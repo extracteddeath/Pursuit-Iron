@@ -234,52 +234,98 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         enabled = !busy) { Text("Reload") }
                 }
             }
-            val firstTrainingWeekday=draft.blocks.firstOrNull()
-                ?.days?.minByOrNull {it.weekday}?.weekday
-            if(firstTrainingWeekday!=null) {
-                PursuitCard(highlighted=true) {
-                    Text("Week 1 · First workout",
-                        style=MaterialTheme.typography.titleLarge)
-                    Text("Review the first scheduled training day from this exact saved cycle. A current full-cycle audit and your explicit consent are required before any workout can be issued.",
+            PursuitCard(highlighted=true) {
+                Text("Next workout in your program",
+                    style=MaterialTheme.typography.titleLarge)
+                Text("Choose the next session from your verified training history. An unfinished issued workout is resumed, never silently replaced. This is the order of your saved program, not an inferred date.",
+                    style=MaterialTheme.typography.bodySmall)
+                val policyReady=state.coachingAudit?.status==
+                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                    state.coachingAudit?.issues?.isEmpty()==true
+                val signed=(state.signoff as? NativeCustomSignoffRead.Found)
+                    ?.isCurrent==true
+                OutlinedButton(
+                    onClick=controller::findNextCycleSession,
+                    enabled=!busy&&policyReady&&signed,
+                    modifier=Modifier.fillMaxWidth()
+                ) { Text("Find my next workout") }
+                if(!signed||!policyReady)
+                    Text("First review this complete training cycle and confirm its exact saved prescription below.",
                         style=MaterialTheme.typography.bodySmall)
-                    OutlinedButton(
-                        onClick={
-                            inspectedWeek="1"
-                            inspectedWeekday=firstTrainingWeekday
-                            controller.previewAuthoredDay(1,firstTrainingWeekday)
-                        },
-                        enabled=!busy,
-                        modifier=Modifier.fillMaxWidth()
-                    ) {Text("Review first workout")}
-                    val policyReady=state.coachingAudit?.status==
-                        CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
-                        state.coachingAudit?.issues?.isEmpty()==true
-                    val signed=(state.signoff as? NativeCustomSignoffRead.Found)
-                        ?.isCurrent==true
-                    if(policyReady && signed) {
-                        OutlinedButton(
-                            onClick={
-                                inspectedWeek="1"
-                                inspectedWeekday=firstTrainingWeekday
-                                controller.verifyConsentBoundDay(1,firstTrainingWeekday)
-                            },enabled=!busy,modifier=Modifier.fillMaxWidth()
-                        ) {Text("Verify first workout for training")}
-                    } else {
-                        Text("Complete the full-cycle review and confirm this exact program below to unlock training.",
-                            style=MaterialTheme.typography.bodySmall)
-                    }
-                    val preflight=state.consentBoundPreview?.session
-                    if(policyReady && signed &&
-                        preflight!=null &&
-                        preflight.absoluteWeek==1 &&
-                        preflight.weekday==firstTrainingWeekday &&
-                        state.preparedWorkout==null) {
+                val selection=state.nextCycleSlot?.takeIf{
+                    state.nextSlotCycleRevision==draft.revision &&
+                        policyReady && signed
+                }
+                when(selection) {
+                    is NativeCustomNextCycleSlot.Next,
+                    is NativeCustomNextCycleSlot.Prepared -> {
+                        val week=when(selection) {
+                            is NativeCustomNextCycleSlot.Next ->selection.absoluteWeek
+                            is NativeCustomNextCycleSlot.Prepared ->selection.absoluteWeek
+                            else ->0
+                        }
+                        val weekday=when(selection) {
+                            is NativeCustomNextCycleSlot.Next ->selection.weekday
+                            is NativeCustomNextCycleSlot.Prepared ->selection.weekday
+                            else ->-1
+                        }
+                        val label=when(selection) {
+                            is NativeCustomNextCycleSlot.Next ->selection.dayLabel
+                            is NativeCustomNextCycleSlot.Prepared ->selection.dayLabel
+                            else ->""
+                        }
+                        Text("Week ${week} · ${customWeekdays.getOrElse(weekday){"Day"}} · ${label}",
+                            style=MaterialTheme.typography.titleMedium)
                         Button(onClick={
-                            controller.prepareConsentBoundDay(1,firstTrainingWeekday)
+                            inspectedWeek=week.toString()
+                            inspectedWeekday=weekday
+                            controller.verifyConsentBoundDay(week,weekday)
                         },enabled=!busy,modifier=Modifier.fillMaxWidth()) {
-                            Text("Prepare first workout")
+                            Text("Verify this exact workout")
+                        }
+                        val preflight=state.consentBoundPreview?.session
+                        if(preflight?.absoluteWeek==week &&
+                            preflight.weekday==weekday &&
+                            preflight.stamp.cycleRevision==draft.revision) {
+                            when(selection) {
+                                is NativeCustomNextCycleSlot.Next ->
+                                    Button(
+                                        enabled=!busy&&state.preparedWorkout==null,
+                                        onClick={
+                                            controller.prepareConsentBoundDay(
+                                                week,weekday)
+                                        },
+                                        modifier=Modifier.fillMaxWidth()
+                                    ) {Text("Prepare this workout")}
+                                is NativeCustomNextCycleSlot.Prepared ->
+                                    OutlinedButton(
+                                        enabled=!busy,
+                                        onClick={
+                                            controller.resumePreparedCalibration(
+                                                selection.workoutId)
+                                        },modifier=Modifier.fillMaxWidth()
+                                    ) {Text("Reopen saved preparation")}
+                                else -> {}
+                            }
                         }
                     }
+                    is NativeCustomNextCycleSlot.ResumeIssued -> {
+                        Text("Unfinished workout · week ${selection.absoluteWeek}, ${selection.dayLabel}",
+                            style=MaterialTheme.typography.titleMedium)
+                        Button(
+                            enabled=!busy,
+                            onClick={onOpenIssuedWorkout(selection.workoutId)},
+                            modifier=Modifier.fillMaxWidth()
+                        ) { Text("Resume my workout") }
+                    }
+                    NativeCustomNextCycleSlot.CycleComplete ->
+                        Text("All scheduled workouts in this saved cycle have verified completed history.",
+                            style=MaterialTheme.typography.bodyMedium)
+                    is NativeCustomNextCycleSlot.Rejected ->
+                        Text(selection.reason,
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    null -> {}
                 }
             }
             NativeKotlinCustomCycleCalibrationPanel(

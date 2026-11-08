@@ -65,11 +65,14 @@ jobs:
           sha='b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06'
           archive="${RUNNER_TEMP}/gradle-${version}-bin.zip"
           verified=false
-          for base in https://downloads.gradle.org https://services.gradle.org; do
+          for url in \
+            "https://github.com/gradle/gradle-distributions/releases/download/v${version}/gradle-${version}-bin.zip" \
+            "https://downloads.gradle.org/distributions/gradle-${version}-bin.zip" \
+            "https://services.gradle.org/distributions/gradle-${version}-bin.zip"; do
             rm -f "$archive"
             if curl --fail --location --retry 3 --retry-all-errors \
                 --retry-delay 5 --connect-timeout 15 --max-time 120 \
-                "${base}/distributions/gradle-${version}-bin.zip" -o "$archive"; then
+                "$url" -o "$archive"; then
               if echo "${sha}  ${archive}" | sha256sum --check --status; then
                 verified=true
                 break

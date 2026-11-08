@@ -140,3 +140,47 @@ A passing Compose build means source compiles. It does **not** mean all UI
 screens are finished, all features have parity, or the coach is more accurate
 than the previous web engine. Report clearly what is implemented, what is
 source-tested, what is visually verified, and what remains unverified.
+
+## Continued implementation — Profile, Progress and whole-app hierarchy
+
+This design-only continuation adds the following **source implementation**.
+Successful Kotlin compilation or source-contract tests must not be confused
+with visual acceptance on a device.
+
+- Profile is now an explicit top-bar destination rather than a sixth crowded
+  navigation tab. It has verified goal, experience, split, training-weekdays,
+  equipment source totals, completed working sets and completed sessions, plus
+  a private local display-name preference independent of athlete identity.
+- Profile routes directly to Plan, Strength Standards, gym, coaching settings,
+  and original theme choices; Settings Back returns to its actual origin.
+- Shared `PursuitScreenContent` centers major screens at readable large-screen
+  widths while retaining scrolling and the theme spacing scale. Onboarding,
+  Plan, initial program, Coach, future-week review, gym and settings use it.
+- Full exercise History is reachable from both custom and generated workout
+  loggers; exercise search filters the owner-verified mixed timeline without
+  hiding saved corrections or faking data. The sheet separates Working sets
+  from All entries (warmups and amplifier follow-ups).
+- Progress now has four verified barbell standards and a selectable per-lift
+  **estimated 1RM trend chart**, with accessible text values. A single
+  corrected owner-verified history snapshot feeds both the chart and standards.
+  Display-only physical unit conversion uses the exact kilogram-per-pound
+  definition; changing the bodyweight unit converts its entered value rather
+  than silently relabeling it. No percentage, level, 1RM or award is persisted
+  as an authoritative coaching fact.
+- Primary copy no longer identifies the implementation as a Kotlin Lab in
+  headers. Debug-only IDs remain behind advanced controls where necessary.
+- Source CI now watches all `NativeKotlin*.kt` and shared design component
+  files. It compiles Compose and tests the engine **without** generating an
+  APK during normal design commits.
+
+**Remaining before design approval:** real-home hierarchy and all planned
+Coach UX; editable program/cycle affordances; complete adaptive pane
+transitions and back navigation; full Profile personalization and milestones;
+strength source-specific age/bodyweight tables with verified rights/provenance;
+source-quality strength graphs and favorites; coherent exercise detail and
+attachments; dark/light and dynamic font QA at multiple sizes; end-to-end
+accessibility and device screenshots. None of these are silently marked done.
+
+**Distribution remains gated:** Do not trigger the disposable APK milestone
+for routine UI changes. The next APK requires the entire app-wide design to be
+reviewed and approved.

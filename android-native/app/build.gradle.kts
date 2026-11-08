@@ -6,6 +6,13 @@ plugins {
 // number. Routine source-only checks retain the existing development code.
 val kotlinLabBuildNumber = providers.gradleProperty("kotlinLabBuildNumber")
     .orNull?.toIntOrNull()?.takeIf { it in 1..2_000_000_000 }
+// Only the separately gated milestone supplies this. No shared debug app ID
+// may be updated under different ephemeral GitHub runner certificates.
+val kotlinLabDisposableRun = providers.gradleProperty("kotlinLabDisposableRun")
+    .orNull?.toIntOrNull()?.takeIf { it in 1..2_000_000_000 }
+if(providers.gradleProperty("kotlinLabDisposableRun").isPresent &&
+    kotlinLabDisposableRun == null)
+    error("Disposable Lab requires a positive per-run identity")
 
 android {
     namespace = "io.github.extracteddeath.pursuitiron"
@@ -42,6 +49,14 @@ android {
             // native preview. Distinct app-private storage and a separate
             // install identity prevent a debug APK from overwriting it.
             applicationIdSuffix = ".kotlinlabstable"
+            manifestPlaceholders["kotlinLabDisplayName"] = "Pursuit Iron Lab Stable"
+            if(kotlinLabDisposableRun!=null) {
+                // Different app per run: ephemeral debug keys cannot erase
+                // an older Lab's app-private workout data.
+                applicationIdSuffix = ".kotlinlabtrial$kotlinLabDisposableRun"
+                manifestPlaceholders["kotlinLabDisplayName"] =
+                    "Pursuit Iron Lab Trial $kotlinLabDisposableRun"
+            }
         }
     }
     buildFeatures { compose = true }

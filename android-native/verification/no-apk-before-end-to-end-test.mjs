@@ -8,6 +8,7 @@ import fs from 'node:fs';
 const read=path=>fs.readFileSync(path,'utf8');
 const preview=read('.github/workflows/android-native-preview.yml');
 const kotlinLab=read('.github/workflows/android-kotlin-lab-device.yml');
+const disposable=read('.github/workflows/android-kotlin-lab-disposable.yml');
 const kotlinMarker=read('android-native/KOTLIN_LAB_DEVICE_TEST.md');
 const device=read('.github/workflows/android-engine-device-proof.yml');
 const sandbox=read('.github/workflows/android-engine-runtime.yml');
@@ -51,6 +52,17 @@ assert.ok(kotlinLab.includes(':kotlin-engine:testDebugUnitTest') &&
   kotlinLab.includes(':native-coach-store:testDebugUnitTest') &&
   kotlinLab.includes(':app:assembleDebug'),
   'Kotlin milestone must test the independent engine and native history before assembling');
+assert.match(disposable,/^on:\n  push:\n    branches:\n      - architecture\/kotlin-engine-rebuild\n    paths:\n      - 'android-native\/KOTLIN_LAB_DISPOSABLE_TEST\.md'/m,
+  'Trial APK must be triggered only by its distinct milestone marker');
+assert.ok(disposable.includes("'milestone(kotlin): disposable lab '") &&
+  disposable.includes('kotlinLabDisposableRun=$GITHUB_RUN_NUMBER') &&
+  disposable.includes(':app:assembleDebug') &&
+  disposable.includes(':app:bundleDebug') &&
+  disposable.includes('kotlin-lab-disposable-test.mjs') &&
+  disposable.includes('apksigner') &&
+  disposable.includes('aapt') &&
+  disposable.includes('if-no-files-found: error'),
+  'Trial must require its own milestone, tests, unique package and verified artifacts');
 assert.ok(kotlinMarker.includes('one-time') &&
   kotlinMarker.includes('development') &&
   kotlinMarker.includes('io.github.extracteddeath.pursuitiron.kotlinlabstable'),

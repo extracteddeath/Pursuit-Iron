@@ -1,0 +1,127 @@
+name: Pursuit Iron Kotlin Lab disposable debug APK and AAB
+
+# Exactly one explicit source-tested trial build. Ordinary rebuild commits do
+# not distribute APKs. This run uses a NEW package ID so that a fresh GitHub
+# debug certificate cannot collide with an existing app's training data.
+on:
+  push:
+    branches:
+      - architecture/kotlin-engine-rebuild
+    paths:
+      - 'android-native/KOTLIN_LAB_DISPOSABLE_TEST.md'
+
+concurrency:
+  group: kotlin-lab-disposable
+  cancel-in-progress: false
+permissions:
+  contents: read
+
+jobs:
+  disposable-device-build:
+    if: startsWith(github.event.head_commit.message, 'milestone(kotlin): disposable lab ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: android-actions/setup-android@v4
+      - name: Android API 37
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Install checksum-pinned Gradle 9.3.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='9.3.1'
+          sha='b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06'
+          archive="$RUNNER_TEMP/gradle-$version-bin.zip"
+          verified=false
+          for url in \
+            "https://distfiles.macports.org/gradle/gradle-$version-bin.zip" \
+            "https://github.com/gradle/gradle-distributions/releases/download/v$version/gradle-$version-bin.zip" \
+            "https://downloads.gradle.org/distributions/gradle-$version-bin.zip" \
+            "https://services.gradle.org/distributions/gradle-$version-bin.zip"; do
+            rm -f "$archive"
+            if curl --fail --location --retry 3 --retry-all-errors \
+                --retry-delay 5 --connect-timeout 15 --max-time 120 \
+                "$url" -o "$archive"; then
+              if echo "$sha  $archive" | sha256sum --check --status; then
+                verified=true
+                break
+              fi
+            fi
+          done
+          if [ "$verified" != true ]; then
+            echo "Checksum-verified Gradle 9.3.1 unavailable" >&2
+            exit 1
+          fi
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gradle-$version/bin/gradle" --version
+          echo "$RUNNER_TEMP/gradle-$version/bin" >> "$GITHUB_PATH"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Revalidate same-revision Kotlin training and isolation
+        run: |
+          set -euo pipefail
+          node android-native/kotlin-engine/verification/offline-only-test.mjs
+          node android-native/kotlin-engine/verification/feature-scope-contract.mjs
+          node android-native/verification/native-core-journey-test.mjs
+          node android-native/verification/native-onboarding-interaction-test.mjs
+          node android-native/verification/native-original-theme-parity-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
+          node android-native/verification/kotlin-lab-navigation-test.mjs
+          node android-native/verification/kotlin-lab-workout-ui-test.mjs
+          node android-native/verification/kotlin-lab-stable-signing-test.mjs
+          node android-native/verification/kotlin-lab-disposable-test.mjs
+      - name: Test real Kotlin coaching and offline journal persistence
+        working-directory: android-native
+        run: gradle :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace
+      - name: Assemble one-off debug APK and non-production debug AAB
+        working-directory: android-native
+        run: |
+          set -euo pipefail
+          test -z "${KOTLIN_LAB_SIGNING_STORE_FILE:-}"
+          gradle :app:assembleDebug :app:bundleDebug --no-daemon --stacktrace \
+            -PkotlinLabBuildNumber=$GITHUB_RUN_NUMBER \
+            -PkotlinLabDisposableRun=$GITHUB_RUN_NUMBER
+      - name: Verify real APK signature, unique app and bundle receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          buildTools="$ANDROID_HOME/build-tools/36.0.0"
+          apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
+          aab="android-native/app/build/outputs/bundle/debug/app-debug.aab"
+          test -s "$apk"
+          test -s "$aab"
+          "$buildTools/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/trial-cert.txt"
+          "$buildTools/aapt" dump badging "$apk" > "$RUNNER_TEMP/trial-manifest.txt"
+          package="io.github.extracteddeath.pursuitiron.kotlinlabtrial$GITHUB_RUN_NUMBER"
+          grep -F "package: name='$package' versionCode='$GITHUB_RUN_NUMBER'" "$RUNNER_TEMP/trial-manifest.txt"
+          grep -F "launchable-activity: name='io.github.extracteddeath.pursuitiron.KotlinEnginePreviewActivity'" "$RUNNER_TEMP/trial-manifest.txt"
+          grep -F "label='Pursuit Iron Lab Trial $GITHUB_RUN_NUMBER'" "$RUNNER_TEMP/trial-manifest.txt"
+          grep -F 'Signer #1 certificate SHA-256 digest:' "$RUNNER_TEMP/trial-cert.txt"
+          unzip -tq "$aab" > /dev/null
+          {
+            echo "sourceCommit=$GITHUB_SHA"
+            echo "workflowRun=$GITHUB_RUN_ID"
+            echo "versionCode=$GITHUB_RUN_NUMBER"
+            echo "applicationId=$package"
+            echo "signature=ephemeral-debug-not-updateable"
+            echo "deviceAcceptance=NOT_TESTED"
+            sha256sum "$apk" "$aab"
+            grep -F 'Signer #1 certificate SHA-256 digest:' "$RUNNER_TEMP/trial-cert.txt"
+          } > "android-native/app/build/outputs/apk/debug/disposable-trial-receipt.txt"
+      - name: Upload short-lived trial APK, debug AAB and identity verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: pursuit-iron-kotlin-lab-disposable
+          path: |
+            android-native/app/build/outputs/apk/debug/app-debug.apk
+            android-native/app/build/outputs/bundle/debug/app-debug.aab
+            android-native/app/build/outputs/apk/debug/disposable-trial-receipt.txt
+          if-no-files-found: error
+          retention-days: 14

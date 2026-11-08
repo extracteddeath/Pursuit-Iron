@@ -260,7 +260,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                     host.reviewNextActivatedWorkoutProgression(
                                         absoluteWeek,weekday,chosen,contextInputs,
                                         readiness,restricted,increase,
-                                        CustomRepForecastPolicy.TARGET_RIR_V2)
+                                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
                                 }.getOrNull()
                             }
                             if(generation==coachingGeneration) {
@@ -292,7 +292,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                     host.previewNextActivatedRepAmendment(
                                         id,absoluteWeek,weekday,chosen,contextInputs,
                                         readiness,restricted,increase,
-                                        CustomRepForecastPolicy.TARGET_RIR_V2)
+                                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
                                 }.getOrNull()
                             }
                             repPreview=result as? NativeCustomNextRepPreview.Ready
@@ -538,7 +538,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                         receipt.fingerprint,receipt.historyRevision,
                                         receipt.consentRevision,receipt.setKeys,
                                         receipt.nextMinimumReps,true,
-                                        CustomRepForecastPolicy.TARGET_RIR_V2)
+                                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
                                     val staged=if(result is NativeCustomNextRepWrite.Accepted)
                                         host.prepareActivatedFutureWorkout(
                                             receipt.workoutId,active.cycleId,
@@ -652,6 +652,16 @@ internal fun NativeKotlinCustomDayCoachingSummary(
     }?.let {Text(it.exerciseId.replace('_',' '),
         style=MaterialTheme.typography.titleSmall)}
     Text(reviewed.review.explanation,style=MaterialTheme.typography.bodyMedium)
+    if(reviewed.review.status==
+        CustomNextWorkoutCoachingStatus.HOLD_MARKED_SAME_DAY_CAPACITY_DROP) {
+        val drops=reviewed.review.capacityDropsFromPreviousSession
+        Text("Same-day capacity review · "+
+            drops.mapIndexed{index,d->"set ${index+1}: −${d}"}.joinToString(", ")+
+            " estimated reps compared with the prior workout.",
+            style=MaterialTheme.typography.bodySmall)
+        Text("This is a temporary hold for review, not a diagnosis of chronic fatigue or proof of a required deload.",
+            style=MaterialTheme.typography.bodySmall)
+    }
     val selected=reviewed.nextWorkout?.slots?.singleOrNull {
         it.slotId==reviewed.selectedSlotId
     }

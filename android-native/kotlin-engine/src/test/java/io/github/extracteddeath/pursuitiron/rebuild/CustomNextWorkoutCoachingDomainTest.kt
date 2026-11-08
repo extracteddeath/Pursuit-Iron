@@ -511,6 +511,98 @@ class CustomNextWorkoutCoachingDomainTest {
         assertNull(rejected.loadReviewCandidate)
     }
 
+    @Test fun v3HoldsARealMarkedSameWeekdayDropWithoutRewritingV2Receipts() {
+        val older=addWarmup(completed(1,3,reps=listOf(8,8),
+            rirs=listOf(5,5)))
+        val weaker=addWarmup(completed(2,4,reps=listOf(5,5),
+            rirs=listOf(4,4)))
+        val next=addWarmup(snapshot(5))
+        fun check(policy:CustomRepForecastPolicy)=
+            CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(next,"main",
+                    listOf(older,weaker),stock(),n(5),
+                    CoachReadiness.NORMAL,false,policy))
+        val legacy=check(CustomRepForecastPolicy.LEGACY_STEP_V1)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,legacy.status)
+        assertEquals(listOf(6,6),legacy.nextSetSuggestions.map{
+            it.proposedNextReps})
+        val v2=check(CustomRepForecastPolicy.TARGET_RIR_V2)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,v2.status)
+        assertEquals(listOf(7,7),v2.nextSetSuggestions.map{
+            it.proposedNextReps})
+        val v3=check(CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_MARKED_SAME_DAY_CAPACITY_DROP,
+            v3.status)
+        assertEquals(listOf(4,4),v3.capacityDropsFromPreviousSession)
+        assertFalse(v3.forecastLimitations.contains(
+            RepForecastLimitation.SINGLE_EXPOSURE))
+        assertNull(v3.loadReviewCandidate)
+        assertTrue(v3.nextSetSuggestions.isEmpty())
+        assertFalse(v3.mayIssueWorkout)
+        assertFalse(v3.mayChangeHistory)
+        assertTrue(v3.explanation.contains("do not establish chronic fatigue"))
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.NOT_AN_ELIGIBLE_REP_REVIEW),
+            CustomNextRepAmendmentDomain.propose(next,"main",v3))
+    }
+
+    @Test fun v3DoesNotInferFatigueFromUnknownRirOrOneBadSet() {
+        val prior=addWarmup(completed(1,3,reps=listOf(8,8),
+            rirs=listOf(5,5)))
+        val latest=addWarmup(completed(2,4,reps=listOf(5,5),
+            rirs=listOf(null,4)))
+        val next=addWarmup(snapshot(5))
+        fun check(previous:CustomCoachingHistoricalSession,
+            current:CustomCoachingHistoricalSession)=
+            CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(next,"main",
+                    listOf(previous,current),stock(),n(5),
+                    CoachReadiness.NORMAL,false,
+                    CustomRepForecastPolicy.TARGET_RIR_TREND_V3))
+        val unknown=check(prior,latest)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,unknown.status)
+        assertTrue(unknown.capacityDropsFromPreviousSession.isEmpty())
+        assertEquals(1,unknown.assumedGoalRirSetCount)
+        assertTrue(unknown.forecastLimitations.contains(
+            RepForecastLimitation.SINGLE_EXPOSURE))
+        val oneSet=check(prior,addWarmup(completed(2,4,
+            reps=listOf(5,8),rirs=listOf(4,5))))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,oneSet.status)
+        assertTrue(oneSet.capacityDropsFromPreviousSession.isEmpty())
+        val differentLoad=addWarmup(completed(1,3,reps=listOf(8,8),
+            rirs=listOf(5,5),actual=listOf(205,205)))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            check(differentLoad,addWarmup(completed(2,4,
+                reps=listOf(5,5),rirs=listOf(4,4)))).status)
+    }
+
+    @Test fun v3StillRecommendsFullEarnedPerSetHeadroomWhenTrendIsStable() {
+        val previous=addWarmup(completed(1,3,reps=listOf(5,6),
+            rirs=listOf(5,4)))
+        val latest=addWarmup(completed(2,4,reps=listOf(5,6),
+            rirs=listOf(5,4)))
+        val next=addWarmup(snapshot(5))
+        val result=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(next,"main",
+                listOf(previous,latest),stock(),n(5),
+                CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_TREND_V3))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,result.status)
+        assertEquals(listOf(8,8),result.nextSetSuggestions.map{
+            it.proposedNextReps})
+        assertTrue(result.capacityDropsFromPreviousSession.isEmpty())
+        assertFalse(result.forecastLimitations.contains(
+            RepForecastLimitation.SINGLE_EXPOSURE))
+        val edit=CustomNextRepAmendmentDomain.propose(next,"main",result)
+        assertTrue(edit.toString(),edit is CustomNextRepAmendmentResult.Proposed)
+        assertEquals(listOf(8,8),
+            (edit as CustomNextRepAmendmentResult.Proposed).amendment.nextMinimumReps)
+        assertEquals(next.slots.single().sets.filter{
+            it.prescription.type==DraftSetType.WARMUP},
+            edit.amendment.amended.slots.single().sets.filter{
+                it.prescription.type==DraftSetType.WARMUP})
+    }
+
     private fun blockEntry(
         week:Int=5,day:Int=0
     )=snapshot(week,day).copy(

@@ -100,6 +100,36 @@ class NativeKotlinCustomRepReceiptCodecTest {
                 "owner-1","workout-3",v2))
     }
 
+    @Test fun v3TrendConsentIsVersionedAndCannotBeInterpretedAsV2() {
+        val v3Receipt=receipt(CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+        val v3=NativeKotlinCustomNextRepApprovalFileStore.encode(v3Receipt)
+        val v2=NativeKotlinCustomNextRepApprovalFileStore.encode(
+            receipt(CustomRepForecastPolicy.TARGET_RIR_V2))
+        val originalV1=NativeKotlinCustomNextRepApprovalFileStore.encode(receipt())
+        assertFalse(v3.contentEquals(v2))
+        assertFalse(v3.contentEquals(originalV1))
+        val inp=readBody(v3)
+        readCommon(inp)
+        assertEquals(2,inp.readInt()) // policy-discriminated V2 envelope
+        repeat(7){inp.readUTF()}
+        inp.readInt();inp.readInt()
+        inp.readLong();inp.readLong()
+        inp.readUTF();inp.readBoolean();inp.readUTF()
+        assertEquals(2,inp.readInt())
+        repeat(2){inp.readUTF();inp.readInt()}
+        assertEquals("TARGET_RIR_TREND_V3",inp.readUTF())
+        assertEquals(0,inp.available())
+        assertEquals(v3Receipt,
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "owner-1","workout-3",v3))
+        assertEquals(receipt(CustomRepForecastPolicy.TARGET_RIR_V2),
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "owner-1","workout-3",v2))
+        assertEquals(receipt(),
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "owner-1","workout-3",originalV1))
+    }
+
     @Test fun canonicalReaderRejectsCorruptionWrongOwnerAndUnknownPolicy() {
         val bytes=NativeKotlinCustomNextRepApprovalFileStore.encode(
             receipt(CustomRepForecastPolicy.TARGET_RIR_V2))

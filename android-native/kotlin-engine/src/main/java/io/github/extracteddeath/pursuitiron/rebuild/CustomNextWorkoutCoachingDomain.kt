@@ -21,7 +21,9 @@ data class CustomCoachingHistoricalSession(
 /** Versioned opt-in: existing native custom approvals replay the exact V1 rule. */
 enum class CustomRepForecastPolicy {
     LEGACY_STEP_V1,
-    TARGET_RIR_V2
+    TARGET_RIR_V2,
+    /** Opt-in longitudinal guard; V1 and V2 saved receipts retain old replay. */
+    TARGET_RIR_TREND_V3
 }
 
 data class CustomNextWorkoutCoachingRequest(
@@ -46,6 +48,7 @@ enum class CustomNextWorkoutCoachingStatus {
     MISSED_OR_FAILED_SETS,
     NEEDS_RECORDED_EFFORT,
     HOLD_NEAR_FAILURE,
+    HOLD_MARKED_SAME_DAY_CAPACITY_DROP,
     BUILD_REPS,
     READY_FOR_LOAD_REVIEW,
     HOLD_CURRENT_TARGETS
@@ -72,7 +75,10 @@ data class CustomNextWorkoutCoachingReview(
     val explanation:String,
     val assumedGoalRirSetCount:Int=0,
     val repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1,
-    val forecastLimitations:Set<RepForecastLimitation> = emptySet()
+    val forecastLimitations:Set<RepForecastLimitation> = emptySet(),
+    /** Confirmed drops measured only from two exact same-slot workouts with
+     * independently reported RIR. Not a fatigue diagnosis or new consent. */
+    val capacityDropsFromPreviousSession:List<Int> = emptyList()
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayEditProgram:Boolean get()=false
@@ -81,6 +87,9 @@ data class CustomNextWorkoutCoachingReview(
 
 /** Never bypass a failed set, an intervening day, a changed source, or RIR. */
 object CustomNextWorkoutCoachingDomain {
+    private fun CustomRepForecastPolicy.usesTargetRir()=
+        this!=CustomRepForecastPolicy.LEGACY_STEP_V1
+
     private val zero=BigDecimal.ZERO
     private val maximum=BigDecimal("100000")
     private fun same(a:BigDecimal,b:BigDecimal)=a.compareTo(b)==0
@@ -141,8 +150,87 @@ object CustomNextWorkoutCoachingDomain {
             facts.all{it.exerciseId==slot.exerciseId}
     }
 
+    /**
+     * This is a PERFORMANCE regression guard, not a chronic-fatigue model.
+     * Two completed exposures do not identify its cause. Require two or more
+     * working sets with authentic independently REPORTED effort, unchanged
+     * loading, exact exercise/day/source and matching warmup prescriptions.
+     * If any input is missing, do not fabricate a decline.
+     */
+    private fun comparableReportedCapacityChanges(
+        previous:CustomCoachingHistoricalSession,
+        latest:CustomCoachingHistoricalSession,
+        latestSlot:CustomWorkoutSlotSnapshot,
+        latestFacts:List<CustomHistoricalVisitFact>
+    ):List<Int>? {
+        val previousSlot=previous.snapshot.slots.singleOrNull{
+            it.slotId==latestSlot.slotId &&
+                it.exerciseId==latestSlot.exerciseId
+        } ?:return null
+        val older=previousSlot.sets.filter{
+            it.prescription.type==DraftSetType.WORKING
+        }
+        val newer=latestSlot.sets.filter{
+            it.prescription.type==DraftSetType.WORKING
+        }
+        if(newer.size<2 || older.size!=newer.size ||
+            previous.snapshot.stamp!=latest.snapshot.stamp ||
+            previous.snapshot.blockId!=latest.snapshot.blockId ||
+            previous.snapshot.weekday!=latest.snapshot.weekday ||
+            previous.snapshot.phase!=latest.snapshot.phase ||
+            previous.snapshot.sessionPurpose!=latest.snapshot.sessionPurpose ||
+            previous.snapshot.split!=latest.snapshot.split ||
+            !sameWarmups(previousSlot,latestSlot) ||
+            !authenticWarmups(previous,previousSlot) ||
+            older.zip(newer).any { (a,b)->
+                a.ordinalInSlot!=b.ordinalInSlot ||
+                    a.prescription!=b.prescription
+            }) return null
+        val before=previous.evidence.visits.filter{
+            it.slotId==latestSlot.slotId &&
+                it.part==CustomWorkoutVisitPart.MAIN &&
+                it.setType==DraftSetType.WORKING
+        }
+        if(!matchingReceipts(before,older) ||
+            !matchingReceipts(latestFacts,newer))
+            return null
+        fun matchesActualLoad(
+            fact:CustomHistoricalVisitFact,
+            set:CustomWorkoutSetSnapshot
+        ):Boolean {
+            val actual=fact.actual ?:return false
+            return when(val prescribed=set.prescription.load) {
+                DraftSetLoad.ExplicitBodyweight ->
+                    actual.load==null && actual.unit==null
+                is DraftSetLoad.Verified ->
+                    actual.load!=null && actual.unit==prescribed.unit &&
+                        same(actual.load,prescribed.value)
+            }
+        }
+        val differences=older.indices.map {i->
+            val a=before.single{it.setKey==older[i].setKey}
+            val b=latestFacts.single{it.setKey==newer[i].setKey}
+            val olderRir=a.actual?.actualRir
+            val newerRir=b.actual?.actualRir
+            if(a.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                b.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                olderRir==null || newerRir==null ||
+                !matchesActualLoad(a,older[i]) ||
+                !matchesActualLoad(b,newer[i])) return null
+            // Same goal/load: comparing reps plus reported reps remaining
+            // estimates relative same-set capacity without claiming the
+            // older RIR was perfectly measured.
+            val beforeCapacity=checkNotNull(a.actual).reps+olderRir
+            val nowCapacity=checkNotNull(b.actual).reps+newerRir
+            beforeCapacity-nowCapacity
+        }
+        return differences
+    }
+
     fun review(request:CustomNextWorkoutCoachingRequest):CustomNextWorkoutCoachingReview {
         var assumedForReview=0
+        var trendDrops:List<Int> = emptyList()
+        var hasComparableReportedTrend=false
         fun result(
             status:CustomNextWorkoutCoachingStatus,
             ids:List<String> = emptyList(),latest:String?=null,
@@ -154,16 +242,19 @@ object CustomNextWorkoutCoachingDomain {
             Collections.unmodifiableList(reps.toList()),load,candidate,
             explanation+ProgressionEffortDomain.assumptionNote(assumedForReview),
             assumedForReview,request.repForecastPolicy,
-            if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2)
+            if(request.repForecastPolicy.usesTargetRir())
                 buildSet {
-                    add(RepForecastLimitation.SINGLE_EXPOSURE)
+                    if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2 ||
+                        !hasComparableReportedTrend)
+                        add(RepForecastLimitation.SINGLE_EXPOSURE)
                     add(RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED)
                     add(RepForecastLimitation.ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE)
                     add(RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
                     if(reps.dropLast(1).any {it.changed})
                         add(RepForecastLimitation.EARLIER_SET_WORK_CHANGED)
                 }
-            else emptySet())
+            else emptySet(),
+            Collections.unmodifiableList(trendDrops.toList()))
         if(request.maximumAuthorizedIncrease<=zero ||
             request.maximumAuthorizedIncrease>maximum ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale()>3 ||
@@ -255,7 +346,7 @@ object CustomNextWorkoutCoachingDomain {
         // performance. An absent/edited warmup or a changed warmup policy
         // cannot silently become evidence of more rep capacity. V1 receipts
         // retain their original comparison policy for exact replay.
-        if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2) {
+        if(request.repForecastPolicy.usesTargetRir()) {
             if(!sameWarmups(oldSlot,target))
                 return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                     ids,latest.evidence.workoutId,
@@ -280,7 +371,7 @@ object CustomNextWorkoutCoachingDomain {
         // A target-RIR estimate has no meaning without its original goal.
         // V1 receipt replay is unchanged; the new policy never invents
         // an intended effort when only an actual RIR happens to be logged.
-        if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2 &&
+        if(request.repForecastPolicy.usesTargetRir() &&
             nextSets.any {it.prescription.targetRir==null})
             return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                 ids,latest.evidence.workoutId,
@@ -308,6 +399,20 @@ object CustomNextWorkoutCoachingDomain {
                 ids,latest.evidence.workoutId,
                 explanation="Reported or assumed-goal effort leaves too little reserve to add reps or load.")
 
+        if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_TREND_V3 &&
+            appearances.size>=2) {
+            val differences=comparableReportedCapacityChanges(
+                appearances[appearances.lastIndex-1],latest,oldSlot,facts)
+            if(differences!=null)hasComparableReportedTrend=true
+            if(differences!=null && differences.all{it>=2}) {
+                trendDrops=differences
+                return result(
+                    CustomNextWorkoutCoachingStatus.HOLD_MARKED_SAME_DAY_CAPACITY_DROP,
+                    ids,latest.evidence.workoutId,
+                    explanation="Every comparable working set lost at least two estimated reps of capacity since the previous same-weekday workout, using separately reported RIR and the same load. Hold this progression and review recovery, rest and the next session. Two sessions do not establish chronic fatigue.")
+            }
+        }
+
         // V1 replay retains its exact one-rep-per-set behavior. New opt-in
         // V2 estimates each ordinal at its OWN intended RIR; no invented
         // universal one-rep ceiling and no heaviest-set load transfer.
@@ -334,7 +439,8 @@ object CustomNextWorkoutCoachingDomain {
                     CustomRepForecastPolicy.LEGACY_STEP_V1 ->
                         if(checkNotNull(effortForSet.rir)>=2)
                             (observed+1).coerceAtMost(upper) else observed
-                    CustomRepForecastPolicy.TARGET_RIR_V2 -> {
+                    CustomRepForecastPolicy.TARGET_RIR_V2,
+                    CustomRepForecastPolicy.TARGET_RIR_TREND_V3 -> {
                         val goal=checkNotNull(set.prescription.targetRir)
                         val capacityAtGoal=actual.reps+
                             checkNotNull(effortForSet.rir)-goal
@@ -364,7 +470,7 @@ object CustomNextWorkoutCoachingDomain {
                 it.prescription.type==DraftSetType.WORKING
             }.orEmpty()
             val matchingPriorWarmups=
-                request.repForecastPolicy!=CustomRepForecastPolicy.TARGET_RIR_V2 ||
+                !request.repForecastPolicy.usesTargetRir() ||
                     (previousSlot!=null && sameWarmups(previousSlot,target))
             val sameSets=matchingPriorWarmups &&
                 previousSets.size==nextSets.size &&
@@ -387,7 +493,7 @@ object CustomNextWorkoutCoachingDomain {
                 }
                 val straight=nextSets.mapNotNull{it.prescription.load as? DraftSetLoad.Verified}
                 val bands=nextSets.map{it.prescription.reps}.distinct()
-                if((request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2 &&
+                if((request.repForecastPolicy.usesTargetRir() &&
                         !authenticWarmups(previous,checkNotNull(previousSlot))) ||
                     !matchingReceipts(priorFacts,previousSets))
                     return result(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
@@ -434,7 +540,7 @@ object CustomNextWorkoutCoachingDomain {
                 "Two complete same-day workouts earned a verified load option. Athlete review is required.")
             increased->result(CustomNextWorkoutCoachingStatus.BUILD_REPS,
                 ids,latest.evidence.workoutId,suggestions,observedLoad,
-                explanation=if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2)
+                explanation=if(request.repForecastPolicy.usesTargetRir())
                     "Review each set's reps at its intended RIR while keeping its own load. Earlier harder sets, rest and longer-term fatigue can change later capacity."
                 else "Increase eligible sets by at most one rep; keep each set's own load.")
             else->result(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,

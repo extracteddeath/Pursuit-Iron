@@ -65,7 +65,8 @@ object CustomNextRepAmendmentDomain {
                 (proposal.changed && when(reviewed.repForecastPolicy) {
                     CustomRepForecastPolicy.LEGACY_STEP_V1 ->
                         proposal.proposedNextReps!=proposal.observedReps+1
-                    CustomRepForecastPolicy.TARGET_RIR_V2 -> {
+                    CustomRepForecastPolicy.TARGET_RIR_V2,
+                    CustomRepForecastPolicy.TARGET_RIR_TREND_V3 -> {
                         val goal=set.prescription.targetRir
                             ?:return fail(CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED)
                         proposal.proposedNextReps !=

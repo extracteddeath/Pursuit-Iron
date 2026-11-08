@@ -428,6 +428,18 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertTrue(actualCoach.historyRevision>0)
         assertTrue(actualCoach.approvedConsentRevision>0)
         assertFalse(actualCoach.mayIssueWorkout)
+        val safer=ownerCoach.reviewAuthored(owner,cycleId,inputs,
+            2,day.weekday,selected.slotId,CoachReadiness.NORMAL,false,n("5"),
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+        assertTrue(safer.toString(),safer is NativeCustomNextCoachResult.Reviewed)
+        val v3=(safer as NativeCustomNextCoachResult.Reviewed).review
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_TREND_V3,
+            v3.repForecastPolicy)
+        assertEquals(actualCoach.review.nextSetSuggestions.map{
+            it.proposedNextReps},v3.nextSetSuggestions.map{it.proposedNextReps})
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,v3.status)
+        assertTrue(v3.capacityDropsFromPreviousSession.isEmpty())
+        assertFalse(v3.mayIssueWorkout)
         // Without activated signoff owners, an activated review cannot be
         // used as a fallback bypass for an ordinary program.
         assertEquals(NativeCustomNextCoachResult.Rejected(

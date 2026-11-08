@@ -302,4 +302,97 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(NativeCustomNextCycleSlot.Next(2,days.first().weekday,
             days.first().label),Disk().next(inputs))
     }
+
+    @Test fun finishedGeneratedWorkoutWithWarmupsProvidesRealV2CoachingEvidence() {
+        val (cycle,inputs)=saveGenerated()
+        val day=cycle.blocks.single().days.minBy {it.weekday}
+        val workoutId="generated-v2-history-1"
+        val before=Disk().prepared.prepare(owner,workoutId,cycleId,1,
+            day.weekday,inputs)
+        assertTrue(before.toString(),before is NativeCustomPrepareResult.Prepared)
+        var journal=(Disk().journals.issue(owner,workoutId,cycleId,1,
+            day.weekday,inputs) as NativeCustomJournalResult.Durable).issued.journal
+        val source=journal.snapshot
+        val all=source.slots.flatMap{it.sets}
+        assertTrue(all.any{it.prescription.type==DraftSetType.WARMUP})
+        val target=all.first{set->
+            set.prescription.type==DraftSetType.WORKING &&
+                set.prescription.reps.minimum<set.prescription.reps.maximum &&
+                set.prescription.targetRir!=null
+        }
+        for((i,set) in all.withIndex()) {
+            val p=set.prescription
+            val actual=when(val load=p.load) {
+                is DraftSetLoad.Verified ->KotlinPerformedSet(
+                    load.value,load.unit,p.reps.minimum,
+                    if(p.type==DraftSetType.WORKING)
+                        (if(set.setKey==target.setKey)
+                            (p.targetRir?:2)+2
+                         else maxOf(2,p.targetRir?:2)).coerceAtMost(10)
+                    else null)
+                DraftSetLoad.ExplicitBodyweight ->KotlinPerformedSet(
+                    null,null,p.reps.minimum,
+                    if(p.type==DraftSetType.WORKING)
+                        (if(set.setKey==target.setKey)
+                            (p.targetRir?:2)+2
+                         else maxOf(2,p.targetRir?:2)).coerceAtMost(10)
+                    else null)
+            }
+            journal=(Disk().journals.record(owner,workoutId,
+                CustomWorkoutJournalOperation.Record(
+                    "generated-v2-set-$i",journal.revision,
+                    CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED,actual))
+                as NativeCustomJournalResult.Durable).issued.journal
+        }
+        assertEquals(0,journal.unresolvedVisitCount)
+        val persisted=Disk()
+        val finish=NativeKotlinCustomHistoryTransaction(
+            persisted.history,persisted.journals,persisted.fence,identity).complete(
+                owner,athlete,workoutId,CustomWorkoutJournalOperation.Finish(
+                    "generated-v2-finish",journal.revision))
+        assertTrue(finish.toString(),finish is NativeCustomFinishResult.Committed)
+
+        val recorded=(Disk().timeline.read(owner,athlete)
+            as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.single()
+            as NativeKotlinMixedHistoryCompletion.Custom
+        val reopened=(Disk().journals.open(owner,workoutId)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(source,reopened.snapshot)
+        assertEquals(workoutId,recorded.evidence.workoutId)
+        assertTrue(recorded.evidence.visits.any {
+            it.setType==DraftSetType.WARMUP
+        })
+        val next=(Disk().preflight.inspect(owner,cycleId,2,day.weekday,inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        val selected=source.slots.single {slot->
+            slot.sets.any {it.setKey==target.setKey}
+        }
+        val coaching=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(next,selected.slotId,
+                listOf(CustomCoachingHistoricalSession(
+                    recorded.manifest.completionOrder,reopened.snapshot,
+                    recorded.evidence)),
+                null,n("5"),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2))
+        assertEquals(coaching.toString(),
+            CustomNextWorkoutCoachingStatus.BUILD_REPS,coaching.status)
+        assertEquals(workoutId,coaching.latestWorkoutId)
+        assertNull(coaching.loadReviewCandidate)
+        assertTrue(coaching.nextSetSuggestions.any{it.changed})
+        val amended=CustomNextRepAmendmentDomain.propose(
+            next,selected.slotId,coaching)
+        assertTrue(amended.toString(),
+            amended is CustomNextRepAmendmentResult.Proposed)
+        val nextSlot=next.slots.single{it.slotId==selected.slotId}
+        val adjusted=(amended as CustomNextRepAmendmentResult.Proposed)
+            .amendment.amended.slots.single{it.slotId==selected.slotId}
+        assertEquals(nextSlot.sets.filter{
+            it.prescription.type==DraftSetType.WARMUP
+        },adjusted.sets.filter{it.prescription.type==DraftSetType.WARMUP})
+        assertEquals(nextSlot.sets.map{it.prescription.load},
+            adjusted.sets.map{it.prescription.load})
+        assertEquals(source,reopened.snapshot)
+    }
 }

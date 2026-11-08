@@ -132,6 +132,7 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
             horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             KotlinJournalSetOutcome.entries.forEach {choice->
                 FilterChip(selected=outcome==choice,
+                    enabled=!submitting,
                     onClick={outcome=choice},
                     label={Text(choice.name.replace('_',' ').lowercase()
                         .replaceFirstChar{it.uppercase()})})
@@ -166,13 +167,15 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                     if(parsedLoad==null)null else unit,
                     parsedReps,parsedRir)
             }
-            if(outcome!=KotlinJournalSetOutcome.SKIPPED &&
+            val selectedOutcome=outcome
+            if(selectedOutcome!=KotlinJournalSetOutcome.SKIPPED &&
                 actual==null) {
                 error="Enter a valid actual load, rep count and optional RIR."
             } else {
                 submitting=true;error=null
                 scope.launch {
                     val result=withContext(Dispatchers.IO) {
+                        runCatching {
                         val verified=host.reviewVerifiedKotlinHistory()
                             as? NativeKotlinMixedHistoryReadResult.Review
                         val current=verified?.timeline?.completions
@@ -196,7 +199,8 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                                     .toString().replace("-",""),
                                 correction.state.correctionRevision,
                                 CustomWorkoutVisitKey(fact.setKey,fact.part),
-                                fact.effectiveEventId,outcome,actual))
+                                fact.effectiveEventId,selectedOutcome,actual))
+                        }.getOrNull()
                     }
                     submitting=false
                     if(result is NativeCustomCorrectionTransactionResult.Committed) {

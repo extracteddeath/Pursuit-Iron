@@ -65,6 +65,13 @@ for(const phrase of ['host.reviewVerifiedKotlinHistory()', 'reviewWorkingSetFact
   'PublishedStrengthReference("conventional_deadlift"',
   'PublishedStrengthReference("barbell_ohp"'])
   assert.ok(standards.includes(phrase),'Unverified strength standards design contract: '+phrase);
+assert.ok(history.includes('var exerciseSearch by rememberSaveable') &&
+  history.includes('visibleSessions=remember(verified,filteredMovements,exerciseSearch)') &&
+  history.includes('items(visibleSessions.asReversed()') &&
+  history.includes('onClick={historyExerciseId=exercise}') &&
+  history.includes('Text("Search exercises")') &&
+  history.includes('No matching saved exercises.'),
+  'History needs a saved, correction-aware searchable exercise drilldown');
 assert.ok(journey.includes('KotlinCandidateDestination.PROFILE') &&
   journey.includes('NativeKotlinProfileScreen(host,themeId,') &&
   journey.includes('contentDescription="Open athlete profile"') &&

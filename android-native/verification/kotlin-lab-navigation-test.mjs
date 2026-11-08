@@ -52,7 +52,7 @@ assert.ok(journey.includes('if(!navigationTouched &&') &&
 for(const required of [
   'KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)',
   'KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)',
-  'set.issuedLoad,set.issuedReps,set.issuedRir',
+  'fact.issuedLoad,fact.issuedReps,fact.issuedRir',
   'fact.prescribedLoad,fact.prescribedReps,fact.prescribedRir',
   'Actual RIR not logged',
   'Amplifier follow-ups:',

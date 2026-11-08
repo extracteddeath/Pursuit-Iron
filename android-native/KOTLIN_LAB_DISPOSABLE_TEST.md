@@ -25,3 +25,19 @@ private stable certificate described in `KOTLIN_LAB_SIGNING_SETUP.md`.
 The first workflow push was rejected by GitHub's YAML parser because the
 milestone conditional contained an unquoted colon. This marker explicitly
 retries only the corrected workflow with the same isolated trial contract.
+
+
+## Trial 3 — original Amethyst UI baseline
+
+This subsequent disposable milestone packages commit
+`9be3c6daa48a6b7821dab33911975fe1a27956ce` and the tested
+Amethyst-first native appearance behavior. Verify that a fresh install
+opens with Amethyst rather than Lime; open More → Appearance to select one
+of the original 20 web palettes, and choose a theme again from Settings.
+Confirm the theme changes immediately and persists after a force-stop and
+cold restart, including light-theme system bar contrast. A deliberately
+selected Lime theme remains available but is NEVER the implicit default.
+
+Like previous trials, this is a new per-run package signed with a disposable
+debug certificate. It does **not** update Trial 2 or share local training data,
+and its debug AAB is **not** a Play Store release artifact.

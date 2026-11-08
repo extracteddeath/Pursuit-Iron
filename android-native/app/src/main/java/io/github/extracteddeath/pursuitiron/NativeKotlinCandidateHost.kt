@@ -432,6 +432,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * session and Finish stay immutable; the shared history transaction
      * must durably acknowledge before the screen can show edited facts.
      */
+    /**
+     * Owner-scoped, read-only correction revision for an ALREADY FINISHED
+     * custom workout. The UI must also read verified mixed history; a
+     * revision alone never authorizes editing. The transaction independently
+     * validates current manifest, predecessor event and revision at commit.
+     */
+    fun readFinishedCustomCorrections(
+        workoutId:String
+    ):NativeCustomSavedCorrectionResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSavedCorrectionResult.Rejected(
+                NativeCustomSavedCorrectionRefusal.NOT_AUTHORIZED)
+        return customSavedCorrections.open(owner.ownerKey,workoutId)
+    }
+
     fun correctFinishedCustomWorkout(
         workoutId:String,operation:CustomSavedVisitCorrection
     ):NativeCustomCorrectionTransactionResult {

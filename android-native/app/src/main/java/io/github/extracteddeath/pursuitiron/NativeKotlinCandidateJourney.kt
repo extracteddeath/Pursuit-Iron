@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
  */
 private enum class KotlinCandidateDestination(val label:String) {
     ONBOARD("My setup"),GYM("My gym"),STARTER("Build first"),PROGRAM("My program"),
-    COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),SETTINGS("Settings"),TRAIN("Train")
+    COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),PROFILE("Profile"),SETTINGS("Settings"),TRAIN("Train")
 }
 
 private val primaryDestinations=listOf(
@@ -154,8 +154,20 @@ internal fun NativeKotlinCandidateJourney(
     var moreExpanded by remember { mutableStateOf(false) }
     var appearanceExpanded by remember { mutableStateOf(false) }
     var trainScreenExpanded by remember { mutableStateOf(false) }
+    var profileReturn by rememberSaveable {
+        mutableStateOf(KotlinCandidateDestination.PROGRAM)
+    }
+    var settingsReturn by rememberSaveable {
+        mutableStateOf(KotlinCandidateDestination.COACH)
+    }
     fun navigate(to:KotlinCandidateDestination) {
         navigationTouched=true
+        if(to==KotlinCandidateDestination.PROFILE &&
+            destination!=KotlinCandidateDestination.PROFILE)
+            profileReturn=destination
+        if(to==KotlinCandidateDestination.SETTINGS &&
+            destination!=KotlinCandidateDestination.SETTINGS)
+            settingsReturn=destination
         if(to==KotlinCandidateDestination.COACH)
             coachRequestedExerciseId=null // ordinary tab, not a saved-set handoff
         destination=to
@@ -181,6 +193,12 @@ internal fun NativeKotlinCandidateJourney(
                         Text(destination.label,
                             style=MaterialTheme.typography.labelMedium,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if(destination!=KotlinCandidateDestination.PROFILE) {
+                        IconButton(onClick={navigate(KotlinCandidateDestination.PROFILE)}) {
+                            Icon(Icons.Filled.Person,
+                                contentDescription="Open athlete profile")
+                        }
                     }
                     Box {
                         IconButton(onClick={moreExpanded=true},
@@ -265,7 +283,7 @@ internal fun NativeKotlinCandidateJourney(
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
                             preferredExerciseId=coachRequestedExerciseId,
-                            onOpenSettings={destination=KotlinCandidateDestination.SETTINGS},
+                            onOpenSettings={navigate(KotlinCandidateDestination.SETTINGS)},
                             onOpenTrain={id->
                                 selectedGeneratedWorkoutId=id
                                 selectedCustomWorkoutId=null
@@ -283,7 +301,15 @@ internal fun NativeKotlinCandidateJourney(
                         NativeKotlinCoachSettingsScreen(host,
                             themeId=themeId,
                             onOpenAppearance={appearanceExpanded=true},
-                            onBack={destination=KotlinCandidateDestination.COACH})
+                            onBack={destination=settingsReturn})
+                    KotlinCandidateDestination.PROFILE ->
+                        NativeKotlinProfileScreen(host,themeId,
+                            onBack={destination=profileReturn},
+                            onPlan={navigate(KotlinCandidateDestination.PROGRAM)},
+                            onProgress={navigate(KotlinCandidateDestination.PROGRESS)},
+                            onGym={navigate(KotlinCandidateDestination.GYM)},
+                            onSettings={navigate(KotlinCandidateDestination.SETTINGS)},
+                            onAppearance={appearanceExpanded=true})
                     KotlinCandidateDestination.PROGRESS ->
                         NativeKotlinStrengthStandardsScreen(host)
                     KotlinCandidateDestination.HISTORY ->

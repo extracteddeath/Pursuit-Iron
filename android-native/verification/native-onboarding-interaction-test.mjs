@@ -140,7 +140,7 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
 // set or publish a workout directly from an unconfirmed tap.
 const tokens=fs.readFileSync(root+'NativeDesignTokens.kt','utf8');
 assert.ok(tokens.includes('internal object PursuitThemes {') &&
-  tokens.includes('const val DEFAULT_ID="lime"') &&
+  tokens.includes('const val DEFAULT_ID="amethyst"') &&
   tokens.includes('val all:List<PursuitPalette> = listOf(') &&
   tokens.includes('internal val PursuitTypography=Typography(') &&
   tokens.includes('internal object PursuitSpace') &&

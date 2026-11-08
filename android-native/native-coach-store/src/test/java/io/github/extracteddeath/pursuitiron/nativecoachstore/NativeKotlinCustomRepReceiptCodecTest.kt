@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
+import java.io.IOException
 import java.math.BigDecimal
 import java.security.MessageDigest
 import org.junit.Assert.*
@@ -71,6 +72,8 @@ class NativeKotlinCustomRepReceiptCodecTest {
         assertEquals(0,inp.available())
         assertEquals(CustomRepForecastPolicy.LEGACY_STEP_V1,
             receipt.repForecastPolicy)
+        assertEquals(receipt,NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+            "owner-1","workout-3",bytes))
     }
 
     @Test fun v2ReceiptRecordsSignedForecastPolicyWithoutChangingV1() {
@@ -92,6 +95,34 @@ class NativeKotlinCustomRepReceiptCodecTest {
         assertEquals(
             "f44dc7ab715abaa93babe02013e1213579638d9f67a7bb9249c8d9b07f914413",
             hash(v1))
+        assertEquals(receipt(CustomRepForecastPolicy.TARGET_RIR_V2),
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "owner-1","workout-3",v2))
+    }
+
+    @Test fun canonicalReaderRejectsCorruptionWrongOwnerAndUnknownPolicy() {
+        val bytes=NativeKotlinCustomNextRepApprovalFileStore.encode(
+            receipt(CustomRepForecastPolicy.TARGET_RIR_V2))
+        assertThrows(IOException::class.java) {
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "different-owner","workout-3",bytes)
+        }
+        assertThrows(IOException::class.java) {
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "owner-1","workout-3",bytes.copyOf(bytes.size-1))
+        }
+        val body=bytes.copyOfRange(4,bytes.size-32)
+        // The final UTF field is the V2 forecast enum. Recompute the
+        // checksum so rejection proves schema validation, not just hashing.
+        body[body.lastIndex]='X'.code.toByte()
+        val invalid=bytes.copyOf()
+        System.arraycopy(body,0,invalid,4,body.size)
+        val digest=MessageDigest.getInstance("SHA-256").digest(body)
+        System.arraycopy(digest,0,invalid,invalid.size-32,digest.size)
+        assertThrows(IOException::class.java) {
+            NativeKotlinCustomNextRepApprovalFileStore.decodeCanonical(
+                "owner-1","workout-3",invalid)
+        }
     }
 
     @Test fun impossibleOrModifiedReceiptNeverSerializes() {

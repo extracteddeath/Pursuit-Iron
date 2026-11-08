@@ -259,7 +259,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                 runCatching {
                                     host.reviewNextActivatedWorkoutProgression(
                                         absoluteWeek,weekday,chosen,contextInputs,
-                                        readiness,restricted,increase)
+                                        readiness,restricted,increase,
+                                        CustomRepForecastPolicy.TARGET_RIR_V2)
                                 }.getOrNull()
                             }
                             if(generation==coachingGeneration) {
@@ -506,7 +507,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         val ready=repPreview
         AlertDialog(onDismissRequest={if(!busy)confirmRepAcceptance=false},
             title={Text("Accept next-workout reps?")},
-            text={Text("Only the reviewed working-set minimums will change. The weights, goal RIR, other exercises, saved cycle and completed history remain unchanged.")},
+            text={Text("Accept the reviewed working-set minimums and prepare an unissued workout. Weights, RIR, the saved cycle and completed history remain unchanged. Training starts only after a separate Issue confirmation.")},
             confirmButton={
                 Button(enabled=!busy&&ready!=null&&maxStep!=null,
                     onClick={
@@ -516,25 +517,42 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                         busy=true
                         scope.launch {
                             val receipt=selected.receipt
-                            val result=withContext(Dispatchers.IO) {
-                                runCatching {host.approveNextActivatedRepAmendment(
-                                    repWorkoutId,absoluteWeek,weekday,slotId,
-                                    contextInputs,readiness,restricted,increase,
-                                    receipt.fingerprint,receipt.historyRevision,
-                                    receipt.consentRevision,receipt.setKeys,
-                                    receipt.nextMinimumReps,true,
-                                    CustomRepForecastPolicy.TARGET_RIR_V2)}.getOrNull()
+                            val (acceptance,preparation)=withContext(Dispatchers.IO) {
+                                runCatching {
+                                    val result=host.approveNextActivatedRepAmendment(
+                                        repWorkoutId,absoluteWeek,weekday,slotId,
+                                        contextInputs,readiness,restricted,increase,
+                                        receipt.fingerprint,receipt.historyRevision,
+                                        receipt.consentRevision,receipt.setKeys,
+                                        receipt.nextMinimumReps,true,
+                                        CustomRepForecastPolicy.TARGET_RIR_V2)
+                                    val staged=if(result is NativeCustomNextRepWrite.Accepted)
+                                        host.prepareActivatedFutureWorkout(
+                                            receipt.workoutId,active.cycleId,
+                                            absoluteWeek,weekday,contextInputs)
+                                    else null
+                                    result to staged
+                                }.getOrElse{null to null}
                             }
-                            repAccepted=(result as? NativeCustomNextRepWrite.Accepted)
+                            repAccepted=(acceptance as? NativeCustomNextRepWrite.Accepted)
                                 ?.receipt
-                            notice=if(repAccepted==null)
-                                "Rep approval refused: "+(result?:"verification unavailable")+
-                                    ". Recheck your workout."
-                            else "Exact target-RIR rep adjustment accepted; the workout has not been issued."
+                            prepared=(preparation as? NativeCustomPrepareResult.Prepared)
+                                ?.workout?.takeIf{it.workoutId==receipt.workoutId}
+                            notice=when {
+                                repAccepted==null ->
+                                    "Rep approval refused: "+(acceptance?:"verification unavailable")+
+                                        ". Recheck your workout."
+                                prepared==null ->
+                                    "Rep targets accepted, but preparation was refused: "+
+                                        (preparation?:"verification unavailable")+
+                                        ". Retry preparation from this screen."
+                                else ->
+                                    "Approved reps are saved in a prepared native workout. Issue it separately to start training."
+                            }
                             if(repAccepted==null)repPreview=null
                             busy=false
                         }
-                    }) {Text("Accept exact rep targets")}
+                    }) {Text("Accept and prepare")}
             },dismissButton={
                 TextButton(enabled=!busy,onClick={confirmRepAcceptance=false}) {
                     Text("Cancel")

@@ -133,6 +133,58 @@ class NativeKotlinCustomNextRepApprovalFileStore(
                 }
             }.toByteArray()
         }
+        /** Exact canonical envelope decode for both legacy and v2 consent. */
+        internal fun decodeCanonical(
+            key:String,workoutId:String,raw:ByteArray
+        ):NativeCustomNextRepReceipt {
+            return DataInputStream(ByteArrayInputStream(raw)).use{inp->
+                val count=inp.readInt()
+                if(count !in 16..(maxBytes-36) || count+36!=raw.size)
+                    throw IOException("bad rep approval envelope")
+                val bytes=ByteArray(count);inp.readFully(bytes)
+                val expected=ByteArray(32);inp.readFully(expected)
+                if(!MessageDigest.isEqual(expected,digest(bytes)))
+                    throw IOException("rep approval checksum mismatch")
+                val data=DataInputStream(ByteArrayInputStream(bytes))
+                if(data.readInt()!=magic)throw IOException("bad rep approval magic")
+                val storedVersion=data.readInt()
+                if(storedVersion!=legacyVersion && storedVersion!=currentVersion)
+                    throw IOException("bad rep approval schema")
+                val owner=data.readUTF();val athlete=data.readUTF()
+                val wid=data.readUTF();val cycle=data.readUTF()
+                val block=data.readUTF();val slot=data.readUTF()
+                val fingerprint=data.readUTF()
+                val week=data.readInt();val weekday=data.readInt()
+                val consent=data.readLong();val history=data.readLong()
+                val readinessName=data.readUTF()
+                val readiness=CoachReadiness.entries.singleOrNull{
+                    it.name==readinessName
+                }?:throw IOException("bad readiness")
+                val restricted=data.readBoolean()
+                val step=BigDecimal(data.readUTF())
+                val n=data.readInt()
+                if(n !in 1..32)throw IOException("bad rep count")
+                val keys=ArrayList<String>(n);val reps=ArrayList<Int>(n)
+                repeat(n){keys+=data.readUTF();reps+=data.readInt()}
+                val forecast=if(storedVersion==legacyVersion)
+                    CustomRepForecastPolicy.LEGACY_STEP_V1 else {
+                        val storedPolicy=data.readUTF()
+                        CustomRepForecastPolicy.entries.singleOrNull{
+                            it.name==storedPolicy &&
+                                it!=CustomRepForecastPolicy.LEGACY_STEP_V1
+                        }?:throw IOException("unrecognized rep forecast policy")
+                    }
+                if(data.available()!=0)throw IOException("trailing rep approval")
+                NativeCustomNextRepReceipt(owner,athlete,wid,cycle,block,
+                    week,weekday,slot,consent,history,fingerprint,keys,reps,
+                    readiness,restricted,step,forecast).also{
+                    encode(it) // validates ALL stored fields and physical bounds
+                    if(owner!=key || wid!=workoutId)
+                        throw IOException("rep receipt identity collision")
+                }
+            }
+        }
+
     }
 
     private fun current(key:String)=
@@ -153,54 +205,9 @@ class NativeKotlinCustomNextRepApprovalFileStore(
         if(!Files.exists(file))return null
         if(Files.isSymbolicLink(file) || Files.size(file) !in 44L..maxBytes.toLong())
             throw IOException("bad rep approval file")
-        val raw=Files.readAllBytes(file)
-        return DataInputStream(ByteArrayInputStream(raw)).use{inp->
-            val count=inp.readInt()
-            if(count !in 16..(maxBytes-36) || count+36!=raw.size)
-                throw IOException("bad rep approval envelope")
-            val bytes=ByteArray(count);inp.readFully(bytes)
-            val expected=ByteArray(32);inp.readFully(expected)
-            if(!MessageDigest.isEqual(expected,digest(bytes)))
-                throw IOException("rep approval checksum mismatch")
-            val data=DataInputStream(ByteArrayInputStream(bytes))
-            if(data.readInt()!=magic)throw IOException("bad rep approval magic")
-            val storedVersion=data.readInt()
-            if(storedVersion!=legacyVersion && storedVersion!=currentVersion)
-                throw IOException("bad rep approval schema")
-            val owner=data.readUTF();val athlete=data.readUTF()
-            val wid=data.readUTF();val cycle=data.readUTF()
-            val block=data.readUTF();val slot=data.readUTF()
-            val fingerprint=data.readUTF()
-            val week=data.readInt();val weekday=data.readInt()
-            val consent=data.readLong();val history=data.readLong()
-            val readinessName=data.readUTF()
-            val readiness=CoachReadiness.entries.singleOrNull{
-                it.name==readinessName
-            }?:throw IOException("bad readiness")
-            val restricted=data.readBoolean()
-            val step=BigDecimal(data.readUTF())
-            val n=data.readInt()
-            if(n !in 1..32)throw IOException("bad rep count")
-            val keys=ArrayList<String>(n);val reps=ArrayList<Int>(n)
-            repeat(n){keys+=data.readUTF();reps+=data.readInt()}
-            val forecast=if(storedVersion==legacyVersion)
-                CustomRepForecastPolicy.LEGACY_STEP_V1 else {
-                    val storedPolicy=data.readUTF()
-                    CustomRepForecastPolicy.entries.singleOrNull{
-                        it.name==storedPolicy &&
-                            it!=CustomRepForecastPolicy.LEGACY_STEP_V1
-                    }?:throw IOException("unrecognized rep forecast policy")
-                }
-            if(data.available()!=0)throw IOException("trailing rep approval")
-            NativeCustomNextRepReceipt(owner,athlete,wid,cycle,block,
-                week,weekday,slot,consent,history,fingerprint,keys,reps,
-                readiness,restricted,step,forecast).also{
-                encode(it) // validates ALL stored fields and physical bounds
-                if(owner!=key || wid!=workoutId)
-                    throw IOException("rep receipt identity collision")
-            }
-        }
+        return decodeCanonical(key,workoutId,Files.readAllBytes(file))
     }
+
     private fun atomic(key:String,workoutId:String,receipt:NativeCustomNextRepReceipt) {
         Files.createDirectories(directory)
         if(Files.isSymbolicLink(directory))throw IOException("unsafe directory")

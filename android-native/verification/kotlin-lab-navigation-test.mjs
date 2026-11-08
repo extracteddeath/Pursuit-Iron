@@ -21,6 +21,7 @@ const sharedDesign=read('android-native/app/src/main/java/io/github/extracteddea
 const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
 const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
 const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
+const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -56,7 +57,7 @@ assert.ok(targetLast.includes('SingleChoiceSegmentedButtonRow') &&
 for(const phrase of ['PursuitSectionHeading','PursuitExerciseHeading',
   'PursuitEmptyState'])assert.ok(sharedDesign.includes('fun '+phrase),
     'Missing a reusable Material design component: '+phrase);
-for(const phrase of ['host.reviewVerifiedKotlinWorkingSetFacts()',
+for(const phrase of ['host.reviewVerifiedKotlinHistory()', 'reviewWorkingSetFacts()',
   'LoadBasis.BARBELL_TOTAL','lift.reps','epleyEstimate(',
   'comparisonGroup','bodyweightText','Reference methodology',
   'PublishedStrengthReference("barbell_bench"',
@@ -96,6 +97,14 @@ assert.ok(standards.includes('LoadUnit.entries.forEachIndexed') &&
   standards.includes('StrengthStandardsMeasurementDomain.relativeStrength(') &&
   !standards.includes('sharedUnit==lift.key.unit'),
   'Strength Standards must compare unit-normalized logged lifts without hiding mixed lb/kg history');
+assert.ok(standards.includes('verifiedStrengthTrend(it,trendExerciseId,displayUnit)') &&
+  standards.includes('StrengthStandardsMeasurementDomain.relativeStrength(') &&
+  standards.includes('timeline=if(verified.first is NativeKotlinMixedFactsReadResult.Review)') &&
+  trend.includes('CustomWorkoutVisitPart.MAIN') &&
+  trend.includes('KotlinJournalSetOutcome.COMPLETED') &&
+  trend.includes('Canvas(') &&
+  trend.includes('estimatedOneRepMax'),
+  'Progress trend must be drawn only from corrected complete-session strength evidence');
 assert.ok(strengthMeasure.includes('BigDecimal("0.45359237")') &&
   strengthMeasure.includes('fun epley(') &&
   strengthMeasure.includes('fun relativeStrength('),

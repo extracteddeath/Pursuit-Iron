@@ -60,7 +60,8 @@ private fun splitLabel(split: CustomSplitIdentity): String = when (split) {
 internal fun NativeKotlinCustomCycleCandidateScreen(
     controller: NativeKotlinCustomCycleController,
     initialCycleId: String? = null,
-    onOpenIssuedWorkout:(String)->Unit = {}
+    onOpenIssuedWorkout:(String)->Unit = {},
+    onOpenHistory:()->Unit = {}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val draft = state.draft
@@ -322,10 +323,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     NativeCustomNextCycleSlot.CycleComplete ->
                         Text("All scheduled workouts in this saved cycle have verified completed history.",
                             style=MaterialTheme.typography.bodyMedium)
-                    is NativeCustomNextCycleSlot.Rejected ->
+                    is NativeCustomNextCycleSlot.Rejected -> {
                         Text(selection.reason,
                             color=MaterialTheme.colorScheme.error,
                             style=MaterialTheme.typography.bodySmall)
+                        OutlinedButton(
+                            enabled=!busy,
+                            onClick=onOpenHistory,
+                            modifier=Modifier.fillMaxWidth()
+                        ) {Text("Open history setup and recovery")}
+                    }
                     null -> {}
                 }
             }

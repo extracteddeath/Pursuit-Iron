@@ -97,6 +97,8 @@ internal fun NativeKotlinStrengthStandardsScreen(
     }
     val scope=rememberCoroutineScope()
     var profileId by remember(host){mutableStateOf<String?>(null)}
+    // A restored unsaved entry belongs to exactly one confirmed athlete.
+    var comparisonOwnerId by rememberSaveable{mutableStateOf<String?>(null)}
     var savedComparison by remember(host) {
         mutableStateOf<Triple<String,String,String>?>(null)
     }
@@ -108,11 +110,19 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var trendExerciseId by rememberSaveable{mutableStateOf("barbell_bench")}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
-    LaunchedEffect(host) {
+    LaunchedEffect(host,revision) {
         val verified=withContext(Dispatchers.IO) {
             (runCatching {host.reviewActiveAthleteSetup()}.getOrNull()
                 as? NativeSavedSetupResume.Ready)?.setup?.athleteProfileId
         }
+        if(comparisonOwnerId!=verified) {
+            comparisonGroup=null
+            bodyweightText=""
+            bodyweightUnit=LoadUnit.LB.name
+            savedComparison=null
+            comparisonNotice=null
+        }
+        comparisonOwnerId=verified
         profileId=verified
         if(verified!=null) {
             val prefix="athlete:$verified:"
@@ -255,9 +265,11 @@ internal fun NativeKotlinStrengthStandardsScreen(
                                 .putString("athlete:$owner:unit",current.third)
                                 .commit()
                         }
-                        if(saved)savedComparison=current
-                        comparisonNotice=if(saved)"Saved on this device only."
-                            else "Could not save comparison settings."
+                        if(profileId==owner) {
+                            if(saved)savedComparison=current
+                            comparisonNotice=if(saved)"Saved on this device only."
+                                else "Could not save comparison settings."
+                        }
                         comparisonBusy=false
                     }
                 },enabled=profileId!=null && chosen!=null && !comparisonBusy,
@@ -274,13 +286,15 @@ internal fun NativeKotlinStrengthStandardsScreen(
                                 .remove("athlete:$owner:unit")
                                 .commit()
                         }
-                        if(cleared) {
-                            savedComparison=null
-                            comparisonGroup=null
-                            bodyweightText=""
+                        if(profileId==owner) {
+                            if(cleared) {
+                                savedComparison=null
+                                comparisonGroup=null
+                                bodyweightText=""
+                            }
+                            comparisonNotice=if(cleared)"Saved comparison cleared."
+                                else "Could not clear saved comparison."
                         }
-                        comparisonNotice=if(cleared)"Saved comparison cleared."
-                            else "Could not clear saved comparison."
                         comparisonBusy=false
                     }
                 },enabled=profileId!=null && savedComparison!=null && !comparisonBusy,

@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -73,11 +76,35 @@ private fun nativeNextRepExplanation(result:NativeOwnerNextSetResult?):String? =
  * The native writer independently re-reads approval, complete corrected
  * history, and every affected workout day at the moment of acceptance.
  */
+/**
+ * Choice of training scope, separate from progression decisions. Navigation
+ * never authors a weight, applies a suggested week or changes a workout.
+ */
+@Composable
+private fun PursuitCoachDestinations(
+    onOpenProgram:()->Unit,onOpenFuture:()->Unit
+) {
+    PursuitSectionHeading("Your training decisions",
+        "Your saved plan and future cycle reviews are separate from exercise-specific progressions.")
+    PursuitDestinationRow(
+        title="Current training plan",
+        description="Review your next workout and edit the complete saved program.",
+        onClick=onOpenProgram,
+        icon={Icon(Icons.Filled.FitnessCenter,contentDescription=null)})
+    PursuitDestinationRow(
+        title="Future weeks and blocks",
+        description="Review optional adaptations before approving any changes.",
+        onClick=onOpenFuture,
+        icon={Icon(Icons.Filled.CalendarMonth,contentDescription=null)})
+}
+
 @Composable
 internal fun NativeKotlinCandidateCoachScreen(
     host: NativeKotlinCandidateHost,
     preferredExerciseId:String?=null,
     onOpenSettings:()->Unit={},
+    onOpenProgram:()->Unit={},
+    onOpenFuture:()->Unit={},
     onOpenTrain:(String)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
@@ -169,13 +196,15 @@ internal fun NativeKotlinCandidateCoachScreen(
                 },style=MaterialTheme.typography.bodyMedium)
                 Button(onClick=onOpenSettings) {Text("Coaching settings")}
             }
+            PursuitCoachDestinations(onOpenProgram,onOpenFuture)
         }
         return
     }
     PursuitScreenContent {
         PageHeading("YOUR COACH",
-            "Review your next load",
-            "A proposed program change based on your real saved native workouts. Nothing changes automatically.")
+            "Your coaching plan",
+            "Review optional suggestions based on verified workouts. Nothing changes automatically.")
+        PursuitCoachDestinations(onOpenProgram,onOpenFuture)
         OutlinedButton(onClick=onOpenSettings) {Text("Coaching settings")}
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {

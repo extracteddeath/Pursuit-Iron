@@ -177,7 +177,22 @@ internal fun NativeKotlinGymSourceCandidateScreen(
         PursuitCard {
             Text("Verified fixtures and attachments",
                 style=MaterialTheme.typography.titleMedium)
-            Text("Facilities: ${gym.availableFacilities.sorted().joinToString().ifBlank { "None" }}")
+            Text("Facilities",style=MaterialTheme.typography.labelLarge)
+            if(gym.availableFacilities.isEmpty())Text("None confirmed")
+            kotlinGymFacilityGroups.forEach { group ->
+                val available=group.choices.filter{it.first in gym.availableFacilities}
+                if(available.isNotEmpty())Text(
+                    "${group.label} · ${available.joinToString {it.second}}",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+            val mapped=kotlinGymFacilityGroups.flatMap{group->
+                group.choices.map{it.first}
+            }.toSet()
+            val other=gym.availableFacilities-mapped
+            if(other.isNotEmpty())Text(
+                "Other verified facilities · ${other.sorted().joinToString()}",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Attachments: ${gym.availableAttachments.sorted().joinToString().ifBlank { "None" }}")
             OutlinedButton(onClick={editingFixtures=true},
                 enabled=!state.busy) {Text("Edit availability")}
@@ -286,13 +301,17 @@ internal fun NativeKotlinGymSourceCandidateScreen(
             onDismissRequest={if(!state.busy)editingFixtures=false},
             title={Text("Confirmed gym fixtures and attachments")},
             text={
-                Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text("Use explicit stable IDs, separated by commas. Empty means unavailable; no attachments are inferred from equipment.",
-                        style=MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(facilities,{facilities=it.take(1200)},
-                        label={Text("Available facilities")})
+                Column(Modifier.heightIn(max=480.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+                    NativeKotlinGroupedFacilityChoices(
+                        title="Available facilities",raw=facilities,
+                        onChange={facilities=it.take(1200)})
+                    Text("Attachments are separate from facilities; no attachment is inferred.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(attachments,{attachments=it.take(1200)},
-                        label={Text("Available attachments")})
+                        label={Text("Confirmed attachment IDs")},
+                        supportingText={Text("Comma-separated; only attachments physically in your gym.")})
                 }
             },
             confirmButton={Button(onClick={

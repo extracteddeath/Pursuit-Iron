@@ -78,6 +78,13 @@ assert.ok(history.includes('var exerciseSearch by rememberSaveable') &&
   history.includes('Text("Search exercises")') &&
   history.includes('No matching saved exercises.'),
   'History needs a saved, correction-aware searchable exercise drilldown');
+assert.ok(journey.includes('import androidx.activity.compose.BackHandler') &&
+  journey.includes('BackHandler(enabled=destination==KotlinCandidateDestination.PROFILE') &&
+  journey.includes('KotlinCandidateDestination.SETTINGS -> destination=settingsReturn') &&
+  journey.includes('progressRequestedExerciseId=null') &&
+  journey.includes('destination=KotlinCandidateDestination.PROFILE') &&
+  !journey.includes('BackHandler(enabled=activeWorkout'),
+  'Android Back must honor Profile/Settings and pinned lift origin without interfering with Train');
 assert.ok(journey.includes('KotlinCandidateDestination.PROFILE') &&
   journey.includes('NativeKotlinProfileScreen(host,themeId,') &&
   journey.includes('contentDescription="Open athlete profile"') &&

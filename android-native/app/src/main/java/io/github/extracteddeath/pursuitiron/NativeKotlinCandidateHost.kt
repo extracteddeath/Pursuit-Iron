@@ -151,6 +151,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     // already-issued journals retain their historical access contract.
     private val gymCoherentAuthority=NativeKotlinGymCoherentWorkoutAuthority(
         approvalStore,authoringSourceStore,revisionFence)
+    private val nativeHistoryEnrollment=NativeKotlinHistoryEnrollmentCoordinator(
+        journalStore,correctionStore,historyStore,revisionFence,
+        gymCoherentAuthority)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,gymCoherentAuthority,revisionFence,
         NativeKotlinAcceptedRepSnapshotVerifier { owner,approval ->
@@ -464,6 +467,39 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomCorrectionTransactionRefusal.NOT_AUTHORIZED)
         return customCorrectionTransactions.recover(
             owner.ownerKey,owner.athleteId)
+    }
+
+    /**
+     * Explicitly opt in to a SEPARATE Kotlin-Lab training history, not a
+     * migration and not a claim that the person has never trained before.
+     * Original JS/web workout data remains untouched and is not included in
+     * this independent history or its fatigue/progression evidence.
+     *
+     * Fresh-owner origin, owner/current-source and ALL native journal,
+     * correction, custom preparation and issue inventories are checked under
+     * the same revision fence BEFORE an empty manifest may be created.
+     */
+    fun enrollSeparateKotlinHistory(
+        explicitlyConfirmed:Boolean
+    ):NativeHistoryEnrollmentResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeHistoryEnrollmentResult.Rejected(
+                NativeHistoryEnrollmentRefusal.NOT_AUTHORIZED)
+        return nativeHistoryEnrollment.enrollSeparateLocalHistory(
+            owner.ownerKey,owner.athleteId,explicitlyConfirmed,
+            authenticateOwner={o,a->
+                localAthlete.signedInIdentity()==owner &&
+                    owner.ownerKey==o && owner.athleteId==a
+            },
+            verifyIndependentLocalOwner={o,a->
+                val source=(authoringSourceStore.read(o)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                localAthlete.isIndependentLocalProfileOwner(o,a) &&
+                    source?.ownerKey==o && source.athleteId==a &&
+                    source.setup.mayReviewProgramCandidate &&
+                    source.setup.reviewed?.athleteProfileId==a
+            },
+            customInventory=outstandingCustomInventory)
     }
 
     /**

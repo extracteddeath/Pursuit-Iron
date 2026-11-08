@@ -64,7 +64,9 @@ const exerciseHistory=read('android-native/app/src/main/java/io/github/extracted
 assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') &&
   journal.includes('PursuitExerciseHeading(slot.exerciseId,') &&
   exerciseHistory.includes('host.reviewVerifiedKotlinHistory()') &&
-  exerciseHistory.includes('CustomWorkoutVisitPart.MAIN') &&
+  exerciseHistory.includes('CustomWorkoutVisitPart.FOLLOW_UP') &&
+  exerciseHistory.includes('Text("All entries")') &&
+  exerciseHistory.includes('showAllVisits') &&
   exerciseHistory.includes('DraftSetType.WORKING') &&
   exerciseHistory.includes('RIR not reported'),
   'Custom workout History must open complete correction-aware exercise facts, never invent RIR');

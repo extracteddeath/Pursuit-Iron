@@ -1,5 +1,11 @@
 # Pursuit Iron — complete engine scope and acceptance ledger
 
+**Current progress reference — 2026-11-08:** the dated implementation notes
+below are the original scope baseline, not current feature certification.
+The isolated Kotlin Lab now has native-owned issuance and training/restart
+flows. See [release readiness](../RELEASE_READINESS.md) for current evidence
+and gaps; all 14 capabilities and E01–E41 acceptance requirements below remain.
+
 **2026-11-03 source audit. Planning document, not certification.**
 Inspected the independent Kotlin rebuild at fa2f2168 and the separate native Compose foundation at c42f90b0. The new engine is not connected to the native app. None of the 14 FeatureCatalog capabilities is certified better than web on a physical device.
 

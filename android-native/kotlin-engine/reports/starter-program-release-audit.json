@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "first-program-reference-v4",
+  "fixture": "advanced, 40–60 min, declared bar/dumbbell gym, one barbell exercise per day",
+  "totalCases": 12,
+  "reviewablePrograms": 4,
+  "unresolvedCases": 8,
+  "releaseApprovalGranted": false,
+  "cases": [
+    {
+      "split": "FULL_BODY",
+      "phase": "HYPERTROPHY",
+      "days": 3,
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "minutes": [
+        56,
+        56,
+        57
+      ],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "A smaller secondary/accessory set allocation fits the full week while preserving the reviewed muscle-dose, frequency and recovery constraints."
+      ]
+    },
+    {
+      "split": "FULL_BODY",
+      "phase": "STRENGTH",
+      "days": 3,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "The closest checked week still needs coach review of muscle dose, recovery, exercise distribution, time or gym constraints."
+      ]
+    },
+    {
+      "split": "FULL_BODY",
+      "phase": "PEAK",
+      "days": 3,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "The closest checked week still needs coach review of muscle dose, recovery, exercise distribution, time or gym constraints."
+      ]
+    },
+    {
+      "split": "UPPER_LOWER",
+      "phase": "HYPERTROPHY",
+      "days": 4,
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "minutes": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained."
+      ]
+    },
+    {
+      "split": "UPPER_LOWER",
+      "phase": "STRENGTH",
+      "days": 4,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+      ]
+    },
+    {
+      "split": "UPPER_LOWER",
+      "phase": "PEAK",
+      "days": 4,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+      ]
+    },
+    {
+      "split": "PUSH_PULL_LEGS",
+      "phase": "HYPERTROPHY",
+      "days": 6,
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "minutes": [
+        51,
+        40,
+        42,
+        51,
+        40,
+        42
+      ],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained."
+      ]
+    },
+    {
+      "split": "PUSH_PULL_LEGS",
+      "phase": "STRENGTH",
+      "days": 6,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+      ]
+    },
+    {
+      "split": "PUSH_PULL_LEGS",
+      "phase": "PEAK",
+      "days": 6,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+      ]
+    },
+    {
+      "split": "ULPPL",
+      "phase": "HYPERTROPHY",
+      "days": 5,
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "minutes": [
+        60,
+        42,
+        45,
+        51,
+        56
+      ],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained."
+      ]
+    },
+    {
+      "split": "ULPPL",
+      "phase": "STRENGTH",
+      "days": 5,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+      ]
+    },
+    {
+      "split": "ULPPL",
+      "phase": "PEAK",
+      "days": 5,
+      "status": "DRAFT_NEEDS_REVIEW",
+      "minutes": [],
+      "unsupportedMuscles": [
+        "LATS",
+        "FRONT_DELTS",
+        "REAR_DELTS",
+        "BRACHIALIS",
+        "WRIST_FLEXORS",
+        "WRIST_EXTENSORS",
+        "GLUTES"
+      ],
+      "issues": [
+        "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
+        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+      ]
+    }
+  ]
+}

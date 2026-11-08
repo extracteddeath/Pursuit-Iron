@@ -184,6 +184,19 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G1 release-matrix continuation — 2026-11-08:** a shipped-catalog advanced
+40–60-minute smoke matrix exposed unresolved automatic strength/peak starters
+and an overlong Full Body hypertrophy week. New versioned first-program v4
+uses a bounded secondary/accessory set-allocation fallback through the existing
+complete composer. Full Body changes from 64/73/73 to 56/56/57 estimated minutes
+without lowering dose/frequency requirements or changing gym, rest, effort,
+warmups or time settings. Saved v1–v3 algorithms remain available for exact
+replay. A real native three-day completion/restart/correction test reaches
+week two. The matrix now has 4/12 reviewable cases, with 8 unresolved and direct
+catalog gaps still explicit; CI emits the incomplete audit instead of claiming
+release readiness. Local suites: 714 engine + 470 persistence tests. See
+[the full release report](../RELEASE_READINESS.md).
+
 **G4/G5 custom policy recovery — 2026-11-08:** newly signed custom cycles now
 persist exact review inputs in version 2 of the existing native consent record.
 Cold recovery rechecks current identity, program, source, whole-cycle audit and

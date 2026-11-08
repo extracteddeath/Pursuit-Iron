@@ -6,13 +6,17 @@ JavaScript training engine.** This is a release requirement, not an optional
 architectural direction. The new engine must be **better than** the legacy
 coaching engine; reproducing its known bugs is not considered parity.
 
-**Current status (2026-11-03): NOT CUT OVER.** The separate Kotlin engine is a
-headless, non-issuing review laboratory. The current native preview still
-depends on the canonical JavaScript engine runtime. Existing JS-based training
+**Current status (2026-11-08): NOT CUT OVER.** The isolated debug Kotlin Lab now
+connects bounded program generation and native-owned workout issuance, logging,
+correction, Finish and restart recovery. The release variant still launches the
+legacy app and retains its JavaScript engine dependency. Existing JS-based training
 must remain functional on its current branch while an independently tested
 replacement is developed. This contract does not authorize publishing,
 decommissioning the website, modifying another developer's native branch, or
 migrating real user data.
+
+See [current release readiness](../RELEASE_READINESS.md) for executed starter
+matrix results, completed core paths and the remaining production gates.
 
 ## Unified coaching implementation roadmap
 

@@ -78,6 +78,9 @@ jobs:
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace
       - name: Test independent paired-comparison oracle and evidence validation
         run: node --test android-native/kotlin-engine/verification/paired-progression-test.mjs android-native/kotlin-engine/verification/paired-functional-test.mjs
+      - name: Audit real starter split and phase coverage without granting release approval
+        working-directory: android-native
+        run: gradle :kotlin-engine:runStarterProgramReleaseProbe --no-daemon --stacktrace
       - name: Check out frozen web engine for matched progression execution
         uses: actions/checkout@v4
         with:
@@ -103,6 +106,14 @@ jobs:
         with:
           name: kotlin-vs-web-comparison-incomplete
           path: android-native/kotlin-engine/reports/engine-superiority-audit.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Attach real starter release coverage audit (not release approval)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starter-program-release-coverage-incomplete
+          path: android-native/kotlin-engine/build/reports/starter-program-release-audit.json
           if-no-files-found: warn
           retention-days: 7
       - name: Attach fresh matched headless progression execution

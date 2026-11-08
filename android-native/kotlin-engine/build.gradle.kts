@@ -30,3 +30,11 @@ tasks.register<JavaExec>("runPairedFunctionalProbe") {
     args(providers.gradleProperty("comparisonInput").get(),
         providers.gradleProperty("comparisonOutput").get())
 }
+
+tasks.register<JavaExec>("runStarterProgramReleaseProbe") {
+    val tests=tasks.named<Test>("testDebugUnitTest")
+    dependsOn("compileDebugUnitTestKotlin", "processDebugUnitTestJavaRes")
+    classpath=files(tests.map{it.classpath})
+    mainClass.set("io.github.extracteddeath.pursuitiron.rebuild.StarterProgramReleaseProbe")
+    args(layout.buildDirectory.file("reports/starter-program-release-audit.json").get().asFile.absolutePath)
+}

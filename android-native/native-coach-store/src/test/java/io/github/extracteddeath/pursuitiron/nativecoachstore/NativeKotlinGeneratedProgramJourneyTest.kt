@@ -24,11 +24,13 @@ class NativeKotlinGeneratedProgramJourneyTest {
         "db_lateral_raise" to n("15"),"db_curl" to n("25"),
         "db_overhead_triceps" to n("25"),"db_calf_raise" to n("30"))
     private val bodyweight=setOf("bodyweight_crunch")
-    private fun setup()=CoachAthleteSetupDomain.review(AthleteSetupDraft(
+    private fun weekdays(split:ComposerSplit)=if(split==ComposerSplit.FULL_BODY)
+        setOf(0,2,4) else setOf(0,1,3,4)
+    private fun setup(split:ComposerSplit=ComposerSplit.UPPER_LOWER)=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="profile-1",athleteProfileId=athlete,
         goal=AthleteTrainingGoal.HYPERTROPHY,
-        experience=AthleteExperience.ADVANCED,split=ComposerSplit.UPPER_LOWER,
-        trainingWeekdays=setOf(0,1,3,4),timezoneId="America/New_York",
+        experience=AthleteExperience.ADVANCED,split=split,
+        trainingWeekdays=weekdays(split),timezoneId="America/New_York",
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
         gym=GymProfileDraft("gym-1",LoadUnit.LB,mapOf(
@@ -41,10 +43,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         maxBarbellExercisesPerDay=1,focusedMuscles=emptySet(),
         reducedMuscles=emptySet(),excludedExerciseIds=emptySet(),
         lockedTrainingDays=emptySet(),hardTrainingDays=emptySet(),
-        longTrainingDays=emptySet(),declaredRestDays=setOf(2,5,6)))
+        longTrainingDays=emptySet(),declaredRestDays=(0..6).toSet()-weekdays(split)))
     private val catalog=StarterExerciseTranche.movements()
-    private fun request()=FirstProgramStartRequest(
-        setup(),catalog,loads,bodyweight,TrainingPhase.HYPERTROPHY,
+    private fun request(split:ComposerSplit=ComposerSplit.UPPER_LOWER)=FirstProgramStartRequest(
+        setup(split),catalog,loads,bodyweight,TrainingPhase.HYPERTROPHY,
         nonSetSecondsPerDay=900)
 
     private inner class Disk {
@@ -83,9 +85,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
     }
 
     private fun saveGenerated(
-        policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION
+        policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION,
+        split:ComposerSplit=ComposerSplit.UPPER_LOWER
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request().copy(policyVersion=policyVersion)
+        val input=request(split).copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -254,9 +257,40 @@ class NativeKotlinGeneratedProgramJourneyTest {
     }
 
     @Test fun generatedFourDayProgramCompletesAllSetsAndColdReturnsToNextWeek() {
-        val (cycle,inputs)=saveGenerated()
+        completeGeneratedWeek(ComposerSplit.UPPER_LOWER)
+    }
+
+    @Test fun savedV3TimedProgramRetainsItsExactCycleAndTargetsAfterV4Arrives() {
+        val (cycle,inputs)=saveGenerated(CoachFirstProgramStartDomain.TIMED_POLICY_VERSION)
+        val disk=Disk()
+        val seed=(NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
+            .read(owner,cycleId) as NativeFirstProgramSeedRead.Found).seed
+        assertEquals("first-program-reference-v3",seed.policyVersion)
+        val replay=CoachFirstProgramStartDomain.review(request().copy(
+            startingLoads=seed.startingLoads,selectedBodyweightExerciseIds=seed.bodyweightExercises,
+            nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
+        assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
+            replay,setup(),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+        val day=cycle.blocks.single().days.first()
+        val expected=(disk.preflight.inspect(owner,cycleId,1,day.weekday,inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        assertTrue(disk.prepared.prepare(owner,"v3-first-day",cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        val issued=(Disk().journals.issue(owner,"v3-first-day",cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(expected,issued.snapshot)
+        assertTrue(issued.snapshot.slots.flatMap{it.sets}
+            .any{it.prescription.type==DraftSetType.WARMUP})
+    }
+
+    @Test fun generatedFullBodyCompletesItsWholeWeekAndColdReturnsToWeekTwo() {
+        completeGeneratedWeek(ComposerSplit.FULL_BODY)
+    }
+
+    private fun completeGeneratedWeek(split:ComposerSplit) {
+        val (cycle,inputs)=saveGenerated(split=split)
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
-        assertEquals(listOf(0,1,3,4),days.map{it.weekday})
+        assertEquals(weekdays(split).sorted(),days.map{it.weekday})
         assertTrue(days.all{it.slots.size>=3})
         val selected=days.flatMap{it.slots}.map{it.exerciseId}.toSet()
         assertTrue(selected.containsAll(setOf("barbell_bench","back_squat",
@@ -348,12 +382,12 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val seed=(NativeKotlinFirstProgramSeedFileStore(
             temp.root.toPath(),Disk().fence,identity).read(owner,cycleId)
             as NativeFirstProgramSeedRead.Found).seed
-        val regenerated=CoachFirstProgramStartDomain.review(request().copy(
+        val regenerated=CoachFirstProgramStartDomain.review(request(split).copy(
             startingLoads=seed.startingLoads,
             selectedBodyweightExerciseIds=seed.bodyweightExercises,
             nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
         assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
-            regenerated,setup(),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+            regenerated,setup(split),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
         // Editing the first finished workout cannot reorder newer results
         // or rewind next-session selection. Preserve the issued original.
         val firstId=completed.first()

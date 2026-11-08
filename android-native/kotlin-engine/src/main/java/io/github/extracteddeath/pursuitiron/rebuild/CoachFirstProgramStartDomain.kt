@@ -27,7 +27,7 @@ data class FirstProgramStartRequest(
     val extraFocuses:List<ComposerFocus> = emptyList(),
     /** Planning assumption. Editable, not inferred from the time bucket. */
     val nonSetSecondsPerDay:Int = 900,
-    /** Saved calibrations replay their original policy; new plans use v3. */
+    /** Saved calibrations replay their original policy; new plans use v4. */
     val policyVersion:String = CoachFirstProgramStartDomain.POLICY_VERSION
 )
 enum class FirstProgramStartStatus {
@@ -58,9 +58,10 @@ data class FirstProgramStartReview(
 object CoachFirstProgramStartDomain {
     const val LEGACY_POLICY_VERSION="first-program-reference-v1"
     const val PREVIOUS_POLICY_VERSION="first-program-reference-v2"
-    const val POLICY_VERSION="first-program-reference-v3"
+    const val TIMED_POLICY_VERSION="first-program-reference-v3"
+    const val POLICY_VERSION="first-program-reference-v4"
     fun supportsPolicy(version:String)=version in setOf(
-        LEGACY_POLICY_VERSION,PREVIOUS_POLICY_VERSION,POLICY_VERSION)
+        LEGACY_POLICY_VERSION,PREVIOUS_POLICY_VERSION,TIMED_POLICY_VERSION,POLICY_VERSION)
     private val zero=BigDecimal.ZERO
     private fun num(v:Int)=BigDecimal(v)
     private fun freeze(items:List<String>)=Collections.unmodifiableList(items)
@@ -253,7 +254,8 @@ object CoachFirstProgramStartDomain {
             revision=when(input.policyVersion) {
                 LEGACY_POLICY_VERSION->"v1"
                 PREVIOUS_POLICY_VERSION->"v2"
-                else->"v3"
+                TIMED_POLICY_VERSION->"v3"
+                else->"v4"
             },
             rationale="Versioned provisional volume and effort starting plan; personal responses, fatigue and recoverable dose require calibration.",
             athleteId=athlete.athleteProfileId,
@@ -285,8 +287,8 @@ object CoachFirstProgramStartDomain {
             val lower=maxOf(desired.minimum,practical.minimum)
             val upper=minOf(desired.maximum,practical.maximum)
             if(lower>upper)return null
-            // Preserve the v2 low-volume rehearsal exactly. Only v3 uses
-            // its already-reviewed durations while choosing working sets.
+            // Preserve the v2 low-volume rehearsal exactly. V3 and later
+            // use their reviewed durations while choosing working sets.
             val warmup=if(input.policyVersion!=LEGACY_POLICY_VERSION &&
                 source.role!=ComposerRole.ACCESSORY && working!=null) {
                 val stock=athlete.gym.confirmedStock[source.equipmentId]
@@ -304,16 +306,16 @@ object CoachFirstProgramStartDomain {
                 activeSecondsPerSet=workSeconds,restSecondsPerSet=restSeconds,
                 scheme=SetLoadScheme.STRAIGHT,warmups=warmup,dayIndex=dayIndex)
         }
-        val timed=input.policyVersion==POLICY_VERSION
+        val timed=input.policyVersion in setOf(TIMED_POLICY_VERSION,POLICY_VERSION)
         val sharedPolicies=if(timed)choices.mapNotNull {choice->
             prescription(choice.exerciseId,choice.selectedLoad,
                 choice.activeSecondsPerSet,choice.restSecondsPerSet,
                 purposes.keys.single(),null)
         } else emptyList()
-        val generated=runCatching {
+        fun generate(offered:List<CatalogExerciseChoice>)=
             CoachAthleteProgramGenerator.generate(
                 AthleteProgramGenerationRequest(input.setup,input.phase,policy,
-                    input.catalog,choices,
+                    input.catalog,offered,
                     athlete.trainingWeekdays.associateWith {
                         input.nonSetSecondsPerDay
                     },
@@ -325,9 +327,39 @@ object CoachFirstProgramStartDomain {
                     preferredPatternsPerDay=2,
                     extraFocuses=input.extraFocuses,
                     visitTimings=CoachSessionPrescriptionDomain.timingsForPolicies(sharedPolicies)))
+        var generated=runCatching {
+            generate(choices)
         }.getOrElse {
             issues+="The independent weekly composer rejected these inputs."
             return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,policy,gaps=gaps)
+        }
+        val initialAudit=generated.candidate?.catalogReview?.draft?.audit
+        if(input.policyVersion==POLICY_VERSION &&
+            generated.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW &&
+            initialAudit?.satisfiesDeclaredHardConstraints==true &&
+            initialAudit.sessions.any {it.finding==TimeWindowFinding.ABOVE_PREFERENCE}) {
+            // A single greedy allocation is not proof that the athlete's
+            // week cannot fit. Compare at most four smaller secondary/
+            // accessory visit envelopes through the SAME complete composer.
+            // Keep primary options, minimum dose/frequency, stock, warmups,
+            // effort, recovery and both time preferences/hard caps unchanged.
+            // Only new v4 plans use this search; saved v1-v3 remain exact.
+            for((secondary,accessory) in listOf(3 to 3,2 to 3,3 to 2,2 to 2)) {
+                val offered=choices.map {choice->
+                    val cap=when(byId.getValue(choice.exerciseId).role) {
+                        ComposerRole.PRIMARY->choice.maximumSetsPerVisit
+                        ComposerRole.SECONDARY->secondary
+                        ComposerRole.ACCESSORY->accessory
+                    }
+                    choice.copy(maximumSetsPerVisit=minOf(choice.maximumSetsPerVisit,cap))
+                }
+                val alternative=runCatching{generate(offered)}.getOrNull() ?:continue
+                if(alternative.status==AthleteGenerationStatus.GENERATED_FOR_REVIEW) {
+                    generated=alternative
+                    issues+="A smaller secondary/accessory set allocation fits the full week while preserving the reviewed muscle-dose, frequency and recovery constraints."
+                    break
+                }
+            }
         }
         if(generated.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW) {
             issues+=generated.issues.map{it.explanation}

@@ -1,51 +1,47 @@
 # Trial 9 Android emulator setup-to-History journey
 
-Run a one-time emulator installation/lifecycle test using the ALREADY
-BUILT immutable source commit 3949ab1137de1880d4b33e31cd1e4e76711b70ad
-and signed APK artifact from GitHub Actions run 42511496443. This adds guided
-setup and the first-program handoff. No AAB is downloaded or produced.
+## Frozen application and execution
 
-Verify the original receipt and APK hash before installation. On Android
-API 35: install the unique trial package, launch its Kotlin activity,
-background/resume, force-stop and cold-launch, then capture real emulator
-screenshots and AndroidRuntime logs. This proves only basic package/startup
-behavior. It does NOT prove workout progression quality, accessibility,
-backup/migration, full device acceptance or production readiness.
+The APK is built from source commit
+`3949ab1137de1880d4b33e31cd1e4e76711b70ad` in
+[build run 42511496443](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42511496443).
+Package `io.github.extracteddeath.pursuitiron.kotlinlabtrial9`, version code 9.
+No AAB is downloaded or produced. Startup verifies the original receipt,
+package and APK hash before installation.
 
-The startup check now rejects the false equipment-failure banner. Visually
-verify that Amethyst paints the status/navigation bar backgrounds and that
-the system icons remain readable after cold restart.
+[Emulator run 42515915160](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42515915160)
+passed on API 35 with driver commit
+`9398cd20696fdc278bc5f5433bbb876082bd87cf`. The signed APK was unchanged
+throughout the driver corrections. The actual screenshots, UI trees, events
+and result are in artifact `13631019780`; the ZIP SHA-256 is
+`843e7db69d77664da293dc5f58c06d2a5e64cb9bd0eea50489d9246fbc032422`.
 
-After startup, exercise the actual Android controls with the same finite gym
-and advanced four-day Upper/Lower profile used by the native generated-program
-journey tests. Confirm unit-change cancellation, reviewed setup, generated
-program save/approval, explicit independent-history consent, Target/Last input
-retention, synthetic set logging, cold recovery, Finish-to-History and the next
-scheduled day. The runner must not seed private files or call hidden enrollment
-or workout APIs. Captured training logs are synthetic QA, never evidence of
-physiological performance or personalized prediction superiority.
+## Verified through actual Android controls
 
-The first extended run verified setup, unit cancellation and the automatic
-builder handoff, then stopped while locating a long exercise label. The
-retry normalizes accessibility whitespace, scrolls outside editable fields,
-and records the visible control text at each search. Cold recovery must show
-exactly two committed sets before and after restarting the process.
+- Install, cold launch, background/resume and force-stop/cold launch.
+- No false equipment-failure banner; Amethyst system bars and readable icons.
+- Finite gym and advanced four-day Upper/Lower setup, explicit choices and
+  unit-change cancellation retaining the exact entered dumbbell stock.
+- Generated first-program save, full-cycle review and explicit approval.
+- Explicit independent native-history enrollment.
+- Target/Last display changes preserve an unsubmitted six-rep input.
+- Two committed sets before and after process death, including the same
+  saved six reps at 105 lb.
+- Eighteen explicit set completions, committed Finish, and Session 1 in
+  History with 16 working sets completed and actual RIR still unreported.
+- The next saved program day advances to Week 1, Tuesday, Upper.
 
-The captured retry trace showed the exact exercise label on screen before
-the runner's centering swipe flung past it. The next run uses slower swipes
-and small centering movements against the same frozen APK; no application
-or engine change is justified by this test-driver failure.
+The fixture is the finite-gym example in
+`GENERATED_PROGRAM_JOURNEY_CHECKPOINT.md`. The runner uses visible controls
+and native file owners, without private database seeding or hidden host API
+shortcuts. It follows the saved program's actual Resume route. Between
+synthetic records it clears an active rest using the real long-press/reset
+control, and after Finish it returns to the summary to open History.
 
-The runner also explicitly returns to the workout summary after Finish to
-open the history link. Between synthetic set records it clears an active
-rest through the actual long-press/reset control (or Clear rest action),
-without changing any workout prescription, set record or engine setting.
-It is not simulating physical recovery or using these records as forecasting
-evidence. The same signed APK remains pinned throughout these driver fixes.
+## Limits
 
-Run 42514386653 reached the approved generated program, Target/Last input
-retention, two verified committed sets and a process restart. After confirmed
-setup recovery, Plan already reopened the saved program and offered its exact
-unfinished journal. The runner incorrectly looked for the closed-program
-list's Refresh action; it now follows the visible Resume route and still
-requires exactly two committed sets after opening that recovered workout.
+These training logs are synthetic QA, not physical exercise or personal
+performance evidence. This pass does not certify optimal programming,
+physiological prediction superiority, physical Android phones, large text,
+screen readers, foldables, backup/migration or production readiness.
+The full recorded checkpoint is `GUIDED_SETUP_CHECKPOINT.md`.

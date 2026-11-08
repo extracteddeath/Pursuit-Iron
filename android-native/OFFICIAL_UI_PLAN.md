@@ -97,10 +97,15 @@ The first-program preview and both workout paths use original curated
 exercise names. Active sets display their position within warmups or working
 sets, and the custom logger groups reps/RIR side by side on the phone.
 
-**Next implementation priority:** validate these controls through a full
-Android workout and large-text layouts, then continue the Plan/Coach screen
-composition, functional parity and measured coaching improvements. Source
-checks do not establish physical-device acceptance.
+The normal-font API 35 UI journey now verifies Target/Last input retention,
+an 18-visit workout, exact saved-set recovery after force-stop, Finish to
+History and selection of the next program day. See
+`GUIDED_SETUP_CHECKPOINT.md` for the signed APK, run and captured results.
+
+**Next implementation priority:** large-text and physical-phone acceptance,
+Plan/Coach screen composition, functional parity and measured coaching
+improvements. The emulator pass is one synthetic profile and workout. It
+does not establish physical-device acceptance or prediction superiority.
 
 ## Guided setup pass
 

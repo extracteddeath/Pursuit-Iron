@@ -169,4 +169,66 @@ class CoachExerciseDecisionDomainTest {
             review(first,second,context=ctx.copy(maximumStepForReview=n(0)))
         }
     }
+
+    private fun authoredMixed(id:String,reps:List<Int>,rir:List<Int?>):
+        ProgressionWorkoutEvidence {
+        val exercise=workout(id,loads=listOf(25,30,35),reps=reps,rir=rir)
+        return exercise.copy(observations=exercise.observations.map {
+            it.copy(issuedLoad=it.actualLoad)
+        })
+    }
+
+    @Test fun verifiedMixedWeightsAtCeilingAreNotIncorrectlyCalledUnstable() {
+        val mixed=authoredMixed("top-backoff",listOf(8,8,8),listOf(2,2,2))
+        val verified=ctx.copy(verifiedPerSetLoading=true)
+        val result=review(mixed,context=verified)
+        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,result.direction)
+        assertNull(result.nextLoadToReview)
+        assertNull(result.nextRepTargetsForReview)
+        assertNull(result.observedWorkingLoad)
+        assertTrue(CoachEvidenceFlag.DIFFERENT_SET_LOADS in result.evidence)
+        assertEquals(CoachDirection.STABILIZE_SET_LOADING,review(mixed).direction)
+        assertEquals(listOf(n(25),n(30),n(35)),
+            mixed.observations.map {it.actualLoad})
+    }
+
+    @Test fun verifiedMixedWeightsBuildRepsAtTheirOwnLoadsAndEffort() {
+        val verified=ctx.copy(verifiedPerSetLoading=true)
+        val headroom=authoredMixed("mixed-headroom",listOf(8,7,6),
+            listOf(2,3,2))
+        val answer=review(headroom,context=verified)
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,answer.direction)
+        assertEquals(listOf(8,8,6),answer.nextRepTargetsForReview)
+        assertNull(answer.nextLoadToReview)
+        assertNull(answer.observedWorkingLoad)
+
+        val noHeadroom=authoredMixed("mixed-hold",listOf(8,7,6),
+            listOf(2,2,2))
+        val hold=review(noHeadroom,context=verified)
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,hold.direction)
+        assertNull(hold.nextRepTargetsForReview)
+        assertNull(hold.nextLoadToReview)
+        assertTrue(hold.explanation.contains("authorized weight for each set"))
+    }
+
+    @Test fun verifiedPerSetFlagNeverLaundersUnissuedOrUnverifiedWeights() {
+        val verified=ctx.copy(verifiedPerSetLoading=true)
+        val mixed=authoredMixed("mixed-edited",listOf(8,7,6),
+            listOf(2,3,2))
+        val edited=mixed.copy(observations=mixed.observations.mapIndexed {i,set->
+            if(i==2)set.copy(issuedLoad=n(30)) else set
+        })
+        assertEquals(CoachDirection.STABILIZE_SET_LOADING,
+            review(edited,context=verified).direction)
+        val unavailable=verified.copy(availableLoads=null)
+        val check=review(mixed,context=unavailable)
+        assertEquals(CoachDirection.VERIFY_LOADING_OPTIONS,check.direction)
+        assertTrue(CoachEvidenceFlag.DEVICE_LOAD_NOT_VERIFIED in check.evidence)
+        assertNull(check.nextLoadToReview)
+        assertNull(check.nextRepTargetsForReview)
+        val exhausted=authoredMixed("mixed-effort",listOf(8,7,5),
+            listOf(2,3,0))
+        assertEquals(CoachDirection.REVIEW_WORKING_LOAD,
+            review(exhausted,context=verified).direction)
+    }
 }

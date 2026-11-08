@@ -174,12 +174,10 @@ object CoachExerciseDecisionDomain {
             return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.STRONG,
                 "Some sets fell below the prescribed rep range. Review the load and fatigue before adding weight.")
         if(latestFacts.mixedActualLoads) {
-            // A verified per-set prescription is different from an athlete
-            // unexpectedly editing weights during a straight-set workout.
-            // Each ordinal uses its own observed effort and intended RIR.
-            // No weight is raised or copied to other days/sets.
-            if(context.verifiedPerSetLoading &&
-                latestFacts.ceilingOrdinals.size<last.expectedWorkingSets) {
+            // Intentional top/backoff loading is not unstable. Only an
+            // authenticated per-set prescription can take this path.
+            // Every actual load must still match its issued set and stock.
+            if(context.verifiedPerSetLoading) {
                 val review=FatigueAwareRepTargetReviewDomain.assess(
                     last,context.availableLoads,
                     context.availableLoads?.basis ?: LoadBasis.EXERCISE_OVERRIDE,
@@ -188,15 +186,44 @@ object CoachExerciseDecisionDomain {
                 if(review.candidateRepTargets!=null)
                     return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
                         CoachConfidence.LIMITED,
-                        "Review each set's reps at its intended RIR, keeping its own weight. These are estimates from the last workout; earlier work and actual rest can change later capacity.",
+                        "Review each set's reps at its intended RIR, keeping its own weight. These estimates do not yet account for earlier work, actual rest or chronic fatigue.",
                         repTargets=review.candidateRepTargets,
                         assumedCount=review.assumedGoalRirSetCount)
-                if(review.reason==FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
-                    return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.LIMITED,
-                        "Review the set-specific loads and recovery: the reported effort suggests at least one set cannot maintain the rep range at its intended RIR.")
+                when(review.reason) {
+                    FatigueRepReviewReason.ALREADY_AT_REP_CEILING ->
+                        return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+                            CoachConfidence.LIMITED,
+                            "Every authored weight reached its rep ceiling. Repeat a comparable set-specific session; a heavier load for any ordinal needs its own progression review.",
+                            assumedCount=review.assumedGoalRirSetCount)
+                    FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM ->
+                        return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
+                            CoachConfidence.LIMITED,
+                            "Hold the authorized weight for each set and build reps as effort allows. The last session did not establish a higher rep target.",
+                            assumedCount=review.assumedGoalRirSetCount)
+                    FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW ->
+                        return result(CoachDirection.REVIEW_WORKING_LOAD,
+                            CoachConfidence.LIMITED,
+                            "Review the set-specific loads and recovery: at least one set cannot maintain the rep range at its intended RIR.")
+                    FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED -> {
+                        flags+=CoachEvidenceFlag.DEVICE_LOAD_NOT_VERIFIED
+                        return result(CoachDirection.VERIFY_LOADING_OPTIONS,
+                            CoachConfidence.LIMITED,
+                            "Confirm every authored set's actual implement load and inventory before reviewing progression.")
+                    }
+                    FatigueRepReviewReason.ZERO_LOAD_NEEDS_SPECIFIC_POLICY ->
+                        return result(CoachDirection.CONFIRM_ZERO_LOAD_MEANING,
+                            CoachConfidence.LIMITED,
+                            "Confirm bodyweight, assistance or loading semantics for each set before reviewing progression.")
+                    FatigueRepReviewReason.EFFORT_TARGET_MISSING,
+                    FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED ->
+                        return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+                            CoachConfidence.LIMITED,
+                            "This set-specific session has missing effort targets. Confirm them before changing its individual loads or reps.")
+                    else -> Unit // edited loads or unsafe evidence cannot pass
+                }
             }
             return result(CoachDirection.STABILIZE_SET_LOADING,CoachConfidence.LIMITED,
-                "Working weights varied across the sets. Use the full set history to choose a repeatable load; the heaviest set alone is not a starting target.")
+                "Working weights varied without a verified matching per-set progression review. Check each issued weight; the heaviest set alone is not a starting target.")
         }
         if(latestFacts.ceilingOrdinals.size!=last.expectedWorkingSets) {
             val repReview=FatigueAwareRepTargetReviewDomain.assess(

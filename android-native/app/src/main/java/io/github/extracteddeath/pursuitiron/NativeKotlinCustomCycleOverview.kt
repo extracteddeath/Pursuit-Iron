@@ -13,6 +13,20 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomNextCyc
 import io.github.extracteddeath.pursuitiron.rebuild.*
 
 /** Read-only base structure. Exact week overrides remain in the verified workout preview. */
+private fun authoredLoadDescription(load:DraftSetLoad):String = when(load) {
+    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+    is DraftSetLoad.Verified ->
+        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"
+}
+
+private fun authoredSetDescription(set:CustomAuthoredSet,number:Int):String {
+    val kind=set.type.name.lowercase().replaceFirstChar{it.uppercase()}
+    val reps=if(set.reps.minimum==set.reps.maximum)
+        "${set.reps.minimum}" else "${set.reps.minimum}–${set.reps.maximum}"
+    return "Set $number · $kind · ${authoredLoadDescription(set.load)} · " +
+        "$reps reps · RIR ${set.targetRir?.toString() ?: "not set"} · " +
+        "${set.restSeconds}s rest"
+}
 @Composable
 internal fun NativeKotlinCustomCycleOverview(
     cycle:CustomTrainingCycle,selection:NativeCustomNextCycleSlot?
@@ -67,13 +81,43 @@ internal fun NativeKotlinCustomCycleOverview(
                 if(expanded)day.slots.forEach { slot ->
                     val working=slot.sets.count{it.type==DraftSetType.WORKING}
                     val warmups=slot.sets.count{it.type==DraftSetType.WARMUP}
+                    var showTargets by rememberSaveable(cycle.cycleId,block.blockId,
+                        day.weekday,slot.slotId) {mutableStateOf(false)}
                     Column(Modifier.fillMaxWidth().padding(horizontal=PursuitSpace.sm),
                         verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
-                        Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.bodyMedium)
-                        Text("$working working ${if(working==1)"set" else "sets"}"+
-                            if(warmups>0)" · $warmups ${if(warmups==1)"warm-up" else "warm-ups"}" else "",
-                            style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.fillMaxWidth(),
+                            verticalAlignment=Alignment.CenterVertically,
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(kotlinExerciseLabel(slot.exerciseId),
+                                    style=MaterialTheme.typography.bodyMedium)
+                                Text("$working working ${if(working==1)"set" else "sets"}"+
+                                    if(warmups>0)" · $warmups ${if(warmups==1)"warm-up" else "warm-ups"}" else "",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(onClick={showTargets=!showTargets},
+                                modifier=Modifier.heightIn(min=48.dp)) {
+                                Text(if(showTargets)"Hide sets" else "See sets")
+                            }
+                        }
+                        if(showTargets) {
+                            slot.sets.forEachIndexed {index,set ->
+                                Text(authoredSetDescription(set,index+1),
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                set.amplifier?.let { amplifier ->
+                                    Text("  ${amplifier.kind.name.lowercase().replace('_',' ')} · " +
+                                        "${amplifier.followUpReps} follow-up reps · " +
+                                        "${amplifier.followUpRestSeconds}s rest" +
+                                        (amplifier.followUpLoad?.let {
+                                            " · ${authoredLoadDescription(it)}"
+                                        } ?: " · same load"),
+                                        style=MaterialTheme.typography.bodySmall,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -98,6 +98,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val resumableCustomWorkouts=NativeKotlinCustomResumeReview(
         revisionFence,localAthlete,mixedHistoryReader,
         outstandingCustomInventory,customIssuedStore)
+    private val nextCustomCycleSession=NativeKotlinCustomNextCycleSessionReview(
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customCycleSignoffs,mixedHistoryReader,outstandingCustomInventory,
+        customPreparedStore)
     private val composerActivationInventory=NativeKotlinComposerActivationInventory(
         journalStore,approvalStore)
     private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(
@@ -362,6 +366,18 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * unfinished custom workouts. No user-entered ID, local cache or
      * prepared-but-not-issued preview can grant access to a workout.
      */
+    /** Reconciles consent, real history and exact prepared/issued workouts
+     * before recommending the next saved-cycle session. Never issues a set. */
+    fun reviewNextCustomCycleSession(
+        cycleId:String,inputs:CustomCoachAuditInputs
+    ):NativeCustomNextCycleSlot {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextCycleSlot.Rejected(
+                "The native athlete is not active.")
+        return nextCustomCycleSession.review(
+            owner.ownerKey,cycleId,inputs)
+    }
+
     fun reviewResumableCustomWorkouts():NativeCustomResumeReview {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomResumeReview.Rejected(

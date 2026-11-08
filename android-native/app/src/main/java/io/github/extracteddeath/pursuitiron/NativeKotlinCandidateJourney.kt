@@ -4,6 +4,13 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,6 +67,7 @@ internal fun NativeKotlinCandidateJourney() {
     // returning lifter through onboarding again. No silent workout issuance
     // or journal opening: TRAIN independently revalidates saved receipts.
     var landingChecked by remember(host) { mutableStateOf(false) }
+    var navigationTouched by remember { mutableStateOf(false) }
     LaunchedEffect(host) {
         if(!landingChecked) {
             val initial=withContext(Dispatchers.IO) {
@@ -79,7 +87,8 @@ internal fun NativeKotlinCandidateJourney() {
             }
             // Do not steal focus after a deliberate tab choice, or from a
             // restored workout currently open in the saved Android state.
-            if(destination==KotlinCandidateDestination.ONBOARD)
+            if(!navigationTouched &&
+                destination==KotlinCandidateDestination.ONBOARD)
                 destination=initial
             landingChecked=true
         }
@@ -94,18 +103,88 @@ internal fun NativeKotlinCandidateJourney() {
             else cycleController.openSavedTraining()
         }
     }
-    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(0.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp)
-            .horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            KotlinCandidateDestination.entries.forEach { page ->
-                FilterChip(selected=destination==page,
-                    onClick={destination=page},
-                    label={Text(page.label)})
+    var moreExpanded by remember { mutableStateOf(false) }
+    fun navigate(to:KotlinCandidateDestination) {
+        navigationTouched=true
+        destination=to
+    }
+    // Four ordinary destinations stay within a thumb's reach. Setup,
+    // generator, gym, and future-block tools remain in the explicit menu.
+    // This is a real Compose navigation shell, not a new session owner.
+    Scaffold(
+        topBar={
+            Surface(tonalElevation=1.dp) {
+                Row(Modifier.fillMaxWidth()
+                    .padding(horizontal=16.dp,vertical=6.dp),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Pursuit Iron",style=MaterialTheme.typography.titleMedium)
+                        Text(destination.label,
+                            style=MaterialTheme.typography.labelMedium,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box {
+                        IconButton(onClick={moreExpanded=true}) {
+                            Icon(Icons.Filled.MoreVert,contentDescription="More screens")
+                        }
+                        DropdownMenu(expanded=moreExpanded,
+                            onDismissRequest={moreExpanded=false}) {
+                            val extras=listOf(
+                                KotlinCandidateDestination.ONBOARD,
+                                KotlinCandidateDestination.GYM,
+                                KotlinCandidateDestination.STARTER,
+                                KotlinCandidateDestination.FUTURE,
+                                KotlinCandidateDestination.SETTINGS)
+                            extras.forEach { page->
+                                DropdownMenuItem(text={Text(page.label)},onClick={
+                                    moreExpanded=false
+                                    navigate(page)
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        bottomBar={
+            NavigationBar {
+                listOf(KotlinCandidateDestination.PROGRAM,
+                    KotlinCandidateDestination.TRAIN,
+                    KotlinCandidateDestination.HISTORY,
+                    KotlinCandidateDestination.COACH).forEach {page->
+                    val selected=destination==page ||
+                        (page==KotlinCandidateDestination.PROGRAM &&
+                            destination in listOf(
+                                KotlinCandidateDestination.STARTER,
+                                KotlinCandidateDestination.FUTURE)) ||
+                        (page==KotlinCandidateDestination.COACH &&
+                            destination==KotlinCandidateDestination.SETTINGS)
+                    NavigationBarItem(
+                        selected=selected,
+                        onClick={navigate(page)},
+                        icon={
+                            when(page) {
+                                KotlinCandidateDestination.PROGRAM ->
+                                    Icon(Icons.Filled.Home,contentDescription=null)
+                                KotlinCandidateDestination.TRAIN ->
+                                    Icon(Icons.Filled.FitnessCenter,contentDescription=null)
+                                KotlinCandidateDestination.HISTORY ->
+                                    Icon(Icons.Filled.History,contentDescription=null)
+                                else ->Icon(Icons.Filled.Person,contentDescription=null)
+                            }
+                        },
+                        label={Text(when(page){
+                            KotlinCandidateDestination.PROGRAM ->"Plan"
+                            KotlinCandidateDestination.TRAIN ->"Train"
+                            KotlinCandidateDestination.HISTORY ->"History"
+                            else ->"Coach"
+                        })}
+                    )
+                }
             }
         }
-        HorizontalDivider()
-        Box(Modifier.fillMaxSize()) {
+    ) { insets ->
+        Box(Modifier.fillMaxSize().padding(insets)) {
             savedScreens.SaveableStateProvider(destination.name) {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->

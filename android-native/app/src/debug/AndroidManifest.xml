@@ -1,6 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
-        <activity android:name=".KotlinEnginePreviewActivity" android:exported="true" android:label="Pursuit Iron Kotlin Lab">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application android:label="Pursuit Iron Kotlin Lab"
+        tools:replace="android:label">
+        <!-- Only Kotlin Lab is launchable for the isolated .kotlinlab build. -->
+        <activity android:name=".KotlinEnginePreviewActivity"
+            android:exported="true" android:label="Pursuit Iron Kotlin Lab">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

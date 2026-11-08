@@ -27,6 +27,9 @@ on:
       - 'android-native/app/build.gradle.kts'
       - 'android-native/settings.gradle.kts'
       - '.github/workflows/android-kotlin-rebuild.yml'
+      - 'android-native/app/src/main/AndroidManifest.xml'
+      - 'android-native/app/src/release/AndroidManifest.xml'
+      - 'android-native/verification/kotlin-lab-navigation-test.mjs'
   workflow_dispatch:
 concurrency:
   group: kotlin-engine-rebuild-${{ github.ref }}
@@ -61,6 +64,8 @@ jobs:
         run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
       - name: Verify first curated starter tranche provenance
         run: node android-native/kotlin-engine/verification/starter-catalog-parity.mjs
+      - name: Verify isolated Kotlin Lab launcher and app navigation
+        run: node android-native/verification/kotlin-lab-navigation-test.mjs
       - name: Test headless Kotlin training decisions and weekly composer without an APK
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace
@@ -84,7 +89,7 @@ jobs:
         run: gradle :native-coach-store:testDebugUnitTest --no-daemon --stacktrace
       - name: Compile Android application with isolated Kotlin host, without building an APK
         working-directory: android-native
-        run: gradle :app:compileDebugKotlin :app:processDebugMainManifest --no-daemon --stacktrace
+        run: gradle :app:compileDebugKotlin :app:processDebugMainManifest :app:processReleaseMainManifest --no-daemon --stacktrace
       - name: Attach incomplete engine comparison scorecard (not release approval)
         if: always()
         uses: actions/upload-artifact@v4

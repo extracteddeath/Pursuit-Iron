@@ -86,6 +86,24 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         return result as AdaptiveSetPrescriptionResult.Candidate
     }
 
+    @Test fun fullWorkoutCannotTransformOverCeilingWorkIntoReducedRepProgression() {
+        val previous=observed(reps=listOf(16,13,12),rir=listOf(2,3,2))
+        val result=KotlinAdaptiveSetPrescriptionDomain.draft(
+            request(previous=previous))
+        assertEquals(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+            (result as AdaptiveSetPrescriptionResult.Rejected).reason)
+        assertEquals(listOf(16,13,12),previous.observations.map {it.actualReps})
+
+        val backoff=observed(reps=listOf(16,13,12),rir=listOf(2,3,2),
+            actualLoads=listOf("30","30","25"),
+            issuedLoads=listOf("30","30","25"))
+        val denied=KotlinAdaptiveSetPrescriptionDomain.draft(
+            request(previous=backoff,next=stagedRequest(
+                p=matchingBackoffPolicy())))
+        assertEquals(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+            (denied as AdaptiveSetPrescriptionResult.Rejected).reason)
+    }
+
     @Test fun constructsActualPerSetTargetsAtIntendedEffortAcrossSeveralSets() {
         val original=KotlinWorkoutSnapshotDomain.stage(stagedRequest())
         assertTrue(original.toString(),original is KotlinWorkoutSnapshotResult.Staged)

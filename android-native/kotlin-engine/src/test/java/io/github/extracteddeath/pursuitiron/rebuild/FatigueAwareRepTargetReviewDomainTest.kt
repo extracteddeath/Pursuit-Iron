@@ -66,6 +66,50 @@ class FatigueAwareRepTargetReviewDomainTest {
             original.observations.map {it.actualLoad})
     }
 
+    @Test fun repCeilingOvershootNeverMasqueradesAsEarnedRepProgression() {
+        val over=review(session(reps=listOf(16,13,12),rir=listOf(2,3,2)))
+        assertEquals(FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW,
+            over.reason)
+        assertNull(over.candidateRepTargets)
+        assertNull(over.proposedOrdinal)
+        assertEquals(listOf(16,13,12),over.observedReps)
+        assertTrue(over.forecastLimitations.contains(
+            RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED))
+        assertEquals(FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW,
+            review(session(reps=listOf(16,16,15),rir=listOf(3,3,2))).reason)
+        assertEquals(listOf(15,14,12),review().candidateRepTargets)
+        // Old signed v1 behavior is replayed exactly, never silently upgraded.
+        assertEquals(FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,
+            FatigueAwareRepTargetReviewDomain.assess(
+                session(reps=listOf(16,13,12),rir=listOf(2,3,2)),
+                gym,LoadBasis.DUMBBELL_PER_HAND,CoachReadiness.NORMAL,false,
+                policyVersion=AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1).reason)
+    }
+
+    @Test fun overshootRemainsReviewOnlyForStraightAndAuthenticatedBackoffSets() {
+        val over=session(reps=listOf(16,13,12),rir=listOf(2,3,2))
+        val context=CoachExerciseContext(CoachReadiness.NORMAL,false,gym,n("5"))
+        val straight=CoachExerciseDecisionDomain.review(listOf(over),context)
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,straight.direction)
+        assertNull(straight.nextRepTargetsForReview)
+        assertTrue(straight.explanation.contains("exceeded"))
+
+        val backoff=session(reps=listOf(16,13,12),rir=listOf(2,3,2),
+            loads=listOf("35","30","25"),
+            issued=listOf("35","30","25"))
+        val perSet=FatigueAwareRepTargetReviewDomain.assess(
+            backoff,gym,LoadBasis.DUMBBELL_PER_HAND,CoachReadiness.NORMAL,
+            false,verifiedPerSetLoading=true)
+        assertEquals(FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW,
+            perSet.reason)
+        assertNull(perSet.candidateRepTargets)
+        val backoffCoach=CoachExerciseDecisionDomain.review(listOf(backoff),
+            context.copy(verifiedPerSetLoading=true))
+        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,backoffCoach.direction)
+        assertNull(backoffCoach.nextRepTargetsForReview)
+        assertTrue(backoffCoach.explanation.contains("exceeded"))
+    }
+
     @Test fun severalSetsAndSeveralRepsCanChangeWhenEachHasEffortHeadroom() {
         val input=session(reps=listOf(10,10,10),rir=listOf(5,5,5))
         val result=review(input)

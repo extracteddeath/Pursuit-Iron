@@ -214,6 +214,10 @@ object CoachExerciseDecisionDomain {
                         return result(CoachDirection.CONFIRM_ZERO_LOAD_MEANING,
                             CoachConfidence.LIMITED,
                             "Confirm bodyweight, assistance or loading semantics for each set before reviewing progression.")
+                    FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW ->
+                        return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+                            CoachConfidence.LIMITED,
+                            "A set exceeded its authored rep ceiling. Review the set-specific load and rep range; reducing it back to the ceiling is not earned progression.")
                     FatigueRepReviewReason.EFFORT_TARGET_MISSING,
                     FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED ->
                         return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
@@ -233,6 +237,10 @@ object CoachExerciseDecisionDomain {
             if(repReview.reason==FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
                 return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.LIMITED,
                     "The reported effort suggests this load cannot maintain the rep range at the intended RIR. Review the load and recovery.")
+            if(repReview.reason==FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW)
+                return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
+                    CoachConfidence.LIMITED,
+                    "A set exceeded its prescribed rep ceiling while other sets are still building. Keep the planned range and review the load; cutting recorded extra reps to the ceiling is not a progression.")
             return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
                 CoachConfidence.LIMITED,
                 if(repReview.candidateRepTargets!=null)

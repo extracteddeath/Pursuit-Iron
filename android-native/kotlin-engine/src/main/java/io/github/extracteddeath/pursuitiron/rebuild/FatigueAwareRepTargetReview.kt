@@ -33,7 +33,8 @@ enum class FatigueRepReviewReason {
     ONE_SET_REP_INCREASE_FOR_REVIEW,
     TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
     EFFORT_TARGET_MISSING,
-    EFFORT_REQUIRES_LOAD_REVIEW
+    EFFORT_REQUIRES_LOAD_REVIEW,
+    REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW
 }
 
 enum class AdaptiveRepPolicyVersion { LEGACY_SINGLE_SET_V1, TARGET_RIR_V2 }
@@ -161,6 +162,12 @@ object FatigueAwareRepTargetReviewDomain {
             (policyVersion==AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1 &&
                 effort.values.any {it.rir!=null && it.rir<=1}))
             return result(FatigueRepReviewReason.NEAR_FAILURE_OR_RECOVERY_PRIORITY)
+        // Clipping a completed 16+ reps down to a prescribed 15-rep
+        // ceiling must not masquerade as earned progression. Over-ceiling
+        // work needs a load/range review. Preserve frozen v1 receipts.
+        if(policyVersion==AdaptiveRepPolicyVersion.TARGET_RIR_V2 &&
+            ordered.any {checkNotNull(it.actualReps)>session.targetReps.maximum})
+            return result(FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW)
         if(effort.values.any {it.rir==null})
             return result(FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED)
         if(policyVersion==AdaptiveRepPolicyVersion.TARGET_RIR_V2) {

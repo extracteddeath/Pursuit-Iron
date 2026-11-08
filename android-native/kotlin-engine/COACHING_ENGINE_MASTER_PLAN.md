@@ -184,6 +184,16 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G3 over-ceiling progression safeguard — 2026-11-08:** target-RIR v2
+no longer clips observed above-ceiling reps into a nominally lower
+"progression". It asks for a load/range review and refuses to materialize
+a misleading next-workout rep candidate, including authenticated per-set
+backoffs. The exercise coach explains the review without overwriting
+actual reps; historical v1 replay stays unchanged. Kotlin engine tests
+cover partial/all-set overshoots, standard and backoff schemes, and whole
+next-workout candidate refusal. This is an arithmetic/provenance correctness
+fix, not evidence that next-session fatigue forecasts are individualized.
+
 **G5 workout-rest continuation — 2026-11-08:** both Kotlin journal paths now
 connect exact issued rest and authenticated saved receipts to the shared native
 countdown, including separate amplifier and ordinary rest and immediate

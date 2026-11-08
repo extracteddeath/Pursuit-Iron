@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -80,7 +83,8 @@ private fun displayedTier(ratio:Double,thresholds:List<Double>):String {
  */
 @Composable
 internal fun NativeKotlinStrengthStandardsScreen(
-    host:NativeKotlinCandidateHost
+    host:NativeKotlinCandidateHost,
+    preferredExerciseId:String?=null
 ) {
     var result by remember(host) {
         mutableStateOf<NativeKotlinMixedFactsReadResult?>(null)
@@ -96,6 +100,12 @@ internal fun NativeKotlinStrengthStandardsScreen(
         context.getSharedPreferences("pursuit-strength-comparison-v1",0)
     }
     val scope=rememberCoroutineScope()
+    val favoritePreferences=remember(context) {
+        context.getSharedPreferences(NativeStrengthFavorites.PREFS_NAME,0)
+    }
+    var favoriteLiftIds by remember(host){mutableStateOf<List<String>>(emptyList())}
+    var favoriteBusy by remember{mutableStateOf(false)}
+    var favoriteNotice by remember{mutableStateOf<String?>(null)}
     var profileId by remember(host){mutableStateOf<String?>(null)}
     // A restored unsaved entry belongs to exactly one confirmed athlete.
     var comparisonOwnerId by rememberSaveable{mutableStateOf<String?>(null)}
@@ -110,6 +120,30 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var trendExerciseId by rememberSaveable{mutableStateOf("barbell_bench")}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
+    LaunchedEffect(preferredExerciseId) {
+        if(preferredExerciseId in NativeStrengthFavorites.supportedIds)
+            trendExerciseId=checkNotNull(preferredExerciseId)
+    }
+    fun toggleFavorite(exerciseId:String) {
+        val athleteId=profileId ?:return
+        if(favoriteBusy || exerciseId !in NativeStrengthFavorites.supportedIds)return
+        val selected=if(exerciseId in favoriteLiftIds)
+            favoriteLiftIds-exerciseId else favoriteLiftIds+exerciseId
+        favoriteBusy=true
+        favoriteNotice=null
+        scope.launch {
+            val saved=withContext(Dispatchers.IO) {
+                NativeStrengthFavorites.write(favoritePreferences,athleteId,selected)
+            }
+            if(profileId==athleteId) {
+                if(saved)favoriteLiftIds=selected
+                favoriteNotice=if(saved)
+                    "Favorite lifts saved privately on this device."
+                    else "Could not update favorite lifts."
+            }
+            favoriteBusy=false
+        }
+    }
     LaunchedEffect(host,revision) {
         val verified=withContext(Dispatchers.IO) {
             (runCatching {host.reviewActiveAthleteSetup()}.getOrNull()
@@ -124,6 +158,10 @@ internal fun NativeKotlinStrengthStandardsScreen(
         }
         comparisonOwnerId=verified
         profileId=verified
+        favoriteLiftIds=if(verified==null)emptyList()
+            else withContext(Dispatchers.IO) {
+                NativeStrengthFavorites.read(favoritePreferences,verified)
+            }
         if(verified!=null) {
             val prefix="athlete:$verified:"
             val stored=withContext(Dispatchers.IO) {
@@ -327,24 +365,36 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     PursuitEmptyState("Start building your strength record",
                         "Complete and save a native barbell workout to see its verified performance here.")
                 PursuitSectionHeading("Strength trend",
-                    "Compare actual finished sessions, not programmed targets.")
+                    "Select an exact barbell lift. Pin your favorites below to keep them first and show them in Profile.")
+                val orderedReferences=favoriteLiftIds.mapNotNull { id ->
+                    publishedReferences.firstOrNull{it.exerciseId==id}
+                }+publishedReferences.filter{it.exerciseId !in favoriteLiftIds}
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                    publishedReferences.forEach { lift ->
+                    orderedReferences.forEach { lift ->
                         FilterChip(selected=trendExerciseId==lift.exerciseId,
                             onClick={trendExerciseId=lift.exerciseId},
+                            leadingIcon={
+                                if(lift.exerciseId in favoriteLiftIds)
+                                    Icon(Icons.Filled.Star,contentDescription="Pinned favorite",
+                                        modifier=Modifier.size(18.dp))
+                            },
                             label={Text(lift.title)})
                     }
                 }
+                favoriteNotice?.let { Text(it,
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant) }
                 val samples=remember(timeline,trendExerciseId,displayUnit) {
                     timeline?.let {
                         verifiedStrengthTrend(it,trendExerciseId,displayUnit)
                     }.orEmpty()
                 }
-                PursuitStrengthTrendChart(samples,displayUnit)
+                PursuitStrengthTrendChart(samples,displayUnit,
+                    onOpenHistory={historyExerciseId=trendExerciseId})
                 PursuitSectionHeading("Strength standards",
                     "Broad community reference levels for four source-matched barbell lifts.")
-                publishedReferences.forEach { standard ->
+                orderedReferences.forEach { standard ->
                     val best=completed.filter{it.key.exerciseId==standard.exerciseId}
                         .mapNotNull {lift->
                             epleyEstimate(lift.actualLoad,lift.reps)?.let{estimate->
@@ -356,6 +406,15 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         PursuitExerciseHeading(standard.exerciseId,
                             onHistory={historyExerciseId=standard.exerciseId},
                             subtitle="Source-matched barbell movement")
+                        val isFavorite=standard.exerciseId in favoriteLiftIds
+                        OutlinedButton(onClick={toggleFavorite(standard.exerciseId)},
+                            enabled=profileId!=null && !favoriteBusy,
+                            modifier=Modifier.heightIn(min=48.dp)) {
+                            Icon(if(isFavorite)Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription=null,modifier=Modifier.size(18.dp))
+                            Spacer(Modifier.width(PursuitSpace.xs))
+                            Text(if(isFavorite)"Unpin from favorites" else "Pin to favorites")
+                        }
                         if(best==null)PursuitHistoryStatus("No qualifying working set",
                             "Log a completed set of 1–10 reps to calculate an estimated maximum.")
                         else {

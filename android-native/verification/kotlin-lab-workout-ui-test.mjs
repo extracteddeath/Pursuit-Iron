@@ -25,6 +25,24 @@ for(const phrase of [
   'CustomWorkoutJournalOperation.Finish('
 ])assert.ok(journal.includes(phrase),'Missing native set-entry behavior: '+phrase);
 
+// A focus filter may unmount all other set editors. Their unsubmitted
+// values must survive a Focus/All switch and configuration restoration.
+for(const phrase of [
+  'var focusOnNext by rememberSaveable(workoutId)',
+  'val editorStates=rememberSaveableStateHolder()',
+  'activeFocus=nextVisit.takeIf',
+  'Text("UP NEXT"',
+  'Text("Focus on next")',
+  'Text("All sets")',
+  'slot.sets.filter{activeFocus==null ||',
+  'editorStates.SaveableStateProvider("main:${set.setKey}")',
+  'editorStates.SaveableStateProvider("follow:${set.setKey}")',
+  'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
+  'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
+])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);
+assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
+  'Finished sessions must still expose recorded sets for review');
+
 assert.match(journal,/var actualRir by rememberSaveable\(set.setKey,part.name,existing\?\.appliedRevision\) \{\s*mutableStateOf\(saved\?\.performed\?\.actualRir\?\.toString\(\)\.orEmpty\(\)\)/,
   'Unknown actual RIR must remain unreported, never copied from the target');
 assert.ok(journal.includes('var actualLoad by rememberSaveable(set.setKey,part.name,existing?.appliedRevision)') &&

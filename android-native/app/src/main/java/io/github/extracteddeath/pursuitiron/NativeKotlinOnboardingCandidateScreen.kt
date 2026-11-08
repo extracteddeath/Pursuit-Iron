@@ -480,8 +480,10 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     label={Text("Available plate pairs")},
                     supportingText={Text("Weight × matching pairs, e.g. 2.5x2, 5x1")},
                     modifier=Modifier.fillMaxWidth())
-                NativeKotlinNamedSetupChoices("Benches and stations",fixtures,
-                    kotlinSetupFacilities,{fixtures=it;gymConfirmed=false})
+                NativeKotlinGroupedFacilityChoices("Available gym facilities",fixtures) {
+                    fixtures=it
+                    gymConfirmed=false
+                }
                 TextButton(onClick={showExtraEquipment=!showExtraEquipment}) {
                     Text(if(showExtraEquipment)"Hide additional equipment" else "Additional equipment")
                 }

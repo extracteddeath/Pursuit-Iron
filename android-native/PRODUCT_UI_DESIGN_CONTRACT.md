@@ -184,3 +184,39 @@ accessibility and device screenshots. None of these are silently marked done.
 **Distribution remains gated:** Do not trigger the disposable APK milestone
 for routine UI changes. The next APK requires the entire app-wide design to be
 reviewed and approved.
+
+## Progress continuation — pinned lifts and verified chart detail (2026-11-08)
+
+**Implemented in Kotlin Lab source; Android visual/device acceptance remains open.**
+
+- Progress now offers opt-in pinned lifts for exactly four source-matched
+  barbell strength comparisons. Selections are persisted only in app-local
+  preferences under a verified native athlete ID, never inferred from workouts,
+  never merged into the coaching store, and never counted as achievements.
+- Profile exposes direct shortcuts to each pinned lift's chart; selecting a
+  shortcut opens that exact exercise in Progress. A regular Progress-tab visit
+  remains independent of the pinned-lift handoff.
+- A chart shows the most recent 20 qualifying finished sessions, sorted by
+  actual completion order. It displays first/latest estimates, signed measured
+  difference, chart values in readable text, and a direct action opening the
+  complete correction-aware exercise history. One session is not shown as a
+  fabricated trend.
+- Only corrected, owner-verified, *completed main working* barbell sets with
+  a valid 1–10-rep estimate are included. Warmups, amplifier follow-ups, skips,
+  failed sets, issued targets, Smith or dumbbell sets and source-incompatible
+  loads cannot become strength-chart achievements.
+- Everything remains clearly labeled **estimated 1RM**. Broad external
+  community thresholds are not age/bodyweight-specific percentiles. Pinning,
+  reading charts or opening exercise history makes no changes to training.
+- Added source-contract coverage for athlete-scoped preference keys, Profile
+  deep links, owner-verified history, source-only chart data and complete
+  history action. CI source compilation is required before declaring the
+  revision green; source checks are not device screenshots or visual approval.
+
+**Still open for the full design gate:** actual age/bodyweight-matched licensed
+standards and provenance, tested 1RM entry distinguished from estimates,
+variant-specific standards, accessible large-text chart QA on real devices,
+customizable order of arbitrary favorite exercises (currently four supported
+source-matched barbell lifts), Profile share cards, broader Progress dashboards,
+and the remaining Home/Coach/program editing and navigation design passes.
+No APK/AAB generation is authorized by this milestone.

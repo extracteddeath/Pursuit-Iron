@@ -54,9 +54,38 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Android API 37
         run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      # Do not let setup-gradle's short CDN retry window block every
+      # source/engine check on transient distribution HTTP 504s. Download
+      # only the fixed official Gradle binary and verify the published SHA.
+      - name: Install checksum-pinned Gradle 9.3.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='9.3.1'
+          sha='b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06'
+          archive="${RUNNER_TEMP}/gradle-${version}-bin.zip"
+          verified=false
+          for base in https://downloads.gradle.org https://services.gradle.org; do
+            rm -f "$archive"
+            if curl --fail --location --retry 3 --retry-all-errors \
+                --retry-delay 5 --connect-timeout 15 --max-time 120 \
+                "${base}/distributions/gradle-${version}-bin.zip" -o "$archive"; then
+              if echo "${sha}  ${archive}" | sha256sum --check --status; then
+                verified=true
+                break
+              fi
+            fi
+          done
+          if [ "$verified" != true ]; then
+            echo "Official Gradle 9.3.1 download/checksum verification failed" >&2
+            exit 1
+          fi
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          "${RUNNER_TEMP}/gradle-${version}/bin/gradle" --version
+          echo "${RUNNER_TEMP}/gradle-${version}/bin" >> "$GITHUB_PATH"
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
+        # Use the already checksum-verified binary; retain Gradle cache and
+        # init-script instrumentation, but do not re-download a distribution.
       - name: Verify Kotlin engine cannot alter native workouts
         run: node android-native/kotlin-engine/verification/offline-only-test.mjs
       - name: Verify entire engine feature scope and native UX documentation

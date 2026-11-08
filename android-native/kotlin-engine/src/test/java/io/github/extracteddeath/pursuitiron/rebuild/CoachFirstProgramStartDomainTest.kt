@@ -83,4 +83,32 @@ class CoachFirstProgramStartDomainTest {
         assertTrue(result.chosenExerciseIds.containsAll(starts.keys))
         assertFalse(result.maySaveProgram)
     }
+    @Test fun ordinaryCalibratedFirstProgramCanReachReviewableCompleteWeek() {
+        val loads=mapOf("bench" to n("25"),"row" to n("25"),
+            "squat" to n("25"))
+        val result=CoachFirstProgramStartDomain.review(request(loads))
+        assertEquals(result.issues.joinToString(" | "),
+            FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
+            result.generation?.status)
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,
+            result.prescription?.status)
+        assertEquals(3,result.prescription?.sessions?.size)
+        assertTrue(result.prescription?.sessions?.all{it.exercises.isNotEmpty()}==true)
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        val converted=CoachFirstProgramDraftConversionDomain.propose(
+            result,source.setup,source.catalog,
+            "calibrated-first-program","My first program",4)
+        assertEquals(converted.reason,
+            FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,converted.status)
+        val policy=CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(result,source.setup)
+        assertNotNull(policy)
+        val audit=CustomCycleCoachAuditDomain.review(
+            checkNotNull(converted.cycle),source.setup,
+            source.catalog,checkNotNull(policy))
+        assertEquals(audit.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+    }
+
 }

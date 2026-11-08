@@ -107,6 +107,9 @@ internal fun NativeKotlinCandidateJourney(
     var coachRequestedExerciseId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    var progressRequestedExerciseId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
     val savedScreens=rememberSaveableStateHolder()
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
@@ -170,6 +173,8 @@ internal fun NativeKotlinCandidateJourney(
             settingsReturn=destination
         if(to==KotlinCandidateDestination.COACH)
             coachRequestedExerciseId=null // ordinary tab, not a saved-set handoff
+        if(to==KotlinCandidateDestination.PROGRESS)
+            progressRequestedExerciseId=null // ordinary tab, not a pinned lift
         destination=to
     }
     // Five ordinary destinations stay within a thumb's reach. Setup,
@@ -309,11 +314,18 @@ internal fun NativeKotlinCandidateJourney(
                             onBack={destination=profileReturn},
                             onPlan={navigate(KotlinCandidateDestination.PROGRAM)},
                             onProgress={navigate(KotlinCandidateDestination.PROGRESS)},
+                            onProgressLift={exerciseId->
+                                if(exerciseId in NativeStrengthFavorites.supportedIds) {
+                                    progressRequestedExerciseId=exerciseId
+                                    destination=KotlinCandidateDestination.PROGRESS
+                                }
+                            },
                             onGym={navigate(KotlinCandidateDestination.GYM)},
                             onSettings={navigate(KotlinCandidateDestination.SETTINGS)},
                             onAppearance={appearanceExpanded=true})
                     KotlinCandidateDestination.PROGRESS ->
-                        NativeKotlinStrengthStandardsScreen(host)
+                        NativeKotlinStrengthStandardsScreen(host,
+                            preferredExerciseId=progressRequestedExerciseId)
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
                             onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
@@ -322,6 +334,7 @@ internal fun NativeKotlinCandidateJourney(
                                 destination=KotlinCandidateDestination.COACH
                             },
                             onOpenProgress={
+                                progressRequestedExerciseId=null
                                 destination=KotlinCandidateDestination.PROGRESS
                             })
                     KotlinCandidateDestination.TRAIN ->

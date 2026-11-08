@@ -21,7 +21,7 @@ assert.ok(buildWorkflow.includes("'android-native/M5_DEVICE_TEST_APK.md'") &&
   buildWorkflow.includes("startsWith(github.event.head_commit.message, 'milestone(android): M5 ')"),
   'Routine preview APK builds must remain frozen except for the one guarded M5 development milestone');
 assert.match(gradle, /compose-bom:2026\.09\.00/);
-assert.match(gradle, /androidx\.compose\.material3:material3:1\.5\.0-beta02/);
+assert.match(gradle, /androidx\.compose\.material3:material3:1\.5\.0-rc01/);
 assert.match(theme, /motionScheme = MotionScheme\.expressive\(\)/);
 assert.match(shell, /MaterialTheme\.motionScheme\.defaultEffectsSpec\(\)/);
 assert.doesNotMatch(shell, /tween\(220\)/);

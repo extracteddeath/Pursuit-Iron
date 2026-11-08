@@ -51,6 +51,11 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     var offer by remember {mutableStateOf<NativeFutureWeekLoadOptionResult.Ready?>(null)}
     var consentPreview by remember {mutableStateOf<NativeFutureWeekConsentPreview.Ready?>(null)}
     var accepted by remember {mutableStateOf<NativeFutureWeekLoadConsentReceipt?>(null)}
+    // New custom-workout rep consent is separate from load consent.
+    var repPreview by remember {mutableStateOf<NativeCustomNextRepPreview.Ready?>(null)}
+    var repAccepted by remember {mutableStateOf<NativeCustomNextRepReceipt?>(null)}
+    var repWorkoutId by rememberSaveable {mutableStateOf("")}
+    var confirmRepAcceptance by remember {mutableStateOf(false)}
     var handoff by remember {
         mutableStateOf<NativeAcceptedFutureWeekLoadHandoff.Ready?>(null)
     }
@@ -65,12 +70,14 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         coachingGeneration++
         session=null;slotId="";coaching=null;offer=null;consentPreview=null;accepted=null
         handoff=null;prepared=null;issued=null;confirmAcceptance=false
+        confirmRepAcceptance=false;repPreview=null;repAccepted=null;repWorkoutId=""
         confirmIssue=false;notice=null
     }
     fun clearOffer() {
         coachingGeneration++
         coaching=null;offer=null;consentPreview=null;accepted=null;handoff=null
         prepared=null;issued=null;confirmAcceptance=false;confirmIssue=false
+        confirmRepAcceptance=false;repPreview=null;repAccepted=null;repWorkoutId=""
         notice=null
     }
     LaunchedEffect(host) {
@@ -267,6 +274,77 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                 coaching?.let {reviewed->
                     NativeKotlinCustomDayCoachingSummary(reviewed,absoluteWeek)
                 }
+                // Offer an actual coach-reviewed rep adjustment, not just
+                // a display-only calculation. The native owner validates
+                // history, consent, equipment and the selected forecast policy.
+                OutlinedButton(enabled=!busy&&slotId.isNotBlank()&&maxStep!=null,
+                    onClick={
+                        val id="custom-"+UUID.randomUUID().toString()
+                        val chosen=slotId
+                        val increase=checkNotNull(maxStep)
+                        clearOffer()
+                        repWorkoutId=id
+                        busy=true
+                        scope.launch {
+                            val result=withContext(Dispatchers.IO) {
+                                runCatching {
+                                    host.previewNextActivatedRepAmendment(
+                                        id,absoluteWeek,weekday,chosen,contextInputs,
+                                        readiness,restricted,increase,
+                                        CustomRepForecastPolicy.TARGET_RIR_V2)
+                                }.getOrNull()
+                            }
+                            repPreview=result as? NativeCustomNextRepPreview.Ready
+                            notice=if(repPreview==null)
+                                "No eligible rep amendment: "+(result?:"review unavailable")+
+                                    ". The approved workout is unchanged."
+                            else null
+                            busy=false
+                        }
+                    }) {Text(if(busy)"Reviewing reps…" else "Review next-session reps")}
+                repPreview?.let {preview->
+                    HorizontalDivider()
+                    Text("Personalized rep review",
+                        style=MaterialTheme.typography.titleLarge)
+                    Text("Estimated from reported RIR. This is a suggestion, not a prediction of actual fatigue; stop at the intended effort.",
+                        style=MaterialTheme.typography.bodySmall)
+                    val original=session?.slots?.singleOrNull {
+                        it.slotId==slotId
+                    }?.sets?.filter {it.prescription.type==DraftSetType.WORKING}.orEmpty()
+                    preview.receipt.nextMinimumReps.forEachIndexed {index,nextMinimum->
+                        val old=original.getOrNull(index)?.prescription?.reps?.minimum
+                        Text("Set "+(index+1)+": "+(old?:"?")+
+                            " → "+nextMinimum+" minimum reps",
+                            style=MaterialTheme.typography.bodyMedium)
+                    }
+                    Button(enabled=!busy&&repAccepted==null,
+                        onClick={confirmRepAcceptance=true}) {
+                        Text("Review and accept these reps")
+                    }
+                }
+                repAccepted?.let {receipt->
+                    Text("Rep targets accepted for this workout",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("This acceptance cannot change any completed workout or the saved training cycle.",
+                        style=MaterialTheme.typography.bodySmall)
+                    Button(enabled=!busy&&prepared==null,onClick={
+                        busy=true
+                        scope.launch {
+                            val result=withContext(Dispatchers.IO) {
+                                runCatching {host.prepareActivatedFutureWorkout(
+                                    receipt.workoutId,active.cycleId,
+                                    absoluteWeek,weekday,contextInputs)}.getOrNull()
+                            }
+                            prepared=(result as? NativeCustomPrepareResult.Prepared)
+                                ?.workout?.takeIf{it.workoutId==receipt.workoutId}
+                            notice=if(prepared==null)
+                                "Rep-adjusted workout preparation refused: "+
+                                    (result?:"verification unavailable")
+                            else "Accepted reps prepared in the native workout. Issue it separately to begin logging."
+                            busy=false
+                        }
+                    }) {Text("Prepare rep-adjusted workout")}
+                }
                 Button(enabled=!busy&&slotId.isNotBlank()&&maxStep!=null,
                     onClick={
                         val chosen=slotId
@@ -423,6 +501,45 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         Text("Candidate journey only · all review, consent, preparation and issuance decisions are independently checked by the Kotlin owner.",
             color=MaterialTheme.colorScheme.onSurfaceVariant,
             style=MaterialTheme.typography.bodySmall)
+    }
+    if(confirmRepAcceptance && active!=null && contextInputs!=null) {
+        val ready=repPreview
+        AlertDialog(onDismissRequest={if(!busy)confirmRepAcceptance=false},
+            title={Text("Accept next-workout reps?")},
+            text={Text("Only the reviewed working-set minimums will change. The weights, goal RIR, other exercises, saved cycle and completed history remain unchanged.")},
+            confirmButton={
+                Button(enabled=!busy&&ready!=null&&maxStep!=null,
+                    onClick={
+                        val selected=ready ?:return@Button
+                        val increase=maxStep ?:return@Button
+                        confirmRepAcceptance=false
+                        busy=true
+                        scope.launch {
+                            val receipt=selected.receipt
+                            val result=withContext(Dispatchers.IO) {
+                                runCatching {host.approveNextActivatedRepAmendment(
+                                    repWorkoutId,absoluteWeek,weekday,slotId,
+                                    contextInputs,readiness,restricted,increase,
+                                    receipt.fingerprint,receipt.historyRevision,
+                                    receipt.consentRevision,receipt.setKeys,
+                                    receipt.nextMinimumReps,true,
+                                    CustomRepForecastPolicy.TARGET_RIR_V2)}.getOrNull()
+                            }
+                            repAccepted=(result as? NativeCustomNextRepWrite.Accepted)
+                                ?.receipt
+                            notice=if(repAccepted==null)
+                                "Rep approval refused: "+(result?:"verification unavailable")+
+                                    ". Recheck your workout."
+                            else "Exact target-RIR rep adjustment accepted; the workout has not been issued."
+                            if(repAccepted==null)repPreview=null
+                            busy=false
+                        }
+                    }) {Text("Accept exact rep targets")}
+            },dismissButton={
+                TextButton(enabled=!busy,onClick={confirmRepAcceptance=false}) {
+                    Text("Cancel")
+                }
+            })
     }
     if(confirmAcceptance && active!=null && contextInputs!=null) {
         val offered=offer;val stamp=consentPreview

@@ -28,7 +28,9 @@ data class NativeCustomNextRepReceipt(
     val historyRevision:Long,val fingerprint:String,
     val setKeys:List<String>,val nextMinimumReps:List<Int>,
     val readiness:CoachReadiness,val movementRestricted:Boolean,
-    val maximumAuthorizedIncrease:BigDecimal
+    val maximumAuthorizedIncrease:BigDecimal,
+    /** V1 receipts preserve the originally accepted calculation. */
+    val repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayModifyCycle:Boolean get()=false
@@ -73,16 +75,66 @@ class NativeKotlinCustomNextRepApprovalFileStore(
     private val prepared:NativeKotlinCustomWorkoutPreparedStore,
     private val issued:NativeKotlinCustomWorkoutJournalFileStore
 ) {
-    private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private val hex=Regex("^[a-f0-9]{64}$")
-    private val magic=0x50495241 // PIRA
-    private val version=1
-    private val maxBytes=16_384
-    private fun digest(bytes:ByteArray):ByteArray=
-        MessageDigest.getInstance("SHA-256").digest(bytes)
-    private fun hash(bytes:ByteArray):String=digest(bytes).joinToString("") {
-        "%02x".format(it.toInt() and 255)
+    companion object {
+        private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
+        private val hex=Regex("^[a-f0-9]{64}$")
+        private val magic=0x50495241 // PIRA
+        private val legacyVersion=1
+        private val currentVersion=2
+        private val maxBytes=16_384
+        private fun digest(bytes:ByteArray):ByteArray=
+            MessageDigest.getInstance("SHA-256").digest(bytes)
+        private fun hash(bytes:ByteArray):String=digest(bytes).joinToString("") {
+            "%02x".format(it.toInt() and 255)
+        }
+        /** Versioned canonical bytes; no unspecified string/JSON key ordering. */
+        internal fun encode(receipt:NativeCustomNextRepReceipt):ByteArray {
+            require(listOf(receipt.ownerKey,receipt.athleteId,
+                receipt.workoutId,receipt.cycleId,receipt.blockId,
+                receipt.slotId).all(id::matches))
+            require(hex.matches(receipt.fingerprint) &&
+                receipt.consentRevision>0 && receipt.historyRevision>0 &&
+                receipt.absoluteWeek in 1..104 && receipt.weekday in 0..6 &&
+                receipt.setKeys.size in 1..32 &&
+                receipt.setKeys.size==receipt.nextMinimumReps.size &&
+                receipt.setKeys.distinct().size==receipt.setKeys.size &&
+                receipt.setKeys.all{it.length in 1..240} &&
+                receipt.nextMinimumReps.all{it in 1..100} &&
+                receipt.maximumAuthorizedIncrease>BigDecimal.ZERO &&
+                receipt.maximumAuthorizedIncrease<=BigDecimal("100000"))
+            val payload=ByteArrayOutputStream()
+            DataOutputStream(payload).use{out->
+                out.writeInt(magic)
+                out.writeInt(if(receipt.repForecastPolicy==
+                    CustomRepForecastPolicy.LEGACY_STEP_V1) legacyVersion
+                    else currentVersion)
+                listOf(receipt.ownerKey,receipt.athleteId,receipt.workoutId,
+                    receipt.cycleId,receipt.blockId,receipt.slotId,
+                    receipt.fingerprint).forEach(out::writeUTF)
+                out.writeInt(receipt.absoluteWeek);out.writeInt(receipt.weekday)
+                out.writeLong(receipt.consentRevision)
+                out.writeLong(receipt.historyRevision)
+                out.writeUTF(receipt.readiness.name)
+                out.writeBoolean(receipt.movementRestricted)
+                out.writeUTF(receipt.maximumAuthorizedIncrease.toPlainString())
+                out.writeInt(receipt.setKeys.size)
+                for(i in receipt.setKeys.indices){
+                    out.writeUTF(receipt.setKeys[i])
+                    out.writeInt(receipt.nextMinimumReps[i])
+                }
+                if(receipt.repForecastPolicy!=CustomRepForecastPolicy.LEGACY_STEP_V1)
+                    out.writeUTF(receipt.repForecastPolicy.name)
+            }
+            val bytes=payload.toByteArray()
+            require(bytes.size+36<=maxBytes)
+            return ByteArrayOutputStream().also{res->
+                DataOutputStream(res).use{out->
+                    out.writeInt(bytes.size);out.write(bytes);out.write(digest(bytes))
+                }
+            }.toByteArray()
+        }
     }
+
     private fun current(key:String)=
         runCatching{identity.signedInIdentity()}.getOrNull()?.takeIf{
             id.matches(key) && it.ownerKey==key && id.matches(it.athleteId)
@@ -94,47 +146,6 @@ class NativeKotlinCustomNextRepApprovalFileStore(
         directory.resolve("future-rep-"+hash(
             "$key\u0000$workoutId".toByteArray(Charsets.UTF_8))+".pending")
 
-    /** Versioned canonical bytes; no unspecified string/JSON key ordering. */
-    private fun encode(receipt:NativeCustomNextRepReceipt):ByteArray {
-        require(listOf(receipt.ownerKey,receipt.athleteId,
-            receipt.workoutId,receipt.cycleId,receipt.blockId,
-            receipt.slotId).all(id::matches))
-        require(hex.matches(receipt.fingerprint) &&
-            receipt.consentRevision>0 && receipt.historyRevision>0 &&
-            receipt.absoluteWeek in 1..104 && receipt.weekday in 0..6 &&
-            receipt.setKeys.size in 1..32 &&
-            receipt.setKeys.size==receipt.nextMinimumReps.size &&
-            receipt.setKeys.distinct().size==receipt.setKeys.size &&
-            receipt.setKeys.all{it.length in 1..240} &&
-            receipt.nextMinimumReps.all{it in 1..100} &&
-            receipt.maximumAuthorizedIncrease>BigDecimal.ZERO &&
-            receipt.maximumAuthorizedIncrease<=BigDecimal("100000"))
-        val payload=ByteArrayOutputStream()
-        DataOutputStream(payload).use{out->
-            out.writeInt(magic);out.writeInt(version)
-            listOf(receipt.ownerKey,receipt.athleteId,receipt.workoutId,
-                receipt.cycleId,receipt.blockId,receipt.slotId,
-                receipt.fingerprint).forEach(out::writeUTF)
-            out.writeInt(receipt.absoluteWeek);out.writeInt(receipt.weekday)
-            out.writeLong(receipt.consentRevision)
-            out.writeLong(receipt.historyRevision)
-            out.writeUTF(receipt.readiness.name)
-            out.writeBoolean(receipt.movementRestricted)
-            out.writeUTF(receipt.maximumAuthorizedIncrease.toPlainString())
-            out.writeInt(receipt.setKeys.size)
-            for(i in receipt.setKeys.indices){
-                out.writeUTF(receipt.setKeys[i])
-                out.writeInt(receipt.nextMinimumReps[i])
-            }
-        }
-        val bytes=payload.toByteArray()
-        require(bytes.size+36<=maxBytes)
-        return ByteArrayOutputStream().also{res->
-            DataOutputStream(res).use{out->
-                out.writeInt(bytes.size);out.write(bytes);out.write(digest(bytes))
-            }
-        }.toByteArray()
-    }
     private fun decode(key:String,workoutId:String):NativeCustomNextRepReceipt? {
         val file=path(key,workoutId)
         if(Files.exists(pending(key,workoutId)))
@@ -152,7 +163,9 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             if(!MessageDigest.isEqual(expected,digest(bytes)))
                 throw IOException("rep approval checksum mismatch")
             val data=DataInputStream(ByteArrayInputStream(bytes))
-            if(data.readInt()!=magic || data.readInt()!=version)
+            if(data.readInt()!=magic)throw IOException("bad rep approval magic")
+            val storedVersion=data.readInt()
+            if(storedVersion!=legacyVersion && storedVersion!=currentVersion)
                 throw IOException("bad rep approval schema")
             val owner=data.readUTF();val athlete=data.readUTF()
             val wid=data.readUTF();val cycle=data.readUTF()
@@ -170,10 +183,18 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             if(n !in 1..32)throw IOException("bad rep count")
             val keys=ArrayList<String>(n);val reps=ArrayList<Int>(n)
             repeat(n){keys+=data.readUTF();reps+=data.readInt()}
+            val forecast=if(storedVersion==legacyVersion)
+                CustomRepForecastPolicy.LEGACY_STEP_V1 else {
+                    val storedPolicy=data.readUTF()
+                    CustomRepForecastPolicy.entries.singleOrNull{
+                        it.name==storedPolicy &&
+                            it!=CustomRepForecastPolicy.LEGACY_STEP_V1
+                    }?:throw IOException("unrecognized rep forecast policy")
+                }
             if(data.available()!=0)throw IOException("trailing rep approval")
             NativeCustomNextRepReceipt(owner,athlete,wid,cycle,block,
                 week,weekday,slot,consent,history,fingerprint,keys,reps,
-                readiness,restricted,step).also{
+                readiness,restricted,step,forecast).also{
                 encode(it) // validates ALL stored fields and physical bounds
                 if(owner!=key || wid!=workoutId)
                     throw IOException("rep receipt identity collision")
@@ -201,13 +222,14 @@ class NativeKotlinCustomNextRepApprovalFileStore(
     private fun derive(
         key:String,workoutId:String,inputs:CustomCoachAuditInputs,
         week:Int,weekday:Int,slot:String,readiness:CoachReadiness,
-        restricted:Boolean,maxIncrease:BigDecimal
+        restricted:Boolean,maxIncrease:BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy
     ):NativeCustomNextRepPreview {
         fun fail(reason:NativeCustomNextRepRefusal)=
             NativeCustomNextRepPreview.Rejected(reason)
         val signed=current(key)?:return fail(NativeCustomNextRepRefusal.NOT_AUTHORIZED)
         val review=reviewer.review(key,inputs,week,weekday,slot,
-            readiness,restricted,maxIncrease)
+            readiness,restricted,maxIncrease,repForecastPolicy)
             as? NativeCustomNextCoachResult.Reviewed
             ?:return fail(NativeCustomNextRepRefusal.REVIEW_NOT_READY)
         val snap=(activation.previewActivatedWorkout(key,inputs,week,weekday)
@@ -215,6 +237,8 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             ?:return fail(NativeCustomNextRepRefusal.REVIEW_NOT_READY)
         if(snap.stamp.athleteId!=signed.athleteId)
             return fail(NativeCustomNextRepRefusal.NOT_AUTHORIZED)
+        if(review.review.repForecastPolicy!=repForecastPolicy)
+            return fail(NativeCustomNextRepRefusal.REVIEW_NOT_READY)
         val amended=CustomNextRepAmendmentDomain.propose(
             snap,slot,review.review)
             as? CustomNextRepAmendmentResult.Proposed
@@ -229,7 +253,12 @@ class NativeKotlinCustomNextRepApprovalFileStore(
 
         val signature=ByteArrayOutputStream()
         DataOutputStream(signature).use{out->
-            out.writeUTF("future-rep-approval-v1")
+            if(repForecastPolicy==CustomRepForecastPolicy.LEGACY_STEP_V1)
+                out.writeUTF("future-rep-approval-v1")
+            else {
+                out.writeUTF("future-rep-approval-v2")
+                out.writeUTF(repForecastPolicy.name)
+            }
             out.writeUTF(key);out.writeUTF(signed.athleteId)
             out.writeUTF(workoutId);out.writeUTF(slot)
             out.writeLong(review.historyRevision)
@@ -251,14 +280,17 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             workoutId,snap.stamp.cycleId,snap.blockId,week,weekday,slot,
             review.approvedConsentRevision,review.historyRevision,
             hash(signature.toByteArray()),amended.amendment.originalSetKeys,
-            amended.amendment.nextMinimumReps,readiness,restricted,maxIncrease)
+            amended.amendment.nextMinimumReps,readiness,restricted,maxIncrease,
+            repForecastPolicy)
         return NativeCustomNextRepPreview.Ready(receipt,amended.amendment)
     }
 
     fun preview(
         key:String,workoutId:String,inputs:CustomCoachAuditInputs,
         week:Int,weekday:Int,slot:String,readiness:CoachReadiness,
-        restricted:Boolean,maxIncrease:BigDecimal
+        restricted:Boolean,maxIncrease:BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=
+            CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextRepPreview {
         if(!listOf(key,workoutId,slot).all(id::matches) ||
             week !in 1..104 || weekday !in 0..6)
@@ -266,7 +298,7 @@ class NativeKotlinCustomNextRepApprovalFileStore(
                 NativeCustomNextRepRefusal.INVALID_SELECTION)
         return runCatching{fence.withOwnerTransaction(key){
             val result=derive(key,workoutId,inputs,week,weekday,slot,
-                readiness,restricted,maxIncrease)
+                readiness,restricted,maxIncrease,repForecastPolicy)
             if(result !is NativeCustomNextRepPreview.Ready)
                 return@withOwnerTransaction result
             if(prepared.open(key,workoutId)!=NativeCustomPreparedRead.Missing ||
@@ -285,7 +317,9 @@ class NativeKotlinCustomNextRepApprovalFileStore(
         restricted:Boolean,maxIncrease:BigDecimal,
         expectedFingerprint:String,expectedHistoryRevision:Long,
         expectedConsentRevision:Long,shownSetKeys:List<String>,
-        shownNextMinimumReps:List<Int>,athleteConfirmed:Boolean
+        shownNextMinimumReps:List<Int>,athleteConfirmed:Boolean,
+        repForecastPolicy:CustomRepForecastPolicy=
+            CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextRepWrite {
         fun fail(reason:NativeCustomNextRepRefusal)=
             NativeCustomNextRepWrite.Rejected(reason)
@@ -296,7 +330,7 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             return fail(NativeCustomNextRepRefusal.INVALID_SELECTION)
         return runCatching{fence.withOwnerTransaction(key){
             val preview=preview(key,workoutId,inputs,week,weekday,slot,
-                readiness,restricted,maxIncrease)
+                readiness,restricted,maxIncrease,repForecastPolicy)
                 as? NativeCustomNextRepPreview.Ready
                 ?:return@withOwnerTransaction fail(
                     NativeCustomNextRepRefusal.REVIEW_NOT_READY)
@@ -352,7 +386,7 @@ class NativeKotlinCustomNextRepApprovalFileStore(
                     NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY)
             val now=derive(key,workoutId,inputs,week,weekday,
                 record.slotId,record.readiness,record.movementRestricted,
-                record.maximumAuthorizedIncrease)
+                record.maximumAuthorizedIncrease,record.repForecastPolicy)
                 as? NativeCustomNextRepPreview.Ready
                 ?:return@withOwnerTransaction NativeCustomNextRepRead.Rejected(
                     NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY)

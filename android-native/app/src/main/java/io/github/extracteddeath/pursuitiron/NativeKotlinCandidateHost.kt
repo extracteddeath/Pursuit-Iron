@@ -933,28 +933,30 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun reviewNextActivatedWorkoutProgression(
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
-        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextCoachResult {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCoachResult.Rejected(
                 NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
         return customNextWorkoutCoach.review(signed.ownerKey,inputs,
             nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
-            maximumAuthorizedIncrease)
+            maximumAuthorizedIncrease,repForecastPolicy)
     }
 
     /** Same native evidence pipeline for an ordinary signed authored cycle. */
     fun reviewNextAuthoredWorkoutProgression(
         cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
-        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextCoachResult {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCoachResult.Rejected(
                 NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
         return customNextWorkoutCoach.reviewAuthored(signed.ownerKey,cycleId,
             inputs,nextAbsoluteWeek,nextWeekday,slotId,readiness,
-            movementRestricted,maximumAuthorizedIncrease)
+            movementRestricted,maximumAuthorizedIncrease,repForecastPolicy)
     }
 
     fun previewBlockCalibration(
@@ -1157,14 +1159,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun previewNextActivatedRepAmendment(
         workoutId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
-        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextRepPreview {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomNextRepPreview.Rejected(
                 NativeCustomNextRepRefusal.NOT_AUTHORIZED)
         return acceptedFutureRepTargets.preview(owner.ownerKey,workoutId,inputs,
             nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
-            maximumAuthorizedIncrease)
+            maximumAuthorizedIncrease,repForecastPolicy)
     }
 
     /**
@@ -1178,7 +1181,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
         expectedFingerprint:String,expectedHistoryRevision:Long,
         expectedConsentRevision:Long,shownSetKeys:List<String>,
-        shownNextMinimumReps:List<Int>,athleteConfirmed:Boolean
+        shownNextMinimumReps:List<Int>,athleteConfirmed:Boolean,
+        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextRepWrite {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomNextRepWrite.Rejected(
@@ -1187,7 +1191,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
             maximumAuthorizedIncrease,expectedFingerprint,
             expectedHistoryRevision,expectedConsentRevision,shownSetKeys,
-            shownNextMinimumReps,athleteConfirmed)
+            shownNextMinimumReps,athleteConfirmed,repForecastPolicy)
     }
 
     /**

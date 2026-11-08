@@ -3,7 +3,8 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
@@ -54,62 +55,113 @@ internal fun verifiedStrengthTrend(
             estimate,loaded.unit,displayUnit)
     }.maxOrNull()
     best?.let{StrengthTrendSample(entry.manifest.completionOrder,it)}
-}
+}.sortedBy {it.completionOrder}
 
+private fun estimatedStrengthLabel(value:BigDecimal,unit:LoadUnit):String =
+    "${value.setScale(1,RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()} ${unit.name.lowercase()}"
+
+/** Display-only chart. All points come from corrected native working sets;
+ * there are no synthetic milestones, predictions, fake PRs or target weights.
+ */
 @Composable
 internal fun PursuitStrengthTrendChart(
     samples:List<StrengthTrendSample>,
-    unit:LoadUnit
+    unit:LoadUnit,
+    onOpenHistory:(()->Unit)?=null
 ) {
+    var showValues by rememberSaveable {mutableStateOf(false)}
     PursuitCard {
         PursuitSectionHeading("Estimated strength over time",
-            "Best qualifying working set in each finished session, not a tested 1RM.")
-        if(samples.size<2) {
-            Text("Two completed appearances are needed to show a trend.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            "Your best qualifying working set per finished session; not a tested one-rep maximum.")
+        val recent=samples.sortedBy{it.completionOrder}.takeLast(20)
+        if(recent.isEmpty()) {
+            PursuitHistoryStatus("No qualified sessions yet",
+                "Finish a 1–10-rep working set on this exact barbell lift to start a trend.")
         } else {
-            val recent=samples.takeLast(20)
-            val low=recent.minOf{it.estimatedOneRepMax}.toFloat()
-            val high=recent.maxOf{it.estimatedOneRepMax}.toFloat()
-            val span=(high-low).takeIf{it>0f} ?: 1f
-            val lineColor=MaterialTheme.colorScheme.primary
-            val description=recent.joinToString("; "){
-                "Session ${it.completionOrder}: ${it.estimatedOneRepMax.setScale(1,RoundingMode.HALF_UP)} ${unit.name.lowercase()}"
-            }
-            Canvas(Modifier.fillMaxWidth().height(120.dp)
-                .semantics {contentDescription=
-                    "Estimated 1RM trend. $description"}) {
-                val left=12.dp.toPx()
-                val right=size.width-12.dp.toPx()
-                val top=12.dp.toPx()
-                val bottom=size.height-12.dp.toPx()
-                fun point(index:Int):Offset {
-                    val ratio=index.toFloat()/(recent.size-1).toFloat()
-                    val vertical=(recent[index].estimatedOneRepMax.toFloat()-low)/span
-                    return Offset(left+(right-left)*ratio,
-                        bottom-(bottom-top)*vertical)
+            val first=recent.first()
+            val last=recent.last()
+            if(recent.size==1) {
+                PursuitHistoryStatus("One qualifying session",
+                    "Session ${last.completionOrder} · estimated 1RM " +
+                    estimatedStrengthLabel(last.estimatedOneRepMax,unit) +
+                    ". A second appearance is needed to show change.")
+            } else {
+                val difference=last.estimatedOneRepMax-first.estimatedOneRepMax
+                val signedDifference=(if(difference.signum()>0)"+" else "")+
+                    estimatedStrengthLabel(difference,unit)
+                PursuitMetricStrip(listOf(
+                    "First shown" to estimatedStrengthLabel(first.estimatedOneRepMax,unit),
+                    "Latest" to estimatedStrengthLabel(last.estimatedOneRepMax,unit),
+                    "Change" to signedDifference
+                ))
+                val low=recent.minOf{it.estimatedOneRepMax}.toFloat()
+                val high=recent.maxOf{it.estimatedOneRepMax}.toFloat()
+                val span=(high-low).takeIf{it>0f} ?: 1f
+                val lineColor=MaterialTheme.colorScheme.primary
+                val guideColor=MaterialTheme.colorScheme.outlineVariant
+                val description=recent.joinToString("; ") {
+                    "Session ${it.completionOrder}, estimated 1RM " +
+                        estimatedStrengthLabel(it.estimatedOneRepMax,unit)
                 }
-                for(index in 0 until recent.lastIndex) {
-                    drawLine(lineColor,start=point(index),end=point(index+1),
-                        strokeWidth=3.dp.toPx(),cap=StrokeCap.Round)
+                Text("Highest shown: "+
+                    estimatedStrengthLabel(recent.maxOf{it.estimatedOneRepMax},unit),
+                    style=MaterialTheme.typography.labelMedium,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Canvas(Modifier.fillMaxWidth().height(164.dp)
+                    .semantics {contentDescription="Estimated 1RM trend. $description"}) {
+                    val left=14.dp.toPx()
+                    val right=size.width-14.dp.toPx()
+                    val top=10.dp.toPx()
+                    val bottom=size.height-10.dp.toPx()
+                    for(fraction in listOf(0f,0.5f,1f)) {
+                        val y=top+(bottom-top)*fraction
+                        drawLine(guideColor,Offset(left,y),Offset(right,y),
+                            strokeWidth=1.dp.toPx())
+                    }
+                    fun point(index:Int):Offset {
+                        val ratio=index.toFloat()/(recent.size-1).toFloat()
+                        val vertical=(recent[index].estimatedOneRepMax.toFloat()-low)/span
+                        return Offset(left+(right-left)*ratio,
+                            bottom-(bottom-top)*vertical)
+                    }
+                    for(index in 0 until recent.lastIndex)
+                        drawLine(lineColor,point(index),point(index+1),
+                            strokeWidth=3.dp.toPx(),cap=StrokeCap.Round)
+                    for(index in recent.indices)
+                        drawCircle(lineColor,radius=4.dp.toPx(),center=point(index))
                 }
-                for(index in recent.indices)drawCircle(lineColor,
-                    radius=4.dp.toPx(),center=point(index))
+                // Separate lines avoid truncating session identifiers at 200% font.
+                Text("First shown · session ${first.completionOrder} · " +
+                    estimatedStrengthLabel(first.estimatedOneRepMax,unit),
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Latest · session ${last.completionOrder} · " +
+                    estimatedStrengthLabel(last.estimatedOneRepMax,unit),
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Difference is between displayed sessions, not a strength prediction or a certified PR.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Row(Modifier.fillMaxWidth(),
-                horizontalArrangement=Arrangement.SpaceBetween) {
-                Text("Session ${recent.first().completionOrder}: "+
-                    "${recent.first().estimatedOneRepMax.setScale(1,RoundingMode.HALF_UP)} ${unit.name.lowercase()}",
-                    style=MaterialTheme.typography.labelSmall)
-                Text("Session ${recent.last().completionOrder}: "+
-                    "${recent.last().estimatedOneRepMax.setScale(1,RoundingMode.HALF_UP)} ${unit.name.lowercase()}",
-                    style=MaterialTheme.typography.labelSmall)
-            }
-            Text(if(samples.size>20)"Most recent 20 qualifying sessions shown."
-                else "${samples.size} qualifying sessions shown.",
+            Text(if(samples.size>20) "Most recent 20 of ${samples.size} qualifying sessions shown."
+                else "${samples.size} qualifying ${if(samples.size==1)"session" else "sessions"} shown.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick={showValues=!showValues},
+                modifier=Modifier.heightIn(min=48.dp)) {
+                Text(if(showValues)"Hide chart values" else "Show chart values")
+            }
+            if(showValues) {
+                recent.asReversed().forEach {sample ->
+                    Text("Session ${sample.completionOrder} · estimated 1RM " +
+                        estimatedStrengthLabel(sample.estimatedOneRepMax,unit),
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        if(onOpenHistory!=null)OutlinedButton(onClick=onOpenHistory,
+            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            Text("Open complete exercise history")
         }
     }
 }

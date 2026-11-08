@@ -649,9 +649,14 @@ internal class NativeKotlinCustomCycleController(
                 message="Run your current full-cycle coaching audit before reviewing starting weights.")
             return@run
         }
+        // Ordinary signed custom programs use the same CURRENT V2
+        // target-RIR estimate as the activated-block coach. This is a
+        // read-only proposal: changing the next workout still requires a
+        // separately approved program edit, and all V1 saved rep receipts
+        // keep their frozen legacy replay policy.
         val result=host.reviewNextAuthoredWorkoutProgression(draft.cycleId,
             absoluteWeek,weekday,slotId,inputs,readiness,movementRestricted,
-            maximumIncrease)
+            maximumIncrease,CustomRepForecastPolicy.TARGET_RIR_V2)
         val reviewed=result as? NativeCustomNextCoachResult.Reviewed
         val preview=current.value.authoredPreview
         val next=reviewed?.nextWorkout

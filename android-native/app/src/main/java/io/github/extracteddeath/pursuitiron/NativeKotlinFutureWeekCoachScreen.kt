@@ -652,8 +652,28 @@ internal fun NativeKotlinCustomDayCoachingSummary(
     }?.let {Text(it.exerciseId.replace('_',' '),
         style=MaterialTheme.typography.titleSmall)}
     Text(reviewed.review.explanation,style=MaterialTheme.typography.bodyMedium)
+    val selected=reviewed.nextWorkout?.slots?.singleOrNull {
+        it.slotId==reviewed.selectedSlotId
+    }
+    val working=selected?.sets?.filter{
+        it.prescription.type==DraftSetType.WORKING
+    }.orEmpty()
     reviewed.review.nextSetSuggestions.forEachIndexed {index,set->
-        Text("Set ${index+1}: ${set.observedReps} recorded → ${set.proposedNextReps} reps for review",
+        val prescribed=working.getOrNull(index)?.prescription
+        val effort=when(set.effortSource) {
+            ProgressionEffortSource.REPORTED ->
+                "reported ${set.actualRir} RIR"
+            ProgressionEffortSource.ASSUMED_GOAL ->
+                "unreported RIR; assumed original goal ${set.progressionRir}"
+            else -> "effort unavailable"
+        }
+        Text("Set ${index+1}: ${set.observedReps} completed · ${effort}",
+            style=MaterialTheme.typography.bodySmall)
+        Text("Next review: ${set.proposedNextReps} reps · goal ${prescribed?.targetRir ?: "?"} RIR",
+            style=MaterialTheme.typography.bodySmall)
+    }
+    if(reviewed.review.nextSetSuggestions.any{it.changed}) {
+        Text("Read-only estimate, not a change to your approved workout. Actual fatigue, rest and earlier-set effort can alter later-set capacity.",
             style=MaterialTheme.typography.bodySmall)
     }
     val starting=reviewed.blockStartingLoads

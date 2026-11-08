@@ -401,5 +401,39 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(nextSlot.sets.map{it.prescription.load},
             adjusted.sets.map{it.prescription.load})
         assertEquals(source,reopened.snapshot)
+
+        // This is the SAME signed ordinary custom-cycle reader the Android
+        // controller invokes, not a caller-assembled history shortcut.
+        // It re-reads current consent, the source catalog, physical stock,
+        // every ledger completion and its immutable issued snapshot.
+        val disk=Disk()
+        val ownerCoach=NativeKotlinCustomNextWorkoutReview(
+            disk.fence,identity,null,null,disk.sources,disk.timeline,
+            disk.journals,null,disk.preflight)
+        val authenticated=ownerCoach.reviewAuthored(
+            owner,cycleId,inputs,2,day.weekday,selected.slotId,
+            CoachReadiness.NORMAL,false,n("5"),
+            CustomRepForecastPolicy.TARGET_RIR_V2)
+        assertTrue(authenticated.toString(),
+            authenticated is NativeCustomNextCoachResult.Reviewed)
+        val actualCoach=authenticated as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_V2,
+            actualCoach.review.repForecastPolicy)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            actualCoach.review.status)
+        assertEquals(coaching.nextSetSuggestions.map{it.proposedNextReps},
+            actualCoach.review.nextSetSuggestions.map{it.proposedNextReps})
+        assertEquals(next,actualCoach.nextWorkout)
+        assertEquals(selected.slotId,actualCoach.selectedSlotId)
+        assertTrue(actualCoach.historyRevision>0)
+        assertTrue(actualCoach.approvedConsentRevision>0)
+        assertFalse(actualCoach.mayIssueWorkout)
+        // Without activated signoff owners, an activated review cannot be
+        // used as a fallback bypass for an ordinary program.
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE),
+            ownerCoach.review(owner,inputs,2,day.weekday,selected.slotId,
+                CoachReadiness.NORMAL,false,n("5"),
+                CustomRepForecastPolicy.TARGET_RIR_V2))
     }
 }

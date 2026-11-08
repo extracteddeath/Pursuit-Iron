@@ -56,8 +56,11 @@ sealed interface NativeCustomNextCoachResult {
 class NativeKotlinCustomNextWorkoutReview(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
-    private val activation:NativeKotlinFutureActivationCommitTransaction,
-    private val signoffs:NativeKotlinActivatedCycleSignoffFileStore,
+    // An ordinary signed custom cycle needs its own preflight, source and
+    // journal history, not an activated future block. Absent activation
+    // dependencies MUST fail closed for the activated-only review path.
+    private val activation:NativeKotlinFutureActivationCommitTransaction?,
+    private val signoffs:NativeKotlinActivatedCycleSignoffFileStore?,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val journals:NativeKotlinCustomWorkoutJournalFileStore,
@@ -132,12 +135,12 @@ class NativeKotlinCustomNextWorkoutReview(
                     return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
             } else {
-                val acceptance=(signoffs.read(ownerKey,inputs)
+                val acceptance=(signoffs?.read(ownerKey,inputs)
                     as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
                     ?.receipt
                     ?:return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
-                val active=(activation.read(ownerKey)
+                val active=(activation?.read(ownerKey)
                     as? NativeFutureCommitReview.Applied)?.context
                     ?:return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
@@ -149,7 +152,7 @@ class NativeKotlinCustomNextWorkoutReview(
                     acceptance.sourceRevision!=active.sourceRevision)
                     return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
-                next=(activation.previewActivatedWorkout(ownerKey,inputs,
+                next=(activation?.previewActivatedWorkout(ownerKey,inputs,
                     nextAbsoluteWeek,nextWeekday)
                     as? CustomWorkoutSnapshotResult.Preview)?.snapshot
                     ?:return@withOwnerTransaction reject(

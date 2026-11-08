@@ -613,7 +613,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     controller.reviewAuthoredDayCoaching(session.absoluteWeek,
                                         session.weekday,slot.slotId,coachReadiness,
                                         coachRestricted,checkNotNull(maxStep))
-                                }){Text("Review this exercise's starting weights")}
+                                }){Text("Review next-session reps and weights")}
                         }
                     }
                     state.dayCoaching?.takeIf {reviewed->

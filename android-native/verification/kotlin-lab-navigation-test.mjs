@@ -132,6 +132,13 @@ assert.ok(favorites.includes('private fun key(athleteId:String)') &&
   favorites.includes('exerciseIds.any{it !in supportedIds}') &&
   !favorites.includes('estimatedOneRepMax'),
   'Favorite lifts must be opt-in athlete-scoped UI choices, never strength outcomes');
+assert.ok(standards.includes('var comparisonExpanded by rememberSaveable') &&
+  standards.includes('if(comparisonExpanded) {') &&
+  standards.includes('Text(if(comparisonExpanded)"Hide comparison settings" else "Edit comparison settings")') &&
+  standards.includes('Text("Community comparison group"') &&
+  standards.includes('comparisonNotice?.let') &&
+  standards.includes('onClick={comparisonExpanded=!comparisonExpanded}'),
+  'Reference settings must remain functional but stay secondary to Progress at first view');
 assert.ok(standards.includes('NativeStrengthFavorites.read(favoritePreferences,verified)') &&
   standards.includes('NativeStrengthFavorites.write(favoritePreferences,athleteId,selected)') &&
   standards.includes('profileId==athleteId') &&

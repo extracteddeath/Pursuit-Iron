@@ -292,6 +292,9 @@ internal fun NativeKotlinCandidateJourney(
                             onOpenCoach={exerciseId->
                                 coachRequestedExerciseId=exerciseId
                                 destination=KotlinCandidateDestination.COACH
+                            },
+                            onOpenProgress={
+                                destination=KotlinCandidateDestination.PROGRESS
                             })
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,

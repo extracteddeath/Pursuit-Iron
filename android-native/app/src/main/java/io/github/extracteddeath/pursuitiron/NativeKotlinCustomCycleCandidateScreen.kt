@@ -234,6 +234,55 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         enabled = !busy) { Text("Reload") }
                 }
             }
+            val firstTrainingWeekday=draft.blocks.firstOrNull()
+                ?.days?.minByOrNull {it.weekday}?.weekday
+            if(firstTrainingWeekday!=null) {
+                PursuitCard(highlighted=true) {
+                    Text("Week 1 · First workout",
+                        style=MaterialTheme.typography.titleLarge)
+                    Text("Review the first scheduled training day from this exact saved cycle. A current full-cycle audit and your explicit consent are required before any workout can be issued.",
+                        style=MaterialTheme.typography.bodySmall)
+                    OutlinedButton(
+                        onClick={
+                            inspectedWeek="1"
+                            inspectedWeekday=firstTrainingWeekday
+                            controller.previewAuthoredDay(1,firstTrainingWeekday)
+                        },
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth()
+                    ) {Text("Review first workout")}
+                    val policyReady=state.coachingAudit?.status==
+                        CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                        state.coachingAudit?.issues?.isEmpty()==true
+                    val signed=(state.signoff as? NativeCustomSignoffRead.Found)
+                        ?.isCurrent==true
+                    if(policyReady && signed) {
+                        OutlinedButton(
+                            onClick={
+                                inspectedWeek="1"
+                                inspectedWeekday=firstTrainingWeekday
+                                controller.verifyConsentBoundDay(1,firstTrainingWeekday)
+                            },enabled=!busy,modifier=Modifier.fillMaxWidth()
+                        ) {Text("Verify first workout for training")}
+                    } else {
+                        Text("Complete the full-cycle review and confirm this exact program below to unlock training.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    val preflight=state.consentBoundPreview?.session
+                    if(policyReady && signed &&
+                        preflight?.absoluteWeek==1 &&
+                        preflight.weekday==firstTrainingWeekday &&
+                        state.preparedWorkout==null) {
+                        Button(onClick={
+                            controller.prepareConsentBoundDay(1,firstTrainingWeekday)
+                        },enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+                            Text("Prepare first workout")
+                        }
+                    }
+                }
+            }
+            NativeKotlinCustomCycleCalibrationPanel(
+                controller,state,onOpenIssuedWorkout)
             draft.blocks.forEachIndexed { index, block ->
                 key(block.blockId) {
                     PursuitCard {
@@ -551,7 +600,6 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     }
                 }
             }
-            NativeKotlinCustomCycleCalibrationPanel(controller,state,onOpenIssuedWorkout)
             PursuitCard(highlighted = true) {
                 Text("Audit your full cycle",
                     style = MaterialTheme.typography.titleLarge)

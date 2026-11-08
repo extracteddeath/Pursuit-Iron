@@ -10,6 +10,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -40,6 +41,8 @@ internal fun NativeKotlinCustomJournalScreen(
     val scope=rememberCoroutineScope()
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
+    var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
+    val editorStates=rememberSaveableStateHolder()
     var referenceMode by rememberWorkoutReferenceMode()
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
@@ -158,6 +161,12 @@ internal fun NativeKotlinCustomJournalScreen(
                     Button(enabled=!busy,onClick={refresh()}){Text("Try again")}
                 }
             } else {
+                // Focus is presentation-only: it changes neither the owned
+                // journal nor the active prescription. Show every entry when
+                // no unresolved visit remains so Finish can be reviewed.
+                val activeFocus=nextVisit.takeIf {
+                    focusOnNext && !finished && current.finishedByEventId==null
+                }
                 val mainTotal=current.snapshot.slots.sumOf{it.sets.size}
                 val mainLogged=current.snapshot.slots.sumOf {slot->
                     slot.sets.count {set->
@@ -241,16 +250,53 @@ internal fun NativeKotlinCustomJournalScreen(
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodyMedium)
                 }
+                if(!finished && current.finishedByEventId==null) {
+                    val upcoming=nextVisit?.let {visit->
+                        current.snapshot.slots.firstOrNull {slot->
+                            slot.sets.any{it.setKey==visit.setKey}
+                        }?.let{slot->slot to slot.sets.first{it.setKey==visit.setKey}}
+                    }
+                    PursuitCard(highlighted=activeFocus!=null) {
+                        Text("UP NEXT",style=MaterialTheme.typography.labelSmall,
+                            color=MaterialTheme.colorScheme.primary)
+                        if(upcoming!=null) {
+                            val (slot,set)=upcoming
+                            Text(kotlinExerciseLabel(slot.exerciseId),
+                                style=MaterialTheme.typography.titleLarge)
+                            val number=slot.sets.indexOfFirst{it.setKey==set.setKey}+1
+                            Text(if(nextVisit?.part==CustomWorkoutVisitPart.FOLLOW_UP)
+                                "Amplifier follow-up · entry $number of ${slot.sets.size}"
+                            else
+                                "${if(set.prescription.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · entry $number of ${slot.sets.size}",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            Text("All entries recorded · review Finish",
+                                style=MaterialTheme.typography.titleMedium)
+                        }
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            FilterChip(selected=focusOnNext,onClick={focusOnNext=true},
+                                label={Text("Focus on next")})
+                            FilterChip(selected=!focusOnNext,onClick={focusOnNext=false},
+                                label={Text("All sets")})
+                        }
+                    }
+                }
                 if(!verifiedFinishedInHistory || showFinishedSets) {
                 PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
-                current.snapshot.slots.forEach {slot->
+                current.snapshot.slots.filter {slot->
+                    activeFocus==null ||
+                        slot.sets.any{it.setKey==activeFocus.setKey}
+                }.forEach {slot->
                     PursuitCard {
                         Text(kotlinExerciseLabel(slot.exerciseId),
                             style=MaterialTheme.typography.titleLarge)
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,
                                 style=MaterialTheme.typography.bodySmall)
-                        slot.sets.forEach {set->
+                        slot.sets.filter{activeFocus==null ||
+                            it.setKey==activeFocus.setKey}.forEach {set->
                             val mainKey=CustomWorkoutVisitKey(
                                 set.setKey,CustomWorkoutVisitPart.MAIN)
                             val observed=current.effectiveVisits[mainKey]
@@ -269,7 +315,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                     style=MaterialTheme.typography.bodySmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            NativeKotlinCustomVisitEditor(
+                            if(activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP)
+                                editorStates.SaveableStateProvider("main:${set.setKey}") {
+                                NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
@@ -281,13 +329,16 @@ internal fun NativeKotlinCustomJournalScreen(
                                     record(set.setKey,CustomWorkoutVisitPart.MAIN,
                                         outcome,actual)
                                 })
+                                }
                             val main=(observed?.operation
                                 as? CustomWorkoutJournalOperation.Record)
                             if(set.prescription.amplifier!=null &&
-                                main?.outcome==KotlinJournalSetOutcome.COMPLETED) {
+                                main?.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                                activeFocus?.part!=CustomWorkoutVisitPart.MAIN) {
                                 val follower=current.effectiveVisits[
                                     CustomWorkoutVisitKey(
                                         set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)]
+                                editorStates.SaveableStateProvider("follow:${set.setKey}") {
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     existing=follower,locked=busy||finished,
@@ -302,6 +353,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                             CustomWorkoutVisitPart.FOLLOW_UP,
                                             outcome,actual)
                                     })
+                                }
                             }
                         }
                     }

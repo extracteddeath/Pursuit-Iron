@@ -284,6 +284,8 @@ internal fun NativeKotlinCandidateJourney(
                         NativeKotlinCandidateCoachScreen(host,
                             preferredExerciseId=coachRequestedExerciseId,
                             onOpenSettings={navigate(KotlinCandidateDestination.SETTINGS)},
+                            onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
+                            onOpenFuture={navigate(KotlinCandidateDestination.FUTURE)},
                             onOpenTrain={id->
                                 selectedGeneratedWorkoutId=id
                                 selectedCustomWorkoutId=null

@@ -36,7 +36,7 @@ passed. Keep the APK freeze until the agreed full journey is ready to test.
 | 2 | A reachable Kotlin journey | Debug-only Kotlin Lab connects saved setup, generated/custom program review, Train and editable native History. Returning from setup now opens saved programs; a single owned program reopens directly, while multiple programs require a choice. Android interaction acceptance is pending. |
 | 3 | Generate a useful first program | Saved athlete choices and explicitly calibrated, attainable loads feed a versioned provisional first-block policy, complete prescription and native draft save. Original calibration recovers the policy after restart only if regeneration matches the saved program. Broader catalog coverage, program-quality review and the goal/split/gym matrix remain open. Test fixtures are not user programs. |
 | 4 | Finish-to-next-workout loop | Exact cycle review/consent, preparation, issuance, logging, corrections and manifest-backed Finish are connected. Reopening a signed generated plan checks the next session automatically; existing prepared/issued work takes precedence. Train checks for unfinished workouts on entry, and verified History links back to the program. A nine-session native-file integration covers week boundaries, authored exceptions, lost Finish acknowledgments and fresh readers. This is not Android interaction proof. |
-| 5 | Cold restart and phone acceptance | Explicit saved-profile resume, generated-policy recovery and durable unfinished/finished work have native source paths. Existing web history still needs verified migration; a separate new Kotlin history requires explicit opt-in and a complete empty-native-inventory check. Custom coaching-policy recovery, full Android journey/layout/TalkBack, backup and physical-device acceptance remain open. |
+| 5 | Cold restart and phone acceptance | Explicit saved-profile resume, generated-policy recovery and durable unfinished/finished work have native source paths. Newly signed custom programs now save and revalidate their complete review rules on cold reopen; older approvals without rules need one fresh review. Existing web history still needs verified migration; a separate new Kotlin history requires explicit opt-in and a complete empty-native-inventory check. Full Android journey/layout/TalkBack, backup and physical-device acceptance remain open. |
 
 Defer additional narrow load-consent variants unless one blocks this loop or
 the direct comparison exposes a real defect. Improve the existing independent progression domains and preserve data owners;
@@ -74,6 +74,15 @@ and issue both saved v2 programs and new timed approvals. See
 The broader program-quality matrix, individual fatigue accuracy, legacy-history
 migration and Android interaction acceptance remain open. A source-tested
 generated week is not full product acceptance or proof of coaching superiority.
+
+**Custom restart continuation — 2026-11-08:** newly signed custom cycles recover
+their complete review inputs from the existing atomic consent record. Cold
+reopening rechecks the current program, gym and fingerprint, restores the policy
+editor and reaches the normal next-workout selector. The nine-session custom
+journey now uses disk-recovered rules rather than remembered UI input throughout.
+Version-1 receipts retain exact replay and need one explicit renewal to save
+previously omitted rules. See
+[the compatibility and execution checkpoint](CUSTOM_POLICY_RECOVERY_CHECKPOINT.md).
 
 ## What counts as progress in updates
 

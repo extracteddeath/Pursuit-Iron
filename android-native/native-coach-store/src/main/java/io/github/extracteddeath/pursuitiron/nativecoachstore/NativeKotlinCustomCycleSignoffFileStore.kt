@@ -20,8 +20,18 @@ private data class SignoffFileRecord(
     val athleteId:String,
     val cycleId:String,
     val revision:Long,
-    val consent:NativeKotlinCustomCycleSignoff?
+    val consent:NativeKotlinCustomCycleSignoff?,
+    val reviewedInputs:CustomCoachAuditInputs?=null
 )
+
+/** A recovered review is revalidated; it never grants new consent or a workout. */
+sealed interface NativeCustomSavedCoachReview {
+    data class Ready(val inputs:CustomCoachAuditInputs,
+        val receipt:NativeKotlinCustomCycleSignoff):NativeCustomSavedCoachReview
+    data object Missing:NativeCustomSavedCoachReview
+    data object LegacyWithoutInputs:NativeCustomSavedCoachReview
+    data class Rejected(val reason:NativeCustomSignoffRefusal):NativeCustomSavedCoachReview
+}
 
 /**
  * Revision-CAS athlete consent for EXACT custom-cycle content. A consent is
@@ -42,8 +52,8 @@ class NativeKotlinCustomCycleSignoffFileStore(
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val sha=Regex("^[a-f0-9]{64}$")
     private val magic=0x50494341 // PICA
-    private val version=1
-    private val maxFileSize=8192
+    private val version=2
+    private val maxFileSize=NativeCustomCoachAuditInputsCodec.MAX_BYTES+8192
     private val maximumRevision=9_007_199_254_740_991L
 
     private fun current(owner:String):NativeKotlinOwnerIdentity? {
@@ -81,6 +91,12 @@ class NativeKotlinCustomCycleSignoffFileStore(
                         out.writeUTF(phase.name);out.writeUTF(revision)
                     }
             }
+            require(item.consent!=null || item.reviewedInputs==null)
+            out.writeBoolean(item.reviewedInputs!=null)
+            item.reviewedInputs?.let {
+                val saved=NativeCustomCoachAuditInputsCodec.encode(it)
+                out.writeInt(saved.size);out.write(saved)
+            }
         }
         val payload=output.toByteArray()
         require(payload.size+36<=maxFileSize)
@@ -108,7 +124,10 @@ class NativeKotlinCustomCycleSignoffFileStore(
             throw IOException("Custom consent checksum mismatch")
         return try {
             DataInputStream(ByteArrayInputStream(payload)).use{input->
-                if(input.readInt()!=magic || input.readInt()!=version)
+                if(input.readInt()!=magic)
+                    throw IOException("Unknown custom consent version")
+                val storedVersion=input.readInt()
+                if(storedVersion !in 1..version)
                     throw IOException("Unknown custom consent version")
                 val owner=input.readUTF();val athlete=input.readUTF()
                 val cycle=input.readUTF();val revision=input.readLong()
@@ -142,8 +161,15 @@ class NativeKotlinCustomCycleSignoffFileStore(
                             throw IOException("Invalid consent receipt")
                     }
                 } else null
+                val inputs=if(storedVersion>=2 && input.readBoolean()) {
+                    val size=input.readInt()
+                    if(receipt==null || size !in 17..NativeCustomCoachAuditInputsCodec.MAX_BYTES ||
+                        size>input.available())throw IOException("Invalid saved review inputs")
+                    val raw=ByteArray(size);input.readFully(raw)
+                    NativeCustomCoachAuditInputsCodec.decode(raw)
+                } else null
                 if(input.available()!=0)throw IOException("Trailing consent bytes")
-                SignoffFileRecord(owner,athlete,cycle,revision,receipt)
+                SignoffFileRecord(owner,athlete,cycle,revision,receipt,inputs)
             }
         } catch(ex:Exception){
             throw IOException("Corrupt custom consent data",ex)
@@ -242,8 +268,16 @@ class NativeKotlinCustomCycleSignoffFileStore(
                 if((previous?.revision?:0L)!=expectedRecordRevision)
                     return@withOwnerTransaction NativeCustomSignoffWrite.Rejected(
                         NativeCustomSignoffRefusal.STALE_CONSENT)
+                // Snapshot mutable caller collections before either audit or
+                // fingerprint, and persist that SAME complete reviewed recipe.
+                val savedInputs=try {NativeCustomCoachAuditInputsCodec.decode(
+                    NativeCustomCoachAuditInputsCodec.encode(inputs))}
+                catch(_:Exception){
+                    return@withOwnerTransaction NativeCustomSignoffWrite.Rejected(
+                        NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
+                }
                 val (candidate,refusal)=verified(ownerKey,cycleId,
-                    expectedCycleRevision,expectedSourceRevision,inputs)
+                    expectedCycleRevision,expectedSourceRevision,savedInputs)
                 if(candidate==null)
                     return@withOwnerTransaction NativeCustomSignoffWrite.Rejected(
                         refusal ?: NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
@@ -252,13 +286,48 @@ class NativeKotlinCustomCycleSignoffFileStore(
                         NativeCustomSignoffRefusal.NOT_AUTHORIZED)
                 val approved=candidate.copy(recordRevision=expectedRecordRevision+1)
                 atomicWrite(file,encode(SignoffFileRecord(
-                    ownerKey,owner.athleteId,cycleId,approved.recordRevision,approved)))
+                    ownerKey,owner.athleteId,cycleId,approved.recordRevision,
+                    approved,savedInputs)))
                 NativeCustomSignoffWrite.Committed(approved)
             }
         }catch(_:Exception){
             NativeCustomSignoffWrite.Rejected(
                 NativeCustomSignoffRefusal.STORAGE_UNAVAILABLE)
         }
+    }
+
+    /** Cold recovery requires the original unrevoked consent, exact current
+     * cycle/source, fresh full-cycle audit AND unchanged fingerprint. A valid
+     * checksum alone cannot turn altered review inputs into approved rules. */
+    fun recoverReviewedInputs(ownerKey:String,cycleId:String):NativeCustomSavedCoachReview {
+        if(current(ownerKey)==null || !id.matches(cycleId))
+            return NativeCustomSavedCoachReview.Rejected(NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return runCatching {fence.withOwnerTransaction(ownerKey) {
+            val owner=current(ownerKey) ?:return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+            val stored=try{decode(path(ownerKey,cycleId))}catch(_:Exception){
+                return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                    NativeCustomSignoffRefusal.CORRUPT_RECORD)
+            } ?:return@withOwnerTransaction NativeCustomSavedCoachReview.Missing
+            if(stored.ownerKey!=ownerKey || stored.athleteId!=owner.athleteId ||
+                stored.cycleId!=cycleId)return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+            val receipt=stored.consent ?:return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                NativeCustomSignoffRefusal.STALE_CONSENT)
+            val inputs=stored.reviewedInputs ?:return@withOwnerTransaction NativeCustomSavedCoachReview.LegacyWithoutInputs
+            val (checked,refusal)=verified(ownerKey,cycleId,
+                receipt.cycleRevision,receipt.sourceRevision,inputs)
+            if(checked==null)return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                refusal ?:NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
+            if(checked.fingerprintSha256!=receipt.fingerprintSha256 ||
+                checked.policyReferences!=receipt.policyReferences)
+                return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                    NativeCustomSignoffRefusal.STALE_CONSENT)
+            if(current(ownerKey)!=owner)return@withOwnerTransaction NativeCustomSavedCoachReview.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+            NativeCustomSavedCoachReview.Ready(inputs,receipt)
+        }}.getOrElse {NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.STORAGE_UNAVAILABLE)}
     }
 
     /** An old receipt can be VIEWED, but is current only after recomputing

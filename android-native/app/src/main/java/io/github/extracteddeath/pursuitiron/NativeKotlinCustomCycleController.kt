@@ -42,8 +42,8 @@ internal data class NativeKotlinCustomCycleState(
     val evidenceSourceRevision: Long? = null,
     val coachingAudit: CustomCoachAudit? = null,
     val auditSourceRevision: Long? = null,
-    /** Inputs from the latest independently rechecked full-cycle audit.
-     * Never persisted, fabricated, or reused after an authored draft edit. */
+    /** Latest full-cycle audit inputs, freshly rechecked after cold recovery.
+     * Never fabricated or reused after an authored draft edit. */
     val reviewedCoachInputs: CustomCoachAuditInputs? = null,
     /** Read-only owner-verified next session; never an issuance grant. */
     val nextCycleSlot:NativeCustomNextCycleSlot?=null,
@@ -152,10 +152,29 @@ internal class NativeKotlinCustomCycleController(
         }.copy(busy=pending.get())
     }
 
-    /** Recheck saved first-program inputs on every cold reopen, not just
-     * when navigating from the generator's transient confirmation screen. */
-    private fun recoverGeneratedCoachPolicy(cycleId:String) {
+    /** Prefer an exact signed review, including custom rules. An unsigned
+     * generated draft may still recover its original calibrated preview. */
+    private fun recoverSavedCoachPolicy(cycleId:String) {
         if(current.value.draft?.cycleId!=cycleId)return
+        val saved=host.recoverSavedCustomCycleReview(cycleId)
+        when(saved) {
+            is NativeCustomSavedCoachReview.Ready -> {
+                auditReviewedSavedCycle(saved.inputs)
+                if(current.value.coachingAudit?.status==
+                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                    (current.value.signoff as? NativeCustomSignoffRead.Found)?.isCurrent==true)
+                    current.value=current.value.copy(
+                        message="Your saved coaching rules were restored and rechecked against this program and gym. Your current approval is preserved.")
+                return
+            }
+            is NativeCustomSavedCoachReview.Rejected -> {
+                current.value=current.value.copy(
+                    message="The saved review could not be restored (${saved.reason.name.lowercase().replace('_',' ')}). Recheck the program, gym and coaching rules before starting a new workout.")
+                return
+            }
+            NativeCustomSavedCoachReview.Missing,
+            NativeCustomSavedCoachReview.LegacyWithoutInputs -> {}
+        }
         when(val recovered=host.recoverSavedFirstProgramReview(cycleId)) {
             is NativeRecoveredFirstProgramReview.Ready -> {
                 auditReviewedSavedCycle(recovered.inputs)
@@ -168,13 +187,17 @@ internal class NativeKotlinCustomCycleController(
                 current.value=current.value.copy(
                     message=recovered.reason+
                         " Your saved custom program remains available for manual coaching review.")
-            NativeRecoveredFirstProgramReview.NotGenerated -> {}
+            NativeRecoveredFirstProgramReview.NotGenerated -> {
+                if(saved==NativeCustomSavedCoachReview.LegacyWithoutInputs)
+                    current.value=current.value.copy(
+                        message="This older approval did not save its coaching rules. Review and sign them once to restore them on future starts. Your program and workout history are preserved.")
+            }
         }
     }
 
     fun open(cycleId: String) = run {
         applyRead(cycleId, host.readCustomCycleDraft(cycleId))
-        recoverGeneratedCoachPolicy(cycleId)
+        recoverSavedCoachPolicy(cycleId)
         selectNextSessionIfReviewed()
     }
 
@@ -190,7 +213,7 @@ internal class NativeKotlinCustomCycleController(
                 } else {
                     applyRead(selected.cycleId,
                         host.readCustomCycleDraft(selected.cycleId))
-                    recoverGeneratedCoachPolicy(selected.cycleId)
+                    recoverSavedCoachPolicy(selected.cycleId)
                     selectNextSessionIfReviewed()
                 }
             }

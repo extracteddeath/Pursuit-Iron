@@ -25,6 +25,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     source:AthleteSetupReview?,
     sourceRevision:Long?,
     busy:Boolean,
+    reviewedInputs:CustomCoachAuditInputs?,
     observedEvidence:CustomCoachPolicyEvidence?,
     onInspectEvidence:()->Unit,
     onDraftChanged:()->Unit,
@@ -45,6 +46,54 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     val liftRows=remember(cycle.cycleId,cycle.revision,sourceRevision) {
         mutableStateMapOf<TrainingPhase,Int>()
     }
+    var edited by remember(cycle.cycleId,cycle.revision,sourceRevision) {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(cycle.cycleId,cycle.revision,sourceRevision,reviewedInputs) {
+        val saved=reviewedInputs
+        // Recover visible fields once; a later audit callback must not
+        // overwrite a newer unsaved policy edit.
+        if(saved!=null && !edited) {
+            fields.clear();liftRows.clear()
+            saved.policiesByPhase.forEach {(phase,policy)->
+                val key=phase.name
+                fields["$key:id"]=policy.policyId
+                fields["$key:revision"]=policy.revision
+                fields["$key:rationale"]=policy.rationale
+                listOf("baseline" to policy.baselineBounds,
+                    "selected" to policy.selectedBounds).forEach {(side,bounds)->
+                    bounds.forEach {b->
+                        val prefix="$key:${b.muscle.name}:$side"
+                        fields["$prefix:mev"]=b.mev.toPlainString()
+                        fields["$prefix:mav"]=b.mav.toPlainString()
+                        fields["$prefix:mrv"]=b.mrv.toPlainString()
+                        fields["$prefix:days"]=b.minimumDirectDays.toString()
+                    }
+                }
+                policy.minimumPurposeDays.forEach {(purpose,days)->
+                    fields["$key:purpose:${purpose.name}"]=days.toString()
+                }
+                liftRows[phase]=policy.primaryLiftMinimumDays.size
+                policy.primaryLiftMinimumDays.entries.forEachIndexed {i,(exercise,days)->
+                    fields["$key:lift:$i:id"]=exercise
+                    fields["$key:lift:$i:days"]=days.toString()
+                }
+            }
+            saved.nonSetSecondsByWeekday.forEach {(day,seconds)->
+                fields["time:$day"]=seconds.toString()
+            }
+            saved.continuityPolicy?.let {c->
+                fields["continuity:dropTotal"]=c.maximumTotalWorkingSetDropFraction.toPlainString()
+                fields["continuity:dropDirect"]=c.maximumDirectMuscleDropFraction.toPlainString()
+                c.maximumTotalWorkingSetRiseFraction?.let {
+                    fields["continuity:riseTotal"]=it.toPlainString()
+                }
+                c.maximumDirectMuscleRiseFraction?.let {
+                    fields["continuity:riseDirect"]=it.toPlainString()
+                }
+            }
+        }
+    }
     var issues by remember(cycle.cycleId,cycle.revision,sourceRevision) {
         mutableStateOf<List<String>>(emptyList())
     }
@@ -57,6 +106,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     }
     fun get(key:String)=fields[key].orEmpty()
     fun put(key:String,value:String) {
+        edited=true
         fields[key]=value
         issues=emptyList()
         onDraftChanged()
@@ -227,6 +277,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         }
     }
     OutlinedButton(enabled=!busy,onClick={
+        edited=true
         listOf("mev","mav","mrv","days").forEach{field->
             val sourceKey=keyFor(selectedMuscle,"baseline",field)
             val dest=keyFor(selectedMuscle,"selected",field)
@@ -257,6 +308,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     }
     if(rowCount<16)
         OutlinedButton(enabled=!busy,onClick={
+            edited=true
             liftRows[selectedPhase]=rowCount+1
             onDraftChanged()
         }){Text("Require another primary lift")}

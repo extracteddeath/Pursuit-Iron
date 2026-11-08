@@ -184,6 +184,17 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G4/G5 custom policy recovery — 2026-11-08:** newly signed custom cycles now
+persist exact review inputs in version 2 of the existing native consent record.
+Cold recovery rechecks current identity, program, source, whole-cycle audit and
+unchanged approval fingerprint, then restores the controller/editor and normal
+next-workout selection. The three-week/nine-session custom journey now obtains
+all rules from fresh disk readers. V1 receipts remain readable with their exact
+fingerprints; omitted rules require one explicit re-review/renewal. No authored
+prescription or completed history changes. Local native suite: 468 passed;
+Android interaction and backup remain separate gates. See
+[the checkpoint](../CUSTOM_POLICY_RECOVERY_CHECKPOINT.md).
+
 **G3/G5 live workout connection — 2026-11-08:** generated and custom workouts
 now feed their own saved per-slot receipts into the existing next-set coach.
 The native reader reopens current settings and physical source under the owner

@@ -1392,6 +1392,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customCycleSignoffs.read(owner.ownerKey,cycleId,inputs)
     }
 
+    fun recoverSavedCustomCycleReview(cycleId:String):NativeCustomSavedCoachReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSavedCoachReview.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.recoverReviewedInputs(owner.ownerKey,cycleId)
+    }
+
     fun revokeCustomCycleConsent(
         cycleId:String,expectedConsentRevision:Long
     ):NativeCustomSignoffWrite {

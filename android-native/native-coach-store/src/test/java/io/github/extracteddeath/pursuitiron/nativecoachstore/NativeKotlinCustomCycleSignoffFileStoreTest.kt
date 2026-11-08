@@ -121,6 +121,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         initialize()
         assertEquals(NativeCustomSignoffRead.Missing,
             store().read("owner-1","cycle-1"))
+        assertEquals(NativeCustomSavedCoachReview.Missing,
+            store().recoverReviewedInputs("owner-1","cycle-1"))
         val receipt=approved()
         assertEquals(1L,receipt.recordRevision)
         assertTrue(receipt.fingerprintSha256.matches(Regex("[a-f0-9]{64}")))
@@ -130,6 +132,103 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             store().read("owner-1","cycle-1",inputs()))
         assertFalse(receipt.mayIssueWorkout)
         assertFalse(receipt.mayAlterHistory)
+    }
+
+    @Test fun savedCustomRulesColdRecoverInManualModeAndCannotBeMutated() {
+        initialize()
+        val supplied=inputs()
+        val overhead=supplied.nonSetSecondsByWeekday.toMutableMap()
+        val phases=supplied.policiesByPhase.toMutableMap()
+        val mutable=supplied.copy(policiesByPhase=phases,nonSetSecondsByWeekday=overhead)
+        val approved=store().confirm("owner-1","cycle-1",1,1,0,mutable,true)
+            as NativeCustomSignoffWrite.Committed
+        phases.clear();overhead[0]=21600
+        assertTrue(coachSettings.save("owner-1",0,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        val recovered=store().recoverReviewedInputs("owner-1","cycle-1")
+            as NativeCustomSavedCoachReview.Ready
+        assertEquals(supplied,recovered.inputs)
+        assertEquals(approved.receipt,recovered.receipt)
+        assertEquals(NativeCustomSignoffRead.Found(approved.receipt,true),
+            store().read("owner-1","cycle-1",recovered.inputs))
+        assertThrows(UnsupportedOperationException::class.java) {
+            (recovered.inputs.nonSetSecondsByWeekday as MutableMap)[0]=900
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (recovered.inputs.policiesByPhase.values.first().selectedBounds
+                as MutableList).clear()
+        }
+        assertFalse(recovered.receipt.mayIssueWorkout)
+        assertEquals(cycle(),(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+    }
+
+    /** Independently reproduce the published V1 envelope. V2's optional
+     * input bytes are supplied only to construct a checksum-valid tamper. */
+    private fun writeConsentFixture(receipt:NativeKotlinCustomCycleSignoff,
+        version:Int,reviewed:CustomCoachAuditInputs?=null) {
+        val bytes=java.io.ByteArrayOutputStream()
+        java.io.DataOutputStream(bytes).use {out->
+            out.writeInt(0x50494341);out.writeInt(version)
+            out.writeUTF(receipt.ownerKey);out.writeUTF(receipt.athleteId)
+            out.writeUTF(receipt.cycleId);out.writeLong(receipt.recordRevision)
+            out.writeBoolean(true)
+            out.writeLong(receipt.cycleRevision);out.writeLong(receipt.sourceRevision)
+            out.writeUTF(receipt.fingerprintSha256)
+            out.writeInt(receipt.policyReferences.size)
+            receipt.policyReferences.forEach {(phase,revision)->
+                out.writeUTF(phase.name);out.writeUTF(revision)
+            }
+            if(version==2) {
+                out.writeBoolean(reviewed!=null)
+                reviewed?.let {
+                    val inputBytes=NativeCustomCoachAuditInputsCodec.encode(it)
+                    out.writeInt(inputBytes.size);out.write(inputBytes)
+                }
+            }
+        }
+        val body=bytes.toByteArray()
+        val envelope=java.io.ByteArrayOutputStream()
+        java.io.DataOutputStream(envelope).use {out->
+            out.writeInt(body.size);out.write(body)
+            out.write(java.security.MessageDigest.getInstance("SHA-256").digest(body))
+        }
+        val file=Files.list(temp.root.toPath()).use {files->
+            files.filter {it.fileName.toString().startsWith("custom-consent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        Files.write(file,envelope.toByteArray())
+    }
+
+    @Test fun v1ConsentReplaysUnchangedAndOneFreshReviewSavesItsMissingRules() {
+        initialize()
+        val receipt=approved()
+        writeConsentFixture(receipt,1)
+        assertEquals(NativeCustomSignoffRead.Found(receipt,true),
+            store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomSavedCoachReview.LegacyWithoutInputs,
+            store().recoverReviewedInputs("owner-1","cycle-1"))
+        val renewed=store().confirm("owner-1","cycle-1",1,1,1,inputs(),true)
+            as NativeCustomSignoffWrite.Committed
+        val recovered=store().recoverReviewedInputs("owner-1","cycle-1")
+            as NativeCustomSavedCoachReview.Ready
+        assertEquals(receipt.copy(recordRevision=2),renewed.receipt)
+        assertEquals(inputs(),recovered.inputs)
+        assertEquals(renewed.receipt,recovered.receipt)
+    }
+
+    @Test fun recomputedChecksumDoesNotApproveAlteredSavedPolicyOrOverhead() {
+        initialize()
+        val receipt=approved()
+        for(changed in listOf(inputs(policy().copy(rationale="Different rules")),
+            inputs().copy(nonSetSecondsByWeekday=mapOf(0 to 201,2 to 200,4 to 200)))) {
+            writeConsentFixture(receipt,2,changed)
+            assertEquals(NativeCustomSavedCoachReview.Rejected(
+                NativeCustomSignoffRefusal.STALE_CONSENT),
+                store().recoverReviewedInputs("owner-1","cycle-1"))
+        }
+        assertEquals(cycle(),(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
     }
 
     @Test fun unreviewedPolicyAndMissingConsentNeverIssueOrWriteRecord() {
@@ -152,6 +251,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             drafts.save("owner-1","cycle-1",1,cycle(2).copy(title="Edited")))
         assertEquals(NativeCustomSignoffRead.Found(receipt,false),
             store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.STALE_PROGRAM),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
         assertEquals(NativeCustomSignoffWrite.Rejected(
             NativeCustomSignoffRefusal.STALE_PROGRAM),
             store().confirm("owner-1","cycle-1",1,1,1,inputs(),true))
@@ -179,6 +281,18 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             store().read("owner-1","cycle-1",inputs()))
     }
 
+    @Test fun newGymSourceRequiresFreshReviewInsteadOfRestoringOldRules() {
+        initialize()
+        val receipt=approved()
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.STALE_SOURCE),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
+        assertEquals(NativeCustomSignoffRead.Found(receipt,false),
+            store().read("owner-1","cycle-1",inputs()))
+    }
+
     @Test fun identitySwitchAndRevocationFailClosed() {
         initialize()
         val receipt=approved()
@@ -186,11 +300,17 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomSignoffRead.Rejected(
             NativeCustomSignoffRefusal.NOT_AUTHORIZED),
             store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.NOT_AUTHORIZED),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
         active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
         val revoked=store().revoke("owner-1","cycle-1",1)
         assertTrue(revoked is NativeCustomSignoffWrite.Committed)
         assertEquals(NativeCustomSignoffRead.Revoked(2),
             store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.STALE_CONSENT),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
         assertEquals(NativeCustomSignoffWrite.Rejected(
             NativeCustomSignoffRefusal.STALE_CONSENT),
             store().confirm("owner-1","cycle-1",1,1,0,inputs(),true))
@@ -216,6 +336,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomSignoffRead.Rejected(
             NativeCustomSignoffRefusal.CORRUPT_RECORD),
             store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.CORRUPT_RECORD),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
         assertEquals(NativeCustomSignoffWrite.Rejected(
             NativeCustomSignoffRefusal.CORRUPT_RECORD),
             store().confirm("owner-1","cycle-1",1,1,1,inputs(),true))

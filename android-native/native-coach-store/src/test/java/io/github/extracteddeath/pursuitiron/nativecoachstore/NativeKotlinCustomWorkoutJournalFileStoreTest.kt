@@ -148,7 +148,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
 
     /** Fresh native readers, as used after returning from Finish or restarting.
      * No in-memory completion list is passed to the next-session chooser. */
-    private fun coldNextSession():NativeCustomNextCycleSlot {
+    private fun coldNextSession(inputs:CustomCoachAuditInputs=input()):NativeCustomNextCycleSlot {
         val root=temp.root.toPath()
         val lock=NativeKotlinApprovalRevisionFence(root)
         val savedDrafts=NativeCustomCycleDraftFileStore(root,lock,identity)
@@ -176,7 +176,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         return NativeKotlinCustomNextCycleSessionReview(
             lock,identity,savedDrafts,savedSource,savedConsent,timeline,
             NativeKotlinCustomOutstandingWorkoutInventory(plans,journals),plans
-        ).review("owner-1","cycle-1",input())
+        ).review("owner-1","cycle-1",inputs)
     }
 
     @Test fun coldReturnToTrainingTraversesWholeCycleWithoutRepeatingFinishedWork() {
@@ -186,17 +186,23 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         val completedIds=mutableListOf<String>()
         for(week in 1..3)for(day in listOf(0,2,4)) {
             val id="training-w$week-d$day"
+            // A fresh approval reader supplies ALL rules after each restart;
+            // no remembered UI policy or generated-program seed is present.
+            val inputs=(NativeKotlinCustomCycleSignoffFileStore(
+                temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+                identity,drafts,sources).recoverReviewedInputs("owner-1","cycle-1")
+                as NativeCustomSavedCoachReview.Ready).inputs
             assertEquals(NativeCustomNextCycleSlot.Next(week,day,"Core $day"),
-                coldNextSession())
-            assertTrue(prepared.prepare("owner-1",id,"cycle-1",week,day,input())
+                coldNextSession(inputs))
+            assertTrue(prepared.prepare("owner-1",id,"cycle-1",week,day,inputs)
                 is NativeCustomPrepareResult.Prepared)
             assertEquals(NativeCustomNextCycleSlot.Prepared(id,week,day,"Core $day"),
-                coldNextSession())
-            val started=issued.issue("owner-1",id,"cycle-1",week,day,input())
+                coldNextSession(inputs))
+            val started=issued.issue("owner-1",id,"cycle-1",week,day,inputs)
                 as NativeCustomJournalResult.Durable
             val original=started.issued.journal.snapshot
             assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
-                id,week,day,"Core $day"),coldNextSession())
+                id,week,day,"Core $day"),coldNextSession(inputs))
             // Week 2's authored exception is an actual issued target; all
             // other days retain the original prescription independently.
             val reps=if(week==2 && day==0)16 else 10
@@ -212,7 +218,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             // the program forward. A read/restart cannot invent completion.
             assertTrue(recorded.issued.journal.canProposeFinish)
             assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
-                id,week,day,"Core $day"),coldNextSession())
+                id,week,day,"Core $day"),coldNextSession(inputs))
             val finish=CustomWorkoutJournalOperation.Finish(
                 "finish-w$week-d$day",recorded.issued.journal.revision)
             val transaction=NativeKotlinCustomHistoryTransaction(

@@ -711,6 +711,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     source=state.reviewedSourceSetup,
                     sourceRevision=state.sourceRevision,
                     busy=busy,
+                    reviewedInputs=state.reviewedCoachInputs,
                     observedEvidence=state.authoredWorkloadEvidence?.takeIf{
                         it.auditedCycleRevision==draft.revision &&
                             state.evidenceSourceRevision==state.sourceRevision

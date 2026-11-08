@@ -31,6 +31,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     var understandsSeparateHistory by remember{mutableStateOf(false)}
     var enrollmentMessage by remember{mutableStateOf<String?>(null)}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
+    var exerciseSearch by rememberSaveable{mutableStateOf("")}
     fun reload() {
         if(busy)return
         busy=true;result=null
@@ -43,6 +44,37 @@ internal fun NativeKotlinCandidateHistoryScreen(
         }
     }
     LaunchedEffect(host){reload()}
+    val verified=(result as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+    val searchableMovements=remember(verified) {
+        verified?.completions.orEmpty().flatMap{entry->
+            when(entry) {
+                is NativeKotlinMixedHistoryCompletion.Composer ->
+                    entry.evidence.sets.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Custom ->
+                    entry.evidence.visits.map{it.exerciseId}
+            }
+        }.distinct().sortedBy(::kotlinExerciseLabel)
+    }
+    val filteredMovements=remember(searchableMovements,exerciseSearch) {
+        val query=exerciseSearch.trim()
+        if(query.isEmpty())emptyList()
+        else searchableMovements.filter{
+            it.contains(query,ignoreCase=true) ||
+                kotlinExerciseLabel(it).contains(query,ignoreCase=true)
+        }
+    }
+    val visibleSessions=remember(verified,filteredMovements,exerciseSearch) {
+        val query=exerciseSearch.trim()
+        if(query.isEmpty())verified?.completions.orEmpty()
+        else verified?.completions.orEmpty().filter{ entry ->
+            when(entry) {
+                is NativeKotlinMixedHistoryCompletion.Composer ->
+                    entry.evidence.sets.any{it.exerciseId in filteredMovements}
+                is NativeKotlinMixedHistoryCompletion.Custom ->
+                    entry.evidence.visits.any{it.exerciseId in filteredMovements}
+            }
+        }
+    }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
@@ -71,7 +103,47 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         }
                 }
                 if(read.timeline.completions.isEmpty())item {Text("Your first finished workout will appear here.")}
-                items(read.timeline.completions.asReversed(),key={it.manifest.workoutId}) {entry->
+                if(read.timeline.completions.isNotEmpty())item {
+                    PursuitCard {
+                        PursuitSectionHeading("Find an exercise",
+                            "Search completed sessions, or open a movement's full history.")
+                        OutlinedTextField(
+                            value=exerciseSearch,
+                            onValueChange={exerciseSearch=it.take(80)},
+                            singleLine=true,
+                            label={Text("Search exercises")},
+                            modifier=Modifier.fillMaxWidth()
+                        )
+                        if(exerciseSearch.isNotBlank()) {
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement=Arrangement.SpaceBetween) {
+                                Text("${visibleSessions.size} matching sessions",
+                                    style=MaterialTheme.typography.bodySmall)
+                                TextButton(onClick={exerciseSearch=""}) {Text("Clear")}
+                            }
+                            if(filteredMovements.isEmpty())
+                                Text("No matching saved exercises.",
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style=MaterialTheme.typography.bodySmall)
+                            else {
+                                Row(Modifier.fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                    filteredMovements.take(8).forEach{exercise->
+                                        OutlinedButton(onClick={historyExerciseId=exercise}) {
+                                            Text(kotlinExerciseLabel(exercise))
+                                        }
+                                    }
+                                }
+                                if(filteredMovements.size>8)
+                                    Text("Showing the first 8 matching exercises; refine your search for more.",
+                                        style=MaterialTheme.typography.bodySmall,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+                items(visibleSessions.asReversed(),key={it.manifest.workoutId}) {entry->
                     var expanded by rememberSaveable(entry.manifest.workoutId){mutableStateOf(false)}
                     PursuitCard {
                         Text("Session ${entry.manifest.completionOrder}",style=MaterialTheme.typography.titleMedium)

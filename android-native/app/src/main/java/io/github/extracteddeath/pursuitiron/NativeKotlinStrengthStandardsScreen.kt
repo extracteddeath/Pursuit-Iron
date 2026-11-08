@@ -81,20 +81,48 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var result by remember(host) {
         mutableStateOf<NativeKotlinMixedFactsReadResult?>(null)
     }
+    var timeline by remember(host) {
+        mutableStateOf<NativeKotlinMixedHistoryTimeline?>(null)
+    }
     var revision by remember{mutableIntStateOf(0)}
     var bodyweightText by rememberSaveable{mutableStateOf("")}
     var bodyweightUnit by rememberSaveable{mutableStateOf(LoadUnit.LB.name)}
     var comparisonGroup by rememberSaveable{mutableStateOf<String?>(null)}
+    var trendExerciseId by rememberSaveable{mutableStateOf("barbell_bench")}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
     LaunchedEffect(host,revision) {
         result=null
-        result=withContext(Dispatchers.IO) {
-            runCatching{host.reviewVerifiedKotlinWorkingSetFacts()}.getOrElse{
-                NativeKotlinMixedFactsReadResult.HistoryRejected(
+        timeline=null
+        // One owner-verified history snapshot supplies BOTH strength cards
+        // and trends. No second asynchronous read can mix manifest revisions.
+        val verified:Pair<NativeKotlinMixedFactsReadResult,
+            NativeKotlinMixedHistoryTimeline?>=withContext(Dispatchers.IO) {
+            when(val history=runCatching{
+                host.reviewVerifiedKotlinHistory()
+            }.getOrElse{
+                NativeKotlinMixedHistoryReadResult.Rejected(
                     NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
+            }) {
+                is NativeKotlinMixedHistoryReadResult.Rejected ->
+                    NativeKotlinMixedFactsReadResult.HistoryRejected(
+                        history.reason) to null
+                is NativeKotlinMixedHistoryReadResult.Review -> {
+                    val facts:NativeKotlinMixedFactsReadResult=
+                        when(val projection=history.timeline.reviewWorkingSetFacts()) {
+                            is NativeMixedFactsResult.Review ->
+                                NativeKotlinMixedFactsReadResult.Review(projection.facts)
+                            is NativeMixedFactsResult.Rejected ->
+                                NativeKotlinMixedFactsReadResult.FactsRejected(
+                                    projection.reason)
+                        }
+                    facts to history.timeline
+                }
             }
         }
+        result=verified.first
+        timeline=if(verified.first is NativeKotlinMixedFactsReadResult.Review)
+            verified.second else null
     }
     val facts=(result as? NativeKotlinMixedFactsReadResult.Review)?.facts
     val completed=facts?.mostRepsAtLoad.orEmpty()
@@ -169,6 +197,24 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 if(completed.isEmpty())
                     PursuitEmptyState("Start building your strength record",
                         "Complete and save a native barbell workout to see its verified performance here.")
+                PursuitSectionHeading("Strength trend",
+                    "Compare actual finished sessions, not programmed targets.")
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    publishedReferences.forEach { lift ->
+                        FilterChip(selected=trendExerciseId==lift.exerciseId,
+                            onClick={trendExerciseId=lift.exerciseId},
+                            label={Text(lift.title)})
+                    }
+                }
+                val samples=remember(timeline,trendExerciseId,displayUnit) {
+                    timeline?.let {
+                        verifiedStrengthTrend(it,trendExerciseId,displayUnit)
+                    }.orEmpty()
+                }
+                PursuitStrengthTrendChart(samples,displayUnit)
+                PursuitSectionHeading("Strength standards",
+                    "Broad community reference levels for four source-matched barbell lifts.")
                 publishedReferences.forEach { standard ->
                     val best=completed.filter{it.key.exerciseId==standard.exerciseId}
                         .mapNotNull {lift->

@@ -56,7 +56,9 @@ def swipe(down=True, distance=950):
     # Swipe only inside the scrolling content, away from the fixed navigation.
     start, end = (1850, max(430, 1850 - distance)) if down else (500, min(1900, 500 + distance))
     # The outer scroll owns this gutter; editable fields cannot capture it.
-    adb("shell", "input", "swipe", 22, start, 22, end, 280)
+    # Fast swipes fling well beyond the requested distance. In particular they
+    # can skip a calibration heading that was already visible near the bottom.
+    adb("shell", "input", "swipe", 22, start, 22, end, 1000)
     time.sleep(.25)
 
 
@@ -86,7 +88,7 @@ def locate(label, *, scroll=True, limit=45, center=False):
         if matches:
             node = matches[0]
             if center and bounds(node)[1] > 1250:
-                swipe(True, min(1100, bounds(node)[1] - 750))
+                swipe(True, min(350, bounds(node)[1] - 1100))
                 continue
             return root, node
         if not scroll:

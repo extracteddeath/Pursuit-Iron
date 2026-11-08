@@ -30,3 +30,8 @@ builder handoff, then stopped while locating a long exercise label. The
 retry normalizes accessibility whitespace, scrolls outside editable fields,
 and records the visible control text at each search. Cold recovery must show
 exactly two committed sets before and after restarting the process.
+
+The captured retry trace showed the exact exercise label on screen before
+the runner's centering swipe flung past it. The next run uses slower swipes
+and small centering movements against the same frozen APK; no application
+or engine change is justified by this test-driver failure.

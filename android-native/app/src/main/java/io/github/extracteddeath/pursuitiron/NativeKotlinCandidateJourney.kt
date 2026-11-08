@@ -38,6 +38,44 @@ private enum class KotlinCandidateDestination(val label:String) {
     COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),SETTINGS("Settings"),TRAIN("Train")
 }
 
+private val primaryDestinations=listOf(
+    KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.TRAIN,
+    KotlinCandidateDestination.HISTORY,KotlinCandidateDestination.PROGRESS,
+    KotlinCandidateDestination.COACH
+)
+
+private fun candidateTabLabel(page:KotlinCandidateDestination):String=when(page) {
+    KotlinCandidateDestination.PROGRAM -> "Plan"
+    KotlinCandidateDestination.TRAIN -> "Train"
+    KotlinCandidateDestination.HISTORY -> "History"
+    KotlinCandidateDestination.PROGRESS -> "Progress"
+    else -> "Coach"
+}
+
+private fun candidateTabSelected(
+    destination:KotlinCandidateDestination,page:KotlinCandidateDestination
+):Boolean = destination==page ||
+    page==KotlinCandidateDestination.PROGRAM &&
+        destination in listOf(KotlinCandidateDestination.STARTER,
+            KotlinCandidateDestination.FUTURE) ||
+    page==KotlinCandidateDestination.COACH &&
+        destination==KotlinCandidateDestination.SETTINGS
+
+@Composable
+private fun CandidateTabIcon(page:KotlinCandidateDestination) {
+    when(page) {
+        KotlinCandidateDestination.PROGRAM ->
+            Icon(Icons.Filled.Home,contentDescription=null)
+        KotlinCandidateDestination.TRAIN ->
+            Icon(Icons.Filled.FitnessCenter,contentDescription=null)
+        KotlinCandidateDestination.HISTORY ->
+            Icon(Icons.Filled.History,contentDescription=null)
+        KotlinCandidateDestination.PROGRESS ->
+            Icon(Icons.Filled.Insights,contentDescription=null)
+        else -> Icon(Icons.Filled.Person,contentDescription=null)
+    }
+}
+
 @Composable
 internal fun NativeKotlinCandidateJourney(
     themeId:String=PursuitThemes.DEFAULT_ID,
@@ -115,6 +153,7 @@ internal fun NativeKotlinCandidateJourney(
     }
     var moreExpanded by remember { mutableStateOf(false) }
     var appearanceExpanded by remember { mutableStateOf(false) }
+    var trainScreenExpanded by remember { mutableStateOf(false) }
     fun navigate(to:KotlinCandidateDestination) {
         navigationTouched=true
         if(to==KotlinCandidateDestination.COACH)
@@ -124,9 +163,16 @@ internal fun NativeKotlinCandidateJourney(
     // Five ordinary destinations stay within a thumb's reach. Setup,
     // generator, gym, and future-block tools remain in the explicit menu.
     // This is a real Compose navigation shell, not a new session owner.
+    // Adaptive Material navigation: bottom destinations on phones,
+    // accessible rail on tablet/foldable widths; no global chrome over sets.
+    val activeWorkout=destination==KotlinCandidateDestination.TRAIN &&
+        (selectedCustomWorkoutId!=null || selectedGeneratedWorkoutId!=null ||
+            trainScreenExpanded)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val wide=maxWidth>=600.dp
     Scaffold(
         topBar={
-            Surface(tonalElevation=1.dp) {
+            if(!activeWorkout)Surface(tonalElevation=1.dp) {
                 Row(Modifier.fillMaxWidth()
                     .padding(horizontal=16.dp,vertical=6.dp),
                     verticalAlignment=Alignment.CenterVertically) {
@@ -166,51 +212,30 @@ internal fun NativeKotlinCandidateJourney(
             }
         },
         bottomBar={
-            // No tab strip over the active custom set logger. Minimize to
-            // Train first; the durable journal remains resumable.
-            if(destination!=KotlinCandidateDestination.TRAIN ||
-                selectedCustomWorkoutId==null)NavigationBar {
-                listOf(KotlinCandidateDestination.PROGRAM,
-                    KotlinCandidateDestination.TRAIN,
-                    KotlinCandidateDestination.HISTORY,
-                    KotlinCandidateDestination.PROGRESS,
-                    KotlinCandidateDestination.COACH).forEach {page->
-                    val selected=destination==page ||
-                        (page==KotlinCandidateDestination.PROGRAM &&
-                            destination in listOf(
-                                KotlinCandidateDestination.STARTER,
-                                KotlinCandidateDestination.FUTURE)) ||
-                        (page==KotlinCandidateDestination.COACH &&
-                            destination==KotlinCandidateDestination.SETTINGS)
+            if(!wide && !activeWorkout)NavigationBar {
+                primaryDestinations.forEach { page ->
                     NavigationBarItem(
-                        selected=selected,
+                        selected=candidateTabSelected(destination,page),
                         onClick={navigate(page)},
-                        icon={
-                            when(page) {
-                                KotlinCandidateDestination.PROGRAM ->
-                                    Icon(Icons.Filled.Home,contentDescription=null)
-                                KotlinCandidateDestination.TRAIN ->
-                                    Icon(Icons.Filled.FitnessCenter,contentDescription=null)
-                                KotlinCandidateDestination.HISTORY ->
-                                    Icon(Icons.Filled.History,contentDescription=null)
-                                KotlinCandidateDestination.PROGRESS ->
-                                    Icon(Icons.Filled.Insights,contentDescription=null)
-                                else ->Icon(Icons.Filled.Person,contentDescription=null)
-                            }
-                        },
-                        label={Text(when(page){
-                            KotlinCandidateDestination.PROGRAM ->"Plan"
-                            KotlinCandidateDestination.TRAIN ->"Train"
-                            KotlinCandidateDestination.HISTORY ->"History"
-                            KotlinCandidateDestination.PROGRESS ->"Progress"
-                            else ->"Coach"
-                        })}
+                        icon={CandidateTabIcon(page)},
+                        label={Text(candidateTabLabel(page))}
                     )
                 }
             }
         }
     ) { insets ->
-        Box(Modifier.fillMaxSize().padding(insets)) {
+        Row(Modifier.fillMaxSize().padding(insets)) {
+            if(wide && !activeWorkout)NavigationRail {
+                primaryDestinations.forEach { page ->
+                    NavigationRailItem(
+                        selected=candidateTabSelected(destination,page),
+                        onClick={navigate(page)},
+                        icon={CandidateTabIcon(page)},
+                        label={Text(candidateTabLabel(page))}
+                    )
+                }
+            }
+            Box(Modifier.weight(1f)) {
             savedScreens.SaveableStateProvider(destination.name) {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
@@ -276,6 +301,7 @@ internal fun NativeKotlinCandidateJourney(
                                 selectedCustomWorkoutId=it
                             },
                             onClearGeneratedWorkout={selectedGeneratedWorkoutId=null},
+                            onActiveWorkoutChanged={trainScreenExpanded=it},
                             onViewFinishedHistory={
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
@@ -294,7 +320,9 @@ internal fun NativeKotlinCandidateJourney(
                             })
                 }
             }
+            }
         }
+    }
     }
     if(appearanceExpanded) {
         NativeAppearanceSheet(
@@ -320,6 +348,7 @@ private fun NativeKotlinCandidateTrainEntry(
     generatedWorkoutId:String?,
     onOpenCustomWorkout:(String?)->Unit,
     onClearGeneratedWorkout:()->Unit,
+    onActiveWorkoutChanged:(Boolean)->Unit,
     onViewFinishedHistory:()->Unit,
     onReviewNext:(String)->Unit,
     onReturnToProgram:()->Unit
@@ -330,6 +359,9 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var reviewingResume by remember {mutableStateOf(false)}
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(customWorkoutId,selectedId) {
+        onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null)
+    }
     LaunchedEffect(generatedWorkoutId) {
         if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)
             selectedId=generatedWorkoutId

@@ -90,6 +90,16 @@ assert.ok(hostProfile.includes('fun reviewActiveAthleteSetup()') &&
   hostProfile.includes('localAthlete.signedInIdentity()'),
   'Presentation Profile must read authenticated saved source without replaying login or mutating history');
 
+const strengthMeasure=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StrengthStandardsMeasurementDomain.kt');
+assert.ok(standards.includes('LoadUnit.entries.forEachIndexed') &&
+  standards.includes('StrengthStandardsMeasurementDomain.convert(') &&
+  standards.includes('StrengthStandardsMeasurementDomain.relativeStrength(') &&
+  !standards.includes('sharedUnit==lift.key.unit'),
+  'Strength Standards must compare unit-normalized logged lifts without hiding mixed lb/kg history');
+assert.ok(strengthMeasure.includes('BigDecimal("0.45359237")') &&
+  strengthMeasure.includes('fun epley(') &&
+  strengthMeasure.includes('fun relativeStrength('),
+  'Unit conversion and 1RM measurements must have one pure Kotlin source');
 assert.ok(!journey.includes('KotlinCandidateDestination.entries.forEach'),
   'Do not reintroduce nine raw debugging chips as the primary navigation');
 for(const required of [

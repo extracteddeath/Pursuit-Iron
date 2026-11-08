@@ -48,7 +48,8 @@ assert.ok(journey.includes('KotlinCandidateDestination.PROGRESS') &&
   'App must have accessible Progress and adaptive Material navigation without workout chrome');
 assert.ok(targetLast.includes('SingleChoiceSegmentedButtonRow') &&
   targetLast.includes('SegmentedButton(') &&
-  targetLast.includes('WorkoutReferenceMode.LAST'),
+  targetLast.includes('WorkoutReferenceMode.entries') &&
+  targetLast.includes('else "Last"'),
   'Target/Last must share the compact Material segmented display-only control');
 for(const phrase of ['PursuitSectionHeading','PursuitExerciseHeading',
   'PursuitEmptyState'])assert.ok(sharedDesign.includes('fun '+phrase),

@@ -344,7 +344,7 @@ internal class NativeKotlinCustomCycleController(
     private fun auditReviewedSavedCycle(inputs:CustomCoachAuditInputs) {
         pendingWeekEdit=null
         current.value=current.value.copy(weekEditReview=null)
-        val requested = current.value.draft ?: return@run
+        val requested = current.value.draft ?: return
         val disk = host.readCustomCycleDraft(requested.cycleId)
         if(disk !is NativeCustomDraftReadResult.Found ||
             disk.draft.revision != requested.revision ||
@@ -352,7 +352,7 @@ internal class NativeKotlinCustomCycleController(
             applyRead(requested.cycleId,disk)
             current.value=current.value.copy(
                 message="The saved cycle changed. Reloaded before review; run the audit again.")
-            return@run
+            return
         }
         val source=runCatching {authoringSource.snapshot()}.getOrNull()
         if(source==null || source.athleteId!=disk.draft.athleteId) {
@@ -360,7 +360,7 @@ internal class NativeKotlinCustomCycleController(
                 coachingAudit=null,auditSourceRevision=null,
                 reviewedCoachInputs=null,
                 message="No current owner-reviewed native gym and catalog. Complete setup before coach review.")
-            return@run
+            return
         }
         val result=CustomCycleCoachAuditDomain.review(
             disk.draft,source.setup,source.catalog,inputs)
@@ -373,7 +373,7 @@ internal class NativeKotlinCustomCycleController(
             applyRead(disk.draft.cycleId,latest)
             current.value=current.value.copy(
                 message="Saved gym or program changed during audit; nothing accepted. Run a fresh review.")
-            return@run
+            return
         }
         auditedInputs=inputs
         current.value=current.value.copy(

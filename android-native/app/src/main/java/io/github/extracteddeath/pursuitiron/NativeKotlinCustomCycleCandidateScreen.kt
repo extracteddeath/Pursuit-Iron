@@ -61,7 +61,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     controller: NativeKotlinCustomCycleController,
     initialCycleId: String? = null,
     onOpenIssuedWorkout:(String)->Unit = {},
-    onOpenHistory:()->Unit = {}
+    onOpenHistory:()->Unit = {},
+    onBuildProgram:()->Unit = {}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val draft = state.draft
@@ -70,6 +71,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         state.preparedWorkout?.let{it.calibrationApprovalFingerprint!=null||it.resetToAuthored}==true
     var openId by rememberSaveable { mutableStateOf(initialCycleId.orEmpty()) }
     var showAdvancedId by rememberSaveable {mutableStateOf(false)}
+    var creatingBlank by rememberSaveable {mutableStateOf(false)}
     LaunchedEffect(initialCycleId) {
         if (!initialCycleId.isNullOrBlank()) controller.open(initialCycleId)
     }
@@ -119,7 +121,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         PageHeading("KOTLIN COACH · ISOLATED",
-            if (draft == null) "Build your program" else draft.title,
+            if (draft == null) "Your programs" else draft.title,
             "Custom programs and cycles · saved privately on this device")
         Text(when {
             state.issuedCalibrationId!=null -> "Workout ready to log"
@@ -140,41 +142,6 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
 
         if (draft == null) {
             PursuitCard(highlighted = true) {
-                Text("Start from blank", style = MaterialTheme.typography.titleLarge)
-                Text("Choose your own split, phases, and training days. No template will overwrite your selections.",
-                    style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(title, { title = it },
-                    label = { Text("Program name") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                CycleChoiceRow("Training goal", AthleteTrainingGoal.entries,
-                    goal, ::pretty) { goal = it }
-                OutlinedTextField(split, { split = it },
-                    label = { Text("Your split name") },
-                    placeholder = { Text("Chest / Back / Legs") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(phaseTitle, { phaseTitle = it },
-                    label = { Text("First block name") },
-                    placeholder = { Text("Foundation") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                CycleChoiceRow("First phase", TrainingPhase.entries,
-                    phase, ::pretty) { phase = it }
-                OutlinedTextField(weeks, { weeks = it },
-                    label = { Text("Weeks in first block (1–52)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                Button(
-                    onClick = {
-                        controller.create(title.trim(), goal,
-                            weeks.toIntOrNull() ?: 0, phase,
-                            phaseTitle.trim(), split.trim())
-                    },
-                    enabled = !busy && title.isNotBlank() &&
-                        phaseTitle.isNotBlank() && split.isNotBlank() &&
-                        (weeks.toIntOrNull() in 1..52),
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Create and save my draft") }
-            }
-            PursuitCard {
                 Text("Your saved programs",
                     style = MaterialTheme.typography.titleMedium)
                 Text("Open a verified program by name. Your edits, blocks and exercise choices are preserved.",
@@ -183,7 +150,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     onClick = {controller.findSavedPrograms()},
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
-                ) {Text("Find my saved programs")}
+                ) {Text("Refresh saved programs")}
                 if(state.savedDraftsLoaded && state.savedDrafts.isEmpty()) {
                     Text("No saved custom programs for this athlete yet.",
                         style=MaterialTheme.typography.bodySmall)
@@ -217,6 +184,55 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     }
                 }
             }
+            PursuitCard {
+                Text("Build a program from your setup",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Choose exercises and starting weights, then review a complete first block.",
+                    style=MaterialTheme.typography.bodySmall)
+                PursuitPrimaryAction("Build a new program",enabled=!busy) {
+                    onBuildProgram()
+                }
+                TextButton(onClick={creatingBlank=!creatingBlank},enabled=!busy) {
+                    Text(if(creatingBlank)"Hide custom builder" else "Create a custom program instead")
+                }
+            }
+            if(creatingBlank) {
+                PursuitCard(highlighted = true) {
+                    Text("Start from blank", style = MaterialTheme.typography.titleLarge)
+                    Text("Choose your own split, phases, and training days. No template will overwrite your selections.",
+                        style = MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(title, { title = it },
+                        label = { Text("Program name") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    CycleChoiceRow("Training goal", AthleteTrainingGoal.entries,
+                        goal, ::pretty) { goal = it }
+                    OutlinedTextField(split, { split = it },
+                        label = { Text("Your split name") },
+                        placeholder = { Text("Chest / Back / Legs") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(phaseTitle, { phaseTitle = it },
+                        label = { Text("First block name") },
+                        placeholder = { Text("Foundation") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    CycleChoiceRow("First phase", TrainingPhase.entries,
+                        phase, ::pretty) { phase = it }
+                    OutlinedTextField(weeks, { weeks = it },
+                        label = { Text("Weeks in first block (1–52)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Button(
+                        onClick = {
+                            controller.create(title.trim(), goal,
+                                weeks.toIntOrNull() ?: 0, phase,
+                                phaseTitle.trim(), split.trim())
+                        },
+                        enabled = !busy && title.isNotBlank() &&
+                            phaseTitle.isNotBlank() && split.isNotBlank() &&
+                            (weeks.toIntOrNull() in 1..52),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Create and save my draft") }
+                }
+            }
         } else {
             PursuitCard(highlighted = true) {
                 Text("Custom authoring", style = MaterialTheme.typography.titleMedium)
@@ -234,6 +250,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         enabled = !busy && state.canUndo) { Text("Undo last edit") }
                     OutlinedButton(onClick = { controller.open(draft.cycleId) },
                         enabled = !busy) { Text("Reload") }
+                    OutlinedButton(onClick = { controller.findSavedPrograms() },
+                        enabled = !busy) { Text("Other programs") }
                 }
             }
             PursuitCard(highlighted=true) {

@@ -149,7 +149,7 @@ internal class NativeKotlinCustomCycleController(
                 NativeKotlinCustomCycleState(cycleId = cycleId,
                     refusal = result.reason,
                     message = "Saved draft could not be verified. Nothing was overwritten.")
-        }
+        }.copy(busy=pending.get())
     }
 
     /** Recheck saved first-program inputs on every cold reopen, not just
@@ -175,23 +175,50 @@ internal class NativeKotlinCustomCycleController(
     fun open(cycleId: String) = run {
         applyRead(cycleId, host.readCustomCycleDraft(cycleId))
         recoverGeneratedCoachPolicy(cycleId)
+        selectNextSessionIfReviewed()
+    }
+
+    /** Re-enter training from setup or Finish using the owned program census.
+     * A single saved program is unambiguous; multiple programs require a choice.
+     * Listing/reopening is read-only and never grants consent or starts training. */
+    fun openSavedTraining() = run {
+        when(val listed=host.listOwnedCustomCycleDrafts()) {
+            is NativeCustomDraftListResult.Ready -> {
+                val selected=listed.drafts.singleOrNull()
+                if(selected==null) {
+                    applySavedProgramList(listed)
+                } else {
+                    applyRead(selected.cycleId,
+                        host.readCustomCycleDraft(selected.cycleId))
+                    recoverGeneratedCoachPolicy(selected.cycleId)
+                    selectNextSessionIfReviewed()
+                }
+            }
+            is NativeCustomDraftListResult.Rejected ->applySavedProgramList(listed)
+        }
+    }
+
+    private fun applySavedProgramList(listed:NativeCustomDraftListResult) {
+        lastUndo=null
+        auditedInputs=null
+        pendingWeekEdit=null
+        current.value=when(listed) {
+            is NativeCustomDraftListResult.Ready ->
+                NativeKotlinCustomCycleState(busy=true,
+                    savedDrafts=listed.drafts,savedDraftsLoaded=true,
+                    message=if(listed.drafts.isEmpty())
+                        "Your setup is ready. Build your first program to continue."
+                    else "Choose the saved program you want to continue.")
+            is NativeCustomDraftListResult.Rejected ->
+                NativeKotlinCustomCycleState(busy=true,
+                    refusal=listed.reason,
+                    message="Saved programs could not be verified. Reconfirm your setup or retry; no program was replaced.")
+        }
     }
 
     /** Owner-verified, read-only program picker. IDs stay internal to navigation. */
     fun findSavedPrograms() = run {
-        when(val listed=host.listOwnedCustomCycleDrafts()) {
-            is NativeCustomDraftListResult.Ready ->
-                current.value=current.value.copy(
-                    savedDrafts=listed.drafts,savedDraftsLoaded=true,
-                    message=if(listed.drafts.isEmpty())
-                        "No saved custom programs were found for this athlete."
-                    else "Found ${listed.drafts.size} saved custom programs.")
-            is NativeCustomDraftListResult.Rejected ->
-                current.value=current.value.copy(
-                    savedDrafts=emptyList(),savedDraftsLoaded=false,
-                    refusal=listed.reason,
-                    message="Saved programs could not be verified. No program was opened.")
-        }
+        applySavedProgramList(host.listOwnedCustomCycleDrafts())
     }
 
     /** Re-open the verified disk state and CURRENT gym/catalog when returning
@@ -419,9 +446,18 @@ internal class NativeKotlinCustomCycleController(
 
     /** Determine the next verified session from the complete actual native
      * journal/manifest census. No calendar-start date is inferred. */
-    fun findNextCycleSession()=run {
+    private fun selectNextSessionIfReviewed() {
+        val value=current.value
+        if(value.coachingAudit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+            (value.signoff as? NativeCustomSignoffRead.Found)?.isCurrent==true)
+            selectNextCycleSession()
+    }
+
+    fun findNextCycleSession()=run {selectNextCycleSession()}
+
+    private fun selectNextCycleSession() {
         val before=current.value
-        val cycle=before.draft ?:return@run
+        val cycle=before.draft ?:return
         val inputs=auditedInputs
         if(inputs==null ||
             before.coachingAudit?.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
@@ -429,7 +465,7 @@ internal class NativeKotlinCustomCycleController(
             current.value=before.copy(nextCycleSlot=null,
                 nextSlotCycleRevision=null,
                 message="Review and sign this exact training cycle before selecting the next workout.")
-            return@run
+            return
         }
         val selected=host.reviewNextCustomCycleSession(cycle.cycleId,inputs)
         val latest=host.readCustomCycleDraft(cycle.cycleId)
@@ -438,7 +474,7 @@ internal class NativeKotlinCustomCycleController(
             applyRead(cycle.cycleId,latest)
             current.value=current.value.copy(
                 message="The saved cycle changed while selecting the next workout. Reopen it.")
-            return@run
+            return
         }
         current.value=before.copy(
             nextCycleSlot=selected,
@@ -470,6 +506,7 @@ internal class NativeKotlinCustomCycleController(
             is NativeRecoveredFirstProgramReview.Ready ->
                 if(recovered.inputs==inputs) {
                     auditReviewedSavedCycle(recovered.inputs)
+                    selectNextSessionIfReviewed()
                 } else current.value=current.value.copy(
                     message="The generated coaching policy changed since you reviewed it. Reopen and review the saved program.")
             NativeRecoveredFirstProgramReview.NotGenerated ->
@@ -519,6 +556,7 @@ internal class NativeKotlinCustomCycleController(
                 current.value=current.value.copy(
                     signoff=now,signoffRefusal=null,
                     message="Your custom cycle review and explicit consent were saved. This is not a workout approval or an issued session.")
+                selectNextSessionIfReviewed()
             }
             is NativeCustomSignoffWrite.Rejected -> {
                 current.value=current.value.copy(

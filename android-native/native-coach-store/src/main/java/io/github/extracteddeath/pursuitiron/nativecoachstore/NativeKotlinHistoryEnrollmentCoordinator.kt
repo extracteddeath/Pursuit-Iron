@@ -72,7 +72,8 @@ class NativeKotlinHistoryEnrollmentCoordinator(
         return runCatching {
             ownerFence.withOwnerTransaction(owner) {
                 enrollFenced(owner, athlete, chronologicalFinishedWorkoutIds,
-                    authenticateOwner, certifyNoUnmigratedLegacyHistory)
+                    authenticateOwner, certifyNoUnmigratedLegacyHistory,
+                    requireEmptyNativeInventory)
             }
         }.getOrElse {
             NativeHistoryEnrollmentResult.Rejected(
@@ -154,7 +155,8 @@ class NativeKotlinHistoryEnrollmentCoordinator(
         athlete: String,
         chronology: List<String>,
         authenticateOwner: (String, String) -> Boolean,
-        certifyNoUnmigratedLegacyHistory: (String, String) -> Boolean
+        certifyNoUnmigratedLegacyHistory: (String, String) -> Boolean,
+        requireEmptyNativeInventory:Boolean=false
     ): NativeHistoryEnrollmentResult {
         fun denied(reason: NativeHistoryEnrollmentRefusal) =
             NativeHistoryEnrollmentResult.Rejected(reason)

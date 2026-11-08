@@ -62,7 +62,7 @@ internal fun NativeKotlinCandidateJourney() {
             if(handoff!=null)
                 cycleController.openSavedFirstProgramForReview(
                     handoff.first,handoff.second)
-            else cycleController.refresh()
+            else cycleController.openSavedTraining()
         }
     }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(0.dp)) {
@@ -81,7 +81,8 @@ internal fun NativeKotlinCandidateJourney() {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
                         NativeKotlinOnboardingCandidateScreen(gymController,
-                            onContinue={destination=KotlinCandidateDestination.STARTER})
+                            onContinue={destination=KotlinCandidateDestination.PROGRAM},
+                            onBuildProgram={destination=KotlinCandidateDestination.STARTER})
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.STARTER ->
@@ -99,7 +100,8 @@ internal fun NativeKotlinCandidateJourney() {
                             },
                             onOpenHistory={
                                 destination=KotlinCandidateDestination.HISTORY
-                            })
+                            },
+                            onBuildProgram={destination=KotlinCandidateDestination.STARTER})
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
                             onOpenSettings={destination=KotlinCandidateDestination.SETTINGS})
@@ -114,7 +116,8 @@ internal fun NativeKotlinCandidateJourney() {
                         NativeKotlinCoachSettingsScreen(host,
                             onBack={destination=KotlinCandidateDestination.COACH})
                     KotlinCandidateDestination.HISTORY ->
-                        NativeKotlinCandidateHistoryScreen(host)
+                        NativeKotlinCandidateHistoryScreen(host,
+                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM})
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,
                             selectedCustomWorkoutId,
@@ -158,13 +161,27 @@ private fun NativeKotlinCandidateTrainEntry(
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
+    var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
     val scope=rememberCoroutineScope()
     val valid = entryId.matches(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
-    LaunchedEffect(customWorkoutId) {
+    suspend fun refreshUnfinishedWorkouts() {
+        reviewingResume=true
+        resumable=null
+        try {
+            resumable=withContext(Dispatchers.IO) {
+                runCatching {host.reviewResumableCustomWorkouts()}.getOrNull()
+            }
+        } finally {
+            reviewingResume=false
+        }
+    }
+    LaunchedEffect(host,customWorkoutId,selectedId) {
         // A past review is never an access grant after Finish or an athlete
         // switch. Reopen verified storage for the next explicit selection.
         resumable=null
+        if(customWorkoutId==null && selectedId==null)
+            refreshUnfinishedWorkouts()
     }
     if(customWorkoutId!=null) {
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
@@ -175,36 +192,26 @@ private fun NativeKotlinCandidateTrainEntry(
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             PageHeading("KOTLIN COACH · ISOLATED",
-                "Your native workout",
-                "Only an explicitly approved Kotlin workout can be started.")
+                "Continue your training",
+                "Resume your workout or open the next session in your saved program.")
             PursuitCard(highlighted=true) {
-                Text("Resume an issued custom workout",
+                Text("Your unfinished workouts",
                     style=MaterialTheme.typography.titleMedium)
-                Text("Find your unfinished, native-issued sessions from verified history. Prepared previews are never treated as workouts. Your custom sets, amplifiers and actual observations remain intact.",
+                Text("Your saved sets and exercise targets are checked before you resume.",
                     style=MaterialTheme.typography.bodySmall)
                 Button(enabled=!reviewingResume,onClick={
-                    reviewingResume=true
-                    resumable=null
-                    scope.launch {
-                        val found=withContext(Dispatchers.IO) {
-                            runCatching {
-                                host.reviewResumableCustomWorkouts()
-                            }.getOrNull()
-                        }
-                        resumable=found
-                        reviewingResume=false
-                    }
+                    scope.launch {refreshUnfinishedWorkouts()}
                 }) {
-                    Text(if(reviewingResume)"Verifying saved journals…"
-                        else "Find my unfinished workouts")
+                    Text(if(reviewingResume)"Checking saved workouts…"
+                        else "Refresh unfinished workouts")
                 }
                 when(val result=resumable) {
                     is NativeCustomResumeReview.Ready -> {
                         if(result.workouts.isEmpty()) {
-                            Text("No unfinished issued custom workouts were found. An approved plan alone is not a started workout.",
+                            Text("You have no unfinished workouts. Open your program to continue.",
                                 style=MaterialTheme.typography.bodySmall)
                         } else {
-                            Text("${result.workouts.size} saved custom workouts · verified history revision ${result.manifestRevision}",
+                            Text("${result.workouts.size} unfinished workouts",
                                 style=MaterialTheme.typography.labelMedium)
                             result.workouts.take(20).forEach { item->
                                 OutlinedButton(
@@ -219,7 +226,7 @@ private fun NativeKotlinCandidateTrainEntry(
                                         verticalArrangement=Arrangement.spacedBy(2.dp)) {
                                         Text(item.dayLabel,
                                             style=MaterialTheme.typography.titleSmall)
-                                        Text("Week ${item.absoluteWeek} · Day ${item.weekday} · ${item.unresolvedVisitCount} visits remaining",
+                                        Text("Week ${item.absoluteWeek} · ${item.unresolvedVisitCount} sets remaining",
                                             style=MaterialTheme.typography.bodySmall)
                                     }
                                 }
@@ -233,10 +240,25 @@ private fun NativeKotlinCandidateTrainEntry(
                         Text("Saved workouts could not be verified (${result.reason.name.replace('_',' ').lowercase()}). No workout opened. If Finish was interrupted, recover it from the native custom workout before retrying.",
                             color=MaterialTheme.colorScheme.error,
                             style=MaterialTheme.typography.bodySmall)
-                    null -> {}
+                    null -> if(!reviewingResume) Text(
+                        "Saved workouts could not be read. Refresh to try again.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
                 }
             }
-            PursuitCard(highlighted=true) {
+            PursuitCard {
+                Text("Your training program",style=MaterialTheme.typography.titleMedium)
+                Text("Review the next session and its exact exercises before starting.",
+                    style=MaterialTheme.typography.bodySmall)
+                PursuitPrimaryAction("Open my program",enabled=!reviewingResume) {
+                    onReturnToProgram()
+                }
+            }
+            TextButton(onClick={showOtherWorkouts=!showOtherWorkouts}) {
+                Text(if(showOtherWorkouts)"Hide other workout tools"
+                    else "Other approved workout tools")
+            }
+            if(showOtherWorkouts) PursuitCard {
                 Text("Open an approved workout",
                     style=MaterialTheme.typography.titleMedium)
                 Text("Open the workout from your saved native approval. The app checks the current athlete, program revision and grant before you can train.")

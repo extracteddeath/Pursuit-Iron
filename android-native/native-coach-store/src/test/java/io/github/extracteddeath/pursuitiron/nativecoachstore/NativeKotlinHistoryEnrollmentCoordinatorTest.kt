@@ -131,6 +131,25 @@ class NativeKotlinHistoryEnrollmentCoordinatorTest {
             as NativeHistoryEnrollmentResult.Enrolled).replayed)
     }
 
+    @Test fun explicitEmptyInventoryRequirementCannotEnrollExistingComposerWork() {
+        val unfinished=issue(1)
+        assertEquals(NativeHistoryEnrollmentRefusal.EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION,
+            refusal(migration().enrollNativeOnly(
+                "owner-1","athlete-1",emptyList(),::ownership,::noLegacy,
+                requireEmptyNativeInventory=true)))
+        assertEquals(NativeHistoryLedgerResult.Rejected(
+            NativeHistoryLedgerRefusal.NOT_ENROLLED),
+            manifest().open("owner-1","athlete-1"))
+        assertEquals(unfinished,(writer().openStored(
+            "owner-1","workout-1",::canRead)
+            as NativeJournalFileResult.Durable).journal)
+        // Normal attested native migration retains its distinct contract:
+        // an unfinished journal is inventoried without inventing a Finish.
+        val migrated=enroll() as NativeHistoryEnrollmentResult.Enrolled
+        assertEquals(1,migrated.issuedWorkoutCount)
+        assertTrue(migrated.manifest.completions.isEmpty())
+    }
+
     @Test fun omittedCompletedWorkoutCannotEnrollAsEmptyOrShortenedHistory() {
         issue(1, finish = true)
         issue(2, finish = true)

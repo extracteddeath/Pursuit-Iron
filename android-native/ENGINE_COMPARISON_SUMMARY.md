@@ -62,13 +62,23 @@ loading defects were not reproduced in the pinned web policy.
 
 ## App usability
 
-The debug Kotlin Lab launcher opens the independent native journey. Setup
-links to the program editor; Train prioritizes saved approvals/resume; History
-shows real completed set facts. The original themes are preserved.
+The debug Kotlin Lab now connects saved setup, calibrated first-program
+generation, native draft save and full-cycle review to the existing logger.
+Generated coaching rules recover from saved calibration after a restart only
+when regeneration matches the saved cycle. Reopening a signed generated
+program checks the next session from verified history; Train checks for
+unfinished workouts on entry. Native History supports saved custom-set
+corrections and links back to the program. The original themes are preserved.
 
-A simple first-program generator from saved athlete choices, saved-profile
-resume, seamless next-workout selection, history editing and complete Android
-interaction acceptance remain unfinished. The finish line remains
+The return-to-training continuation verifies a three-week, nine-session custom
+cycle through the actual native storage owners and fresh disk readers,
+including prepared/unfinished priority, week-specific targets and duplicate
+Finish acknowledgments. This small fixture is workflow evidence, not proof of
+program quality or a complete generated-program Android journey.
+
+Broader generator coverage, individualized fatigue calibration, legacy history
+migration, custom-policy recovery and complete Android interaction acceptance
+remain unfinished. The finish line remains
 [one complete usable training loop](USABLE_APP_MILESTONE.md). No APK or
 production cutover is implied by headless policy checks.
 

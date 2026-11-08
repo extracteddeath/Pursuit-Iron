@@ -125,7 +125,8 @@ private fun displayEnum(value:Enum<*>):String =
 @Composable
 internal fun NativeKotlinOnboardingCandidateScreen(
     controller:NativeKotlinGymSourceController,
-    onContinue:()->Unit={}
+    onContinue:()->Unit={},
+    onBuildProgram:()->Unit={}
 ) {
     val sourceState by controller.state.collectAsStateWithLifecycle()
     LaunchedEffect(controller) { controller.open() }
@@ -257,10 +258,15 @@ internal fun NativeKotlinOnboardingCandidateScreen(
         }
         if(existing!=null) {
             PursuitCard(highlighted=true) {
-                Text("Native source active",style=MaterialTheme.typography.titleLarge)
-                Text("Current reviewed athlete: ${existing.athleteId}. Source revision ${existing.revision}.")
-                Text("Continue to the gym or custom-program editor. No new profile or equipment is created here.")
+                Text("Your training setup is ready",style=MaterialTheme.typography.titleLarge)
+                existing.setup.reviewed?.let { setup ->
+                    Text("${displayEnum(setup.goal)} · ${displayEnum(setup.split)} · ${setup.trainingWeekdays.size} days a week")
+                }
+                Text("Continue your saved program or build a new one from these settings.")
                 Button(onClick=onContinue,enabled=!sourceState.busy) {Text("Continue to my program")}
+                TextButton(onClick=onBuildProgram,enabled=!sourceState.busy) {
+                    Text("Build a new program")
+                }
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),

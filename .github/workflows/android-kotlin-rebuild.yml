@@ -13,6 +13,8 @@ on:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSource*.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinOnboardingCandidateScreen.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinFirstProgramCandidateScreen.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt'
       - 'android-native/app/src/debug/**'

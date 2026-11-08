@@ -33,16 +33,32 @@ passed. Keep the APK freeze until the agreed full journey is ready to test.
 | Priority | Deliverable | Current evidence / missing work |
 | --- | --- | --- |
 | 1 | Honest direct engine comparisons | Seven historical parity cases; the one-set rep-quality claim is explicitly withdrawn. New rep estimates require held-out individual validation and fresh source measurement. Program/cycle quality and overall superiority remain unproven. |
-| 2 | A reachable Kotlin journey | Debug-only Kotlin Lab launcher, setup-to-program action and real factual History screen added. Main app ownership is unchanged. Android/device acceptance is pending. |
-| 3 | Generate a useful first program | Headless generator exists. The product still needs versioned starting coaching policies, sufficient reviewed exercise coverage and a native review/save flow from the saved setup. Do not use test fixtures as user programs. |
-| 4 | Finish-to-next-workout loop | Native logging and history transactions exist. Connect automatic day selection, next-session approval/issuance and the History editor through the actual app journey. |
-| 5 | Cold restart and phone acceptance | Native storage has recovery tests. Saved-profile resume, full journey interaction, layout, TalkBack, backup and physical-device verification still need acceptance. |
+| 2 | A reachable Kotlin journey | Debug-only Kotlin Lab connects saved setup, generated/custom program review, Train and editable native History. Returning from setup now opens saved programs; a single owned program reopens directly, while multiple programs require a choice. Android interaction acceptance is pending. |
+| 3 | Generate a useful first program | Saved athlete choices and explicitly calibrated, attainable loads feed a versioned provisional first-block policy, complete prescription and native draft save. Original calibration recovers the policy after restart only if regeneration matches the saved program. Broader catalog coverage, program-quality review and the goal/split/gym matrix remain open. Test fixtures are not user programs. |
+| 4 | Finish-to-next-workout loop | Exact cycle review/consent, preparation, issuance, logging, corrections and manifest-backed Finish are connected. Reopening a signed generated plan checks the next session automatically; existing prepared/issued work takes precedence. Train checks for unfinished workouts on entry, and verified History links back to the program. A nine-session native-file integration covers week boundaries, authored exceptions, lost Finish acknowledgments and fresh readers. This is not Android interaction proof. |
+| 5 | Cold restart and phone acceptance | Explicit saved-profile resume, generated-policy recovery and durable unfinished/finished work have native source paths. Existing web history still needs verified migration; a separate new Kotlin history requires explicit opt-in and a complete empty-native-inventory check. Custom coaching-policy recovery, full Android journey/layout/TalkBack, backup and physical-device acceptance remain open. |
 
 Defer additional narrow load-consent variants unless one blocks this loop or
 the direct comparison exposes a real defect. Improve the existing independent progression domains and preserve data owners;
 do not build parallel engines or journals. The objective is feasible work at
 the intended RIR, informed by individual experience/history, accumulated fatigue
 and current-session fatigue, across daily sessions, programs and cycles.
+
+## Current continuation — 2026-11-07
+
+The inherited checkpoint's latest CI failed in history-enrollment compilation:
+`requireEmptyNativeInventory` was declared at the public entry point but neither
+forwarded to nor declared on the private implementation. The continuation wires
+the requirement through both paths and adds a regression that refuses an empty
+history enrollment when an unfinished native Composer workout already exists.
+No history format or training calculation changes are needed for this repair.
+
+The next source milestone is the actual generated-program journey across
+multiple exercises and complete working/warmup sets, including cold reopen,
+correction and next-session issuance. Current nine-session traversal uses a
+deliberately small custom fixture to verify the real storage/selection owners;
+it does not establish whole-body program quality, individual fatigue accuracy,
+legacy-history migration or phone usability.
 
 ## What counts as progress in updates
 

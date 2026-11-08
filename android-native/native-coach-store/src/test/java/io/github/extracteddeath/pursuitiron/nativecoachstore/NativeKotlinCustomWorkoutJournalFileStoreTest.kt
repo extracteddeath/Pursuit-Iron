@@ -146,6 +146,113 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         ) is NativeCustomSignoffWrite.Committed)
     }
 
+    /** Fresh native readers, as used after returning from Finish or restarting.
+     * No in-memory completion list is passed to the next-session chooser. */
+    private fun coldNextSession():NativeCustomNextCycleSlot {
+        val root=temp.root.toPath()
+        val lock=NativeKotlinApprovalRevisionFence(root)
+        val savedDrafts=NativeCustomCycleDraftFileStore(root,lock,identity)
+        val savedSource=NativeKotlinCustomAuthoringSourceFileStore(root,lock,identity)
+        val savedConsent=NativeKotlinCustomCycleSignoffFileStore(
+            root,lock,identity,savedDrafts,savedSource)
+        val check=NativeKotlinCustomWorkoutPreflight(
+            lock,identity,savedDrafts,savedSource,savedConsent)
+        val plans=NativeKotlinCustomWorkoutPreparedStore(root,lock,identity,check)
+        val ledger=NativeKotlinHistoryManifestFileStore(root)
+        val composer=KotlinNativeJournalFileStore(root)
+        val journals=NativeKotlinCustomWorkoutJournalFileStore(
+            root,lock,identity,plans,check,ledger,composer)
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(ownerKey:String,workoutId:String)
+                :NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(ownerKey:String,
+                source:KotlinTrainingSourceRevision):Boolean=false
+        }
+        val savedEdits=NativeKotlinCustomSavedCorrectionFileStore(
+            root,lock,identity,journals,ledger)
+        val timeline=NativeKotlinMixedHistoryReadCoordinator(
+            ledger,composer,KotlinNativeSavedCorrectionFileStore(root,composer),
+            journals,authority,identity,lock,savedEdits)
+        return NativeKotlinCustomNextCycleSessionReview(
+            lock,identity,savedDrafts,savedSource,savedConsent,timeline,
+            NativeKotlinCustomOutstandingWorkoutInventory(plans,journals),plans
+        ).review("owner-1","cycle-1",input())
+    }
+
+    @Test fun coldReturnToTrainingTraversesWholeCycleWithoutRepeatingFinishedWork() {
+        initialize();approve()
+        assertTrue(coldNextSession() is NativeCustomNextCycleSlot.Rejected)
+        assertTrue(independentEnrollment() is NativeHistoryEnrollmentResult.Enrolled)
+        val completedIds=mutableListOf<String>()
+        for(week in 1..3)for(day in listOf(0,2,4)) {
+            val id="training-w$week-d$day"
+            assertEquals(NativeCustomNextCycleSlot.Next(week,day,"Core $day"),
+                coldNextSession())
+            assertTrue(prepared.prepare("owner-1",id,"cycle-1",week,day,input())
+                is NativeCustomPrepareResult.Prepared)
+            assertEquals(NativeCustomNextCycleSlot.Prepared(id,week,day,"Core $day"),
+                coldNextSession())
+            val started=issued.issue("owner-1",id,"cycle-1",week,day,input())
+                as NativeCustomJournalResult.Durable
+            val original=started.issued.journal.snapshot
+            assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
+                id,week,day,"Core $day"),coldNextSession())
+            // Week 2's authored exception is an actual issued target; all
+            // other days retain the original prescription independently.
+            val reps=if(week==2 && day==0)16 else 10
+            val set=original.slots.single().sets.single()
+            assertEquals(reps,set.prescription.reps.minimum)
+            val recorded=issued.record("owner-1",id,
+                CustomWorkoutJournalOperation.Record("set-w$week-d$day",0,
+                    CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(null,null,reps,null)))
+                as NativeCustomJournalResult.Durable
+            // Even with every set logged, only manifest-backed Finish moves
+            // the program forward. A read/restart cannot invent completion.
+            assertTrue(recorded.issued.journal.canProposeFinish)
+            assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
+                id,week,day,"Core $day"),coldNextSession())
+            val finish=CustomWorkoutJournalOperation.Finish(
+                "finish-w$week-d$day",recorded.issued.journal.revision)
+            val transaction=NativeKotlinCustomHistoryTransaction(
+                history,issued,fence,identity)
+            assertTrue(transaction.complete("owner-1","athlete-1",id,finish)
+                is NativeCustomFinishResult.Committed)
+            // Retrying a lost acknowledgment cannot count this workout twice.
+            assertTrue(transaction.complete("owner-1","athlete-1",id,finish)
+                is NativeCustomFinishResult.Committed)
+            completedIds+=id
+            val ledger=(history.open("owner-1","athlete-1")
+                as NativeHistoryLedgerResult.Durable).ledger
+            assertEquals(completedIds,ledger.completions.map{it.workoutId})
+            val restored=(issued.open("owner-1",id)
+                as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(original,restored.snapshot)
+            val evidence=CustomWorkoutHistoryEvidenceDomain.project(restored)
+                as CustomHistoryEvidenceResult.Candidate
+            assertEquals(reps,evidence.evidence.visits.single().actual?.reps)
+            assertNull(evidence.evidence.visits.single().actual?.actualRir)
+        }
+        assertEquals(NativeCustomNextCycleSlot.CycleComplete,coldNextSession())
+        assertEquals(cycle(),(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+    }
+
+    @Test fun returnToTrainingDoesNotBypassConsentOrChangedAthlete() {
+        initialize();approve()
+        assertTrue(independentEnrollment() is NativeHistoryEnrollmentResult.Enrolled)
+        assertEquals(NativeCustomNextCycleSlot.Next(1,0,"Core 0"),coldNextSession())
+        current=null
+        assertTrue(coldNextSession() is NativeCustomNextCycleSlot.Rejected)
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertTrue(consent.revoke("owner-1","cycle-1",1)
+            is NativeCustomSignoffWrite.Committed)
+        assertTrue(coldNextSession() is NativeCustomNextCycleSlot.Rejected)
+        assertTrue((history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions.isEmpty())
+    }
+
 
     private fun independentEnrollment(
         confirmed:Boolean=true, separate:Boolean=true

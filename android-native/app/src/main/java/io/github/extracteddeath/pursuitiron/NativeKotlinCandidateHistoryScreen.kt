@@ -16,7 +16,10 @@ import kotlinx.coroutines.withContext
 
 /** Display real corrected native facts. No JS history, estimated PRs or invented dates. */
 @Composable
-internal fun NativeKotlinCandidateHistoryScreen(host:NativeKotlinCandidateHost) {
+internal fun NativeKotlinCandidateHistoryScreen(
+    host:NativeKotlinCandidateHost,
+    onOpenProgram:()->Unit={}
+) {
     val scope=rememberCoroutineScope()
     var busy by remember{mutableStateOf(false)}
     var result by remember{mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)}
@@ -47,6 +50,11 @@ internal fun NativeKotlinCandidateHistoryScreen(host:NativeKotlinCandidateHost) 
         }
         when(val read=result) {
             is NativeKotlinMixedHistoryReadResult.Review -> {
+                item {
+                    PursuitPrimaryAction("Continue to my program",enabled=!busy) {
+                        onOpenProgram()
+                    }
+                }
                 if(read.timeline.completions.isEmpty())item {Text("Your first finished workout will appear here.")}
                 items(read.timeline.completions.asReversed(),key={it.manifest.workoutId}) {entry->
                     var expanded by rememberSaveable(entry.manifest.workoutId){mutableStateOf(false)}

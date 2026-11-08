@@ -77,3 +77,13 @@ trial to install this one; their training data remains separate.
 
 The APK-only packaging guard also runs in the routine source workflow, so
 source readiness and the device milestone enforce the same output contract.
+
+## Startup correction after visual emulator review
+
+The emulator screenshots exposed a false equipment failure on fresh setup
+and white system-bar backgrounds under dark-theme icons. The next APK treats
+an unopened athlete as ordinary setup guidance without reading protected gym
+data, and paints the selected theme behind system bars before insetting content.
+Verify fresh launch and cold restart, no equipment-failure banner before setup,
+and readable status/navigation bars. These changes do not alter the engine
+source tree or the recorded load-review comparisons.

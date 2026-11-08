@@ -65,7 +65,15 @@ internal class NativeKotlinGymSourceController(
                     message=
                     "Native gym/catalog source was revoked at revision ${result.revision}.")
             is NativeAuthoringSourceRead.Rejected ->
-                NativeKotlinGymSourceState(refusal=result.reason,
+                if(result.reason==NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+                    // A fresh or locked local profile has no readable gym
+                    // yet. This is setup guidance, not failed equipment.
+                    // source remains null; no owner/stock gate is bypassed.
+                    NativeKotlinGymSourceState(savedAthleteId=previousAthlete,
+                        message=if(previousAthlete==null)
+                            "Choose your training preferences and equipment to get started."
+                        else "Confirm your saved athlete to reopen your training setup.")
+                else NativeKotlinGymSourceState(refusal=result.reason,
                     savedAthleteId=previousAthlete,
                     message="Native equipment could not be verified; nothing was replaced.")
         }

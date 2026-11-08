@@ -42,6 +42,12 @@ fi
 adb exec-out screencap -p > smoke-out/cold-launch.png
 adb shell uiautomator dump /sdcard/kotlin-lab-ui.xml > smoke-out/uiautomator-log.txt 2>&1 || true
 adb pull /sdcard/kotlin-lab-ui.xml smoke-out/ui-tree.xml > /dev/null 2>&1 || true
+test -s smoke-out/ui-tree.xml
+grep -F 'Your training' smoke-out/ui-tree.xml > /dev/null
+if grep -F 'Native equipment could not be verified' smoke-out/ui-tree.xml; then
+  echo "FAIL: fresh onboarding showed a false equipment error" | tee smoke-out/result.txt
+  exit 1
+fi
 adb logcat -d -v brief -s AndroidRuntime:E > smoke-out/android-runtime-errors.txt || true
 if grep -F "Process: $package" smoke-out/android-runtime-errors.txt; then
   echo "FAIL: AndroidRuntime reported Kotlin Lab fatal exception" | tee smoke-out/result.txt

@@ -4,9 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +41,11 @@ class KotlinEnginePreviewActivity:ComponentActivity() {
                 bars.isAppearanceLightNavigationBars=themeUsesLightBars
             }
             PursuitIronTheme(themeId=themeId) {
-                Surface(Modifier.fillMaxSize().safeDrawingPadding()) {
+                // Paint behind system bars before applying content insets.
+                // Padding the Surface itself leaves the window's white
+                // background behind the white icons of a dark theme.
+                Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+                    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                     NativeKotlinCandidateJourney(
                         themeId=themeId,
                         onThemeSelected={requested->
@@ -49,6 +55,7 @@ class KotlinEnginePreviewActivity:ComponentActivity() {
                             }
                         }
                     )
+                    }
                 }
             }
         }

@@ -55,7 +55,7 @@ for(const phrase of ['PursuitSectionHeading','PursuitExerciseHeading',
   'PursuitEmptyState'])assert.ok(sharedDesign.includes('fun '+phrase),
     'Missing a reusable Material design component: '+phrase);
 for(const phrase of ['host.reviewVerifiedKotlinWorkingSetFacts()',
-  'LoadBasis.BARBELL_TOTAL','it.reps','epleyEstimate(',
+  'LoadBasis.BARBELL_TOTAL','lift.reps','epleyEstimate(',
   'comparisonGroup','bodyweightText','Reference methodology',
   'PublishedStrengthReference("barbell_bench"',
   'PublishedStrengthReference("back_squat"',

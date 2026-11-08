@@ -344,7 +344,15 @@ try:
     tap("Issue this exact workout")
     tap("Issue workout", scroll=False)
     tap("Open workout logger")
+    locate("UP NEXT")
+    locate("Focus on next")
     enter("Reps completed", "6")
+    top()
+    tap("All sets", scroll=False)
+    assert_value("Reps completed", "6")
+    top()
+    tap("Focus on next", scroll=False)
+    assert_value("Reps completed", "6")
     top()
     tap("Last")
     assert_value("Reps completed", "6")
@@ -413,7 +421,7 @@ try:
               "checks": ["reviewed setup", "unit cancellation preserves stock", "generated four-day program",
                          "Plan overview and full-program disclosure",
                          "unsaved policy draft retained without approval and explicitly discarded",
-                         "explicit cycle and history consent", "Target/Last preserves unsubmitted reps",
+                         "explicit cycle and history consent", "Focus/All preserves unsubmitted reps", "Target/Last preserves unsubmitted reps",
                          "1.6 font scale retains unsubmitted reps and completes a set",
                          "native set writes", "cold recovery", "Finish to History", "next independent day"],
               "not_certified": ["physiological prediction superiority", "physical phone", "backup/migration", "accessibility"]}

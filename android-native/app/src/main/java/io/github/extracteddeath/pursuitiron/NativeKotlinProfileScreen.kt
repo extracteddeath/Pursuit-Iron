@@ -217,7 +217,7 @@ internal fun NativeKotlinProfileScreen(
                 OutlinedTextField(
                     value=draftName,
                     onValueChange={if(it.length<=MAX_PROFILE_LABEL_LENGTH)
-                        draftName=it.filter{char->!char.isISOControl()}},
+                        draftName=it.filter{char->char.code>=32 && char.code!=127}},
                     singleLine=true,
                     label={Text("Display name")},
                     supportingText={Text("Optional, stored on this device only.")},

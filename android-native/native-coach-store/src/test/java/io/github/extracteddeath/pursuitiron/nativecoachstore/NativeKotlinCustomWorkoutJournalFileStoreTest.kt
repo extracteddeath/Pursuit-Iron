@@ -212,6 +212,35 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         // reset from a partial program cannot force an empty history manifest.
     }
 
+    @Test fun independentNewNativeHistoryUnlocksActualFirstIssueAndFinish() {
+        initialize();approve()
+        val enrolled=independentEnrollment()
+        assertTrue(enrolled.toString(),
+            enrolled is NativeHistoryEnrollmentResult.Enrolled)
+        // Preparing an actual workout remains a separate consent-bound act.
+        prepareWeek()
+        assertTrue(issueWeek().issued.journal.canProposeFinish.not())
+        val saved=issued.record("owner-1","workout-2",
+            recordSet("first-workout-set",0))
+        assertTrue(saved.toString(),saved is NativeCustomJournalResult.Durable)
+        val recorded=(saved as NativeCustomJournalResult.Durable).issued.journal
+        assertTrue(recorded.canProposeFinish)
+        val finished=NativeKotlinCustomHistoryTransaction(
+            history,issued,fence,identity).complete(
+                "owner-1","athlete-1","workout-2",
+                CustomWorkoutJournalOperation.Finish(
+                    "first-workout-finish",recorded.revision))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val completed=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions
+        assertEquals(listOf("workout-2"),completed.map{it.workoutId})
+        assertEquals("first-workout-finish",completed.single().finishEventId)
+        val reopened=issued.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable
+        assertEquals("first-workout-finish",
+            reopened.issued.journal.finishedByEventId)
+    }
+
     @Test fun preparationAndConsentAloneNeverIssueUntilHistoryIsEnrolled() {
         initialize();approve();prepareWeek()
         assertEquals(NativeCustomJournalResult.Rejected(

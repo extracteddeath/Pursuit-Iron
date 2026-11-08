@@ -22,6 +22,7 @@ const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath
 const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
 const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
+const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
 const facilityPicker=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
@@ -49,7 +50,7 @@ assert.ok(journey.includes('Scaffold(') && journey.includes('NavigationBar {') &
   journey.includes('NavigationBarItem('),
   'Ordinary training screens must be reachable through a persistent native bar');
 assert.ok(journey.includes('KotlinCandidateDestination.PROGRESS') &&
-  journey.includes('NativeKotlinStrengthStandardsScreen(host)') &&
+  journey.includes('NativeKotlinStrengthStandardsScreen(host,') &&
   journey.includes('NavigationRail {') &&
   journey.includes('candidateTabSelected(destination,page)') &&
   journey.includes('if(!activeWorkout)Surface('),
@@ -117,6 +118,33 @@ assert.ok(standards.includes('verifiedStrengthTrend(it,trendExerciseId,displayUn
   trend.includes('Canvas(') &&
   trend.includes('estimatedOneRepMax'),
   'Progress trend must be drawn only from corrected complete-session strength evidence');
+assert.ok(favorites.includes('private fun key(athleteId:String)') &&
+  favorites.includes('preferences.getString(key(athleteId),null)') &&
+  favorites.includes('editor.putString(key(athleteId),exerciseIds.joinToString(","))') &&
+  favorites.includes('return editor.commit()') &&
+  favorites.includes('exerciseIds.any{it !in supportedIds}') &&
+  !favorites.includes('estimatedOneRepMax'),
+  'Favorite lifts must be opt-in athlete-scoped UI choices, never strength outcomes');
+assert.ok(standards.includes('NativeStrengthFavorites.read(favoritePreferences,verified)') &&
+  standards.includes('NativeStrengthFavorites.write(favoritePreferences,athleteId,selected)') &&
+  standards.includes('profileId==athleteId') &&
+  standards.includes('Text(if(isFavorite)"Unpin from favorites" else "Pin to favorites")') &&
+  standards.includes('preferredExerciseId in NativeStrengthFavorites.supportedIds') &&
+  standards.includes('onOpenHistory={historyExerciseId=trendExerciseId}') &&
+  profile.includes('NativeStrengthFavorites.read(favoritePreferences,athleteId)') &&
+  profile.includes('onProgressLift(liftId)') &&
+  journey.includes('onProgressLift={exerciseId->') &&
+  journey.includes('preferredExerciseId=progressRequestedExerciseId'),
+  'Favorite strength charts must round-trip through verified Progress, Profile and History');
+assert.ok(trend.includes('.sortedBy {it.completionOrder}') &&
+  trend.includes('val recent=samples.sortedBy{it.completionOrder}.takeLast(20)') &&
+  trend.includes('Text("Open complete exercise history")') &&
+  trend.includes('Text(if(showValues)"Hide chart values" else "Show chart values")') &&
+  trend.includes('estimatedStrengthLabel(sample.estimatedOneRepMax,unit)') &&
+  trend.includes('contentDescription="Estimated 1RM trend.') &&
+  trend.includes('CustomWorkoutVisitPart.MAIN') &&
+  trend.includes('LoadBasis.BARBELL_TOTAL'),
+  'The accessible chart must expose chronological verified points and full history, not predictions');
 assert.ok(strengthMeasure.includes('BigDecimal("0.45359237")') &&
   strengthMeasure.includes('fun epley(') &&
   strengthMeasure.includes('fun relativeStrength('),

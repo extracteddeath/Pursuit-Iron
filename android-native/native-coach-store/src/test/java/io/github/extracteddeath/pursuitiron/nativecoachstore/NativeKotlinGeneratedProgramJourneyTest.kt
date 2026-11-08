@@ -435,5 +435,59 @@ class NativeKotlinGeneratedProgramJourneyTest {
             ownerCoach.review(owner,inputs,2,day.weekday,selected.slotId,
                 CoachReadiness.NORMAL,false,n("5"),
                 CustomRepForecastPolicy.TARGET_RIR_V2))
+
+        // A real V2 proposal feeds the EXISTING explicit, whole-cycle week
+        // edit, not a second unsigned workout issuer. No historical set
+        // is modified and only this future weekday/slot gets new rep floors.
+        val repOffer=CustomNextRepAmendmentDomain.propose(
+            next,selected.slotId,actualCoach.review)
+            as CustomNextRepAmendmentResult.Proposed
+        val updatedSets=repOffer.amendment.amended.slots.single{
+            it.slotId==selected.slotId
+        }.sets.map{it.prescription}
+        val checked=CustomCoachWeekEditDomain.review(
+            cycle,cycle.revision,2,day.weekday,selected.slotId,updatedSets,
+            setup(),catalog,inputs)
+        assertTrue(checked.toString(),checked is CustomCoachWeekEditResult.Reviewed)
+        val comparison=(checked as CustomCoachWeekEditResult.Reviewed).review
+        assertFalse(comparison.mayIssueWorkout)
+        assertFalse(comparison.mayApprovePolicy)
+        assertTrue(comparison.after.issues.toString(),
+            comparison.after.issues.isEmpty())
+        val revised=comparison.proposal.draft
+        assertTrue(revised.revision>cycle.revision)
+        assertEquals(cycle,(Disk().drafts.read(owner,cycleId)
+            as NativeCustomDraftReadResult.Found).draft)
+        val oldDay=(Disk().journals.open(owner,workoutId)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(source,oldDay.snapshot)
+        val diskForEdit=Disk()
+        val stored=diskForEdit.drafts.save(
+            owner,cycleId,cycle.revision,revised)
+        assertTrue(stored.toString(),
+            stored is NativeCustomDraftWriteResult.Committed)
+        val obsolete=diskForEdit.consent.read(owner,cycleId,inputs)
+            as NativeCustomSignoffRead.Found
+        assertFalse(obsolete.isCurrent)
+        assertTrue(Disk().next(inputs) is NativeCustomNextCycleSlot.Rejected)
+        val newSignoff=Disk().consent.confirm(
+            owner,cycleId,revised.revision,1,
+            obsolete.receipt.recordRevision,inputs,true)
+        assertTrue(newSignoff.toString(),
+            newSignoff is NativeCustomSignoffWrite.Committed)
+        // Old finished Week 1 remains complete. A revised cycle should
+        // offer the next NOT-yet-trained day, never restart Monday or
+        // pretend the edited Week 2 workout was already performed.
+        val nextDay=cycle.blocks.single().days.sortedBy{it.weekday}[1]
+        assertEquals(NativeCustomNextCycleSlot.Next(1,nextDay.weekday,
+            nextDay.label),Disk().next(inputs))
+        val verified=(Disk().preflight.inspect(owner,cycleId,2,
+            day.weekday,inputs) as NativeCustomPreflightResult.ReviewedPreview)
+            .session
+        assertEquals(updatedSets,verified.slots.single{
+            it.slotId==selected.slotId
+        }.sets.map{it.prescription})
+        assertEquals(source,(Disk().journals.open(owner,workoutId)
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot)
     }
 }

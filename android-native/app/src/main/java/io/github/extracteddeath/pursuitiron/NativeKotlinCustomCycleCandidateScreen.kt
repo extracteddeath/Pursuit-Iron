@@ -113,6 +113,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var weekExerciseEditor by remember(draft?.cycleId,draft?.revision) {
         mutableStateOf<Triple<Int,Int,String>?>(null)
     }
+    /** Prefill only a freshly validated V2 suggestion; never silently save. */
+    var weekEditFromCoach by remember(draft?.cycleId,draft?.revision) {
+        mutableStateOf(false)
+    }
     LaunchedEffect(state.weekEditReview) {
         if(state.weekEditReview!=null)weekExerciseEditor=null
     }
@@ -601,8 +605,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             }
                         }
                         OutlinedButton(enabled=!busy && session.stamp.cycleRevision==draft.revision,
-                            onClick={weekExerciseEditor=Triple(
-                                session.absoluteWeek,session.weekday,slot.slotId)}) {
+                            onClick={
+                                weekEditFromCoach=false
+                                weekExerciseEditor=Triple(
+                                    session.absoluteWeek,session.weekday,slot.slotId)
+                            }) {
                             Text("Compare an edit for week ${session.absoluteWeek}")
                         }
                         if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled && !calibrationLocked) {
@@ -623,6 +630,27 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             session.stamp.gymCatalogSourceRevision==state.sourceRevision
                     }?.let {reviewed->
                         NativeKotlinCustomDayCoachingSummary(reviewed,session.absoluteWeek)
+                        val readyRepEdit=reviewed.selectedSlotId?.let {chosen->
+                            (CustomNextRepAmendmentDomain.propose(
+                                session,chosen,reviewed.review)
+                                as? CustomNextRepAmendmentResult.Proposed)
+                                ?.amendment
+                        }
+                        if(readyRepEdit!=null && state.preparedWorkout==null &&
+                            reviewed.review.repForecastPolicy==
+                                CustomRepForecastPolicy.TARGET_RIR_V2) {
+                            Text("Suggestions are not automatically applied. To change this week's minimum reps, review an explicit week edit, then re-audit and approve the updated program.",
+                                style=MaterialTheme.typography.bodySmall)
+                            OutlinedButton(enabled=!busy,
+                                onClick={
+                                    weekEditFromCoach=true
+                                    weekExerciseEditor=Triple(
+                                        session.absoluteWeek,session.weekday,
+                                        checkNotNull(reviewed.selectedSlotId))
+                                }) {
+                                Text("Review suggested set targets")
+                            }
+                        }
                         reviewed.sameBlockLoadContinuity?.takeIf {
                             it.status==CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT &&
                                 it.changesAuthoredLoads
@@ -923,12 +951,32 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 ?.days?.firstOrNull {it.weekday==weekday}
                 ?.slots?.firstOrNull {it.slotId==slotId}
             if(session!=null && selected!=null && base!=null) {
-                key(current.revision,absoluteWeek,weekday,slotId) {
+                val amended=if(weekEditFromCoach) {
+                    val reviewed=state.dayCoaching?.takeIf {
+                        it.review.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2 &&
+                            it.selectedSlotId==slotId &&
+                            it.review.status==CustomNextWorkoutCoachingStatus.BUILD_REPS &&
+                            it.nextWorkout?.copy(
+                                declaredNonSetSeconds=session.declaredNonSetSeconds)==session
+                    }
+                    reviewed?.let {
+                        (CustomNextRepAmendmentDomain.propose(
+                            session,slotId,it.review)
+                            as? CustomNextRepAmendmentResult.Proposed)
+                            ?.amendment?.amended
+                    }
+                } else null
+                val initial=amended?.slots?.singleOrNull {
+                    it.slotId==slotId
+                }?.sets?.map{it.prescription}
+                    ?:selected.sets.map{it.prescription}
+                key(current.revision,absoluteWeek,weekday,slotId,weekEditFromCoach) {
                     var comparisonRequested by remember {mutableStateOf(false)}
                     NativeKotlinCustomExerciseSheet(busy=busy,
                         available=controller.availableExerciseChoices(),
-                        existing=base.copy(sets=selected.sets.map {it.prescription}),
-                        scopeLabel="Week $absoluteWeek only · ${customWeekdays[weekday]}",
+                        existing=base.copy(sets=initial),
+                        scopeLabel="Week $absoluteWeek only · ${customWeekdays[weekday]}"+
+                            if(amended!=null)" · coach proposal for review" else "",
                         saveLabel="Compare full-cycle effects",
                         feedback=state.message?.takeIf {comparisonRequested && !busy},
                         onSave={_,sets,_ ->

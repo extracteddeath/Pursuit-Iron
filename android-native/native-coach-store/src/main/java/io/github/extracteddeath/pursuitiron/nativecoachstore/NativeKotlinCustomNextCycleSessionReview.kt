@@ -45,11 +45,19 @@ internal object NativeCustomNextCycleSlotDomain {
                 it.days.map{d->d.weekday}.distinct().size!=it.days.size ||
                 it.days.any{d->d.weekday !in 0..6}})
             return refuse("The saved training-cycle calendar is incomplete.")
-        if(facts.any{it.cycleRevision!=cycle.revision ||
-            it.absoluteWeek !in 1..cycle.blocks.sumOf{b->b.weeks} ||
-            it.weekday !in 0..6 || it.completed&&!it.issued} ||
+        // A FINISHED old-revision workout is still a real occurrence of
+        // its scheduled day after the athlete edits and re-signs future work.
+        // Otherwise an approved Week 2 coaching edit would make the app
+        // forget Week 1 and block every remaining training session.
+        // Never grant coaching comparability from that old revision: this
+        // selector only marks completed calendar positions.
+        if(facts.any{
+                it.cycleRevision !in 1..cycle.revision ||
+                it.absoluteWeek !in 1..cycle.blocks.sumOf{b->b.weeks} ||
+                it.weekday !in 0..6 || it.completed&&!it.issued
+            } ||
             facts.map{it.absoluteWeek to it.weekday}.distinct().size!=facts.size)
-            return refuse("Training history contains an older revision or ambiguous repeated session. Choose a day manually.")
+            return refuse("Training history contains a future or invalid revision, or an ambiguous repeated session. Choose a day manually.")
         val schedule=linkedMapOf<Pair<Int,Int>,String>()
         var week=0
         for(block in cycle.blocks)repeat(block.weeks) {
@@ -60,6 +68,12 @@ internal object NativeCustomNextCycleSlotDomain {
         val byDay=facts.associateBy{it.absoluteWeek to it.weekday}
         if(byDay.keys.any{it !in schedule})
             return refuse("A previously prepared workout is no longer in this saved training calendar. Review the changed program.")
+        // A not-yet-finished old-revision workout must be resolved using
+        // its original immutable issued snapshot, never silently reissued
+        // with the new cycle's targets. Train can still locate it from the
+        // complete native pending-workout inventory.
+        if(facts.any{!it.completed && it.cycleRevision!=cycle.revision})
+            return refuse("An unfinished workout belongs to an earlier program revision. Resume or resolve that workout before continuing this revised cycle.")
         // Existing issued work outranks a new session even when someone
         // trained out of order. Prepared-only sessions come next; never
         // create a duplicate while a cold-recoverable preparation exists.

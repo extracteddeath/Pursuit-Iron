@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,6 +55,34 @@ internal fun NativeKotlinCandidateJourney() {
     val savedScreens=rememberSaveableStateHolder()
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
+    }
+    // Resume the owned native journey after process death; do not send a
+    // returning lifter through onboarding again. No silent workout issuance
+    // or journal opening: TRAIN independently revalidates saved receipts.
+    var landingChecked by remember(host) { mutableStateOf(false) }
+    LaunchedEffect(host) {
+        if(!landingChecked) {
+            val initial=withContext(Dispatchers.IO) {
+                val unfinished=runCatching {
+                    host.reviewResumableCustomWorkouts()
+                }.getOrNull() as? NativeCustomResumeReview.Ready
+                if(unfinished?.workouts?.isNotEmpty()==true)
+                    KotlinCandidateDestination.TRAIN
+                else {
+                    val programs=runCatching {
+                        host.listOwnedCustomCycleDrafts()
+                    }.getOrNull() as? NativeCustomDraftListResult.Ready
+                    if(programs?.drafts?.isNotEmpty()==true)
+                        KotlinCandidateDestination.PROGRAM
+                    else KotlinCandidateDestination.ONBOARD
+                }
+            }
+            // Do not steal focus after a deliberate tab choice, or from a
+            // restored workout currently open in the saved Android state.
+            if(destination==KotlinCandidateDestination.ONBOARD)
+                destination=initial
+            landingChecked=true
+        }
     }
     LaunchedEffect(destination) {
         if(destination==KotlinCandidateDestination.PROGRAM) {

@@ -196,6 +196,12 @@ reviewed and approved.
 - Profile exposes direct shortcuts to each pinned lift's chart; selecting a
   shortcut opens that exact exercise in Progress. A regular Progress-tab visit
   remains independent of the pinned-lift handoff.
+- Android system Back now returns from Profile and Settings to the originating
+  destination and from a pinned Progress drilldown to Profile. Active Train
+  journals retain their existing explicit minimize/recovery ownership.
+- Comparison inputs now default to a collapsed, clearly labeled optional
+  panel rather than consuming the first screen. Logged trends remain visible
+  without entering bodyweight or reference-group data.
 - A chart shows the most recent 20 qualifying finished sessions, sorted by
   actual completion order. It displays first/latest estimates, signed measured
   difference, chart values in readable text, and a direct action opening the

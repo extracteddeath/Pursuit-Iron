@@ -106,6 +106,10 @@ jobs:
         run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
       - name: Verify first curated starter tranche provenance
         run: node android-native/kotlin-engine/verification/starter-catalog-parity.mjs
+      - name: Verify shipped web palettes and native Amethyst first-install appearance
+        run: |
+          node android-native/verification/native-original-theme-parity-test.mjs
+          node android-native/verification/native-onboarding-interaction-test.mjs
       - name: Verify isolated Kotlin Lab launcher and app navigation
         run: node android-native/verification/kotlin-lab-navigation-test.mjs
       - name: Verify focused editable Kotlin workout logging

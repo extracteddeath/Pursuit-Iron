@@ -130,7 +130,9 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             val event=KotlinJournalOperation.RecordSet(
                 "set-$id-$index",journal.revision,target.setKey,
                 KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(load.value,load.unit,12,actualRir))
+                KotlinPerformedSet(load.value,load.unit,
+                    if(target.type==DraftSetType.WARMUP)target.reps.minimum else 12,
+                    if(target.type==DraftSetType.WARMUP)null else actualRir))
             val written=journals.appendStored(
                 "owner-1",journal.snapshot.workoutId,event,
                 approvals::canAccessIssuedWorkout)
@@ -1598,4 +1600,95 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
                 approvals::canAccessIssuedWorkout))
     }
 
+
+    private fun withVerifiedPressWarmup():List<ExercisePrescriptionPolicy> =
+        policies.map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))
+            else p
+        }
+
+    @Test fun realFinishedWarmupHistoryFeedsNextNativeRepTargets() {
+        enrolled()
+        val p=withVerifiedPressWarmup()
+        val finished=complete(1,1,p,actualRir=3)
+        val oldWarmups=finished.first.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WARMUP
+        }
+        assertEquals(1,oldWarmups.size)
+        val firstKey=finished.second
+        val parent=finished.first.effectiveSets.getValue(firstKey).operation.eventId
+        assertTrue(transactions.correct("owner-1","athlete-1","workout-1",
+            KotlinSavedSetCorrection("warmup-rep-correction",0,firstKey,parent,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("30"),LoadUnit.LB,11,3)))
+            is NativeHistoryTransactionResult.Durable)
+        val next=NativeKotlinWorkoutApproval("owner-1","athlete-1",source,source,
+            KotlinWorkoutSelectionGrant("grant-2","workout-2",source,1),
+            program,p,"storage-2",2)
+        assertEquals(NativeApprovalWriteResult.Committed(2),
+            approvals.publish("owner-1",1,next))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,sourceRecord()))
+        val shown=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(shown.toString(),shown is NativeOwnerNextSetResult.Review)
+        val reviewed=(shown as NativeOwnerNextSetResult.Review).candidate
+            as NativeCurrentRepPrescriptionResult.Reviewed
+        val proposal=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(listOf(11,12),proposal.observedReps)
+        assertEquals(listOf(12,12),proposal.newRepTargets)
+        assertEquals(oldWarmups,proposal.workout.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WARMUP
+        })
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            proposal.workout.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.map {it.reps})
+        assertFalse(proposal.mayIssueWorkout)
+    }
+
+    @Test fun twoSavedWarmupWorkoutsCanEarnAndAcceptPhysicalLoadIncrease() {
+        enrolled()
+        val p=withVerifiedPressWarmup()
+        val older=complete(1,1,p)
+        val latest=complete(2,1,p)
+        assertTrue(listOf(older,latest).all {completed ->
+            completed.first.snapshot.targets.any {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WARMUP
+            }
+        })
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,sourceRecord()))
+        val shown=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",
+            n("5"),CoachReadiness.NORMAL,false,authoring)
+        assertTrue(shown.toString(),shown is NativeOwnerLoadReviewResult.Review)
+        val review=(shown as NativeOwnerLoadReviewResult.Review).coaching
+            as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            review.coaching.status)
+        assertEquals(n("35"),review.coaching.candidateLoad)
+        val accepted=reader.acceptCurrentApprovedLoad("owner-1","athlete-1",
+            approvals,intent(review),n("5"),CoachReadiness.NORMAL,false,authoring)
+        assertTrue(accepted.toString(),accepted is NativeKotlinCoachAcceptanceResult.Committed)
+        val now=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        val rebuilt=KotlinWorkoutSnapshotDomain.stage(
+            KotlinWorkoutSnapshotRequest(now.approvedSource,now.currentSource,
+                now.grant,now.program,now.policies))
+        assertTrue(rebuilt.toString(),rebuilt is KotlinWorkoutSnapshotResult.Staged)
+        val rows=(rebuilt as KotlinWorkoutSnapshotResult.Staged).snapshot.targets
+            .filter {it.exerciseId=="db-press"}
+        assertEquals(1,rows.count {it.type==DraftSetType.WARMUP})
+        assertEquals(n("25"),(rows.single {it.type==DraftSetType.WARMUP}
+            .load as DraftSetLoad.Verified).value)
+        assertTrue(rows.filter {it.type==DraftSetType.WORKING}.all {
+            (it.load as DraftSetLoad.Verified).value==n("35")
+        })
+        assertFalse(accepted is NativeKotlinCoachAcceptanceResult.Rejected)
+        assertEquals(8L,older.first.snapshot.source.programRevision)
+        assertEquals(8L,latest.first.snapshot.source.programRevision)
+    }
 }

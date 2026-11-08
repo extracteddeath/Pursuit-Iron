@@ -25,7 +25,7 @@ class SessionFatigueEvidenceDomainTest {
         LoadUnit.LB,LoadBasis.BARBELL_TOTAL,
         listOf(BigDecimal(190),BigDecimal(195),BigDecimal(200)))
     private fun recorded(
-        id:String,values:List<Int>,rir:List<Int?>=List(3){2},
+        id:String,values:List<Int>,rir:List<Int?> = List(3){2},
         loads:List<Int> = List(3){200},day:String="upper-a"
     ):ProgressionWorkoutEvidence=ProgressionWorkoutEvidence(
         id,"bench",LoadUnit.LB,reps,3,values.indices.map{i->
@@ -51,6 +51,11 @@ class SessionFatigueEvidenceDomainTest {
         val oneBad=checkNotNull(SessionFatigueEvidenceDomain.inspectRecent(
             listOf(a,recorded("b",listOf(8,8,8)),c),verified))
         assertEquals(RepeatedSessionFatigueSignal.NO_REPEATED_DECLINE,oneBad.signal)
+        // A first set that fluctuates is not proof it stayed steady.
+        val unstableFirst=checkNotNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,recorded("b",listOf(7,7,7)),c),verified))
+        assertEquals(RepeatedSessionFatigueSignal.NO_REPEATED_DECLINE,
+            unstableFirst.signal)
     }
 
     @Test fun fatigueTrendCannotUseMissingRirOtherDaysOrChangedStock() {

@@ -113,7 +113,9 @@ object SessionFatigueEvidenceDomain {
         val signal=when {
             0 in declines && declines.size*2>=n ->
                 RepeatedSessionFatigueSignal.BROAD_DECLINE
-            0 !in declines && declines.count{it>0}>=2 ->
+            0 !in declines && scores[0][0]<=scores[1][0] &&
+                scores[1][0]<=scores[2][0] &&
+                declines.count{it>0}>=2 ->
                 RepeatedSessionFatigueSignal.LATER_SET_DECLINE
             else ->RepeatedSessionFatigueSignal.NO_REPEATED_DECLINE
         }

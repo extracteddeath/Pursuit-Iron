@@ -43,7 +43,7 @@ def tree():
 
 
 def text_of(node):
-    return node.get("text", "") or node.get("content-desc", "")
+    return " ".join((node.get("text", "") or node.get("content-desc", "")).split())
 
 
 def find(root, label):
@@ -55,7 +55,8 @@ def find(root, label):
 def swipe(down=True, distance=950):
     # Swipe only inside the scrolling content, away from the fixed navigation.
     start, end = (1850, max(430, 1850 - distance)) if down else (500, min(1900, 500 + distance))
-    adb("shell", "input", "swipe", 540, start, 540, end, 280)
+    # The outer scroll owns this gutter; editable fields cannot capture it.
+    adb("shell", "input", "swipe", 22, start, 22, end, 280)
     time.sleep(.25)
 
 
@@ -75,9 +76,13 @@ def top():
 
 
 def locate(label, *, scroll=True, limit=45, center=False):
-    for _ in range(limit if scroll else 1):
+    for attempt in range(limit if scroll else 1):
         root = tree()
         matches = find(root, label)
+        with (out / "control-search.jsonl").open("a") as trace:
+            trace.write(json.dumps({"control": label, "attempt": attempt,
+                                    "visible": [text_of(n) for n in root.iter("node")
+                                                if n.get("package") == package and text_of(n)]}) + "\n")
         if matches:
             node = matches[0]
             if center and bounds(node)[1] > 1250:
@@ -185,6 +190,7 @@ def enter_below(heading, value):
     press_node(root, node)
     adb("shell", "input", "text", value)
     dismiss_keyboard()
+    events.append({"calibrated": heading, "load": value})
 
 
 def assert_value(label, value):
@@ -198,6 +204,17 @@ def capture(name):
     root = tree()
     ET.ElementTree(root).write(out / (name + ".xml"), encoding="unicode")
     (out / "events.json").write_text(json.dumps(events, indent=2))
+
+
+def expect_saved_sets(count):
+    top()
+    pattern = re.compile(rf"^{count} of \d+ sets recorded$")
+    end = time.monotonic() + 25
+    while time.monotonic() < end:
+        if any(pattern.fullmatch(text_of(n)) for n in tree().iter("node")):
+            return
+        time.sleep(.3)
+    raise AssertionError(f"Expected exactly {count} committed sets")
 
 
 def history_checkbox(label):
@@ -288,6 +305,7 @@ try:
     assert_value("Reps completed", "6")
     tap("Complete")
     tap("Complete")
+    expect_saved_sets(2)
     capture("03-two-saved-sets")
     adb("shell", "am", "force-stop", package)
     adb("shell", "am", "start", "-W", "-n", component)
@@ -300,6 +318,7 @@ try:
     top()
     tap("Find my next workout")
     tap("Resume my workout")
+    expect_saved_sets(2)
     capture("04-recovered-workout")
     for _ in range(100):
         root = tree()

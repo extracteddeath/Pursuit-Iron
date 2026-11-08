@@ -24,3 +24,9 @@ retention, synthetic set logging, cold recovery, Finish-to-History and the next
 scheduled day. The runner must not seed private files or call hidden enrollment
 or workout APIs. Captured training logs are synthetic QA, never evidence of
 physiological performance or personalized prediction superiority.
+
+The first extended run verified setup, unit cancellation and the automatic
+builder handoff, then stopped while locating a long exercise label. The
+retry normalizes accessibility whitespace, scrolls outside editable fields,
+and records the visible control text at each search. Cold recovery must show
+exactly two committed sets before and after restarting the process.

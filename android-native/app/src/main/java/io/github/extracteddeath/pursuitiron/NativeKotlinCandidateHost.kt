@@ -82,6 +82,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete,customPreparedStore,
         customWorkoutPreflight,historyStore,journalStore,
         futureActivationHandoff)
+    private val customLiveSetCoach=NativeKotlinCustomLiveSetCoachReview(
+        revisionFence,localAthlete,customIssuedStore,authoringSourceStore,coachSettings)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
         historyStore,customIssuedStore,revisionFence,localAthlete)
     private val customSavedCorrections=NativeKotlinCustomSavedCorrectionFileStore(
@@ -1834,6 +1836,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
             revisionFence.withOwnerTransaction(signed.ownerKey) {
                 if(localAthlete.signedInIdentity()!=signed)
                     return@withOwnerTransaction null
+                val assistance=(coachSettings.read(signed.ownerKey)
+                    as? NativeCoachSettingsRead.Current)?.settings?.policy
+                    ?:return@withOwnerTransaction null
                 val stored=coordinator.open(signed.ownerKey,workoutId)
                     as? NativeJournalFileResult.Durable
                     ?:return@withOwnerTransaction null
@@ -1852,9 +1857,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 else null
                 KotlinJournalLiveSetCoachDomain.review(
                     journal,setKey,stock,readiness,movementRestricted,
-                    maximumReviewStep)
+                    maximumReviewStep,assistance)
             }
         }.getOrNull()
+    }
+
+    fun reviewLiveCustomNextSet(
+        workoutId:String,setKey:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumReviewStep:java.math.BigDecimal
+    ):LiveSetCoachResult? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        return customLiveSetCoach.review(owner.ownerKey,workoutId,setKey,
+            readiness,movementRestricted,maximumReviewStep)
     }
 
     fun recoverWorkout(workoutId:String):NativeJournalFileResult {

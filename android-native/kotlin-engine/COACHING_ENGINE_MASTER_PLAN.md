@@ -184,6 +184,17 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G3/G5 live workout connection — 2026-11-08:** generated and custom workouts
+now feed their own saved per-slot receipts into the existing next-set coach.
+The native reader reopens current settings and physical source under the owner
+fence; the Compose logger presents advice beside the next main set without
+changing targets or entered actuals. Progression Only/Manual suppress fatigue
+advice in both journal paths, including the previously ungated composer host.
+Cold-file integration covers hard work, correction, opt-out, changed source,
+corrupt preferences and continued logging. This is immediate-coaching reachability,
+not personalized fatigue prediction or Android interaction proof. See
+[the checkpoint](../LIVE_NEXT_SET_CHECKPOINT.md).
+
 **G3/G4/G5 accepted calibration — 2026-11-07:** ordinary signed custom cycles
 now have a durable one-workout starting-load approval through native
 `NativeKotlinBlockCalibrationConsentStore`. Every new acceptance, preparation

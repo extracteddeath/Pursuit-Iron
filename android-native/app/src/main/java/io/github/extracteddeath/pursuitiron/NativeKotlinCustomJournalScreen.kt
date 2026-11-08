@@ -47,6 +47,11 @@ internal fun NativeKotlinCustomJournalScreen(
     var verifiedFinishedInHistory by remember(host,workoutId){
         mutableStateOf(false)
     }
+    var readiness by rememberSaveable(workoutId){mutableStateOf(CoachReadiness.NORMAL)}
+    var movementRestricted by rememberSaveable(workoutId){mutableStateOf(false)}
+    var liveCoach by remember(host,workoutId){
+        mutableStateOf<LiveSetCoachResult.Reviewed?>(null)
+    }
 
     suspend fun verifyCommittedHistory():Boolean {
         val found=withContext(Dispatchers.IO) {
@@ -156,6 +161,24 @@ internal fun NativeKotlinCustomJournalScreen(
                             CustomWorkoutVisitPart.MAIN) in current.effectiveVisits
                     }
                 }
+                // Only committed observations can affect advice. A new set,
+                // correction, readiness selection or in-flight write clears
+                // the old projection; canceled callbacks cannot restore it.
+                LaunchedEffect(host,workoutId,current.revision,nextVisit,
+                    readiness,movementRestricted,busy) {
+                    liveCoach=null
+                    if(busy || current.finishedByEventId!=null ||
+                        nextVisit?.part!=CustomWorkoutVisitPart.MAIN)
+                        return@LaunchedEffect
+                    val result=withContext(Dispatchers.IO) {
+                        host.reviewLiveCustomNextSet(workoutId,nextVisit.setKey,
+                            readiness,movementRestricted,BigDecimal("5"))
+                    } as? LiveSetCoachResult.Reviewed
+                    if(journal?.revision==current.revision && !busy &&
+                        result?.journalRevision==current.revision &&
+                        result.setKey==nextVisit.setKey)
+                        liveCoach=result
+                }
                 PageHeading("APPROVED · IMMUTABLE TARGETS",
                     current.snapshot.dayLabel,
                     "Week ${current.snapshot.absoluteWeek} · ${current.snapshot.phase.name.replace('_',' ')}")
@@ -189,6 +212,28 @@ internal fun NativeKotlinCustomJournalScreen(
                     OutlinedButton(enabled=!busy,
                         onClick={refresh()}){Text("Reload saved journal")}
                 }
+                if(!finished) {
+                    Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        CoachReadiness.entries.forEach {option->
+                            FilterChip(selected=readiness==option,
+                                enabled=!busy,onClick={readiness=option},
+                                label={Text(option.name.lowercase().replaceFirstChar {
+                                    it.uppercase()
+                                })})
+                        }
+                    }
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Checkbox(checked=movementRestricted,enabled=!busy,
+                            onCheckedChange={movementRestricted=it})
+                        Text("Movement restricted")
+                    }
+                    if(movementRestricted)Text(
+                        "Review an adjustment or alternate movement before continuing.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodyMedium)
+                }
                 current.snapshot.slots.forEach {slot->
                     PursuitCard {
                         Text(slot.exerciseId.replace('_',' ').replace('-',' '),
@@ -200,6 +245,21 @@ internal fun NativeKotlinCustomJournalScreen(
                             val mainKey=CustomWorkoutVisitKey(
                                 set.setKey,CustomWorkoutVisitPart.MAIN)
                             val observed=current.effectiveVisits[mainKey]
+                            val advice=liveCoach?.takeIf {
+                                !busy && !finished && mainKey==nextVisit &&
+                                    it.workoutId==workoutId && it.setKey==set.setKey &&
+                                    it.journalRevision==current.revision
+                            }
+                            if(advice!=null) {
+                                Text("Coach · next set",
+                                    style=MaterialTheme.typography.titleSmall,
+                                    color=MaterialTheme.colorScheme.primary)
+                                Text(advice.coaching.message,
+                                    style=MaterialTheme.typography.bodyMedium)
+                                Text("Choose any change in the set fields. Planned targets and your entries stay unchanged.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                             NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished,

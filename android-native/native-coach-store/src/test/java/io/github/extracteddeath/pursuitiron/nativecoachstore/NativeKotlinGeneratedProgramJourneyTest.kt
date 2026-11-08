@@ -62,6 +62,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val composer=KotlinNativeJournalFileStore(root)
         val journals=NativeKotlinCustomWorkoutJournalFileStore(
             root,fence,identity,prepared,preflight,history,composer)
+        val settings=NativeKotlinCoachAssistanceSettingsStore(root,fence,identity)
+        val liveCoach=NativeKotlinCustomLiveSetCoachReview(
+            fence,identity,journals,sources,settings)
         val corrections=NativeKotlinCustomSavedCorrectionFileStore(
             root,fence,identity,journals,history)
         val authority=object:NativeKotlinWorkoutAuthority {
@@ -136,6 +139,86 @@ class NativeKotlinGeneratedProgramJourneyTest {
             .audit.muscles
         assertEquals(n("0"),doses.getValue(TrainingMuscle.CHEST).directWorkingSets)
         assertEquals(n("0"),doses.getValue(TrainingMuscle.QUADS).directWorkingSets)
+    }
+
+    @Test fun generatedWorkoutUsesColdSavedSetsAndCurrentOptOutForLiveAdvice() {
+        val (cycle,inputs)=saveGenerated()
+        val day=cycle.blocks.single().days.first()
+        val id="live-first-day"
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        var journal=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val original=journal.snapshot
+        val slot=original.slots.first {slot->
+            val work=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+            work.size>=2 && (work.first().prescription.load as? DraftSetLoad.Verified)
+                ?.basis==LoadBasis.DUMBBELL_PER_HAND
+        }
+        val work=slot.sets.filter{it.prescription.type==DraftSetType.WORKING}
+        val first=work[0];val next=work[1]
+        val load=first.prescription.load as DraftSetLoad.Verified
+        // Reopen after every append as a restarted phone would. Warmups are
+        // actual independent records, not assumed complete for the coach.
+        for(warmup in slot.sets.takeWhile{it.prescription.type==DraftSetType.WARMUP}) {
+            val weight=warmup.prescription.load as DraftSetLoad.Verified
+            journal=(Disk().journals.record(owner,id,CustomWorkoutJournalOperation.Record(
+                "live-warmup-${journal.revision}",journal.revision,
+                CustomWorkoutVisitKey(warmup.setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(
+                    weight.value,weight.unit,warmup.prescription.reps.minimum,null)))
+                as NativeCustomJournalResult.Durable).issued.journal
+        }
+        val hard=CustomWorkoutJournalOperation.Record("live-hard",journal.revision,
+            CustomWorkoutVisitKey(first.setKey,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(
+                load.value,load.unit,first.prescription.reps.minimum-1,0))
+        journal=(Disk().journals.record(owner,id,hard)
+            as NativeCustomJournalResult.Durable).issued.journal
+        fun look()=Disk().liveCoach.review(owner,id,next.setKey,
+            CoachReadiness.NORMAL,false,n("5"))
+        val advice=look() as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,advice.coaching.direction)
+        assertEquals(load.value-n("5"),advice.coaching.weightForHumanReview)
+        assertEquals(journal.revision,advice.journalRevision)
+        assertFalse(advice.canModifyWorkout)
+        val corrected=hard.copy(eventId="live-correction",expectedRevision=journal.revision,
+            performed=hard.performed!!.copy(reps=first.prescription.reps.minimum,
+                actualRir=3),correctsEventId=hard.eventId)
+        journal=(Disk().journals.record(owner,id,corrected)
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,
+            (look() as LiveSetCoachResult.Reviewed).coaching.direction)
+        assertEquals(original,journal.snapshot)
+        assertTrue(Disk().settings.save(owner,0,CoachAssistancePolicy.PROGRESSION_ONLY)
+            is NativeCoachSettingsWrite.Saved)
+        assertEquals(LiveSetCoachResult.Unavailable(LiveSetCoachUnavailable.ASSISTANCE_DISABLED),look())
+        assertTrue(Disk().settings.save(owner,1,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        assertEquals(LiveSetCoachResult.Unavailable(LiveSetCoachUnavailable.ASSISTANCE_DISABLED),look())
+        assertTrue(Disk().settings.save(owner,2,CoachAssistancePolicy.STANDARD)
+            is NativeCoachSettingsWrite.Saved)
+        // Even a physically identical new gym-source revision cannot lend
+        // authority to an older workout's suggestion.
+        val old=(Disk().sources.read(owner) as NativeAuthoringSourceRead.Found).source
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            Disk().sources.publish(owner,1,old.copy(revision=2)))
+        val stale=look() as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.VERIFY_PLANNED_EQUIPMENT,stale.coaching.direction)
+        assertNull(stale.coaching.weightForHumanReview)
+        assertEquals(original,(Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        java.nio.file.Files.list(Disk().root).use {files->
+            val settingsFile=files.filter {
+                it.fileName.toString().startsWith("coach-assistance-") &&
+                    it.fileName.toString().endsWith(".bin")
+            }.findFirst().get()
+            java.nio.file.Files.write(settingsFile,byteArrayOf(1,2,3))
+        }
+        assertNull(look()) // Corrupt preferences never turn coaching back on.
+        assertTrue(Disk().journals.record(owner,id,corrected.copy(
+            eventId="live-logging-still-works",expectedRevision=journal.revision,
+            correctsEventId=corrected.eventId)) is NativeCustomJournalResult.Durable)
     }
 
     @Test fun savedV2ProgramColdReopensWithoutBeingRegeneratedWithV3Timing() {

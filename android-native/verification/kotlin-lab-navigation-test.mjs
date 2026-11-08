@@ -12,6 +12,7 @@ const debug=read('android-native/app/src/debug/AndroidManifest.xml');
 const release=read('android-native/app/src/release/AndroidManifest.xml');
 const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
+const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -48,4 +49,12 @@ assert.ok(journey.includes('if(!navigationTouched &&') &&
   journey.includes('host.reviewResumableCustomWorkouts()') &&
   journey.includes('host.listOwnedCustomCycleDrafts()'),
   'Cold-start routing must be based on verified native state without stealing a manual navigation');
-console.log('PASS isolated single-launcher Kotlin Lab; original release launcher preserved; four-tab training UI and advanced menu reachable');
+for(const required of [
+  'KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)',
+  'KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)',
+  'set.issuedLoad,set.issuedReps,set.issuedRir',
+  'fact.prescribedLoad,fact.prescribedReps,fact.prescribedRir',
+  'Actual RIR not logged',
+  'Amplifier follow-ups:'
+])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
+console.log('PASS isolated Kotlin Lab navigation and correction-aware History summaries for generated and custom workouts');

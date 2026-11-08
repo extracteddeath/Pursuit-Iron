@@ -62,10 +62,37 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         Text("Session ${entry.manifest.completionOrder}",style=MaterialTheme.typography.titleMedium)
                         Text(if(entry is NativeKotlinMixedHistoryCompletion.Custom)"Custom program" else "Generated program",
                             style=MaterialTheme.typography.bodySmall)
-                        TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide sets" else "View performed sets")}
+                        // These are effective, correction-aware facts from the
+                        // verified owner history—not a cached PR or estimate.
+                        val performance=when(entry) {
+                            is NativeKotlinMixedHistoryCompletion.Composer ->
+                                KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)
+                            is NativeKotlinMixedHistoryCompletion.Custom ->
+                                KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)
+                        }
+                        Text("${performance.completedWorkingSets} of ${performance.workingSets} working sets completed",
+                            style=MaterialTheme.typography.titleSmall)
+                        if(performance.skippedWorkingSets>0 || performance.failedWorkingSets>0)
+                            Text("${performance.skippedWorkingSets} skipped · ${performance.failedWorkingSets} failed attempts",
+                                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                style=MaterialTheme.typography.bodySmall)
+                        if(performance.completedWorkingSets>0) {
+                            Text("Reps: ${performance.repsWithinRange} within target · ${performance.repsBelowMinimum} below · ${performance.repsAboveMaximum} above",
+                                style=MaterialTheme.typography.bodySmall)
+                            Text("Actual RIR recorded: ${performance.actualRirReportedWorkingSets} of ${performance.completedWorkingSets} completed working sets",
+                                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                        if(performance.followUpVisits>0)
+                            Text("Amplifier follow-ups: ${performance.completedFollowUpVisits} of ${performance.followUpVisits} completed (not counted as main sets)",
+                                style=MaterialTheme.typography.bodySmall)
+                        TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide sets" else "View targets and actuals")}
                         if(expanded)when(entry) {
-                            is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEachIndexed {index,set->
-                                KotlinHistoryActualRow(set.exerciseId,"Set ${index+1}",set.outcome,set.actual)
+                            is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEach {set->
+                                val name=set.type.name.lowercase().replaceFirstChar{it.uppercase()}
+                                KotlinHistoryActualRow(set.exerciseId,"$name ${set.originalOrdinal+1}",
+                                    set.issuedLoad,set.issuedReps,set.issuedRir,
+                                    set.outcome,set.actual)
                             }
                             is NativeKotlinMixedHistoryCompletion.Custom ->entry.evidence.visits.forEach {set->
                                 NativeKotlinSavedCustomHistoryVisitRow(
@@ -158,19 +185,37 @@ internal fun NativeKotlinCandidateHistoryScreen(
     )
 }
 
+private fun kotlinHistoryLoadLabel(load:DraftSetLoad):String=when(load) {
+    is DraftSetLoad.Verified ->
+        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"
+    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+}
+
 @Composable
-private fun KotlinHistoryActualRow(exercise:String,label:String,outcome:KotlinJournalSetOutcome,actual:KotlinPerformedSet?) {
-    Text(exercise.replace('_',' ').replace('-',' '),style=MaterialTheme.typography.titleSmall)
+private fun KotlinHistoryActualRow(
+    exercise:String,label:String,issuedLoad:DraftSetLoad,issuedReps:RepBand,
+    issuedRir:Int?,outcome:KotlinJournalSetOutcome,actual:KotlinPerformedSet?
+) {
+    Text("${exercise.replace('_',' ').replace('-',' ')} · $label",
+        style=MaterialTheme.typography.titleSmall)
+    val goalReps=if(issuedReps.minimum==issuedReps.maximum)
+        "${issuedReps.minimum} reps" else "${issuedReps.minimum}–${issuedReps.maximum} reps"
+    Text("Target: ${kotlinHistoryLoadLabel(issuedLoad)} × $goalReps · "+
+        (issuedRir?.let{"$it RIR target"} ?: "No RIR target"),
+        style=MaterialTheme.typography.bodySmall,
+        color=MaterialTheme.colorScheme.onSurfaceVariant)
     val performed=actual?.let{
-        "${it.load?.toPlainString() ?: "Bodyweight"} ${it.unit?.name?.lowercase().orEmpty()} × ${it.reps} · "+
-            (it.actualRir?.let{rir->"$rir RIR"} ?:"RIR not logged")
-    } ?:"No performed values available"
+        val weight=if(it.load==null) "Bodyweight" else
+            "${it.load.stripTrailingZeros().toPlainString()} ${it.unit?.name?.lowercase() ?: "unit unreported"}"
+        "$weight × ${it.reps} reps · "+
+            (it.actualRir?.let{rir->"$rir actual RIR"} ?: "Actual RIR not logged")
+    } ?: "No performed values available"
     val values=when(outcome) {
-        KotlinJournalSetOutcome.SKIPPED ->"Skipped"
-        KotlinJournalSetOutcome.FAILED_ATTEMPT ->"Failed attempt · $performed"
-        KotlinJournalSetOutcome.COMPLETED ->performed
+        KotlinJournalSetOutcome.SKIPPED -> "Skipped"
+        KotlinJournalSetOutcome.FAILED_ATTEMPT -> "Failed attempt · $performed"
+        KotlinJournalSetOutcome.COMPLETED -> "Actual: $performed"
     }
-    Text("$label · $values",style=MaterialTheme.typography.bodyMedium)
+    Text(values,style=MaterialTheme.typography.bodyMedium)
 }
 
 /**
@@ -186,8 +231,9 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
     onChanged:()->Unit
 ) {
     KotlinHistoryActualRow(fact.exerciseId,
-        if(fact.part==CustomWorkoutVisitPart.FOLLOW_UP)"Follow-up" else
+        if(fact.part==CustomWorkoutVisitPart.FOLLOW_UP)"Amplifier follow-up" else
             fact.setType.name.lowercase().replaceFirstChar{it.uppercase()},
+        fact.prescribedLoad,fact.prescribedReps,fact.prescribedRir,
         fact.outcome,fact.actual)
     var editing by remember(entry.manifest.workoutId,fact.setKey,
         fact.part,fact.effectiveEventId) {mutableStateOf(false)}

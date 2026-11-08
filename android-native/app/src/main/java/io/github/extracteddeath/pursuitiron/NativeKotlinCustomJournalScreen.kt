@@ -26,7 +26,9 @@ import kotlinx.coroutines.withContext
 internal fun NativeKotlinCustomJournalScreen(
     host:NativeKotlinCandidateHost,
     workoutId:String,
-    onClose:()->Unit
+    onClose:()->Unit,
+    onViewHistory:()->Unit={},
+    onReturnToProgram:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var journal by remember(host,workoutId) {
@@ -37,6 +39,21 @@ internal fun NativeKotlinCustomJournalScreen(
     var error by remember(host,workoutId){mutableStateOf<String?>(null)}
     var finished by remember(host,workoutId){mutableStateOf(false)}
     var finishConfirm by remember(host,workoutId){mutableStateOf(false)}
+    var verifiedFinishedInHistory by remember(host,workoutId){
+        mutableStateOf(false)
+    }
+
+    suspend fun verifyCommittedHistory():Boolean {
+        val found=withContext(Dispatchers.IO) {
+            runCatching {host.reviewVerifiedKotlinHistory()}.getOrNull()
+        }
+        return (found as? NativeKotlinMixedHistoryReadResult.Review)
+            ?.timeline?.completions?.any {
+                it is NativeKotlinMixedHistoryCompletion.Custom &&
+                    it.manifest.workoutId==workoutId &&
+                    it.evidence.workoutId==workoutId
+            } ==true
+    }
 
     fun refresh() {
         if(busy)return
@@ -48,6 +65,8 @@ internal fun NativeKotlinCustomJournalScreen(
             val saved=result as? NativeCustomJournalResult.Durable
             journal=saved?.issued?.journal
             finished=saved?.issued?.journal?.finishedByEventId!=null
+            verifiedFinishedInHistory=if(finished)verifyCommittedHistory()
+                else false
             error=if(saved==null)
                 "This workout is not an authenticated native custom journal: ${result ?: "storage unavailable"}."
             else null
@@ -118,9 +137,24 @@ internal fun NativeKotlinCustomJournalScreen(
                         style=MaterialTheme.typography.titleLarge)
                     Text("Journal revision ${current.revision}. Actual weights, reps and effort are recorded separately from the plan.",
                         style=MaterialTheme.typography.bodySmall)
-                    if(finished||current.finishedByEventId!=null)
-                        Text("Native Finish receipt stored. If history recovery was interrupted, use the recovery action to verify or finalize the manifest before relying on completion.",
-                            color=MaterialTheme.colorScheme.primary)
+                    if(finished||current.finishedByEventId!=null) {
+                        Text(if(verifiedFinishedInHistory)
+                            "Workout finished and verified in committed native history."
+                            else "Finish receipt exists, but committed history has not yet been verified. Recover the interrupted Finish before advancing.",
+                            color=if(verifiedFinishedInHistory)
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error)
+                        if(verifiedFinishedInHistory) {
+                            Button(
+                                onClick=onReturnToProgram,
+                                modifier=Modifier.fillMaxWidth()
+                            ){Text("Continue to my next workout")}
+                            OutlinedButton(
+                                onClick=onViewHistory,
+                                modifier=Modifier.fillMaxWidth()
+                            ){Text("View finished workout in history")}
+                        }
+                    }
                     OutlinedButton(enabled=!busy,
                         onClick={refresh()}){Text("Reload saved journal")}
                 }
@@ -172,7 +206,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         enabled=!busy&&current.canProposeFinish&&!finished,
                         onClick={finishConfirm=true}) {
                         Text("Review Finish")}
-                    if(!finished)
+                    if(!verifiedFinishedInHistory)
                         OutlinedButton(enabled=!busy,onClick={
                             busy=true
                             scope.launch{
@@ -190,6 +224,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                 journal=(restored as? NativeCustomJournalResult.Durable)
                                     ?.issued?.journal
                                 finished=journal?.finishedByEventId!=null
+                                verifiedFinishedInHistory=if(finished)
+                                    verifyCommittedHistory()
+                                else false
                                 busy=false
                             }
                         }){Text("Recover interrupted Finish")}
@@ -222,7 +259,13 @@ internal fun NativeKotlinCustomJournalScreen(
                                 }.getOrNull()
                             }
                             finished=result is NativeCustomFinishResult.Committed
-                            error=if(finished)null else
+                            verifiedFinishedInHistory=if(finished)
+                                verifyCommittedHistory()
+                            else false
+                            error=if(finished && verifiedFinishedInHistory)null else
+                                if(finished)
+                                    "Finish was committed, but the history read could not be independently verified. Use recovery before advancing."
+                                else
                                 "Finish not committed: ${result ?: "storage unavailable"}. The workout remains recoverable."
                             val saved=withContext(Dispatchers.IO){
                                 runCatching{host.openIssuedCustomWorkout(workoutId)}

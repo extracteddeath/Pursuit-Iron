@@ -77,8 +77,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    // Preview channel only: beta API provides the published expressive MotionScheme.
-    implementation("androidx.compose.material3:material3:1.5.0-beta02")
+    // Material 3 Expressive 1.5 release candidate, with published MotionScheme.
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

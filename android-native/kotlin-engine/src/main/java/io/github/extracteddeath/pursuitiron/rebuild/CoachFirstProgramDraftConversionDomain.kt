@@ -24,6 +24,44 @@ data class FirstProgramDraftReview(
 object CoachFirstProgramDraftConversionDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
+    /**
+     * Review inputs from the EXACT generated policy and already audited
+     * per-weekday non-set time. This is not a newly inferred coach threshold.
+     * A custom-program edit invalidates this handoff; it must be re-audited.
+     */
+    fun policyForInitialFullCycleReview(
+        reviewed:FirstProgramStartReview,
+        setup:AthleteSetupReview
+    ):CustomCoachAuditInputs? {
+        val athlete=setup.reviewed ?:return null
+        val generated=reviewed.generation ?:return null
+        val policy=reviewed.policy ?:return null
+        val draft=reviewed.prescription ?:return null
+        val request=generated.candidate?.catalogReview?.composedRequest
+            ?:return null
+        if(!setup.mayReviewProgramCandidate ||
+            reviewed.status!=FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW ||
+            generated.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW ||
+            draft.status!=PrescriptionDraftStatus.COMPLETE_FOR_REVIEW ||
+            draft.composer.visits!=generated.candidate?.catalogReview?.draft?.visits ||
+            policy.athleteId!=athlete.athleteProfileId ||
+            policy.athleteRevision!=athlete.profileRevision ||
+            policy.goal!=athlete.goal ||
+            policy.experience!=athlete.experience ||
+            policy.split!=athlete.split ||
+            policy.trainingDays!=athlete.trainingWeekdays.size ||
+            request.days.map{it.calendarDay}.toSet()!=athlete.trainingWeekdays)
+            return null
+        val time=request.days.associate{day->
+            day.calendarDay to day.window.declaredNonSetSeconds
+        }
+        if(time.size!=athlete.trainingWeekdays.size)
+            return null
+        return CustomCoachAuditInputs(
+            policiesByPhase=mapOf(policy.phase to policy),
+            nonSetSecondsByWeekday=Collections.unmodifiableMap(time))
+    }
+
     fun propose(
         reviewed:FirstProgramStartReview,
         setup:AthleteSetupReview,
@@ -83,7 +121,11 @@ object CoachFirstProgramDraftConversionDomain {
                                     set.targetRir,set.activeSeconds,
                                     set.restSeconds)
                             }),
-                            pinned=false)
+                            pinned=generated.intents.any { intent ->
+                                intent.weekday==day.calendarDay &&
+                                    intent.requiredPrimaryExerciseId==exercise.exerciseId &&
+                                    exercise.role==ComposerRole.PRIMARY
+                            })
                     }))
         }
         val next=CustomTrainingCycle(

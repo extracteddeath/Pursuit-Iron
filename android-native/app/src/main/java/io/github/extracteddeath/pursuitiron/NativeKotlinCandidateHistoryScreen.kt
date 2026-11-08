@@ -20,6 +20,9 @@ internal fun NativeKotlinCandidateHistoryScreen(host:NativeKotlinCandidateHost) 
     val scope=rememberCoroutineScope()
     var busy by remember{mutableStateOf(false)}
     var result by remember{mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)}
+    var showSeparateHistoryConsent by remember{mutableStateOf(false)}
+    var understandsSeparateHistory by remember{mutableStateOf(false)}
+    var enrollmentMessage by remember{mutableStateOf<String?>(null)}
     fun reload() {
         if(busy)return
         busy=true;result=null
@@ -38,6 +41,9 @@ internal fun NativeKotlinCandidateHistoryScreen(host:NativeKotlinCandidateHost) 
             PageHeading("PURSUIT IRON · KOTLIN LAB","Workout history",
                 "Your completed workouts and saved set corrections.")
             OutlinedButton(onClick=::reload,enabled=!busy){Text(if(busy)"Loading…" else "Refresh history")}
+            enrollmentMessage?.let { Text(it,
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                style=MaterialTheme.typography.bodyMedium) }
         }
         when(val read=result) {
             is NativeKotlinMixedHistoryReadResult.Review -> {
@@ -64,14 +70,84 @@ internal fun NativeKotlinCandidateHistoryScreen(host:NativeKotlinCandidateHost) 
             is NativeKotlinMixedHistoryReadResult.Rejected ->item {
                 Text(when(read.reason) {
                     NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED ->"Confirm your saved athlete setup to open history."
-                    NativeKotlinMixedHistoryRefusal.NOT_ENROLLED ->"Complete native setup before opening history."
-                    NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION ->"Finish recovery is pending. Return to Train and recover the saved workout, then refresh."
+                    NativeKotlinMixedHistoryRefusal.NOT_ENROLLED ->
+                        "This Kotlin athlete has no enrolled native workout history. Existing web training history is NOT migrated here."
+                    NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION ->
+                        "Finish recovery is pending. Return to Train and recover the saved workout, then refresh."
                     else ->"Saved history could not be verified. Your saved workouts have been kept."
                 },color=MaterialTheme.colorScheme.error)
+                if(read.reason==NativeKotlinMixedHistoryRefusal.NOT_ENROLLED) {
+                    PursuitCard {
+                        Text("Start an independent Kotlin history",
+                            style=MaterialTheme.typography.titleMedium)
+                        Text("For a new, separately owned Kotlin profile only. This creates an empty local training history without importing or changing your JavaScript/web workouts. Prior experience and fatigue history will NOT be known to the Kotlin coach. If you need your old history included, do not start separately: wait for verified migration.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        Button(
+                            enabled=!busy,
+                            modifier=Modifier.fillMaxWidth(),
+                            onClick={
+                                understandsSeparateHistory=false
+                                showSeparateHistoryConsent=true
+                            }) {Text("Review separate-history choice")}
+                    }
+                }
             }
             null ->if(busy)item {LinearProgressIndicator(Modifier.fillMaxWidth())}
         }
     }
+    if(showSeparateHistoryConsent)AlertDialog(
+        onDismissRequest={
+            if(!busy)showSeparateHistoryConsent=false
+        },
+        title={Text("Start a separate Kotlin training history?")},
+        text={
+            Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("This is NOT a migration. It does not bring over old web or JavaScript workouts, personal records, fatigue, or progression history. It does not erase them either. The coach will start with only future Kotlin logs.")
+                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Checkbox(
+                        checked=understandsSeparateHistory,
+                        onCheckedChange={understandsSeparateHistory=it},
+                        enabled=!busy)
+                    Text("I want a new independent history, not an import.")
+                }
+            }
+        },
+        confirmButton={
+            Button(
+                enabled=understandsSeparateHistory&&!busy,
+                onClick={
+                    showSeparateHistoryConsent=false
+                    busy=true
+                    enrollmentMessage=null
+                    scope.launch {
+                        val enrollment=withContext(Dispatchers.IO) {
+                            runCatching {
+                                host.enrollSeparateKotlinHistory(true)
+                            }.getOrNull()
+                        }
+                        busy=false
+                        when(enrollment) {
+                            is NativeHistoryEnrollmentResult.Enrolled -> {
+                                enrollmentMessage=
+                                    "Separate native history verified. Web app workouts remain untouched and are not included."
+                                reload()
+                            }
+                            is NativeHistoryEnrollmentResult.Rejected ->
+                                enrollmentMessage="Separate history was not created: ${enrollment.reason.name.replace('_',' ').lowercase()}. Existing records were kept."
+                            null ->enrollmentMessage=
+                                "Could not verify a new native history. No enrollment was claimed."
+                        }
+                    }
+                }) {Text("Start separate history")}
+        },
+        dismissButton={
+            TextButton(
+                enabled=!busy,
+                onClick={showSeparateHistoryConsent=false}
+            ) {Text("Keep existing history unchanged")}
+        }
+    )
 }
 
 @Composable

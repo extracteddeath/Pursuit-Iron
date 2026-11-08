@@ -45,11 +45,11 @@ internal object StarterProgramReleaseFixture {
 }
 
 class StarterProgramReleaseMatrixTest {
-    @Test fun fourRealHypertrophySplitsPreserveDoseStockRecoveryAndWholeSessionTime() {
-        for(split in ComposerSplit.entries) {
-            val input=StarterProgramReleaseFixture.request(split,TrainingPhase.HYPERTROPHY)
+    @Test fun twelveRealStarterCasesPreserveDoseStockRecoveryAndWholeSessionTime() {
+        for(split in ComposerSplit.entries)for(phase in TrainingPhase.entries) {
+            val input=StarterProgramReleaseFixture.request(split,phase)
             val result=CoachFirstProgramStartDomain.review(input)
-            assertEquals("$split: ${result.issues}",
+            assertEquals("$split/$phase: ${result.issues}",
                 FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
             val draft=checkNotNull(result.prescription)
             val audit=checkNotNull(draft.finalAudit)
@@ -65,13 +65,42 @@ class StarterProgramReleaseMatrixTest {
                 assertTrue(checkNotNull(session.estimatedMinutes) in 40L..60L)
                 session.exercises.forEach {exercise->
                     val spec=input.catalog.single{it.exerciseId==exercise.exerciseId}
-                    exercise.sets.forEach {set->
-                        val load=set.load as? DraftSetLoad.Verified ?:return@forEach
+                    exercise.sets.forEach setLoop@{set->
+                        val load=set.load as? DraftSetLoad.Verified ?:return@setLoop
                         val stock=input.setup.reviewed?.gym?.confirmedStock?.get(spec.equipmentId)
                         val checked=EquipmentLoadDomain.inspect(stock,load.value,load.unit)
                         assertTrue(checked is LoadInspection.Confirmed && checked.exact)
                     }
                 }
+            }
+            if(phase!=TrainingPhase.HYPERTROPHY) {
+                assertTrue(result.phasePoliciesChecked in 1..32)
+                assertFalse(result.phaseSearchBudgetReached)
+                val policy=checkNotNull(result.policy)
+                val generated=checkNotNull(result.generation)
+                val skill=generated.intents.filter {
+                    it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+                }
+                assertEquals(setOf("barbell_bench","back_squat"),policy.primaryLiftMinimumDays.keys)
+                assertEquals(if(split==ComposerSplit.FULL_BODY)3 else 4,skill.size)
+                for(intent in skill) {
+                    val lift=input.catalog.single{it.exerciseId==intent.requiredPrimaryExerciseId}
+                    assertTrue(generated.focusByWeekday.getValue(intent.weekday) in lift.permittedFocus)
+                    val dayIndex=checkNotNull(input.setup.reviewed).trainingWeekdays.sorted()
+                        .indexOf(intent.weekday)
+                    val session=draft.sessions.single{it.dayIndex==dayIndex}
+                    assertEquals(lift.exerciseId,session.exercises.first().exerciseId)
+                    val work=session.exercises.first().sets.filter{it.type==DraftSetType.WORKING}
+                    assertTrue(work.all{it.targetReps==RepBand(3,6) && it.targetRir==2})
+                }
+                for(intent in generated.intents.filter{it !in skill}) {
+                    assertEquals(ComposerSessionPurpose.GENERAL_PREPARATION,intent.purpose)
+                    assertEquals(ComposerFocus.PULL,generated.focusByWeekday[intent.weekday])
+                }
+                val frequencies=checkNotNull(generated.candidate?.realization).primaryFrequencies
+                assertTrue(frequencies.all{it.deliveredDays>=it.requiredDays})
+                if(split!=ComposerSplit.FULL_BODY)
+                    assertTrue(frequencies.all{it.deliveredDays==2})
             }
             // Known starter-library gaps remain visible, not waived by a
             // mechanical week passing its declared provisional policy.
@@ -79,6 +108,62 @@ class StarterProgramReleaseMatrixTest {
                 TrainingMuscle.BRACHIALIS,TrainingMuscle.WRIST_FLEXORS,
                 TrainingMuscle.WRIST_EXTENSORS)))
             assertFalse(result.mayIssueWorkout)
+        }
+    }
+
+    @Test fun archivedV4RetainsItsEightUnresolvedPhasesWithoutChangingSavedRules() {
+        var oldReady=0
+        for(split in ComposerSplit.entries)for(phase in TrainingPhase.entries) {
+            val input=StarterProgramReleaseFixture.request(split,phase)
+                .copy(policyVersion=CoachFirstProgramStartDomain.ALLOCATION_POLICY_VERSION)
+            val old=CoachFirstProgramStartDomain.review(input)
+            if(old.status==FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)oldReady++
+            assertEquals(if(phase==TrainingPhase.HYPERTROPHY)
+                FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW
+                else FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,old.status)
+            assertEquals("v4",old.policy?.revision)
+        }
+        assertEquals(4,oldReady)
+    }
+
+    @Test fun phaseSearchCannotInventAnUncalibratedPrimaryOrRoundInvalidStock() {
+        val source=StarterProgramReleaseFixture.request(ComposerSplit.UPPER_LOWER,
+            TrainingPhase.STRENGTH)
+        val noSquat=CoachFirstProgramStartDomain.review(source.copy(
+            startingLoads=source.startingLoads-"back_squat"))
+        assertEquals(setOf("barbell_bench"),noSquat.policy?.primaryLiftMinimumDays?.keys)
+        assertTrue(noSquat.generation?.intents.orEmpty().none{
+            it.requiredPrimaryExerciseId=="back_squat"
+        })
+        val bad=CoachFirstProgramStartDomain.review(source.copy(
+            startingLoads=source.startingLoads+("barbell_bench" to BigDecimal("137.5"))))
+        assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,bad.status)
+        assertNull(bad.generation)
+        assertNull(bad.prescription)
+    }
+
+    @Test fun overlappingMainLiftOptionsUseBoundedCompleteWeekAudits() {
+        val base=StarterProgramReleaseFixture.request(ComposerSplit.UPPER_LOWER,
+            TrainingPhase.STRENGTH)
+        for(extra in listOf(mapOf("barbell_ohp" to BigDecimal("95")),
+            mapOf("barbell_ohp" to BigDecimal("95"),"paused_bench" to BigDecimal("135")))) {
+            val input=base.copy(startingLoads=base.startingLoads+extra)
+            val result=CoachFirstProgramStartDomain.review(input)
+            assertEquals(result.issues.toString(),
+                FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
+            assertTrue(result.phasePoliciesChecked in 1..32)
+            assertTrue(checkNotNull(result.prescription?.finalAudit).satisfiesDeclaredHardConstraints)
+            assertTrue(checkNotNull(result.prescription?.finalAudit).daysOutsidePreferredWindow.isEmpty())
+            assertTrue(checkNotNull(result.policy).primaryLiftMinimumDays.keys.all {
+                it in input.startingLoads
+            })
+            for(session in checkNotNull(result.prescription).sessions) {
+                assertTrue(session.exercises.count {exercise->
+                    input.catalog.single{it.exerciseId==exercise.exerciseId}
+                        .expectedLoadBasis==LoadBasis.BARBELL_TOTAL
+                }<=1)
+            }
+            assertEquals(input.startingLoads.keys,result.chosenExerciseIds.toSet()-"bodyweight_crunch")
         }
     }
 
@@ -115,6 +200,22 @@ object StarterProgramReleaseProbe {
             "{"+listOf("split" to quote(split.name),"phase" to quote(phase.name),
                 "days" to checkNotNull(input.setup.reviewed).trainingWeekdays.size.toString(),
                 "status" to quote(result.status.name),
+                "phasePoliciesChecked" to result.phasePoliciesChecked.toString(),
+                "phaseSearchBudgetReached" to result.phaseSearchBudgetReached.toString(),
+                "purposeByWeekday" to result.generation?.intents.orEmpty()
+                    .joinToString(prefix="{",postfix="}"){
+                        quote(it.weekday.toString())+":"+quote(it.purpose.name)
+                    },
+                "namedPrimaryByWeekday" to result.generation?.intents.orEmpty()
+                    .joinToString(prefix="{",postfix="}"){
+                        quote(it.weekday.toString())+":"+
+                            (it.requiredPrimaryExerciseId?.let(::quote) ?:"null")
+                    },
+                "primaryFrequency" to result.generation?.candidate?.realization
+                    ?.primaryFrequencies.orEmpty().joinToString(prefix="[",postfix="]"){
+                        "{\"exerciseId\":"+quote(it.exerciseId)+
+                            ",\"requiredDays\":${it.requiredDays},\"deliveredDays\":${it.deliveredDays}}"
+                    },
                 "minutes" to result.prescription?.sessions.orEmpty()
                     .joinToString(prefix="[",postfix="]"){it.estimatedMinutes?.toString() ?:"null"},
                 "unsupportedMuscles" to result.unsupportedMuscles

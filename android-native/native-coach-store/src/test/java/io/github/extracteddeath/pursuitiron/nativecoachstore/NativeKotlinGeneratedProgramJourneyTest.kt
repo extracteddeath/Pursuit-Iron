@@ -24,11 +24,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
         "db_lateral_raise" to n("15"),"db_curl" to n("25"),
         "db_overhead_triceps" to n("25"),"db_calf_raise" to n("30"))
     private val bodyweight=setOf("bodyweight_crunch")
-    private fun weekdays(split:ComposerSplit)=if(split==ComposerSplit.FULL_BODY)
-        setOf(0,2,4) else setOf(0,1,3,4)
-    private fun setup(split:ComposerSplit=ComposerSplit.UPPER_LOWER)=CoachAthleteSetupDomain.review(AthleteSetupDraft(
+    private fun weekdays(split:ComposerSplit)=when(split) {
+        ComposerSplit.FULL_BODY->setOf(0,2,4)
+        ComposerSplit.UPPER_LOWER->setOf(0,1,3,4)
+        ComposerSplit.PUSH_PULL_LEGS->setOf(0,1,2,3,4,5)
+        ComposerSplit.ULPPL->setOf(0,1,2,4,5)
+    }
+    private fun setup(split:ComposerSplit=ComposerSplit.UPPER_LOWER,
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY)=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="profile-1",athleteProfileId=athlete,
-        goal=AthleteTrainingGoal.HYPERTROPHY,
+        goal=if(phase==TrainingPhase.HYPERTROPHY)AthleteTrainingGoal.HYPERTROPHY
+            else AthleteTrainingGoal.POWERBUILDING,
         experience=AthleteExperience.ADVANCED,split=split,
         trainingWeekdays=weekdays(split),timezoneId="America/New_York",
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
@@ -45,8 +51,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
         lockedTrainingDays=emptySet(),hardTrainingDays=emptySet(),
         longTrainingDays=emptySet(),declaredRestDays=(0..6).toSet()-weekdays(split)))
     private val catalog=StarterExerciseTranche.movements()
-    private fun request(split:ComposerSplit=ComposerSplit.UPPER_LOWER)=FirstProgramStartRequest(
-        setup(split),catalog,loads,bodyweight,TrainingPhase.HYPERTROPHY,
+    private fun request(split:ComposerSplit=ComposerSplit.UPPER_LOWER,
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY)=FirstProgramStartRequest(
+        setup(split,phase),catalog,loads,bodyweight,phase,
         nonSetSecondsPerDay=900)
 
     private inner class Disk {
@@ -86,9 +93,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
 
     private fun saveGenerated(
         policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION,
-        split:ComposerSplit=ComposerSplit.UPPER_LOWER
+        split:ComposerSplit=ComposerSplit.UPPER_LOWER,
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request(split).copy(policyVersion=policyVersion)
+        val input=request(split,phase).copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -115,7 +123,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
                 .create(owner,NativeFirstProgramSeed(
                     cycleId,cycle.title,4,1,input.policyVersion,
-                    TrainingPhase.HYPERTROPHY,loads,bodyweight,emptyList(),900)))
+                    phase,loads,bodyweight,emptyList(),900)))
         assertTrue(disk.consent.confirm(owner,cycleId,1,1,0,inputs,true)
             is NativeCustomSignoffWrite.Committed)
         val enrollment=NativeKotlinHistoryEnrollmentCoordinator(
@@ -260,12 +268,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
         completeGeneratedWeek(ComposerSplit.UPPER_LOWER)
     }
 
-    @Test fun savedV3TimedProgramRetainsItsExactCycleAndTargetsAfterV4Arrives() {
-        val (cycle,inputs)=saveGenerated(CoachFirstProgramStartDomain.TIMED_POLICY_VERSION)
+    @Test fun savedV3TimedProgramRetainsItsExactCycleAndTargetsAfterNewPoliciesArrive() {
+        verifySavedTimedProgram(CoachFirstProgramStartDomain.TIMED_POLICY_VERSION)
+    }
+
+    @Test fun savedV4ProgramRetainsItsExactCycleAndTargetsAfterV5Arrives() {
+        verifySavedTimedProgram(CoachFirstProgramStartDomain.ALLOCATION_POLICY_VERSION)
+    }
+
+    private fun verifySavedTimedProgram(version:String) {
+        val (cycle,inputs)=saveGenerated(version)
         val disk=Disk()
         val seed=(NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
             .read(owner,cycleId) as NativeFirstProgramSeedRead.Found).seed
-        assertEquals("first-program-reference-v3",seed.policyVersion)
+        assertEquals(version,seed.policyVersion)
         val replay=CoachFirstProgramStartDomain.review(request().copy(
             startingLoads=seed.startingLoads,selectedBodyweightExerciseIds=seed.bodyweightExercises,
             nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
@@ -287,8 +303,21 @@ class NativeKotlinGeneratedProgramJourneyTest {
         completeGeneratedWeek(ComposerSplit.FULL_BODY)
     }
 
-    private fun completeGeneratedWeek(split:ComposerSplit) {
-        val (cycle,inputs)=saveGenerated(split=split)
+    @Test fun generatedStrengthWeekCompletesAndColdRestoresItsOwnPhaseRules() {
+        completeGeneratedWeek(ComposerSplit.UPPER_LOWER,TrainingPhase.STRENGTH)
+    }
+
+    @Test fun generatedPeakWeekCompletesAndColdRestoresItsOwnPhaseRules() {
+        completeGeneratedWeek(ComposerSplit.UPPER_LOWER,TrainingPhase.PEAK)
+    }
+
+    @Test fun mixedPurposePplStrengthWeekCompletesAndColdRestoresSupportingDays() {
+        completeGeneratedWeek(ComposerSplit.PUSH_PULL_LEGS,TrainingPhase.STRENGTH)
+    }
+
+    private fun completeGeneratedWeek(split:ComposerSplit,
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY) {
+        val (cycle,inputs)=saveGenerated(split=split,phase=phase)
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
         assertEquals(weekdays(split).sorted(),days.map{it.weekday})
         assertTrue(days.all{it.slots.size>=3})
@@ -382,12 +411,13 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val seed=(NativeKotlinFirstProgramSeedFileStore(
             temp.root.toPath(),Disk().fence,identity).read(owner,cycleId)
             as NativeFirstProgramSeedRead.Found).seed
-        val regenerated=CoachFirstProgramStartDomain.review(request(split).copy(
+        assertEquals(phase,seed.phase)
+        val regenerated=CoachFirstProgramStartDomain.review(request(split,seed.phase).copy(
             startingLoads=seed.startingLoads,
             selectedBodyweightExerciseIds=seed.bodyweightExercises,
             nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
         assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
-            regenerated,setup(split),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+            regenerated,setup(split,seed.phase),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
         // Editing the first finished workout cannot reorder newer results
         // or rewind next-session selection. Preserve the issued original.
         val firstId=completed.first()

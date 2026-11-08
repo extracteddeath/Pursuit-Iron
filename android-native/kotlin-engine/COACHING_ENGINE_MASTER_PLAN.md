@@ -184,6 +184,19 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G1 phase-placement continuation — 2026-11-08:** first-program v5 checks
+multiple calibrated primary lifts and bounded skill/supporting-day policies
+through the existing generator, prescription and whole-week audit. It fixes
+the former single-primary/all-skill mismatch without inventing equipment or
+changing dose, effort, rest, warmup, weekday or time constraints. The declared
+advanced 40–60-minute matrix improves from 4/12 to 12/12 reviewable cases;
+actual named lift/day roles and delivered frequency are recorded in its audit.
+Native complete-week cases include strength, peak and mixed-purpose PPL; saved
+v1–v4 algorithms remain available for exact replay. No universal training
+frequency or individualized peak/taper accuracy is claimed. Broader catalog,
+policy calibration, complete cycles and device acceptance remain open. See
+[the updated release report](../RELEASE_READINESS.md).
+
 **G1 release-matrix continuation — 2026-11-08:** a shipped-catalog advanced
 40–60-minute smoke matrix exposed unresolved automatic strength/peak starters
 and an overlong Full Body hypertrophy week. New versioned first-program v4

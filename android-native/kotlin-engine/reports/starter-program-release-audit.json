@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "first-program-reference-v4",
+  "policyVersion": "first-program-reference-v5",
   "fixture": "advanced, 40–60 min, declared bar/dumbbell gym, one barbell exercise per day",
   "totalCases": 12,
-  "reviewablePrograms": 4,
-  "unresolvedCases": 8,
+  "reviewablePrograms": 12,
+  "unresolvedCases": 0,
   "releaseApprovalGranted": false,
   "cases": [
     {
@@ -12,6 +12,19 @@
       "phase": "HYPERTROPHY",
       "days": 3,
       "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 0,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "HYPERTROPHY",
+        "2": "HYPERTROPHY",
+        "4": "HYPERTROPHY"
+      },
+      "namedPrimaryByWeekday": {
+        "0": null,
+        "2": null,
+        "4": null
+      },
+      "primaryFrequency": [],
       "minutes": [
         56,
         56,
@@ -35,8 +48,36 @@
       "split": "FULL_BODY",
       "phase": "STRENGTH",
       "days": 3,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 1,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "2": "STRENGTH_SKILL",
+        "4": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "barbell_bench",
+        "2": "back_squat",
+        "4": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 1
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        56,
+        56,
+        57
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -48,15 +89,44 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "The closest checked week still needs coach review of muscle dose, recovery, exercise distribution, time or gym constraints."
+        "A smaller secondary/accessory set allocation fits the full week while preserving the reviewed muscle-dose, frequency and recovery constraints.",
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
       "split": "FULL_BODY",
       "phase": "PEAK",
       "days": 3,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 1,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "2": "STRENGTH_SKILL",
+        "4": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "barbell_bench",
+        "2": "back_squat",
+        "4": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 1
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        56,
+        56,
+        57
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -68,7 +138,8 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "The closest checked week still needs coach review of muscle dose, recovery, exercise distribution, time or gym constraints."
+        "A smaller secondary/accessory set allocation fits the full week while preserving the reviewed muscle-dose, frequency and recovery constraints.",
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
@@ -76,6 +147,21 @@
       "phase": "HYPERTROPHY",
       "days": 4,
       "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 0,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "HYPERTROPHY",
+        "1": "HYPERTROPHY",
+        "3": "HYPERTROPHY",
+        "4": "HYPERTROPHY"
+      },
+      "namedPrimaryByWeekday": {
+        "0": null,
+        "1": null,
+        "3": null,
+        "4": null
+      },
+      "primaryFrequency": [],
       "minutes": [
         60,
         60,
@@ -99,8 +185,39 @@
       "split": "UPPER_LOWER",
       "phase": "STRENGTH",
       "days": 4,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 1,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "1": "STRENGTH_SKILL",
+        "3": "STRENGTH_SKILL",
+        "4": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "back_squat",
+        "1": "barbell_bench",
+        "3": "back_squat",
+        "4": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        60,
+        60,
+        60,
+        60
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -112,15 +229,46 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
       "split": "UPPER_LOWER",
       "phase": "PEAK",
       "days": 4,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 1,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "1": "STRENGTH_SKILL",
+        "3": "STRENGTH_SKILL",
+        "4": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "back_squat",
+        "1": "barbell_bench",
+        "3": "back_squat",
+        "4": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        60,
+        60,
+        60,
+        60
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -132,7 +280,7 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
@@ -140,6 +288,25 @@
       "phase": "HYPERTROPHY",
       "days": 6,
       "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 0,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "HYPERTROPHY",
+        "1": "HYPERTROPHY",
+        "2": "HYPERTROPHY",
+        "3": "HYPERTROPHY",
+        "4": "HYPERTROPHY",
+        "5": "HYPERTROPHY"
+      },
+      "namedPrimaryByWeekday": {
+        "0": null,
+        "1": null,
+        "2": null,
+        "3": null,
+        "4": null,
+        "5": null
+      },
+      "primaryFrequency": [],
       "minutes": [
         51,
         40,
@@ -165,8 +332,45 @@
       "split": "PUSH_PULL_LEGS",
       "phase": "STRENGTH",
       "days": 6,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 3,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "1": "GENERAL_PREPARATION",
+        "2": "STRENGTH_SKILL",
+        "3": "STRENGTH_SKILL",
+        "4": "GENERAL_PREPARATION",
+        "5": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "back_squat",
+        "1": null,
+        "2": "barbell_bench",
+        "3": "back_squat",
+        "4": null,
+        "5": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        51,
+        40,
+        42,
+        51,
+        40,
+        42
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -178,15 +382,52 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
       "split": "PUSH_PULL_LEGS",
       "phase": "PEAK",
       "days": 6,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 3,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "1": "GENERAL_PREPARATION",
+        "2": "STRENGTH_SKILL",
+        "3": "STRENGTH_SKILL",
+        "4": "GENERAL_PREPARATION",
+        "5": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "back_squat",
+        "1": null,
+        "2": "barbell_bench",
+        "3": "back_squat",
+        "4": null,
+        "5": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        51,
+        40,
+        42,
+        51,
+        40,
+        42
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -198,7 +439,7 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
@@ -206,6 +447,23 @@
       "phase": "HYPERTROPHY",
       "days": 5,
       "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 0,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "HYPERTROPHY",
+        "1": "HYPERTROPHY",
+        "2": "HYPERTROPHY",
+        "4": "HYPERTROPHY",
+        "5": "HYPERTROPHY"
+      },
+      "namedPrimaryByWeekday": {
+        "0": null,
+        "1": null,
+        "2": null,
+        "4": null,
+        "5": null
+      },
+      "primaryFrequency": [],
       "minutes": [
         60,
         42,
@@ -230,8 +488,42 @@
       "split": "ULPPL",
       "phase": "STRENGTH",
       "days": 5,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 2,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "1": "STRENGTH_SKILL",
+        "2": "STRENGTH_SKILL",
+        "4": "GENERAL_PREPARATION",
+        "5": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "back_squat",
+        "1": "barbell_bench",
+        "2": "back_squat",
+        "4": null,
+        "5": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        60,
+        56,
+        51,
+        45,
+        42
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -243,15 +535,49 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     },
     {
       "split": "ULPPL",
       "phase": "PEAK",
       "days": 5,
-      "status": "DRAFT_NEEDS_REVIEW",
-      "minutes": [],
+      "status": "PRESCRIBED_DRAFT_FOR_REVIEW",
+      "phasePoliciesChecked": 2,
+      "phaseSearchBudgetReached": false,
+      "purposeByWeekday": {
+        "0": "STRENGTH_SKILL",
+        "1": "STRENGTH_SKILL",
+        "2": "STRENGTH_SKILL",
+        "4": "GENERAL_PREPARATION",
+        "5": "STRENGTH_SKILL"
+      },
+      "namedPrimaryByWeekday": {
+        "0": "back_squat",
+        "1": "barbell_bench",
+        "2": "back_squat",
+        "4": null,
+        "5": "barbell_bench"
+      },
+      "primaryFrequency": [
+        {
+          "exerciseId": "back_squat",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        },
+        {
+          "exerciseId": "barbell_bench",
+          "requiredDays": 1,
+          "deliveredDays": 2
+        }
+      ],
+      "minutes": [
+        60,
+        56,
+        51,
+        45,
+        42
+      ],
       "unsupportedMuscles": [
         "LATS",
         "FRONT_DELTS",
@@ -263,7 +589,7 @@
       ],
       "issues": [
         "The starter selection lacks direct exercise coverage for 7 tracked muscles. These are not secretly counted as fully trained.",
-        "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules."
+        "Main-lift practice and supporting days match your chosen split and verified movements."
       ]
     }
   ]

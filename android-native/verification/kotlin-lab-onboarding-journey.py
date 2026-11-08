@@ -228,6 +228,32 @@ def history_checkbox(label):
     press_node(root, min(matches, key=lambda n: abs(sum(bounds(n)[1::2]) / 2 - y)))
 
 
+def clear_running_rest():
+    # Synthetic QA is not physical training. Use the actual timer control
+    # rather than waiting for a prescribed recovery interval between records.
+    root = tree()
+    running = [n for n in root.iter("node") if n.get("package") == package
+               and text_of(n).startswith("Rest · ")]
+    if not running:
+        return
+    parents = {child: parent for parent in root.iter() for child in parent}
+    node = running[0]
+    while node is not None and node.get("long-clickable") != "true":
+        node = parents.get(node)
+    if node is not None:
+        assert enabled(root, node), "Rest reset is disabled"
+        x1, y1, x2, y2 = bounds(node)
+        x, y = (x1 + x2) // 2, (y1 + y2) // 2
+        adb("shell", "input", "swipe", x, y, x, y, 1100)
+    else:
+        controls = find(root, "Clear rest")
+        assert controls, "Active rest has no reset control"
+        press_node(root, controls[0])
+    assert not any(text_of(n).startswith("Rest · ") for n in tree().iter("node")
+                   if n.get("package") == package), "Rest reset did not clear the timer"
+    events.append({"cleared_rest_through_ui": True})
+
+
 try:
     capture("00-fresh-setup")
     choice("Primary goal", "Hypertrophy")
@@ -306,7 +332,9 @@ try:
     tap("Target")
     assert_value("Reps completed", "6")
     tap("Complete")
+    clear_running_rest()
     tap("Complete")
+    clear_running_rest()
     expect_saved_sets(2)
     capture("03-two-saved-sets")
     adb("shell", "am", "force-stop", package)
@@ -315,8 +343,6 @@ try:
     tap("Resume my saved setup")
     tap("Verify and resume", scroll=False)
     tap("Continue to my program")
-    tap("Refresh saved programs")
-    tap("My first program")
     top()
     tap("Find my next workout")
     tap("Resume my workout")
@@ -326,6 +352,7 @@ try:
         root = tree()
         if find(root, "Complete"):
             tap("Complete", scroll=False)
+            clear_running_rest()
             continue
         if any(enabled(root, n) for n in find(root, "Review Finish")):
             break
@@ -334,6 +361,7 @@ try:
         raise AssertionError("Workout did not reach Finish within 100 explicit set actions")
     tap("Review Finish")
     tap("Commit native Finish", scroll=False)
+    top()
     tap("View finished workout in history")
     wait_for("Session 1")
     capture("05-saved-history")

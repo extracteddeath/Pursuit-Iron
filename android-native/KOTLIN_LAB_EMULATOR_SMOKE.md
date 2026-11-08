@@ -35,3 +35,17 @@ The captured retry trace showed the exact exercise label on screen before
 the runner's centering swipe flung past it. The next run uses slower swipes
 and small centering movements against the same frozen APK; no application
 or engine change is justified by this test-driver failure.
+
+The runner also explicitly returns to the workout summary after Finish to
+open the history link. Between synthetic set records it clears an active
+rest through the actual long-press/reset control (or Clear rest action),
+without changing any workout prescription, set record or engine setting.
+It is not simulating physical recovery or using these records as forecasting
+evidence. The same signed APK remains pinned throughout these driver fixes.
+
+Run 42514386653 reached the approved generated program, Target/Last input
+retention, two verified committed sets and a process restart. After confirmed
+setup recovery, Plan already reopened the saved program and offered its exact
+unfinished journal. The runner incorrectly looked for the closed-program
+list's Refresh action; it now follows the visible Resume route and still
+requires exactly two committed sets after opening that recovered workout.

@@ -45,6 +45,9 @@ internal data class NativeKotlinCustomCycleState(
     /** Inputs from the latest independently rechecked full-cycle audit.
      * Never persisted, fabricated, or reused after an authored draft edit. */
     val reviewedCoachInputs: CustomCoachAuditInputs? = null,
+    /** Read-only owner-verified next session; never an issuance grant. */
+    val nextCycleSlot:NativeCustomNextCycleSlot?=null,
+    val nextSlotCycleRevision:Long?=null,
     /** Unsaved, athlete-entered one-week correction and its full-cycle effects. */
     val weekEditReview: CustomCoachWeekEditReview? = null,
     val signoff: NativeCustomSignoffRead? = null,
@@ -251,6 +254,8 @@ internal class NativeKotlinCustomCycleController(
                             evidenceSourceRevision = null,
                             auditSourceRevision = null,
                             reviewedCoachInputs = null,
+                            nextCycleSlot = null,
+                            nextSlotCycleRevision = null,
                             weekEditReview = null,
                             signoff = host.readCustomCycleConsent(result.draft.cycleId),
                             signoffRefusal = null,
@@ -297,6 +302,8 @@ internal class NativeKotlinCustomCycleController(
         current.value=previous.copy(
             coachingAudit=null,
             reviewedCoachInputs=null,
+            nextCycleSlot=null,
+            nextSlotCycleRevision=null,
             weekEditReview=null,
             auditSourceRevision=null,
             consentBoundPreview=null,
@@ -409,6 +416,45 @@ internal class NativeKotlinCustomCycleController(
     fun auditFullCycle(
         inputs:CustomCoachAuditInputs=CustomCoachAuditInputs()
     )=run {auditReviewedSavedCycle(inputs)}
+
+    /** Determine the next verified session from the complete actual native
+     * journal/manifest census. No calendar-start date is inferred. */
+    fun findNextCycleSession()=run {
+        val before=current.value
+        val cycle=before.draft ?:return@run
+        val inputs=auditedInputs
+        if(inputs==null ||
+            before.coachingAudit?.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+            (before.signoff as? NativeCustomSignoffRead.Found)?.isCurrent!=true) {
+            current.value=before.copy(nextCycleSlot=null,
+                nextSlotCycleRevision=null,
+                message="Review and sign this exact training cycle before selecting the next workout.")
+            return@run
+        }
+        val selected=host.reviewNextCustomCycleSession(cycle.cycleId,inputs)
+        val latest=host.readCustomCycleDraft(cycle.cycleId)
+        if(latest !is NativeCustomDraftReadResult.Found ||
+            latest.draft!=cycle) {
+            applyRead(cycle.cycleId,latest)
+            current.value=current.value.copy(
+                message="The saved cycle changed while selecting the next workout. Reopen it.")
+            return@run
+        }
+        current.value=before.copy(
+            nextCycleSlot=selected,
+            nextSlotCycleRevision=cycle.revision,
+            message=when(selected) {
+                is NativeCustomNextCycleSlot.Next ->
+                    "This is the next unfinished session in your saved cycle, not an inferred calendar date. Verify it before preparing."
+                is NativeCustomNextCycleSlot.Prepared ->
+                    "The next session has a saved preparation. Reopen and verify it rather than creating a duplicate."
+                is NativeCustomNextCycleSlot.ResumeIssued ->
+                    "An issued session is unfinished. Resume its exact journal instead of starting another."
+                NativeCustomNextCycleSlot.CycleComplete ->
+                    "Every scheduled session in this cycle has verified completed history."
+                is NativeCustomNextCycleSlot.Rejected ->selected.reason
+            })
+    }
 
     /**
      * Open a newly saved generated program AND re-audit its reviewed policy

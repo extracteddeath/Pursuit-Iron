@@ -118,6 +118,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var bodyweightUnit by rememberSaveable{mutableStateOf(LoadUnit.LB.name)}
     var comparisonGroup by rememberSaveable{mutableStateOf<String?>(null)}
     var trendExerciseId by rememberSaveable{mutableStateOf("barbell_bench")}
+    var comparisonExpanded by rememberSaveable{mutableStateOf(false)}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
     LaunchedEffect(preferredExerciseId) {
@@ -233,9 +234,24 @@ internal fun NativeKotlinStrengthStandardsScreen(
     PursuitScreenContent {
         PageHeading("PROGRESS","Strength standards",
             "Compare your actual logged barbell performance with published community reference bands.")
-        PursuitCard(highlighted=true) {
-            PursuitSectionHeading("Your comparison",
-                "Optional; these settings never change your workouts or training recommendations.")
+        PursuitCard {
+            PursuitSectionHeading("Community comparison",
+                "Optional settings; they do not alter workouts, progressions or achievements.")
+            val ready=comparisonGroup!=null && bodyweight!=null
+            Text(when {
+                !ready -> "Not set · you can still explore verified strength charts."
+                Triple(comparisonGroup.orEmpty(),bodyweightText,bodyweightUnit)==savedComparison ->
+                    "Saved locally · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
+                    "${bodyweightText} ${displayUnit.name.lowercase()} bodyweight"
+                else -> "Unsaved · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
+                    "${bodyweightText} ${displayUnit.name.lowercase()} bodyweight"
+            },style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick={comparisonExpanded=!comparisonExpanded},
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                Text(if(comparisonExpanded)"Hide comparison settings" else "Edit comparison settings")
+            }
+            if(comparisonExpanded) {
             Text("Community comparison group",style=MaterialTheme.typography.labelLarge)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
@@ -354,6 +370,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
             Text("Broad entire-community reference only, not an age- or bodyweight-specific ranking. The estimated 1RM is not a tested maximum.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         when(result) {
             null -> LinearProgressIndicator(Modifier.fillMaxWidth())

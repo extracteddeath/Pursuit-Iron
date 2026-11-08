@@ -1,0 +1,142 @@
+# Pursuit Iron native app — final-design implementation contract
+
+Status: **IN PROGRESS — not full-design complete**. Branch: `architecture/kotlin-engine-rebuild`.
+The next distributable APK is intentionally **deferred** until every screen in
+this contract reaches a reviewed, integrated state. Source-only compilation,
+unit tests and screenshots during development are allowed; do **not** trigger
+disposable APK milestones in routine design commits.
+
+## Design direction / Material baseline
+
+- Modern Material 3 Expressive with shipped Compose `material3:1.5.0-beta02`;
+  prefer stable, accessible public APIs. Re-evaluate current official release
+  notes before a final version pin and regression run, not after every commit.
+- Preserve all original Pursuit Iron color schemes. First install **Amethyst**,
+  never Lime. Theme is athlete-chosen and independent from workout/history facts.
+- Own hierarchy through shared Compose components: semantic typography
+  styles, single spacing scale (`PursuitSpace`), elevation/surface roles,
+  standardized shapes, segmented selections, meaningful actions and consistent
+  empty/loading/error states. No local ad-hoc CSS/inline colors.
+- Use icon + text for discoverability until repeated use warrants icon-only.
+  Core buttons require at least 48dp targets and screen-reader content labels.
+- Animate state changes with Material motion and respect reduced-motion; no
+  excessive bouncing, jumpy reflows, screen flashing or covering the set-entry
+  action. Avoid experimental motion APIs without fallback and accessibility.
+- Layout: compact phones use bottom navigation, medium/wide screens use an
+  adaptive rail and two-pane History/Plan where genuinely helpful. Foldable
+  and large-text layouts must never hide required completion controls.
+- Preserve a **single recording authority**. UI components only show current
+  native data or submit explicit, validated actions. No presentation-driven
+  fabricated RIR, PR, load, effort, progressions, exercise substitutions or
+  history migrations.
+
+## Persistent information architecture
+
+At most five top-level destinations:
+
+1. **Plan** — next workout first, concise cycle phase, entire program outline,
+   one-tap full program editor and safe undo/review of changes.
+2. **Train** — resume/start, immersive active session and persistent rest timer.
+3. **History** — factual completed sessions, corrections, calendar,
+   exercise-specific history, source-backed PRs and export.
+4. **Progress** — Strength Standards as a first-class feature, tracked lifts,
+   longitudinal progress/consistency, favorites and share/export.
+5. **Coach** — game plan and clear training decisions, coaching toggles,
+   readiness/injury handling and genuinely reviewed next-session proposals.
+
+Athlete Profile, gym/equipment, saved programs, appearance and settings belong
+in a coherent secondary hierarchy; onboarding is a step-based flow, not another
+permanent tab. Back returns to the previous level, not to setup unexpectedly.
+
+## Screen hierarchy and required interactions
+
+| Screen | Primary / secondary / tertiary order | Completion gate |
+| --- | --- | --- |
+| Home / Plan overview | Next workout + readiness → next plan summary → phase/week → full plan | No duplicated conflicting today card; 1-tap start/resume |
+| Onboarding | Goal → schedule/split → equipment/load stock → review → create program | Save/Back survives rotation and preserves units/choices |
+| Program / Cycle | Adaptive option → full week/day exercise list → per-set prescriptions → review/approve | Full Body, UL, PPL, ULPPL; 3–6 days; adaptive split and exercise toggles |
+| Workout | Movement + set ordinal → **Target / Last** → entry weight, reps, RIR → **Complete** | Last is same day/slot and unreported RIR remains unknown |
+| Workout controls | History, Info, Skip, Warm-up, Swap, Superset, Notes, timer | Open **full exercise history in one tap**, no lost unsubmitted values |
+| History | Recent session → actual vs target → per-exercise ledger → corrections | Verified corrections, skips and failure are distinct; no implied PR |
+| Progress | **Strength Standards** → lift-specific trajectory → training consistency | Bodyweight, comparison group, age context and source metadata explicit |
+| Profile | Personal card / milestones → strength standards → favorite charts → preferences | Meets no fabricated badge or metric |
+| Coach | Today's human-readable game plan → optional changes → review acceptance | Standard, Progression-only, Manual modes must remain independent |
+| Gym | Grouped facilities → exact available weights/attachments → confirmation | Physical stock never substituted by a name-only equipment match |
+| Settings | Appearance, assistance toggles, units/bar weights, privacy & backup | Original palettes and owned-history boundaries preserved |
+
+## Target/Last and exercise history — acceptance contract
+
+- One shared compact Material 3 segmented Target/Last control used by BOTH
+  Kotlin logger implementations. It only affects presentation, never writes.
+- Target: weight → rep range → target RIR. Last: exact latest **comparable**
+  program day + same exercise slot/set type and ordinal, weight → observed
+  reps → **observed** RIR. If the latest appearance was skipped/failed, show
+  that outcome rather than cherry-picking an older success.
+- The active exercise has a visible History action. It opens a sheet with
+  **all correction-aware saved main working visits** in reverse session order,
+  including skips/failures and targets. It does not navigate away or discard
+  unfinished set input. Never use a locally cached partial history as authority.
+- Keep set entry compact and accessible. Edited values survive Target/Last,
+  Focus/All, minimize/resume, configuration changes and history sheet dismiss.
+- Use full exercise history also from Progress, History and exercise details.
+
+## Strength Standards — prominent Progress feature
+
+Current source-only first pass implements four **exact barbell** comparisons:
+`barbell_bench`, `back_squat`, `conventional_deadlift`,
+`barbell_ohp`. A verified corrected native 1–10-rep working set yields
+a plainly labeled **Epley estimated 1RM**, not a tested 1RM or certified PR.
+Use the actual logged load **only**; machine, dumbbell, Smith and barbell
+figures are not interchangeable.
+
+Bodyweight and male/female reference selection are entered **explicitly** and
+are not inferred from training history. Community ratio bands must cite the
+published source, include link to methodology and distinguish broad bands from
+age/bodyweight-specific percentiles. Source: Strength Level 2026 published
+community ratio tables for bench, squat, deadlift and shoulder press:
+https://strengthlevel.com/strength-standards
+
+Before declaring Strength Standards feature-complete, add unit conversion,
+athlete-configurable saved comparison settings with privacy controls, age- and
+bodyweight-specific published lookups with verifiable license/provenance,
+equipment/variant-specific standards, actual tested-1RM override and a fully
+accessible chart/detail view. Do not fabricate ratios, rankings or citations
+where valid source tables are not integrated.
+
+## Reusable components and ownership
+
+- Existing: `NativeDesignTokens.kt`, `NativeComponents.kt`,
+  `NativeKotlinWorkoutReference.kt`.
+- New shared layout: `PursuitDesignComponents.kt` for section headers,
+  exercise title/history action, empty state and historical captions.
+- New specific surfaces: `NativeKotlinExerciseHistorySheet.kt` and
+  `NativeKotlinStrengthStandardsScreen.kt`.
+- Next components to centralize across all 12+ destination/editor screens:
+  app top bars, adaptive navigation, grouped choice controls, single-row
+  workout actions, fields/steppers, confirmation sheets, feedback/toast,
+  chart legend, coach rationale, responsive dual-pane information sections.
+- Domain calculations belong in independently testable pure Kotlin when
+  promoted beyond display-only values. No formulas duplicated across Plan,
+  Train, History and Progress.
+
+## Gate BEFORE the next APK
+
+1. Design audit checks ALL screens, not only Plan or Train, in both theme
+   modes at phone, 1.6–2.0 font scale and tablet/foldable widths.
+2. Shared components used consistently, dark/light contrast verified,
+   navigation and back stack tested, keyboard and touch targets correct.
+3. Full custom/generated workout loop; history and strength-standard cross-
+   links; edit/correction/restart; no visible UI regressions.
+4. Source-only checks and Compose compilation pass; actual emulator screenshots
+   reviewed. No feature is silently absent or implemented only as a static
+   placeholder.
+5. User has reviewed and accepted the finished design. **Then**, and only
+   then, run one intentionally gated APK milestone for real-device feedback.
+   An AAB remains out of scope until Play Store preparation.
+
+## Status discipline
+
+A passing Compose build means source compiles. It does **not** mean all UI
+screens are finished, all features have parity, or the coach is more accurate
+than the previous web engine. Report clearly what is implemented, what is
+source-tested, what is visually verified, and what remains unverified.

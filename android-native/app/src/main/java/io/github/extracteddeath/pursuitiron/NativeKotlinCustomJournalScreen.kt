@@ -44,6 +44,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
     val editorStates=rememberSaveableStateHolder()
     var referenceMode by rememberWorkoutReferenceMode()
+    var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
     }
@@ -290,8 +291,9 @@ internal fun NativeKotlinCustomJournalScreen(
                         slot.sets.any{it.setKey==activeFocus.setKey}
                 }.forEach {slot->
                     PursuitCard {
-                        Text(kotlinExerciseLabel(slot.exerciseId),
-                            style=MaterialTheme.typography.titleLarge)
+                        PursuitExerciseHeading(slot.exerciseId,
+                            onHistory={historyExerciseId=slot.exerciseId},
+                            subtitle="Working sets and saved exercise history")
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,
                                 style=MaterialTheme.typography.bodySmall)
@@ -411,6 +413,10 @@ internal fun NativeKotlinCustomJournalScreen(
             NativeKotlinWorkoutRestTimer(workoutId,
                 KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy)
         }
+    }
+    historyExerciseId?.let { exerciseId ->
+        NativeKotlinExerciseHistorySheet(host,exerciseId,
+            onDismiss={historyExerciseId=null})
     }
     val selected=journal
     if(finishConfirm&&selected!=null) {

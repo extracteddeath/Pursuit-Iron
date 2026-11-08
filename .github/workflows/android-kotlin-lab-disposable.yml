@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   disposable-device-build:
-    if: startsWith(github.event.head_commit.message, 'milestone(kotlin): disposable lab ')
+    if: "startsWith(github.event.head_commit.message, 'milestone(kotlin): disposable lab ')"
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

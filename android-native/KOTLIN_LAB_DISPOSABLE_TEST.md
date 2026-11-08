@@ -19,3 +19,9 @@ ID, signer fingerprint and SHA-256 receipt. Device acceptance, complete
 feature parity, backup/migration and demonstrated coaching superiority
 are NOT yet certified. Persistent in-place upgrades still require the
 private stable certificate described in `KOTLIN_LAB_SIGNING_SETUP.md`.
+
+## One-time milestone correction
+
+The first workflow push was rejected by GitHub's YAML parser because the
+milestone conditional contained an unquoted colon. This marker explicitly
+retries only the corrected workflow with the same isolated trial contract.

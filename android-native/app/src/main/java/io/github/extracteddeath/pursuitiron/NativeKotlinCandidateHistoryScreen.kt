@@ -89,10 +89,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide sets" else "View targets and actuals")}
                         if(expanded)when(entry) {
                             is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEach {set->
-                                val name=set.type.name.lowercase().replaceFirstChar{it.uppercase()}
-                                KotlinHistoryActualRow(set.exerciseId,"$name ${set.originalOrdinal+1}",
-                                    set.issuedLoad,set.issuedReps,set.issuedRir,
-                                    set.outcome,set.actual)
+                                NativeKotlinSavedComposerHistorySetRow(
+                                    host,entry,set,onChanged={reload()})
                             }
                             is NativeKotlinMixedHistoryCompletion.Custom ->entry.evidence.visits.forEach {set->
                                 NativeKotlinSavedCustomHistoryVisitRow(
@@ -205,8 +203,11 @@ private fun KotlinHistoryActualRow(
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)
     val performed=actual?.let{
-        val weight=if(it.load==null) "Bodyweight" else
-            "${it.load.stripTrailingZeros().toPlainString()} ${it.unit?.name?.lowercase() ?: "unit unreported"}"
+        // Local snapshot is required: Kotlin cannot smart-cast a public
+        // property exposed from the independent engine module.
+        val observedLoad=it.load
+        val weight=if(observedLoad==null) "Bodyweight" else
+            "${observedLoad.stripTrailingZeros().toPlainString()} ${it.unit?.name?.lowercase() ?: "unit unreported"}"
         "$weight × ${it.reps} reps · "+
             (it.actualRir?.let{rir->"$rir actual RIR"} ?: "Actual RIR not logged")
     } ?: "No performed values available"
@@ -216,6 +217,142 @@ private fun KotlinHistoryActualRow(
         KotlinJournalSetOutcome.COMPLETED -> "Actual: $performed"
     }
     Text(values,style=MaterialTheme.typography.bodyMedium)
+}
+
+/**
+ * Share parsing between generated and custom correction forms. Unknown actual
+ * RIR is never filled from the goal, and skipped sets never acquire fake reps.
+ * The native reducers remain the final authority for valid load/outcome pairs.
+ */
+private fun kotlinHistoryCorrectionActual(
+    outcome:KotlinJournalSetOutcome,
+    enteredLoad:String,enteredReps:String,enteredRir:String,
+    unit:LoadUnit?
+):KotlinPerformedSet? {
+    if(outcome==KotlinJournalSetOutcome.SKIPPED)return null
+    val load=if(enteredLoad.isBlank())null else
+        runCatching{java.math.BigDecimal(enteredLoad.trim())}.getOrNull()
+    val reps=enteredReps.toIntOrNull() ?:return null
+    val rir=if(enteredRir.isBlank())null else enteredRir.toIntOrNull()
+    if((enteredLoad.isNotBlank() && load==null) ||
+        (enteredRir.isNotBlank() && rir==null) ||
+        (load!=null && unit==null))return null
+    return KotlinPerformedSet(load,if(load==null)null else unit,reps,rir)
+}
+
+/** Generated/composer history uses the same committed native history
+ * transaction as Finish. Neither this UI nor a direct correction-file append
+ * may change already-issued targets or publish uncommitted observations. */
+@Composable
+private fun NativeKotlinSavedComposerHistorySetRow(
+    host:NativeKotlinCandidateHost,
+    entry:NativeKotlinMixedHistoryCompletion.Composer,
+    fact:KotlinHistoricalSetFact,
+    onChanged:()->Unit
+) {
+    val label=fact.type.name.lowercase().replaceFirstChar{it.uppercase()}+
+        " ${fact.originalOrdinal+1}"
+    KotlinHistoryActualRow(fact.exerciseId,label,
+        fact.issuedLoad,fact.issuedReps,fact.issuedRir,
+        fact.outcome,fact.actual)
+    var editing by remember(entry.manifest.workoutId,fact.setKey,
+        fact.effectiveEventId){mutableStateOf(false)}
+    var submitting by remember{mutableStateOf(false)}
+    var error by remember{mutableStateOf<String?>(null)}
+    var outcome by remember(entry.manifest.workoutId,fact.effectiveEventId){
+        mutableStateOf(fact.outcome)
+    }
+    var load by remember(entry.manifest.workoutId,fact.effectiveEventId){
+        mutableStateOf(fact.actual?.load?.stripTrailingZeros()?.toPlainString().orEmpty())
+    }
+    var reps by remember(entry.manifest.workoutId,fact.effectiveEventId){
+        mutableStateOf(fact.actual?.reps?.toString().orEmpty())
+    }
+    var rir by remember(entry.manifest.workoutId,fact.effectiveEventId){
+        mutableStateOf(fact.actual?.actualRir?.toString().orEmpty())
+    }
+    val scope=rememberCoroutineScope()
+    TextButton(onClick={editing=!editing;error=null},enabled=!submitting){
+        Text(if(editing)"Cancel correction" else "Correct saved set")
+    }
+    if(editing) {
+        Text("The prescribed goal stays unchanged. Only the logged result will be corrected.",
+            style=MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            KotlinJournalSetOutcome.entries.forEach {choice->
+                FilterChip(selected=outcome==choice,enabled=!submitting,
+                    onClick={outcome=choice},
+                    label={Text(choice.name.replace('_',' ').lowercase()
+                        .replaceFirstChar{it.uppercase()})})
+            }
+        }
+        if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
+            OutlinedTextField(value=load,onValueChange={load=it},
+                label={Text("Actual weight (blank for bodyweight)")},
+                singleLine=true,modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(value=reps,onValueChange={reps=it},
+                label={Text("Actual reps")},
+                singleLine=true,modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(value=rir,onValueChange={rir=it},
+                label={Text("Actual RIR (optional)")},
+                singleLine=true,modifier=Modifier.fillMaxWidth())
+        }
+        Button(enabled=!submitting,onClick={
+            val performed=kotlinHistoryCorrectionActual(
+                outcome,load,reps,rir,
+                fact.actual?.unit ?: (fact.issuedLoad as? DraftSetLoad.Verified)?.unit)
+            val selectedOutcome=outcome
+            if(selectedOutcome!=KotlinJournalSetOutcome.SKIPPED &&
+                performed==null) {
+                error="Enter a valid weight, rep count and optional actual RIR."
+            } else {
+                submitting=true;error=null
+                scope.launch {
+                    val result=withContext(Dispatchers.IO){
+                        runCatching{
+                            // Re-read the full owner-fenced corrected ledger
+                            // before sending a CAS event. A stale edit is
+                            // rejected rather than overwriting later work.
+                            val verified=host.reviewVerifiedKotlinHistory()
+                                as? NativeKotlinMixedHistoryReadResult.Review
+                            val current=verified?.timeline?.completions
+                                ?.filterIsInstance<NativeKotlinMixedHistoryCompletion.Composer>()
+                                ?.singleOrNull{
+                                    it.manifest.workoutId==entry.manifest.workoutId
+                                }
+                            val currentSet=current?.evidence?.sets?.singleOrNull{
+                                it.setKey==fact.setKey
+                            }
+                            if(currentSet==null ||
+                                currentSet.effectiveEventId!=fact.effectiveEventId ||
+                                currentSet.issuedLoad!=fact.issuedLoad ||
+                                currentSet.issuedReps!=fact.issuedReps ||
+                                currentSet.issuedRir!=fact.issuedRir ||
+                                current?.manifest?.savedCorrectionRevision!=
+                                    entry.manifest.savedCorrectionRevision) null
+                            else host.correctSavedKotlinWorkout(
+                                entry.manifest.workoutId,
+                                KotlinSavedSetCorrection(
+                                    "composer-correction-"+java.util.UUID.randomUUID()
+                                        .toString().replace("-",""),
+                                    entry.manifest.savedCorrectionRevision,
+                                    fact.setKey,fact.effectiveEventId,
+                                    selectedOutcome,performed))
+                        }.getOrNull()
+                    }
+                    submitting=false
+                    if(result is NativeSavedCorrectionFileResult.Durable){
+                        editing=false;error=null;onChanged()
+                    } else error="Correction was not saved. The history or prior set may have changed. Refresh and retry."
+                }
+            }
+        },modifier=Modifier.fillMaxWidth()){
+            Text(if(submitting)"Saving actual correction…" else "Save corrected result")
+        }
+        error?.let{Text(it,color=MaterialTheme.colorScheme.error,
+            style=MaterialTheme.typography.bodySmall)}
+    }
 }
 
 /**
@@ -280,23 +417,9 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                 singleLine=true,modifier=Modifier.fillMaxWidth())
         }
         Button(enabled=!submitting,onClick={
-            val actual=if(outcome==KotlinJournalSetOutcome.SKIPPED)
-                null
-            else {
-                val parsedLoad=if(load.isBlank())null else
-                    runCatching{java.math.BigDecimal(load.trim())}.getOrNull()
-                val parsedReps=reps.toIntOrNull()
-                val parsedRir=if(rir.isBlank())null else rir.toIntOrNull()
-                val unit=fact.actual?.unit ?:
-                    (fact.prescribedLoad as? DraftSetLoad.Verified)?.unit
-                if(parsedReps==null ||
-                    (!rir.isBlank() && parsedRir==null) ||
-                    (!load.isBlank() && parsedLoad==null) ||
-                    (parsedLoad!=null && unit==null))null
-                else KotlinPerformedSet(parsedLoad,
-                    if(parsedLoad==null)null else unit,
-                    parsedReps,parsedRir)
-            }
+            val actual=kotlinHistoryCorrectionActual(
+                outcome,load,reps,rir,
+                fact.actual?.unit ?: (fact.prescribedLoad as? DraftSetLoad.Verified)?.unit)
             val selectedOutcome=outcome
             if(selectedOutcome!=KotlinJournalSetOutcome.SKIPPED &&
                 actual==null) {

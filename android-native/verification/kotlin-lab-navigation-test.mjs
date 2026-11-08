@@ -55,6 +55,13 @@ for(const required of [
   'set.issuedLoad,set.issuedReps,set.issuedRir',
   'fact.prescribedLoad,fact.prescribedReps,fact.prescribedRir',
   'Actual RIR not logged',
-  'Amplifier follow-ups:'
+  'Amplifier follow-ups:',
+  'NativeKotlinSavedComposerHistorySetRow(',
+  'host.correctSavedKotlinWorkout(',
+  'KotlinSavedSetCorrection(',
+  'NativeSavedCorrectionFileResult.Durable',
+  'currentSet.effectiveEventId!=fact.effectiveEventId',
+  'current?.manifest?.savedCorrectionRevision!=',
+  'kotlinHistoryCorrectionActual('
 ])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
 console.log('PASS isolated Kotlin Lab navigation and correction-aware History summaries for generated and custom workouts');

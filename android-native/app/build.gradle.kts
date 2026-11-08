@@ -2,6 +2,11 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+// The one-shot device workflow provides its monotonically increasing run
+// number. Routine source-only checks retain the existing development code.
+val kotlinLabBuildNumber = providers.gradleProperty("kotlinLabBuildNumber")
+    .orNull?.toIntOrNull()?.takeIf { it in 1..2_000_000_000 }
+
 android {
     namespace = "io.github.extracteddeath.pursuitiron"
     compileSdk = 37
@@ -9,13 +14,16 @@ android {
         applicationId = "io.github.extracteddeath.pursuitiron"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0-native-foundation"
+        versionCode = kotlinLabBuildNumber ?: 1
+        versionName = kotlinLabBuildNumber?.let { "0.1.0-kotlin-lab.$it" }
+            ?: "0.1.0-native-foundation"
     }
     buildTypes {
         getByName("debug") {
-            // This preview can coexist with a future Play Store package.
-            applicationIdSuffix = ".preview"
+            // This isolated Kotlin Lab is NOT the other developer's
+            // native preview. Distinct app-private storage and a separate
+            // install identity prevent a debug APK from overwriting it.
+            applicationIdSuffix = ".kotlinlab"
         }
     }
     buildFeatures { compose = true }

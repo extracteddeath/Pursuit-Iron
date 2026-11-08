@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
@@ -37,6 +38,8 @@ internal fun NativeKotlinCustomJournalScreen(
     onReturnToProgram:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
+    val workoutScroll=rememberScrollState()
+    var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
     var referenceMode by rememberWorkoutReferenceMode()
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
@@ -53,6 +56,10 @@ internal fun NativeKotlinCustomJournalScreen(
     var movementRestricted by rememberSaveable(workoutId){mutableStateOf(false)}
     var liveCoach by remember(host,workoutId){
         mutableStateOf<LiveSetCoachResult.Reviewed?>(null)
+    }
+    // Reveal success only after the independent committed-History read.
+    LaunchedEffect(workoutId,verifiedFinishedInHistory) {
+        if(verifiedFinishedInHistory)workoutScroll.animateScrollTo(0)
     }
     val view=LocalView.current
     val running=journal!=null && !finished && journal?.finishedByEventId==null
@@ -87,7 +94,7 @@ internal fun NativeKotlinCustomJournalScreen(
             verifiedFinishedInHistory=if(finished)verifyCommittedHistory()
                 else false
             error=if(saved==null)
-                "This workout is not an authenticated native custom journal: ${result ?: "storage unavailable"}."
+                "This saved workout could not be verified. Try reloading it."
             else null
             loading=false;busy=false
         }
@@ -117,7 +124,7 @@ internal fun NativeKotlinCustomJournalScreen(
             if(result is NativeCustomJournalResult.Durable) {
                 journal=result.issued.journal;error=null
             } else {
-                error="Set not saved: ${result ?: "storage unavailable"}. Reloaded the latest durable journal."
+                error="Your set could not be saved. The last saved version has been reloaded; check it before trying again."
                 val recovery=withContext(Dispatchers.IO){
                     runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
                 }
@@ -132,7 +139,7 @@ internal fun NativeKotlinCustomJournalScreen(
         enabled=referenceMode==WorkoutReferenceMode.LAST && current!=null)
     val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
     Column(Modifier.fillMaxSize()) {
-    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+    Column(Modifier.weight(1f).verticalScroll(workoutScroll)
         .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Row(Modifier.fillMaxWidth(),
             horizontalArrangement=Arrangement.SpaceBetween,
@@ -147,8 +154,8 @@ internal fun NativeKotlinCustomJournalScreen(
                 PursuitCard {
                     Text("Workout unavailable",
                         style=MaterialTheme.typography.titleMedium)
-                    Text("A prepared preview is not an issued workout. No set was recorded.")
-                    Button(enabled=!busy,onClick={refresh()}){Text("Retry durable open")}
+                    Text("Reopen your saved workout from Plan, or try loading it again.")
+                    Button(enabled=!busy,onClick={refresh()}){Text("Try again")}
                 }
             } else {
                 val mainTotal=current.snapshot.slots.sumOf{it.sets.size}
@@ -178,7 +185,7 @@ internal fun NativeKotlinCustomJournalScreen(
                 }
                 PageHeading("TODAY'S TRAINING",
                     current.snapshot.dayLabel,
-                    "Week ${current.snapshot.absoluteWeek} · ${current.snapshot.phase.name.replace('_',' ')}")
+                    "Week ${current.snapshot.absoluteWeek} · ${current.snapshot.phase.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}}")
                 PursuitCard(highlighted=true) {
                     Text("${mainLogged} of ${mainTotal} sets recorded",
                         style=MaterialTheme.typography.titleLarge)
@@ -186,28 +193,31 @@ internal fun NativeKotlinCustomJournalScreen(
                         progress={if(mainTotal==0)0f else
                             mainLogged.toFloat()/mainTotal.toFloat()},
                         modifier=Modifier.fillMaxWidth())
-                    Text("${current.unresolvedVisitCount} required entries remain, including amplifier follow-ups. Nothing is saved until you confirm a set.",
-                        style=MaterialTheme.typography.bodySmall)
-                    if(finished||current.finishedByEventId!=null) {
-                        Text(if(verifiedFinishedInHistory)
-                            "Workout finished and verified in committed native history."
-                            else "Finish receipt exists, but committed history has not yet been verified. Recover the interrupted Finish before advancing.",
-                            color=if(verifiedFinishedInHistory)
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error)
-                        if(verifiedFinishedInHistory) {
-                            Button(
-                                onClick=onReturnToProgram,
-                                modifier=Modifier.fillMaxWidth()
-                            ){Text("Continue to my next workout")}
-                            OutlinedButton(
-                                onClick=onViewHistory,
-                                modifier=Modifier.fillMaxWidth()
-                            ){Text("View finished workout in history")}
+                    if(verifiedFinishedInHistory) {
+                        Text("Workout saved",style=MaterialTheme.typography.headlineSmall,
+                            color=MaterialTheme.colorScheme.primary)
+                        Text("Your results are saved in workout history.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        PursuitPrimaryAction("View finished workout in history",enabled=!busy,
+                            onClick=onViewHistory)
+                        OutlinedButton(onClick=onReturnToProgram,enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text("Continue to my next workout")
                         }
+                        TextButton(onClick={showFinishedSets=!showFinishedSets}) {
+                            Text(if(showFinishedSets)"Hide recorded sets" else "View recorded sets")
+                        }
+                    } else if(finished||current.finishedByEventId!=null) {
+                        Text("Finish is saved. History verification needs to be completed before you advance.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodyMedium)
+                    } else {
+                        Text("${current.unresolvedVisitCount} entries left. Confirm each set to save it.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     OutlinedButton(enabled=!busy,
-                        onClick={refresh()}){Text("Reload saved journal")}
+                        onClick={refresh()}){Text("Refresh saved workout")}
                 }
                 if(!finished) {
                     Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
@@ -231,6 +241,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodyMedium)
                 }
+                if(!verifiedFinishedInHistory || showFinishedSets) {
                 PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
                 current.snapshot.slots.forEach {slot->
                     PursuitCard {
@@ -295,12 +306,13 @@ internal fun NativeKotlinCustomJournalScreen(
                         }
                     }
                 }
-                PursuitCard {
+                }
+                if(!verifiedFinishedInHistory)PursuitCard {
                     Text("Finish workout",
                         style=MaterialTheme.typography.titleMedium)
                     Text(if(current.canProposeFinish)
-                        "Every required main set and independent amplifier visit has an actual outcome. Finish will be committed to verified native history."
-                    else "Record or explicitly skip each remaining visit before finishing. An unfinished amplifier is never assumed complete.",
+                        "Every set and amplifier follow-up has a recorded outcome. Finish to save this workout in History."
+                    else "Log or skip the remaining sets and amplifier follow-ups before finishing.",
                         style=MaterialTheme.typography.bodySmall)
                     Button(
                         enabled=!busy&&current.canProposeFinish&&!finished,
@@ -335,7 +347,8 @@ internal fun NativeKotlinCustomJournalScreen(
         }
         error?.let{Text(it,color=MaterialTheme.colorScheme.error,
             style=MaterialTheme.typography.bodySmall)}
-        Text("Native custom journal only. The approved set targets cannot be overwritten by coaching, UI defaults or the web app.",
+        Text(if(verifiedFinishedInHistory)"You can review and correct saved sets in History."
+            else "Log what you actually did. Your original targets stay available for comparison.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -351,7 +364,7 @@ internal fun NativeKotlinCustomJournalScreen(
     if(finishConfirm&&selected!=null) {
         AlertDialog(onDismissRequest={if(!busy)finishConfirm=false},
             title={Text("Finish and save this workout?")},
-            text={Text("All ${selected.snapshot.slots.sumOf{it.sets.size}} main sets and required follow-ups have recorded outcomes. Finish permanently commits these actual results to native history.")},
+            text={Text("Save the recorded results for this workout to History. You can review and correct saved sets there.")},
             confirmButton={
                 Button(enabled=!busy&&selected.canProposeFinish,
                     onClick={
@@ -483,7 +496,7 @@ private fun NativeKotlinCustomVisitEditor(
             if(!editing) {
                 OutlinedButton(onClick={editing=true}){Text("Log this set")}
             } else {
-            Text("Planned weight and reps are prefilled for convenience. Correct them to what you actually did before completing. Blank RIR stays unreported.",
+            Text("Edit the values to match your set. Blank RIR stays unreported.",
                 style=MaterialTheme.typography.bodySmall)
             if(verified!=null)
                 OutlinedTextField(value=actualLoad,onValueChange={actualLoad=it},
@@ -491,35 +504,64 @@ private fun NativeKotlinCustomVisitEditor(
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                     singleLine=true,modifier=Modifier.fillMaxWidth(),
                     isError=actualLoad.isNotBlank()&&weight==null)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-            OutlinedTextField(value=actualReps,onValueChange={actualReps=it},
-                label={Text("Reps completed")},singleLine=true,
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                modifier=Modifier.weight(1f),
-                isError=actualReps.isNotBlank()&&reps==null)
-            OutlinedTextField(value=actualRir,onValueChange={actualRir=it},
-                label={Text("RIR · optional")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                singleLine=true,modifier=Modifier.weight(1f),
-                isError=!effortValid)
+            val repsField:@Composable (Modifier)->Unit={fieldModifier->
+                OutlinedTextField(value=actualReps,onValueChange={actualReps=it},
+                    label={Text("Reps completed")},singleLine=true,
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
+                    modifier=fieldModifier,
+                    isError=actualReps.isNotBlank()&&reps==null)
             }
-            Row(Modifier.fillMaxWidth(),
-                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            val rirField:@Composable (Modifier)->Unit={fieldModifier->
+                OutlinedTextField(value=actualRir,onValueChange={actualRir=it},
+                    label={Text("RIR · optional")},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
+                    singleLine=true,modifier=fieldModifier,isError=!effortValid)
+            }
+            val completeButton:@Composable (Modifier)->Unit={buttonModifier->
                 Button(enabled=loadValid&&reps!=null&&effortValid,
-                    modifier=Modifier.weight(1f),
+                    modifier=buttonModifier,
                     onClick={
                         onRecord(KotlinJournalSetOutcome.COMPLETED,
                             KotlinPerformedSet(weight,verified?.unit,
                                 checkNotNull(reps),effort))
                     }){Text("Complete")}
-                OutlinedButton(modifier=Modifier.weight(1f),onClick={
+            }
+            val skipButton:@Composable (Modifier)->Unit={buttonModifier->
+                OutlinedButton(modifier=buttonModifier,onClick={
                     pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
                 }){Text("Skip")}
-                OutlinedButton(enabled=loadValid,
-                    modifier=Modifier.weight(1f),
-                    onClick={
-                        pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT
-                    }){Text("Failed")}
+            }
+            val failedButton:@Composable (Modifier)->Unit={buttonModifier->
+                OutlinedButton(enabled=loadValid,modifier=buttonModifier,
+                    onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
+                    Text("Failed")
+                }
+            }
+            val largeText=LocalDensity.current.fontScale>=1.35f
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                if(largeText || maxWidth<300.dp) {
+                    Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                        repsField(Modifier.fillMaxWidth())
+                        rirField(Modifier.fillMaxWidth())
+                        completeButton(Modifier.fillMaxWidth())
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            skipButton(Modifier.weight(1f))
+                            failedButton(Modifier.weight(1f))
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            repsField(Modifier.weight(1f))
+                            rirField(Modifier.weight(1f))
+                        }
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            skipButton(Modifier.weight(1f))
+                            failedButton(Modifier.weight(1f))
+                            completeButton(Modifier.weight(1f))
+                        }
+                    }
+                }
             }
             TextButton(onClick={editing=false}) {
                 Text(if(saved!=null)"Cancel correction" else "Collapse set")

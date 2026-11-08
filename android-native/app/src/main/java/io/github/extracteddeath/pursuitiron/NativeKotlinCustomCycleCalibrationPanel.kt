@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
@@ -52,8 +53,20 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         confirmAccept=false;confirmIssue=false;confirmReset=false;confirmAuthoredReturn=false
     }
     val readyPolicy=state.reviewedCoachInputs!=null
+    var showRecovery by rememberSaveable(state.draft?.cycleId){mutableStateOf(false)}
+    val hasReview=prepared!=null || offer!=null || reset!=null || authoredReturn!=null ||
+        state.calibrationReceipt!=null || state.issuedCalibrationId!=null ||
+        state.pendingCalibrations.isNotEmpty() || state.pendingCalibrationAcceptances.isNotEmpty() ||
+        state.preparationRefusal==NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED
+    if(!hasReview && !showRecovery) {
+        TextButton(onClick={showRecovery=true},enabled=!state.busy) {
+            Text("Saved workout reviews")
+        }
+        return
+    }
     PursuitCard {
-        Text("Reviewed workout weights",style=MaterialTheme.typography.titleLarge)
+        Text(if(hasReview)"Workout preview" else "Saved workout reviews",
+            style=MaterialTheme.typography.titleLarge)
         OutlinedButton(enabled=!state.busy,onClick=controller::findPendingCalibrations) {
             Text("Find saved approvals and preparations")
         }
@@ -87,7 +100,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             Text("These weights are higher than the previous same-day workout. Choosing them does not mean an increase was earned.",
                 style=MaterialTheme.typography.bodySmall)
             review.higherSlots.forEach {slot->
-                Text(slot.exerciseId.replace('_',' '),style=MaterialTheme.typography.titleSmall)
+                Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.titleSmall)
                 slot.higherSets.forEach {set->
                     val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
                     Text("Set ${set.ordinal}: previously prescribed ${set.lastIssuedLoad} → authored ${set.authoredLoad} ${set.unit.name.lowercase()}$basis",
@@ -131,18 +144,27 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         prepared?.let {workout->
             HorizontalDivider()
             if(workout==ordinaryPrepared)
-                Text("Regular workout · no special load-calibration change required",
+                Text("Reviewed targets from your program",
                     style=MaterialTheme.typography.bodyMedium)
             Text("Prepared · week ${workout.snapshot.absoluteWeek} · ${workout.snapshot.dayLabel}",
                 style=MaterialTheme.typography.titleMedium)
             if(workout.authoredReturnFingerprint!=null)Text("Your confirmed choice of heavier authored weights. History will be checked again before issuance.",
                 style=MaterialTheme.typography.bodySmall)
             workout.snapshot.slots.forEach {slot->
-                Text(slot.exerciseId.replace('_',' '),style=MaterialTheme.typography.titleSmall)
+                Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.titleSmall)
                 slot.sets.forEach {set->
-                    val load=set.prescription.load as? DraftSetLoad.Verified
-                    val basis=if(load?.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
-                    Text("Set ${set.ordinalInSlot}: ${load?.value ?: "bodyweight"} ${load?.unit?.name?.lowercase().orEmpty()}$basis · ${set.prescription.reps.minimum}–${set.prescription.reps.maximum} reps · goal ${set.prescription.targetRir} RIR",
+                    val target=set.prescription
+                    val weight=when(val load=target.load) {
+                        DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+                        is DraftSetLoad.Verified -> "${load.value.toPlainString()} ${load.unit.name.lowercase()}"+
+                            if(load.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                    }
+                    val reps=if(target.reps.minimum==target.reps.maximum)
+                        "${target.reps.minimum}" else "${target.reps.minimum}–${target.reps.maximum}"
+                    val position=slot.sets.filter{it.prescription.type==target.type}.indexOf(set)+1
+                    val label=if(target.type==DraftSetType.WARMUP)"Warm-up" else "Set"
+                    val effort=target.targetRir?.let{" · $it RIR"}.orEmpty()
+                    Text("$label $position · $weight · $reps reps$effort",
                         style=MaterialTheme.typography.bodySmall)
                 }
             }
@@ -162,13 +184,13 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             it.authored.slots.forEach {slot->slot.sets.forEach {set->
                 val load=set.prescription.load as? DraftSetLoad.Verified
                 val basis=if(load?.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
-                Text("${slot.exerciseId.replace('_',' ')} · set ${set.ordinalInSlot}: ${load?.value ?: "bodyweight"} ${load?.unit?.name?.lowercase().orEmpty()}$basis",
+                Text("${kotlinExerciseLabel(slot.exerciseId)} · set ${set.ordinalInSlot}: ${load?.value ?: "bodyweight"} ${load?.unit?.name?.lowercase().orEmpty()}$basis",
                     style=MaterialTheme.typography.bodySmall)
             }}
             OutlinedButton(enabled=!state.busy,onClick={confirmReset=true}){Text("Return to these authored targets")}
         }
         state.issuedCalibrationId?.let {id->
-            Text("Workout issued. Targets are immutable.",style=MaterialTheme.typography.bodySmall)
+            Text("Your workout is ready to log.",style=MaterialTheme.typography.bodyMedium)
             Button(enabled=!state.busy,onClick={onOpenIssuedWorkout(id)}){Text("Open workout logger")}
         }
     }

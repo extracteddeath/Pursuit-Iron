@@ -103,3 +103,24 @@ Use the real Android UI to validate setup, finite gym inventory, a generated
 four-day program, approval, separate-history consent, issued set logging,
 Target/Last, recovery, Finish and saved History. These checks do not establish
 personalized forecasting superiority or physical-device acceptance.
+
+## Plan and workout UI composition
+
+The next APK places the next-workout action first, followed by a readable
+program outline with named exercises and separate working/warm-up counts.
+Technical cycle identifiers, policy diagnostics and editing tools sit under
+Open full program; incomplete custom drafts still open their required review.
+Prepared workouts retain all their exact per-set targets with readable names,
+warm-up labels and no null-RIR text. Empty saved-review controls are optional.
+
+After an independently verified Finish, the logger reveals Workout saved,
+History and next-workout actions at the top, with recorded sets available on
+request. Active-set Complete sits on the right at ordinary font sizes; large
+text stacks the fields and gives Complete full width. No prescription,
+approval, actual-RIR or journal-write rule changes in this UI pass.
+
+Verify the full Android setup-to-History journey again, including opening and
+closing the full-program editor, retaining an unsubmitted rep value across a
+1.6 font-scale configuration change, logging a set with that layout, restart
+recovery and a visible saved-workout result without manually scrolling up.
+Keep Amethyst as default and produce only an APK.

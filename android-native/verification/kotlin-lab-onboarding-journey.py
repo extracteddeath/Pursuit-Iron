@@ -309,6 +309,15 @@ try:
     tap("Save new draft", scroll=False)
     tap("Continue to full-cycle review")
     top()
+    wait_for("Next workout in your program")
+    assert not any(text_of(n).startswith("Cycle ID:") for n in tree().iter("node")), \
+        "Normal Plan exposes a technical cycle identifier"
+    capture("02a-plan-overview")
+    tap("Open full program")
+    locate("Name & notes")
+    top()
+    tap("Close full program")
+    top()
     tap("Review program approval")
     tap("I approve this reviewed cycle", scroll=False)
     tap("History")
@@ -331,8 +340,15 @@ try:
     top()
     tap("Target")
     assert_value("Reps completed", "6")
+    adb("shell", "settings", "put", "system", "font_scale", "1.6")
+    time.sleep(3)
+    assert_value("Reps completed", "6")
+    capture("03a-large-text-entry")
     tap("Complete")
     clear_running_rest()
+    adb("shell", "settings", "put", "system", "font_scale", "1.0")
+    time.sleep(3)
+    expect_saved_sets(1)
     tap("Complete")
     clear_running_rest()
     expect_saved_sets(2)
@@ -361,7 +377,13 @@ try:
         raise AssertionError("Workout did not reach Finish within 100 explicit set actions")
     tap("Review Finish")
     tap("Commit native Finish", scroll=False)
+    wait_for("Workout saved")
+    capture("05a-finish-result")
+    tap("View recorded sets", scroll=False)
+    locate("Recorded: completed · 6 reps at 105")
     top()
+    tap("Hide recorded sets")
+    wait_for("Workout saved")
     tap("View finished workout in history")
     wait_for("Session 1")
     capture("05-saved-history")
@@ -378,7 +400,9 @@ try:
     capture("06-next-program-day")
     result = {"status": "PASS", "scope": "synthetic real-UI training journey",
               "checks": ["reviewed setup", "unit cancellation preserves stock", "generated four-day program",
+                         "Plan overview and full-program disclosure",
                          "explicit cycle and history consent", "Target/Last preserves unsubmitted reps",
+                         "1.6 font scale retains unsubmitted reps and completes a set",
                          "native set writes", "cold recovery", "Finish to History", "next independent day"],
               "not_certified": ["physiological prediction superiority", "physical phone", "backup/migration", "accessibility"]}
     (out / "result.json").write_text(json.dumps(result, indent=2))

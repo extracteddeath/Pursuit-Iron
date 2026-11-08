@@ -216,7 +216,7 @@ internal class NativeKotlinFirstProgramController(
 
     override fun close(){scope.cancel()}
 }
-private fun prettyFirstProgram(value:String)=value.replace('_',' ')
+private fun prettyFirstProgram(value:String)=value.lowercase().replace('_',' ')
     .replaceFirstChar{it.uppercase()}
 
 @Composable

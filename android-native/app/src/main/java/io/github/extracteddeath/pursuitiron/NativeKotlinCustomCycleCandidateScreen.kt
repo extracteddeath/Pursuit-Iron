@@ -72,6 +72,20 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var openId by rememberSaveable { mutableStateOf(initialCycleId.orEmpty()) }
     var showAdvancedId by rememberSaveable {mutableStateOf(false)}
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
+    var showProgramEditor by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
+    val policyReady=state.coachingAudit?.status==
+        CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+        state.coachingAudit?.issues?.isEmpty()==true &&
+        state.auditSourceRevision!=null &&
+        state.auditSourceRevision==state.sourceRevision &&
+        state.coachingAudit?.auditedCycleRevision==draft?.revision
+    val signed=(state.signoff as? NativeCustomSignoffRead.Found)?.isCurrent==true
+    val currentSelection=state.nextCycleSlot?.takeIf{
+        state.nextSlotCycleRevision==draft?.revision && policyReady && signed
+    }
+    LaunchedEffect(draft?.cycleId,busy,policyReady) {
+        if(draft!=null && !busy && !policyReady)showProgramEditor=true
+    }
     LaunchedEffect(initialCycleId) {
         if (!initialCycleId.isNullOrBlank()) controller.open(initialCycleId)
     }
@@ -126,22 +140,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         PageHeading("YOUR TRAINING PLAN",
             if (draft == null) "Your programs" else draft.title,
-            "Custom programs and cycles · saved privately on this device")
-        Text(when {
-            state.issuedCalibrationId!=null -> "Workout ready to log"
-            state.preparedWorkout!=null -> "Targets prepared · workout not started"
-            state.calibrationReceipt!=null -> "Starting weights saved · workout not started"
-            draft!=null -> "Your authored cycle · review changes before starting"
-            else -> "Create and review your own training cycle"
-        },
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary)
+            if(draft==null)"Build a program around the way you train."
+            else "${pretty(draft.goal)} · ${draft.blocks.sumOf{it.weeks}} weeks")
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        state.message?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall,
-                color = if (state.refusal == null)
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.error)
+        if(draft==null || state.refusal!=null || showProgramEditor)state.message?.let {
+            Text(it,style=MaterialTheme.typography.bodySmall,
+                color=if(state.refusal==null)MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.error)
         }
 
         if (draft == null) {
@@ -238,39 +243,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 }
             }
         } else {
-            PursuitCard(highlighted = true) {
-                Text("Custom authoring", style = MaterialTheme.typography.titleMedium)
-                Text("${draft.blocks.size} blocks · ${draft.blocks.sumOf { it.weeks }} scheduled weeks · revision ${draft.revision}",
-                    style = MaterialTheme.typography.bodyMedium)
-                Text("Cycle ID: ${draft.cycleId}",
-                    style = MaterialTheme.typography.bodySmall)
-                Text(draft.authorNote.ifBlank { "No author notes" },
-                    style = MaterialTheme.typography.bodySmall)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { editingCycle = true },
-                        enabled = !busy) { Text("Name & notes") }
-                    OutlinedButton(onClick = { controller.undo() },
-                        enabled = !busy && state.canUndo) { Text("Undo last edit") }
-                    OutlinedButton(onClick = { controller.open(draft.cycleId) },
-                        enabled = !busy) { Text("Reload") }
-                    OutlinedButton(onClick = { controller.findSavedPrograms() },
-                        enabled = !busy) { Text("Other programs") }
-                }
-            }
             PursuitCard(highlighted=true) {
-                Text("Next workout in your program",
+                Text(if(currentSelection is NativeCustomNextCycleSlot.ResumeIssued)
+                    "Continue your workout" else "Next workout in your program",
                     style=MaterialTheme.typography.titleLarge)
-                Text("Choose the next session from your verified training history. An unfinished issued workout is resumed, never silently replaced. This is the order of your saved program, not an inferred date.",
+                Text(if(currentSelection is NativeCustomNextCycleSlot.ResumeIssued)
+                    "Your saved sets are ready. Pick up where you left off."
+                    else "Follow your saved program, one workout at a time.",
                     style=MaterialTheme.typography.bodySmall)
-                val policyReady=state.coachingAudit?.status==
-                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
-                    state.coachingAudit?.issues?.isEmpty()==true &&
-                    state.auditSourceRevision!=null &&
-                    state.auditSourceRevision==state.sourceRevision &&
-                    state.coachingAudit?.auditedCycleRevision==draft.revision
-                val signed=(state.signoff as? NativeCustomSignoffRead.Found)
-                    ?.isCurrent==true
                 if(!signed)PursuitPrimaryAction("Review program approval",
                     enabled=!busy&&policyReady) {confirmConsent=true}
                 OutlinedButton(
@@ -279,12 +259,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     modifier=Modifier.fillMaxWidth()
                 ) { Text("Find my next workout") }
                 if(!signed||!policyReady)
-                    Text("First review this complete training cycle and confirm its exact saved prescription below.",
+                    Text(if(policyReady)"Your program review is ready. Confirm it before choosing a workout."
+                        else "Complete the training review below before approving your program.",
                         style=MaterialTheme.typography.bodySmall)
-                val selection=state.nextCycleSlot?.takeIf{
-                    state.nextSlotCycleRevision==draft.revision &&
-                        policyReady && signed
-                }
+                val selection=currentSelection
                 when(selection) {
                     is NativeCustomNextCycleSlot.Next,
                     is NativeCustomNextCycleSlot.Prepared -> {
@@ -348,7 +326,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         ) { Text("Resume my workout") }
                     }
                     NativeCustomNextCycleSlot.CycleComplete ->
-                        Text("All scheduled workouts in this saved cycle have verified completed history.",
+                        Text("You have finished every workout in this training cycle.",
                             style=MaterialTheme.typography.bodyMedium)
                     is NativeCustomNextCycleSlot.Rejected -> {
                         Text(selection.reason,
@@ -365,6 +343,34 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             }
             NativeKotlinCustomCycleCalibrationPanel(
                 controller,state,onOpenIssuedWorkout)
+            OutlinedButton(onClick={showProgramEditor=!showProgramEditor},
+                enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+                Text(if(showProgramEditor)"Close full program" else "Open full program")
+            }
+            NativeKotlinCustomCycleOverview(draft,currentSelection)
+            // Incomplete custom programs keep their existing editor and policy
+            // controls visible. Reviewed programs open them only on request.
+            if(showProgramEditor) {
+            PursuitCard(highlighted = true) {
+                Text("Custom authoring", style = MaterialTheme.typography.titleMedium)
+                Text("${draft.blocks.size} blocks · ${draft.blocks.sumOf { it.weeks }} scheduled weeks · revision ${draft.revision}",
+                    style = MaterialTheme.typography.bodyMedium)
+                Text("Cycle ID: ${draft.cycleId}",
+                    style = MaterialTheme.typography.bodySmall)
+                Text(draft.authorNote.ifBlank { "No author notes" },
+                    style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { editingCycle = true },
+                        enabled = !busy) { Text("Name & notes") }
+                    OutlinedButton(onClick = { controller.undo() },
+                        enabled = !busy && state.canUndo) { Text("Undo last edit") }
+                    OutlinedButton(onClick = { controller.open(draft.cycleId) },
+                        enabled = !busy) { Text("Reload") }
+                    OutlinedButton(onClick = { controller.findSavedPrograms() },
+                        enabled = !busy) { Text("Other programs") }
+                }
+            }
             draft.blocks.forEachIndexed { index, block ->
                 key(block.blockId) {
                     PursuitCard {
@@ -897,12 +903,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     }
             }
             PursuitCard {
-                Text("Approval and issuance remain separate",
+                Text("Program management",
                     style = MaterialTheme.typography.titleMedium)
-                Text("Your entire custom program—including supersets, amplifiers and week-specific overrides—must be preserved through a separately validated athlete sign-off and Kotlin-only workout issuer. The old composer snapshot cannot silently replace your authored sets.",
+                Text("Changes to your program need a fresh review before you use them in a workout.",
                     style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { deleteConfirm = true },
                     enabled = !busy) { Text("Delete this saved draft") }
+            }
             }
         }
     }
@@ -910,9 +917,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     if(confirmConsent && draft!=null) {
         AlertDialog(
             onDismissRequest={if(!busy)confirmConsent=false},
-            title={Text("Confirm your exact custom program")},
+            title={Text("Approve your program")},
             text={
-                Text("You're consenting to the reviewed version of ${draft.title}, revision ${draft.revision}. The complete gym/catalog and authored coaching policy are rechecked before saving. This does not issue, begin, or approve a workout.")
+                Text("Approve the reviewed exercises, sets and training days in ${draft.title}. Your current program and gym settings are checked again before saving. You will review each workout before starting it.")
             },
             confirmButton={
                 Button(onClick={

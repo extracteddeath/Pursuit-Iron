@@ -22,6 +22,8 @@ const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath
 const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
 const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
+const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -169,7 +171,31 @@ for(const required of [
   'current?.manifest?.savedCorrectionRevision!=',
   'kotlinHistoryCorrectionActual('
 ])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
+// Source contracts only: these guard the important navigation and consent
+// wiring. Runtime accessibility and touch-device acceptance are still pending.
+assert.ok(plan.indexOf('NativeKotlinCustomCycleOverview(draft,currentSelection)') <
+  plan.indexOf('NativeKotlinCustomCycleCalibrationPanel(') &&
+  plan.includes('Open full program editor') &&
+  outline.includes('slot.sets.forEachIndexed') &&
+  outline.includes('authoredSetDescription(set,index+1)') &&
+  outline.includes('set.amplifier?.let') &&
+  outline.includes('set.targetRir?.toString() ?: "not set"'),
+  'Plan must offer full-program editing and inspectable authored set details before optional coaching');
+assert.ok(main.includes('android:allowBackup="false"') &&
+  standards.includes('getSharedPreferences("pursuit-strength-comparison-v1",0)') &&
+  standards.includes('host.reviewActiveAthleteSetup()') &&
+  standards.includes('Text("Save comparison")') &&
+  standards.includes('Text("Clear saved")') &&
+  standards.includes('comparisonGroup?.let') &&
+  standards.includes('.commit()'),
+  'Strength comparison settings must have explicit athlete-scoped on-device save and clear');
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
+assert.ok(coach.includes('PursuitCoachDestinations(onOpenProgram,onOpenFuture)') &&
+  coach.includes('onOpenProgram:()->Unit={}') &&
+  coach.includes('onOpenFuture:()->Unit={}') &&
+  journey.includes('onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)}') &&
+  journey.includes('onOpenFuture={navigate(KotlinCandidateDestination.FUTURE)}'),
+  'Coach must reach the saved plan and future weeks through actual native routes');
 assert.ok(coach.includes('is AdaptiveSetPrescriptionResult.Rejected -> proposed.detail') &&
   coach.includes('nativeNextRepExplanation(outcome.getOrNull())') &&
   !coach.includes('No eligible next-set progression: ${result.proposal}'),

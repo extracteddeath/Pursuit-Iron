@@ -48,3 +48,44 @@ Report functional and layout defects before treating this preview as usable.
 No migration of existing web history or automatic switching to the new
 engine is performed. Do not enter irreplaceable training history in a test
 build until full backup/recovery acceptance.
+
+## Kotlin Lab device acceptance candidate 2 — improved training interaction
+
+This new one-time build tests **UI and flow improvements**, not a changed
+training algorithm or a production release. It keeps the same isolated
+`.kotlinlab` Android package and a larger Gradle-provided build number, so
+the first Kotlin Lab test APK can be upgraded in place without replacing the
+other developer's preview.
+
+- Debug Kotlin Lab is the ONLY launcher activity; the original MainActivity
+  launcher remains available to the non-debug/release variant.
+- Plan, Train, History, Coach have persistent Material 3 navigation, with
+  setup, gym, first-program builder, future weeks and settings in More.
+- Once a custom workout is open, the bottom tab strip is hidden. **Minimize**
+  leaves its native durable journal intact and the Train area can resume it.
+- Progress is counted from actual committed MAIN visits. The first outstanding
+  set, including a required amplifier follow-up, is the expanded editor;
+  other unrecorded sets have an explicit Log action.
+- The prescribed weight and floor reps are editable *starting values* in the
+  logging form. They are not claims about actual performance and nothing is
+  recorded until the athlete taps Complete. RIR stays empty/unreported unless
+  explicitly entered.
+- Native workout history, fresh-owner validation, correction and Finish remain
+  the same durable sources.
+
+**Device checks for this candidate:**
+1. Confirm there is one **Pursuit Iron Kotlin Lab** launcher entry.
+2. Verify all four navigation destinations and the More menu, in light/dark
+   colors and with Android large font.
+3. Start a generated workout and confirm only the next set editor expands;
+   the weight and target rep floor are prefilled but editable.
+4. Log a set with unknown RIR, and verify the saved history reports
+   unreported RIR; log another with explicit RIR and confirm the distinction.
+5. Minimize mid-workout, restart the app and resume the exact journal.
+6. Check amplifier follow-ups, skip, corrections, Finish and next-day
+   continuation. Verify no historical workout was overwritten.
+7. Observe layout at small width and with the keyboard open; log issues
+   before using this as the regular workout app.
+
+These checks are for the human device tester. Passing CI does not claim
+that this physical-device acceptance has happened.

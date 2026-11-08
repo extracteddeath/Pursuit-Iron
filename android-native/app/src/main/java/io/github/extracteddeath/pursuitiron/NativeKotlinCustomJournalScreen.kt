@@ -3,6 +3,8 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.*
@@ -334,8 +336,14 @@ private fun NativeKotlinCustomVisitEditor(
     var editing by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved==null && initiallyExpanded)
     }
+    val reveal=remember(set.setKey,part){BringIntoViewRequester()}
     LaunchedEffect(set.setKey,part,initiallyExpanded,locked,existing?.appliedRevision) {
-        if(initiallyExpanded && saved==null && !locked)editing=true
+        if(initiallyExpanded && saved==null && !locked) {
+            editing=true
+            // A long workout can contain dozens of sets. Bring the next
+            // unrecorded one into view after each durable save.
+            reveal.bringIntoView()
+        }
     }
     // These values are editable targets, NEVER synthesized performed facts.
     // They become recorded actuals only after the athlete taps Complete.
@@ -361,7 +369,7 @@ private fun NativeKotlinCustomVisitEditor(
         actualRir.trim().toIntOrNull()?.takeIf{it in 0..10}
     val effortValid=actualRir.isBlank()||effort!=null
     val loadValid=verified==null||weight!=null
-    Column(Modifier.fillMaxWidth(),
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(reveal),
         verticalArrangement=Arrangement.spacedBy(6.dp)) {
         HorizontalDivider()
         val label=if(part==CustomWorkoutVisitPart.MAIN)

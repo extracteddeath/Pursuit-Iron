@@ -20,6 +20,9 @@ for(const phrase of [
   'progress={if(mainTotal==0)0f',
   'Text("Log this set")',
   'Text("Minimize")',
+  'BringIntoViewRequester()',
+  'reveal.bringIntoView()',
+  'bringIntoViewRequester(reveal)',
   'CustomWorkoutJournalOperation.Finish('
 ])assert.ok(journal.includes(phrase),'Missing native set-entry behavior: '+phrase);
 

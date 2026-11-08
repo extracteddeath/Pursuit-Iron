@@ -308,14 +308,15 @@ private fun NativeKotlinSetCard(
 ) {
     val target=set.target
     val existing=set.actual
-    var weight by rememberSaveable(target.setKey){
+    var weight by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.load?.toPlainString()
             ?: (target.load as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty())
     }
-    var reps by rememberSaveable(target.setKey){
-        mutableStateOf(existing?.reps?.takeIf{it>0}?.toString().orEmpty())
+    var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
+        mutableStateOf(existing?.reps?.takeIf{it>0}?.toString()
+            ?:target.reps.minimum.toString())
     }
-    var effort by rememberSaveable(target.setKey){
+    var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.actualRir?.toString().orEmpty())
     }
     val actual=performed(target,weight,reps,effort)
@@ -342,6 +343,9 @@ private fun NativeKotlinSetCard(
                 style=MaterialTheme.typography.bodyMedium)
         }
         if(finished) return@PursuitCard
+        Text("Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(verifiedLoad!=null) {
             OutlinedTextField(value=weight,onValueChange={weight=it},
                 label={Text("Actual load · ${verifiedLoad.unit.name} · ${verifiedLoad.basis.name.lowercase().replace('_',' ')}")},

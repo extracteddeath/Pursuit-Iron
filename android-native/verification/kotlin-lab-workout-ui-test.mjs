@@ -32,9 +32,20 @@ assert.ok(journal.includes('var actualLoad by rememberSaveable(set.setKey,part.n
   'Uncommitted edit fields must survive an Android configuration change');
 assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*KotlinPerformedSet\(weight,verified\?\.unit/,
   'Actual set writing must require an explicit Complete action');
+assert.ok(journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED') &&
+  journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT') &&
+  journal.includes('if(pending!=null && !locked) AlertDialog(') &&
+  journal.includes('KotlinPerformedSet(weight,verified?.unit,0,null)') &&
+  journal.includes('"Confirm skip" else "Log failed attempt"'),
+  'Custom skipped/failed visits must require confirmation before a journal write');
 assert.ok(journey.includes('selectedCustomWorkoutId==null)NavigationBar'),
   'Active custom workout must not have the tab strip above the logger');
 const composer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+assert.ok(composer.includes('rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision)') &&
+  composer.includes('?:target.reps.minimum.toString()') &&
+  composer.includes('existing?.actualRir?.toString().orEmpty()') &&
+  composer.includes('Planned reps and load are editable starting points'),
+  'Composer must prefill editable reps, preserve unknown RIR, and refresh a saved correction');
 const restBridge=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt');
 const timer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt');
 for(const source of [journal,composer]) {

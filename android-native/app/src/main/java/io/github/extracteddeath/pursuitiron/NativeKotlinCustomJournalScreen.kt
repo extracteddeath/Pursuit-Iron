@@ -398,6 +398,14 @@ private fun NativeKotlinCustomVisitEditor(
     var editing by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved==null && initiallyExpanded)
     }
+    // Skips and failed attempts are durable factual observations, not
+    // ordinary navigation. Confirm before writing to the owned journal.
+    var pendingExceptionalOutcome by rememberSaveable(
+        set.setKey,part.name,existing?.appliedRevision
+    ) {mutableStateOf<KotlinJournalSetOutcome?>(null)}
+    LaunchedEffect(locked) {
+        if(locked)pendingExceptionalOutcome=null
+    }
     val reveal=remember(set.setKey,part){BringIntoViewRequester()}
     LaunchedEffect(set.setKey,part,initiallyExpanded,locked,existing?.appliedRevision) {
         if(initiallyExpanded && saved==null && !locked) {
@@ -485,13 +493,12 @@ private fun NativeKotlinCustomVisitEditor(
                                 checkNotNull(reps),effort))
                     }){Text("Complete")}
                 OutlinedButton(modifier=Modifier.weight(1f),onClick={
-                    onRecord(KotlinJournalSetOutcome.SKIPPED,null)
+                    pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
                 }){Text("Skip")}
                 OutlinedButton(enabled=loadValid,
                     modifier=Modifier.weight(1f),
                     onClick={
-                        onRecord(KotlinJournalSetOutcome.FAILED_ATTEMPT,
-                            KotlinPerformedSet(weight,verified?.unit,0,null))
+                        pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT
                     }){Text("Failed")}
             }
             TextButton(onClick={editing=false}) {
@@ -500,4 +507,32 @@ private fun NativeKotlinCustomVisitEditor(
             }
         }
     }
+    val pending=pendingExceptionalOutcome
+    if(pending!=null && !locked) AlertDialog(
+        onDismissRequest={pendingExceptionalOutcome=null},
+        title={Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+            "Skip this visit?" else "Log a failed attempt?")},
+        text={Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+            "Skipping records an explicit outcome. It is not a completed set, and you can correct it before Finish."
+        else
+            "A failed attempt records zero completed reps at your entered attempted load. It does not count as successful work or earned progression.")},
+        confirmButton={
+            Button(enabled=pending==KotlinJournalSetOutcome.SKIPPED||loadValid,
+                onClick={
+                    pendingExceptionalOutcome=null
+                    when(pending) {
+                        KotlinJournalSetOutcome.SKIPPED->
+                            onRecord(KotlinJournalSetOutcome.SKIPPED,null)
+                        KotlinJournalSetOutcome.FAILED_ATTEMPT->
+                            onRecord(KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                                KotlinPerformedSet(weight,verified?.unit,0,null))
+                        else -> Unit
+                    }
+                }){Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+                    "Confirm skip" else "Log failed attempt")}
+        },
+        dismissButton={
+            TextButton(onClick={pendingExceptionalOutcome=null}){Text("Cancel")}
+        }
+    )
 }

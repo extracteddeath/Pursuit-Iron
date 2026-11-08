@@ -29,7 +29,8 @@ data class AthleteProgramGenerationRequest(
      * Only explicit opt-in permits pruning unpinned offered catalog options.
      */
     val selectFromOfferedCatalog:Boolean=false,
-    val maximumSelectedOptions:Int=32
+    val maximumSelectedOptions:Int=32,
+    val visitTimings:List<ComposerVisitTiming> = emptyList()
 )
 enum class AthleteGenerationStatus {
     INPUTS_UNRESOLVED, PLACEMENTS_UNRESOLVED, GENERATED_FOR_REVIEW
@@ -505,6 +506,13 @@ object CoachAthleteProgramGenerator {
                 selection=selection)
         }
         val chosen=selection?.choices ?:input.choices
+        if(input.visitTimings.size>128 || input.visitTimings.any {timing->
+            input.choices.none{it.exerciseId==timing.exerciseId}
+        }) {
+            fail("visitTimings",AthleteGenerationIssueKind.COMPOSED_WEEK_UNRESOLVED,
+                "Session timing must refer to an offered exercise and remain within the review budget.")
+            return result(AthleteGenerationStatus.INPUTS_UNRESOLVED,selection=selection)
+        }
         val catalog=input.catalog.associateBy {it.exerciseId}
         val choices=chosen.associateBy {it.exerciseId}
         val ids=policy.primaryLiftMinimumDays.keys
@@ -582,7 +590,8 @@ object CoachAthleteProgramGenerator {
                     input.setup,input.phase,byDay,
                     policy.selectedBounds,input.nonSetSecondsByWeekday,plans,
                     input.catalog,chosen,input.maximumExercisesPerDay,
-                    input.preferredPatternsPerDay,policy))
+                    input.preferredPatternsPerDay,policy,
+                    input.visitTimings.filter {t->chosen.any{it.exerciseId==t.exerciseId}}))
             val actual=proposal.realization
             if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
                 actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW) {

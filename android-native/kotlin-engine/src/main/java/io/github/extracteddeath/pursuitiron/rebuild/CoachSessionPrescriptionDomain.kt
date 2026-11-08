@@ -93,6 +93,17 @@ object CoachSessionPrescriptionDomain {
     private fun validLoad(v:BigDecimal)=v>=zero && v<=maxLoad &&
         v.stripTrailingZeros().scale()<=3
 
+    /** One timing projection for generation, composition and native replay.
+     * It deliberately has no authority to alter sets, loads, reps or RIR. */
+    fun timingsForPolicies(policies:List<ExercisePrescriptionPolicy>):List<ComposerVisitTiming> =
+        Collections.unmodifiableList(policies.map {p->
+            ComposerVisitTiming(p.exerciseId,p.purpose,
+                p.activeSecondsPerSet,p.restSecondsPerSet,
+                Collections.unmodifiableList(p.warmups.map {
+                    ComposerWarmupTiming(it.activeSeconds,it.restSeconds)
+                }),p.dayIndex)
+        })
+
     private fun validatePolicies(
         policies:List<ExercisePrescriptionPolicy>,request:ComposerRequest
     ) {
@@ -209,6 +220,12 @@ object CoachSessionPrescriptionDomain {
     fun draft(request:ComposerRequest,
         policies:List<ExercisePrescriptionPolicy>):SessionPrescriptionDraft {
         validatePolicies(policies,request)
+        // An issued timed program may not carry an understated timing model
+        // while prescribing different warmup, active or rest durations.
+        if(request.visitTimings.isNotEmpty())
+            require(request.visitTimings.toSet()==timingsForPolicies(policies).toSet()) {
+                "Composition timing differs from the actual prescription"
+            }
         val composed=CoachWeekComposer.compose(request)
         val options=request.exercises.associateBy {it.exerciseId}
         val conflicts=linkedSetOf<String>()

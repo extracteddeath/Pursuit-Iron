@@ -80,6 +80,13 @@ that failure and preserves exact v1 replay. This is a demonstrated improvement
 over the prior Kotlin policy, not a measured improvement over the web coach.
 See [the executed program and limits](GENERATED_PROGRAM_JOURNEY_CHECKPOINT.md).
 
+New v3 starter weeks also account for warmups and actual rest during composition,
+instead of adding their time after choosing the week. A controlled three-day
+case that previously produced a 64-minute day now fits the stated 40–60-minute
+range. Saved v1/v2 prescriptions retain their original bytes. This corrects
+another prior Kotlin generation defect; it is not a paired JS superiority result.
+See [the measured source comparison](WARMUP_TIMING_CHECKPOINT.md).
+
 Broader generator coverage, individualized fatigue calibration, legacy history
 migration, custom-policy recovery and complete Android interaction acceptance
 remain unfinished. The finish line remains

@@ -64,10 +64,16 @@ retain exact replay. Ordinary prepared workouts can now reopen through a fresh
 exact-snapshot/consent preflight. See
 [the executed program and limits](GENERATED_PROGRAM_JOURNEY_CHECKPOINT.md).
 
-Full warmup-aware composition, the broader program-quality matrix,
-individual fatigue accuracy, legacy-history migration and Android interaction
-acceptance remain open. A source-tested generated week is not full product
-acceptance or proof of coaching superiority.
+Warmup-aware composition now selects new v3 weeks using the actual per-visit
+warmup/rest durations and independently matches the final prescription audit.
+The formerly overlong three-day case now fits 40–60 minutes. Saved v1/v2
+cycles and untimed native approval bytes remain exact; native tests cold-open
+and issue both saved v2 programs and new timed approvals. See
+[the executed timing comparison](WARMUP_TIMING_CHECKPOINT.md).
+
+The broader program-quality matrix, individual fatigue accuracy, legacy-history
+migration and Android interaction acceptance remain open. A source-tested
+generated week is not full product acceptance or proof of coaching superiority.
 
 ## What counts as progress in updates
 

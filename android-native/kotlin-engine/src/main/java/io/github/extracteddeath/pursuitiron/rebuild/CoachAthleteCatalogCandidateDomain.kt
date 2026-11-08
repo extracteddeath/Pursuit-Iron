@@ -24,7 +24,8 @@ data class AthleteCatalogCandidateRequest(
     val maximumExercisesPerDay:Int,
     val preferredPatternsPerDay:Int,
     /** Versioned authored policy; null means a mechanically inspected week only. */
-    val goalPolicy:AuthoredGoalProgramPolicy?=null
+    val goalPolicy:AuthoredGoalProgramPolicy?=null,
+    val visitTimings:List<ComposerVisitTiming> = emptyList()
 )
 enum class AthleteCandidateIssueKind {
     SETUP_UNRESOLVED, SCHEDULE_MISMATCH, POLICY_UNRESOLVED,
@@ -140,7 +141,8 @@ object CoachAthleteCatalogCandidateDomain {
             request.bounds,emptyList(),request.maximumExercisesPerDay,
             request.preferredPatternsPerDay,intents,
             maximumBarbellExercisesPerDay=profile.maxBarbellExercisesPerDay,
-            allowDirectTricepsOnLower=profile.allowTricepsOnLower)
+            allowDirectTricepsOnLower=profile.allowTricepsOnLower,
+            visitTimings=request.visitTimings)
         val plan=runCatching {
             CoachExerciseCatalogDomain.review(
                 CatalogWeekRequest(template,request.catalog,request.choices,

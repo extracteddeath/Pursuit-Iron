@@ -79,8 +79,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         ).review(owner,cycleId,inputs)
     }
 
-    private fun saveGenerated():Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request()
+    private fun saveGenerated(
+        policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION
+    ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
+        val input=request().copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -106,7 +108,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(NativeFirstProgramSeedWrite.Committed,
             NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
                 .create(owner,NativeFirstProgramSeed(
-                    cycleId,cycle.title,4,1,CoachFirstProgramStartDomain.POLICY_VERSION,
+                    cycleId,cycle.title,4,1,input.policyVersion,
                     TrainingPhase.HYPERTROPHY,loads,bodyweight,emptyList(),900)))
         assertTrue(disk.consent.confirm(owner,cycleId,1,1,0,inputs,true)
             is NativeCustomSignoffWrite.Committed)
@@ -134,6 +136,38 @@ class NativeKotlinGeneratedProgramJourneyTest {
             .audit.muscles
         assertEquals(n("0"),doses.getValue(TrainingMuscle.CHEST).directWorkingSets)
         assertEquals(n("0"),doses.getValue(TrainingMuscle.QUADS).directWorkingSets)
+    }
+
+    @Test fun savedV2ProgramColdReopensWithoutBeingRegeneratedWithV3Timing() {
+        val (cycle,inputs)=saveGenerated(CoachFirstProgramStartDomain.PREVIOUS_POLICY_VERSION)
+        val disk=Disk()
+        val seed=(NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
+            .read(owner,cycleId) as NativeFirstProgramSeedRead.Found).seed
+        assertEquals("first-program-reference-v2",seed.policyVersion)
+        val replay=CoachFirstProgramStartDomain.review(request().copy(
+            startingLoads=seed.startingLoads,
+            selectedBodyweightExerciseIds=seed.bodyweightExercises,
+            nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
+        assertTrue(checkNotNull(replay.generation?.candidate?.catalogReview?.composedRequest)
+            .visitTimings.isEmpty())
+        assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
+            replay,setup(),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+        // Frozen from execution of the previously published v2 policy,
+        // before visit-aware timing was added to the composer.
+        val frozen=checkNotNull(CoachFirstProgramDraftConversionDomain.propose(
+            replay,setup(),catalog,"frozen-first","My first program",4).cycle)
+        assertEquals("be2fcc9b5d97f0697085708efa8afbecd66437d9f3642b000d97d53be16c0e54",
+            java.security.MessageDigest.getInstance("SHA-256")
+                .digest(NativeCustomCycleDraftCodec.encode(frozen))
+                .joinToString(""){"%02x".format(it)})
+        val day=cycle.blocks.single().days.first()
+        val expected=(disk.preflight.inspect(owner,cycleId,1,day.weekday,inputs)
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        assertTrue(disk.prepared.prepare(owner,"old-first-day",cycleId,1,
+            day.weekday,inputs) is NativeCustomPrepareResult.Prepared)
+        val issued=(Disk().journals.issue(owner,"old-first-day",cycleId,1,
+            day.weekday,inputs) as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(expected,issued.snapshot)
     }
 
     @Test fun generatedFourDayProgramCompletesAllSetsAndColdReturnsToNextWeek() {
@@ -234,7 +268,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val regenerated=CoachFirstProgramStartDomain.review(request().copy(
             startingLoads=seed.startingLoads,
             selectedBodyweightExerciseIds=seed.bodyweightExercises,
-            nonSetSecondsPerDay=seed.nonSetSeconds))
+            nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
         assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
             regenerated,setup(),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
         // Editing the first finished workout cannot reorder newer results

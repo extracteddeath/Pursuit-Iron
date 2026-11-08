@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=6
+    private const val VERSION=7
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -160,7 +160,7 @@ internal object NativeKotlinApprovalCodec {
             optionalBand()
         )
     }
-    private fun DataOutputStream.program(p:ComposerRequest) {
+    private fun DataOutputStream.program(p:ComposerRequest,version:Int) {
         writeEnum(p.split);writeEnum(p.phase)
         items(p.days){day->
             writeInt(day.calendarDay);writeEnum(day.focus)
@@ -183,8 +183,13 @@ internal object NativeKotlinApprovalCodec {
         }
         optionalInt(p.maximumBarbellExercisesPerDay)
         writeBoolean(p.allowDirectTricepsOnLower)
+        if(version>=7)items(p.visitTimings){t->
+            string(t.exerciseId);writeEnum(t.purpose);optionalInt(t.dayIndex)
+            writeInt(t.activeSecondsPerSet);writeInt(t.restSecondsPerSet)
+            items(t.warmups){w->writeInt(w.activeSeconds);writeInt(w.restSeconds)}
+        }
     }
-    private fun DataInputStream.program():ComposerRequest {
+    private fun DataInputStream.program(version:Int):ComposerRequest {
         val split=readEnum<ComposerSplit>();val phase=readEnum<TrainingPhase>()
         val days=items(6){
             ComposerDay(readInt(),readEnum<ComposerFocus>(),
@@ -202,8 +207,16 @@ internal object NativeKotlinApprovalCodec {
             ComposerSessionIntent(readInt(),readEnum<ComposerSessionPurpose>(),
                 optionalString())
         }
+        val barbellCap=optionalInt()
+        val triceps=readBoolean()
+        val timings=if(version>=7)items(128){
+            val id=readUTF();val purpose=readEnum<ComposerSessionPurpose>()
+            val day=optionalInt();val active=readInt();val rest=readInt()
+            ComposerVisitTiming(id,purpose,active,rest,
+                items(12){ComposerWarmupTiming(readInt(),readInt())},day)
+        } else emptyList()
         return ComposerRequest(split,phase,days,bounds,exercises,maxDifferent,
-            preferred,intents,optionalInt(),readBoolean())
+            preferred,intents,barbellCap,triceps,timings)
     }
 
     private fun DataOutputStream.policies(policies:List<ExercisePrescriptionPolicy>) {
@@ -296,14 +309,17 @@ internal object NativeKotlinApprovalCodec {
         }
         value.acceptedRepTargets?.let {verifiedRepProof(it,staged.snapshot)}
         val bytes=ByteArrayOutputStream()
+        // Retain the exact v6 bytes for approvals without the new timing
+        // model. Cold reopening must not reinterpret existing workouts.
+        val version=if(value.program.visitTimings.isEmpty())6 else VERSION
         DataOutputStream(bytes).use {out->
             with(out){
-                writeInt(MAGIC);writeInt(VERSION)
+                writeInt(MAGIC);writeInt(version)
                 string(value.ownerKey);string(value.athleteId)
                 source(value.approvedSource);source(value.currentSource)
                 string(value.grant.grantId);string(value.grant.workoutId)
                 source(value.grant.approvedSource);writeInt(value.grant.dayIndex)
-                program(value.program);policies(value.policies)
+                program(value.program,version);policies(value.policies)
                 string(value.storageReceiptId);writeLong(value.storageRevision)
                 val proof=value.acceptedRepTargets
                 writeBoolean(proof!=null)
@@ -335,7 +351,7 @@ internal object NativeKotlinApprovalCodec {
                     val approved=source();val current=source()
                     val grant=KotlinWorkoutSelectionGrant(
                         readUTF(),readUTF(),source(),readInt())
-                    val program=program()
+                    val program=program(version)
                     val policies=policies(version)
                     val receipt=readUTF();val revision=readLong()
                     val proof=if(version>=2 && readBoolean()) {

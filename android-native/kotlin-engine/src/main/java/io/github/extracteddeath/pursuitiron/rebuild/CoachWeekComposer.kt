@@ -60,6 +60,17 @@ data class ComposerExerciseOption(
 )
 data class ComposerDay(val calendarDay:Int,val focus:ComposerFocus,
     val window:DeclaredSessionWindow)
+/** Planned durations only. No load, performed set or muscle-dose observation. */
+data class ComposerWarmupTiming(val activeSeconds:Int,val restSeconds:Int)
+data class ComposerVisitTiming(
+    val exerciseId:String,
+    val purpose:ComposerSessionPurpose,
+    val activeSecondsPerSet:Int,
+    val restSecondsPerSet:Int,
+    val warmups:List<ComposerWarmupTiming> = emptyList(),
+    /** A day-specific policy overrides the shared policy for that purpose. */
+    val dayIndex:Int?=null
+)
 data class ComposerRequest(
     val split:ComposerSplit,
     val phase:TrainingPhase,
@@ -78,7 +89,10 @@ data class ComposerRequest(
      */
     val maximumBarbellExercisesPerDay:Int?=null,
     /** An explicit restriction on direct triceps credit during LOWER days. */
-    val allowDirectTricepsOnLower:Boolean=true
+    val allowDirectTricepsOnLower:Boolean=true,
+    /** Empty preserves historical composition. New prescriptions supply
+     * their actual per-visit warmups and working-set/rest durations. */
+    val visitTimings:List<ComposerVisitTiming> = emptyList()
 )
 data class ComposerVisit(val dayIndex:Int,val exerciseId:String,
     val pattern:ComposerPattern,val sets:Int)
@@ -194,6 +208,20 @@ object CoachWeekComposer {
                             request.days[intent.dayIndex].focus in option.allowedFocus
                     })
         })
+        require(request.visitTimings.size<=128)
+        require(request.visitTimings.map {
+            Triple(it.exerciseId,it.purpose,it.dayIndex)
+        }.distinct().size==request.visitTimings.size)
+        require(request.visitTimings.all {t->
+            request.exercises.any{it.exerciseId==t.exerciseId} &&
+                t.activeSecondsPerSet in 1..3600 && t.restSecondsPerSet in 0..3600 &&
+                t.warmups.size<=12 && t.warmups.all {
+                    it.activeSeconds in 1..3600 && it.restSeconds in 0..3600
+                } && (t.dayIndex==null ||
+                    request.sessionIntents.any {
+                        it.dayIndex==t.dayIndex && it.purpose==t.purpose
+                    })
+        })
         require(request.exercises.all {option ->
             idPattern.matches(option.exerciseId) &&
             option.allowedFocus.isNotEmpty() &&
@@ -217,6 +245,15 @@ object CoachWeekComposer {
             request.phase,request.days.size,request.days.map {it.window},
             emptyList(),request.bounds))
     }
+    private fun timing(request:ComposerRequest,exerciseId:String,day:Int):ComposerVisitTiming? {
+        val purpose=request.sessionIntents.firstOrNull{it.dayIndex==day}?.purpose
+            ?:ComposerSessionPurpose.UNSPECIFIED
+        return request.visitTimings.singleOrNull {
+            it.exerciseId==exerciseId && it.purpose==purpose && it.dayIndex==day
+        } ?:request.visitTimings.singleOrNull {
+            it.exerciseId==exerciseId && it.purpose==purpose && it.dayIndex==null
+        }
+    }
     private fun toWeek(request:ComposerRequest,
         visits:List<ComposerVisit>,
         options:Map<String,ComposerExerciseOption>):DeclaredTrainingWeek {
@@ -227,13 +264,21 @@ object CoachWeekComposer {
             .associate {it.dayIndex to it.orderedVisits.lastOrNull()?.exerciseId}
         val sets=visits.flatMap {visit ->
             val option=checkNotNull(options[visit.exerciseId])
-            (0 until visit.sets).map {ordinal ->
+            val timing=timing(request,visit.exerciseId,visit.dayIndex)
+            val warmups=timing?.warmups.orEmpty().mapIndexed {ordinal,warmup->
+                PlannedWorkingExposure(
+                    option.exerciseId+":d"+visit.dayIndex+":w"+ordinal,
+                    visit.dayIndex,ExposureSetKind.WARMUP,emptyList(),
+                    warmup.activeSeconds,warmup.restSeconds)
+            }
+            warmups+(0 until visit.sets).map {ordinal ->
                 val isFinal=lastByDay[visit.dayIndex]==visit.exerciseId &&
                     ordinal==visit.sets-1
                 PlannedWorkingExposure(
                     option.exerciseId+":d"+visit.dayIndex+":s"+ordinal,
                     visit.dayIndex,ExposureSetKind.WORKING,option.credits,
-                    option.workSeconds,if(isFinal)0 else option.restSeconds)
+                    timing?.activeSecondsPerSet ?:option.workSeconds,
+                    if(isFinal)0 else timing?.restSecondsPerSet ?:option.restSeconds)
             }
         }
         return DeclaredTrainingWeek(request.phase,request.days.size,

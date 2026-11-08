@@ -97,6 +97,47 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun timedProgramColdReopensWithTheExactWarmupAndRestModel() {
+        val original=approval()
+        val timed=original.copy(program=original.program.copy(visitTimings=
+            CoachSessionPrescriptionDomain.timingsForPolicies(original.policies)))
+        val bytes=NativeKotlinApprovalCodec.encode(timed)
+        assertEquals(7,bytes[7].toInt())
+        assertEquals(timed,NativeKotlinApprovalCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeKotlinApprovalCodec.encode(
+            NativeKotlinApprovalCodec.decode(bytes)))
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            authority().publish("owner-1",0,timed))
+        val restored=checkNotNull(authority().currentOwnedApproval("owner-1"))
+        assertEquals(timed,restored)
+        val draft=CoachSessionPrescriptionDomain.draft(restored.program,restored.policies)
+        assertEquals(draft.composer.audit.sessions,draft.finalAudit?.sessions)
+        assertTrue(draft.composer.week.exposures.any{it.kind==ExposureSetKind.WARMUP})
+        val journal=KotlinNativeJournalFileStore(temp.root.toPath())
+        val issued=got(NativeKotlinWorkoutCoordinator(journal,authority(),fence())
+            .issue("owner-1","workout-1")).journal.snapshot
+        assertEquals(draft.sessions.first().estimatedMinutes,issued.estimatedMinutes)
+        assertTrue(issued.targets.any{it.type==DraftSetType.WARMUP})
+        val cold=got(NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temp.root.toPath()),authority(),fence())
+            .issue("owner-1","workout-1"))
+        assertTrue(cold.replayed)
+        assertEquals(issued,cold.journal.snapshot)
+        // Untimed approvals keep their previous encoding and composition.
+        val untimed=NativeKotlinApprovalCodec.encode(original)
+        assertEquals(6,untimed[7].toInt())
+        assertEquals("4b472914ac4dc470bac65d3c27dbd80bd7e9d6f2ef8f2655de5d8fcf36ea9b03",
+            java.security.MessageDigest.getInstance("SHA-256").digest(untimed)
+                .joinToString(""){"%02x".format(it)})
+        val incorrect=timed.copy(policies=timed.policies.map {
+            it.copy(restSecondsPerSet=it.restSecondsPerSet+60)
+        })
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinApprovalCodec.encode(incorrect)
+        }
+        assertEquals(timed,authority().currentOwnedApproval("owner-1"))
+    }
+
     @Test fun legacyVersionOneApprovalRemainsReadableDuringRepProofUpgrade() {
         // The v4 format adds one day-scope marker after each optional
         // v3 load marker. Reconstruct v3, v2 and v1 byte layouts, rather

@@ -157,6 +157,53 @@ class CoachSessionPrescriptionDomainTest {
             report.composer.audit.sessions.first().declaredSeconds)
     }
 
+    @Test fun exactTimingIncludesDaySpecificRestWarmupsAndTheTrueLastSet() {
+        val base=policies()
+        val extra=base.single {it.exerciseId=="db-row" &&
+            it.purpose==ComposerSessionPurpose.HYPERTROPHY}
+            .copy(dayIndex=2,restSecondsPerSet=210,
+                warmups=listOf(DeclaredWarmupStep(n("20"),5,35,65)))
+        val policies=base+extra
+        val input=request().copy(visitTimings=
+            CoachSessionPrescriptionDomain.timingsForPolicies(policies))
+        val result=CoachSessionPrescriptionDomain.draft(input,policies)
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,result.status)
+        assertEquals(result.composer.audit.sessions,result.finalAudit?.sessions)
+        assertEquals(result.composer.audit.muscles,result.finalAudit?.muscles)
+        val friday=result.sessions.single{it.dayIndex==2}
+            .exercises.single{it.exerciseId=="db-row"}
+        assertEquals(1,friday.sets.count{it.type==DraftSetType.WARMUP})
+        assertTrue(friday.sets.filter{it.type==DraftSetType.WORKING}
+            .all{it.restSeconds==210})
+        for(session in result.sessions) {
+            val sets=session.exercises.flatMap{it.sets}
+            assertEquals(60+sets.sumOf{it.activeSeconds.toLong()+it.restSeconds}-
+                sets.last().restSeconds,
+                result.composer.audit.sessions[session.dayIndex].declaredSeconds)
+            assertTrue(sets.last().restSeconds>0)
+        }
+    }
+
+    @Test fun aTimingModelCannotUnderstateTheActualPolicies() {
+        val policies=policies()
+        val input=request().copy(visitTimings=
+            CoachSessionPrescriptionDomain.timingsForPolicies(policies))
+        for(changed in listOf(
+            policies.map{it.copy(restSecondsPerSet=it.restSecondsPerSet+60)},
+            policies.map{it.copy(warmups=emptyList())}
+        ))assertThrows(IllegalArgumentException::class.java) {
+            CoachSessionPrescriptionDomain.draft(input,changed)
+        }
+        for(timings in listOf(
+            input.visitTimings+input.visitTimings.first(),
+            listOf(input.visitTimings.first().copy(exerciseId="absent")),
+            listOf(input.visitTimings.first().copy(activeSecondsPerSet=0)),
+            listOf(input.visitTimings.first().copy(dayIndex=7))
+        ))assertThrows(IllegalArgumentException::class.java) {
+            CoachWeekComposer.compose(input.copy(visitTimings=timings))
+        }
+    }
+
     @Test fun changedRestCanBreakHardTimeLimitEvenWhenComposerPassed() {
         val long=policies().map {
             it.copy(restSecondsPerSet=3600)

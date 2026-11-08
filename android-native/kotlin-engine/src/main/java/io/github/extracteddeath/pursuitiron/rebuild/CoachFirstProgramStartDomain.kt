@@ -27,7 +27,7 @@ data class FirstProgramStartRequest(
     val extraFocuses:List<ComposerFocus> = emptyList(),
     /** Planning assumption. Editable, not inferred from the time bucket. */
     val nonSetSecondsPerDay:Int = 900,
-    /** Saved calibrations replay their original policy; new plans use v2. */
+    /** Saved calibrations replay their original policy; new plans use v3. */
     val policyVersion:String = CoachFirstProgramStartDomain.POLICY_VERSION
 )
 enum class FirstProgramStartStatus {
@@ -57,8 +57,10 @@ data class FirstProgramStartReview(
 
 object CoachFirstProgramStartDomain {
     const val LEGACY_POLICY_VERSION="first-program-reference-v1"
-    const val POLICY_VERSION="first-program-reference-v2"
-    fun supportsPolicy(version:String)=version in setOf(LEGACY_POLICY_VERSION,POLICY_VERSION)
+    const val PREVIOUS_POLICY_VERSION="first-program-reference-v2"
+    const val POLICY_VERSION="first-program-reference-v3"
+    fun supportsPolicy(version:String)=version in setOf(
+        LEGACY_POLICY_VERSION,PREVIOUS_POLICY_VERSION,POLICY_VERSION)
     private val zero=BigDecimal.ZERO
     private fun num(v:Int)=BigDecimal(v)
     private fun freeze(items:List<String>)=Collections.unmodifiableList(items)
@@ -92,9 +94,9 @@ object CoachFirstProgramStartDomain {
             // Missing direct work remains an explicit coverage gap. It must
             // not forbid a compound's declared indirect exposure. A zero
             // MRV previously excluded bench, rows and squats altogether.
-            val ceiling=if(policyVersion==POLICY_VERSION && muscle in exposed)
+            val ceiling=if(policyVersion!=LEGACY_POLICY_VERSION && muscle in exposed)
                 initial*3 else amount*3
-            val target=if(policyVersion==POLICY_VERSION && muscle in exposed)
+            val target=if(policyVersion!=LEGACY_POLICY_VERSION && muscle in exposed)
                 initial*2 else amount*2
             DeclaredMuscleDoseBounds(muscle,num(amount),num(target),
                 num(ceiling),if(amount>0)1 else 0)
@@ -248,7 +250,11 @@ object CoachFirstProgramStartDomain {
             issues+="Strength/peak needs a calibrated, eligible primary movement; none was chosen."
         val policy=AuthoredGoalProgramPolicy(
             policyId=input.policyVersion,
-            revision=if(input.policyVersion==LEGACY_POLICY_VERSION)"v1" else "v2",
+            revision=when(input.policyVersion) {
+                LEGACY_POLICY_VERSION->"v1"
+                PREVIOUS_POLICY_VERSION->"v2"
+                else->"v3"
+            },
             rationale="Versioned provisional volume and effort starting plan; personal responses, fatigue and recoverable dose require calibration.",
             athleteId=athlete.athleteProfileId,
             athleteRevision=athlete.profileRevision,
@@ -262,6 +268,48 @@ object CoachFirstProgramStartDomain {
                 mapOf(primary.exerciseId to 1) else emptyMap())
         if(input.phase!=TrainingPhase.HYPERTROPHY && primary==null)
             return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,policy,gaps=gaps)
+
+        val byId=selected.associateBy{it.exerciseId}
+        fun prescription(
+            exerciseId:String,working:BigDecimal?,workSeconds:Int,restSeconds:Int,
+            purpose:ComposerSessionPurpose,dayIndex:Int?
+        ):ExercisePrescriptionPolicy? {
+            val source=byId[exerciseId] ?:return null
+            val desired=when {
+                input.phase!=TrainingPhase.HYPERTROPHY &&
+                    source.role==ComposerRole.PRIMARY -> RepBand(3,6)
+                source.role==ComposerRole.ACCESSORY -> RepBand(10,15)
+                else ->RepBand(6,12)
+            }
+            val practical=source.sourcePracticalReps ?:desired
+            val lower=maxOf(desired.minimum,practical.minimum)
+            val upper=minOf(desired.maximum,practical.maximum)
+            if(lower>upper)return null
+            // Preserve the v2 low-volume rehearsal exactly. Only v3 uses
+            // its already-reviewed durations while choosing working sets.
+            val warmup=if(input.policyVersion!=LEGACY_POLICY_VERSION &&
+                source.role!=ComposerRole.ACCESSORY && working!=null) {
+                val stock=athlete.gym.confirmedStock[source.equipmentId]
+                val lighter=(EquipmentLoadDomain.inspect(stock,
+                    working*BigDecimal("0.8"),athlete.gym.unit)
+                    as? LoadInspection.Confirmed)?.atOrBelow
+                if(lighter!=null && lighter>zero && lighter<working)
+                    listOf(DeclaredWarmupStep(lighter,
+                        if(input.phase==TrainingPhase.HYPERTROPHY)5 else 3,30,60))
+                else emptyList()
+            } else emptyList()
+            return ExercisePrescriptionPolicy(
+                exerciseId,purpose,RepBand(lower,upper),
+                targetRir=if(athlete.experience==AthleteExperience.BEGINNER)3 else 2,
+                activeSecondsPerSet=workSeconds,restSecondsPerSet=restSeconds,
+                scheme=SetLoadScheme.STRAIGHT,warmups=warmup,dayIndex=dayIndex)
+        }
+        val timed=input.policyVersion==POLICY_VERSION
+        val sharedPolicies=if(timed)choices.mapNotNull {choice->
+            prescription(choice.exerciseId,choice.selectedLoad,
+                choice.activeSecondsPerSet,choice.restSecondsPerSet,
+                purposes.keys.single(),null)
+        } else emptyList()
         val generated=runCatching {
             CoachAthleteProgramGenerator.generate(
                 AthleteProgramGenerationRequest(input.setup,input.phase,policy,
@@ -275,7 +323,8 @@ object CoachFirstProgramStartDomain {
                         SessionTimeBucket.TWO_HOURS_PLUS->9
                     },
                     preferredPatternsPerDay=2,
-                    extraFocuses=input.extraFocuses))
+                    extraFocuses=input.extraFocuses,
+                    visitTimings=CoachSessionPrescriptionDomain.timingsForPolicies(sharedPolicies)))
         }.getOrElse {
             issues+="The independent weekly composer rejected these inputs."
             return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,policy,gaps=gaps)
@@ -291,47 +340,11 @@ object CoachFirstProgramStartDomain {
             return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,policy,
                 generated,gaps=gaps)
         }
-        val byId=selected.associateBy{it.exerciseId}
-        val prescriptions=composed.sessionIntents.flatMap {intent ->
+        val prescriptions=if(timed)sharedPolicies else composed.sessionIntents.flatMap {intent ->
             composed.exercises.mapNotNull {option->
-                val source=byId[option.exerciseId] ?:return@mapNotNull null
-                val desired=when {
-                    input.phase!=TrainingPhase.HYPERTROPHY &&
-                        source.role==ComposerRole.PRIMARY -> RepBand(3,6)
-                    source.role==ComposerRole.ACCESSORY -> RepBand(10,15)
-                    else ->RepBand(6,12)
-                }
-                val practical=source.sourcePracticalReps ?: desired
-                val lower=maxOf(desired.minimum,practical.minimum)
-                val upper=minOf(desired.maximum,practical.maximum)
-                // Explicitly refuse a mismatched rep scheme instead of
-                // silently issuing reps outside the reviewed movement range.
-                if(lower>upper)return@mapNotNull null
-                // Practical, versioned low-volume rehearsal; not a personal
-                // 1RM estimate or a validated optimum. Use only a confirmed
-                // lighter implement. Warmup time and zero working-set credit
-                // are independently audited by the existing prescription owner.
-                val working=(option.equipment as? ComposerEquipment.Verified)?.plannedLoad
-                val warmup=if(input.policyVersion==POLICY_VERSION &&
-                    source.role!=ComposerRole.ACCESSORY && working!=null) {
-                    val stock=athlete.gym.confirmedStock[source.equipmentId]
-                    val lighter=(EquipmentLoadDomain.inspect(stock,
-                        working*BigDecimal("0.8"),athlete.gym.unit)
-                        as? LoadInspection.Confirmed)?.atOrBelow
-                    if(lighter!=null && lighter>zero && lighter<working)
-                        listOf(DeclaredWarmupStep(lighter,
-                            if(input.phase==TrainingPhase.HYPERTROPHY)5 else 3,
-                            30,60))
-                    else emptyList()
-                } else emptyList()
-                ExercisePrescriptionPolicy(
-                    option.exerciseId,intent.purpose,RepBand(lower,upper),
-                    targetRir=if(athlete.experience==AthleteExperience.BEGINNER)3 else 2,
-                    activeSecondsPerSet=option.workSeconds,
-                    restSecondsPerSet=option.restSeconds,
-                    scheme=SetLoadScheme.STRAIGHT,
-                    warmups=warmup,
-                    dayIndex=intent.dayIndex)
+                prescription(option.exerciseId,
+                    (option.equipment as? ComposerEquipment.Verified)?.plannedLoad,
+                    option.workSeconds,option.restSeconds,intent.purpose,intent.dayIndex)
             }
         }
         val prescribed=runCatching {

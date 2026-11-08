@@ -186,12 +186,34 @@ class CoachFirstProgramStartDomainTest {
     @Test fun separatelyTimedWarmupsCannotBypassTheFullSessionReview() {
         val result=CoachFirstProgramStartDomain.review(request(mapOf(
             "bench" to n("25"),"row" to n("25"),"squat" to n("25")))
-            .copy(nonSetSecondsPerDay=1800))
+            .copy(nonSetSecondsPerDay=1800,
+                policyVersion=CoachFirstProgramStartDomain.PREVIOUS_POLICY_VERSION))
         assertEquals(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,result.status)
         val draft=checkNotNull(result.prescription)
         assertEquals(PrescriptionDraftStatus.UNRESOLVED,draft.status)
         assertTrue(checkNotNull(draft.finalAudit).daysOutsidePreferredWindow.isNotEmpty())
         assertFalse(result.maySaveProgram)
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun newGenerationFitsTheWholePrescriptionBeforeAcceptingTheWeek() {
+        val input=request(mapOf("bench" to n("25"),"row" to n("25"),
+            "squat" to n("25"))).copy(nonSetSecondsPerDay=1800)
+        val result=CoachFirstProgramStartDomain.review(input)
+        assertEquals(result.issues.toString(),
+            FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
+        val prescribed=checkNotNull(result.prescription)
+        val audit=checkNotNull(prescribed.finalAudit)
+        assertEquals(prescribed.composer.audit.sessions,audit.sessions)
+        assertEquals(prescribed.composer.audit.muscles,audit.muscles)
+        assertTrue(audit.daysOutsidePreferredWindow.isEmpty())
+        for(session in prescribed.sessions) {
+            val sets=session.exercises.flatMap{it.sets}
+            val seconds=1800+sets.sumOf{it.activeSeconds.toLong()+it.restSeconds}-
+                sets.last().restSeconds
+            assertEquals(seconds,audit.sessions[session.dayIndex].declaredSeconds)
+            assertTrue(checkNotNull(session.estimatedMinutes) in 40L..60L)
+        }
         assertFalse(result.mayIssueWorkout)
     }
 

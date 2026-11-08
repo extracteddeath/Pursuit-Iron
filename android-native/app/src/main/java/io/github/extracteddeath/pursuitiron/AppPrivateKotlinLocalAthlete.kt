@@ -162,6 +162,23 @@ internal class AppPrivateKotlinLocalAthlete(context: Context) :
         }
     }
 
+    /**
+     * Proof of origin only for the separate Kotlin-Lab owner namespace:
+     * this class mints "local-"+UUID.randomUUID() on first setup and
+     * provides no importing/rebinding API. THIS DOES NOT prove the human
+     * had no workout history in the web app or another device.
+     */
+    @Synchronized fun isIndependentLocalProfileOwner(
+        ownerKey:String,athleteId:String
+    ):Boolean {
+        val verified=signedInIdentity() ?:return false
+        val nativeOwner=Regex(
+            "^local-[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+        return verified.ownerKey==ownerKey &&
+            verified.athleteId==athleteId &&
+            nativeOwner.matches(ownerKey)
+    }
+
     /** Never claim a previous login on cold startup without native activation. */
     override fun signedInIdentity():NativeKotlinOwnerIdentity? =
         if(explicitlyActivated)runCatching {read()}.getOrNull() else null

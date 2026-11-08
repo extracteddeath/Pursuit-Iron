@@ -35,7 +35,7 @@ enum class CoachEvidenceFlag {
     COMPLETED_AT_CEILING, REPEATABLE_PERFORMANCE, REPORTED_NEAR_FAILURE,
     EFFORT_NOT_REPORTED, DEVICE_LOAD_NOT_VERIFIED, ACTUAL_SET_MISSING,
     FAILED_ATTEMPT, READINESS_LOW, USER_REPORTED_RESTRICTION,
-    GOAL_RIR_ASSUMED
+    GOAL_RIR_ASSUMED, REPEATED_BROAD_DECLINE, REPEATED_LATER_SET_DECLINE
 }
 
 data class CoachExerciseContext(
@@ -173,6 +173,27 @@ object CoachExerciseDecisionDomain {
         if(latestFacts.belowFloorOrdinals.isNotEmpty())
             return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.STRONG,
                 "Some sets fell below the prescribed rep range. Review the load and fatigue before adding weight.")
+        // Never pool unmatched Upper/Push sessions or manufacture effort.
+        // A repeated set-position decline suggests a review, not an
+        // automatic cut or evidence of a diagnosed recovery condition.
+        val trend=SessionFatigueEvidenceDomain.inspectRecent(
+            chronologicalSessions,context.availableLoads,
+            context.verifiedPerSetLoading)
+        when(trend?.signal) {
+            RepeatedSessionFatigueSignal.BROAD_DECLINE -> {
+                flags+=CoachEvidenceFlag.REPEATED_BROAD_DECLINE
+                return result(CoachDirection.REVIEW_WORKING_LOAD,
+                    CoachConfidence.LIMITED,
+                    "Across three comparable workouts, most sets (including the first) repeatedly lost effort-aligned reps. Review recovery, session demands and working load before increasing anything; this is not a fatigue diagnosis.")
+            }
+            RepeatedSessionFatigueSignal.LATER_SET_DECLINE -> {
+                flags+=CoachEvidenceFlag.REPEATED_LATER_SET_DECLINE
+                return result(CoachDirection.REVIEW_WORKING_LOAD,
+                    CoachConfidence.LIMITED,
+                    "The first set stayed steady, but two or more later sets declined across three comparable workouts. Review rest, exercise order and accumulated fatigue before raising later-set targets.")
+            }
+            else -> Unit
+        }
         if(latestFacts.mixedActualLoads) {
             // Intentional top/backoff loading is not unstable. Only an
             // authenticated per-set prescription can take this path.

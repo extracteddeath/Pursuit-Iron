@@ -148,7 +148,12 @@ object KotlinWorkoutHistoryEvidenceDomain {
                             fact.actual?.load, fact.actual?.reps, fact.actual?.actualRir,
                             issued.value, fact.issuedRir
                         )
-                    })
+                    }),
+                    // Distinguish days across an authored split or program
+                    // revision; this never changes signed historical facts.
+                    trainingDayId="${journal.snapshot.source.programId}:"+
+                        "${journal.snapshot.source.programRevision}:"+
+                        "${journal.snapshot.dayIndex}"
                 )
             } else null
             val progression = workout?.let {

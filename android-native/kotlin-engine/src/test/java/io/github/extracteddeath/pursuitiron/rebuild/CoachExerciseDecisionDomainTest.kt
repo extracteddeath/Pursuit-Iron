@@ -25,7 +25,7 @@ class CoachExerciseDecisionDomainTest {
                     SetOutcome.FAILED_ATTEMPT -> WorkingSetFact(i,SetOutcome.FAILED_ATTEMPT,
                         n(loads[i]),0,null,n(30),2)
                 }
-            })
+            },trainingDayId="upper-a")
     }
     private fun review(vararg recent:ProgressionWorkoutEvidence,
         context:CoachExerciseContext=ctx)=CoachExerciseDecisionDomain.review(recent.toList(),context)
@@ -70,6 +70,31 @@ class CoachExerciseDecisionDomainTest {
         val result=review(first,workout("second",reps=listOf(8,7,6)))
         assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,result.direction)
         assertNull(result.nextLoadToReview)
+    }
+
+    @Test fun repeatedSameDayFatigueChangesCoachReviewWithoutAutocuts() {
+        val a=workout("a",reps=listOf(8,8,8))
+        val b=workout("b",reps=listOf(8,7,7))
+        val c=workout("c",reps=listOf(8,6,6))
+        val later=review(a,b,c)
+        assertEquals(CoachDirection.REVIEW_WORKING_LOAD,later.direction)
+        assertTrue(CoachEvidenceFlag.REPEATED_LATER_SET_DECLINE in later.evidence)
+        assertTrue(later.explanation.contains("rest, exercise order"))
+        assertNull(later.nextRepTargetsForReview)
+        assertNull(later.nextLoadToReview)
+        val broad=review(a,workout("b",reps=listOf(7,7,7)),
+            workout("c",reps=listOf(6,6,6)))
+        assertEquals(CoachDirection.REVIEW_WORKING_LOAD,broad.direction)
+        assertTrue(CoachEvidenceFlag.REPEATED_BROAD_DECLINE in broad.evidence)
+        val crossDay=review(a,b,c.copy(trainingDayId="push-day"))
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,crossDay.direction)
+        assertFalse(CoachEvidenceFlag.REPEATED_LATER_SET_DECLINE in crossDay.evidence)
+        val missing=review(a,b,c.copy(observations=c.observations.map{
+            it.copy(actualRir=null)}))
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,missing.direction)
+        assertFalse(CoachEvidenceFlag.REPEATED_LATER_SET_DECLINE in missing.evidence)
+        val noTrend=review(a,b,c,workout("d",reps=listOf(8,6,6)))
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,noTrend.direction)
     }
 
     @Test fun failedRepFloorDemandsReviewInsteadOfJumpingToLastHeaviest() {

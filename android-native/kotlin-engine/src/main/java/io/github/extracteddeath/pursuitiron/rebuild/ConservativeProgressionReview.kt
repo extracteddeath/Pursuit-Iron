@@ -21,7 +21,10 @@ data class ProgressionWorkoutEvidence(
     val unit: LoadUnit,
     val targetReps: RepBand,
     val expectedWorkingSets: Int,
-    val observations: List<WorkingSetFact>
+    val observations: List<WorkingSetFact>,
+    /** Stable, owner-verified training-day cell. Never pool Upper and Push
+     * exercise appearances by name. Null means this provenance is absent. */
+    val trainingDayId: String? = null
 )
 
 enum class IncreaseReviewReason {

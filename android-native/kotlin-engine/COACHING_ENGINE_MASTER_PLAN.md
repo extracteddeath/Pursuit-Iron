@@ -184,6 +184,17 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G4 repeated-set recovery review — 2026-11-08:** The exercise
+coach can examine three comparable, day-scoped workout appearances
+using the native journal's program/revision/day identity.
+Repeated decline at the same verified set loads and fully reported
+actual RIR is differentiated into broad and later-set-specific
+recovery review. Cross-day records, missing actual effort,
+unverified load inventories and unapproved per-set schemes
+cannot establish the trend. No automated load/deload or new
+set-target authority is conferred; this descriptive heuristic
+does not certify physiological prediction accuracy.
+
 **G3 over-ceiling progression safeguard — 2026-11-08:** target-RIR v2
 no longer clips observed above-ceiling reps into a nominally lower
 "progression". It asks for a load/range review and refuses to materialize

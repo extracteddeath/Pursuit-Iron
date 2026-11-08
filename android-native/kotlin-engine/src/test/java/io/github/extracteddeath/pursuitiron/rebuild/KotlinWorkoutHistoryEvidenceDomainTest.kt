@@ -85,6 +85,7 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         val chronologicalInput = checkNotNull(review.progressionWorkout)
         assertEquals("workout-1", chronologicalInput.workoutId)
         assertEquals("press", chronologicalInput.exerciseId)
+        assertEquals("program-1:8:0",chronologicalInput.trainingDayId)
         assertEquals(listOf(0, 1), chronologicalInput.observations.map { it.workingOrdinal })
         assertEquals(listOf(8, null), chronologicalInput.observations.map { it.actualReps })
         assertEquals(listOf(1, null), chronologicalInput.observations.map { it.actualRir })

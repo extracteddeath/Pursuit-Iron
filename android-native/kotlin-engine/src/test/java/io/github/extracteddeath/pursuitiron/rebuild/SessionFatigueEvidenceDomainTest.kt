@@ -21,6 +21,65 @@ class SessionFatigueEvidenceDomainTest {
     private fun inspect(sets:List<WorkingSetFact>,count:Int=sets.size)=
         SessionFatigueEvidenceDomain.inspect(reps,count,sets)
 
+    private val verified=VerifiedLoadStock.Totals(
+        LoadUnit.LB,LoadBasis.BARBELL_TOTAL,
+        listOf(BigDecimal(190),BigDecimal(195),BigDecimal(200)))
+    private fun recorded(
+        id:String,values:List<Int>,rir:List<Int?>=List(3){2},
+        loads:List<Int> = List(3){200},day:String="upper-a"
+    ):ProgressionWorkoutEvidence=ProgressionWorkoutEvidence(
+        id,"bench",LoadUnit.LB,reps,3,values.indices.map{i->
+            WorkingSetFact(i,SetOutcome.COMPLETED,BigDecimal(loads[i]),
+                values[i],rir[i],BigDecimal(loads[i]),2)
+        },trainingDayId=day)
+
+    @Test fun sameDayTrendDistinguishesLaterSetAndBroadDeclines() {
+        val a=recorded("a",listOf(8,8,8))
+        val b=recorded("b",listOf(8,7,7))
+        val c=recorded("c",listOf(8,6,6))
+        val late=checkNotNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,b,c),verified))
+        assertEquals(RepeatedSessionFatigueSignal.LATER_SET_DECLINE,late.signal)
+        assertEquals(setOf(1,2),late.decliningOrdinals)
+        assertEquals(listOf(8,6,6),late.effortAlignedRepsBySession.last())
+        assertFalse(late.mayChangeWorkout)
+        val broad=checkNotNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,recorded("b",listOf(7,7,7)),
+                recorded("c",listOf(6,6,6))),verified))
+        assertEquals(RepeatedSessionFatigueSignal.BROAD_DECLINE,broad.signal)
+        assertEquals(setOf(0,1,2),broad.decliningOrdinals)
+        val oneBad=checkNotNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,recorded("b",listOf(8,8,8)),c),verified))
+        assertEquals(RepeatedSessionFatigueSignal.NO_REPEATED_DECLINE,oneBad.signal)
+    }
+
+    @Test fun fatigueTrendCannotUseMissingRirOtherDaysOrChangedStock() {
+        val a=recorded("a",listOf(8,8,8))
+        val b=recorded("b",listOf(8,7,7))
+        val c=recorded("c",listOf(8,6,6))
+        assertNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,b,c),null))
+        assertNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,b,c.copy(trainingDayId="push-day")),verified))
+        assertNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,b,c.copy(trainingDayId=null)),verified))
+        assertNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,b,c.copy(observations=c.observations.mapIndexed{i,set->
+                if(i==1)set.copy(actualRir=null) else set})),verified))
+        assertNull(SessionFatigueEvidenceDomain.inspectRecent(
+            listOf(a,b,c.copy(observations=c.observations.mapIndexed{i,set->
+                if(i==2)set.copy(actualLoad=BigDecimal(195),
+                    issuedLoad=BigDecimal(195)) else set})),verified))
+        val mixed=listOf(
+            recorded("a",listOf(8,8,8),loads=listOf(200,195,190)),
+            recorded("b",listOf(8,7,7),loads=listOf(200,195,190)),
+            recorded("c",listOf(8,6,6),loads=listOf(200,195,190)))
+        assertNull(SessionFatigueEvidenceDomain.inspectRecent(mixed,verified))
+        assertEquals(RepeatedSessionFatigueSignal.LATER_SET_DECLINE,
+            SessionFatigueEvidenceDomain.inspectRecent(mixed,verified,
+                verifiedPerSetLoading=true)?.signal)
+    }
+
     @Test fun sameLoadDeclineRetainsEachRealSetWithoutInferringTargetRir() {
         val profile=inspect(session(listOf(8,7,6,5),rir=listOf(3,2,1,0)))
         assertEquals(FatiguePattern.REPS_DECLINING,profile.pattern)

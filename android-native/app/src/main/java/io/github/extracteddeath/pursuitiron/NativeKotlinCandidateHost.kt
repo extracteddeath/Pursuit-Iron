@@ -172,6 +172,35 @@ internal class NativeKotlinCandidateHost(context:Context) {
         coordinator,historyTransactions,historyStore,correctionStore,
         gymCoherentAuthority,revisionFence)
 
+    /**
+     * Read-only profile/settings summary for the CURRENT confirmed athlete.
+     * Unlike explicit-resume, this never activates or deactivates a profile.
+     * Source ownership and its reviewed setup are verified under the same
+     * owner transaction used for canonical workout/history reads.
+     */
+    fun reviewActiveAthleteSetup():NativeSavedSetupResume {
+        val identity=localAthlete.signedInIdentity()
+            ?:return NativeSavedSetupResume.Rejected(
+                "Confirm your saved athlete profile before opening Profile.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(identity.ownerKey) {
+                val source=(authoringSourceStore.read(identity.ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                val reviewed=source?.setup?.reviewed
+                if(source==null || source.ownerKey!=identity.ownerKey ||
+                    source.athleteId!=identity.athleteId ||
+                    source.setup.mayReviewProgramCandidate!=true ||
+                    reviewed?.athleteProfileId!=identity.athleteId)
+                    NativeSavedSetupResume.Rejected(
+                        "The current saved training profile could not be verified.")
+                else NativeSavedSetupResume.Ready(reviewed,source.revision)
+            }
+        }.getOrElse {
+            NativeSavedSetupResume.Rejected(
+                "The current saved training profile could not be read.")
+        }
+    }
+
     /** A displayed local ID is not a session nor access to gym/history. */
     fun savedAthleteIdForExplicitResume():String? =
         localAthlete.savedAthleteIdForExplicitResume()

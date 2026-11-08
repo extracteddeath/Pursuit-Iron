@@ -101,3 +101,14 @@ sets, and the custom logger groups reps/RIR side by side on the phone.
 Android workout and large-text layouts, then continue the Plan/Coach screen
 composition, functional parity and measured coaching improvements. Source
 checks do not establish physical-device acceptance.
+
+## Guided setup pass
+
+Normal first-run controls now use named choices rather than profile, gym,
+exercise and fixture IDs. Advanced ID input remains available. Balanced
+muscle priorities and using all eligible exercises are explicit choices,
+not hidden defaults; the exact Kotlin input and confirmation gates remain.
+Unit changes can be canceled without losing entered stock. After confirmed
+setup is durably verified, the first-program builder opens directly. Plan
+surfaces program approval beside the next-workout action, with the same
+current audit, source revision and explicit consent requirements.

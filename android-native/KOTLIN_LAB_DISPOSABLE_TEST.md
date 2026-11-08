@@ -87,3 +87,19 @@ data, and paints the selected theme behind system bars before insetting content.
 Verify fresh launch and cold restart, no equipment-failure banner before setup,
 and readable status/navigation bars. These changes do not alter the engine
 source tree or the recorded load-review comparisons.
+
+## Guided setup and first-program handoff
+
+This milestone replaces normal onboarding ID entry with named controls,
+an explicit balanced-training choice, named exclusions and facilities,
+device-time-zone selection and optional advanced sections. Changing units
+requires confirmation before existing entered weights can be cleared.
+Android Back returns to the previous setup step with entries preserved.
+After an explicitly confirmed setup is durably read back, the screen opens
+the first-program builder. Program approval is surfaced near the next-workout
+card and still requires the current full-cycle audit and saved source revision.
+
+Use the real Android UI to validate setup, finite gym inventory, a generated
+four-day program, approval, separate-history consent, issued set logging,
+Target/Last, recovery, Finish and saved History. These checks do not establish
+personalized forecasting superiority or physical-device acceptance.

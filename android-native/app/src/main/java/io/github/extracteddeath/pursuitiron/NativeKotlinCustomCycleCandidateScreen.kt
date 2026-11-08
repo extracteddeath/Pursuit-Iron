@@ -265,9 +265,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     style=MaterialTheme.typography.bodySmall)
                 val policyReady=state.coachingAudit?.status==
                     CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
-                    state.coachingAudit?.issues?.isEmpty()==true
+                    state.coachingAudit?.issues?.isEmpty()==true &&
+                    state.auditSourceRevision!=null &&
+                    state.auditSourceRevision==state.sourceRevision &&
+                    state.coachingAudit?.auditedCycleRevision==draft.revision
                 val signed=(state.signoff as? NativeCustomSignoffRead.Found)
                     ?.isCurrent==true
+                if(!signed)PursuitPrimaryAction("Review program approval",
+                    enabled=!busy&&policyReady) {confirmConsent=true}
                 OutlinedButton(
                     onClick=controller::findNextCycleSession,
                     enabled=!busy&&policyReady&&signed,
@@ -884,16 +889,6 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 }
                 Text("A full coach-authored dose policy and actual session-time evidence are required first. Consent is not authorization to start a workout.",
                     style = MaterialTheme.typography.bodySmall)
-                val ready = state.coachingAudit?.status ==
-                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
-                    state.coachingAudit?.issues?.isEmpty()==true &&
-                    state.auditSourceRevision != null &&
-                    state.coachingAudit?.auditedCycleRevision == draft.revision
-                Button(onClick = { confirmConsent=true },
-                    enabled = !busy && ready,
-                    modifier = Modifier.fillMaxWidth()) {
-                    Text("Review and sign this exact cycle")
-                }
                 if(state.signoff is NativeCustomSignoffRead.Found)
                     OutlinedButton(onClick = { controller.revokeAthleteConsent() },
                         enabled = !busy,

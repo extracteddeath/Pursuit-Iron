@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 import java.util.UUID
+import java.time.ZoneId
 
 private val kotlinWeekdayNames=listOf("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
 private val kotlinId=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")
@@ -111,8 +113,15 @@ private fun NativeSetupWeekdays(
     }
 }
 
-private fun displayEnum(value:Enum<*>):String =
-    value.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}
+private fun displayEnum(value:Enum<*>):String = when(value) {
+    is SessionTimeBucket -> "${value.minimumMinutes}"+
+        (value.preferredMaximumMinutes?.let{"–$it"}?:"+")+" min"
+    ComposerSplit.FULL_BODY -> "Full body"
+    ComposerSplit.UPPER_LOWER -> "Upper / Lower"
+    ComposerSplit.PUSH_PULL_LEGS -> "Push / Pull / Legs"
+    ComposerSplit.ULPPL -> "Upper / Lower / Push / Pull / Legs"
+    else -> value.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}
+}
 
 /**
  * Genuine candidate Kotlin onboarding. Every field needed for
@@ -173,6 +182,12 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var machineLoads by rememberSaveable {mutableStateOf("")}
     var gymConfirmed by rememberSaveable {mutableStateOf(false)}
     var showIdentity by rememberSaveable {mutableStateOf(false)}
+    var showSchedule by rememberSaveable {mutableStateOf(false)}
+    var showPriorities by rememberSaveable {mutableStateOf(false)}
+    var showExclusions by rememberSaveable {mutableStateOf(false)}
+    var showExtraEquipment by rememberSaveable {mutableStateOf(false)}
+    var pendingUnit by rememberSaveable {mutableStateOf<String?>(null)}
+    var buildAfterSave by remember {mutableStateOf(false)}
     var awaitingConfirmation by rememberSaveable {mutableStateOf(false)}
     var awaitingSavedResume by rememberSaveable {mutableStateOf(false)}
 
@@ -230,12 +245,31 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     )
     val review=NativeKotlinOnboardingInputDomain.review(input)
     val existing=sourceState.source
+    fun changeUnit(next:String) {
+        if(unit.isNotBlank() && unit!=next) {
+            dumbbells="";cable="";barWeight="";plates=""
+            machineId="";machineLoads=""
+        }
+        unit=next;gymConfirmed=false
+    }
+    LaunchedEffect(existing,sourceState.busy,sourceState.refusal,buildAfterSave) {
+        if(buildAfterSave && !sourceState.busy) {
+            if(existing!=null && sourceState.refusal==null) {
+                buildAfterSave=false
+                onBuildProgram()
+            } else if(sourceState.refusal!=null)buildAfterSave=false
+        }
+    }
+    BackHandler(enabled=sourceState.busy ||
+        (step>0 && pendingUnit==null && !awaitingConfirmation && !awaitingSavedResume)) {
+        if(!sourceState.busy)step=(step-1).coerceAtLeast(0)
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        PageHeading("KOTLIN COACH · CANDIDATE",
-            when(step) {0->"Your training";1->"Your actual gym";else->"Review and confirm"},
-            "Native onboarding · your choices, no auto-filled workouts")
+        PageHeading("GET STARTED",
+            when(step) {0->"Your training";1->"Your gym";else->"Review your setup"},
+            "Choose how you train. Your first program comes next.")
         if(sourceState.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         sourceState.message?.let {
             Text(it,style=MaterialTheme.typography.bodyMedium,
@@ -247,7 +281,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
             PursuitCard(highlighted=true) {
                 Text("Resume your saved training setup",
                     style=MaterialTheme.typography.titleLarge)
-                Text("This device has a previous Kotlin athlete. You can reopen the original verified profile and gym without re-entering every setting. Nothing is overwritten, and a corrupt or revoked setup is refused.",
+                Text("Continue with the profile and gym saved on this device.",
                     style=MaterialTheme.typography.bodySmall)
                 Button(
                     onClick={awaitingSavedResume=true},
@@ -278,9 +312,8 @@ internal fun NativeKotlinOnboardingCandidateScreen(
         }
         if(step==0) {
             PursuitCard {
-                Text("Training identity",style=MaterialTheme.typography.titleLarge)
-                Text("The private ID distinguishes saved native athletes. Reconfirm the saved local athlete after an app restart; no workouts or gym settings become readable until the complete setup is reviewed.",
-                    style=MaterialTheme.typography.bodySmall)
+                Text("Training preferences",style=MaterialTheme.typography.titleLarge)
+                if(showIdentity) {
                 sourceState.savedAthleteId?.takeIf { it != athleteId }?.let { prior ->
                     OutlinedButton(
                         onClick={ athleteId=prior;showIdentity=true },
@@ -290,10 +323,6 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     Text("This selects an identifier only. You must still review and explicitly confirm your native settings before it opens protected data.",
                         style=MaterialTheme.typography.bodySmall)
                 }
-                TextButton(onClick={showIdentity=!showIdentity}) {
-                    Text(if(showIdentity)"Hide IDs" else "Show / restore athlete ID")
-                }
-                if(showIdentity) {
                     OutlinedTextField(athleteId,{athleteId=it.take(63)},
                         label={Text("Local athlete ID")},
                         modifier=Modifier.fillMaxWidth())
@@ -322,12 +351,19 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     hardLimitMinutes,{hardLimitMinutes=it.take(3)},
                     label={Text("Maximum minutes")})
                 OutlinedTextField(timezone,{timezone=it.take(80)},
-                    label={Text("IANA time zone (e.g. America/New_York)")},
+                    label={Text("Time zone")},
                     modifier=Modifier.fillMaxWidth(),singleLine=true)
+                TextButton(onClick={timezone=ZoneId.systemDefault().id}) {
+                    Text("Use this device's time zone")
+                }
                 NativeSetupWeekdays("Your training days (3–6)",weekdays) {
                     weekdays=it
                     calendarConfirmed=false;restConfirmed=false
                 }
+                TextButton(onClick={showSchedule=!showSchedule}) {
+                    Text(if(showSchedule)"Hide schedule preferences" else "Optional schedule preferences")
+                }
+                if(showSchedule) {
                 NativeSetupWeekdays("Locked training days",lockDays) {
                     lockDays=it;calendarConfirmed=false
                 }
@@ -337,13 +373,23 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                 NativeSetupWeekdays("Long-session days",longDays) {
                     longDays=it;calendarConfirmed=false
                 }
-                Checkbox(checked=calendarConfirmed,onCheckedChange={calendarConfirmed=it})
-                Text("I reviewed these training days and preferences",
-                    style=MaterialTheme.typography.bodySmall)
-                Checkbox(checked=restConfirmed,onCheckedChange={restConfirmed=it})
-                Text("I confirm every unselected day is a rest day",
-                    style=MaterialTheme.typography.bodySmall)
+                }
+                val restNames=(0..6).filter{it !in selectedDays(weekdays)}
+                    .joinToString{ kotlinWeekdayNames[it] }
+                Text("Rest days: $restNames",style=MaterialTheme.typography.bodySmall)
+                NativeKotlinSetupConfirmation(
+                    "Use these training days and keep the other days for rest",
+                    calendarConfirmed && restConfirmed,{
+                        calendarConfirmed=it;restConfirmed=it
+                    },enabled=selectedDays(weekdays).size in 3..6)
                 Text("Muscle priorities",style=MaterialTheme.typography.titleMedium)
+                FilterChip(selected=musclesConfirmed && focusMask.isBlank() && reducedMask.isBlank(),
+                    onClick={focusMask="";reducedMask="";musclesConfirmed=true;showPriorities=false},
+                    label={Text("Balanced training")})
+                TextButton(onClick={showPriorities=!showPriorities}) {
+                    Text(if(showPriorities)"Hide muscle choices" else "Choose focus or reduced muscles")
+                }
+                if(showPriorities) {
                 muscles.forEach { muscle ->
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -367,84 +413,105 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                             },label={Text("Reduced")})
                     }
                 }
-                Checkbox(checked=musclesConfirmed,onCheckedChange={musclesConfirmed=it})
-                Text("I reviewed all muscle focus/reduction choices, including none",
-                    style=MaterialTheme.typography.bodySmall)
-                OutlinedTextField(excludedIds,{excludedIds=it.take(1000);
-                    excludedConfirmed=false},
-                    label={Text("Excluded exercise IDs (optional, comma separated)")},
-                    modifier=Modifier.fillMaxWidth())
-                Checkbox(checked=excludedConfirmed,onCheckedChange={excludedConfirmed=it})
-                Text("I confirmed excluded exercises, including none",
-                    style=MaterialTheme.typography.bodySmall)
+                NativeKotlinSetupConfirmation("Use these muscle priorities",musclesConfirmed,
+                    {musclesConfirmed=it})
+                }
+                if(focusMask.isNotBlank() || reducedMask.isNotBlank()) {
+                    Text("${maskMuscles(focusMask).orEmpty().size} focused · ${maskMuscles(reducedMask).orEmpty().size} reduced",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                Text("Exercise preferences",style=MaterialTheme.typography.titleMedium)
+                FilterChip(selected=excludedConfirmed && excludedIds.isBlank(),
+                    onClick={excludedIds="";excludedConfirmed=true;showExclusions=false},
+                    label={Text("Use all eligible exercises")})
+                TextButton(onClick={showExclusions=!showExclusions}) {
+                    Text(if(showExclusions)"Hide excluded exercises" else "Exclude exercises")
+                }
+                if(showExclusions) {
+                    NativeKotlinNamedSetupChoices("Exercises to leave out",excludedIds,
+                        StarterExerciseTranche.entries().map{
+                            it.legacyCuratedId to kotlinExerciseLabel(it.legacyCuratedId)
+                        },{excludedIds=it;excludedConfirmed=false},searchable=true)
+                    NativeKotlinSetupConfirmation("Use these exclusions",excludedConfirmed,
+                        {excludedConfirmed=it})
+                }
+                TextButton(onClick={showIdentity=!showIdentity}) {
+                    Text(if(showIdentity)"Hide profile details" else "Advanced profile details")
+                }
             }
         } else if(step==1) {
             PursuitCard {
-                Text("Gym permissions",style=MaterialTheme.typography.titleLarge)
-                OutlinedTextField(gymId,{gymId=it.take(63)},
-                    label={Text("Gym identity")},modifier=Modifier.fillMaxWidth())
+                Text("Training options",style=MaterialTheme.typography.titleLarge)
+                if(showIdentity)OutlinedTextField(gymId,{gymId=it.take(63)},
+                    label={Text("Gym ID")},modifier=Modifier.fillMaxWidth())
                 NativeSetupChoice("Weight units",LoadUnit.entries,
-                    chosenUnit,::displayEnum){
+                    chosenUnit,{it.name.lowercase()}){
                     // Switching units always clears the ENTIRE provisional
                     // inventory; these numbers must never be converted.
                     if(unit!=it.name) {
-                        unit=it.name
-                        dumbbells="";cable="";barWeight="";plates=""
-                        machineId="";machineLoads="";gymConfirmed=false
+                        if(unit.isNotBlank() && listOf(dumbbells,cable,barWeight,plates,machineLoads)
+                                .any{raw->raw.isNotBlank()})pendingUnit=it.name
+                        else changeUnit(it.name)
                     }
                 }
                 NativeSetupChoice("Allow bodyweight exercises",listOf("YES","NO"),
-                    bodyweight.takeIf{it.isNotBlank()},{it}){
+                    bodyweight.takeIf{it.isNotBlank()},{if(it=="YES")"Allow" else "Don't allow"}){
                     bodyweight=it
                 }
                 NativeSetupChoice("Allow supersets",listOf("YES","NO"),
-                    supersets.takeIf{it.isNotBlank()},{it}){supersets=it}
+                    supersets.takeIf{it.isNotBlank()},{if(it=="YES")"Allow" else "Don't allow"}){supersets=it}
                 NativeSetupChoice("Triceps on lower days",listOf("YES","NO"),
-                    tricepsLower.takeIf{it.isNotBlank()},{it}){tricepsLower=it}
+                    tricepsLower.takeIf{it.isNotBlank()},{if(it=="YES")"Allow" else "Don't allow"}){tricepsLower=it}
                 OutlinedTextField(barbellLimit,{barbellLimit=it.take(2)},
                     label={Text("Maximum barbell exercises per day (0–12)")},
                     modifier=Modifier.fillMaxWidth())
-                Text("Only list physically verified equipment. You can add more individual machines and attachments later in the native gym editor. Unknown is NOT zero or a default stack.",
-                    style=MaterialTheme.typography.bodyMedium)
+            }
+            PursuitCard {
+                Text("Available weights",style=MaterialTheme.typography.titleLarge)
+                Text("Enter the weights your gym actually has. You'll choose your starting workout weights next.",
+                    style=MaterialTheme.typography.bodySmall)
                 OutlinedTextField(dumbbells,{dumbbells=it.take(900);
                     gymConfirmed=false},
-                    label={Text("Dumbbells per hand · exact " + unit.ifBlank { "selected unit" } + " values")},
-                    placeholder={Text("Only your real values, comma-separated")},
-                    modifier=Modifier.fillMaxWidth())
-                OutlinedTextField(cable,{cable=it.take(100);gymConfirmed=false},
-                    label={Text("Cable 1 · min, increment, max")},
+                    label={Text("Available dumbbells · per hand")},
+                    supportingText={Text("Exact ${unit.lowercase().ifBlank{"weight"}} values, separated by commas")},
                     modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(barWeight,{barWeight=it.take(30);gymConfirmed=false},
-                    label={Text("Barbell empty bar weight")})
+                    label={Text("Empty barbell weight")},modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(plates,{plates=it.take(500);gymConfirmed=false},
-                    label={Text("Confirmed plate pairs, e.g. 2.5x2, 5x1")})
+                    label={Text("Available plate pairs")},
+                    supportingText={Text("Weight × matching pairs, e.g. 2.5x2, 5x1")},
+                    modifier=Modifier.fillMaxWidth())
+                NativeKotlinNamedSetupChoices("Benches and stations",fixtures,
+                    kotlinSetupFacilities,{fixtures=it;gymConfirmed=false})
+                TextButton(onClick={showExtraEquipment=!showExtraEquipment}) {
+                    Text(if(showExtraEquipment)"Hide additional equipment" else "Additional equipment")
+                }
+                if(showExtraEquipment) {
+                OutlinedTextField(cable,{cable=it.take(100);gymConfirmed=false},
+                    label={Text("Cable stack · min, increment, max")},
+                    modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(machineId,{machineId=it.take(63);gymConfirmed=false},
                     label={Text("Optional machine's stable equipment ID")})
                 OutlinedTextField(machineLoads,{machineLoads=it.take(900);
                     gymConfirmed=false},
                     label={Text("That machine's exact logged selectable loads")})
-                OutlinedTextField(fixtures,{fixtures=it.take(1000);
-                    gymConfirmed=false},
-                    label={Text("Confirmed facilities, comma-separated")},
-                    supportingText={Text("e.g. flat-bench, rack, incline-bench, pullup-bar")},
-                    modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(attachments,{attachments=it.take(1000);
                     gymConfirmed=false},
                     label={Text("Confirmed attachments, comma-separated")},
                     modifier=Modifier.fillMaxWidth())
+                }
                 if(chosenUnit!=null && gymInventory==null) Text(
                     "Please correct inventory format. A partial bar/plate pair or invalid weight cannot be saved.",
                     color=MaterialTheme.colorScheme.error)
-                Checkbox(checked=gymConfirmed,onCheckedChange={gymConfirmed=it &&
-                    gymInventory!=null && confirmedFacilities!=null &&
-                    confirmedAttachments!=null})
-                Text("I checked these physical gym facts, including any explicitly empty inventory",
-                    style=MaterialTheme.typography.bodySmall)
+                NativeKotlinSetupConfirmation("I checked this equipment and these available weights",
+                    gymConfirmed,{gymConfirmed=it},
+                    enabled=chosenUnit!=null && gymInventory!=null &&
+                        confirmedFacilities!=null && confirmedAttachments!=null)
             }
         } else {
             PursuitCard(highlighted=true) {
-                Text("Kotlin setup review",style=MaterialTheme.typography.titleLarge)
-                Text("Status: ${displayEnum(review.status)}",
+                Text("Your setup",style=MaterialTheme.typography.titleLarge)
+                Text(if(review.issues.isEmpty())"Ready to save" else "A few choices need attention",
                     style=MaterialTheme.typography.titleMedium)
                 if(review.issues.isNotEmpty()) {
                     Text("${review.issues.size} fields need attention before saving",
@@ -457,15 +524,18 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     }
                     if(review.issues.size>25)Text("Additional issues remain. Complete the displayed fields and review again.")
                 } else {
-                    Text("Your exact choices passed the independent Kotlin setup review. This does NOT approve a program or issue a workout.")
-                    Text("Training: ${review.reviewed?.trainingWeekdays?.sorted()?.joinToString()} · " +
-                        "Gym: ${review.reviewed?.gym?.confirmedStock?.size} confirmed implements",
-                        style=MaterialTheme.typography.bodyMedium)
-                    Text("The first 20 catalog variants are engineering-reviewed provisional metadata, not independent scientific validation. No weights or training prescriptions are assigned from the catalog.")
+                    review.reviewed?.let {saved->
+                        Text("${displayEnum(saved.goal)} · ${displayEnum(saved.experience)}")
+                        Text("${displayEnum(saved.split)} · ${displayEnum(saved.sessionTimeBucket)}")
+                        Text("Training: "+saved.trainingWeekdays.sorted().joinToString{ kotlinWeekdayNames[it] })
+                        Text("Rest: "+saved.declaredRestDays.sorted().joinToString{ kotlinWeekdayNames[it] })
+                        Text("${saved.gym.confirmedStock.size} verified weight inventories · ${saved.gym.unit.name.lowercase()}")
+                    }
+                    Text("Save these choices, then review your exercises and starting weights.")
                     Button(onClick={awaitingConfirmation=true},
                         enabled=!sourceState.busy && existing==null,
                         modifier=Modifier.fillMaxWidth()) {
-                        Text("Review native enrollment")
+                        Text("Save setup and build my program")
                     }
                 }
             }
@@ -481,10 +551,18 @@ internal fun NativeKotlinOnboardingCandidateScreen(
             }
         }
     }
+    if(pendingUnit!=null)AlertDialog(
+        onDismissRequest={pendingUnit=null},
+        title={Text("Change weight units?")},
+        text={Text("Changing units clears the entered weights so they cannot be reused under a different unit. Your other choices stay saved in this form.")},
+        confirmButton={Button(onClick={
+            pendingUnit?.let(::changeUnit);pendingUnit=null
+        }){Text("Change units and clear weights")}},
+        dismissButton={TextButton(onClick={pendingUnit=null}){Text("Keep my weights")}})
     if(awaitingSavedResume)AlertDialog(
         onDismissRequest={if(!sourceState.busy)awaitingSavedResume=false},
-        title={Text("Resume the existing Kotlin athlete?")},
-        text={Text("The app will verify the original local identity and revalidate the saved training setup and physical gym. It will not create a new athlete, change the program, or issue a workout.")},
+        title={Text("Resume your saved setup?")},
+        text={Text("Reopen the profile and gym saved on this device to continue your training.")},
         confirmButton={Button(
             enabled=!sourceState.busy && sourceState.savedAthleteId!=null,
             onClick={
@@ -498,14 +576,15 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     )
     if(awaitingConfirmation)AlertDialog(
         onDismissRequest={if(!sourceState.busy)awaitingConfirmation=false},
-        title={Text("Confirm your native athlete setup?")},
-        text={Text("Create a device-local Kotlin athlete and its reviewed gym/catalog source. Your selected equipment and schedule will be stored exactly as reviewed. This does not edit the web app, approve a training program, or replace another athlete's saved data.")},
+        title={Text("Save your training setup?")},
+        text={Text("Save your reviewed preferences, schedule and gym on this device, then choose the starting weights for your first program.")},
         confirmButton={Button(onClick={
             awaitingConfirmation=false
+            buildAfterSave=true
             controller.activateReviewedStarter(input.toDraft())
         },enabled=!sourceState.busy &&
             review.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
-            existing==null) {Text("Confirm and save")}},
+            existing==null) {Text("Save setup")}},
         dismissButton={TextButton(onClick={awaitingConfirmation=false}) {
             Text("Cancel")
         }}

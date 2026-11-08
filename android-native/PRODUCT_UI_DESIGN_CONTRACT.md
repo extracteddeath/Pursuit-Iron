@@ -8,7 +8,7 @@ disposable APK milestones in routine design commits.
 
 ## Design direction / Material baseline
 
-- Modern Material 3 Expressive with shipped Compose `material3:1.5.0-beta02`;
+- Modern Material 3 Expressive with pinned Compose `material3:1.5.0-rc01`;
   prefer stable, accessible public APIs. Re-evaluate current official release
   notes before a final version pin and regression run, not after every commit.
 - Preserve all original Pursuit Iron color schemes. First install **Amethyst**,

@@ -349,13 +349,17 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     null -> {}
                 }
             }
-            NativeKotlinCustomCycleCalibrationPanel(
-                controller,state,onOpenIssuedWorkout)
+            // The full plan is a primary Plan action, not buried beneath
+            // coaching/calibration. Keep its actual saved exercise outline
+            // visible before optional training-change proposals.
             OutlinedButton(onClick={showProgramEditor=!showProgramEditor},
                 enabled=!busy,modifier=Modifier.fillMaxWidth()) {
-                Text(if(showProgramEditor)"Close full program" else "Open full program")
+                Text(if(showProgramEditor)"Close full program editor"
+                    else "Open full program editor")
             }
             NativeKotlinCustomCycleOverview(draft,currentSelection)
+            NativeKotlinCustomCycleCalibrationPanel(
+                controller,state,onOpenIssuedWorkout)
             // Incomplete custom programs keep their existing editor and policy
             // controls visible. Reviewed programs open them only on request.
             if(showProgramEditor) {

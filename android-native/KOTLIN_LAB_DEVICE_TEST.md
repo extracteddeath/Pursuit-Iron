@@ -54,8 +54,13 @@ build until full backup/recovery acceptance.
 This new one-time build tests **UI and flow improvements**, not a changed
 training algorithm or a production release. It keeps the same isolated
 `.kotlinlab` Android package and a larger Gradle-provided build number, so
-the first Kotlin Lab test APK can be upgraded in place without replacing the
-other developer's preview.
+the other developer's preview is not replaced. GitHub runners generate
+different debug signing certificates for each one-off build, so v2 CANNOT be
+installed as an in-place update over v1 even though the application ID matches.
+Uninstalling v1 removes its app-private test data. Preserve any needed data
+before uninstalling, or keep v1 installed until a migration/export path is
+available. A stable private development-signing setup is required for safe
+future in-place upgrades.
 
 - Debug Kotlin Lab is the ONLY launcher activity; the original MainActivity
   launcher remains available to the non-debug/release variant.

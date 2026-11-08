@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
+import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,9 +52,18 @@ internal fun NativeKotlinCandidateJourney() {
         mutableStateOf<String?>(null)
     }
     val savedScreens=rememberSaveableStateHolder()
+    var pendingFirstProgramAudit by remember {
+        mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
+    }
     LaunchedEffect(destination) {
-        if(destination==KotlinCandidateDestination.PROGRAM)
-            cycleController.refresh()
+        if(destination==KotlinCandidateDestination.PROGRAM) {
+            val handoff=pendingFirstProgramAudit
+            pendingFirstProgramAudit=null
+            if(handoff!=null)
+                cycleController.openSavedFirstProgramForReview(
+                    handoff.first,handoff.second)
+            else cycleController.refresh()
+        }
     }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(0.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp)
@@ -75,7 +85,12 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.STARTER ->
-                        NativeKotlinFirstProgramCandidateScreen(starterController)
+                        NativeKotlinFirstProgramCandidateScreen(
+                            starterController,
+                            onOpenSavedProgram={cycleId,reviewInputs->
+                                pendingFirstProgramAudit=cycleId to reviewInputs
+                                destination=KotlinCandidateDestination.PROGRAM
+                            })
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController,
                             onOpenIssuedWorkout={id->

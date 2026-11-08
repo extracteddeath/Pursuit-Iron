@@ -147,6 +147,71 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
     }
 
 
+    private fun independentEnrollment(
+        confirmed:Boolean=true, separate:Boolean=true
+    ):NativeHistoryEnrollmentResult {
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(
+                ownerKey:String,workoutId:String
+            ):NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(
+                ownerKey:String,source:KotlinTrainingSourceRevision
+            ):Boolean=false
+        }
+        return NativeKotlinHistoryEnrollmentCoordinator(
+            composerJournal,KotlinNativeSavedCorrectionFileStore(
+                temp.root.toPath(),composerJournal),
+            history,fence,authority
+        ).enrollSeparateLocalHistory(
+            "owner-1","athlete-1",confirmed,
+            authenticateOwner={o,a->
+                current==NativeKotlinOwnerIdentity(o,a)
+            },
+            verifyIndependentLocalOwner={o,a->
+                separate && current==NativeKotlinOwnerIdentity(o,a)
+            },
+            customInventory=NativeKotlinCustomOutstandingWorkoutInventory(
+                prepared,issued))
+    }
+
+    @Test fun freshSeparateNativeProfileRequiresExplicitConsentAndOwnerProof() {
+        val denied=independentEnrollment(confirmed=false)
+        assertEquals(NativeHistoryEnrollmentResult.Rejected(
+            NativeHistoryEnrollmentRefusal.SEPARATE_HISTORY_NOT_CONFIRMED),
+            denied)
+        assertEquals(NativeHistoryLedgerResult.Rejected(
+            NativeHistoryLedgerRefusal.NOT_ENROLLED),
+            history.open("owner-1","athlete-1"))
+        assertEquals(NativeHistoryEnrollmentResult.Rejected(
+            NativeHistoryEnrollmentRefusal.SEPARATE_NATIVE_OWNER_UNVERIFIED),
+            independentEnrollment(separate=false))
+        val accepted=independentEnrollment() as NativeHistoryEnrollmentResult.Enrolled
+        assertEquals(0,accepted.issuedWorkoutCount)
+        assertEquals(0,accepted.manifest.completions.size)
+        assertEquals(1L,accepted.manifest.revision)
+        assertTrue((independentEnrollment()
+            as NativeHistoryEnrollmentResult.Enrolled).replayed)
+    }
+
+    @Test fun unissuedPreparedCustomWorkoutBlocksNewEmptyIndependentHistory() {
+        initialize();approve();prepareWeek()
+        assertEquals(NativeHistoryEnrollmentResult.Rejected(
+            NativeHistoryEnrollmentRefusal.EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION),
+            independentEnrollment())
+        assertEquals(NativeHistoryLedgerResult.Rejected(
+            NativeHistoryLedgerRefusal.NOT_ENROLLED),
+            history.open("owner-1","athlete-1"))
+    }
+
+    @Test fun separateHistoryUsesExistingWorkoutIssueAndFinishAuthorities() {
+        initialize();approve();prepareWeek()
+        assertEquals(NativeHistoryEnrollmentResult.Rejected(
+            NativeHistoryEnrollmentRefusal.EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION),
+            independentEnrollment())
+        // The real user must enroll BEFORE preparing a workout. Attempting to
+        // reset from a partial program cannot force an empty history manifest.
+    }
+
     @Test fun preparationAndConsentAloneNeverIssueUntilHistoryIsEnrolled() {
         initialize();approve();prepareWeek()
         assertEquals(NativeCustomJournalResult.Rejected(

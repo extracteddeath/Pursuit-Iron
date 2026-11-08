@@ -53,4 +53,43 @@ class CoachFirstProgramDraftConversionDomainTest {
                 source.setup,source.catalog,"my-first-cycle",
                 "My first cycle",4).status)
     }
+    @Test fun generatedAuditInputsReachFullCycleReviewWithoutReenteringTechnicalPolicy() {
+        val candidate=reviewed()
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        val inputs=CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(candidate,source.setup)
+        assertNotNull(inputs)
+        assertEquals(source.policy,inputs?.policiesByPhase?.get(TrainingPhase.HYPERTROPHY))
+        assertEquals(mapOf(0 to 2100,2 to 2100,4 to 2100),
+            inputs?.nonSetSecondsByWeekday)
+        val proposal=CoachFirstProgramDraftConversionDomain.propose(
+            candidate,source.setup,source.catalog,"first-review",
+            "My first program",4)
+        assertEquals(FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,proposal.status)
+        val audit=CustomCycleCoachAuditDomain.review(
+            checkNotNull(proposal.cycle),source.setup,source.catalog,
+            checkNotNull(inputs))
+        assertEquals(audit.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        assertTrue(audit.issues.isEmpty())
+        assertEquals(4,audit.weeks.size)
+        assertFalse(proposal.mayApproveProgram)
+        assertFalse(proposal.mayIssueWorkout)
+    }
+
+    @Test fun changedOrMissingGeneratedPolicyDoesNotTransferToApprovalAudit() {
+        val candidate=reviewed()
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        assertNull(CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(
+                candidate.copy(status=FirstProgramStartStatus.DRAFT_NEEDS_REVIEW),
+                source.setup))
+        assertNull(CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(
+                candidate.copy(policy=null),source.setup))
+        assertNull(CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(
+                candidate,source.setup.copy(reviewed=null)))
+    }
+
 }

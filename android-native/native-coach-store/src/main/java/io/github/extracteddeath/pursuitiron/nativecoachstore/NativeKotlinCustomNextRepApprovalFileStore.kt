@@ -44,7 +44,10 @@ enum class NativeCustomNextRepRefusal {
 sealed interface NativeCustomNextRepPreview {
     data class Ready(
         val receipt:NativeCustomNextRepReceipt,
-        val amendment:CustomNextRepAmendment
+        val amendment:CustomNextRepAmendment,
+        /** Ephemeral authenticated evidence for the review screen, NEVER
+         * part of the signed receipt or permission to issue a workout. */
+        val coaching:CustomNextWorkoutCoachingReview?=null
     ):NativeCustomNextRepPreview
     data class Rejected(val reason:NativeCustomNextRepRefusal):
         NativeCustomNextRepPreview
@@ -289,7 +292,8 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             hash(signature.toByteArray()),amended.amendment.originalSetKeys,
             amended.amendment.nextMinimumReps,readiness,restricted,maxIncrease,
             repForecastPolicy)
-        return NativeCustomNextRepPreview.Ready(receipt,amended.amendment)
+        return NativeCustomNextRepPreview.Ready(
+            receipt,amended.amendment,review.review)
     }
 
     fun preview(

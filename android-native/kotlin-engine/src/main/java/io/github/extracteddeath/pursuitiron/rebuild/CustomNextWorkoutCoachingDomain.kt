@@ -88,7 +88,8 @@ object CustomNextWorkoutCoachingDomain {
 
     private fun matchingReceipts(
         records:List<CustomHistoricalVisitFact>,
-        authored:List<CustomWorkoutSetSnapshot>
+        authored:List<CustomWorkoutSetSnapshot>,
+        type:DraftSetType=DraftSetType.WORKING
     ):Boolean {
         if(records.size!=authored.size ||
             records.map{it.setKey}.toSet()!=authored.map{it.setKey}.toSet())
@@ -99,7 +100,7 @@ object CustomNextWorkoutCoachingDomain {
             val prescribed=set.prescription
             fact.slotId==set.slotId &&
                 fact.part==CustomWorkoutVisitPart.MAIN &&
-                fact.setType==DraftSetType.WORKING &&
+                fact.setType==type &&
                 fact.prescribedLoad==prescribed.load &&
                 fact.prescribedReps==prescribed.reps &&
                 fact.prescribedRir==prescribed.targetRir &&
@@ -108,6 +109,36 @@ object CustomNextWorkoutCoachingDomain {
                 CustomWorkoutJournalDomain.actualValid(
                     prescribed.load,fact.outcome,fact.actual)
         }
+    }
+
+    private fun sameWarmups(
+        previous:CustomWorkoutSlotSnapshot,
+        next:CustomWorkoutSlotSnapshot
+    ):Boolean {
+        val old=previous.sets.filter{it.prescription.type==DraftSetType.WARMUP}
+        val current=next.sets.filter{it.prescription.type==DraftSetType.WARMUP}
+        return old.size==current.size &&
+            old.zip(current).all { (before,after)->
+                before.slotId==after.slotId &&
+                    before.ordinalInSlot==after.ordinalInSlot &&
+                    before.prescription==after.prescription
+            }
+    }
+
+    private fun authenticWarmups(
+        history:CustomCoachingHistoricalSession,
+        slot:CustomWorkoutSlotSnapshot
+    ):Boolean {
+        val authored=slot.sets.filter{
+            it.prescription.type==DraftSetType.WARMUP
+        }
+        val facts=history.evidence.visits.filter{
+            it.slotId==slot.slotId &&
+                it.part==CustomWorkoutVisitPart.MAIN &&
+                it.setType==DraftSetType.WARMUP
+        }
+        return matchingReceipts(facts,authored,DraftSetType.WARMUP) &&
+            facts.all{it.exerciseId==slot.exerciseId}
     }
 
     fun review(request:CustomNextWorkoutCoachingRequest):CustomNextWorkoutCoachingReview {
@@ -220,6 +251,21 @@ object CustomNextWorkoutCoachingDomain {
                 ids,latest.evidence.workoutId,
                 explanation="Sets, rep ranges, loads or amplifier changed. Do not reuse old progression.")
 
+        // V2 treats warmups as authenticated context, not as working-set
+        // performance. An absent/edited warmup or a changed warmup policy
+        // cannot silently become evidence of more rep capacity. V1 receipts
+        // retain their original comparison policy for exact replay.
+        if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2) {
+            if(!sameWarmups(oldSlot,target))
+                return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+                    ids,latest.evidence.workoutId,
+                    explanation="The warmup prescription changed since the last session.")
+            if(!authenticWarmups(latest,oldSlot))
+                return result(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+                    ids,latest.evidence.workoutId,
+                    explanation="The latest warmups do not match their issued saved workout.")
+        }
+
         val facts=latest.evidence.visits.filter {
             it.slotId==target.slotId &&
                 it.part==CustomWorkoutVisitPart.MAIN &&
@@ -317,7 +363,11 @@ object CustomNextWorkoutCoachingDomain {
             val previousSets=previousSlot?.sets?.filter{
                 it.prescription.type==DraftSetType.WORKING
             }.orEmpty()
-            val sameSets=previousSets.size==nextSets.size &&
+            val matchingPriorWarmups=
+                request.repForecastPolicy!=CustomRepForecastPolicy.TARGET_RIR_V2 ||
+                    (previousSlot!=null && sameWarmups(previousSlot,target))
+            val sameSets=matchingPriorWarmups &&
+                previousSets.size==nextSets.size &&
                 previousSets.zip(nextSets).all{
                     it.first.prescription.copy(
                         reps=it.second.prescription.reps)==
@@ -337,7 +387,9 @@ object CustomNextWorkoutCoachingDomain {
                 }
                 val straight=nextSets.mapNotNull{it.prescription.load as? DraftSetLoad.Verified}
                 val bands=nextSets.map{it.prescription.reps}.distinct()
-                if(!matchingReceipts(priorFacts,previousSets))
+                if((request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2 &&
+                        !authenticWarmups(previous,checkNotNull(previousSlot))) ||
+                    !matchingReceipts(priorFacts,previousSets))
                     return result(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
                         ids,latest.evidence.workoutId,
                         explanation="The earlier completed day no longer matches its immutable logged working-set prescription.")

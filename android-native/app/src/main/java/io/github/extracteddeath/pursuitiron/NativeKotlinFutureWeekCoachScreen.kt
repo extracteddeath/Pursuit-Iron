@@ -305,19 +305,32 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     }) {Text(if(busy)"Reviewing reps…" else "Review next-session reps")}
                 repPreview?.let {preview->
                     HorizontalDivider()
-                    Text("Personalized rep review",
+                    Text("Next-session rep review",
                         style=MaterialTheme.typography.titleLarge)
-                    Text("Estimated from reported RIR. This is a suggestion, not a prediction of actual fatigue; stop at the intended effort.",
-                        style=MaterialTheme.typography.bodySmall)
+                    val review=preview.coaching
                     val original=session?.slots?.singleOrNull {
                         it.slotId==slotId
                     }?.sets?.filter {it.prescription.type==DraftSetType.WORKING}.orEmpty()
                     preview.receipt.nextMinimumReps.forEachIndexed {index,nextMinimum->
-                        val old=original.getOrNull(index)?.prescription?.reps?.minimum
-                        Text("Set "+(index+1)+": "+(old?:"?")+
-                            " → "+nextMinimum+" minimum reps",
+                        val authored=original.getOrNull(index)?.prescription
+                        val observed=review?.nextSetSuggestions?.getOrNull(index)
+                        val effort=when(observed?.effortSource) {
+                            ProgressionEffortSource.REPORTED ->
+                                "reported ${observed?.actualRir} RIR"
+                            ProgressionEffortSource.ASSUMED_GOAL ->
+                                "RIR unreported; assumed goal ${observed?.progressionRir}"
+                            else -> "effort not available"
+                        }
+                        Text("Set ${index+1}: last ${observed?.observedReps ?: "?"} reps · ${effort}",
                             style=MaterialTheme.typography.bodyMedium)
+                        Text("Next: ${authored?.reps?.minimum ?: "?"}–${authored?.reps?.maximum ?: "?"} → ${nextMinimum}–${authored?.reps?.maximum ?: "?"} reps · goal ${authored?.targetRir ?: "?"} RIR",
+                            style=MaterialTheme.typography.bodySmall)
                     }
+                    Text("These are proposed minimums, not required repetitions. Stop at the intended effort.",
+                        style=MaterialTheme.typography.bodySmall)
+                    if(review?.forecastLimitations?.isNotEmpty()==true)
+                        Text("Actual rest, accumulated fatigue and harder earlier sets can change later-set capacity.",
+                            style=MaterialTheme.typography.bodySmall)
                     Button(enabled=!busy&&repAccepted==null,
                         onClick={confirmRepAcceptance=true}) {
                         Text("Review and accept these reps")

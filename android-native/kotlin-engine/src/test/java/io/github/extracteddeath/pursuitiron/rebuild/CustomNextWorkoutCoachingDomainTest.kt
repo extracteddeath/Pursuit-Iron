@@ -55,6 +55,44 @@ class CustomNextWorkoutCoachingDomainTest {
                 "workout-${week}-${day}","cycle",3,
                 "finish-${week}-${day}",3,visits))
     }
+    private fun addWarmup(
+        original:CustomCoachingHistoricalSession,
+        weight:Int=195,
+        includeReceipt:Boolean=true
+    ):CustomCoachingHistoricalSession {
+        val slot=original.snapshot.slots.single()
+        val before=CustomWorkoutSetSnapshot(
+            "cycle:w${original.snapshot.absoluteWeek}:d${original.snapshot.weekday}:main:w1",
+            slot.slotId,0,
+            CustomAuthoredSet(DraftSetType.WARMUP,load(weight),
+                RepBand(8,8),null,60,60))
+        val updated=original.snapshot.copy(slots=listOf(
+            slot.copy(sets=listOf(before)+slot.sets)))
+        val warmupFact=CustomHistoricalVisitFact(slot.slotId,slot.exerciseId,
+            before.setKey,CustomWorkoutVisitPart.MAIN,DraftSetType.WARMUP,
+            before.prescription.load,before.prescription.reps,
+            before.prescription.targetRir,null,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n(weight),LoadUnit.LB,8,null),
+            "warmup-${original.snapshot.absoluteWeek}")
+        return original.copy(snapshot=updated,
+            evidence=original.evidence.copy(
+                visits=(if(includeReceipt)listOf(warmupFact) else emptyList())+
+                    original.evidence.visits))
+    }
+
+    private fun addWarmup(
+        original:CustomWorkoutDaySnapshot,weight:Int=195
+    ):CustomWorkoutDaySnapshot {
+        val slot=original.slots.single()
+        val before=CustomWorkoutSetSnapshot(
+            "cycle:w${original.absoluteWeek}:d${original.weekday}:main:w1",
+            slot.slotId,0,
+            CustomAuthoredSet(DraftSetType.WARMUP,load(weight),
+                RepBand(8,8),null,60,60))
+        return original.copy(slots=listOf(slot.copy(sets=listOf(before)+slot.sets)))
+    }
+
     private fun stock()=VerifiedLoadStock.Totals(
         LoadUnit.LB,LoadBasis.MACHINE_STACK,
         listOf(n(195),n(200),n(205),n(210),n(215)))
@@ -405,6 +443,73 @@ class CustomNextWorkoutCoachingDomainTest {
     }
 
 
+
+    @Test fun verifiedCustomWarmupsSupportV2WithoutEarningWorkingReps() {
+        val older=addWarmup(completed(1,3,reps=listOf(8,8)))
+        val latest=addWarmup(completed(2,4,reps=listOf(5,6),
+            rirs=listOf(5,4)))
+        val next=addWarmup(snapshot(5))
+        val result=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(next,"main",listOf(older,latest),
+                stock(),n(5),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,result.status)
+        assertEquals(listOf(8,8),result.nextSetSuggestions.map{it.proposedNextReps})
+        assertEquals(2,result.nextSetSuggestions.size)
+        assertNull(result.loadReviewCandidate)
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_V2,result.repForecastPolicy)
+    }
+
+    @Test fun V2CannotBorrowChangedOrMissingCustomWarmupHistory() {
+        val older=addWarmup(completed(1,3,reps=listOf(8,8)))
+        val latest=addWarmup(completed(2,4,reps=listOf(5,6),
+            rirs=listOf(5,4)))
+        val next=addWarmup(snapshot(5))
+        fun check(history:List<CustomCoachingHistoricalSession>,
+            target:CustomWorkoutDaySnapshot=next
+        )=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(target,"main",history,stock(),
+                n(5),CoachReadiness.NORMAL,false,
+                CustomRepForecastPolicy.TARGET_RIR_V2))
+        val noReceipt=addWarmup(completed(2,4,reps=listOf(5,6),
+            rirs=listOf(5,4)),includeReceipt=false)
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            check(listOf(older,noReceipt)).status)
+        val changedIssued=latest.copy(evidence=latest.evidence.copy(
+            visits=latest.evidence.visits.map{fact->
+                if(fact.setType==DraftSetType.WARMUP)
+                    fact.copy(prescribedLoad=load(200)) else fact
+            }))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            check(listOf(older,changedIssued)).status)
+        assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+            check(listOf(older,latest),addWarmup(snapshot(5),200)).status)
+        // A V1 comparison retains its original historical semantics.
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            review(next=next,sessions=listOf(older,noReceipt)).status)
+    }
+
+    @Test fun V2LoadReviewNeedsBothAuthenticatedWarmupWorkouts() {
+        val older=addWarmup(completed(1,3))
+        val latest=addWarmup(completed(2,4))
+        val next=addWarmup(snapshot(5))
+        fun check(sessions:List<CustomCoachingHistoricalSession>)=
+            CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(next,"main",sessions,
+                    stock(),n(5),CoachReadiness.NORMAL,false,
+                    CustomRepForecastPolicy.TARGET_RIR_V2))
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            check(listOf(older,latest)).status)
+        assertEquals(n(205),check(listOf(older,latest)).loadReviewCandidate)
+        val corruptedOlder=older.copy(evidence=older.evidence.copy(
+            visits=older.evidence.visits.filter{
+                it.setType!=DraftSetType.WARMUP
+            }))
+        val rejected=check(listOf(corruptedOlder,latest))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            rejected.status)
+        assertNull(rejected.loadReviewCandidate)
+    }
 
     private fun blockEntry(
         week:Int=5,day:Int=0

@@ -41,3 +41,18 @@ selected Lime theme remains available but is NEVER the implicit default.
 Like previous trials, this is a new per-run package signed with a disposable
 debug certificate. It does **not** update Trial 2 or share local training data,
 and its debug AAB is **not** a Play Store release artifact.
+
+## Trial 4 — first-install Amethyst build after theme contract alignment
+
+Trial 3 was refused before packaging because an older onboarding source test
+still demanded the web app's original Lime DEFAULT_ID. The UI and palette
+were correct; the test was updated to deliberately require the new native
+Amethyst DEFAULT_ID while retaining exact original web palette data and
+explicitly selected Lime. The Kotlin source workflow now executes BOTH
+the original 20-palette parity test and onboarding appearance contract.
+
+This follow-up packages the corrected native UI at commit
+`9b4836d68519cb5367eeae311100c30fb86d8ae8` plus this one-off marker.
+Verify fresh-install Amethyst, selectable themes, saved preference on reopen,
+and stable/production app isolation. The artifact is disposable, with its
+own run-number package identity and debug-only certificate.

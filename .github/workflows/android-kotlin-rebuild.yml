@@ -66,6 +66,7 @@ jobs:
           archive="${RUNNER_TEMP}/gradle-${version}-bin.zip"
           verified=false
           for url in \
+            "https://distfiles.macports.org/gradle/gradle-${version}-bin.zip" \
             "https://github.com/gradle/gradle-distributions/releases/download/v${version}/gradle-${version}-bin.zip" \
             "https://downloads.gradle.org/distributions/gradle-${version}-bin.zip" \
             "https://services.gradle.org/distributions/gradle-${version}-bin.zip"; do

@@ -84,6 +84,16 @@ Version-1 receipts retain exact replay and need one explicit renewal to save
 previously omitted rules. See
 [the compatibility and execution checkpoint](CUSTOM_POLICY_RECOVERY_CHECKPOINT.md).
 
+**Workout-rest continuation — 2026-11-08:** generated/custom and composer
+Kotlin workouts now display the existing native countdown from their saved
+receipts and exact issued warmup, working and amplifier durations. The timer
+stays below the scroll, supports manual restart/clear and ends at the last
+required visit. Per-workout saveable UI retains unsubmitted fields/deadlines
+through minimize/resume; fresh mounts baseline old receipts, and custom workouts
+now keep the screen awake. Superset rests remain manual. No actual rest or
+fatigue fact is inferred from the countdown; notifications and phone acceptance
+remain separate work. See [the release report](RELEASE_READINESS.md).
+
 ## What counts as progress in updates
 
 Report the changed user behavior or the executed comparison result first.

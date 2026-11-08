@@ -20,6 +20,9 @@ is supported by the current evidence.
   need one explicit renewal to save the missing rules.
 - Per-slot actual history, optional-RIR provenance, versioned rep/load reviews,
   immediate next-set advice and saved Standard/Progression Only/Manual controls.
+- Receipt-driven rest countdowns in both Kotlin workout paths, with exact
+  warmup/working and amplifier timings, manual restart/clear, per-workout
+  minimize/resume UI state and screen-awake behavior.
 
 These are bounded source/native-file demonstrations. Phone acceptance and full
 coaching accuracy are not implied by successful compilation or test counts.
@@ -109,6 +112,29 @@ in `starter-program-release-coverage-incomplete`. The audit never grants release
 approval. The checked-in result is
 [starter-program-release-audit.json](kotlin-engine/reports/starter-program-release-audit.json).
 
+## This continuation: usable workout rest and minimize/resume
+
+Generated/custom journals and the original composer journal now connect their
+durably recovered receipts to the existing native rest countdown. The pure
+Kotlin projection uses the just-completed set's issued rest even when Focus
+advances to an exercise with a different or zero manual rest target. Warmups
+retain their own durations. Amplified mains use their explicit intra-set pause;
+follow-ups use the parent's ordinary between-set rest. An immediate follow-up
+clears the preceding countdown rather than inventing a pause. Corrections,
+skips and failed attempts do not start a fresh automatic rest, and completing
+the last required visit removes the timer before Finish.
+
+Both loggers reserve space below the scrolling controls for the countdown.
+Each workout has its own saveable screen state, preserving the running deadline
+and unsubmitted fields through minimize/resume and normal Activity restoration.
+A fresh timer mount baselines recovered receipts so an old receipt cannot
+restart rest; elapsed/wall-clock checks still reject invalid restored clocks.
+Custom workouts now keep the screen awake while active and restore the previous
+view setting when closed. The timer does not write measured rest into history
+or feed assumed rest into fatigue calculations. Superset rest is explicitly
+manual until a paired-round protocol exists. Notifications and physical
+background/restart, keyboard and accessibility acceptance remain open.
+
 ## Remaining production release gates
 
 | Gate | Current gap / required exit evidence |
@@ -116,7 +142,7 @@ approval. The checked-in result is
 | Complete program generation | The declared twelve-case placement matrix passes. Broaden goal/experience/split/day/gym/time coverage; finish catalog/attachments and all separately tracked muscle channels; independently review phase-specific dose, practice frequency, recovery, peak/taper behavior and actual program quality. |
 | Progressions and personalized fatigue | All advertised progression methods must work through actual next workouts. Validate individual target-RIR predictions, intra-workout effects, accumulated fatigue, plateaus and deload response against later performance. The current arithmetic estimates and V3 reported-effort hold do not establish that accuracy. |
 | Adaptive cycles | Complete goal-appropriate hypertrophy/strength/peak and powerbuilding options, permitted split/day/exercise changes, stable history mappings, preserved custom techniques, full prospective audits and understandable end-to-end acceptance. Existing bounded proposal/consent paths are partial evidence. |
-| Full app feature parity | Complete Kotlin-path workout tools and adjustments: rest, Last/Target, Focus, notes, plate/bar controls, substitutions, supersets, restrictions and shorter sessions; finish real-data PR/charts/standards, bodyweight, milestones and profile/preferences. Existing legacy/native components are not automatically functional Kotlin Lab features. |
+| Full app feature parity | Basic receipt-driven rest is now connected; paired-superset rest, notification/device acceptance and remaining Kotlin-path tools still need closure: Last/Target, complete Focus, notes, plate/bar controls, substitutions, supersets, restrictions and shorter sessions; finish real-data PR/charts/standards, bodyweight, milestones and profile/preferences. Existing legacy/native components are not automatically functional Kotlin Lab features. |
 | Data recovery and migration | Verified rebuilt-app export/restore, conflicts/Undo, interrupted import, existing web history/settings reconciliation and active legacy-session closeout; preserve exact targets, actuals, IDs and PR eligibility. Native journal durability does not substitute for complete user backup/restore. |
 | Android acceptance | Test the installable build on phone and foldable: complete offline journey, keyboard, large fonts/TalkBack, original themes, timing/awake behavior, background/process death, corrections, recovery and signed updates retaining data. Source checks are not physical-device acceptance. |
 | Demonstrated improvement | Fresh matched comparisons of complete programs, cycles, progressions and user experience; independent expected outcomes and individual forecast calibration. Historical parity and the withdrawn one-set benchmark do not prove overall superiority. |
@@ -154,10 +180,13 @@ APK that makes it possible; it is required before a production release.
 
 ## Validation at this checkpoint
 
-Current local validation passes **717 engine tests + 474 native persistence
+Current local validation passes **727 engine tests + 475 native persistence
 tests**. Native cases include complete generated hypertrophy, strength, peak
 and mixed-purpose PPL weeks, nine-session custom-cycle continuity, and saved
-v2/v3/v4 compatibility. Source CI repeats these checks, audits all twelve starter
+v2/v3/v4 compatibility. New rest checks cover exact issued durations, all four
+amplifier kinds, immediate follow-ups, corrections, duplicate movement slots,
+superset/manual behavior and cold native receipts without target/RIR mutation.
+Source CI repeats these checks, audits all twelve starter
 cases, re-executes web/Kotlin comparison probes and compiles Android.
 
 The prior [31-step source pipeline](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42459293542)

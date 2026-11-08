@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
@@ -51,6 +52,13 @@ internal fun NativeKotlinCustomJournalScreen(
     var movementRestricted by rememberSaveable(workoutId){mutableStateOf(false)}
     var liveCoach by remember(host,workoutId){
         mutableStateOf<LiveSetCoachResult.Reviewed?>(null)
+    }
+    val view=LocalView.current
+    val running=journal!=null && !finished && journal?.finishedByEventId==null
+    DisposableEffect(view,running) {
+        val previous=view.keepScreenOn
+        if(running)view.keepScreenOn=true
+        onDispose{view.keepScreenOn=previous}
     }
 
     suspend fun verifyCommittedHistory():Boolean {
@@ -118,7 +126,10 @@ internal fun NativeKotlinCustomJournalScreen(
             busy=false
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+    val current=journal
+    val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
         .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Row(Modifier.fillMaxWidth(),
             horizontalArrangement=Arrangement.SpaceBetween,
@@ -129,7 +140,6 @@ internal fun NativeKotlinCustomJournalScreen(
         if(loading) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         } else {
-            val current=journal
             if(current==null) {
                 PursuitCard {
                     Text("Workout unavailable",
@@ -138,22 +148,6 @@ internal fun NativeKotlinCustomJournalScreen(
                     Button(enabled=!busy,onClick={refresh()}){Text("Retry durable open")}
                 }
             } else {
-                // Keep the next unresolved visit in focus. An amplifier is
-                // required only when its main set was completed; skipped or
-                // failed sets do not produce a phantom follow-up.
-                val nextVisit=current.snapshot.slots.flatMap {slot->
-                    slot.sets.flatMap {set->
-                        val main=CustomWorkoutVisitKey(set.setKey,
-                            CustomWorkoutVisitPart.MAIN)
-                        val recorded=current.effectiveVisits[main]?.operation
-                            as? CustomWorkoutJournalOperation.Record
-                        if(set.prescription.amplifier!=null &&
-                            recorded?.outcome==KotlinJournalSetOutcome.COMPLETED)
-                            listOf(main,CustomWorkoutVisitKey(
-                                set.setKey,CustomWorkoutVisitPart.FOLLOW_UP))
-                        else listOf(main)
-                    }
-                }.firstOrNull {it !in current.effectiveVisits}
                 val mainTotal=current.snapshot.slots.sumOf{it.sets.size}
                 val mainLogged=current.snapshot.slots.sumOf {slot->
                     slot.sets.count {set->
@@ -332,6 +326,14 @@ internal fun NativeKotlinCustomJournalScreen(
         Text("Native custom journal only. The approved set targets cannot be overwritten by coaching, UI defaults or the web app.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    // Fixed below the scroll, so focusing a later set cannot hide the timer
+    // and the timer never overlays a set-entry control or the Finish button.
+    if(current!=null && current.unresolvedVisitCount>0 && !finished)
+        Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp)) {
+            NativeKotlinWorkoutRestTimer(workoutId,
+                KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy)
+        }
     }
     val selected=journal
     if(finishConfirm&&selected!=null) {

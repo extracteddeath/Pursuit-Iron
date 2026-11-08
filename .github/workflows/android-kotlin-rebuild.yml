@@ -23,6 +23,8 @@ on:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt'
       - 'android-native/app/build.gradle.kts'
       - 'android-native/settings.gradle.kts'

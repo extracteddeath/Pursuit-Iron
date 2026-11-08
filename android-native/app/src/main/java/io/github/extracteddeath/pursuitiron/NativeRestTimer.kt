@@ -51,6 +51,11 @@ internal fun NativeRestTimer(
     var observedEvent by rememberSaveable(workoutId) {
         mutableStateOf(latestReceiptOperationId)
     }
+    // A saved UI checkpoint can precede a durable write acknowledged while
+    // the app was leaving. Baseline every fresh mount against the recovered
+    // receipt, including restoration; never start that old rest on reopening.
+    // An already-running saveable deadline is preserved independently.
+    var receiptBaselineChecked by remember(workoutId) { mutableStateOf(false) }
     fun begin(seconds: Int) {
         if(seconds !in 1..3600)return
         val elapsed=SystemClock.elapsedRealtime()
@@ -61,12 +66,21 @@ internal fun NativeRestTimer(
         deadline=elapsed+seconds*1000L
     }
     LaunchedEffect(latestReceiptOperationId,enabled) {
-        if(enabled && latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
+        if(!receiptBaselineChecked) {
+            observedEvent=latestReceiptOperationId
+            receiptBaselineChecked=true
+        } else if(enabled && latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
             observedEvent=latestReceiptOperationId
             // Skipped/corrected sets don't produce an auto cue. The journal
             // receipt, not a pending Log click, is what starts the countdown.
-            if(autoCue?.operationId==latestReceiptOperationId)
-                begin(autoCue.seconds)
+            if(autoCue?.operationId==latestReceiptOperationId) {
+                // An explicitly immediate Kotlin follow-up must not inherit
+                // a countdown still running from the preceding normal set.
+                if(autoCue.seconds==0) {
+                    deadline=0L
+                    activeSeconds=0
+                } else begin(autoCue.seconds)
+            }
         }
     }
 

@@ -103,6 +103,23 @@ object CustomWorkoutJournalDomain {
     private val maxWeight=BigDecimal("100000")
     private const val MAX_EVENTS=2048
 
+    /** Ordered presentation of the next required observation. An authored
+     * follow-up becomes required only after its main is actually completed. */
+    fun nextUnresolvedVisit(journal:CustomWorkoutJournalDraft):CustomWorkoutVisitKey? {
+        if(journal.finishedByEventId!=null)return null
+        for(slot in journal.snapshot.slots)for(set in slot.sets) {
+            val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
+            val recorded=journal.effectiveVisits[main]?.operation
+                as? CustomWorkoutJournalOperation.Record ?:return main
+            if(recorded.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                set.prescription.amplifier!=null) {
+                val follow=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)
+                if(follow !in journal.effectiveVisits)return follow
+            }
+        }
+        return null
+    }
+
     fun begin(
         workoutId:String,
         snapshot:CustomWorkoutDaySnapshot,

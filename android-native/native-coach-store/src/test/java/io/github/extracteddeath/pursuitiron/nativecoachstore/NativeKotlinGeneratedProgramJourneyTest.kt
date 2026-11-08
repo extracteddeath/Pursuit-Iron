@@ -152,6 +152,46 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(n("0"),doses.getValue(TrainingMuscle.QUADS).directWorkingSets)
     }
 
+    @Test fun generatedWorkoutRestReadsDurableReceiptsAndNeverRestartsFromCorrections() {
+        val (cycle,inputs)=saveGenerated()
+        val day=cycle.blocks.single().days.first()
+        val id="rest-first-day"
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        var journal=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val original=journal.snapshot
+        fun projection(j:CustomWorkoutJournalDraft)=KotlinWorkoutRestDomain.inspect(
+            j,CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+        assertNull(projection(journal).automaticCue)
+        val target=original.slots.first().sets.first()
+        val load=target.prescription.load as? DraftSetLoad.Verified
+        val event=CustomWorkoutJournalOperation.Record("rest-saved",0,
+            CustomWorkoutVisitKey(target.setKey,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(
+                load?.value,load?.unit,target.prescription.reps.minimum,null))
+        assertTrue(Disk().journals.record(owner,id,event) is NativeCustomJournalResult.Durable)
+        journal=(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable)
+            .issued.journal
+        val expected=KotlinWorkoutRestCue(event.eventId,target.prescription.restSeconds,0)
+        assertEquals(expected,projection(journal).automaticCue)
+        // A retry is the same event; the timer consumes its ID once rather
+        // than interpreting another native acknowledgment as more exercise.
+        val retry=Disk().journals.record(owner,id,event) as NativeCustomJournalResult.Durable
+        assertEquals(projection(journal),projection(retry.issued.journal))
+        val correction=event.copy(eventId="rest-corrected",expectedRevision=journal.revision,
+            correctsEventId=event.eventId,performed=event.performed!!.copy(reps=
+                target.prescription.reps.minimum+1))
+        assertTrue(Disk().journals.record(owner,id,correction) is NativeCustomJournalResult.Durable)
+        val cold=(Disk().journals.open(owner,id) as NativeCustomJournalResult.Durable)
+            .issued.journal
+        assertEquals("rest-corrected",projection(cold).latestReceiptEventId)
+        assertNull(projection(cold).automaticCue)
+        assertEquals(original,cold.snapshot)
+        assertNull((cold.effectiveVisits.getValue(event.visit).operation
+            as CustomWorkoutJournalOperation.Record).performed?.actualRir)
+    }
+
     @Test fun generatedWorkoutUsesColdSavedSetsAndCurrentOptOutForLiveAdvice() {
         val (cycle,inputs)=saveGenerated()
         val day=cycle.blocks.single().days.first()

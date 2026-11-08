@@ -275,6 +275,10 @@ private fun NativeKotlinCandidateTrainEntry(
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
+    // Minimize removes the logger from composition. Preserve its timer and
+    // unsubmitted fields per exact workout, then revalidate native storage
+    // when reopening. Another workout must never inherit that UI state.
+    val workoutScreens=rememberSaveableStateHolder()
     val scope=rememberCoroutineScope()
     val valid = entryId.matches(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
@@ -297,10 +301,12 @@ private fun NativeKotlinCandidateTrainEntry(
             refreshUnfinishedWorkouts()
     }
     if(customWorkoutId!=null) {
+        workoutScreens.SaveableStateProvider("custom:$customWorkoutId") {
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
             onClose={onOpenCustomWorkout(null)},
             onViewHistory=onViewFinishedHistory,
             onReturnToProgram=onReturnToProgram)
+        }
     } else if(selectedId == null) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -430,8 +436,10 @@ private fun NativeKotlinCandidateTrainEntry(
                 }) { Text("Other workout") }
             }
             Box(Modifier.weight(1f)) {
+                workoutScreens.SaveableStateProvider("composer:$selectedId") {
                 NativeKotlinWorkoutCandidateScreen(
                     controller,checkNotNull(selectedId))
+                }
             }
         }
     }

@@ -53,9 +53,13 @@ class KotlinNativeJournalFileStoreTest {
         val afterRestart=store()
         val recovered=ok(afterRestart.open("owner-1",snapshot,identity))
         assertEquals(first.journal,recovered.journal)
+        assertEquals(KotlinWorkoutRestCue("event-1",120,0),
+            KotlinWorkoutRestDomain.inspect(recovered.journal,"set-2").automaticCue)
         val second=ok(afterRestart.append("owner-1",snapshot,identity,
             completed("event-2",1,"set-2",9)))
         assertEquals(0,second.journal.unresolvedSetCount)
+        assertFalse(KotlinWorkoutRestDomain.inspect(second.journal,"set-2").hasRemainingWork)
+        assertNull(KotlinWorkoutRestDomain.inspect(second.journal,"set-2").automaticCue)
         val completed=ok(storage.append("owner-1",snapshot,identity,
             KotlinJournalOperation.Finish("finish-1",2)))
         assertEquals("finish-1",completed.journal.finishedByEventId)
@@ -134,6 +138,9 @@ class KotlinNativeJournalFileStoreTest {
         assertEquals(8,observed?.reps)
         assertEquals("event-1",reopened.receipts.first().operation.eventId)
         assertEquals("edit-1",reopened.receipts.last().operation.eventId)
+        assertEquals("edit-1",KotlinWorkoutRestDomain.inspect(reopened,"set-2")
+            .latestReceiptEventId)
+        assertNull(KotlinWorkoutRestDomain.inspect(reopened,"set-2").automaticCue)
     }
 
     @Test fun immutableIssuedProgramAndAuthenticatedOwnerScopeNeverDrift() {

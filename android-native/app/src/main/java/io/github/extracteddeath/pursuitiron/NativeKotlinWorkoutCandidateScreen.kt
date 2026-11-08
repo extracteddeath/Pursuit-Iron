@@ -130,7 +130,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }})
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
         .padding(horizontal=16.dp,vertical=20.dp),
         verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageHeading("KOTLIN COACH · ISOLATED",
@@ -262,6 +263,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         OutlinedButton(onClick={controller.open(workoutId)},
             enabled=!state.busy,modifier=Modifier.fillMaxWidth()) {
             Text("Reload saved workout")
+        }
+    }
+    if(journal!=null && journal.unresolvedSetCount>0 && journal.finishedByEventId==null)
+        Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp)) {
+            NativeKotlinWorkoutRestTimer(workoutId,
+                KotlinWorkoutRestDomain.inspect(journal,selected?.target?.setKey),
+                enabled=!state.busy)
         }
     }
 

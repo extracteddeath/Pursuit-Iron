@@ -184,6 +184,18 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**G5 workout-rest continuation — 2026-11-08:** both Kotlin journal paths now
+connect exact issued rest and authenticated saved receipts to the shared native
+countdown, including separate amplifier and ordinary rest and immediate
+follow-ups. Corrections/skips/failures never start fresh rest; the final required
+visit removes it. The countdown stays below the scrolling controls, and
+workout-scoped saveable UI preserves deadlines and unsubmitted fields on
+minimize/resume without replaying old receipts after a fresh mount. Custom
+workouts now restore screen-awake state on close. Superset breaks remain manual;
+timer history/fatigue inference, notifications and Android interaction acceptance
+are not claimed. Local suites: 727 engine + 475 native tests. See
+[the updated release report](../RELEASE_READINESS.md).
+
 **G1 phase-placement continuation — 2026-11-08:** first-program v5 checks
 multiple calibrated primary lifts and bounded skill/supporting-day policies
 through the existing generator, prescription and whole-week audit. It fixes

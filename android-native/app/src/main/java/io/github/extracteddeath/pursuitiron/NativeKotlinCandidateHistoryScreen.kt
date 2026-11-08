@@ -21,7 +21,8 @@ import kotlinx.coroutines.withContext
 internal fun NativeKotlinCandidateHistoryScreen(
     host:NativeKotlinCandidateHost,
     onOpenProgram:()->Unit={},
-    onOpenCoach:(String?)->Unit={}
+    onOpenCoach:(String?)->Unit={},
+    onOpenProgress:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var busy by remember{mutableStateOf(false)}
@@ -29,6 +30,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     var showSeparateHistoryConsent by remember{mutableStateOf(false)}
     var understandsSeparateHistory by remember{mutableStateOf(false)}
     var enrollmentMessage by remember{mutableStateOf<String?>(null)}
+    var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     fun reload() {
         if(busy)return
         busy=true;result=null
@@ -56,6 +58,10 @@ internal fun NativeKotlinCandidateHistoryScreen(
                 item {
                     PursuitPrimaryAction("Continue to my program",enabled=!busy) {
                         onOpenProgram()
+                    }
+                    OutlinedButton(onClick=onOpenProgress,
+                        enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+                        Text("Strength standards")
                     }
                     if(read.timeline.completions.isNotEmpty())
                         OutlinedButton(
@@ -99,6 +105,29 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         // hint. Coach still intersects with the CURRENT
                         // approved program; custom training stays in its
                         // separately consented cycle review workflow.
+                        // Full exercise ledger is separate from Coach.
+                        // Any completed custom or generated movement can open
+                        // complete owner-verified, correction-aware history.
+                        val allMovements=when(entry) {
+                            is NativeKotlinMixedHistoryCompletion.Composer ->
+                                entry.evidence.sets.map{it.exerciseId}
+                            is NativeKotlinMixedHistoryCompletion.Custom ->
+                                entry.evidence.visits.map{it.exerciseId}
+                        }.distinct()
+                        if(allMovements.isNotEmpty()) {
+                            PursuitSectionHeading("Exercise history",
+                                "Open all logged visits without leaving History.")
+                            Row(Modifier.fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                allMovements.forEach { exercise ->
+                                    OutlinedButton(enabled=!busy,
+                                        onClick={historyExerciseId=exercise}) {
+                                        Text(kotlinExerciseLabel(exercise))
+                                    }
+                                }
+                            }
+                        }
                         if(entry is NativeKotlinMixedHistoryCompletion.Composer) {
                             val movements=entry.evidence.exerciseReviews
                                 .filter{it.workingSets.isNotEmpty()}
@@ -160,6 +189,10 @@ internal fun NativeKotlinCandidateHistoryScreen(
             }
             null ->if(busy)item {LinearProgressIndicator(Modifier.fillMaxWidth())}
         }
+    }
+    historyExerciseId?.let { exerciseId ->
+        NativeKotlinExerciseHistorySheet(host,exerciseId,
+            onDismiss={historyExerciseId=null})
     }
     if(showSeparateHistoryConsent)AlertDialog(
         onDismissRequest={

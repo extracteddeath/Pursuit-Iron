@@ -96,6 +96,9 @@ internal fun NativeKotlinCandidateJourney() {
                             onOpenIssuedWorkout={id->
                                 selectedCustomWorkoutId=id
                                 destination=KotlinCandidateDestination.TRAIN
+                            },
+                            onOpenHistory={
+                                destination=KotlinCandidateDestination.HISTORY
                             })
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,

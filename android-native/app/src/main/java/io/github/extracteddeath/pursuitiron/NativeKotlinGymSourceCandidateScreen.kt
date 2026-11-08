@@ -98,9 +98,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     var bar by rememberSaveable {mutableStateOf("")}
     var plates by rememberSaveable {mutableStateOf("")}
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        PageHeading("KOTLIN COACH · ISOLATED",
+    PursuitScreenContent {
+        PageHeading("YOUR GYM",
             "Your verified gym",
             "Physical equipment first · workouts never guessed")
         if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())

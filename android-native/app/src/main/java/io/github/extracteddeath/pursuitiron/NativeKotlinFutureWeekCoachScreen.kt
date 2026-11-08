@@ -127,9 +127,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     }
     val active=activation
     val contextInputs=savedInputs
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        PageHeading("KOTLIN COACH · ISOLATED",
+    PursuitScreenContent {
+        PageHeading("FUTURE TRAINING",
             "Future-week progression",
             "Review an earned change to one future workout. Your authored cycle and completed workouts stay unchanged.")
         if(loading) {

@@ -46,7 +46,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
-            PageHeading("PURSUIT IRON · KOTLIN LAB","Workout history",
+            PageHeading("TRAINING LOG","Workout history",
                 "Your completed workouts and saved set corrections.")
             OutlinedButton(onClick=::reload,enabled=!busy){Text(if(busy)"Loading…" else "Refresh history")}
             enrollmentMessage?.let { Text(it,

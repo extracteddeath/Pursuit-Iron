@@ -265,8 +265,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
         if(!sourceState.busy)step=(step-1).coerceAtLeast(0)
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+    PursuitScreenContent {
         PageHeading("GET STARTED",
             when(step) {0->"Your training";1->"Your gym";else->"Review your setup"},
             "Choose how you train. Your first program comes next.")

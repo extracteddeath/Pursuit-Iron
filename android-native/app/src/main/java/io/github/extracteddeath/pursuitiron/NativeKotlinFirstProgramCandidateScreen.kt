@@ -227,9 +227,8 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
     val state by controller.state.collectAsStateWithLifecycle()
     var confirmingSave by remember {mutableStateOf(false)}
     LaunchedEffect(controller) {controller.open()}
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        PageHeading("KOTLIN COACH · ISOLATED",
+    PursuitScreenContent {
+        PageHeading("YOUR PROGRAM",
             "Build your first program",
             "Review a training week from your saved choices and physical gym.")
         if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())

@@ -145,9 +145,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         if(state.weekEditReview!=null)weekExerciseEditor=null
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    PursuitScreenContent {
         PageHeading("YOUR TRAINING PLAN",
             if (draft == null) "Your programs" else draft.title,
             if(draft==null)"Build a program around the way you train."

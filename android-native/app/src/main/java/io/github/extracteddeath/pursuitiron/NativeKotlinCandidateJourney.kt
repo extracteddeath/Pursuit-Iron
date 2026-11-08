@@ -434,7 +434,7 @@ private fun NativeKotlinCandidateTrainEntry(
     } else if(selectedId == null) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            PageHeading("KOTLIN COACH · ISOLATED",
+            PageHeading("TRAIN",
                 "Continue your training",
                 "Resume your workout or open the next session in your saved program.")
             PursuitCard(highlighted=true) {
@@ -552,7 +552,7 @@ private fun NativeKotlinCandidateTrainEntry(
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),
                 horizontalArrangement=Arrangement.SpaceBetween) {
-                Text("Native workout · ${selectedId}",
+                Text("Workout in progress",
                     style=MaterialTheme.typography.labelLarge)
                 TextButton(onClick={
                     controller.clear()

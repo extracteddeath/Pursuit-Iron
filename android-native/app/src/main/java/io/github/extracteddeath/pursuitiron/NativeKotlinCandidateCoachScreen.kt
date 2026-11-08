@@ -154,9 +154,8 @@ internal fun NativeKotlinCandidateCoachScreen(
     }
 
     if(assistance?.offersProgression!=true) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-            PageHeading("KOTLIN COACH · ISOLATED",
+        PursuitScreenContent {
+            PageHeading("YOUR COACH",
                 if(choicesLoading) "Checking coach settings…" else "Train your way",
                 "Your authored workouts, history, and Finish stay available even when coaching is off.")
             PursuitFormSection("Coaching preferences",
@@ -173,12 +172,11 @@ internal fun NativeKotlinCandidateCoachScreen(
         }
         return
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        Button(onClick=onOpenSettings) {Text("Coaching settings")}
-        PageHeading("KOTLIN COACH · ISOLATED",
+    PursuitScreenContent {
+        PageHeading("YOUR COACH",
             "Review your next load",
             "A proposed program change based on your real saved native workouts. Nothing changes automatically.")
+        OutlinedButton(onClick=onOpenSettings) {Text("Coaching settings")}
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text("Choose an approved exercise",

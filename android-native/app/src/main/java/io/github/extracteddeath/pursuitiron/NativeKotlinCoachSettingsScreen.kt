@@ -110,17 +110,13 @@ internal fun NativeKotlinCoachSettingsScreen(
 
     val policy=current?.policy
     val editable=policy!=null && !loading && !saving
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement=Arrangement.spacedBy(16.dp)
-    ) {
+    PursuitScreenContent {
         PageHeading(
-            "TRAINING SETTINGS · KOTLIN CANDIDATE",
+            "PREFERENCES",
             "Your coaching, your choice",
             "Optional suggestions never control workout logging or your authored program."
         )
-        Button(onClick=onBack,enabled=!saving) {Text("Back to Coach")}
+        TextButton(onClick=onBack,enabled=!saving) {Text("Back")}
         PursuitFormSection("Appearance",
             "Choose from the original Pursuit Iron web-app themes. This changes the app's colors, not training data."
         ) {

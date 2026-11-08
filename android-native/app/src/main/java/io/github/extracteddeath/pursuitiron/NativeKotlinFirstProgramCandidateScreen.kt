@@ -221,7 +221,8 @@ private fun prettyFirstProgram(value:String)=value.replace('_',' ')
 
 @Composable
 internal fun NativeKotlinFirstProgramCandidateScreen(
-    controller:NativeKotlinFirstProgramController
+    controller:NativeKotlinFirstProgramController,
+    onOpenSavedProgram:(String,CustomCoachAuditInputs)->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     var confirmingSave by remember {mutableStateOf(false)}
@@ -408,9 +409,25 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                         Text("A new draft still needs the native cycle-structure review before saving.",
                             style=MaterialTheme.typography.bodySmall)
                     }
-                    if(state.savedProgramId!=null) {
-                        Text("First-program draft saved. Use My program to open and complete approval.",
+                    state.savedProgramId?.let { id ->
+                        val savedPolicy=state.source?.setup?.let{setup->
+                            CoachFirstProgramDraftConversionDomain
+                                .policyForInitialFullCycleReview(review,setup)
+                        }
+                        Text("First-program draft saved and verified.",
                             style=MaterialTheme.typography.bodyMedium)
+                        if(savedPolicy!=null) {
+                            Button(
+                                onClick={onOpenSavedProgram(id,savedPolicy)},
+                                enabled=!state.busy,
+                                modifier=Modifier.fillMaxWidth()
+                            ) {
+                                Text("Continue to full-cycle review")
+                            }
+                        } else {
+                            Text("Open My program and re-audit the saved draft. The original review policy is no longer available.",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
                     }
                     Text("A saved first-program draft is not an approved or executable workout. Full-cycle review and explicit workout issuance remain separate.",
                         style=MaterialTheme.typography.bodySmall)

@@ -38,7 +38,8 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             it.repApprovalFingerprint==null &&
             it.futureWeekApprovalFingerprint==null &&
             !it.resetToAuthored &&
-            state.consentBoundPreview?.session?.stamp==it.snapshot.stamp &&
+            state.consentBoundPreview!=null &&
+            state.consentBoundPreview.session.stamp==it.snapshot.stamp &&
             state.consentBoundPreview?.session?.absoluteWeek==it.snapshot.absoluteWeek &&
             state.consentBoundPreview?.session?.weekday==it.snapshot.weekday &&
             state.draft?.revision==it.snapshot.stamp.cycleRevision

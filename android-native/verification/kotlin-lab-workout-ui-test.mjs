@@ -56,9 +56,22 @@ assert.ok(journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.SK
   journal.includes('KotlinPerformedSet(weight,verified?.unit,0,null)') &&
   journal.includes('"Confirm skip" else "Log failed attempt"'),
   'Custom skipped/failed visits must require confirmation before a journal write');
-assert.ok(journey.includes('selectedCustomWorkoutId==null)NavigationBar'),
-  'Active custom workout must not have the tab strip above the logger');
+assert.ok(journey.includes('if(!wide && !activeWorkout)NavigationBar {') &&
+  journey.includes('if(wide && !activeWorkout)NavigationRail {') &&
+  journey.includes('onActiveWorkoutChanged={trainScreenExpanded=it}'),
+  'Active Kotlin workouts must hide global navigation, with adaptive bottom bar/rail otherwise');
+const exerciseHistory=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseHistorySheet.kt');
+assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') &&
+  journal.includes('PursuitExerciseHeading(slot.exerciseId,') &&
+  exerciseHistory.includes('host.reviewVerifiedKotlinHistory()') &&
+  exerciseHistory.includes('CustomWorkoutVisitPart.MAIN') &&
+  exerciseHistory.includes('DraftSetType.WORKING') &&
+  exerciseHistory.includes('RIR not reported'),
+  'Custom workout History must open complete correction-aware exercise facts, never invent RIR');
 const composer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+assert.ok(composer.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') &&
+  composer.includes('PursuitExerciseHeading(target.exerciseId,onHistory=onHistory)'),
+  'Generated workout must open the same verified full exercise history');
 assert.ok(composer.includes('rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision)') &&
   composer.includes('?:target.reps.minimum.toString()') &&
   composer.includes('existing?.actualRir?.toString().orEmpty()') &&

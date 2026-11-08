@@ -230,7 +230,8 @@ internal fun NativeKotlinCandidateJourney() {
                             onBack={destination=KotlinCandidateDestination.COACH})
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
-                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM})
+                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
+                            onOpenCoach={destination=KotlinCandidateDestination.COACH})
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,
                             selectedCustomWorkoutId,
@@ -238,6 +239,10 @@ internal fun NativeKotlinCandidateJourney() {
                             onViewFinishedHistory={
                                 selectedCustomWorkoutId=null
                                 destination=KotlinCandidateDestination.HISTORY
+                            },
+                            onReviewNext={
+                                selectedCustomWorkoutId=null
+                                destination=KotlinCandidateDestination.COACH
                             },
                             onReturnToProgram={
                                 selectedCustomWorkoutId=null
@@ -263,6 +268,7 @@ private fun NativeKotlinCandidateTrainEntry(
     customWorkoutId:String?,
     onOpenCustomWorkout:(String?)->Unit,
     onViewFinishedHistory:()->Unit,
+    onReviewNext:()->Unit,
     onReturnToProgram:()->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
@@ -438,7 +444,17 @@ private fun NativeKotlinCandidateTrainEntry(
             Box(Modifier.weight(1f)) {
                 workoutScreens.SaveableStateProvider("composer:$selectedId") {
                 NativeKotlinWorkoutCandidateScreen(
-                    controller,checkNotNull(selectedId))
+                    controller,checkNotNull(selectedId),host,
+                    onViewHistory={
+                        controller.clear()
+                        selectedId=null
+                        onViewFinishedHistory()
+                    },
+                    onReviewNext={
+                        controller.clear()
+                        selectedId=null
+                        onReviewNext()
+                    })
                 }
             }
         }

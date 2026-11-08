@@ -70,4 +70,13 @@ assert.ok(timer.includes('var receiptBaselineChecked by remember(workoutId)') &&
   timer.includes('observedEvent=latestReceiptOperationId') &&
   timer.includes('if(autoCue.seconds==0)'),
   'Remount must baseline old saved receipts; an immediate follow-up must clear a preceding countdown');
-console.log('PASS next native set gets a focused prefilled editable form; actual effort stays unknown and recording requires an explicit action');
+assert.ok(composer.includes('NativeKotlinFinishedComposerHandoff.inspect(stored,history)') &&
+  composer.includes('host.reviewVerifiedKotlinHistory()') &&
+  composer.includes('View finished workout in History') &&
+  composer.includes('Review next session with Coach') &&
+  composer.includes('Recheck committed History') &&
+  journey.includes('onViewHistory={') &&
+  journey.includes('onReviewNext={') &&
+  journey.includes('controller.clear()'),
+  'Generated Finish navigation requires independently verified committed history, never just the Finish flag');
+console.log('PASS native workout recording and verified Finish-to-History/Coach navigation');

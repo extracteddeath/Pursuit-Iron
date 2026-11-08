@@ -14,7 +14,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
-import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileRefusal
+import io.github.extracteddeath.pursuitiron.nativecoachstore.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Exact input validation belongs to the pure Kotlin engine, not Compose. */
 private fun performed(
@@ -66,13 +68,34 @@ private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {
 @Composable
 internal fun NativeKotlinWorkoutCandidateScreen(
     controller:NativeKotlinSessionController,
-    workoutId:String
+    workoutId:String,
+    host:NativeKotlinCandidateHost,
+    onViewHistory:()->Unit={},
+    onReviewNext:()->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
     val running=presentation!=null && !presentation.finished
+    var verifiedFinish by remember(host,workoutId){
+        mutableStateOf<NativeComposerFinishHandoffResult?>(null)
+    }
+    var finishCheckRevision by remember(host,workoutId){mutableIntStateOf(0)}
+    LaunchedEffect(host,workoutId,journal?.revision,
+        journal?.finishedByEventId,finishCheckRevision) {
+        verifiedFinish=null
+        val stored=journal?.takeIf{it.finishedByEventId!=null}
+            ?:return@LaunchedEffect
+        // Never trust just a local finished flag. Read the ENTIRE signed-in
+        // athlete's independently owner-verified, manifest-backed history.
+        verifiedFinish=withContext(Dispatchers.IO) {
+            val history=runCatching{host.reviewVerifiedKotlinHistory()}
+                .getOrElse{NativeKotlinMixedHistoryReadResult.Rejected(
+                    NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)}
+            NativeKotlinFinishedComposerHandoff.inspect(stored,history)
+        }
+    }
 
     val view=LocalView.current
     DisposableEffect(view,running) {
@@ -259,6 +282,30 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             Text("Workout completion is saved",
                 style=MaterialTheme.typography.titleMedium)
             Text("Your original targets and every actual, skip, failure and correction remain in the Kotlin journal.")
+            when(verifiedFinish) {
+                is NativeComposerFinishHandoffResult.Verified -> {
+                    Text("Finish verified in committed native History. Your next workout remains unchanged until you explicitly review it.",
+                        style=MaterialTheme.typography.bodySmall)
+                    PursuitPrimaryAction("View finished workout in History",
+                        enabled=!state.busy){onViewHistory()}
+                    OutlinedButton(
+                        onClick=onReviewNext,enabled=!state.busy,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Review next session with Coach")
+                    }
+                }
+                is NativeComposerFinishHandoffResult.Rejected ->
+                    Text("Finish was recorded, but complete native History has not been verified. Recheck before advancing.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                null -> Text("Verifying committed native History…",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+            if(verifiedFinish !is NativeComposerFinishHandoffResult.Verified)
+                OutlinedButton(onClick={finishCheckRevision++},
+                    enabled=!state.busy,modifier=Modifier.fillMaxWidth()) {
+                    Text("Recheck committed History")
+                }
         }
         OutlinedButton(onClick={controller.open(workoutId)},
             enabled=!state.busy,modifier=Modifier.fillMaxWidth()) {

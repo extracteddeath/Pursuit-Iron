@@ -18,7 +18,8 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun NativeKotlinCandidateHistoryScreen(
     host:NativeKotlinCandidateHost,
-    onOpenProgram:()->Unit={}
+    onOpenProgram:()->Unit={},
+    onOpenCoach:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var busy by remember{mutableStateOf(false)}
@@ -54,6 +55,12 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     PursuitPrimaryAction("Continue to my program",enabled=!busy) {
                         onOpenProgram()
                     }
+                    if(read.timeline.completions.isNotEmpty())
+                        OutlinedButton(
+                            onClick=onOpenCoach,enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text("Review next workout with Coach")
+                        }
                 }
                 if(read.timeline.completions.isEmpty())item {Text("Your first finished workout will appear here.")}
                 items(read.timeline.completions.asReversed(),key={it.manifest.workoutId}) {entry->

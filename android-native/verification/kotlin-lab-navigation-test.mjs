@@ -64,4 +64,8 @@ for(const required of [
   'current?.manifest?.savedCorrectionRevision!=',
   'kotlinHistoryCorrectionActual('
 ])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
-console.log('PASS isolated Kotlin Lab navigation and correction-aware History summaries for generated and custom workouts');
+assert.ok(journey.includes('onOpenCoach={destination=KotlinCandidateDestination.COACH}') &&
+  journey.includes('onReviewNext={') &&
+  history.includes('Review next workout with Coach'),
+  'Verified finished or corrected History must link to Coach without silently issuing a workout');
+console.log('PASS Kotlin Lab navigation, corrected History and explicit History-to-Coach handoff');

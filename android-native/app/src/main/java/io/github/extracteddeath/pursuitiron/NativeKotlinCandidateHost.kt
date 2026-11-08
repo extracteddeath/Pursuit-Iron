@@ -26,6 +26,19 @@ internal sealed interface NativeSavedSetupResume {
     data class Rejected(val reason:String):NativeSavedSetupResume
 }
 
+/**
+ * The transient generated preview is not trusted after process death.
+ * Rebuild the full candidate from durable calibration plus current verified
+ * source, require exact equality to the original saved cycle, then re-audit.
+ */
+internal sealed interface NativeRecoveredFirstProgramReview {
+    data class Ready(val inputs:CustomCoachAuditInputs):
+        NativeRecoveredFirstProgramReview
+    data object NotGenerated:NativeRecoveredFirstProgramReview
+    data class Rejected(val reason:String):
+        NativeRecoveredFirstProgramReview
+}
+
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -37,6 +50,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val approvalStore=NativeKotlinApprovalFileAuthority(
         root,revisionFence,localAthlete)
     private val customDraftStore=NativeCustomCycleDraftFileStore(
+        root,revisionFence,localAthlete)
+    private val firstProgramSeedStore=NativeKotlinFirstProgramSeedFileStore(
         root,revisionFence,localAthlete)
     private val authoringSourceStore=NativeKotlinCustomAuthoringSourceFileStore(
         root,revisionFence,localAthlete)
@@ -1483,33 +1498,125 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomDraftWriteResult.Rejected(
                 NativeCustomDraftRefusal.NOT_AUTHORIZED)
-        val read=authoringSourceStore.read(owner.ownerKey)
-        val source=(read as? NativeAuthoringSourceRead.Found)?.source
-            ?:return NativeCustomDraftWriteResult.Rejected(
-                NativeCustomDraftRefusal.STALE_REVISION)
-        if(source.revision!=expectedSourceRevision ||
-            source.athleteId!=owner.athleteId ||
-            input.setup!=source.setup || input.catalog!=source.catalog)
-            return NativeCustomDraftWriteResult.Rejected(
-                NativeCustomDraftRefusal.STALE_REVISION)
-        val replay=runCatching {
-            CoachFirstProgramStartDomain.review(input.copy(
-                setup=source.setup,catalog=source.catalog))
-        }.getOrNull() ?:return NativeCustomDraftWriteResult.Rejected(
-            NativeCustomDraftRefusal.INVALID_DRAFT)
-        if(replay!=shown ||
-            replay.status!=FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
-            return NativeCustomDraftWriteResult.Rejected(
-                NativeCustomDraftRefusal.STALE_REVISION)
-        val candidate=CoachFirstProgramDraftConversionDomain.propose(
-            replay,source.setup,source.catalog,cycleId,title,weeks)
-        val cycle=candidate.cycle?.takeIf {
-            candidate.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT
-        } ?:return NativeCustomDraftWriteResult.Rejected(
-            NativeCustomDraftRefusal.INVALID_DRAFT)
-        return customAuthoringCoordinator.saveVerifiedExerciseEdit(
-            owner.ownerKey,cycle,expectedDraftRevision=0,
-            expectedSourceRevision=expectedSourceRevision)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                val source=(authoringSourceStore.read(owner.ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.STALE_REVISION)
+                if(source.revision!=expectedSourceRevision ||
+                    source.athleteId!=owner.athleteId ||
+                    input.setup!=source.setup || input.catalog!=source.catalog)
+                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.STALE_REVISION)
+                val replay=runCatching {
+                    CoachFirstProgramStartDomain.review(input.copy(
+                        setup=source.setup,catalog=source.catalog))
+                }.getOrNull() ?:return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                    NativeCustomDraftRefusal.INVALID_DRAFT)
+                if(replay!=shown ||
+                    replay.status!=FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
+                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.STALE_REVISION)
+                val candidate=CoachFirstProgramDraftConversionDomain.propose(
+                    replay,source.setup,source.catalog,cycleId,title,weeks)
+                val cycle=candidate.cycle?.takeIf {
+                    candidate.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT
+                } ?:return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                    NativeCustomDraftRefusal.INVALID_DRAFT)
+                val seed=NativeFirstProgramSeed(cycleId,title,weeks,
+                    source.revision,CoachFirstProgramStartDomain.POLICY_VERSION,
+                    input.phase,input.startingLoads,
+                    input.selectedBodyweightExerciseIds,input.extraFocuses,
+                    input.nonSetSecondsPerDay)
+                // Write immutable calibration FIRST under the same owner
+                // lock. If interrupted, an orphan cannot issue or be listed
+                // as a program; the draft only appears after this succeeds.
+                val stored=firstProgramSeedStore.create(owner.ownerKey,seed)
+                if(stored !is NativeFirstProgramSeedWrite.Committed)
+                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+                customAuthoringCoordinator.saveVerifiedExerciseEdit(
+                    owner.ownerKey,cycle,expectedDraftRevision=0,
+                    expectedSourceRevision=expectedSourceRevision)
+            }
+        }.getOrElse {
+            NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Cold-recover a first-program's original generated coaching assumptions
+     * only if the CURRENT saved athlete, gym and EXACT untouched cycle
+     * reproduce the same finished draft. A missing sidecar marks a normal
+     * custom program, not a generated program. Never grants signoff.
+     */
+    fun recoverSavedFirstProgramReview(
+        cycleId:String
+    ):NativeRecoveredFirstProgramReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeRecoveredFirstProgramReview.Rejected(
+                "The native athlete is not active.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val stored=firstProgramSeedStore.read(owner.ownerKey,cycleId)
+                if(stored is NativeFirstProgramSeedRead.Missing)
+                    return@withOwnerTransaction NativeRecoveredFirstProgramReview.NotGenerated
+                val seed=(stored as? NativeFirstProgramSeedRead.Found)?.seed
+                    ?:return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
+                        "Saved first-program coaching inputs cannot be verified.")
+                val source=(authoringSourceStore.read(owner.ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                val draft=(customDraftStore.read(owner.ownerKey,cycleId)
+                    as? NativeCustomDraftReadResult.Found)?.draft
+                if(source==null || draft==null ||
+                    source.athleteId!=owner.athleteId ||
+                    draft.athleteId!=owner.athleteId ||
+                    source.revision!=seed.sourceRevision ||
+                    draft.revision!=1L ||
+                    seed.policyVersion!=CoachFirstProgramStartDomain.POLICY_VERSION)
+                    return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
+                        "The saved gym, program revision or generator version changed. Review the program manually.")
+                val replay=runCatching {
+                    CoachFirstProgramStartDomain.review(
+                        FirstProgramStartRequest(
+                            source.setup,source.catalog,seed.startingLoads,
+                            seed.bodyweightExercises,seed.phase,
+                            seed.extraFocuses,seed.nonSetSeconds))
+                }.getOrNull()
+                val candidate=replay?.let {
+                    CoachFirstProgramDraftConversionDomain.propose(
+                        it,source.setup,source.catalog,cycleId,seed.title,
+                        seed.blockWeeks)
+                }
+                if(candidate?.status!=FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT ||
+                    candidate.cycle!=draft)
+                    return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
+                        "Saved training draft differs from its original review. Nothing was approved.")
+                val inputs=CoachFirstProgramDraftConversionDomain
+                    .policyForInitialFullCycleReview(
+                        checkNotNull(replay),source.setup)
+                    ?:return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
+                        "Original generated coaching policy is not available.")
+                val audit=CustomCycleCoachAuditDomain.review(
+                    draft,source.setup,source.catalog,inputs)
+                if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+                    audit.issues.isNotEmpty())
+                    return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
+                        "The saved first program did not pass a new full-cycle audit.")
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
+                        "The active athlete changed.")
+                NativeRecoveredFirstProgramReview.Ready(inputs)
+            }
+        }.getOrElse {
+            NativeRecoveredFirstProgramReview.Rejected(
+                "First-program review could not be recovered. No workout was approved.")
+        }
     }
 
     fun createBlankCustomCycleDraft(

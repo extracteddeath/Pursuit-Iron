@@ -47,6 +47,23 @@ class NativeKotlinCustomNextCycleSessionReviewTest {
             "w1d2",1,2,"Day 2"),
             NativeCustomNextCycleSlotDomain.select(cycle(),prepared))
     }
+    @Test fun outstandingIssuedTrainingAlwaysResumesBeforeASeparateUnstartedDay() {
+        val laterIssued=fact(2,4,issued=true,completed=false)
+        assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
+            laterIssued.workoutId,2,4,"Day 4"),
+            NativeCustomNextCycleSlotDomain.select(cycle(),listOf(laterIssued)))
+        val laterPrepared=fact(2,2,issued=false,completed=false)
+        assertEquals(NativeCustomNextCycleSlot.ResumeIssued(
+            laterIssued.workoutId,2,4,"Day 4"),
+            NativeCustomNextCycleSlotDomain.select(
+                cycle(),listOf(laterPrepared,laterIssued)))
+    }
+    @Test fun noLongerScheduledDaysMustNotSilentlyDisappear() {
+        val ghost=fact(1,1)
+        assertTrue(NativeCustomNextCycleSlotDomain.select(
+            cycle(),listOf(ghost)) is NativeCustomNextCycleSlot.Rejected)
+    }
+
     @Test fun repeatedOrStaleCycleRecordsRequireManualSelection() {
         assertTrue(NativeCustomNextCycleSlotDomain.select(
             cycle(),listOf(fact(1,0,rev=2)))

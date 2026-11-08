@@ -628,7 +628,8 @@ internal class NativeKotlinCustomCycleController(
             prepared.repApprovalFingerprint==null &&
             prepared.futureWeekApprovalFingerprint==null &&
             !prepared.resetToAuthored &&
-            preflight?.session?.stamp==prepared.snapshot.stamp &&
+            preflight!=null &&
+            preflight.session.stamp==prepared.snapshot.stamp &&
             preflight.session.absoluteWeek==prepared.snapshot.absoluteWeek &&
             preflight.session.weekday==prepared.snapshot.weekday &&
             prepared.snapshot.stamp.cycleId==draft.cycleId &&

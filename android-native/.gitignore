@@ -2,3 +2,9 @@
 .kotlin/
 **/build/
 local.properties
+__pycache__/
+# Independent development signing material must never become source.
+*.jks
+*.keystore
+*.p12
+*.pfx

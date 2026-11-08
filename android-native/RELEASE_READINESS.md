@@ -164,8 +164,18 @@ compilation failure. No APK was produced. See
 
 The repository owner must complete the one-time private signing configuration
 in GitHub Actions secrets before a stable test build can be assembled. The
-current integration does not expose secret administration; no key material
-was created, displayed, committed or requested in chat during this pass.
+current integration does not expose secret administration. This pass has not
+configured the repository's signing settings or requested any private key in chat.
+
+The owner setup is now a single private command in
+`tools/kotlin_lab_signing.py configure`; it uploads the four secrets without
+printing them and pins the public certificate in `KOTLIN_LAB_CERT_SHA256`.
+It refuses to replace an existing pinned key. The device workflow checks real
+private-key access before assembly and verifies the final APK's signature,
+stable package, version and Kotlin launcher before upload. Its public receipt
+binds the APK hash to the source commit and marks device acceptance NOT_TESTED.
+Temporary signing-key tests do not configure the repository or produce an APK;
+owner setup and signed-update testing remain open.
 
 Future Lab builds use the distinct `.kotlinlabstable` identity and the same
 private development certificate on every update. Existing v2 test data stays in

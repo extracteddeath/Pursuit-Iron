@@ -7,6 +7,7 @@ const workflow=read('.github/workflows/android-kotlin-lab-device.yml');
 const app=read('android-native/app/build.gradle.kts');
 const docs=read('android-native/KOTLIN_LAB_SIGNING_SETUP.md');
 const marker=read('android-native/KOTLIN_LAB_DEVICE_TEST.md');
+const signing=read('android-native/tools/kotlin_lab_signing.py');
 
 for(const secret of [
   'KOTLIN_LAB_KEYSTORE_B64',
@@ -16,12 +17,23 @@ for(const secret of [
 ])assert.ok(workflow.includes('secrets.'+secret),
   'APK workflow must depend on private stable signing secret '+secret);
 assert.ok(workflow.includes('Require stable private Kotlin Lab signing') &&
-  workflow.includes('if [[ -z "$KEYSTORE_BASE64"') &&
-  workflow.includes('exit 1') &&
-  workflow.includes('base64 --decode') &&
-  workflow.includes('keytool -list') &&
-  workflow.includes('KOTLIN_LAB_SIGNING_STORE_FILE='),
+  workflow.includes('kotlin_lab_signing.py prepare') &&
+  signing.includes('any(not os.environ.get(name') &&
+  signing.includes('base64.b64decode') &&
+  signing.includes('KotlinLabSigningKeyCheck.java') &&
+  read('android-native/tools/KotlinLabSigningKeyCheck.java').includes('store.getKey(args[1], keyPassword)') &&
+  signing.includes('KOTLIN_LAB_SIGNING_STORE_FILE='),
   'Missing keys must abort the APK before build, without emitting key material');
+assert.ok(workflow.includes('vars.KOTLIN_LAB_CERT_SHA256') &&
+  workflow.includes('kotlin_lab_signing.py verify') &&
+  workflow.includes('--source-commit "$GITHUB_SHA"') &&
+  workflow.includes('kotlin-lab-build-receipt.json') &&
+  workflow.includes('Remove temporary private signing key') &&
+  signing.includes('"apksigner"') && signing.includes('"aapt2"'),
+  'Final APK must verify its real certificate, package, version and launcher before upload');
+assert.ok(workflow.indexOf('kotlin_lab_signing.py verify') <
+  workflow.indexOf('uses: actions/upload-artifact@v4'),
+  'An unverified APK cannot reach artifact upload');
 for(const v of [
   'KOTLIN_LAB_SIGNING_STORE_FILE',
   'KOTLIN_LAB_SIGNING_STORE_PASSWORD',
@@ -40,7 +52,7 @@ assert.ok(docs.includes('ephemeral') && docs.includes('cannot update') &&
   docs.includes('coexist') &&
   docs.includes('io.github.extracteddeath.pursuitiron.kotlinlabstable') &&
   docs.includes('repo') && docs.includes('secret') &&
-  docs.includes('never') &&
+  docs.toLowerCase().includes('never') &&
   marker.includes('GitHub runners generate'),
   'Safety docs must explain the original key incompatibility and private-key setup');
 console.log('PASS no future Kotlin Lab APK may publish under an ephemeral signing key; source CI remains key-free');

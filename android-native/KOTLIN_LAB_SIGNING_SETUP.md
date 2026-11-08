@@ -23,44 +23,69 @@ without the key. No new unsigned or ephemerally signed APK is published.
 
 ### One-time owner setup (on a trusted computer)
 
-1. Install an up-to-date JDK providing `keytool`. Generate an independent
-   **development-only** key, not your Play Store release-signing key:
+Use Python 3.9+, JDK 17+ (`java` and `keytool`) and GitHub CLI `gh`, signed
+into GitHub as the repository owner. From the rebuild checkout, run:
 
-   ```sh
-   keytool -genkeypair -v \
-     -keystore pursuit-iron-kotlin-lab.jks \
-     -storetype PKCS12 -keyalg RSA -keysize 3072 \
-     -validity 10000 -alias pursuit-kotlin-lab
-   ```
+```sh
+python3 android-native/tools/kotlin_lab_signing.py configure \
+  --create "$HOME/.pursuit-iron-signing/pursuit-iron-kotlin-lab.p12"
+```
 
-   Choose a strong private password and record it securely. The keystore is
-   private. **Never commit it, share it in chat, or use the production app key.**
-   Keep a backed-up copy in a secure password manager/encrypted storage.
+The command asks for a private password, creates an independent
+**development-only** key outside the source checkout, and sends the four
+repository secrets directly to GitHub through standard input. The password
+and encoded keystore do not appear in the command line or console output.
+It also saves the **public** certificate SHA-256 as repository Actions
+variable `KOTLIN_LAB_CERT_SHA256`. Back up the keystore and password privately.
+**Never commit the key, share it in chat, or use the production app key.**
 
-2. Under **Pursuit-Iron → Settings → Secrets and variables → Actions**, create
-   these four repository secrets:
-   - `KOTLIN_LAB_KEYSTORE_B64`: the entire base64 encoding of the binary
-     `.jks` file, on **one line**.
-   - `KOTLIN_LAB_STORE_PASSWORD`: the keystore password.
-   - `KOTLIN_LAB_KEY_ALIAS`: `pursuit-kotlin-lab` (or the actual alias).
-   - `KOTLIN_LAB_KEY_PASSWORD`: the private-key password, often identical
-     to the store password for a PKCS12 key.
+If a key already exists, reuse it instead of generating another:
 
-   For the first value, on Linux use
-   `base64 -w0 pursuit-iron-kotlin-lab.jks`; on macOS use
-   `base64 < pursuit-iron-kotlin-lab.jks | tr -d '\n'`.
-   Paste the output only into the GitHub **secret** field. Never paste
-   the encoded key into a repository file or log.
+```sh
+python3 android-native/tools/kotlin_lab_signing.py configure \
+  --keystore /absolute/private/path/pursuit-iron-kotlin-lab.p12
+```
 
-3. Test a future **explicitly approved** Kotlin Lab milestone commit.
-   The workflow decodes the key into the temporary runner directory,
-   validates the alias, and configures the Android debug signing certificate
-   **only for that APK assembly**. The key material is never uploaded in
-   the APK artifact and should not be printed in logs.
+Supply `--alias ACTUAL_ALIAS` if it differs from `pursuit-kotlin-lab`.
+For a previously configured key whose secrets predate the public pin, add
+`--adopt-existing-key` **once**, using that same original keystore. The command
+will not create a key over existing/partial configuration, overwrite a local
+keystore, or replace a pinned certificate with a different key. If an upload
+fails halfway through, retain the local keystore and retry `--keystore` with
+the same file. Do not retry with `--create`.
 
-4. Preserve this **same key and alias** for subsequent Kotlin Lab releases
-   and increment versionCode. A new key would again prevent in-place
-   upgrades and risk test-data loss.
+The four private Actions secrets remain:
+
+| Secret | Value supplied by the command |
+| --- | --- |
+| `KOTLIN_LAB_KEYSTORE_B64` | One-line base64 encoding of the binary keystore |
+| `KOTLIN_LAB_STORE_PASSWORD` | Keystore password |
+| `KOTLIN_LAB_KEY_ALIAS` | Private-key alias |
+| `KOTLIN_LAB_KEY_PASSWORD` | Private-key password; the generated PKCS12 key uses the store password |
+
+This setup configures signing; it does not trigger an APK or production release.
+The current ChatGPT GitHub connection cannot administer these private settings,
+so the owner runs this command locally. No password or key needs to be sent in chat.
+
+### What the device-build workflow verifies
+
+Before assembly, the workflow requires all four secrets **and the public pin**.
+It validates both passwords by opening the actual private key through the JDK
+keystore API and compares its certificate with the pin. Checking only a public
+certificate or using `keytool` with a PKCS12 key would not reliably reject a
+wrong private-key password. The decoded file has private permissions and is
+removed after the build, including failure paths.
+
+After assembly, Android `apksigner verify --verbose --print-certs` must validate
+the real APK with exactly the pinned certificate. The APK manifest must have
+the stable package, the milestone version code and the independent Kotlin Lab
+launcher. A wrong signer, package, version or launcher prevents artifact upload.
+
+The artifact includes a public `kotlin-lab-build-receipt.json` with the APK
+SHA-256, certificate SHA-256, package, version, source commit and size. It
+explicitly records device acceptance as **NOT_TESTED**. Preserve the **same key,
+alias and public pin** for later Lab builds; version codes increase with the
+same device workflow's run number. A new key cannot be substituted for an update.
 
 ### Coexistence and data preservation
 
@@ -81,11 +106,16 @@ change or overwrite them.
 
 ### Acceptance checks
 
-- A new APK workflow without all four private secrets must fail **before**
+- A new APK workflow without all four private secrets and the public pin must fail **before**
   assembling a distributable artifact.
 - Source-only Kotlin tests and Android compilation must not require secrets.
 - The APK should have exactly one Kotlin Lab launcher and correct
-  `.kotlinlab` package identity.
+  `.kotlinlabstable` package identity, pinned certificate and expected version.
+- A mismatched private-key password or certificate must fail before assembly;
+  a final APK certificate/identity mismatch must fail before artifact upload.
+- Source CI exercises real disposable JDK keys without using repository signing
+  secrets. It checks partial configuration, wrong aliases/passwords/certificates,
+  refusal to rotate a pinned key, interrupted upload/retry and artifact rejection.
 - Two sequential stable-signed APKs with increasing version codes must show
   the same signing certificate SHA-256 and install as an in-place Android
   update while retaining a saved test journal.

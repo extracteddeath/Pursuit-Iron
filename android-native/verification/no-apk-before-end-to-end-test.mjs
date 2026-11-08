@@ -57,12 +57,13 @@ assert.match(disposable,/^on:\n  push:\n    branches:\n      - architecture\/kot
 assert.ok(disposable.includes("'milestone(kotlin): disposable lab '") &&
   disposable.includes('kotlinLabDisposableRun=$GITHUB_RUN_NUMBER') &&
   disposable.includes(':app:assembleDebug') &&
-  disposable.includes(':app:bundleDebug') &&
+  !disposable.includes(':app:bundleDebug') &&
+  !disposable.includes('.aab') &&
   disposable.includes('kotlin-lab-disposable-test.mjs') &&
   disposable.includes('apksigner') &&
   disposable.includes('aapt') &&
   disposable.includes('if-no-files-found: error'),
-  'Trial must require its own milestone, tests, unique package and verified artifacts');
+  'Trial must require its own milestone, tests, unique package and verified APK-only artifacts');
 assert.ok(kotlinMarker.includes('one-time') &&
   kotlinMarker.includes('development') &&
   kotlinMarker.includes('io.github.extracteddeath.pursuitiron.kotlinlabstable'),

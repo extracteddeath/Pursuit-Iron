@@ -74,3 +74,6 @@ The workflow now assembles, verifies and uploads **only the test APK**. No AAB
 is generated. This is another isolated per-run install with a temporary debug
 certificate, not an in-place update of a prior trial. Do not uninstall a prior
 trial to install this one; their training data remains separate.
+
+The APK-only packaging guard also runs in the routine source workflow, so
+source readiness and the device milestone enforce the same output contract.

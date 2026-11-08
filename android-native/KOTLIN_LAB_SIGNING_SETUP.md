@@ -126,7 +126,7 @@ change or overwrite them.
 The signing configuration is infrastructure for safer device testing.
 It does not constitute proof of coaching accuracy or production readiness.
 
-## Separate disposable APK/AAB trial (no private signing secret)
+## Separate disposable APK trial (no private signing secret)
 
 The `native-app` workflow builds a standard Android debug APK and a
 release AAB; without its optional upload key the release bundle is
@@ -134,15 +134,15 @@ unsigned. Ordinary debug APK keys generated on different GitHub runners
 are not update-compatible. The Kotlin Lab stable channel therefore
 still requires the owner-provided, pinned certificate above.
 
-A second, explicitly milestone-gated workflow can generate a **disposable
-debug APK and debug AAB** using the standard runner debug key, but gives
+A second, explicitly milestone-gated workflow generates a **disposable
+test APK** using the standard runner debug key, but gives
 each run its **own package**:
 `io.github.extracteddeath.pursuitiron.kotlinlabtrial<RUN_NUMBER>`.
 The installed launcher says `Pursuit Iron Lab Trial <RUN_NUMBER>`.
 This cannot update or overwrite a stable, production, native preview,
 old Lab, or other trial installation. It cannot migrate or update trial
-data across runs either. Do not enter irreplaceable history. The debug
-AAB is for packaging tests only and is not a signed Play Store release.
+data across runs either. Do not enter irreplaceable history. Kotlin Lab
+AAB generation is deferred until a Play Store listing is being prepared.
 
 Source, engine, persisted journal, package, launcher, APK signer and
 checksums are checked before a short-lived GitHub artifact is uploaded.

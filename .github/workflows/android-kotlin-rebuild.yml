@@ -43,6 +43,7 @@ on:
       - '.github/workflows/android-kotlin-lab-device.yml'
       - '.github/workflows/android-kotlin-lab-disposable.yml'
       - 'android-native/verification/kotlin-lab-disposable-test.mjs'
+      - 'android-native/verification/no-apk-before-end-to-end-test.mjs'
   workflow_dispatch:
 concurrency:
   group: kotlin-engine-rebuild-${{ github.ref }}
@@ -120,6 +121,7 @@ jobs:
         run: |
           node android-native/verification/kotlin-lab-workout-ui-test.mjs
           node android-native/verification/kotlin-lab-disposable-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify durable private signing gate for future Kotlin Lab APKs
         run: |
           node android-native/verification/kotlin-lab-stable-signing-test.mjs

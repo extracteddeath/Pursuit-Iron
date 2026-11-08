@@ -214,6 +214,12 @@ reviewed and approved.
 - Everything remains clearly labeled **estimated 1RM**. Broad external
   community thresholds are not age/bodyweight-specific percentiles. Pinning,
   reading charts or opening exercise history makes no changes to training.
+- **Do not fabricate a weekly consistency calendar yet:** the verified mixed
+  manifest/evidence currently provides authoritative completion *order*, but
+  not a durable, authenticated completion date. Date-based grouping needs a
+  versioned timestamp in both native history owners, corruption/recovery
+  validation and timezone-safe presentation before any calendar or streak
+  can claim to represent saved workouts.
 - Added source-contract coverage for athlete-scoped preference keys, Profile
   deep links, owner-verified history, source-only chart data and complete
   history action. CI source compilation is required before declaring the

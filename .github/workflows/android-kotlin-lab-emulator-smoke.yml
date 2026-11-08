@@ -1,6 +1,6 @@
 name: Pursuit Iron Kotlin Lab trial — Android emulator smoke
 
-# Exercise ONLY the source-verified disposable APK from run 42481026405.
+# Exercise ONLY the source-verified APK-only trial from run 42495295715.
 # No new signing keys, AAB release or production app changes.
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       - name: Download already-built disposable APK and receipt
         uses: actions/download-artifact@v4
         with:
-          run-id: 42481026405
+          run-id: 42495295715
           github-token: ${{ github.token }}
           name: pursuit-iron-kotlin-lab-disposable
           path: trial
@@ -38,8 +38,8 @@ jobs:
           set -euo pipefail
           receipt="$(find trial -name disposable-trial-receipt.txt -print -quit)"
           test -n "$receipt"
-          grep -Fx 'sourceCommit=bf977ff049d5c16b13d9862cbd1386e1cd3e8c89' "$receipt"
-          grep -Fx 'applicationId=io.github.extracteddeath.pursuitiron.kotlinlabtrial2' "$receipt"
+          grep -Fx 'sourceCommit=fe5237d85d1b45c6e34a7ab745f71958655605fc' "$receipt"
+          grep -Fx 'applicationId=io.github.extracteddeath.pursuitiron.kotlinlabtrial7' "$receipt"
           grep -Fx 'deviceAcceptance=NOT_TESTED' "$receipt"
           apk="$(find trial -name '*.apk' -print -quit)"
           test -s "$apk"
@@ -64,7 +64,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: kotlin-lab-trial2-emulator-smoke
+          name: kotlin-lab-trial7-emulator-smoke
           path: smoke-out
           if-no-files-found: warn
           retention-days: 14

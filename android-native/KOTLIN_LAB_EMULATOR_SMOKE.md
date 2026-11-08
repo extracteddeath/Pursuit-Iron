@@ -1,8 +1,9 @@
-# Trial 2 Android emulator startup smoke
+# Trial 7 Android emulator startup smoke
 
 Run a one-time emulator installation/lifecycle test using the ALREADY
-BUILT immutable source commit bf977ff049d5c16b13d9862cbd1386e1cd3e8c89
-and signed APK artifact from GitHub Actions run 42481026405.
+BUILT immutable source commit fe5237d85d1b45c6e34a7ab745f71958655605fc
+and signed APK artifact from GitHub Actions run 42495295715. This is the
+APK-only Amethyst/Target/Last milestone; no AAB is downloaded or produced.
 
 Verify the original receipt and APK hash before installation. On Android
 API 35: install the unique trial package, launch its Kotlin activity,

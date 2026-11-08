@@ -24,6 +24,8 @@ on:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseLabels.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt'
       - 'android-native/app/build.gradle.kts'
@@ -39,6 +41,8 @@ on:
       - 'android-native/tools/KotlinLabSigningKeyCheck.java'
       - 'android-native/verification/kotlin-lab-signing-test.py'
       - '.github/workflows/android-kotlin-lab-device.yml'
+      - '.github/workflows/android-kotlin-lab-disposable.yml'
+      - 'android-native/verification/kotlin-lab-disposable-test.mjs'
   workflow_dispatch:
 concurrency:
   group: kotlin-engine-rebuild-${{ github.ref }}
@@ -113,7 +117,9 @@ jobs:
       - name: Verify isolated Kotlin Lab launcher and app navigation
         run: node android-native/verification/kotlin-lab-navigation-test.mjs
       - name: Verify focused editable Kotlin workout logging
-        run: node android-native/verification/kotlin-lab-workout-ui-test.mjs
+        run: |
+          node android-native/verification/kotlin-lab-workout-ui-test.mjs
+          node android-native/verification/kotlin-lab-disposable-test.mjs
       - name: Verify durable private signing gate for future Kotlin Lab APKs
         run: |
           node android-native/verification/kotlin-lab-stable-signing-test.mjs

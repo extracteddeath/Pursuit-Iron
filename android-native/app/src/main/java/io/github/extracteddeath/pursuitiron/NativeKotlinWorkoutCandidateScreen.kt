@@ -74,6 +74,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     onReviewNext:(String)->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
+    var referenceMode by rememberWorkoutReferenceMode()
+    val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
+        enabled=referenceMode==WorkoutReferenceMode.LAST)
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
@@ -157,7 +160,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
         .padding(horizontal=16.dp,vertical=20.dp),
         verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        PageHeading("KOTLIN COACH · ISOLATED",
+        PageHeading("TODAY'S TRAINING",
             if(presentation?.finished==true)"Workout complete"
             else "Today's workout",
             if(presentation==null)"Native session preview · no JavaScript"
@@ -206,7 +209,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 FilterChip(selected=selectedExercise,
                     onClick={selectedKey=ex.nextUnresolvedSetKey
                         ?:ex.sets.last().target.setKey},
-                    label={Text("${ex.exerciseId} · ${ex.resolvedCount}/${ex.sets.size}")})
+                    label={Text("${kotlinExerciseLabel(ex.exerciseId)} · ${ex.resolvedCount}/${ex.sets.size}")})
             }
         }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
@@ -251,9 +254,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
         activeKeys.forEach{set->
             key(set.target.setKey){
                 NativeKotlinSetCard(set,presentation.finished,state.busy,
+                    referenceMode=referenceMode,lastReferences=lastReferences,
+                    position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
+                        it.target.type==set.target.type}.indexOf(set)+1,
+                    setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
+                        it.target.type==set.target.type},
                     onRecord={outcome,actual->
                         controller.record(set.target.setKey,outcome,actual)
                     },
@@ -357,6 +366,10 @@ private fun NativeKotlinSetCard(
     set:KotlinWorkoutSetPresentation,
     finished:Boolean,
     busy:Boolean,
+    referenceMode:WorkoutReferenceMode,
+    lastReferences:WorkoutLastReferenceResult?,
+    position:Int,
+    setCount:Int,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onSkip:()->Unit,
     onFail:(KotlinPerformedSet)->Unit
@@ -380,14 +393,11 @@ private fun NativeKotlinSetCard(
     val entry=KotlinWorkoutEntryDomain.parse(target,weight,reps,effort)
     val working=target.type==DraftSetType.WORKING
     PursuitCard(highlighted=!set.isResolved && !finished) {
-        Text(target.exerciseId,style=MaterialTheme.typography.headlineSmall)
-        Text("${if(working)"Working" else "Warmup"} set ${target.ordinal+1} · "+
-            "${target.role.name.lowercase()}",
+        Text(kotlinExerciseLabel(target.exerciseId),style=MaterialTheme.typography.headlineSmall)
+        Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
             style=MaterialTheme.typography.labelLarge)
-        Text("Target: ${loadLabel(target.load)} · "+
-            "${target.reps.minimum}–${target.reps.maximum} reps"+
-            (target.targetRir?.let{" · ${it} RIR target"}?:""),
-            style=MaterialTheme.typography.bodyMedium)
+        PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
+            lastReferences,WorkoutReferenceKey(target.setKey))
         if(set.isResolved) {
             Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
                 (existing?.let{" · ${it.reps} reps"+
@@ -403,7 +413,7 @@ private fun NativeKotlinSetCard(
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(verifiedLoad!=null) {
             OutlinedTextField(value=weight,onValueChange={weight=it},
-                label={Text("Actual load · ${verifiedLoad.unit.name} · ${verifiedLoad.basis.name.lowercase().replace('_',' ')}")},
+                label={Text("Weight · ${verifiedLoad.unit.name.lowercase()}")},
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 singleLine=true,modifier=Modifier.fillMaxWidth())
         }

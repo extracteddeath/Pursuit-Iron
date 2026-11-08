@@ -1,8 +1,9 @@
 # Isolated Kotlin Lab disposable QA candidate
 
 This is a single **development-device** milestone, not a release or
-Kotlin production cutover. It builds one signed Android debug APK plus a
-non-production debug AAB after re-running the native and Kotlin test gates.
+Kotlin production cutover. It builds one signed Android test APK after
+re-running the native and Kotlin test gates. AAB generation is deferred until
+a Play Store listing is being prepared.
 
 Each run has a distinct installed package
 `io.github.extracteddeath.pursuitiron.kotlinlabtrial<RUN_NUMBER>` and
@@ -13,8 +14,7 @@ Kotlin Lab, production or the other developer's native preview. Neither
 does it update prior trial installs or transfer their data. Never record
 irreplaceable training history in this disposable build.
 
-The debug AAB is an engineering artifact only, **not a Play Store release
-bundle**. Both outputs are bound to the source commit, exact per-run app
+The APK is bound to the source commit, exact per-run app
 ID, signer fingerprint and SHA-256 receipt. Device acceptance, complete
 feature parity, backup/migration and demonstrated coaching superiority
 are NOT yet certified. Persistent in-place upgrades still require the

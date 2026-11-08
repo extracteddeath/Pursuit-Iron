@@ -75,13 +75,29 @@ data-class string or an implied automatic update.
 - The default theme is Amethyst; actual selected theme persists on reopen;
   Lime never reappears as an implicit fallback; all web-app themes remain
   selectable.
-- The official app earns a consistently signed, update-safe APK/AAB and
-  complete device evidence. The disposable trial APK/AAB exists only to
+- The official app earns a consistently signed, update-safe APK and
+  complete device evidence. AAB production is deferred until the athlete
+  prepares a Play Store listing. The disposable trial APK exists only to
   discover usability defects; source CI alone is not a release gate.
 - No changes to the existing web app, production app package, saved training
   data or the other developer's native branch during this UI iteration.
 
-**Next implementation priority:** replace temporary candidate labels and
-screen-specific layout rules in the active Plan/Train/Coach shell with a
-shared, production-grade typography/actions system, then validate a full
-workout session on the phone.
+## Workout reference pass — 2026-11-08
+
+Both custom-cycle and Composer workout screens now share a persistent
+Target/Last display preference and weight → reps → RIR reference strip.
+Last uses corrected, authenticated saved observations from the latest same
+program day, matching the exact exercise slot, warmup/working position and
+amplifier part. Upper-day bench and Push-day bench remain independent.
+Skipped/failed latest visits are shown as such; an older successful workout
+is never selected instead. Unreported actual RIR remains unknown. Changing
+the display cannot fill/edit/record any set field or alter a target.
+
+The first-program preview and both workout paths use original curated
+exercise names. Active sets display their position within warmups or working
+sets, and the custom logger groups reps/RIR side by side on the phone.
+
+**Next implementation priority:** validate these controls through a full
+Android workout and large-text layouts, then continue the Plan/Coach screen
+composition, functional parity and measured coaching improvements. Source
+checks do not establish physical-device acceptance.

@@ -9,7 +9,7 @@ for(const required of [
   "'android-native/KOTLIN_LAB_DISPOSABLE_TEST.md'",
   "'milestone(kotlin): disposable lab '",
   '-PkotlinLabDisposableRun=$GITHUB_RUN_NUMBER',
-  ':app:assembleDebug :app:bundleDebug',
+  'gradle :app:assembleDebug --no-daemon --stacktrace',
   'kotlin-lab-stable-signing-test.mjs',
   'native-core-journey-test.mjs',
   ':native-coach-store:testDebugUnitTest',
@@ -27,6 +27,6 @@ assert.ok(flow.includes('test -z "${KOTLIN_LAB_SIGNING_STORE_FILE:-}"') &&
   !flow.includes('secrets.KOTLIN_LAB_KEYSTORE') &&
   stable.includes('Require stable private Kotlin Lab signing'),
   'Trial never accesses production or stable signing keys');
-assert.ok(!flow.includes('bundleRelease') && flow.includes('app-debug.aab'),
-  'Trial cannot masquerade as a Play-ready AAB');
-console.log('PASS per-run disposable Kotlin Lab APK and debug AAB are isolated and milestone gated');
+assert.ok(!flow.includes('bundleDebug') && !flow.includes('bundleRelease') &&
+  !flow.includes('.aab'), 'Device testing produces an APK only; Play bundles are deferred');
+console.log('PASS per-run disposable Kotlin Lab APK is isolated, APK-only and milestone gated');

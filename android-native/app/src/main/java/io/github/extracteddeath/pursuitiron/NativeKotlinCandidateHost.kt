@@ -517,6 +517,58 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Read-only Target/Last reference, cold-opened under the same owner fence
+     * as corrected history. UI-provided sets or cached workout facts cannot
+     * become a reference. Logging never depends on this optional read.
+     */
+    fun reviewWorkoutLastReferences(
+        workoutId:String,custom:Boolean
+    ):WorkoutLastReferenceResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return WorkoutLastReferenceResult.Unavailable
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val history=mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
+                    as? NativeKotlinMixedHistoryReadResult.Review
+                    ?:return@withOwnerTransaction WorkoutLastReferenceResult.Unavailable
+                val result=if(custom) {
+                    val current=(customIssuedStore.open(owner.ownerKey,workoutId)
+                        as? NativeCustomJournalResult.Durable)?.issued?.journal
+                        ?:return@withOwnerTransaction WorkoutLastReferenceResult.Unavailable
+                    val completed=ArrayList<CustomCoachingHistoricalSession>()
+                    for(entry in history.timeline.completions) {
+                        if(entry !is NativeKotlinMixedHistoryCompletion.Custom ||
+                            entry.evidence.cycleId!=current.snapshot.stamp.cycleId)continue
+                        val saved=(customIssuedStore.open(owner.ownerKey,entry.manifest.workoutId)
+                            as? NativeCustomJournalResult.Durable)?.issued?.journal
+                            ?:return@withOwnerTransaction WorkoutLastReferenceResult.Unavailable
+                        if(saved.workoutId!=entry.evidence.workoutId ||
+                            saved.snapshot.stamp.athleteId!=owner.athleteId ||
+                            saved.revision!=entry.evidence.journalRevision)
+                            return@withOwnerTransaction WorkoutLastReferenceResult.Unavailable
+                        completed+=CustomCoachingHistoricalSession(
+                            entry.manifest.completionOrder,saved.snapshot,entry.evidence)
+                    }
+                    WorkoutLastReferenceDomain.custom(workoutId,current.snapshot,completed)
+                } else {
+                    val current=trackedWorkout.open(owner.ownerKey,owner.athleteId,workoutId)
+                        as? NativeJournalFileResult.Durable
+                        ?:return@withOwnerTransaction WorkoutLastReferenceResult.Unavailable
+                    val completed=history.timeline.completions.mapNotNull {entry->
+                        (entry as? NativeKotlinMixedHistoryCompletion.Composer)?.let {
+                            ComposerReferenceSession(it.manifest.completionOrder,
+                                it.dayIndex,it.purpose,it.evidence)
+                        }
+                    }
+                    WorkoutLastReferenceDomain.composer(current.journal.snapshot,completed)
+                }
+                if(localAthlete.signedInIdentity()!=owner)
+                    WorkoutLastReferenceResult.Unavailable else result
+            }
+        }.getOrDefault(WorkoutLastReferenceResult.Unavailable)
+    }
+
+    /**
      * Owner-verified generated + custom MAIN working-set facts. It reads
      * actual journal outcomes, corrections and physical loads while holding
      * the same native history transaction fence. Still read-only: NO

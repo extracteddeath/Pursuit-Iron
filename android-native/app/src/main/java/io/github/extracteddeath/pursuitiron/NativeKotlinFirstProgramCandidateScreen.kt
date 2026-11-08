@@ -327,7 +327,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     style=MaterialTheme.typography.bodySmall)
                 options.forEach { option ->
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Text(prettyFirstProgram(option.exerciseId),
+                        Text(kotlinExerciseLabel(option.exerciseId),
                             style=MaterialTheme.typography.titleSmall)
                         if(option.needsWeightCalibration) {
                             OutlinedTextField(
@@ -379,7 +379,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             Text("Day ${day.dayIndex+1} · ${prettyFirstProgram(day.purpose.name)}",
                                 style=MaterialTheme.typography.titleSmall)
                             day.orderedVisits.forEach { visit ->
-                                Text("${prettyFirstProgram(visit.exerciseId)} · ${visit.sets} sets",
+                                Text("${kotlinExerciseLabel(visit.exerciseId)} · ${visit.sets} sets",
                                     style=MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -395,7 +395,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             val range=target?.targetReps?.let {
                                 "${it.minimum}–${it.maximum}"
                             } ?: "unresolved"
-                            Text("${prettyFirstProgram(exercise.exerciseId)}: ${working.size} × ${range} · goal RIR ${target?.targetRir ?: "?"}",
+                            Text("${kotlinExerciseLabel(exercise.exerciseId)}: ${working.size} × ${range} · goal RIR ${target?.targetRir ?: "?"}",
                                 style=MaterialTheme.typography.bodySmall)
                         }
                     }

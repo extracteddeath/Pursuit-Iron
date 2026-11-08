@@ -37,6 +37,9 @@ internal fun NativeKotlinCustomJournalScreen(
     onReturnToProgram:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
+    var referenceMode by rememberWorkoutReferenceMode()
+    val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
+        enabled=referenceMode==WorkoutReferenceMode.LAST)
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
     }
@@ -173,7 +176,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         result.setKey==nextVisit.setKey)
                         liveCoach=result
                 }
-                PageHeading("APPROVED · IMMUTABLE TARGETS",
+                PageHeading("TODAY'S TRAINING",
                     current.snapshot.dayLabel,
                     "Week ${current.snapshot.absoluteWeek} · ${current.snapshot.phase.name.replace('_',' ')}")
                 PursuitCard(highlighted=true) {
@@ -228,9 +231,10 @@ internal fun NativeKotlinCustomJournalScreen(
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodyMedium)
                 }
+                PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
                 current.snapshot.slots.forEach {slot->
                     PursuitCard {
-                        Text(slot.exerciseId.replace('_',' ').replace('-',' '),
+                        Text(kotlinExerciseLabel(slot.exerciseId),
                             style=MaterialTheme.typography.titleLarge)
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,
@@ -257,6 +261,10 @@ internal fun NativeKotlinCustomJournalScreen(
                             NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished,
+                                referenceMode=referenceMode,lastReferences=lastReferences,
+                                position=slot.sets.filter{it.prescription.type==set.prescription.type}
+                                    .indexOf(set)+1,
+                                setCount=slot.sets.count{it.prescription.type==set.prescription.type},
                                 initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
                                     record(set.setKey,CustomWorkoutVisitPart.MAIN,
@@ -272,6 +280,10 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     existing=follower,locked=busy||finished,
+                                    referenceMode=referenceMode,lastReferences=lastReferences,
+                                    position=slot.sets.filter{it.prescription.type==set.prescription.type}
+                                        .indexOf(set)+1,
+                                    setCount=slot.sets.count{it.prescription.type==set.prescription.type},
                                     initiallyExpanded=nextVisit==CustomWorkoutVisitKey(
                                         set.setKey,CustomWorkoutVisitPart.FOLLOW_UP),
                                     onRecord={outcome,actual->
@@ -385,6 +397,10 @@ private fun NativeKotlinCustomVisitEditor(
     part:CustomWorkoutVisitPart,
     existing:CustomWorkoutJournalReceipt?,
     locked:Boolean,
+    referenceMode:WorkoutReferenceMode,
+    lastReferences:WorkoutLastReferenceResult?,
+    position:Int,
+    setCount:Int,
     initiallyExpanded:Boolean,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit
 ) {
@@ -443,16 +459,18 @@ private fun NativeKotlinCustomVisitEditor(
         verticalArrangement=Arrangement.spacedBy(6.dp)) {
         HorizontalDivider()
         val label=if(part==CustomWorkoutVisitPart.MAIN)
-            "Set ${set.ordinalInSlot}"
+            "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
         else "Amplifier · ${follower?.kind?.name?.replace('_',' ')}"
         Text(label,style=MaterialTheme.typography.titleMedium)
-        Text("Target: "+when(target) {
-            DraftSetLoad.ExplicitBodyweight -> "bodyweight"
-            is DraftSetLoad.Verified -> "${target.value} ${target.unit.name} · ${target.basis.name.replace('_',' ')}"
-        }+" · "+if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-            "${follower?.followUpReps} follow-up reps"
-        else "${prescription.reps.minimum}–${prescription.reps.maximum} reps · RIR ${prescription.targetRir ?: "unset"}",
-            style=MaterialTheme.typography.bodySmall)
+        if(editing || initiallyExpanded) {
+            val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+                follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
+            else prescription.reps
+            PursuitWorkoutSetReference(referenceMode,target,referenceReps,
+                if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
+                lastReferences,WorkoutReferenceKey(set.setKey,
+                    part==CustomWorkoutVisitPart.FOLLOW_UP))
+        }
         if(saved!=null&&!editing){
             Text("Recorded: ${saved.outcome.name.replace('_',' ').lowercase()}" +
                 (saved.performed?.let{" · ${it.reps} reps" +
@@ -469,20 +487,22 @@ private fun NativeKotlinCustomVisitEditor(
                 style=MaterialTheme.typography.bodySmall)
             if(verified!=null)
                 OutlinedTextField(value=actualLoad,onValueChange={actualLoad=it},
-                    label={Text("Weight performed · ${verified.unit.name} / ${verified.basis.name.replace('_',' ')}")},
+                    label={Text("Weight · ${verified.unit.name.lowercase()}")},
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                     singleLine=true,modifier=Modifier.fillMaxWidth(),
                     isError=actualLoad.isNotBlank()&&weight==null)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
             OutlinedTextField(value=actualReps,onValueChange={actualReps=it},
                 label={Text("Reps completed")},singleLine=true,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                modifier=Modifier.fillMaxWidth(),
+                modifier=Modifier.weight(1f),
                 isError=actualReps.isNotBlank()&&reps==null)
             OutlinedTextField(value=actualRir,onValueChange={actualRir=it},
-                label={Text("Actual RIR · optional, blank if unknown")},
+                label={Text("RIR · optional")},
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                singleLine=true,modifier=Modifier.fillMaxWidth(),
+                singleLine=true,modifier=Modifier.weight(1f),
                 isError=!effortValid)
+            }
             Row(Modifier.fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Button(enabled=loadValid&&reps!=null&&effortValid,

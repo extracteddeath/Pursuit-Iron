@@ -1,4 +1,4 @@
-name: Pursuit Iron Kotlin Lab disposable debug APK and AAB
+name: Pursuit Iron Kotlin Lab disposable test APK
 
 # Exactly one explicit source-tested trial build. Ordinary rebuild commits do
 # not distribute APKs. This run uses a NEW package ID so that a fresh GitHub
@@ -80,23 +80,21 @@ jobs:
       - name: Test real Kotlin coaching and offline journal persistence
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace
-      - name: Assemble one-off debug APK and non-production debug AAB
+      - name: Assemble one-off test APK
         working-directory: android-native
         run: |
           set -euo pipefail
           test -z "${KOTLIN_LAB_SIGNING_STORE_FILE:-}"
-          gradle :app:assembleDebug :app:bundleDebug --no-daemon --stacktrace \
+          gradle :app:assembleDebug --no-daemon --stacktrace \
             -PkotlinLabBuildNumber=$GITHUB_RUN_NUMBER \
             -PkotlinLabDisposableRun=$GITHUB_RUN_NUMBER
-      - name: Verify real APK signature, unique app and bundle receipt
+      - name: Verify real APK signature, unique app and source receipt
         shell: bash
         run: |
           set -euo pipefail
           buildTools="$ANDROID_HOME/build-tools/36.0.0"
           apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
-          aab="android-native/app/build/outputs/bundle/debug/app-debug.aab"
           test -s "$apk"
-          test -s "$aab"
           "$buildTools/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/trial-cert.txt"
           "$buildTools/aapt" dump badging "$apk" > "$RUNNER_TEMP/trial-manifest.txt"
           package="io.github.extracteddeath.pursuitiron.kotlinlabtrial$GITHUB_RUN_NUMBER"
@@ -104,7 +102,6 @@ jobs:
           grep -F "launchable-activity: name='io.github.extracteddeath.pursuitiron.KotlinEnginePreviewActivity'" "$RUNNER_TEMP/trial-manifest.txt"
           grep -F "label='Pursuit Iron Lab Trial $GITHUB_RUN_NUMBER'" "$RUNNER_TEMP/trial-manifest.txt"
           grep -F 'Signer #1 certificate SHA-256 digest:' "$RUNNER_TEMP/trial-cert.txt"
-          unzip -tq "$aab" > /dev/null
           {
             echo "sourceCommit=$GITHUB_SHA"
             echo "workflowRun=$GITHUB_RUN_ID"
@@ -112,16 +109,15 @@ jobs:
             echo "applicationId=$package"
             echo "signature=ephemeral-debug-not-updateable"
             echo "deviceAcceptance=NOT_TESTED"
-            sha256sum "$apk" "$aab"
+            sha256sum "$apk"
             grep -F 'Signer #1 certificate SHA-256 digest:' "$RUNNER_TEMP/trial-cert.txt"
           } > "android-native/app/build/outputs/apk/debug/disposable-trial-receipt.txt"
-      - name: Upload short-lived trial APK, debug AAB and identity verification
+      - name: Upload short-lived trial APK and identity verification
         uses: actions/upload-artifact@v4
         with:
           name: pursuit-iron-kotlin-lab-disposable
           path: |
             android-native/app/build/outputs/apk/debug/app-debug.apk
-            android-native/app/build/outputs/bundle/debug/app-debug.aab
             android-native/app/build/outputs/apk/debug/disposable-trial-receipt.txt
           if-no-files-found: error
           retention-days: 14

@@ -124,7 +124,10 @@ object KotlinAdaptiveSetPrescriptionDomain {
         // A recognized last-set backoff is eligible ONLY if its rep envelope
         // and issued RIR are the same as the main sets. Each prescribed
         // weight is independently re-staged and verified, never promoted to
-        // the heaviest set. Other advanced schemes remain unchanged.
+        // the heaviest set. Warmups are re-staged and verified with the
+        // whole approved week, but are NEVER part of working-rep adaptation
+        // or substituted for the performed history. Other advanced schemes
+        // remain unchanged.
         val policy=CoachSessionPrescriptionDomain.selectedPolicy(
             base.policies,history.exerciseId,original.purpose,original.dayIndex)
         val backoff=policy?.scheme==SetLoadScheme.LAST_SET_BACKOFF
@@ -132,11 +135,7 @@ object KotlinAdaptiveSetPrescriptionDomain {
                 policy.scheme!=SetLoadScheme.STRAIGHT && !backoff) ||
             (backoff && (
                 policy.backoffReps!=policy.workingReps ||
-                    policy.backoffRir!=policy.targetRir)) ||
-            policy.warmups.isNotEmpty() ||
-            original.targets.any {
-                it.exerciseId==history.exerciseId && it.type==DraftSetType.WARMUP
-            })
+                    policy.backoffRir!=policy.targetRir)))
             return denied(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
                 "This load/effort scheme requires a separate approved set-specific prescription.")
 

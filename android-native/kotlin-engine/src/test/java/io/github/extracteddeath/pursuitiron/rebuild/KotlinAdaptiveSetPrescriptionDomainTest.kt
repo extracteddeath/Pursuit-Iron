@@ -291,15 +291,65 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
                     AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
-    @Test fun neverOverwriteWarmupsOrTopBackoffSchemesWithStraightSetProgression() {
-        val w=DeclaredWarmupStep(n("25"),8,60,60)
-        val changed=policies().map {
-            if(it.exerciseId=="db-press")it.copy(warmups=listOf(w)) else it
+    @Test fun authenticWarmupIsPreservedWhileWorkingRepsAdapt() {
+        val warmup=DeclaredWarmupStep(n("25"),8,60,60)
+        val withWarmups=policies().map {
+            if(it.exerciseId=="db-press")it.copy(warmups=listOf(warmup)) else it
         }
-        val result=KotlinAdaptiveSetPrescriptionDomain.draft(
-            request(next=stagedRequest(p=changed)))
-        assertEquals(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
-            (result as AdaptiveSetPrescriptionResult.Rejected).reason)
+        val next=stagedRequest(p=withWarmups)
+        val base=(KotlinWorkoutSnapshotDomain.stage(next)
+            as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val result=candidate(request(next=next))
+        assertEquals(listOf(15,14,12),result.newRepTargets)
+        val oldWarmups=base.targets.filter {it.type==DraftSetType.WARMUP}
+        val newWarmups=result.workout.targets.filter {it.type==DraftSetType.WARMUP}
+        assertEquals(1,oldWarmups.size)
+        assertEquals(oldWarmups,newWarmups)
+        assertEquals(RepBand(8,8),newWarmups.single().reps)
+        assertEquals(n("25"),(newWarmups.single().load as DraftSetLoad.Verified).value)
+        assertEquals(60,newWarmups.single().restSeconds)
+        assertEquals(base.targets.filter {it.exerciseId=="db-row"},
+            result.workout.targets.filter {it.exerciseId=="db-row"})
+        assertEquals(base.estimatedMinutes,result.workout.estimatedMinutes)
+        assertEquals(listOf(14,13,12),result.observedReps)
+        assertFalse(result.mayAutoApply)
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun warmupsWithVerifiedLastSetBackoffKeepEveryWeightAndSetType() {
+        val warmup=DeclaredWarmupStep(n("25"),5,30,60)
+        val policies=matchingBackoffPolicy().map {p ->
+            if(p.exerciseId=="db-press") p.copy(warmups=listOf(warmup)) else p
+        }
+        val history=observed(reps=listOf(14,13,12),rir=listOf(3,3,4),
+            actualLoads=listOf("30","30","25"),issuedLoads=listOf("30","30","25"))
+        val next=stagedRequest(p=policies)
+        val before=(KotlinWorkoutSnapshotDomain.stage(next)
+            as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val result=candidate(request(previous=history,next=next))
+        assertEquals(listOf(15,14,14),result.newRepTargets)
+        assertEquals(before.targets.filter {it.type==DraftSetType.WARMUP},
+            result.workout.targets.filter {it.type==DraftSetType.WARMUP})
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            result.workout.targets.filter {it.exerciseId=="db-press" &&
+                it.type==DraftSetType.WORKING}.map {
+                (it.load as DraftSetLoad.Verified).value
+            })
+        assertEquals(before.targets.map {it.setKey},
+            result.workout.targets.map {it.setKey})
+    }
+
+    @Test fun unverifiedWarmupCannotEnterAdaptiveWorkout() {
+        val bad=policies().map {
+            if(it.exerciseId=="db-press")it.copy(
+                warmups=listOf(DeclaredWarmupStep(n("32.5"),8,60,60)))
+            else it
+        }
+        assertTrue(KotlinAdaptiveSetPrescriptionDomain.draft(
+            request(next=stagedRequest(p=bad))) is AdaptiveSetPrescriptionResult.Rejected)
+    }
+
+    @Test fun authenticBackoffStillCannotBorrowUniformHistory() {
         val backoff=policies().map {
             if(it.exerciseId=="db-press") it.copy(
                 scheme=SetLoadScheme.LAST_SET_BACKOFF,
@@ -307,13 +357,12 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
                 backoffReps=RepBand(10,15),backoffRir=2
             ) else it
         }
-        val result2=KotlinAdaptiveSetPrescriptionDomain.draft(
+        // Uniform historical 30-lb sets are not comparable to the
+        // authentic 30/30/25-lb backoff prescription.
+        val result=KotlinAdaptiveSetPrescriptionDomain.draft(
             request(next=stagedRequest(p=backoff)))
-        // The backoff itself is now supported when its rep/RIR targets
-        // match, but a historical uniform 30-lb day is NOT comparable
-        // to the new authentic 30/30/25-lb backoff prescription.
         assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
-            (result2 as AdaptiveSetPrescriptionResult.Rejected).reason)
+            (result as AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
     @Test fun staleHistoryRevisionAndChangedAthleteGymProgramCannotShapeWorkout() {

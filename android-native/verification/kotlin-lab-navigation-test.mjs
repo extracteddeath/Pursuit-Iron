@@ -24,6 +24,9 @@ const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pur
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
+const facilityPicker=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
+const gymScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt');
+const onboarding=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinOnboardingCandidateScreen.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -171,6 +174,31 @@ for(const required of [
   'current?.manifest?.savedCorrectionRevision!=',
   'kotlinHistoryCorrectionActual('
 ])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
+// Each group is a physical-availability checkbox, not an equipment-load
+// grant. Preserve all original bench/station IDs and category ordering.
+const facilityIds=[...facilityPicker.matchAll(/"([a-z0-9-]+)" to "/g)]
+  .map(match=>match[1]);
+assert.equal(new Set(facilityIds).size,facilityIds.length,
+  'Named physical facilities must have unique stable source IDs');
+for(const id of ['flat-bench','rack','incline-bench','pullup-bar'])
+  assert.ok(facilityIds.includes(id),'Original source facility lost: '+id);
+assert.ok(facilityIds.indexOf('hip-abduction')+1===
+  facilityIds.indexOf('hip-adduction'),
+  'Hip Abduction and Hip Adduction must remain adjacent');
+for(const group of ['Free weights','Bars','Benches & stations',
+  'Cables & general machines','Leg machines','Hip & glute machines',
+  'Upper-body machines','Arm & core machines'])
+  assert.ok(facilityPicker.includes('KotlinGymFacilityGroup("'+group+'"'),
+    'Missing grouped gym category '+group);
+assert.ok(facilityPicker.includes('val updated=if(checked)selected+id else selected-id') &&
+  facilityPicker.includes('Other saved facilities:') &&
+  facilityPicker.includes('Additional saved IDs are preserved'),
+  'Named equipment toggles must preserve manually verified uncommon IDs');
+assert.ok(onboarding.includes('NativeKotlinGroupedFacilityChoices("Available gym facilities"') &&
+  gymScreen.includes('NativeKotlinGroupedFacilityChoices(') &&
+  gymScreen.includes('controller.setFacilitiesAndAttachments('),
+  'Onboarding and gym editing must share physical-facility choices and explicit saves');
+
 // Source contracts only: these guard the important navigation and consent
 // wiring. Runtime accessibility and touch-device acceptance are still pending.
 assert.ok(plan.indexOf('NativeKotlinCustomCycleOverview(draft,currentSelection)') <

@@ -641,4 +641,62 @@ class NativeKotlinCurrentLoadCoachReviewTest {
                 .observedReps)
     }
 
+
+    private fun historicalWarmup(i:Int,load:String="25"):KotlinHistoricalSetFact =
+        KotlinHistoricalSetFact("db-press","db-press:d1:w0",
+            DraftSetType.WARMUP,0,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,n(load)),
+            RepBand(5,5),null,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n(load),LoadUnit.LB,5,null),
+            "warmup-$i",null)
+
+    @Test fun currentNativeRepReviewAcceptsRealWarmupsWithoutEditingThem() {
+        val current=approval().copy(policies=policies.map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))
+            else p
+        })
+        val earlier=purposeLoad(composer(1),"30",listOf(11,10),3)
+        val history=earlier.copy(evidence=earlier.evidence.copy(
+            sets=listOf(historicalWarmup(1))+earlier.evidence.sets))
+        val result=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+            current,timeline(history),"db-press",CoachReadiness.NORMAL,false)
+        assertTrue(result.toString(),
+            result is NativeCurrentRepPrescriptionResult.Reviewed)
+        val reviewed=result as NativeCurrentRepPrescriptionResult.Reviewed
+        val adapted=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(listOf(12,11),adapted.newRepTargets)
+        val warmups=adapted.workout.targets.filter {it.exerciseId=="db-press" &&
+            it.type==DraftSetType.WARMUP}
+        assertEquals(1,warmups.size)
+        assertEquals("db-press:d1:w0",warmups.single().setKey)
+        assertEquals(RepBand(5,5),warmups.single().reps)
+        assertEquals(n("25"),(warmups.single().load as DraftSetLoad.Verified).value)
+        assertEquals(60,warmups.single().restSeconds)
+        assertEquals(listOf(11,10),earlier.evidence.exerciseReviews.single()
+            .workingSets.map {it.actual!!.reps})
+        assertFalse(adapted.mayIssueWorkout)
+    }
+
+    @Test fun missingOrChangedHistoricalWarmupCannotPassNativeRepReview() {
+        val current=approval().copy(policies=policies.map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))
+            else p
+        })
+        val performed=purposeLoad(composer(1),"30",listOf(11,10),3)
+        val unchanged=performed.copy(evidence=performed.evidence.copy(
+            sets=listOf(historicalWarmup(1))+performed.evidence.sets))
+        val changed=unchanged.copy(evidence=unchanged.evidence.copy(
+            sets=listOf(historicalWarmup(1,"30"))+performed.evidence.sets))
+        for(entry in listOf(performed,changed)) {
+            assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+                NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT),
+                NativeKotlinCurrentRepPrescriptionDomain.inspect(
+                    current,timeline(entry),"db-press",
+                    CoachReadiness.NORMAL,false))
+        }
+    }
 }

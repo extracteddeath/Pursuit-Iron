@@ -118,11 +118,7 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val reviewedBackoff=prescription.scheme==SetLoadScheme.LAST_SET_BACKOFF &&
             prescription.backoffReps==prescription.workingReps &&
             prescription.backoffRir==prescription.targetRir
-        if((prescription.scheme!=SetLoadScheme.STRAIGHT && !reviewedBackoff) ||
-            prescription.warmups.isNotEmpty() ||
-            last.evidence.sets.any {
-                it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
-            })
+        if(prescription.scheme!=SetLoadScheme.STRAIGHT && !reviewedBackoff)
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val equipment=(approval.program.exercises.singleOrNull {
             it.exerciseId==exerciseId
@@ -133,6 +129,32 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val working=day.targets.filter {
             it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
         }
+        // Warmups do not provide evidence for working-rep progression, but
+        // their immutable issued identities must still match the full current
+        // approved prescription. A changed/missing warmup cannot silently
+        // become a working set or contaminate a day-specific review.
+        val stagedWarmups=day.targets.filter {
+            it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
+        }.sortedBy {it.ordinal}
+        val recordedWarmups=last.evidence.sets.filter {
+            it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
+        }.sortedBy {it.originalOrdinal}
+        if(stagedWarmups.size!=recordedWarmups.size ||
+            stagedWarmups.indices.any {i->
+                val target=stagedWarmups[i]
+                val fact=recordedWarmups[i]
+                val issued=fact.issuedLoad as? DraftSetLoad.Verified
+                val expected=target.load as? DraftSetLoad.Verified
+                fact.setKey!=target.setKey ||
+                    fact.originalOrdinal!=target.ordinal ||
+                    fact.issuedReps!=target.reps ||
+                    fact.issuedRir!=target.targetRir ||
+                    issued==null || expected==null ||
+                    issued.unit!=expected.unit ||
+                    issued.basis!=expected.basis ||
+                    issued.value.compareTo(expected.value)!=0
+            })
+            return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         // No transfer from other days or legacy exercise-wide defaults.
         // The FULL currently approved next day supplies the original stable
         // working-set load of EVERY ordinal. Both the historical issuance

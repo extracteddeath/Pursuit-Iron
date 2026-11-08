@@ -94,3 +94,23 @@ future in-place upgrades.
 
 These checks are for the human device tester. Passing CI does not claim
 that this physical-device acceptance has happened.
+
+## Future stable-signed Kotlin Lab channel
+
+The 2026-11-08 v1 and v2 APKs above remain archived under package
+`io.github.extracteddeath.pursuitiron.kotlinlab` and were signed by
+different temporary GitHub runner keys.
+
+**Future** Kotlin Lab APK builds require a private stable signing key and use
+a NEW, separate package
+`io.github.extracteddeath.pursuitiron.kotlinlabstable` with launcher
+**Pursuit Iron Lab Stable**. The old v2 app can remain installed; its saved
+test data is untouched but is not automatically migrated to the new app.
+The first stable build cannot be published without the owner configuring
+the GitHub Actions signing secrets in
+`android-native/KOTLIN_LAB_SIGNING_SETUP.md`. Source-only validation remains
+available without secrets.
+
+All subsequent stable-channel updates must preserve the exact new package
+ID and signing certificate; no production app or other developer preview
+is modified.

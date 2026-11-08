@@ -23,10 +23,10 @@ assert.equal((release.match(/android.intent.category.LAUNCHER/g)||[]).length,1,
 assert.match(debug,/android:name="\.KotlinEnginePreviewActivity"/);
 assert.equal((debug.match(/android.intent.category.LAUNCHER/g)||[]).length,1,
   'Debug variant must have only the Kotlin Lab launcher');
-assert.ok(debug.includes('android:label="Pursuit Iron Kotlin Lab"') &&
+assert.ok(debug.includes('android:label="Pursuit Iron Lab Stable"') &&
   debug.includes('tools:replace="android:label"'),
   'The installed Kotlin Lab icon must have its own explicit label');
-assert.ok(build.includes('applicationIdSuffix = ".kotlinlab"'),
+assert.ok(build.includes('applicationIdSuffix = ".kotlinlabstable"'),
   'Kotlin Lab must not overwrite production or another developer\'s .preview app');
 assert.ok(journey.includes('Scaffold(') && journey.includes('NavigationBar {') &&
   journey.includes('NavigationBarItem('),

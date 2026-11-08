@@ -53,10 +53,10 @@ assert.ok(kotlinLab.includes(':kotlin-engine:testDebugUnitTest') &&
   'Kotlin milestone must test the independent engine and native history before assembling');
 assert.ok(kotlinMarker.includes('one-time') &&
   kotlinMarker.includes('development') &&
-  kotlinMarker.includes('io.github.extracteddeath.pursuitiron.kotlinlab'),
+  kotlinMarker.includes('io.github.extracteddeath.pursuitiron.kotlinlabstable'),
   'Kotlin milestone must disclose its testing scope and isolated package ID');
 assert.ok(read('android-native/app/build.gradle.kts')
-  .includes('applicationIdSuffix = ".kotlinlab"'),
+  .includes('applicationIdSuffix = ".kotlinlabstable"'),
   'Kotlin device candidate must not overwrite the native preview install');
 assert.match(device,/^on:\n  workflow_dispatch:/m);
 assert.doesNotMatch(device,/^  push:/m);

@@ -2,11 +2,16 @@
 
 ## Why this is a required gate
 
-The isolated Kotlin Lab APK currently uses package
-`io.github.extracteddeath.pursuitiron.kotlinlab`. The first two test APKs
-were automatically signed using **different ephemeral GitHub debug keys**.
-Android will **not** update one from the other. Uninstalling to switch
-signatures erases that test app's private stored workouts and settings.
+The first two Kotlin Lab test APKs use package
+`io.github.extracteddeath.pursuitiron.kotlinlab`. They were signed using
+**different ephemeral GitHub debug keys**, so they cannot update each other.
+Uninstalling to switch signatures erases that test app's private data.
+
+The new **stable-key** test channel intentionally uses a distinct package:
+`io.github.extracteddeath.pursuitiron.kotlinlabstable` (displayed as
+**Pursuit Iron Lab Stable**). It can be installed **beside** either old Lab
+APK and will not erase the old app's saved training. Its future updates must
+keep both this same package ID and the same stable certificate.
 
 Do **not** treat a higher version code as a way to change signing identity.
 We cannot recover those previous ephemeral runner keys.
@@ -14,7 +19,7 @@ We cannot recover those previous ephemeral runner keys.
 Starting with the next device-test milestone, the independent Kotlin Lab
 APK workflow **fails closed** if a stable signing key has not been configured.
 This is intentional: ordinary source-only engine tests still run normally
-without the key, but no additional incompatible test APK is published.
+without the key. No new unsigned or ephemerally signed APK is published.
 
 ### One-time owner setup (on a trusted computer)
 
@@ -43,7 +48,7 @@ without the key, but no additional incompatible test APK is published.
 
    For the first value, on Linux use
    `base64 -w0 pursuit-iron-kotlin-lab.jks`; on macOS use
-   `base64 < pursuit-iron-kotlin-lab.jks | tr -d '\\n'`.
+   `base64 < pursuit-iron-kotlin-lab.jks | tr -d '\n'`.
    Paste the output only into the GitHub **secret** field. Never paste
    the encoded key into a repository file or log.
 
@@ -57,14 +62,18 @@ without the key, but no additional incompatible test APK is published.
    and increment versionCode. A new key would again prevent in-place
    upgrades and risk test-data loss.
 
-### The first transition remains unavoidable
+### Coexistence and data preservation
 
-The previously distributed v1 and v2 Kotlin Lab test APKs use ephemeral
-signatures. The **first** stable-key build cannot upgrade either of them.
-Before uninstalling an earlier test build, consider its stored workout data.
-Do not delete useful records until an explicit export/migration route exists.
-Once the stable-key build is installed, future builds using this same key
-can be installed as upgrades, preserving normal app-private data.
+The previously distributed v1 and v2 APKs use ephemeral signatures, but
+**the first stable-key build has a different package ID**, so it can
+coexist with either old build. You do **not** need to uninstall v2 to
+install the new stable-key test app. The existing v2 workout history
+remains inside v2. It is **not automatically transferred** to the stable
+app. Do not delete the old app until there is an explicitly tested
+export/migration path for any records you need.
+
+Subsequent builds using the same stable key and package ID can be installed
+as upgrades, preserving the stable app's own data.
 
 The production Play Store application and other developer's native preview
 have different package IDs and signing identities; this procedure does not

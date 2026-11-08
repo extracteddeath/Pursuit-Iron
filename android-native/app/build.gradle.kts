@@ -41,7 +41,7 @@ android {
             // This isolated Kotlin Lab is NOT the other developer's
             // native preview. Distinct app-private storage and a separate
             // install identity prevent a debug APK from overwriting it.
-            applicationIdSuffix = ".kotlinlab"
+            applicationIdSuffix = ".kotlinlabstable"
         }
     }
     buildFeatures { compose = true }

@@ -31,12 +31,14 @@ for(const v of [
   'Stable signing must pass '+v+' into Android Gradle');
 assert.ok(app.includes('getByName("debug")') &&
   app.includes('storeFile=file(keyFile)') &&
-  app.includes('applicationIdSuffix = ".kotlinlab"'),
+  app.includes('applicationIdSuffix = ".kotlinlabstable"'),
   'Only the separate Kotlin Lab debug signing identity may be customized');
 assert.ok(!read('.github/workflows/android-kotlin-rebuild.yml')
   .includes('secrets.KOTLIN_LAB_KEYSTORE_B64'),
   'Source validation must never need private signing credentials');
-assert.ok(docs.includes('ephemeral') && docs.includes('cannot upgrade') &&
+assert.ok(docs.includes('ephemeral') && docs.includes('cannot update') &&
+  docs.includes('coexist') &&
+  docs.includes('io.github.extracteddeath.pursuitiron.kotlinlabstable') &&
   docs.includes('repo') && docs.includes('secret') &&
   docs.includes('never') &&
   marker.includes('GitHub runners generate'),

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.mapSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -34,19 +36,28 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     val phaseList=remember(cycle.cycleId,cycle.revision) {
         cycle.blocks.map{it.phase}.distinct()
     }
-    var selectedPhase by remember(cycle.cycleId,cycle.revision) {
+    var selectedPhase by rememberSaveable(cycle.cycleId,cycle.revision) {
         mutableStateOf(phaseList.first())
     }
-    var selectedMuscle by remember(cycle.cycleId,cycle.revision) {
+    var selectedMuscle by rememberSaveable(cycle.cycleId,cycle.revision) {
         mutableStateOf(TrainingMuscle.CHEST)
     }
-    val fields=remember(cycle.cycleId,cycle.revision,sourceRevision) {
-        mutableStateMapOf<String,String>()
-    }
-    val liftRows=remember(cycle.cycleId,cycle.revision,sourceRevision) {
-        mutableStateMapOf<TrainingPhase,Int>()
-    }
-    var edited by remember(cycle.cycleId,cycle.revision,sourceRevision) {
+    val fields=rememberSaveable(cycle.cycleId,cycle.revision,sourceRevision,
+        saver=mapSaver<MutableMap<String,String>>(
+            save={it.toMap()},
+            restore={saved->mutableStateMapOf<String,String>().apply {
+                saved.forEach{(key,value)->if(value is String)put(key,value)}
+            }})) { mutableStateMapOf<String,String>() }
+    val liftRows=rememberSaveable(cycle.cycleId,cycle.revision,sourceRevision,
+        saver=mapSaver<MutableMap<TrainingPhase,Int>>(
+            save={rows->rows.entries.associate{it.key.name to it.value}},
+            restore={saved->mutableStateMapOf<TrainingPhase,Int>().apply {
+                saved.forEach{(key,value)->
+                    val phase=runCatching{TrainingPhase.valueOf(key)}.getOrNull()
+                    if(phase!=null && value is Int)put(phase,value)
+                }
+            }})) { mutableStateMapOf<TrainingPhase,Int>() }
+    var edited by rememberSaveable(cycle.cycleId,cycle.revision,sourceRevision) {
         mutableStateOf(false)
     }
     LaunchedEffect(cycle.cycleId,cycle.revision,sourceRevision,reviewedInputs) {
@@ -94,10 +105,10 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
             }
         }
     }
-    var issues by remember(cycle.cycleId,cycle.revision,sourceRevision) {
+    var issues by rememberSaveable(cycle.cycleId,cycle.revision,sourceRevision) {
         mutableStateOf<List<String>>(emptyList())
     }
-    var expanded by remember(cycle.cycleId,cycle.revision) {
+    var expanded by rememberSaveable(cycle.cycleId,cycle.revision) {
         mutableStateOf(false)
     }
     val profile=source?.reviewed?.takeIf {

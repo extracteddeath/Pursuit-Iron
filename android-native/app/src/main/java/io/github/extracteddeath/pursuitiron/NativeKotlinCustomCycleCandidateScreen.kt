@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,15 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var showAdvancedId by rememberSaveable {mutableStateOf(false)}
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
     var showProgramEditor by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
+    val policyDrafts=rememberSaveableStateHolder()
+    var retainedPolicyKey by rememberSaveable {mutableStateOf<String?>(null)}
+    val policyKey=draft?.let{"policy:${it.athleteId}:${it.cycleId}:${it.revision}:${state.sourceRevision}"}
+    LaunchedEffect(policyKey) {
+        if(policyKey!=null) {
+            retainedPolicyKey?.takeIf{it!=policyKey}?.let{policyDrafts.removeState(it)}
+            retainedPolicyKey=policyKey
+        }
+    }
     val policyReady=state.coachingAudit?.status==
         CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
         state.coachingAudit?.issues?.isEmpty()==true &&
@@ -717,6 +727,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     style = MaterialTheme.typography.titleLarge)
                 Text("Review every scheduled week and every authored override against your actual gym and confirmed training constraints. Missing coach-authored dose and time policies are shown as blockers—not invented targets.",
                     style = MaterialTheme.typography.bodyMedium)
+                policyDrafts.SaveableStateProvider(checkNotNull(policyKey)) {
                 NativeKotlinCustomCoachPolicyEditor(
                     cycle=draft,
                     source=state.reviewedSourceSetup,
@@ -734,6 +745,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     onReview={reviewedInputs->
                         controller.auditFullCycle(reviewedInputs)
                     })
+                }
                 OutlinedButton(
                     onClick={controller.auditFullCycle()},
                     enabled=!busy,

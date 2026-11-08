@@ -52,12 +52,19 @@ internal fun PursuitWorkoutReferencePicker(
     Row(Modifier.fillMaxWidth(),
         horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
         verticalAlignment=Alignment.CenterVertically) {
-        Text("Set reference",modifier=Modifier.weight(1f),
+        Text("Reference",modifier=Modifier.weight(1f),
             style=MaterialTheme.typography.labelLarge)
-        FilterChip(selected=mode==WorkoutReferenceMode.TARGET,
-            onClick={onChange(WorkoutReferenceMode.TARGET)},label={Text("Target")})
-        FilterChip(selected=mode==WorkoutReferenceMode.LAST,
-            onClick={onChange(WorkoutReferenceMode.LAST)},label={Text("Last")})
+        SingleChoiceSegmentedButtonRow {
+            WorkoutReferenceMode.entries.forEachIndexed { index,choice ->
+                SegmentedButton(
+                    selected=mode==choice,
+                    shape=SegmentedButtonDefaults.itemShape(index=index,count=2),
+                    onClick={onChange(choice)}
+                ) {
+                    Text(if(choice==WorkoutReferenceMode.TARGET)"Target" else "Last")
+                }
+            }
+        }
     }
 }
 

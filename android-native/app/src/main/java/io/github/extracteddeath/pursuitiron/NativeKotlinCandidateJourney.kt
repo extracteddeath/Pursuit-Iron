@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
@@ -34,7 +35,7 @@ import kotlinx.coroutines.withContext
  */
 private enum class KotlinCandidateDestination(val label:String) {
     ONBOARD("My setup"),GYM("My gym"),STARTER("Build first"),PROGRAM("My program"),
-    COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),SETTINGS("Settings"),TRAIN("Train")
+    COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),SETTINGS("Settings"),TRAIN("Train")
 }
 
 @Composable
@@ -120,7 +121,7 @@ internal fun NativeKotlinCandidateJourney(
             coachRequestedExerciseId=null // ordinary tab, not a saved-set handoff
         destination=to
     }
-    // Four ordinary destinations stay within a thumb's reach. Setup,
+    // Five ordinary destinations stay within a thumb's reach. Setup,
     // generator, gym, and future-block tools remain in the explicit menu.
     // This is a real Compose navigation shell, not a new session owner.
     Scaffold(
@@ -172,6 +173,7 @@ internal fun NativeKotlinCandidateJourney(
                 listOf(KotlinCandidateDestination.PROGRAM,
                     KotlinCandidateDestination.TRAIN,
                     KotlinCandidateDestination.HISTORY,
+                    KotlinCandidateDestination.PROGRESS,
                     KotlinCandidateDestination.COACH).forEach {page->
                     val selected=destination==page ||
                         (page==KotlinCandidateDestination.PROGRAM &&
@@ -191,6 +193,8 @@ internal fun NativeKotlinCandidateJourney(
                                     Icon(Icons.Filled.FitnessCenter,contentDescription=null)
                                 KotlinCandidateDestination.HISTORY ->
                                     Icon(Icons.Filled.History,contentDescription=null)
+                                KotlinCandidateDestination.PROGRESS ->
+                                    Icon(Icons.Filled.Insights,contentDescription=null)
                                 else ->Icon(Icons.Filled.Person,contentDescription=null)
                             }
                         },
@@ -198,6 +202,7 @@ internal fun NativeKotlinCandidateJourney(
                             KotlinCandidateDestination.PROGRAM ->"Plan"
                             KotlinCandidateDestination.TRAIN ->"Train"
                             KotlinCandidateDestination.HISTORY ->"History"
+                            KotlinCandidateDestination.PROGRESS ->"Progress"
                             else ->"Coach"
                         })}
                     )
@@ -254,6 +259,8 @@ internal fun NativeKotlinCandidateJourney(
                             themeId=themeId,
                             onOpenAppearance={appearanceExpanded=true},
                             onBack={destination=KotlinCandidateDestination.COACH})
+                    KotlinCandidateDestination.PROGRESS ->
+                        NativeKotlinStrengthStandardsScreen(host)
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
                             onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},

@@ -59,12 +59,8 @@ private val publishedTierNames=listOf(
     "Beginner","Novice","Intermediate","Advanced","Elite"
 )
 
-private fun epleyEstimate(load:BigDecimal,reps:Int):BigDecimal? {
-    if(reps !in 1..10 || load<=BigDecimal.ZERO)return null
-    if(reps==1)return load
-    return load.multiply(BigDecimal.valueOf((30+reps).toLong()))
-        .divide(BigDecimal("30"),2,RoundingMode.HALF_UP)
-}
+private fun epleyEstimate(load:BigDecimal,reps:Int):BigDecimal? =
+    StrengthStandardsMeasurementDomain.epley(load,reps)
 private fun scalarLabel(value:BigDecimal):String=
     value.stripTrailingZeros().toPlainString()
 private fun displayedTier(ratio:Double,thresholds:List<Double>):String {
@@ -87,6 +83,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     }
     var revision by remember{mutableIntStateOf(0)}
     var bodyweightText by rememberSaveable{mutableStateOf("")}
+    var bodyweightUnit by rememberSaveable{mutableStateOf(LoadUnit.LB.name)}
     var comparisonGroup by rememberSaveable{mutableStateOf<String?>(null)}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
@@ -102,13 +99,10 @@ internal fun NativeKotlinStrengthStandardsScreen(
     val facts=(result as? NativeKotlinMixedFactsReadResult.Review)?.facts
     val completed=facts?.mostRepsAtLoad.orEmpty()
         .filter{it.key.basis==LoadBasis.BARBELL_TOTAL}
-    val observedUnits=completed.map{it.key.unit}.distinct()
-    val sharedUnit=observedUnits.singleOrNull()
+    val displayUnit=LoadUnit.valueOf(bodyweightUnit)
     val bodyweight=runCatching{BigDecimal(bodyweightText.trim())}.getOrNull()
         ?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("1000")}
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(PursuitSpace.md),
-        verticalArrangement=Arrangement.spacedBy(PursuitSpace.lg)) {
+    PursuitScreenContent {
         PageHeading("PROGRESS","Strength standards",
             "Compare your actual logged barbell performance with published community reference bands.")
         PursuitCard(highlighted=true) {
@@ -124,20 +118,43 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     onClick={comparisonGroup=if(comparisonGroup=="female")null else "female"},
                     label={Text("Female reference")})
             }
+            Text("Bodyweight units",style=MaterialTheme.typography.labelLarge)
+            SingleChoiceSegmentedButtonRow {
+                LoadUnit.entries.forEachIndexed { index, unit ->
+                    SegmentedButton(
+                        selected=displayUnit==unit,
+                        shape=SegmentedButtonDefaults.itemShape(
+                            index=index,count=LoadUnit.entries.size),
+                        onClick={
+                            if(displayUnit!=unit) {
+                                val entered=runCatching {
+                                    BigDecimal(bodyweightText.trim())
+                                }.getOrNull()
+                                if(entered!=null && entered>BigDecimal.ZERO) {
+                                    bodyweightText=StrengthStandardsMeasurementDomain
+                                        .convert(entered,displayUnit,unit)
+                                        .setScale(2,RoundingMode.HALF_UP)
+                                        .stripTrailingZeros().toPlainString()
+                                }
+                                bodyweightUnit=unit.name
+                            }
+                        }
+                    ) { Text(unit.name) }
+                }
+            }
             OutlinedTextField(value=bodyweightText,
                 onValueChange={input->
                     if(input.length<=9 && input.all{it.isDigit()||it=='.'})
                         bodyweightText=input
                 },
                 singleLine=true,
-                label={Text("Bodyweight (${sharedUnit?.name?.lowercase() ?: "same unit as logged lifts"})")},
+                label={Text("Bodyweight (${displayUnit.name.lowercase()})")},
                 isError=bodyweightText.isNotEmpty()&&bodyweight==null,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 modifier=Modifier.fillMaxWidth())
-            if(observedUnits.size>1)
-                Text("Your saved barbell lifts use different units. A bodyweight-ratio comparison is held until units are reconciled; individual logged lifts remain visible.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.error)
+            Text("Changing units converts your entered bodyweight. Saved sets retain their original weight units.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Broad entire-community reference only, not an age- or bodyweight-specific ranking. The estimated 1RM is not a tested maximum.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -155,8 +172,9 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 publishedReferences.forEach { standard ->
                     val best=completed.filter{it.key.exerciseId==standard.exerciseId}
                         .mapNotNull {lift->
-                            epleyEstimate(lift.actualLoad,lift.reps)?.let{
-                                lift to it
+                            epleyEstimate(lift.actualLoad,lift.reps)?.let{estimate->
+                                lift to StrengthStandardsMeasurementDomain.convert(
+                                    estimate,lift.key.unit,displayUnit)
                             }
                         }.maxByOrNull{it.second}
                     PursuitCard {
@@ -168,19 +186,20 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         else {
                             val (lift,estimate)=best
                             PursuitMetricStrip(listOf(
-                                "Estimated 1RM" to "${scalarLabel(estimate)} ${lift.key.unit.name.lowercase()}",
-                                "From logged" to "${scalarLabel(lift.actualLoad)} × ${lift.reps}",
+                                "Estimated 1RM" to "${scalarLabel(estimate.setScale(1,RoundingMode.HALF_UP))} ${displayUnit.name.lowercase()}",
+                                "From logged" to "${scalarLabel(lift.actualLoad)} ${lift.key.unit.name.lowercase()} × ${lift.reps}",
                                 "Session" to lift.completionOrder.toString()
                             ))
-                            val eligible=sharedUnit==lift.key.unit &&
-                                bodyweight!=null && comparisonGroup!=null
+                            val eligible=bodyweight!=null && comparisonGroup!=null
                             if(eligible) {
-                                val ratio=estimate.divide(checkNotNull(bodyweight),5,
-                                    RoundingMode.HALF_UP).toDouble()
+                                val ratio=checkNotNull(
+                                    StrengthStandardsMeasurementDomain.relativeStrength(
+                                        estimate,checkNotNull(bodyweight))
+                                ).toDouble()
                                 val bands=if(comparisonGroup=="male")standard.male
                                     else standard.female
                                 val tier=displayedTier(ratio,bands)
-                                Text("$tier · ${"%.2f".format(java.util.Locale.US,ratio)}× bodyweight",
+                                Text("$tier reference · ${"%.2f".format(java.util.Locale.US,ratio)}× bodyweight",
                                     style=MaterialTheme.typography.titleMedium)
                                 LinearProgressIndicator(
                                     progress={(ratio / bands.last()).coerceIn(0.0,1.0).toFloat()},
@@ -189,7 +208,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
                                     style=MaterialTheme.typography.bodySmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
-                                Text("Choose a comparison group and enter bodyweight in the logged lift's unit to view its broad reference band.",
+                                Text("Choose a reference group and enter bodyweight to view the broad, unit-corrected comparison.",
                                     style=MaterialTheme.typography.bodySmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }

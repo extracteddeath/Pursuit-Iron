@@ -270,7 +270,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     }
                     val preflight=state.consentBoundPreview?.session
                     if(policyReady && signed &&
-                        preflight?.absoluteWeek==1 &&
+                        preflight!=null &&
+                        preflight.absoluteWeek==1 &&
                         preflight.weekday==firstTrainingWeekday &&
                         state.preparedWorkout==null) {
                         Button(onClick={

@@ -16,6 +16,9 @@ const history=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 const labActivity=read('android-native/app/src/debug/java/io/github/extracteddeath/pursuitiron/KotlinEnginePreviewActivity.kt');
 const tokens=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeDesignTokens.kt');
 const nativeSettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
+const standards=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthStandardsScreen.kt');
+const sharedDesign=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
+const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -37,6 +40,27 @@ assert.ok(build.includes('applicationIdSuffix = ".kotlinlabstable"') &&
 assert.ok(journey.includes('Scaffold(') && journey.includes('NavigationBar {') &&
   journey.includes('NavigationBarItem('),
   'Ordinary training screens must be reachable through a persistent native bar');
+assert.ok(journey.includes('KotlinCandidateDestination.PROGRESS') &&
+  journey.includes('NativeKotlinStrengthStandardsScreen(host)') &&
+  journey.includes('NavigationRail {') &&
+  journey.includes('candidateTabSelected(destination,page)') &&
+  journey.includes('if(!activeWorkout)Surface('),
+  'App must have accessible Progress and adaptive Material navigation without workout chrome');
+assert.ok(targetLast.includes('SingleChoiceSegmentedButtonRow') &&
+  targetLast.includes('SegmentedButton(') &&
+  targetLast.includes('WorkoutReferenceMode.LAST'),
+  'Target/Last must share the compact Material segmented display-only control');
+for(const phrase of ['PursuitSectionHeading','PursuitExerciseHeading',
+  'PursuitEmptyState'])assert.ok(sharedDesign.includes('fun '+phrase),
+    'Missing a reusable Material design component: '+phrase);
+for(const phrase of ['host.reviewVerifiedKotlinWorkingSetFacts()',
+  'LoadBasis.BARBELL_TOTAL','it.reps','epleyEstimate(',
+  'comparisonGroup','bodyweightText','Reference methodology',
+  'PublishedStrengthReference("barbell_bench"',
+  'PublishedStrengthReference("back_squat"',
+  'PublishedStrengthReference("conventional_deadlift"',
+  'PublishedStrengthReference("barbell_ohp"'])
+  assert.ok(standards.includes(phrase),'Unverified strength standards design contract: '+phrase);
 assert.ok(!journey.includes('KotlinCandidateDestination.entries.forEach'),
   'Do not reintroduce nine raw debugging chips as the primary navigation');
 for(const required of [

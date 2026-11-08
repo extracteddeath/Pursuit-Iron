@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -176,6 +177,23 @@ internal fun NativeKotlinCandidateJourney(
         if(to==KotlinCandidateDestination.PROGRESS)
             progressRequestedExerciseId=null // ordinary tab, not a pinned lift
         destination=to
+    }
+    // Physical Back follows the visible detail route, not the app launcher.
+    // Never intercept an active workout: its independent save/minimize and
+    // durable-journal recovery controls remain the only workout owners.
+    BackHandler(enabled=destination==KotlinCandidateDestination.PROFILE ||
+        destination==KotlinCandidateDestination.SETTINGS ||
+        (destination==KotlinCandidateDestination.PROGRESS &&
+            progressRequestedExerciseId!=null)) {
+        when(destination) {
+            KotlinCandidateDestination.PROFILE -> destination=profileReturn
+            KotlinCandidateDestination.SETTINGS -> destination=settingsReturn
+            KotlinCandidateDestination.PROGRESS -> {
+                progressRequestedExerciseId=null
+                destination=KotlinCandidateDestination.PROFILE
+            }
+            else -> Unit
+        }
     }
     // Five ordinary destinations stay within a thumb's reach. Setup,
     // generator, gym, and future-block tools remain in the explicit menu.

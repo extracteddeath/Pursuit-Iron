@@ -100,11 +100,17 @@ waived by publishing a development APK.
 ## Next test APK versus full release
 
 An isolated **development test APK is a nearer milestone** than production.
-The ordinary core is available in source; its next device candidate requires
-the stable private signing configuration to be confirmed and the milestone
-workflow to build the exact source-tested commit. The current tools do not
-expose repository-secret configuration, so signing readiness is **unverified**,
-not asserted missing or complete.
+The ordinary core is available in source. The candidate-3 build was actually
+attempted after source validation and **stopped at the required private-signing
+guard**, before APK assembly: at least one required GitHub Actions signing
+secret is absent. This is a concrete infrastructure blocker, not an Android
+compilation failure. No APK was produced. See
+[the guarded build attempt](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42459673171).
+
+The repository owner must complete the one-time private signing configuration
+in GitHub Actions secrets before a stable test build can be assembled. The
+current integration does not expose secret administration; no key material
+was created, displayed, committed or requested in chat during this pass.
 
 Future Lab builds use the distinct `.kotlinlabstable` identity and the same
 private development certificate on every update. Existing v2 test data stays in
@@ -119,10 +125,12 @@ APK that makes it possible; it is required before a production release.
 
 ## Validation at this checkpoint
 
-Local execution passes **714 engine tests + 470 native persistence tests**.
+Local execution and source CI pass **714 engine tests + 470 native persistence tests**.
 The latter includes the complete three-day generated Full Body journey, the
 four-day generated Upper/Lower journey, nine-session custom-cycle continuity,
-and explicit saved v2/v3 compatibility. The isolated CI pipeline repeats those
-checks, audits all twelve starter cases, re-executes web/Kotlin comparison
-probes and compiles Android. No APK assembly or production deployment is part
-of this pass.
+and explicit saved v2/v3 compatibility. The
+[31-step source pipeline](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42459293542)
+also audited all twelve starter cases, re-executed web/Kotlin comparison probes
+and compiled Android. The separate device milestone passed its source guards
+and then refused assembly because private signing was incomplete. No APK or
+production deployment resulted from this pass.

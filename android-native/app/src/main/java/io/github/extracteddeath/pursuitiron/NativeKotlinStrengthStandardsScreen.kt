@@ -121,8 +121,9 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
     LaunchedEffect(preferredExerciseId) {
-        if(preferredExerciseId in NativeStrengthFavorites.supportedIds)
-            trendExerciseId=checkNotNull(preferredExerciseId)
+        if(preferredExerciseId!=null &&
+            preferredExerciseId in NativeStrengthFavorites.supportedIds)
+            trendExerciseId=preferredExerciseId
     }
     fun toggleFavorite(exerciseId:String) {
         val athleteId=profileId ?:return

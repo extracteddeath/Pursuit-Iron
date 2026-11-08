@@ -18,6 +18,55 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Coach explanations use authenticated model outcomes, not debug DTO strings.
+ * A refused progression is a normal outcome: no workout target was changed. */
+private fun nativeNextRepExplanation(result:NativeOwnerNextSetResult?):String? =
+    when(result) {
+        is NativeOwnerNextSetResult.Review -> when(val review=result.candidate) {
+            is NativeCurrentRepPrescriptionResult.Reviewed -> when(
+                val proposed=review.proposal) {
+                is AdaptiveSetPrescriptionResult.Candidate -> null
+                is AdaptiveSetPrescriptionResult.Rejected -> proposed.detail
+            }
+            is NativeCurrentRepPrescriptionResult.Rejected -> when(review.reason) {
+                NativeCurrentRepPrescriptionRefusal.NO_RECORDED_EXERCISE ->
+                    "This movement has no finished native workout yet. Complete an approved session before reviewing progression."
+                NativeCurrentRepPrescriptionRefusal.CUSTOM_WORKOUT_IS_LATEST ->
+                    "Your latest recorded set was in a custom cycle. Review its next week from My Program; this generated-program coach does not borrow that history."
+                NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT ->
+                    "The last recorded sets, prescribed loads or exercise details are not comparable to this workout. Review the training log first."
+                NativeCurrentRepPrescriptionRefusal.EXERCISE_SOURCE_CHANGED ->
+                    "Your approved program or gym changed. Build a comparable session history before progressing reps."
+                NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED ->
+                    "The previous workout used a different training day or purpose. Keep those progression histories separate."
+                NativeCurrentRepPrescriptionRefusal.INVALID_SOURCE_OR_HISTORY ->
+                    "The approved program and native workout history could not be matched safely. Refresh before reviewing again."
+            }
+        }
+        is NativeOwnerNextSetResult.HistoryRejected -> when(result.reason) {
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION ->
+                "A Finish or saved correction is still pending recovery. Reopen Train and History before reviewing progression."
+            NativeKotlinMixedHistoryRefusal.NOT_ENROLLED ->
+                "Native Kotlin history is not enrolled. Existing web workouts are not automatically included in this coach."
+            else ->
+                "Your saved training history could not be fully verified. No targets were changed."
+        }
+        is NativeOwnerNextSetResult.Rejected -> when(result.reason) {
+            NativeOwnerNextSetRefusal.NO_CURRENT_APPROVAL ->
+                "Approve a Kotlin training program before requesting a next-session prescription."
+            NativeOwnerNextSetRefusal.ALREADY_ISSUED_OR_CONFLICT ->
+                "Your approved next workout is already issued or has a conflicting journal. Open Train to resume its original targets."
+            NativeOwnerNextSetRefusal.GYM_SOURCE_UNAVAILABLE,
+            NativeOwnerNextSetRefusal.GYM_SOURCE_CHANGED ->
+                "Your approved workout and current gym equipment no longer match. Check equipment and approve the updated program."
+            NativeOwnerNextSetRefusal.ASSISTANCE_DISABLED ->
+                "Progression assistance is off. You can still train with your authored targets."
+            else ->
+                "The current athlete or approved workout could not be verified. No changes were saved."
+        }
+        null -> "No verified next-session suggestion is available."
+    }
+
 /**
  * Isolated Kotlin-only coaching review. Deliberately never mounted from
  * NativeRuntimeHost, and never silently saves a plan or issues a workout.
@@ -233,18 +282,9 @@ internal fun NativeKotlinCandidateCoachScreen(
                             }
                             nextRepReview=outcome.getOrNull()
                                 as? NativeOwnerNextSetResult.Review
-                            val result=nextRepReview?.candidate
-                                as? NativeCurrentRepPrescriptionResult.Reviewed
-                            nextRepNotice=when {
-                                outcome.isFailure ->
-                                    "Unable to verify saved workout history. No targets changed."
-                                result?.proposal is AdaptiveSetPrescriptionResult.Candidate ->
-                                    null
-                                result!=null ->
-                                    "No eligible next-set progression: ${result.proposal}"
-                                else ->
-                                    "No history-backed set suggestion: ${outcome.getOrNull()}"
-                            }
+                            nextRepNotice=if(outcome.isFailure)
+                                "Unable to verify saved workout history. No targets changed."
+                            else nativeNextRepExplanation(outcome.getOrNull())
                             busy=false
                         }
                     }

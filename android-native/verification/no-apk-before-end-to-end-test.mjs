@@ -43,7 +43,8 @@ for(const script of [
   'native-original-theme-parity-test.mjs',
   'no-apk-before-end-to-end-test.mjs',
   'kotlin-lab-navigation-test.mjs',
-  'kotlin-lab-workout-ui-test.mjs'
+  'kotlin-lab-workout-ui-test.mjs',
+  'kotlin-lab-stable-signing-test.mjs'
 ])assert.ok(kotlinLab.includes('node android-native/verification/'+script),
   'Kotlin device candidate must recheck '+script);
 assert.ok(kotlinLab.includes(':kotlin-engine:testDebugUnitTest') &&

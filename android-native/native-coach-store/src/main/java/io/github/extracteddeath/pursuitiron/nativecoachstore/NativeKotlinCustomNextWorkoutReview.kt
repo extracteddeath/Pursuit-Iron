@@ -117,7 +117,8 @@ class NativeKotlinCustomNextWorkoutReview(
                     ?:return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.COACH_SETTINGS_UNAVAILABLE)
             val preference=currentSettings?.policy ?:CoachAssistancePolicy.STANDARD
-            if(!preference.offersProgression)
+            if(!CustomRepForecastPolicyDomain.permits(
+                    preference,repForecastPolicy))
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
             val next:CustomWorkoutDaySnapshot

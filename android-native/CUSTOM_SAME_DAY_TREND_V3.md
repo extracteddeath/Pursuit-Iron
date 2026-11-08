@@ -46,6 +46,20 @@ missing, there is only one comparable working set, or only one set declines,
 V3 **does not invent a decline**. The existing verified target-RIR and
 physical-equipment progression checks remain in force.
 
+## Athlete opt-out and independent verification
+
+The saved coach preferences choose the policy **on each new review**:
+- **Standard:** V3 may examine the same-day reported-effort trend.
+- **Progression Only:** V2's regular target-RIR progression remains available,
+  but no V3 performance/fatigue guard is run.
+- **Manual:** Neither proposal is made; the authored workout and completed
+  history remain accessible.
+
+A native owner-fenced review independently re-reads these settings. A
+previously accepted V3 receipt cannot silently replay after fatigue coaching
+is switched off; the athlete must obtain a fresh policy-matched review.
+V1 and V2 receipts remain separately versioned and replay their own rules.
+
 ## What is kept stable
 - V1's byte-for-byte approved receipts and frozen one-rep rule.
 - V2's target-RIR projection, even on a pattern that V3 would hold.

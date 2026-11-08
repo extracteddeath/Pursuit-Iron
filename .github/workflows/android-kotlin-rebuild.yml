@@ -31,6 +31,8 @@ on:
       - 'android-native/app/src/release/AndroidManifest.xml'
       - 'android-native/verification/kotlin-lab-navigation-test.mjs'
       - 'android-native/verification/kotlin-lab-workout-ui-test.mjs'
+      - 'android-native/verification/kotlin-lab-stable-signing-test.mjs'
+      - 'android-native/KOTLIN_LAB_SIGNING_SETUP.md'
   workflow_dispatch:
 concurrency:
   group: kotlin-engine-rebuild-${{ github.ref }}
@@ -69,6 +71,8 @@ jobs:
         run: node android-native/verification/kotlin-lab-navigation-test.mjs
       - name: Verify focused editable Kotlin workout logging
         run: node android-native/verification/kotlin-lab-workout-ui-test.mjs
+      - name: Verify durable private signing gate for future Kotlin Lab APKs
+        run: node android-native/verification/kotlin-lab-stable-signing-test.mjs
       - name: Test headless Kotlin training decisions and weekly composer without an APK
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace

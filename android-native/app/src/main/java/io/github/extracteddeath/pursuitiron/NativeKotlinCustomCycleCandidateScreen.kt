@@ -637,8 +637,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 ?.amendment
                         }
                         if(readyRepEdit!=null && state.preparedWorkout==null &&
-                            reviewed.review.repForecastPolicy==
-                                CustomRepForecastPolicy.TARGET_RIR_TREND_V3) {
+                            reviewed.review.repForecastPolicy!=
+                                CustomRepForecastPolicy.LEGACY_STEP_V1) {
                             Text("Suggestions are not automatically applied. To change this week's minimum reps, review an explicit week edit, then re-audit and approve the updated program.",
                                 style=MaterialTheme.typography.bodySmall)
                             OutlinedButton(enabled=!busy,
@@ -953,7 +953,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             if(session!=null && selected!=null && base!=null) {
                 val amended=if(weekEditFromCoach) {
                     val reviewed=state.dayCoaching?.takeIf {
-                        it.review.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_TREND_V3 &&
+                        it.review.repForecastPolicy!=CustomRepForecastPolicy.LEGACY_STEP_V1 &&
                             it.selectedSlotId==slotId &&
                             it.review.status==CustomNextWorkoutCoachingStatus.BUILD_REPS &&
                             it.nextWorkout?.copy(

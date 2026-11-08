@@ -108,6 +108,9 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     }
     val allowed=activation!=null && block!=null && savedInputs!=null &&
         assistance?.offersProgression==true
+    val repForecastPolicy=assistance?.let{
+        CustomRepForecastPolicyDomain.newProposal(it)
+    } ?: CustomRepForecastPolicy.TARGET_RIR_V2 // never used when disabled
     val maxStep=remember(maxStepText) {
         runCatching{BigDecimal(maxStepText.trim())}.getOrNull()
             ?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
@@ -260,7 +263,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                     host.reviewNextActivatedWorkoutProgression(
                                         absoluteWeek,weekday,chosen,contextInputs,
                                         readiness,restricted,increase,
-                                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+                                        repForecastPolicy)
                                 }.getOrNull()
                             }
                             if(generation==coachingGeneration) {
@@ -292,7 +295,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                     host.previewNextActivatedRepAmendment(
                                         id,absoluteWeek,weekday,chosen,contextInputs,
                                         readiness,restricted,increase,
-                                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+                                        repForecastPolicy)
                                 }.getOrNull()
                             }
                             repPreview=result as? NativeCustomNextRepPreview.Ready
@@ -538,7 +541,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                                         receipt.fingerprint,receipt.historyRevision,
                                         receipt.consentRevision,receipt.setKeys,
                                         receipt.nextMinimumReps,true,
-                                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+                                        repForecastPolicy)
                                     val staged=if(result is NativeCustomNextRepWrite.Accepted)
                                         host.prepareActivatedFutureWorkout(
                                             receipt.workoutId,active.cycleId,

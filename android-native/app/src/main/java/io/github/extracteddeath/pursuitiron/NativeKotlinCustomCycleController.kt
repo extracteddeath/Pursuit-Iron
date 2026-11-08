@@ -649,14 +649,20 @@ internal class NativeKotlinCustomCycleController(
                 message="Run your current full-cycle coaching audit before reviewing starting weights.")
             return@run
         }
-        // Ordinary signed custom programs use the same CURRENT V3
-        // target-RIR estimate as the activated-block coach. This is a
-        // read-only proposal: changing the next workout still requires a
-        // separately approved program edit, and all V1 saved rep receipts
-        // keep their frozen legacy replay policy.
+        // Read current owner-persisted settings at the time of review,
+        // not the last rendered toggle. Both regular and Future Weeks use
+        // the same versioned selector and the trusted owner checks again.
+        val settings=(host.readCoachAssistance()
+            as? NativeCoachSettingsRead.Current)?.settings?.policy
+        val policy=settings?.let{CustomRepForecastPolicyDomain.newProposal(it)}
+        if(policy==null) {
+            current.value=current.value.copy(
+                message="Progression assistance is off or the saved coaching settings could not be verified. No targets were changed.")
+            return@run
+        }
         val result=host.reviewNextAuthoredWorkoutProgression(draft.cycleId,
             absoluteWeek,weekday,slotId,inputs,readiness,movementRestricted,
-            maximumIncrease,CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
+            maximumIncrease,policy)
         val reviewed=result as? NativeCustomNextCoachResult.Reviewed
         val preview=current.value.authoredPreview
         val next=reviewed?.nextWorkout

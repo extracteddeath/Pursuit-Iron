@@ -43,13 +43,41 @@ jobs:
           node android-native/verification/no-apk-before-end-to-end-test.mjs
           node android-native/verification/kotlin-lab-navigation-test.mjs
           node android-native/verification/kotlin-lab-workout-ui-test.mjs
+          node android-native/verification/kotlin-lab-stable-signing-test.mjs
           grep -q 'KotlinEnginePreviewActivity' android-native/app/src/debug/AndroidManifest.xml
           grep -q 'applicationIdSuffix = ".kotlinlab"' android-native/app/build.gradle.kts
+      # Deliberately refuse a distributable APK signed with a new ephemeral
+      # GitHub runner key. Such builds cannot update the previously installed
+      # Kotlin Lab and would require deleting app-private training history.
+      - name: Require stable private Kotlin Lab signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KOTLIN_LAB_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.KOTLIN_LAB_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KOTLIN_LAB_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KOTLIN_LAB_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$KEYSTORE_BASE64" || -z "$STORE_PASSWORD" ||
+                -z "$KEY_ALIAS" || -z "$KEY_PASSWORD" ]]; then
+            echo "::error::Stable Kotlin Lab signing secrets are not configured. Refusing an incompatible APK; see android-native/KOTLIN_LAB_SIGNING_SETUP.md."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/kotlin-lab-signing"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode \
+            > "$RUNNER_TEMP/kotlin-lab-signing/lab-upload.keystore"
+          chmod 600 "$RUNNER_TEMP/kotlin-lab-signing/lab-upload.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/kotlin-lab-signing/lab-upload.keystore" \
+            -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          echo "KOTLIN_LAB_SIGNING_STORE_FILE=$RUNNER_TEMP/kotlin-lab-signing/lab-upload.keystore" >> "$GITHUB_ENV"
       - name: Test native program decisions and durable workout history
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace
       - name: Compile and assemble isolated Kotlin Lab debug APK
         working-directory: android-native
+        env:
+          KOTLIN_LAB_SIGNING_STORE_PASSWORD: ${{ secrets.KOTLIN_LAB_STORE_PASSWORD }}
+          KOTLIN_LAB_SIGNING_KEY_ALIAS: ${{ secrets.KOTLIN_LAB_KEY_ALIAS }}
+          KOTLIN_LAB_SIGNING_KEY_PASSWORD: ${{ secrets.KOTLIN_LAB_KEY_PASSWORD }}
         run: gradle :app:assembleDebug :app:processDebugMainManifest --no-daemon --stacktrace -PkotlinLabBuildNumber=${{ github.run_number }}
       - name: Verify signed-out test device build output and checksum
         run: |

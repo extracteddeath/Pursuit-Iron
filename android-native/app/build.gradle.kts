@@ -18,6 +18,24 @@ android {
         versionName = kotlinLabBuildNumber?.let { "0.1.0-kotlin-lab.$it" }
             ?: "0.1.0-native-foundation"
     }
+    signingConfigs {
+        // Only the opt-in Kotlin Lab device pipeline supplies these values.
+        // Source CI may compile without them; assembling a distributable
+        // Kotlin Lab APK is separately blocked in the workflow until a
+        // private, stable signing key is configured in GitHub secrets.
+        getByName("debug") {
+            val keyFile=System.getenv("KOTLIN_LAB_SIGNING_STORE_FILE")
+            if(!keyFile.isNullOrBlank()) {
+                storeFile=file(keyFile)
+                storePassword=System.getenv("KOTLIN_LAB_SIGNING_STORE_PASSWORD")
+                    ?:error("Missing stable Kotlin Lab store password")
+                keyAlias=System.getenv("KOTLIN_LAB_SIGNING_KEY_ALIAS")
+                    ?:error("Missing stable Kotlin Lab key alias")
+                keyPassword=System.getenv("KOTLIN_LAB_SIGNING_KEY_PASSWORD")
+                    ?:error("Missing stable Kotlin Lab key password")
+            }
+        }
+    }
     buildTypes {
         getByName("debug") {
             // This isolated Kotlin Lab is NOT the other developer's

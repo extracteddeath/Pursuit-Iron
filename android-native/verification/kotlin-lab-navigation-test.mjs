@@ -109,6 +109,27 @@ assert.ok(strengthMeasure.includes('BigDecimal("0.45359237")') &&
   strengthMeasure.includes('fun epley(') &&
   strengthMeasure.includes('fun relativeStrength('),
   'Unit conversion and 1RM measurements must have one pure Kotlin source');
+// Design-first rule: screen width, spacing and safe scroll handling belong
+// to shared Material components, not seven diverging root Columns.
+for(const screen of [
+  'NativeKotlinCoachSettingsScreen.kt',
+  'NativeKotlinCandidateCoachScreen.kt',
+  'NativeKotlinCustomCycleCandidateScreen.kt',
+  'NativeKotlinFirstProgramCandidateScreen.kt',
+  'NativeKotlinGymSourceCandidateScreen.kt',
+  'NativeKotlinFutureWeekCoachScreen.kt',
+  'NativeKotlinOnboardingCandidateScreen.kt'
+]) {
+  const content=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/'+screen);
+  assert.ok(content.includes('PursuitScreenContent {'),
+    'Responsive shared Material layout is missing in '+screen);
+  assert.ok(!content.includes('PageHeading("KOTLIN COACH · ISOLATED"'),
+    'Raw development jargon reached a published screen in '+screen);
+}
+assert.ok(journey.includes('PageHeading("TRAIN",') &&
+  !journey.includes('Text("Native workout ·') &&
+  history.includes('PageHeading("TRAINING LOG",'),
+  'Athlete-facing Train and History must not show raw Kotlin runtime IDs');
 assert.ok(!journey.includes('KotlinCandidateDestination.entries.forEach'),
   'Do not reintroduce nine raw debugging chips as the primary navigation');
 for(const required of [

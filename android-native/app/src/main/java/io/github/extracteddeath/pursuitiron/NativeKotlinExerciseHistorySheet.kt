@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
@@ -21,6 +22,8 @@ private data class ExerciseVisitDisplay(
     val key:String,
     val sessionOrder:Long,
     val entryNumber:Int,
+    val type:DraftSetType,
+    val followUp:Boolean,
     val outcome:KotlinJournalSetOutcome,
     val issuedLoad:DraftSetLoad,
     val issuedReps:RepBand,
@@ -35,20 +38,20 @@ private fun exerciseHistoryRows(
     when(completed) {
         is NativeKotlinMixedHistoryCompletion.Composer ->
             completed.evidence.sets.filter {
-                it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
+                it.exerciseId==exerciseId
             }.mapIndexed { index,set ->
                 ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}",
-                    order,index+1,set.outcome,set.issuedLoad,
+                    order,index+1,set.type,false,set.outcome,set.issuedLoad,
                     set.issuedReps,set.issuedRir,set.actual)
             }
         is NativeKotlinMixedHistoryCompletion.Custom ->
             completed.evidence.visits.filter {
-                it.exerciseId==exerciseId &&
-                    it.part==CustomWorkoutVisitPart.MAIN &&
-                    it.setType==DraftSetType.WORKING
+                it.exerciseId==exerciseId
             }.mapIndexed { index,set ->
-                ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}",
-                    order,index+1,set.outcome,set.prescribedLoad,
+                ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}:${set.part.name}",
+                    order,index+1,set.setType,
+                    set.part==CustomWorkoutVisitPart.FOLLOW_UP,
+                    set.outcome,set.prescribedLoad,
                     set.prescribedReps,set.prescribedRir,set.actual)
             }
     }
@@ -79,6 +82,7 @@ internal fun NativeKotlinExerciseHistorySheet(
     var history by remember(host,exerciseId) {
         mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)
     }
+    var showAllVisits by rememberSaveable(exerciseId){mutableStateOf(false)}
     LaunchedEffect(host,exerciseId) {
         history=withContext(Dispatchers.IO) {
             runCatching {host.reviewVerifiedKotlinHistory()}.getOrElse {
@@ -92,7 +96,7 @@ internal fun NativeKotlinExerciseHistorySheet(
             .padding(horizontal=PursuitSpace.md),
             verticalArrangement=Arrangement.spacedBy(PursuitSpace.md)) {
             PageHeading("EXERCISE HISTORY",kotlinExerciseLabel(exerciseId),
-                "All saved working sets · corrections included")
+                "Full training history · corrections included")
             when(val result=history) {
                 null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 is NativeKotlinMixedHistoryReadResult.Rejected ->
@@ -103,18 +107,39 @@ internal fun NativeKotlinExerciseHistorySheet(
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }
                     if(rows.isEmpty())
-                        PursuitEmptyState("No recorded working sets yet",
-                            "After this exercise has a finished native workout, its actual sets will appear here.")
+                        PursuitEmptyState("No recorded sets yet",
+                            "After this exercise has a finished native workout, its actual visits will appear here.")
                     else {
                         PursuitHistoryStatus(
-                            "${rows.map{it.sessionOrder}.distinct().size} training sessions · ${rows.size} working sets",
+                            "${rows.map{it.sessionOrder}.distinct().size} training sessions · ${rows.size} recorded entries",
                             "Newest session first. Skips and failed attempts remain visible; missing RIR is never estimated.")
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            FilterChip(selected=!showAllVisits,
+                                onClick={showAllVisits=false},
+                                label={Text("Working sets")})
+                            FilterChip(selected=showAllVisits,
+                                onClick={showAllVisits=true},
+                                label={Text("All entries")})
+                        }
+                        val visible=if(showAllVisits)rows else rows.filter {
+                            it.type==DraftSetType.WORKING && !it.followUp
+                        }
                         LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp),
                             contentPadding=PaddingValues(bottom=PursuitSpace.xl),
                             verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            items(rows,key={it.key}) { row ->
+                            if(visible.isEmpty())item {
+                                Text("No working sets in this history. Select All entries.",
+                                    style=MaterialTheme.typography.bodySmall)
+                            }
+                            items(visible,key={it.key}) { row ->
                                 PursuitCard {
-                                    Text("Session ${row.sessionOrder} · Set ${row.entryNumber}",
+                                    val kind=when {
+                                        row.followUp -> "Amplifier follow-up"
+                                        row.type==DraftSetType.WARMUP -> "Warm-up"
+                                        else -> "Working set"
+                                    }
+                                    Text("Session ${row.sessionOrder} · $kind ${row.entryNumber}",
                                         style=MaterialTheme.typography.titleSmall)
                                     val targetReps=if(row.issuedReps.minimum==row.issuedReps.maximum)
                                         "${row.issuedReps.minimum}"

@@ -149,8 +149,29 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
+    /** Recheck saved first-program inputs on every cold reopen, not just
+     * when navigating from the generator's transient confirmation screen. */
+    private fun recoverGeneratedCoachPolicy(cycleId:String) {
+        if(current.value.draft?.cycleId!=cycleId)return
+        when(val recovered=host.recoverSavedFirstProgramReview(cycleId)) {
+            is NativeRecoveredFirstProgramReview.Ready -> {
+                auditReviewedSavedCycle(recovered.inputs)
+                if(current.value.coachingAudit?.status==
+                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
+                    current.value=current.value.copy(
+                        message="Generated first-program coaching policy restored from verified saved calibration. Review and sign this exact cycle before preparing a workout.")
+            }
+            is NativeRecoveredFirstProgramReview.Rejected ->
+                current.value=current.value.copy(
+                    message=recovered.reason+
+                        " Your saved custom program remains available for manual coaching review.")
+            NativeRecoveredFirstProgramReview.NotGenerated -> {}
+        }
+    }
+
     fun open(cycleId: String) = run {
         applyRead(cycleId, host.readCustomCycleDraft(cycleId))
+        recoverGeneratedCoachPolicy(cycleId)
     }
 
     /** Owner-verified, read-only program picker. IDs stay internal to navigation. */
@@ -398,8 +419,19 @@ internal class NativeKotlinCustomCycleController(
         cycleId:String,inputs:CustomCoachAuditInputs
     )=run {
         applyRead(cycleId,host.readCustomCycleDraft(cycleId))
-        if(current.value.draft?.cycleId==cycleId)
-            auditReviewedSavedCycle(inputs)
+        if(current.value.draft?.cycleId!=cycleId)return@run
+        when(val recovered=host.recoverSavedFirstProgramReview(cycleId)) {
+            is NativeRecoveredFirstProgramReview.Ready ->
+                if(recovered.inputs==inputs) {
+                    auditReviewedSavedCycle(recovered.inputs)
+                } else current.value=current.value.copy(
+                    message="The generated coaching policy changed since you reviewed it. Reopen and review the saved program.")
+            NativeRecoveredFirstProgramReview.NotGenerated ->
+                current.value=current.value.copy(
+                    message="No durable generated coaching policy exists for this custom program. Run a manual full-cycle audit.")
+            is NativeRecoveredFirstProgramReview.Rejected ->
+                current.value=current.value.copy(message=recovered.reason)
+        }
     }
 
     /**

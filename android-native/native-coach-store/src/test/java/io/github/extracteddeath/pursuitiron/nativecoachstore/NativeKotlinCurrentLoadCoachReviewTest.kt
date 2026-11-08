@@ -665,6 +665,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         assertTrue(result.toString(),
             result is NativeCurrentRepPrescriptionResult.Reviewed)
         val reviewed=result as NativeCurrentRepPrescriptionResult.Reviewed
+        assertTrue("Actual native rep review: ${reviewed.proposal}",
+            reviewed.proposal is AdaptiveSetPrescriptionResult.Candidate)
         val adapted=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
         assertEquals(listOf(12,11),adapted.newRepTargets)
         val warmups=adapted.workout.targets.filter {it.exerciseId=="db-press" &&

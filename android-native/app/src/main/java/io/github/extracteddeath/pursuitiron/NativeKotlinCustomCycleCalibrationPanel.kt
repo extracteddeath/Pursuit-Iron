@@ -30,9 +30,22 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             (state.calibrationReceipt!=null ||
                 it.original.copy(declaredNonSetSeconds=state.authoredPreview?.declaredNonSetSeconds)==state.authoredPreview)
     }
+    val ordinaryPrepared=state.preparedWorkout?.takeIf {
+        it.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+            it.calibrationApprovalFingerprint==null &&
+            it.authoredReturnFingerprint==null &&
+            it.loadApprovalFingerprint==null &&
+            it.repApprovalFingerprint==null &&
+            it.futureWeekApprovalFingerprint==null &&
+            !it.resetToAuthored &&
+            state.consentBoundPreview?.session?.stamp==it.snapshot.stamp &&
+            state.consentBoundPreview?.session?.absoluteWeek==it.snapshot.absoluteWeek &&
+            state.consentBoundPreview?.session?.weekday==it.snapshot.weekday &&
+            state.draft?.revision==it.snapshot.stamp.cycleRevision
+    }
     val prepared=state.preparedWorkout?.takeIf {
         it.calibrationApprovalFingerprint!=null||it.resetToAuthored||it.authoredReturnFingerprint!=null
-    }
+    } ?:ordinaryPrepared
     val reset=state.calibrationReset
     LaunchedEffect(offer?.receipt?.fingerprint,prepared,reset?.preparedFingerprint,authoredReturn?.fingerprint) {
         confirmAccept=false;confirmIssue=false;confirmReset=false;confirmAuthoredReturn=false
@@ -116,6 +129,9 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         }
         prepared?.let {workout->
             HorizontalDivider()
+            if(workout==ordinaryPrepared)
+                Text("Regular workout · no special load-calibration change required",
+                    style=MaterialTheme.typography.bodyMedium)
             Text("Prepared · week ${workout.snapshot.absoluteWeek} · ${workout.snapshot.dayLabel}",
                 style=MaterialTheme.typography.titleMedium)
             if(workout.authoredReturnFingerprint!=null)Text("Your confirmed choice of heavier authored weights. History will be checked again before issuance.",
@@ -165,7 +181,11 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
     if(confirmIssue&&prepared!=null)AlertDialog(
         onDismissRequest={if(!state.busy)confirmIssue=false},title={Text("Issue this exact workout?")},
         text={Text("Recheck saved history, consent and the prepared targets for ${prepared.snapshot.dayLabel}. Once issued, targets cannot be rewritten.")},
-        confirmButton={Button(enabled=!state.busy,onClick={confirmIssue=false;controller.issueBlockCalibration()}){Text("Issue workout")}},
+        confirmButton={Button(enabled=!state.busy,onClick={
+            confirmIssue=false
+            if(prepared==ordinaryPrepared)controller.issueOrdinaryPreparedWorkout()
+            else controller.issueBlockCalibration()
+        }){Text("Issue workout")}},
         dismissButton={TextButton(enabled=!state.busy,onClick={confirmIssue=false}){Text("Cancel")}})
     if(confirmReset&&reset!=null)AlertDialog(
         onDismissRequest={if(!state.busy)confirmReset=false},title={Text("Restore authored targets?")},

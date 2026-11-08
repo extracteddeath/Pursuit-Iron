@@ -607,6 +607,59 @@ internal class NativeKotlinCustomCycleController(
             else "Issuance refused. Recheck consent and corrected history, or explicitly return to the authored workout.")
     }
 
+    /**
+     * Explicitly issue an ordinary, unamended, consent-bound custom workout.
+     * Previously only special calibration preparations were exposed to the
+     * Compose issuer. Do not convert a merely prepared snapshot to a grant:
+     * both the current checked preflight AND the host's owner-fenced issuer
+     * independently verify the exact program, consent and history.
+     */
+    fun issueOrdinaryPreparedWorkout() = run {
+        val before=current.value
+        val prepared=before.preparedWorkout ?:return@run
+        val draft=before.draft ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val preflight=before.consentBoundPreview
+        val ordinary=prepared.authority==
+                NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+            prepared.calibrationApprovalFingerprint==null &&
+            prepared.authoredReturnFingerprint==null &&
+            prepared.loadApprovalFingerprint==null &&
+            prepared.repApprovalFingerprint==null &&
+            prepared.futureWeekApprovalFingerprint==null &&
+            !prepared.resetToAuthored &&
+            preflight?.session?.stamp==prepared.snapshot.stamp &&
+            preflight.session.absoluteWeek==prepared.snapshot.absoluteWeek &&
+            preflight.session.weekday==prepared.snapshot.weekday &&
+            prepared.snapshot.stamp.cycleId==draft.cycleId &&
+            prepared.snapshot.stamp.cycleRevision==draft.revision &&
+            before.coachingAudit?.status==
+                CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+            (before.signoff as? NativeCustomSignoffRead.Found)?.isCurrent==true
+        if(!ordinary) {
+            current.value=before.copy(
+                message="The ordinary prepared workout is no longer tied to the current approved cycle and preflight. Reverify the exact day.")
+            return@run
+        }
+        val onDisk=host.openPreparedCustomWorkout(prepared.workoutId)
+        if(onDisk !is NativeCustomPreparedRead.Found ||
+            onDisk.workout!=prepared) {
+            current.value=before.copy(preparedWorkout=null,
+                message="Saved workout preparation changed or could not be verified. No workout was issued.")
+            return@run
+        }
+        val snap=prepared.snapshot
+        val result=host.issueReviewedCustomWorkout(
+            prepared.workoutId,draft.cycleId,
+            snap.absoluteWeek,snap.weekday,inputs)
+        current.value=current.value.copy(
+            issuedCalibrationId=(result as? NativeCustomJournalResult.Durable)
+                ?.issued?.journal?.workoutId,
+            message=if(result is NativeCustomJournalResult.Durable)
+                "Your exact regular workout was issued. Open its logger to record each actual working set."
+            else "Normal workout issuance was refused. The saved consent, history or exercise targets changed; nothing started.")
+    }
+
     fun findPendingCalibrations() = run {
         val cycle=current.value.draft?.cycleId ?:return@run
         val result=host.pendingBlockCalibrations(cycle)

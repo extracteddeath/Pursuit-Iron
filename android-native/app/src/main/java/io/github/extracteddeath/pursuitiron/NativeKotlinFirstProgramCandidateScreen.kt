@@ -222,7 +222,7 @@ private fun prettyFirstProgram(value:String)=value.replace('_',' ')
 @Composable
 internal fun NativeKotlinFirstProgramCandidateScreen(
     controller:NativeKotlinFirstProgramController,
-    onOpenSavedProgram:(String,CustomCoachAuditInputs)->Unit={}
+    onOpenSavedProgram:(String,CustomCoachAuditInputs)->Unit={_,_->}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     var confirmingSave by remember {mutableStateOf(false)}

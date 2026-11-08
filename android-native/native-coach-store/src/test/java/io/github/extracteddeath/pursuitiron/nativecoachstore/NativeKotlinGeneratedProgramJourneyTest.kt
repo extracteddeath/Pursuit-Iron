@@ -315,7 +315,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val source=journal.snapshot
         val all=source.slots.flatMap{it.sets}
         assertTrue(all.any{it.prescription.type==DraftSetType.WARMUP})
-        val target=all.first{set->
+        // The coached movement itself must have issued warmups; a warmup
+        // attached to some other slot is not evidence for this exercise.
+        val selected=source.slots.first{slot->
+            slot.sets.any{it.prescription.type==DraftSetType.WARMUP} &&
+                slot.sets.any{set->
+                    set.prescription.type==DraftSetType.WORKING &&
+                        set.prescription.reps.minimum<set.prescription.reps.maximum &&
+                        set.prescription.targetRir!=null
+                }
+        }
+        val target=selected.sets.first{set->
             set.prescription.type==DraftSetType.WORKING &&
                 set.prescription.reps.minimum<set.prescription.reps.maximum &&
                 set.prescription.targetRir!=null
@@ -366,9 +376,6 @@ class NativeKotlinGeneratedProgramJourneyTest {
         })
         val next=(Disk().preflight.inspect(owner,cycleId,2,day.weekday,inputs)
             as NativeCustomPreflightResult.ReviewedPreview).session
-        val selected=source.slots.single {slot->
-            slot.sets.any {it.setKey==target.setKey}
-        }
         val coaching=CustomNextWorkoutCoachingDomain.review(
             CustomNextWorkoutCoachingRequest(next,selected.slotId,
                 listOf(CustomCoachingHistoricalSession(

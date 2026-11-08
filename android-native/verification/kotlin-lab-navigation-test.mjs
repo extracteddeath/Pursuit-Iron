@@ -19,6 +19,8 @@ const nativeSettings=read('android-native/app/src/main/java/io/github/extractedd
 const standards=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthStandardsScreen.kt');
 const sharedDesign=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
+const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
+const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -62,6 +64,32 @@ for(const phrase of ['host.reviewVerifiedKotlinWorkingSetFacts()',
   'PublishedStrengthReference("conventional_deadlift"',
   'PublishedStrengthReference("barbell_ohp"'])
   assert.ok(standards.includes(phrase),'Unverified strength standards design contract: '+phrase);
+assert.ok(journey.includes('KotlinCandidateDestination.PROFILE') &&
+  journey.includes('NativeKotlinProfileScreen(host,themeId,') &&
+  journey.includes('contentDescription="Open athlete profile"') &&
+  journey.includes('profileReturn=destination') &&
+  journey.includes('settingsReturn=destination') &&
+  journey.includes('onBack={destination=settingsReturn}'),
+  'Profile must be reachable without using a sixth bottom tab and Settings Back must preserve its origin');
+assert.ok(profile.includes('host.reviewActiveAthleteSetup()') &&
+  profile.includes('host.reviewVerifiedKotlinHistory()') &&
+  profile.includes('KotlinHistoryPerformanceSummaryDomain.fromCustom') &&
+  profile.includes('KotlinHistoryPerformanceSummaryDomain.fromComposer') &&
+  profile.includes('displayName') &&
+  profile.includes('prefs.edit().putString(') &&
+  profile.includes('Strength Standards'),
+  'Profile must be source-backed, locally customizable, and surface Strength Standards');
+assert.ok(shared.includes('fun PursuitDestinationRow') &&
+  shared.includes('fun PursuitScreenContent') &&
+  shared.includes('min=64.dp') &&
+  shared.includes('widthIn(max=920.dp)'),
+  'Profile and Settings must reuse Material navigation rows and responsive screen width');
+const hostProfile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+assert.ok(hostProfile.includes('fun reviewActiveAthleteSetup()') &&
+  hostProfile.includes('revisionFence.withOwnerTransaction(identity.ownerKey)') &&
+  hostProfile.includes('localAthlete.signedInIdentity()'),
+  'Presentation Profile must read authenticated saved source without replaying login or mutating history');
+
 assert.ok(!journey.includes('KotlinCandidateDestination.entries.forEach'),
   'Do not reintroduce nine raw debugging chips as the primary navigation');
 for(const required of [

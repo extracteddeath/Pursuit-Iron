@@ -62,6 +62,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     var referenceMode by rememberWorkoutReferenceMode()
+    var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
@@ -250,6 +251,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         it.target.type==set.target.type}.indexOf(set)+1,
                     setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type},
+                    onHistory={historyExerciseId=set.target.exerciseId},
                     onRecord={outcome,actual->
                         controller.record(set.target.setKey,outcome,actual)
                     },
@@ -324,6 +326,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
     }
 
+    historyExerciseId?.let { exerciseId ->
+        NativeKotlinExerciseHistorySheet(host,exerciseId,
+            onDismiss={historyExerciseId=null})
+    }
     val skip=allSets.firstOrNull{it.target.setKey==pendingSkip}
     if(skip!=null)AlertDialog(onDismissRequest={pendingSkip=null},
         title={Text("Skip this set?")},
@@ -357,6 +363,7 @@ private fun NativeKotlinSetCard(
     lastReferences:WorkoutLastReferenceResult?,
     position:Int,
     setCount:Int,
+    onHistory:()->Unit,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onSkip:()->Unit,
     onFail:(KotlinPerformedSet)->Unit
@@ -380,7 +387,7 @@ private fun NativeKotlinSetCard(
     val entry=KotlinWorkoutEntryDomain.parse(target,weight,reps,effort)
     val working=target.type==DraftSetType.WORKING
     PursuitCard(highlighted=!set.isResolved && !finished) {
-        Text(kotlinExerciseLabel(target.exerciseId),style=MaterialTheme.typography.headlineSmall)
+        PursuitExerciseHeading(target.exerciseId,onHistory=onHistory)
         Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
             style=MaterialTheme.typography.labelLarge)
         PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,

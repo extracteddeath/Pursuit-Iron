@@ -62,8 +62,18 @@ object CustomNextRepAmendmentDomain {
                 proposal.proposedNextReps !in range.minimum..range.maximum ||
                 proposal.changed !=
                     (proposal.proposedNextReps>proposal.observedReps) ||
-                (proposal.changed &&
-                    proposal.proposedNextReps!=proposal.observedReps+1) ||
+                (proposal.changed && when(reviewed.repForecastPolicy) {
+                    CustomRepForecastPolicy.LEGACY_STEP_V1 ->
+                        proposal.proposedNextReps!=proposal.observedReps+1
+                    CustomRepForecastPolicy.TARGET_RIR_V2 -> {
+                        val goal=set.prescription.targetRir
+                            ?:return fail(CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED)
+                        proposal.proposedNextReps !=
+                            (proposal.observedReps+
+                                checkNotNull(effort.rir)-goal)
+                                .coerceIn(range.minimum,range.maximum)
+                    }
+                }) ||
                 (!proposal.changed &&
                     proposal.proposedNextReps!=proposal.observedReps))
                 return fail(CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED)

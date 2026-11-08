@@ -660,4 +660,60 @@ class CustomNextWorkoutCoachingDomainTest {
             baseline(sessions=listOf(completed(1,3),duplicate)).status)
     }
 
+
+    @Test fun optionalTargetRirV2CanRecommendSeveralRepsWithoutOneRepCap() {
+        val older=completed(1,3,reps=listOf(5,5))
+        val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(5,4))
+        val request=CustomNextWorkoutCoachingRequest(snapshot(5),"main",
+            listOf(older,latest),stock(),n(5),CoachReadiness.NORMAL,false,
+            CustomRepForecastPolicy.TARGET_RIR_V2)
+        val result=CustomNextWorkoutCoachingDomain.review(request)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,result.status)
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_V2,result.repForecastPolicy)
+        assertEquals(listOf(8,8),result.nextSetSuggestions.map{it.proposedNextReps})
+        assertTrue(result.forecastLimitations.contains(
+            RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED))
+        assertNull(result.loadReviewCandidate)
+        val amendment=CustomNextRepAmendmentDomain.propose(
+            snapshot(5),"main",result) as CustomNextRepAmendmentResult.Proposed
+        assertEquals(listOf(8,8),amendment.amendment.nextMinimumReps)
+        assertTrue(amendment.amendment.amended.slots.single().sets.all {
+            it.prescription.reps==RepBand(8,8) &&
+                (it.prescription.load as DraftSetLoad.Verified).value==n(200)
+        })
+        val legacy=review(sessions=listOf(older,latest))
+        assertEquals(CustomRepForecastPolicy.LEGACY_STEP_V1,legacy.repForecastPolicy)
+        assertEquals(listOf(6,7),legacy.nextSetSuggestions.map{it.proposedNextReps})
+        assertEquals(listOf(5,6),latest.evidence.visits.map{it.actual!!.reps})
+    }
+
+    @Test fun targetRirV2NeverTurnsAssumedEffortIntoExtraHeadroom() {
+        val previous=completed(1,3,reps=listOf(5,5))
+        val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(null,null))
+        val request=CustomNextWorkoutCoachingRequest(snapshot(5),"main",
+            listOf(previous,latest),stock(),n(5),CoachReadiness.NORMAL,false,
+            CustomRepForecastPolicy.TARGET_RIR_V2)
+        val result=CustomNextWorkoutCoachingDomain.review(request)
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,result.status)
+        assertEquals(listOf(5,6),result.nextSetSuggestions.map{it.proposedNextReps})
+        assertEquals(2,result.assumedGoalRirSetCount)
+        assertTrue(result.nextSetSuggestions.all {it.actualRir==null})
+        assertTrue(CustomNextRepAmendmentDomain.propose(snapshot(5),"main",result)
+            is CustomNextRepAmendmentResult.Rejected)
+    }
+
+    @Test fun v2AmendmentRejectsForgedTargetsAboveObservedRirHeadroom() {
+        val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(4,3))
+        val request=CustomNextWorkoutCoachingRequest(snapshot(5),"main",
+            listOf(completed(1,3),latest),stock(),n(5),
+            CoachReadiness.NORMAL,false,CustomRepForecastPolicy.TARGET_RIR_V2)
+        val result=CustomNextWorkoutCoachingDomain.review(request)
+        assertEquals(listOf(7,7),result.nextSetSuggestions.map{it.proposedNextReps})
+        val forged=result.copy(nextSetSuggestions=result.nextSetSuggestions.mapIndexed {
+            i,value-> if(i==0)value.copy(proposedNextReps=8) else value
+        })
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED),
+            CustomNextRepAmendmentDomain.propose(snapshot(5),"main",forged))
+    }
 }

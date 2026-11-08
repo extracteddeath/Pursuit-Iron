@@ -18,6 +18,12 @@ data class CustomCoachingHistoricalSession(
     val evidence:CustomWorkoutHistoricalEvidence
 )
 
+/** Versioned opt-in: existing native custom approvals replay the exact V1 rule. */
+enum class CustomRepForecastPolicy {
+    LEGACY_STEP_V1,
+    TARGET_RIR_V2
+}
+
 data class CustomNextWorkoutCoachingRequest(
     val next:CustomWorkoutDaySnapshot,
     val slotId:String,
@@ -25,7 +31,8 @@ data class CustomNextWorkoutCoachingRequest(
     val verifiedStock:VerifiedLoadStock?,
     val maximumAuthorizedIncrease:BigDecimal,
     val readiness:CoachReadiness,
-    val movementRestricted:Boolean
+    val movementRestricted:Boolean,
+    val repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
 )
 
 enum class CustomNextWorkoutCoachingStatus {
@@ -63,7 +70,9 @@ data class CustomNextWorkoutCoachingReview(
     val observedStraightSetLoad:BigDecimal?,
     val loadReviewCandidate:BigDecimal?,
     val explanation:String,
-    val assumedGoalRirSetCount:Int=0
+    val assumedGoalRirSetCount:Int=0,
+    val repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1,
+    val forecastLimitations:Set<RepForecastLimitation> = emptySet()
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayEditProgram:Boolean get()=false
@@ -112,7 +121,14 @@ object CustomNextWorkoutCoachingDomain {
         )=CustomNextWorkoutCoachingReview(status,
             Collections.unmodifiableList(ids.toList()),latest,
             Collections.unmodifiableList(reps.toList()),load,candidate,
-            explanation+ProgressionEffortDomain.assumptionNote(assumedForReview),assumedForReview)
+            explanation+ProgressionEffortDomain.assumptionNote(assumedForReview),
+            assumedForReview,request.repForecastPolicy,
+            if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2)
+                setOf(RepForecastLimitation.SINGLE_EXPOSURE,
+                    RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED,
+                    RepForecastLimitation.ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE,
+                    RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
+            else emptySet())
         if(request.maximumAuthorizedIncrease<=zero ||
             request.maximumAuthorizedIncrease>maximum ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale()>3 ||
@@ -211,6 +227,14 @@ object CustomNextWorkoutCoachingDomain {
                 ids,latest.evidence.workoutId,
                 explanation="Logged working sets do not match the finished immutable workout.")
 
+        // A target-RIR estimate has no meaning without its original goal.
+        // V1 receipt replay is unchanged; the new policy never invents
+        // an intended effort when only an actual RIR happens to be logged.
+        if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2 &&
+            nextSets.any {it.prescription.targetRir==null})
+            return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+                ids,latest.evidence.workoutId,
+                explanation="The custom prescription has no approved goal RIR for at least one working set.")
         if(request.movementRestricted || request.readiness==CoachReadiness.LOW)
             return result(CustomNextWorkoutCoachingStatus.RESTRICTED_OR_LOW_READINESS,
                 ids,latest.evidence.workoutId,
@@ -234,8 +258,10 @@ object CustomNextWorkoutCoachingDomain {
                 ids,latest.evidence.workoutId,
                 explanation="Reported or assumed-goal effort leaves too little reserve to add reps or load.")
 
-        // Recommend at most ONE additional rep per individual working set.
-        // A mixed-loading top set never becomes an all-sets prescription.
+        // V1 replay retains its exact one-rep-per-set behavior. New opt-in
+        // V2 estimates each ordinal at its OWN intended RIR; no invented
+        // universal one-rep ceiling and no heaviest-set load transfer.
+        // Neither approach predicts capacity after extra earlier-set work.
         // Set keys include absolute week; join the last completed set to
         // next week's set by stable slot ordinal, never by different-week ID.
         val suggestions=nextSets.zip(oldSets).map {(set,previousSet)->
@@ -253,9 +279,21 @@ object CustomNextWorkoutCoachingDomain {
             }
             val observed=actual.reps.coerceIn(lower,upper)
             val effortForSet=effort.getValue(previousSet.setKey)
-            val next=if(sameIssued && actual.reps<=upper &&
-                checkNotNull(effortForSet.rir)>=2) (observed+1).coerceAtMost(upper)
-                else observed
+            val next=if(!sameIssued || actual.reps>upper) observed
+                else when(request.repForecastPolicy) {
+                    CustomRepForecastPolicy.LEGACY_STEP_V1 ->
+                        if(checkNotNull(effortForSet.rir)>=2)
+                            (observed+1).coerceAtMost(upper) else observed
+                    CustomRepForecastPolicy.TARGET_RIR_V2 -> {
+                        val goal=checkNotNull(set.prescription.targetRir)
+                        val capacityAtGoal=actual.reps+
+                            checkNotNull(effortForSet.rir)-goal
+                        // Do not turn a low-effort set into an invented
+                        // below-range target; effort/working-load review is
+                        // distinct from this rep-only amendment.
+                        capacityAtGoal.coerceIn(lower,upper)
+                    }
+                }
             CustomNextSetCoaching(set.setKey,actual.reps,next,
                 actual.actualRir,next>observed,effortForSet.rir,effortForSet.source)
         }

@@ -114,3 +114,41 @@ available without secrets.
 All subsequent stable-channel updates must preserve the exact new package
 ID and signing certificate; no production app or other developer preview
 is modified.
+
+## Stable-channel device candidate 3 — release-readiness core
+
+This development candidate follows the source-tested v4 first-program and
+custom-restart checkpoints. Its build must execute the stable-signing guard,
+all engine/native-store tests and Android APK assembly on the exact milestone
+commit. If the private signing configuration is absent, no APK may be produced.
+
+Supported source evidence now includes four hypertrophy starter splits in the
+declared advanced 40–60-minute fixture, the three-day Full Body and four-day
+Upper/Lower full workout weeks, immutable logging/corrections/Finish, saved
+custom review rules, cold next-session selection and optional live next-set
+advice. The Full Body estimate is 56/56/57 minutes rather than 64/73/73.
+
+**Known limitations:** the same twelve-case starter audit still records eight
+unresolved strength/peak cases and explicit catalog coverage gaps. This APK is
+for the supported core journey, not regular production training, completed
+feature parity, verified backup/migration, proven personalized fatigue accuracy
+or a Kotlin-only production release. See `RELEASE_READINESS.md`.
+
+Device checks for this candidate:
+
+1. Keep the old v2 test app installed. The stable app must use its separate
+   `.kotlinlabstable` identity; old test records are not automatically copied.
+2. Create a calibrated hypertrophy plan, including a three-day Full Body
+   choice. Review its real weights, warmups, rest, dose gaps and time estimates.
+3. Sign the exact plan, close/restart, and check that the rules and next-workout
+   action return without manually re-entering the policy fields.
+4. Log a complete workout, save a correction, minimize/restart, resume and
+   Finish. Verify history and the next day/week without duplicate completion.
+5. With Standard coaching, record a genuinely difficult set and inspect the
+   next-set advice. Confirm actual fields never change automatically. Check
+   Progression Only and Manual, and keep blank actual RIR unreported.
+6. Edit and sign a custom review; reopen it and verify all phase/muscle/time
+   fields. A changed gym/program or revoked approval must require fresh review.
+7. Exercise keyboard, dark/light theme, large font/TalkBack, interruptions and
+   small/foldable layouts. Record observed failures; no physical-device pass is
+   claimed by this milestone document or by source CI.

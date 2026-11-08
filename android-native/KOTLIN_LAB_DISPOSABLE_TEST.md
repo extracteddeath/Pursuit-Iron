@@ -129,3 +129,24 @@ The follow-up candidate also retains unsaved policy form fields when closing
 and reopening the full-program disclosure or changing Android configuration.
 Restoring a form draft cannot count as a policy audit; it must be reviewed
 explicitly before any training approval can rely on those changed values.
+
+## Focused workout UI with lossless entry draft
+
+This source-tested milestone puts the next unrecorded custom workout visit
+in a dedicated Focus view, with an explicit All sets alternative. It shows
+the upcoming movement and correctly distinguishes warm-ups, working sets
+and amplifier follow-ups. A durable saved receipt selects the next entry;
+changing presentation mode never changes the target, actual, journal,
+coaching mode, progression or finish authority.
+
+The independent saveable-state holder retains uncommitted weight, rep and
+optional actual-RIR fields while switching Focus/All, including after a
+configuration change. Emulator acceptance must enter unsubmitted reps,
+switch both views, then check Target/Last, large font, consecutive saves,
+cold recovery and Finish-to-History. Do not assume successful compilation
+is evidence of a physical-phone acceptance or better predictions.
+
+As before: build and distribute **one APK only**, never an AAB; preserve
+Amethyst as first-install default and leave other web themes selectable.
+This is a new disposable trial package with its own ephemeral debug signer,
+not an update of any prior installed lab or production app.

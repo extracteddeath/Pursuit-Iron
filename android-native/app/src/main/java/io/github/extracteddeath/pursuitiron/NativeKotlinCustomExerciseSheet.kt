@@ -147,12 +147,14 @@ internal fun NativeKotlinCustomExerciseSheet(
     // A query can span the movement, equipment variant, attachment and muscle.
     // Matching is independent of token order; ranking is still calculated from
     // the ENTIRE verified gym catalog before the search filter is applied.
-    val terms=search.trim().lowercase().split(Regex("\\s+"))
+    val terms=search.trim().replace('_',' ').replace('-',' ')
+        .lowercase().split(Regex("\\s+"))
         .filter { it.isNotEmpty() }
     val labeled=available.filter { choice ->
         val searchable=(listOfNotNull(
             choice.exerciseId,choice.familyId,choice.variantId,choice.attachmentId,
-            kotlinExerciseLabel(choice.exerciseId),choice.pattern?.name
+            kotlinExerciseLabel(choice.exerciseId),choice.pattern?.name,
+            choice.role?.name
         ) + choice.muscleCredits.map { it.muscle.name })
             .joinToString(" ").replace('_',' ').replace('-',' ').lowercase()
         terms.all { searchable.contains(it) }

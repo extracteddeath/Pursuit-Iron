@@ -139,7 +139,7 @@ internal fun NativeKotlinComposerSwapSheet(
                     Text(selected.explanation,
                         style=MaterialTheme.typography.bodySmall)
                     selected.option.sourcePracticalReps?.let { envelope ->
-                        Text("Reviewed practical rep range: "+
+                        Text("Reviewed working-set rep range: "+
                             "${envelope.minimum}–${envelope.maximum} per set",
                             style=MaterialTheme.typography.labelMedium)
                     }

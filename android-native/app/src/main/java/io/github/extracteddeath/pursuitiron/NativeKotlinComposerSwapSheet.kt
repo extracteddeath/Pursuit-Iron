@@ -3,7 +3,6 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -77,17 +76,14 @@ internal fun NativeKotlinComposerSwapSheet(
             }
         }.getOrNull()
     }
-    AlertDialog(
-        onDismissRequest={if(!busy)onDismiss()},
-        title={Text(if(selected==null)"Swap this exercise"
-            else "Confirm workout-only targets")},
-        text={
-            Column(
-                Modifier.fillMaxWidth().heightIn(max=510.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement=Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Replacing ${kotlinExerciseLabel(fromExerciseId)}. "+
+    // Full-height native Material 3 editing sheet shares the program
+    // editor's scrolling/IME behavior. Keep all authoring state local until
+    // the owner accepts the newly verified journal operation.
+    NativeEditSheet(busy=busy,onDismiss=onDismiss){
+        Text(if(selected==null)"Swap this exercise"
+            else "Review workout-only targets",
+            style=MaterialTheme.typography.titleLarge)
+        Text("Replacing ${kotlinExerciseLabel(fromExerciseId)}. "+
                     "Your saved program, other sets and historical lifts "+
                     "will not change.",
                     style=MaterialTheme.typography.bodyMedium)
@@ -208,23 +204,20 @@ internal fun NativeKotlinComposerSwapSheet(
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-        },
-        confirmButton={
-            if(selected!=null)Button(
+        if(selected!=null) {
+            Button(
                 onClick={
                     if(approved!=null)
                         onConfirm(selected.option.exerciseId,approved)
                 },
-                enabled=!busy && approved!=null
+                enabled=!busy && approved!=null,
+                modifier=Modifier.fillMaxWidth()
             ){Text("Confirm workout-only swap")}
-        },
-        dismissButton={
-            TextButton(onClick={
-                if(selected!=null)selectedId=null else onDismiss()
-            },enabled=!busy) {
-                Text(if(selected!=null)"Back to exercises" else "Cancel")
-            }
         }
-    )
+        TextButton(
+            onClick={if(selected!=null)selectedId=null else onDismiss()},
+            enabled=!busy,
+            modifier=Modifier.fillMaxWidth()
+        ) { Text(if(selected!=null)"Back to exercises" else "Cancel") }
+    }
 }

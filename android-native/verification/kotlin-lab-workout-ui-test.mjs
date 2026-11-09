@@ -111,6 +111,16 @@ assert.ok(composer.includes('rememberSaveable(target.setKey,set.currentReceipt?.
   composer.includes('Planned reps and load are editable starting points'),
   'Composer must prefill editable reps, preserve unknown RIR, and refresh a saved correction');
 const sharedSetFields=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt');
+assert.ok(journal.includes('NativeSetValueFields(') &&
+  journal.includes('showLoad=verified!=null') &&
+  journal.includes('onLoad={actualLoad=it}') &&
+  journal.includes('onReps={actualReps=it}') &&
+  journal.includes('onRir={actualRir=it}') &&
+  journal.includes('loadError=actualLoad.isNotBlank()&&weight==null') &&
+  journal.includes('rirError=!effortValid') &&
+  journal.includes('KotlinPerformedSet(weight,verified?.unit,') &&
+  journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT'),
+  'Custom workout must share bodyweight-aware stepper fields while retaining explicit complete, skip, failed and corrected history outcomes');
 assert.ok(composer.includes('NativeSetValueFields(') &&
   composer.includes('showLoad=verifiedLoad!=null') &&
   composer.includes('onLoad={weight=it}') &&

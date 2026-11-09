@@ -168,11 +168,10 @@ internal fun NativeKotlinComposerSwapSheet(
         },
         confirmButton={
             if(selected!=null)Button(
-                onClick={approved?.let{
-                    val targetId=selected.option.exerciseId
-                    val intents=it.toList()
-                    {onConfirm(targetId,intents)}
-                }?:{}},
+                onClick={
+                    if(approved!=null)
+                        onConfirm(selected.option.exerciseId,approved)
+                },
                 enabled=!busy && approved!=null
             ){Text("Confirm workout-only swap")}
         },

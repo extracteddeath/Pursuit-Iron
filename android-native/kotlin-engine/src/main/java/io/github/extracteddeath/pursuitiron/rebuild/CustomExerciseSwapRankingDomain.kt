@@ -87,7 +87,8 @@ object CustomExerciseSwapRankingDomain {
             }.toSet()
             directCredits(checkNotNull(source))-otherDirect
         } else emptySet()
-        val tokens=search.trim().take(80).lowercase().split(Regex("\\s+"))
+        val tokens=search.trim().take(80).replace('_',' ').replace('-',' ')
+            .lowercase().split(Regex("\\s+"))
             .filter {it.isNotEmpty()}
         val sorted=available.asSequence()
             .filter{it.exerciseId!=sourceExerciseId}

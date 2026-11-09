@@ -125,6 +125,12 @@ assert.ok(restBridge.includes('if(!rest.hasRemainingWork)return') &&
   restBridge.includes('latestReceiptOperationId=rest.latestReceiptEventId') &&
   restBridge.includes('NativeRestCue(it.eventId,it.seconds,it.exerciseIndex)'),
   'Both journal paths share the native timer with exact receipt-bound durations and no final rest');
+for(const source of [journal,composer]) {
+  assert.ok(source.includes('.widthIn(max=920.dp).align(Alignment.CenterHorizontally)') &&
+    source.includes('Column(Modifier.widthIn(max=920.dp).fillMaxWidth()') &&
+    source.includes('.align(Alignment.CenterHorizontally)'),
+    'Both active workout routes must cap form and rest dock width for wide Android displays');
+}
 assert.ok(journey.includes('workoutScreens.SaveableStateProvider("custom:$customWorkoutId")') &&
   journey.includes('workoutScreens.SaveableStateProvider("composer:$selectedId")') &&
   journey.includes('var minimizedGeneratedId by rememberSaveable') &&

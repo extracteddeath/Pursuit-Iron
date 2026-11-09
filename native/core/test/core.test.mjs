@@ -752,7 +752,11 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(h.coach.length >= 1 && h.coach.every((f) => f.title && f.text), 'coach notes for the next session: ' + h.coach.map((f) => f.title).join(' | '));
   C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); }
   C.finishSession(); h = C.home();
-  ok(h.streakWeeks === 1 && h.weekStrip.some((d) => d.today && d.done) && h.weekDays.filter((d) => d.status === 'done').length === 1, 'a workout today: streak 1, today checked, its day done'); }
+  ok(h.streakWeeks === 1 && h.weekStrip.some((d) => d.today && d.done) && h.weekDays.filter((d) => d.status === 'done').length === 1, 'a workout today: streak 1, today checked, its day done');
+  // Finish the program week the same day: the cursor moves to week 2, and week 2 starts with nothing done.
+  for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  h = C.home(); const pl = C.plan();
+  ok(h.block.weekIndex === 2 && h.weekDays.every((d) => d.status !== 'done') && pl.days.every((d) => d.status !== 'done'), 'a finished week rolls over: week 2 shows no day done (' + h.weekDays.map((d) => d.status).join(',') + ')'); }
 // Progress charts: weekly volume, intensity distribution, recovery & feedback — from logged history
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'G', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });

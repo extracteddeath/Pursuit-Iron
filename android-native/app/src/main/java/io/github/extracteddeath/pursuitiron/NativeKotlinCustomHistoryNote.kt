@@ -34,7 +34,7 @@ internal fun NativeKotlinCustomHistoryNote(
         val journal=opened?.issued?.journal
         val source=completed.evidence
         val valid=journal!=null &&
-            opened.issued.athleteId==source.athleteId &&
+            opened?.issued?.athleteId==source.athleteId &&
             journal.workoutId==id &&
             source.workoutId==id &&
             journal.finishedByEventId==completed.manifest.finishEventId &&

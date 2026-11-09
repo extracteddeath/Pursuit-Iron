@@ -8,6 +8,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -103,6 +106,15 @@ internal fun NativeKotlinStrengthStandardsScreen(
     val favoritePreferences=remember(context) {
         context.getSharedPreferences(NativeStrengthFavorites.PREFS_NAME,0)
     }
+    val exercisePreferences=remember(context) {
+        context.getSharedPreferences(NativeExerciseFavorites.PREFS_NAME,0)
+    }
+    var exerciseFavoriteIds by remember(host) {
+        mutableStateOf<List<String>>(emptyList())
+    }
+    var exerciseFavoriteBusy by remember {mutableStateOf(false)}
+    var exerciseFavoriteNotice by remember {mutableStateOf<String?>(null)}
+    var exerciseSearch by rememberSaveable {mutableStateOf("")}
     var favoriteLiftIds by remember(host){mutableStateOf<List<String>>(emptyList())}
     var favoriteBusy by remember{mutableStateOf(false)}
     var favoriteNotice by remember{mutableStateOf<String?>(null)}
@@ -121,6 +133,53 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var comparisonExpanded by rememberSaveable{mutableStateOf(false)}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
+    val verifiedTimeline=timeline?.takeIf {it.athleteId==profileId}
+    val availableMovements=remember(verifiedTimeline) {
+        verifiedTimeline?.let(NativeExerciseFavorites::loggedIds).orEmpty()
+    }
+    LaunchedEffect(profileId,verifiedTimeline?.manifestRevision) {
+        exerciseFavoriteIds=emptyList()
+        exerciseFavoriteNotice=null
+        val owner=profileId
+        val snapshot=verifiedTimeline
+        if(owner!=null && snapshot!=null) {
+            val stored=withContext(Dispatchers.IO) {
+                NativeExerciseFavorites.read(exercisePreferences,owner,
+                    NativeExerciseFavorites.loggedIds(snapshot).toSet())
+            }
+            if(profileId==owner && timeline?.athleteId==owner &&
+                timeline?.manifestRevision==snapshot.manifestRevision)
+                exerciseFavoriteIds=stored
+        }
+    }
+    LaunchedEffect(preferredExerciseId,verifiedTimeline?.manifestRevision) {
+        val exercise=preferredExerciseId
+        if(exercise!=null &&
+            exercise !in NativeStrengthFavorites.supportedIds &&
+            exercise in availableMovements)historyExerciseId=exercise
+    }
+    fun changeExerciseFavorites(next:List<String>) {
+        val owner=profileId ?:return
+        val version=verifiedTimeline?.manifestRevision ?:return
+        val allowed=availableMovements.toSet()
+        if(exerciseFavoriteBusy || next==exerciseFavoriteIds)return
+        exerciseFavoriteBusy=true
+        exerciseFavoriteNotice=null
+        scope.launch {
+            val saved=withContext(Dispatchers.IO) {
+                NativeExerciseFavorites.write(exercisePreferences,owner,
+                    next,allowed)
+            }
+            if(profileId==owner && timeline?.athleteId==owner &&
+                timeline?.manifestRevision==version) {
+                if(saved)exerciseFavoriteIds=next
+                exerciseFavoriteNotice=if(saved)
+                    "Exercise favorites saved locally in this order."
+                else "Could not save exercise favorites."
+            }
+            exerciseFavoriteBusy=false
+        }
+    }
     LaunchedEffect(preferredExerciseId) {
         if(preferredExerciseId!=null &&
             preferredExerciseId in NativeStrengthFavorites.supportedIds)
@@ -410,6 +469,112 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 }
                 PursuitStrengthTrendChart(samples,displayUnit,
                     onOpenHistory={historyExerciseId=trendExerciseId})
+                PursuitSectionHeading("Your exercise favorites",
+                    "Pin and arrange any movement in your verified training history. Open its complete actual sets, including corrections.")
+                PursuitCard {
+                    if(profileId==null || verifiedTimeline==null)
+                        Text("Verify native training history before organizing exercise favorites.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    else {
+                        if(exerciseFavoriteIds.isEmpty())Text(
+                            "No saved exercise favorites yet. Find a recorded movement below.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        exerciseFavoriteIds.forEachIndexed {index,exerciseId ->
+                            Row(Modifier.fillMaxWidth(),
+                                verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
+                                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                                Text(kotlinExerciseLabel(exerciseId),
+                                    modifier=Modifier.weight(1f),
+                                    style=MaterialTheme.typography.bodyMedium)
+                                IconButton(
+                                    enabled=!exerciseFavoriteBusy && index>0,
+                                    onClick={
+                                        val moved=exerciseFavoriteIds.toMutableList()
+                                        java.util.Collections.swap(moved,index,index-1)
+                                        changeExerciseFavorites(moved)
+                                    }) {
+                                    Icon(Icons.Filled.KeyboardArrowUp,
+                                        contentDescription="Move ${kotlinExerciseLabel(exerciseId)} up")
+                                }
+                                IconButton(
+                                    enabled=!exerciseFavoriteBusy &&
+                                        index<exerciseFavoriteIds.lastIndex,
+                                    onClick={
+                                        val moved=exerciseFavoriteIds.toMutableList()
+                                        java.util.Collections.swap(moved,index,index+1)
+                                        changeExerciseFavorites(moved)
+                                    }) {
+                                    Icon(Icons.Filled.KeyboardArrowDown,
+                                        contentDescription="Move ${kotlinExerciseLabel(exerciseId)} down")
+                                }
+                                IconButton(enabled=!exerciseFavoriteBusy,
+                                    onClick={
+                                        changeExerciseFavorites(
+                                            exerciseFavoriteIds-exerciseId)
+                                    }) {
+                                    Icon(Icons.Filled.Close,
+                                        contentDescription="Unpin ${kotlinExerciseLabel(exerciseId)}")
+                                }
+                            }
+                            TextButton(onClick={historyExerciseId=exerciseId},
+                                modifier=Modifier.heightIn(min=48.dp)) {
+                                Text("Full history · ${kotlinExerciseLabel(exerciseId)}")
+                            }
+                            if(index<exerciseFavoriteIds.lastIndex)HorizontalDivider()
+                        }
+                        Text("${exerciseFavoriteIds.size} of ${NativeExerciseFavorites.MAX_FAVORITES} pinned · ordered as shown",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedTextField(
+                            value=exerciseSearch,
+                            onValueChange={exerciseSearch=it.take(80)},
+                            singleLine=true,
+                            label={Text("Find a logged exercise")},
+                            modifier=Modifier.fillMaxWidth()
+                        )
+                        val matching=availableMovements.filter {exerciseId ->
+                            exerciseId !in exerciseFavoriteIds &&
+                                (exerciseSearch.isBlank() ||
+                                    exerciseId.contains(exerciseSearch,ignoreCase=true) ||
+                                    kotlinExerciseLabel(exerciseId).contains(
+                                        exerciseSearch,ignoreCase=true))
+                        }
+                        if(exerciseSearch.isNotBlank() && matching.isEmpty())
+                            Text("No matching unpinned recorded movements.",
+                                style=MaterialTheme.typography.bodySmall)
+                        matching.take(6).forEach {exerciseId ->
+                            Row(Modifier.fillMaxWidth(),
+                                verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                                Text(kotlinExerciseLabel(exerciseId),
+                                    modifier=Modifier.weight(1f),
+                                    style=MaterialTheme.typography.bodyMedium)
+                                TextButton(
+                                    enabled=!exerciseFavoriteBusy &&
+                                        exerciseFavoriteIds.size<
+                                            NativeExerciseFavorites.MAX_FAVORITES,
+                                    onClick={
+                                        changeExerciseFavorites(
+                                            exerciseFavoriteIds+exerciseId)
+                                    },
+                                    modifier=Modifier.heightIn(min=48.dp)
+                                ) {Text("Pin")}
+                            }
+                        }
+                        if(matching.size>6)Text(
+                            "Showing 6 movements. Search to narrow the list.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(exerciseFavoriteIds.size>=
+                            NativeExerciseFavorites.MAX_FAVORITES)Text(
+                            "Remove a favorite before pinning another exercise.",
+                            style=MaterialTheme.typography.bodySmall)
+                        exerciseFavoriteNotice?.let {Text(it,
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)}
+                    }
+                }
                 PursuitSectionHeading("Strength standards",
                     "Broad community reference levels for four source-matched barbell lifts.")
                 orderedReferences.forEach { standard ->

@@ -223,6 +223,76 @@ object CustomExerciseAuthoringDomain {
     }
 
     /**
+     * Athlete-confirmed, program-draft-only swap. The replacement carries
+     * freshly authored sets and a new slot ID; never migrate numeric loads,
+     * historical identity, advanced techniques or week overrides. A pinned
+     * source is replaceable ONLY through the explicit confirmation UI.
+     *
+     * Source setup, physical stock, attachments and every new set are checked
+     * again immediately before the owner/revision-fenced program write.
+     */
+    fun replaceSelectedExercise(
+        current:CustomTrainingCycle,
+        expectedRevision:Long,
+        blockId:String,
+        weekday:Int,
+        previousSlotId:String,
+        replacement:CustomExerciseSlot,
+        setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>
+    ):CustomAuthoringResult {
+        val athlete=setup.reviewed?.takeIf {
+            setup.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
+                it.athleteProfileId==current.athleteId
+        } ?:return CustomAuthoringResult.Rejected(
+            CustomAuthoringRefusal.SETUP_UNRESOLVED)
+        val previous=current.blocks.firstOrNull {it.blockId==blockId}
+            ?.days?.firstOrNull {it.weekday==weekday}
+            ?.slots?.firstOrNull {it.slotId==previousSlotId}
+            ?:return CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.AUTHORING_CONFLICT)
+        if(previous.exerciseId==replacement.exerciseId ||
+            previous.slotId==replacement.slotId ||
+            previous.supersetGroup!=null || replacement.supersetGroup!=null ||
+            current.weekOverrides[blockId].orEmpty().any {
+                it.weekday==weekday && it.slotId==previousSlotId
+            } || replacement.sets.isEmpty() ||
+            replacement.sets.size>20 || !replacement.pinned ||
+            replacement.coachNote.length>1000)
+            return CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.AUTHORING_CONFLICT)
+        val option=picker(setup,catalog).firstOrNull {
+            it.exerciseId==replacement.exerciseId
+        } ?:return CustomAuthoringResult.Rejected(
+            CustomAuthoringRefusal.EXERCISE_UNAVAILABLE)
+        val catalogRole=catalog.firstOrNull {
+            it.exerciseId==replacement.exerciseId
+        }?.role
+        if(replacement.role!=catalogRole)
+            return CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.AUTHORING_CONFLICT)
+        if(replacement.attachmentId!=option.attachmentId)
+            return CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.ATTACHMENT_UNAVAILABLE)
+        if(!athlete.allowSupersets && replacement.supersetGroup!=null)
+            return CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.AUTHORING_CONFLICT)
+        val invalid=replacement.sets.firstNotNullOfOrNull {
+            validSet(it,option)
+        }
+        if(invalid!=null)return CustomAuthoringResult.Rejected(invalid)
+        return when(val proposed=CustomCycleBuilderDomain.replaceExerciseSlot(
+            current,expectedRevision,blockId,weekday,previousSlotId,
+            replacement)) {
+            is CustomCycleBuilderResult.Proposed ->
+                CustomAuthoringResult.Accepted(proposed)
+            is CustomCycleBuilderResult.Rejected ->
+                CustomAuthoringResult.Rejected(
+                    CustomAuthoringRefusal.AUTHORING_CONFLICT)
+        }
+    }
+
+    /**
      * Edit only the chosen slot. Never replace the same exercise on another
      * day or reset an explicit week override. The gym is checked AGAIN when
      * changing individual loads or advanced-set techniques. A supplied

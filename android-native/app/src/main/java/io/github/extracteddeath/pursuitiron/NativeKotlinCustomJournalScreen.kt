@@ -464,6 +464,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                 "${if(set.prescription.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · entry $number of ${slot.sets.size}",
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            NativeVerifiedPlateLoadingControl(
+                                host=host,workoutId=workoutId,
+                                exerciseId=slot.exerciseId,custom=true,
+                                load=set.prescription.load,
+                                enabled=!busy
+                            )
                         } else {
                             Text("All entries recorded · review Finish",
                                 style=MaterialTheme.typography.titleMedium)

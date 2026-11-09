@@ -44,6 +44,36 @@ class NativeCustomWorkoutJournalCodecTest {
     private fun record(state:CustomWorkoutJournalDraft)=
         NativeCustomWorkoutJournalRecord("owner-1",state)
 
+    @Test fun versionThreeSessionNotesSurviveColdReplayAndLegacyFormatIsUnchanged() {
+        val original=initial()
+        val legacy=NativeCustomWorkoutJournalCodec.encode(record(original))
+        assertEquals(1,java.nio.ByteBuffer.wrap(legacy,4,4).int)
+        val note=CustomWorkoutJournalOperation.SessionNote(
+            "note-1",0,"Shoulder felt fine today")
+        val withNote=accept(original,note)
+        val bytes=NativeCustomWorkoutJournalCodec.encode(record(withNote))
+        assertEquals(3,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        val cold=NativeCustomWorkoutJournalCodec.decode(bytes)
+        assertEquals("Shoulder felt fine today",cold.journal.sessionNote)
+        assertEquals(withNote,cold.journal)
+        assertEquals(bytes.toList(),
+            NativeCustomWorkoutJournalCodec.encode(cold).toList())
+        val cleared=accept(cold.journal,
+            CustomWorkoutJournalOperation.SessionNote("clear-note",1,""))
+        assertEquals("",NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(cleared)))
+            .journal.sessionNote)
+        // This is a factual journal revision, not a change to authored work.
+        assertEquals(original.snapshot,cleared.snapshot)
+        assertEquals(original.unresolvedVisitCount,cleared.unresolvedVisitCount)
+        assertEquals(legacy.toList(),
+            NativeCustomWorkoutJournalCodec.encode(record(original)).toList())
+        val truncated=bytes.copyOf(bytes.size-3)
+        assertThrows(IOException::class.java) {
+            NativeCustomWorkoutJournalCodec.decode(truncated)
+        }
+    }
+
     @Test fun coldReopenReplaysIndependentActualRirAndFollowupData() {
         val main=accept(initial(),event("event-main",0,
             CustomWorkoutVisitPart.MAIN,10,null))

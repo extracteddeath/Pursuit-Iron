@@ -7,11 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 /**
  * Exercise history uses ONLY the complete correction-aware, owner-verified
@@ -77,19 +79,39 @@ private fun actualLabel(actual:KotlinPerformedSet?):String {
 internal fun NativeKotlinExerciseHistorySheet(
     host:NativeKotlinCandidateHost,
     exerciseId:String,
-    onDismiss:()->Unit
+    onDismiss:()->Unit,
+    onFavoritesChanged:(List<String>)->Unit={}
 ) {
+    val context=LocalContext.current.applicationContext
+    val preferences=remember(context) {
+        context.getSharedPreferences(NativeExerciseFavorites.PREFS_NAME,0)
+    }
+    val scope=rememberCoroutineScope()
     var history by remember(host,exerciseId) {
         mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)
     }
+    var favoriteIds by remember(host,exerciseId) {
+        mutableStateOf<List<String>>(emptyList())
+    }
+    var favoriteSaving by remember(host,exerciseId){mutableStateOf(false)}
+    var favoriteNotice by remember(host,exerciseId){mutableStateOf<String?>(null)}
     var showAllVisits by rememberSaveable(exerciseId){mutableStateOf(false)}
     LaunchedEffect(host,exerciseId) {
-        history=withContext(Dispatchers.IO) {
+        val verified=withContext(Dispatchers.IO) {
             runCatching {host.reviewVerifiedKotlinHistory()}.getOrElse {
                 NativeKotlinMixedHistoryReadResult.Rejected(
                     NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
             }
         }
+        history=verified
+        favoriteIds=if(verified is NativeKotlinMixedHistoryReadResult.Review) {
+            withContext(Dispatchers.IO) {
+                NativeExerciseFavorites.read(preferences,
+                    verified.timeline.athleteId,
+                    NativeExerciseFavorites.loggedIds(verified.timeline).toSet())
+            }
+        } else emptyList()
+        favoriteNotice=null
     }
     ModalBottomSheet(onDismissRequest=onDismiss) {
         Column(Modifier.fillMaxWidth()
@@ -103,6 +125,58 @@ internal fun NativeKotlinExerciseHistorySheet(
                     PursuitEmptyState("History unavailable",
                         "Verified saved history could not be opened. Your workout entries are unchanged.")
                 is NativeKotlinMixedHistoryReadResult.Review -> {
+                    val verified=result.timeline
+                    val allowed=remember(verified) {
+                        NativeExerciseFavorites.loggedIds(verified).toSet()
+                    }
+                    if(exerciseId in allowed) {
+                        val isPinned=exerciseId in favoriteIds
+                        OutlinedButton(
+                            enabled=!favoriteSaving &&
+                                (isPinned || favoriteIds.size<
+                                    NativeExerciseFavorites.MAX_FAVORITES),
+                            onClick={
+                                val candidate=if(isPinned)favoriteIds-exerciseId
+                                    else favoriteIds+exerciseId
+                                favoriteSaving=true
+                                favoriteNotice=null
+                                scope.launch {
+                                    val wrote=withContext(Dispatchers.IO) {
+                                        val current=runCatching {
+                                            host.reviewVerifiedKotlinHistory()
+                                        }.getOrNull()
+                                        val live=(current as?
+                                            NativeKotlinMixedHistoryReadResult.Review)?.timeline
+                                        if(live==null ||
+                                            live.athleteId!=verified.athleteId ||
+                                            live.manifestRevision!=verified.manifestRevision)
+                                            false
+                                        else NativeExerciseFavorites.write(
+                                            preferences,live.athleteId,candidate,
+                                            NativeExerciseFavorites.loggedIds(live).toSet())
+                                    }
+                                    if((history as?
+                                        NativeKotlinMixedHistoryReadResult.Review)
+                                            ?.timeline==verified) {
+                                        if(wrote) {
+                                            favoriteIds=candidate
+                                            onFavoritesChanged(candidate)
+                                        }
+                                        favoriteNotice=if(wrote)
+                                            "Exercise favorites saved privately."
+                                        else "History changed or could not be verified. Reopen to retry."
+                                    }
+                                    favoriteSaving=false
+                                }
+                            },
+                            modifier=Modifier.heightIn(min=48.dp)
+                        ) {Text(if(isPinned)"Unpin from exercise favorites"
+                            else "Pin this exercise")}
+                        favoriteNotice?.let {
+                            Text(it,style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     val rows=remember(result.timeline.manifestRevision,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }

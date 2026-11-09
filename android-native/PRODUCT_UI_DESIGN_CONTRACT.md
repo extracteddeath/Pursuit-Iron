@@ -345,3 +345,14 @@ The native Program screen now exposes a **real, cycle-scoped adaptation permissi
 - Dedicated JVM regression fixtures cover real lb/kg conversion, physical load isolation, exact rep windowing, best in each session, omission of warm-ups/failed/skip/amplifier sets, invalid/missing values, unweighted bodyweight, and custom history corrections.
 
 **Outstanding:** hands-on screen-reader, narrow-width and 200%-font usability; scientifically valid longitudinal estimates that control for effort and fatigue; sourced demographic standards for other exercise modalities. No new APK or AAB until the full app design is complete.
+
+
+## Strength Standards first-screen hierarchy — 2026-11-09 follow-up
+
+The source-level Progress screen now prioritizes **four verified barbell summaries before settings**. A shared `NativeKotlinStrengthOverview` uses the same owner-verified `mostRepsAtLoad` projection, physical `BARBELL_TOTAL` basis, and canonical Epley 1–10-rep calculation as the detailed reference view. There is one shared best-per-exercise selection, not two independently calculated definitions of a PR. A missing qualifying set is explicitly labelled; never interpreted as zero strength, an unobserved milestone, or an inferred age/sex/bodyweight ranking.
+
+Each barbell overview card selects its corresponding verified trend. Responsive layout is one column on compact widths or large font scales (>=1.35), two on normal phones, and four on wide screens. The selected state is exposed through accessibility semantics and the existing theme roles, not hardcoded accent colors. The published reference tier is only displayed after an explicit comparison group and valid, unit-normalized bodyweight are provided.
+
+Community comparison is one collapsed Material disclosure with a saved/unsaved summary. Its optional Save/Clear actions use a new reusable responsive action-pair component, stacking at narrow widths or enlarged text. Detailed published reference thresholds and external methodology remain reachable in a **separate collapsed disclosure**, immediately after comparison and before unrelated exercise favorites. The general exercise trends and ordered favorites remain intact. All changes are to UI presentation; native history, journal transactions, profile authoring, coach permissions, progression and workout issuing are unchanged.
+
+**Acceptance still required:** real-device normal/large text, talkback selected-control wording, phone landscape/tablet/foldable spacing, dark/light theme readability, and exact interaction review. The source navigation contract now asserts this hierarchy, shared widgets and the history provenance. Full Kotlin/Compose CI outcome is tracked in the current build; no APK/AAB until the entire native app design is ready.

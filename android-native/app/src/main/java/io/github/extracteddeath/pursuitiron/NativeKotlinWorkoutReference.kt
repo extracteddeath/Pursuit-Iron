@@ -68,6 +68,38 @@ internal fun PursuitWorkoutReferencePicker(
     }
 }
 
+/**
+ * Optional single-tap draft helper. Only verified COMPLETED same-day history
+ * with the exact current load basis and set key can be applied. Never logs a
+ * set, changes an issued target, infers RIR, or overwrites a corrected receipt.
+ */
+@Composable
+internal fun PursuitUseLastCompletedSet(
+    mode:WorkoutReferenceMode,
+    history:WorkoutLastReferenceResult?,
+    key:WorkoutReferenceKey,
+    currentLoad:DraftSetLoad,
+    enabled:Boolean=true,
+    onApply:(KotlinPerformedSet)->Unit
+) {
+    if(mode!=WorkoutReferenceMode.LAST)return
+    val actual=WorkoutLastDraftDomain.reviewedActual(history,key,currentLoad)
+        ?:return
+    val weight=actual.load?.let{
+        "${it.stripTrailingZeros().toPlainString()} ${actual.unit?.name?.lowercase().orEmpty()}"
+    } ?: "bodyweight"
+    OutlinedButton(
+        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+        enabled=enabled,
+        onClick={onApply(actual)}
+    ) {
+        Text("Use last completed set · $weight × ${actual.reps}")
+    }
+    Text("Fills editable actuals only. Missing last RIR stays blank; tap Complete to save.",
+        style=MaterialTheme.typography.bodySmall,
+        color=MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
 internal fun kotlinLoadBasisLabel(basis:LoadBasis?):String=when(basis) {
     LoadBasis.DUMBBELL_PER_HAND -> "per hand"
     LoadBasis.BARBELL_TOTAL -> "total barbell weight"

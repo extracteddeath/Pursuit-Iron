@@ -27,9 +27,9 @@ class CustomCycleBlockComparisonDomainTest {
             "strength","Strength",TrainingPhase.STRENGTH,
             CustomBlockPurpose.TRAINING,2,CustomSplitIdentity.Freeform("Upper/Lower"),
             listOf(
-                CustomTrainingDay(0,"Upper",ComposerSessionPurpose.STRENGTH,
+                CustomTrainingDay(0,"Upper",ComposerSessionPurpose.STRENGTH_SKILL,
                     listOf(slot("str_b","bench",6))),
-                CustomTrainingDay(4,"Lower",ComposerSessionPurpose.STRENGTH,
+                CustomTrainingDay(4,"Lower",ComposerSessionPurpose.STRENGTH_SKILL,
                     listOf(slot("str_d","deadlift",5,pinned=false)))
             )
         )

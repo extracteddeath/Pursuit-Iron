@@ -52,6 +52,16 @@ class CustomExerciseSwapRankingDomainTest {
             CustomExerciseSwapRankingDomain.rank(rows,"press-original",
                 search="nonexistent"))
     }
+    @Test fun searchCanHideSourceRowWithoutLosingItsRankingContext() {
+        val filtered=CustomExerciseSwapRankingDomain.rank(
+            rows,"press-original",search="chest")
+        assertEquals(listOf("chest-fly"),
+            filtered.map {it.choice.exerciseId})
+        assertEquals(CustomSwapFit.SHARED_REVIEWED_MUSCLES,
+            filtered.single().fit)
+        assertTrue(filtered.single().explanation.contains("Shared credited muscles"))
+    }
+
     @Test fun duplicateUnverifiedInputFailsClosedAndNoSourceIsNotRecommended() {
         assertTrue(CustomExerciseSwapRankingDomain.rank(
             rows+rows.first(),"press-original").isEmpty())

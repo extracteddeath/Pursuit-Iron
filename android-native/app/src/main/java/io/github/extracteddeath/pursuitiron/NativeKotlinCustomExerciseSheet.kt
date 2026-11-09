@@ -115,29 +115,60 @@ internal fun NativeKotlinCustomExerciseSheet(
     scopeLabel: String? = null,
     saveLabel: String = "Save authored sets",
     onRestore: (() -> Unit)? = null,
-    feedback: String? = null
+    feedback: String? = null,
+    /** Explicit replacement only; existing authored sets are NEVER reused. */
+    replacing: CustomExerciseSlot? = null
 ) {
     var search by remember(existing?.slotId) { mutableStateOf("") }
     var exerciseId by remember(existing?.slotId) {
         mutableStateOf(existing?.exerciseId.orEmpty())
     }
-    var note by remember(existing?.slotId) {
+    var samePatternOnly by remember(replacing?.slotId) {mutableStateOf(false)}
+    var sharedMusclesOnly by remember(replacing?.slotId) {mutableStateOf(false)}
+    var swapConfirmation by remember(replacing?.slotId) {mutableStateOf(false)}
+    var note by remember(existing?.slotId,replacing?.slotId) {
         mutableStateOf(existing?.coachNote.orEmpty())
     }
-    var forms by remember(existing?.slotId) {
+    var forms by remember(existing?.slotId,replacing?.slotId) {
         mutableStateOf(existing?.sets?.map { it.toFields() }
             ?: listOf(CustomSetFields()))
     }
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
-    val filtered = available.filter {
-        it.exerciseId.contains(search.trim(),ignoreCase = true) ||
-            it.familyId.contains(search.trim(),ignoreCase = true)
-    }.take(15)
+    val needle=search.trim()
+    val labeled=available.filter {choice ->
+        needle.isBlank() || choice.exerciseId.contains(needle,true) ||
+            choice.familyId.contains(needle,true) ||
+            choice.variantId.contains(needle,true) ||
+            kotlinExerciseLabel(choice.exerciseId).contains(needle,true) ||
+            choice.pattern?.name?.contains(needle,true)==true ||
+            choice.muscleCredits.any {
+                it.muscle.name.contains(needle,true)
+            }
+    }
+    val ranked=CustomExerciseSwapRankingDomain.rank(
+        labeled,replacing?.exerciseId,
+        samePatternOnly=samePatternOnly,
+        sharedMusclesOnly=sharedMusclesOnly)
+    val filtered=ranked.take(20)
+    // Any changed target or entered set invalidates previous confirmation.
+    LaunchedEffect(exerciseId,forms,note,replacing?.slotId) {
+        swapConfirmation=false
+    }
 
     NativeEditSheet(busy = busy, onDismiss = onDismiss) {
-        Text(if (existing == null) "Add your exercise" else "Edit authored sets",
-            style = MaterialTheme.typography.titleLarge)
+        Text(when {
+            replacing!=null -> "Swap exercise"
+            existing==null -> "Add your exercise"
+            else -> "Edit authored sets"
+        },style=MaterialTheme.typography.titleLarge)
+        replacing?.let {source ->
+            Text("Replacing ${kotlinExerciseLabel(source.exerciseId)} on this program day only.",
+                style=MaterialTheme.typography.titleMedium)
+            Text("Choose a new exercise and author new sets. Old weights, advanced techniques, attachments, notes and history are never transferred. Protected week edits and supersets require separate review.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         scopeLabel?.let { Text(it,style=MaterialTheme.typography.titleMedium) }
         feedback?.let { Text(it,style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.error) }
@@ -149,18 +180,52 @@ internal fun NativeKotlinCustomExerciseSheet(
                 style = MaterialTheme.typography.bodyMedium)
         } else if (existing == null) {
             OutlinedTextField(search, { search = it.take(80) },
-                label = { Text("Find available exercise or variant") },
+                label = { Text("Search by exercise, family, pattern or muscle") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true)
-            filtered.forEach { candidate ->
-                FilterChip(
-                    selected = exerciseId == candidate.exerciseId,
-                    onClick = { exerciseId = candidate.exerciseId },
-                    label = {
-                        Text(kotlinExerciseLabel(candidate.exerciseId) +
-                            " · " + candidate.variantId.replace('-', ' '))
-                    })
+            if(replacing!=null) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    FilterChip(selected=!samePatternOnly && !sharedMusclesOnly,
+                        onClick={samePatternOnly=false;sharedMusclesOnly=false},
+                        label={Text("All available")})
+                    FilterChip(selected=samePatternOnly,
+                        onClick={
+                            samePatternOnly=!samePatternOnly
+                            sharedMusclesOnly=false
+                        },label={Text("Same pattern")})
+                    FilterChip(selected=sharedMusclesOnly,
+                        onClick={
+                            sharedMusclesOnly=!sharedMusclesOnly
+                            samePatternOnly=false
+                        },label={Text("Shared muscles")})
+                }
+                val source=available.firstOrNull {
+                    it.exerciseId==replacing.exerciseId
+                }
+                Text(if(source==null)
+                    "The former exercise is not in the current gym/catalog. No similarity score is assumed."
+                    else "Alternatives rank by reviewed movement pattern, family and credited muscles. A match is not a guarantee of equal load or effect.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if(filtered.isEmpty())Text("No verified matches. Try another search or filter.",
+                style=MaterialTheme.typography.bodySmall)
+            filtered.forEach { optionRow ->
+                val candidate=optionRow.choice
+                FilterChip(
+                    selected=exerciseId==candidate.exerciseId,
+                    onClick={exerciseId=candidate.exerciseId},
+                    label={Text(kotlinExerciseLabel(candidate.exerciseId)+
+                        " · "+candidate.variantId.replace('-', ' '))})
+                if(replacing!=null)Text(optionRow.explanation,
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if(ranked.size>filtered.size)Text(
+                "Showing first ${filtered.size} of ${ranked.size} verified matches. Narrow your search for more.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             Text(kotlinExerciseLabel(existing.exerciseId),
                 style = MaterialTheme.typography.titleMedium)
@@ -302,15 +367,33 @@ internal fun NativeKotlinCustomExerciseSheet(
         }
         Text("Saving checks actual gym loading and every set again. A draft is never automatically approved.",
             style = MaterialTheme.typography.bodySmall)
+        val canSubmit=!busy && parsed!=null && option!=null &&
+            note.length<=1000 && (replacing==null ||
+                exerciseId!=replacing.exerciseId)
+        if(replacing!=null && swapConfirmation) {
+            PursuitHistoryStatus(
+                "Confirm program replacement",
+                "${kotlinExerciseLabel(replacing.exerciseId)} → ${kotlinExerciseLabel(exerciseId)}. Only this day changes. The replacement gets a new history-safe slot identity. All new targets are exactly the sets entered here; the edit is undoable, and a fresh program audit is required.")
+            OutlinedButton(onClick={swapConfirmation=false},
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                Text("Keep editing")
+            }
+        }
         Button(
             onClick = {
-                val sets = parsedSets(forms, option)
-                if (sets != null) onSave(exerciseId, sets, note)
+                if(replacing!=null && !swapConfirmation)
+                    swapConfirmation=true
+                else {
+                    val sets=parsedSets(forms,option)
+                    if(sets!=null)onSave(exerciseId,sets,note)
+                }
             },
-            enabled = !busy && parsed != null && option != null &&
-                note.length <= 1000,
-            modifier = Modifier.fillMaxWidth()) {
-            Text(saveLabel)
+            enabled=canSubmit,
+            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+            Text(if(replacing!=null) {
+                if(swapConfirmation)"Confirm this program swap"
+                else "Review replacement"
+            } else saveLabel)
         }
         onRestore?.let { restore ->
             OutlinedButton(onClick=restore,enabled=!busy,modifier=Modifier.fillMaxWidth()) {

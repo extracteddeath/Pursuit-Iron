@@ -24,6 +24,7 @@ const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pur
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
 const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const adaptiveRights=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinAdaptiveCyclePermissionsPanel.kt');
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
 const sessionBrief=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNextSessionBrief.kt');
@@ -210,6 +211,26 @@ assert.ok(plan.includes('NativeKotlinNextSessionBrief(draft,week,weekday)') &&
   !sessionBrief.includes('rememberCoroutineScope') &&
   !sessionBrief.includes('host.'),
   'Next session game plan must be display-only sourced from the exact selected day');
+assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
+  plan.includes('NativeKotlinAdaptiveCyclePermissionsPanel(ownerHost,draft.cycleId)') &&
+  journey.includes('permissionHost=host)') &&
+  adaptiveRights.includes('host.readAdaptiveCyclePermissions(cycleId)') &&
+  adaptiveRights.includes('host.confirmAdaptiveCyclePermissions(') &&
+  adaptiveRights.includes('host.revokeAdaptiveCyclePermissions(cycleId,expected)') &&
+  adaptiveRights.includes('val revision=when(val read=state)') &&
+  adaptiveRights.includes('NativeAdaptivePermissionRead.Missing -> 0L') &&
+  adaptiveRights.includes('is NativeAdaptivePermissionRead.Revoked -> read.revision') &&
+  adaptiveRights.includes('is NativeAdaptivePermissionRead.Found -> existing?.revision') &&
+  adaptiveRights.includes('val canEdit=!loading && !saving && revision!=null') &&
+  adaptiveRights.includes('enabled=confirmed && !saving') &&
+  adaptiveRights.includes('if(result is NativeAdaptivePermissionWrite.Committed)') &&
+  adaptiveRights.includes('CustomCycleChangeKind.SPLIT') &&
+  adaptiveRights.includes('CustomCycleChangeKind.EXERCISES') &&
+  adaptiveRights.includes('CustomCycleChangeKind.SCHEDULE') &&
+  adaptiveRights.includes('CustomCycleChangeKind.DAY_COUNT') &&
+  adaptiveRights.includes('CustomCycleChangeKind.REMOVE_PINNED') &&
+  adaptiveRights.includes('Change rights')===false,
+  'Adaptive permissions must be source-backed, explicit, independently revocable and never an automatic edit');
 assert.ok(coach.includes('if(assistance==CoachAssistancePolicy.STANDARD)') &&
   coach.includes('assistance==CoachAssistancePolicy.PROGRESSION_ONLY') &&
   coach.includes('PursuitExerciseHeading(exerciseId,') &&

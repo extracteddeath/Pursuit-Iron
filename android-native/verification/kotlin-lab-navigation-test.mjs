@@ -298,7 +298,6 @@ assert.ok(main.includes('android:allowBackup="false"') &&
   standards.includes('comparisonGroup?.let') &&
   standards.includes('.commit()'),
   'Strength comparison settings must have explicit athlete-scoped on-device save and clear');
-const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 assert.ok(coach.includes('PursuitCoachDestinations(onOpenProgram,onOpenFuture)') &&
   coach.includes('onOpenProgram:()->Unit={}') &&
   coach.includes('onOpenFuture:()->Unit={}') &&

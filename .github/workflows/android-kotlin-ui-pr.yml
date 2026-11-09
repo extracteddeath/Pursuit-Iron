@@ -13,6 +13,7 @@ on:
       - 'android-native/verification/kotlin-strength-club-contract-test.mjs'
       - 'android-native/verification/kotlin-workout-readiness-layout-test.mjs'
       - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
+      - 'android-native/verification/kotlin-train-resume-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   pull_request:
     branches:
@@ -26,6 +27,7 @@ on:
       - 'android-native/verification/kotlin-strength-club-contract-test.mjs'
       - 'android-native/verification/kotlin-workout-readiness-layout-test.mjs'
       - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
+      - 'android-native/verification/kotlin-train-resume-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   workflow_dispatch:
 
@@ -85,6 +87,8 @@ jobs:
         run: node android-native/verification/kotlin-workout-readiness-layout-test.mjs
       - name: Verify native Plan hierarchy and current workout
         run: node android-native/verification/kotlin-plan-hierarchy-test.mjs
+      - name: Verify native Train minimize, revalidated resume and complete unfinished list
+        run: node android-native/verification/kotlin-train-resume-test.mjs
       - name: Compile all native Kotlin UI and test the independent engine (never assembles APK)
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

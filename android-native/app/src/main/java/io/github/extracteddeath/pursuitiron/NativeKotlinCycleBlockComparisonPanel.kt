@@ -101,6 +101,10 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     } ?:return
     val prior=comparison.prior
     val next=comparison.next
+    // Snapshot cross-module nullable properties before Compose branches.
+    // A null check on a public property alone is not a Kotlin smart cast.
+    val priorAuditedSets=prior.auditedWeeklyWorkingSets
+    val nextAuditedSets=next.auditedWeeklyWorkingSets
     val fontScale=LocalDensity.current.fontScale
     var expandAllMuscles by rememberSaveable(cycle.cycleId,id){
         mutableStateOf(false)
@@ -145,14 +149,13 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
             "better recovery or sufficient strength training.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(prior.auditedWeeklyWorkingSets!=null &&
-            next.auditedWeeklyWorkingSets!=null) {
+        if(priorAuditedSets!=null && nextAuditedSets!=null) {
             HorizontalDivider()
             PursuitSectionHeading("Full-cycle measurements",
                 "Includes exact saved week overrides. Review status is shown separately.")
             PursuitMetricStrip(listOf(
-                "Earlier weeks" to auditedRange(prior.auditedWeeklyWorkingSets),
-                "Next weeks" to auditedRange(next.auditedWeeklyWorkingSets),
+                "Earlier weeks" to auditedRange(priorAuditedSets),
+                "Next weeks" to auditedRange(nextAuditedSets),
                 "First-week change" to (
                     comparison.firstAuditedWeekDelta?.let(::signedCount) ?: "—")
             ))

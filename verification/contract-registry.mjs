@@ -25,7 +25,6 @@ export const contractGroups = Object.freeze({
         'm324-session-summary-test.mjs'
     ]),
     adaptation: Object.freeze([
-        'm378-web-approved-regressions-test.mjs',
         'm235-engine-verification-test.mjs',
         'm234-candidate-optimization-test.mjs',
         'm233-semantic-exercise-graph-test.mjs',
@@ -74,6 +73,8 @@ export const contractGroups = Object.freeze({
         'm188-production-torture-test.mjs'
     ]),
     integration: Object.freeze([
+        // Draft PRs run this group, so approved fixes receive early runnable evidence.
+        'm378-web-approved-regressions-test.mjs',
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
         'home-utility-owner-test.mjs',

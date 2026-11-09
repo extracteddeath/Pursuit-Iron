@@ -335,7 +335,11 @@ internal fun NativeKotlinCandidateJourney(
                             onPlan={navigate(KotlinCandidateDestination.PROGRAM)},
                             onProgress={navigate(KotlinCandidateDestination.PROGRESS)},
                             onProgressLift={exerciseId->
-                                if(exerciseId in NativeStrengthFavorites.supportedIds) {
+                                // Profile emits only source-matched barbell
+                                // favorites or verified logged exercise pins.
+                                // Progress independently verifies general
+                                // exercise IDs against the current owner history.
+                                if(exerciseId.isNotBlank()) {
                                     progressRequestedExerciseId=exerciseId
                                     destination=KotlinCandidateDestination.PROGRESS
                                 }

@@ -51,7 +51,7 @@ object CustomWorkoutHistoryEvidenceDomain {
                 CustomHistoryEvidenceRefusal.UNFINISHED)
         var rebuilt=runCatching {
             CustomWorkoutJournalDomain.begin(
-                journal.workoutId,journal.snapshot,
+                journal.workoutId,journal.originalSnapshot,
                 journal.preparedConsentFingerprint)
         }.getOrNull() ?:return CustomHistoryEvidenceResult.Rejected(
             CustomHistoryEvidenceRefusal.UNVERIFIED_JOURNAL)

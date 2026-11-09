@@ -165,8 +165,9 @@ internal fun NativeKotlinCustomJournalScreen(
                 reviewed.athleteProfileId==stamp.athleteId &&
                 reviewed.profileRevision==stamp.athleteProfileRevision &&
                 reviewed.gym.gymId==stamp.gymId
-            val options=if(ready)CustomExerciseAuthoringDomain.picker(
-                checkNotNull(source).setup,source.catalog) else emptyList()
+            val options=if(ready)checkNotNull(source).let{
+                CustomExerciseAuthoringDomain.picker(it.setup,it.catalog)
+            } else emptyList()
             if(journal?.revision==active.revision && ready &&
                 options.any {it.exerciseId!=slot.exerciseId}) {
                 swapChoices=options

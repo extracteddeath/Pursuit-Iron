@@ -90,6 +90,12 @@ internal object NativeCustomWorkoutJournalCodec {
                 writeInt(slot.size)
                 write(slot)
             }
+            is CustomWorkoutJournalOperation.UndoSwap->{
+                writeByte(4)
+                writeUTF(event.eventId)
+                writeLong(event.expectedRevision)
+                writeUTF(event.swapEventId)
+            }
         }
     }
     private fun DataInputStream.operation():CustomWorkoutJournalOperation =
@@ -125,6 +131,8 @@ internal object NativeCustomWorkoutJournalCodec {
                 CustomWorkoutJournalOperation.Swap(eventId,revision,previous,
                     NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(slot))
             }
+            4->CustomWorkoutJournalOperation.UndoSwap(
+                readUTF(),readLong(),readUTF())
             else->throw IOException("invalid workout receipt kind")
         }
 

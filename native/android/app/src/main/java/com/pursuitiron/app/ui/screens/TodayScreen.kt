@@ -274,7 +274,8 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
 @Composable
 private fun StartSplitButton(vm: AppViewModel, hasFresher: Boolean, onFresher: () -> Unit, early: Boolean = false) {
     val cs = MaterialTheme.colorScheme
-    val bc = if (early) ButtonDefaults.buttonColors(containerColor = cs.secondaryContainer, contentColor = cs.onSecondaryContainer)
+    // On the hero's primaryContainer a secondaryContainer button all but vanished; surface keeps it a button.
+    val bc = if (early) ButtonDefaults.buttonColors(containerColor = cs.surface, contentColor = cs.primary)
         else ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)
     var open by remember { mutableStateOf(false) }
     val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, com.pursuitiron.app.ui.theme.Motion.spatialFast(), label = "split")

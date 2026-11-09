@@ -17,6 +17,7 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 /** Exact input validation belongs to the pure Kotlin engine, not Compose. */
 private fun performed(

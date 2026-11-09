@@ -373,15 +373,6 @@ internal fun NativeKotlinCustomJournalScreen(
                         onClick={refresh()}){Text("Refresh saved workout")}
                 }
                 if(!finished && current.finishedByEventId==null) {
-                    PursuitWorkoutReadinessPanel(
-                        readiness=readiness,
-                        onReadinessChange={readiness=it},
-                        movementRestricted=movementRestricted,
-                        onMovementRestrictedChange={movementRestricted=it},
-                        enabled=!busy
-                    )
-                }
-                if(!finished && current.finishedByEventId==null) {
                     val upcoming=nextVisit?.let {visit->
                         current.snapshot.slots.firstOrNull {slot->
                             slot.sets.any{it.setKey==visit.setKey}
@@ -403,6 +394,15 @@ internal fun NativeKotlinCustomJournalScreen(
                         setDetail=focusDetail,
                         focusOnNext=focusOnNext,
                         onFocusChange={focusOnNext=it},
+                        enabled=!busy
+                    )
+                }
+                if(!finished && current.finishedByEventId==null) {
+                    PursuitWorkoutReadinessPanel(
+                        readiness=readiness,
+                        onReadinessChange={readiness=it},
+                        movementRestricted=movementRestricted,
+                        onMovementRestrictedChange={movementRestricted=it},
                         enabled=!busy
                     )
                 }

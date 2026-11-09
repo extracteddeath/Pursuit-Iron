@@ -61,6 +61,11 @@ data class GeneratedAdaptiveBlockResult(
 object GeneratedAdaptiveBlockDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
+    /** Athlete-owned work cannot be silently regenerated. */
+    private fun CustomExerciseSlot.isProtected():Boolean =
+        pinned || attachmentId!=null || supersetGroup!=null ||
+            coachNote.isNotBlank() || sets.any {it.amplifier!=null}
+
     // A new exposure gets a deterministic, short, namespace-scoped identity.
     // Including the source revision ensures that a changed day cannot
     // accidentally inherit a retired slot from a prior approved revision.
@@ -102,17 +107,11 @@ object GeneratedAdaptiveBlockDomain {
             return refuse(GeneratedAdaptiveBlockStatus.INVALID_SOURCE,
                 "The target training block, athlete, goal, phase or source revision is incompatible.")
 
-        // Import and custom cycles are first-class. Until slot-preserving
-        // technique migration is implemented, refuse rather than erase
-        // pinned exercises, amplifiers, attachments or week overrides.
-        if(cycle.weekOverrides[input.targetBlockId].orEmpty().isNotEmpty() ||
-            source.days.any {day ->day.slots.any {slot ->
-                slot.pinned || slot.attachmentId!=null ||
-                    slot.supersetGroup!=null ||
-                    slot.sets.any {it.amplifier!=null}
-            }})
+        // Week-specific edits need a separately verified slot-key migration.
+        // Until that exists, do not erase effective authored prescriptions.
+        if(cycle.weekOverrides[input.targetBlockId].orEmpty().isNotEmpty())
             return refuse(GeneratedAdaptiveBlockStatus.PROTECTED_CUSTOM_WORK,
-                "This block contains protected authored slots, attached techniques or weekly overrides.")
+                "Week-specific custom prescriptions require a separate lossless migration.")
 
         val generation=CoachAthleteProgramGenerator.generate(input.program)
         val selected=generation.candidate?.catalogReview
@@ -138,6 +137,41 @@ object GeneratedAdaptiveBlockDomain {
                 }} })
             return refuse(GeneratedAdaptiveBlockStatus.PRESCRIPTION_UNRESOLVED,
                 "The same generated week lacks complete, exact loads, sets, reps, RIR or duration.",
+                generation,prescribed)
+
+        // Exact preservation gate for pinned work, notes, attachments,
+        // supersets and techniques. The generated visit must occupy the SAME
+        // index, weekday, session purpose, exercise and role. If any protected
+        // exposure would move or disappear, refuse the ENTIRE candidate.
+        // The canonical full-cycle audit still verifies actual equipment,
+        // set credits, session duration and technique loads afterward.
+        val proposedByWeekday=prescribed.sessions.mapNotNull {session ->
+            composed.days.getOrNull(session.dayIndex)?.let {
+                it.calendarDay to session
+            }
+        }.toMap()
+        val protectedMatches=source.days.all {day ->
+            val protected=day.slots.withIndex().filter {
+                it.value.isProtected()
+            }
+            if(protected.isEmpty())true else {
+                val nextDay=proposedByWeekday[day.weekday]
+                nextDay!=null && nextDay.purpose==day.purpose &&
+                    protected.all { (index,slot) ->
+                        day.slots.count {it.exerciseId==slot.exerciseId}==1 &&
+                            nextDay.exercises.count {
+                                it.exerciseId==slot.exerciseId
+                            }==1 &&
+                            nextDay.exercises.getOrNull(index)?.let {
+                                it.exerciseId==slot.exerciseId &&
+                                    it.role==slot.role
+                            }==true
+                    }
+            }
+        }
+        if(!protectedMatches)
+            return refuse(GeneratedAdaptiveBlockStatus.PROTECTED_CUSTOM_WORK,
+                "A pinned visit, coach note, attachment, superset or advanced set would move or be changed. Preserve the exact visit or edit it explicitly.",
                 generation,prescribed)
 
         val originalByDay=source.days.associateBy {it.weekday}
@@ -175,9 +209,10 @@ object GeneratedAdaptiveBlockDomain {
                 identities+=GeneratedAdaptiveSlotContinuity(
                     weekday,exercise.exerciseId,matching?.slotId,
                     stableId,relationship)
-                // A protected source slot may never be silently reassigned;
-                // new slots are distinguishable from authored slot IDs.
-                CustomExerciseSlot(stableId,exercise.exerciseId,exercise.role,
+                // Keep the exact athlete-authored slot and every set in it.
+                // Unprotected visits alone may receive generated prescriptions.
+                if(matching?.isProtected()==true)checkNotNull(matching)
+                else CustomExerciseSlot(stableId,exercise.exerciseId,exercise.role,
                     Collections.unmodifiableList(exercise.sets.map {set ->
                         CustomAuthoredSet(set.type,set.load,set.targetReps,
                             set.targetRir,set.activeSeconds,set.restSeconds)

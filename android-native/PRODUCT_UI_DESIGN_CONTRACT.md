@@ -280,3 +280,11 @@ next-day coaching summary, richer arbitrary exercise chart favorites and
 equipment/variant-specific Strength Standards with trustworthy source tables.
 All of this is still subject to explicit athlete approval for saved training
 changes; no APK or AAB should be created from this source-only milestone.
+
+## Direct Plan editing and next-session focus — 2026-11-08 continuation
+
+- The saved Program outline now has **Edit this training day** and **Edit exercise sets** actions. Both carry the exact authored block, weekday and stable exercise-slot ID into the existing native editor, rather than constructing parallel plans or changing prescriptions from the outline. The exercise editor retains its exact current draft, validated equipment choices, review and source-revision guards.
+- Editor disclosures are controlled and saveable per current cycle: opening a day selects the right block/day, and a deep exercise edit opens its existing set sheet. Ordinary block/day expansion is still user-controlled. Changing view mode restores the shared scroll position to the top so an editor is not stranded under a previous long outline.
+- The next approved custom session now shows a compact, *source-based* base-plan focus: phase and block, exercise count, working and warm-up set count, and up to four exercise names. It is rendered only for a verified Next or Prepared selection and explicitly distinguishes the base outline from exact week-specific loads and overrides. It makes no coaching estimates and never starts/issues a workout.
+- Shared `PursuitScreenContent` accepts an optional owned Compose scroll state; all other screens retain the original default. Source contracts now guard correct deep-link targets, no invented session facts, precise selection authority and history-safe editor writes.
+- Device visual acceptance (including 200% font, TalkBack, foldable and long-cycle navigation) and end-to-end workout quality evidence remain necessary. Do not interpret source CI as release approval. **No APK/AAB until the whole app design is finished and reviewed.**

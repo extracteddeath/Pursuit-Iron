@@ -113,6 +113,10 @@ class NativeKotlinTrackedWorkoutGateway(
     ): NativeJournalFileResult = fenced(owner, athlete, unavailable()) {
         if (!verifyHistory(owner, athlete)) return@fenced unavailable()
         when (operation) {
+            is KotlinJournalOperation.SwapExercise,
+            is KotlinJournalOperation.UndoSwap ->
+                NativeJournalFileResult.Rejected(
+                    NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE)
             is KotlinJournalOperation.RecordSet -> {
                 val existing = workout.open(owner, workoutId)
                 if (existing !is NativeJournalFileResult.Durable)
@@ -140,6 +144,42 @@ class NativeKotlinTrackedWorkoutGateway(
                     recorded.journal, committed.replayed)
             }
         }
+    }
+
+    /**
+     * Replace an unstarted Composer exercise only after verified History,
+     * current athlete access, and full source-based target review.
+     */
+    fun swapExercise(
+        owner:String,athlete:String,workoutId:String,
+        eventId:String,expectedRevision:Long,
+        previousExerciseId:String,replacementExerciseId:String,
+        intents:List<KotlinComposerSwapSetIntent>
+    ):NativeJournalFileResult=fenced(owner,athlete,unavailable()) {
+        if(!verifyHistory(owner,athlete))return@fenced unavailable()
+        val opened=workout.open(owner,workoutId)
+        if(opened !is NativeJournalFileResult.Durable)
+            return@fenced opened
+        if(!authorized(owner,athlete,opened.journal))
+            return@fenced NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.NOT_AUTHORIZED)
+        workout.swapExercise(owner,workoutId,eventId,expectedRevision,
+            previousExerciseId,replacementExerciseId,intents)
+    }
+
+    fun undoSwap(
+        owner:String,athlete:String,workoutId:String,
+        eventId:String,expectedRevision:Long,swapEventId:String
+    ):NativeJournalFileResult=fenced(owner,athlete,unavailable()) {
+        if(!verifyHistory(owner,athlete))return@fenced unavailable()
+        val opened=workout.open(owner,workoutId)
+        if(opened !is NativeJournalFileResult.Durable)
+            return@fenced opened
+        if(!authorized(owner,athlete,opened.journal))
+            return@fenced NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.NOT_AUTHORIZED)
+        workout.undoExerciseSwap(owner,workoutId,eventId,expectedRevision,
+            swapEventId)
     }
 
     /**

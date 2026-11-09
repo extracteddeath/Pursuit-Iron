@@ -3256,6 +3256,18 @@ const EDITS = {
         return { ...p, days, overrides: reindexSlotMap(p.overrides || {}, dayId, swap), slotBias: reindexSlotMap(p.slotBias, dayId, swap),
             nextWeekPrescriptions: E.swapNextSlotPrescriptions(p.nextWeekPrescriptions, dayId, slot, target), ss: clearDayKeys(p.ss, dayId), rounds: clearDayKeys(p.rounds, dayId), edited: true };
     },
+    // Drag to reorder: one lift from `from` to `to`, as a run of neighbour swaps so overrides, notes, prescriptions and the
+    // primary lift follow it exactly as the arrows do (App.js moveSlot).
+    moveTo(p, { dayId, from, to }) {
+        let q = p; const dir = to > from ? 1 : -1;
+        for (let s = from; s !== to; s += dir) q = EDITS.move(q, { dayId, slot: s, dir });
+        return q;
+    },
+    moveDayTo(p, { from, to }) {
+        let q = p; const dir = to > from ? 1 : -1;
+        for (let s = from; s !== to; s += dir) q = EDITS.moveDay(q, { dayId: q.days[s].id, dir });
+        return q;
+    },
     // App.js addSpecific: an added slot is owned by the lifter in every progression mode.
     add(p, { dayId, exId }) { return addSlot(p, dayId, EX_BY_ID[exId]); },
     // App.js toggleSS: pairs this slot with the next; clears the day's rounds.

@@ -100,6 +100,8 @@ fun ProgramEditorScreen(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     val wide = LocalWide.current
     var sheet by remember { mutableStateOf<ESheet?>(null) }
+    var reorder by remember { mutableStateOf(false) }
+    var reorderDays by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
     var scopeAsk by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
@@ -223,8 +225,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                         DayAct(PiIcons.Pencil, "Rename") { sheet = ESheet.RenameDay(dId, d.s("label")); dayMenu = false }
                         DayAct(PiIcons.Note, if (d.s("note").isBlank()) "Add day note" else "Edit day note") { noteEdit = d.s("note"); dayMenu = false }
                         DayAct(PiIcons.Copy, "Duplicate") { vm.edit("copyDay", "dayId" to dId); dayMenu = false }
-                        if (di > 0) DayAct(PiIcons.ChevronLeft, "Move earlier") { vm.edit("moveDay", "dayId" to dId, "dir" to -1) }
-                        if (di < days.size - 1) DayAct(PiIcons.ChevronRight, "Move later") { vm.edit("moveDay", "dayId" to dId, "dir" to 1) }
+                        if (days.size > 1) DayAct(PiIcons.Grip, "Reorder days") { reorderDays = true; dayMenu = false }
                         DayAct(PiIcons.Plus, "Add a day") { vm.edit("addDay"); dayMenu = false }
                         if (days.size > 1) DayAct(PiIcons.Trash, "Delete day", tone = true) { confirmDeleteDay = true }
                     }
@@ -259,12 +260,36 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 }
             }
             item(key = "exh") {
-                Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.Bottom) {
+                Row(Modifier.padding(start = 4.dp, end = 0.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Exercises", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
                     Text("${exs.size} ${if (exs.size == 1) "lift" else "lifts"}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+                    // Reorder: the cards fold to one line each so the whole day fits, and a handle drags each lift into place.
+                    if (exs.size > 1) TextButton(onClick = { reorder = !reorder; openRow = null }, modifier = Modifier.padding(start = 4.dp)) {
+                        Icon(if (reorder) PiIcons.Check else PiIcons.Grip, null, modifier = Modifier.size(18.dp)); Text(if (reorder) "  Done" else "  Reorder")
+                    }
                 }
             }
-            items(exs, key = { "$dId:${it.i("slot")}:${it.s("id")}" }) { x ->
+            if (reorder) item(key = "reorder") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Drag a lift by its handle. Supersets on this day are unpaired when the order changes.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+                    com.pursuitiron.app.ui.common.ReorderColumn(exs, keyOf = { "${it.s("id")}" }, onMove = { f, t -> vm.edit("moveTo", "dayId" to dId, "from" to f, "to" to t) }, labelOf = { it.s("name") }) { x, k, handle, lifted ->
+                        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(18.dp)).background(if (lifted) cs.secondaryContainer else cs.surfaceContainerLow)
+                            .padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.size(28.dp).clip(RoundedCornerShape(10.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                                Text("${k + 1}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.onSecondaryContainer)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(x.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("${x.i("sets")} × ${x.s("reps").replace("-", "–")}" + if (x.b("primary")) " · key lift" else "", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            }
+                            Box(handle.size(48.dp).semantics { contentDescription = "Drag to reorder ${x.s("name")}" }, contentAlignment = Alignment.Center) {
+                                Icon(PiIcons.Grip, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    }
+                }
+            }
+            if (!reorder) items(exs, key = { "$dId:${it.i("slot")}:${it.s("id")}" }) { x ->
                 val slot = x.i("slot")
                 val paired = x.b("superset") || exs.getOrNull(slot - 1)?.b("superset") == true
                 // A group's first lift carries its header: superset or circuit, and how many rounds it runs.
@@ -366,6 +391,29 @@ fun ProgramEditorScreen(vm: AppViewModel) {
     }
     why?.let { k -> d?.let { WhyLiftSheet(vm, e.s("programId"), it.s("id"), k, e.i("weekIndex")) { why = null } } }
     info?.let { id -> ExerciseSheet(vm, id, dayId = d?.s("id")) { info = null } }
+    if (reorderDays) ModalBottomSheet(onDismissRequest = { reorderDays = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        val cs = MaterialTheme.colorScheme
+        val ds = e.list("days")
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Reorder days", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
+            Text("Drag a day by its handle. The weekly order changes; logged workouts stay in your history.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            com.pursuitiron.app.ui.common.ReorderColumn(ds, keyOf = { it.s("id") }, onMove = { f, t -> vm.edit("moveDayTo", "from" to f, "to" to t) }, labelOf = { it.s("label") }) { x, k, handle, lifted ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(18.dp)).background(if (lifted) cs.secondaryContainer else cs.surfaceContainerHigh)
+                    .padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("D${k + 1}", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(x.s("label"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${x.list("exercises").size} lifts" + (x.s("weekday").takeIf { it.isNotBlank() }?.let { " · ${it.lowercase().replaceFirstChar { c -> c.uppercase() }}" } ?: ""),
+                            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                    Box(handle.size(48.dp).semantics { contentDescription = "Drag to reorder ${x.s("label")}" }, contentAlignment = Alignment.Center) {
+                        Icon(PiIcons.Grip, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
+            Button(onClick = { reorderDays = false }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done") }
+        }
+    }
     if (confirmDeleteDay && d != null) AlertDialog(onDismissRequest = { confirmDeleteDay = false }, title = { Text("Delete ${d.s("label")}?") },
         text = { Text("It comes out of the draft. Nothing changes until you save. Logged workouts stay in your history.") },
         confirmButton = { Button(onClick = { confirmDeleteDay = false; dayMenu = false; vm.edit("deleteDay", "dayId" to d.s("id")); dayId = null }) { Text("Delete") } },

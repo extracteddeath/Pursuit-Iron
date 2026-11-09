@@ -49,6 +49,7 @@ object PiIcons {
     val Pause = icon("pause", "M9 5v14M15 5v14")
     val Note = icon("note", "M5 4h14v16H5zM9 8h6M9 12h6M9 16h3")
     val List = icon("list", "M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01")
+    val Grip = icon("grip", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01", 3.4f)
     val Trash = icon("trash", "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3", 2f)
     val Info = icon("info", "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01")
     val Swap = icon("swap", "M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7")

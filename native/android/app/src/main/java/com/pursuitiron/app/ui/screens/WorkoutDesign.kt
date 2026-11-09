@@ -179,12 +179,12 @@ fun ExercisesSheet(vm: AppViewModel, s: JSONObject, onAdd: () -> Unit, onClose: 
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Today's exercises", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
-            Text("Tap to jump · arrows to reorder · logged sets move with their lift", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-            exs.forEachIndexed { k, e ->
+            Text("Tap to jump · drag the handle to reorder · logged sets move with their lift", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+            com.pursuitiron.app.ui.common.ReorderColumn(exs, keyOf = { it.s("id") }, onMove = { f, t -> vm.act("move", "from" to f, "to" to t) }, labelOf = { it.s("name") }) { e, k, handle, lifted ->
                 val on = k == cur
                 val work = e.list("sets").filter { !it.b("warm") && !it.b("sub") && !it.b("skipped") }
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (on) cs.primaryContainer else cs.surfaceContainer)
-                    .clickable { vm.act("select", "ei" to k); onClose() }.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (lifted) cs.secondaryContainer else if (on) cs.primaryContainer else cs.surfaceContainer)
+                    .clickable { vm.act("select", "ei" to k); onClose() }.padding(start = 10.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
                     .semantics { selected = on }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(if (on) cs.primary else cs.surfaceContainerHighest), contentAlignment = Alignment.Center) {
                         Text("${k + 1}", style = MaterialTheme.typography.labelLarge, color = if (on) cs.onPrimary else cs.onSurface)
@@ -193,13 +193,8 @@ fun ExercisesSheet(vm: AppViewModel, s: JSONObject, onAdd: () -> Unit, onClose: 
                         Text(e.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text("${work.count { it.b("done") }}/${work.size} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
-                    listOf(Triple(PiIcons.ChevronUp, k - 1, "Move ${e.s("name")} up"), Triple(PiIcons.ChevronDown, k + 1, "Move ${e.s("name")} down")).forEach { (ic, to, lbl) ->
-                        val ok = to in exs.indices
-                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(if (ok) cs.surface else Color.Transparent)
-                            .then(if (ok) Modifier.clickable { vm.act("move", "from" to k, "to" to to) } else Modifier)
-                            .semantics { contentDescription = lbl; role = Role.Button }, contentAlignment = Alignment.Center) {
-                            Icon(ic, null, tint = if (ok) cs.onSurface else cs.outlineVariant, modifier = Modifier.size(20.dp))
-                        }
+                    Box(handle.size(48.dp).semantics { contentDescription = "Drag to reorder ${e.s("name")}" }, contentAlignment = Alignment.Center) {
+                        Icon(PiIcons.Grip, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
                     }
                 }
             }

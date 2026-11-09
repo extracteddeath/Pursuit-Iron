@@ -1251,4 +1251,15 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   ok(C.editor({ programId: pid }).days[0].exercises[last].rounds === null, 'back to auto sets clears the rounds');
   C.editAct({ programId: pid, type: 'rounds', dayId: day.id, slot: 0, rounds: 3 });
   ok(C.editor({ programId: pid }).days[0].exercises[0].rounds === null, 'an ungrouped lift takes no rounds'); C.discardEdits?.({ programId: pid }); }
+// Drag to reorder: a lift moves several places in one go, and so does a day
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const made = C.createProgram({ config: { goal: 'hypertrophy', days: 4, session: 's60', experience: 'intermediate', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  const pid = made.programId, d0 = C.editor({ programId: pid }).days[0], ids = d0.exercises.map((x) => x.id);
+  C.editAct({ programId: pid, type: 'moveTo', dayId: d0.id, from: 0, to: ids.length - 1 });
+  const after = C.editor({ programId: pid }).days[0].exercises.map((x) => x.id);
+  ok(after[after.length - 1] === ids[0] && after[0] === ids[1] && after.length === ids.length, 'a lift drags from first to last, the rest shift up');
+  const days = C.editor({ programId: pid }).days.map((d) => d.id);
+  C.editAct({ programId: pid, type: 'moveDayTo', from: 3, to: 0 });
+  const nd = C.editor({ programId: pid }).days.map((d) => d.id);
+  ok(nd[0] === days[3] && nd[1] === days[0], 'a day drags from last to first'); C.discardEdits?.({ programId: pid }); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

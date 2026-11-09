@@ -1237,6 +1237,23 @@ if tap(r"Edit program", "editor"):
                 FAILS.append("no superset header after pairing")
         else:
             back()
+    # Drag to reorder: the cards fold to one line, the first lift is dragged two places down by its handle
+    if seek(r"Reorder$") and tap(r"Reorder$", "editor-reorder"):
+        first = find(r"^Drag to reorder ", timeout=4)
+        names = [n.get("content-desc") for n in nodes() if (n.get("content-desc") or "").startswith("Drag to reorder ")]
+        if first and len(names) >= 3:
+            x, y = first
+            adb("shell", "input", "swipe", str(x), str(y), str(x), str(y + int(2.2 * 68 * 2.625)), "1400")
+            time.sleep(2.0)
+            shot("editor-reordered")
+            after = [n.get("content-desc") for n in nodes() if (n.get("content-desc") or "").startswith("Drag to reorder ")]
+            if after == names:
+                FAILS.append("dragging a lift did not reorder the day")
+        else:
+            FAILS.append("reorder mode shows no drag handles")
+        tap(r"Done$", required=False)
+    else:
+        FAILS.append("editor has no Reorder")
     # Day setup sits under the lifts, folded: it opens to the day focus
     if seek(r"(^|\|)Day setup"):
         tap(r"(^|\|)Day setup", "editor-day-setup")

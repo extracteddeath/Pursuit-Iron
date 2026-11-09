@@ -134,6 +134,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var comparisonGroup by rememberSaveable{mutableStateOf<String?>(null)}
     var trendExerciseId by rememberSaveable{mutableStateOf("barbell_bench")}
     var comparisonExpanded by rememberSaveable{mutableStateOf(false)}
+    var standardsExpanded by rememberSaveable{mutableStateOf(false)}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
     val verifiedTimeline=timeline?.takeIf {it.athleteId==profileId}
@@ -298,9 +299,68 @@ internal fun NativeKotlinStrengthStandardsScreen(
     val displayUnit=LoadUnit.valueOf(bodyweightUnit)
     val bodyweight=runCatching{BigDecimal(bodyweightText.trim())}.getOrNull()
         ?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("1000")}
+    // A single corrected-history evidence selection powers BOTH overview
+    // and the detailed reference cards. Do not derive two definitions of
+    // best performance from different samples or issued targets.
+    val bestByExercise=remember(completed,displayUnit) {
+        publishedReferences.associate { reference ->
+            reference.exerciseId to completed
+                .filter {it.key.exerciseId==reference.exerciseId}
+                .mapNotNull { lift ->
+                    epleyEstimate(lift.actualLoad,lift.reps)?.let { estimate ->
+                        lift to StrengthStandardsMeasurementDomain.convert(
+                            estimate,lift.key.unit,displayUnit)
+                    }
+                }.maxByOrNull {it.second}
+        }
+    }
+    val orderedReferences=favoriteLiftIds.mapNotNull { id ->
+        publishedReferences.firstOrNull {it.exerciseId==id}
+    }+publishedReferences.filter {it.exerciseId !in favoriteLiftIds}
+    val overviewItems=orderedReferences.map {standard ->
+        val best=bestByExercise[standard.exerciseId]
+        val ratio=if(best!=null && bodyweight!=null && comparisonGroup!=null)
+            StrengthStandardsMeasurementDomain.relativeStrength(
+                best.second,bodyweight)
+        else null
+        val tier=ratio?.let { value ->
+            displayedTier(value.toDouble(),
+                if(comparisonGroup=="male")standard.male else standard.female)
+        }
+        NativeStrengthOverviewItem(
+            standard.exerciseId,standard.title,
+            best?.second?.let {
+                "${scalarLabel(it.setScale(1,RoundingMode.HALF_UP))} ${displayUnit.name.lowercase()}"
+            },
+            when {
+                best==null -> "No qualifying 1–10-rep set"
+                tier!=null -> "$tier community reference"
+                else -> "Reference comparison optional"
+            }
+        )
+    }
     PursuitScreenContent {
         PageHeading("PROGRESS","Strength standards",
-            "Compare your actual logged barbell performance with published community reference bands.")
+            "Verified barbell strength at a glance, with source-attributed community references.")
+        when(result) {
+            null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+            is NativeKotlinMixedFactsReadResult.HistoryRejected,
+            is NativeKotlinMixedFactsReadResult.FactsRejected ->
+                PursuitEmptyState("Verified history is unavailable",
+                    "Strength scores are withheld when complete corrected training history cannot be verified.")
+            is NativeKotlinMixedFactsReadResult.Review -> {
+                NativeKotlinStrengthOverview(overviewItems,trendExerciseId) {
+                    trendExerciseId=it
+                }
+                val samples=remember(timeline,trendExerciseId,displayUnit) {
+                    timeline?.let {
+                        verifiedStrengthTrend(it,trendExerciseId,displayUnit)
+                    }.orEmpty()
+                }
+                PursuitStrengthTrendChart(samples,displayUnit,
+                    onOpenHistory={historyExerciseId=trendExerciseId})
+            }
+        }
         PursuitCard {
             PursuitSectionHeading("Community comparison",
                 "Optional settings; they do not alter workouts, progressions or achievements.")
@@ -440,43 +500,13 @@ internal fun NativeKotlinStrengthStandardsScreen(
             }
         }
         when(result) {
-            null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+            null -> Unit
             is NativeKotlinMixedFactsReadResult.HistoryRejected,
-            is NativeKotlinMixedFactsReadResult.FactsRejected ->
-                PursuitEmptyState("Verified history is unavailable",
-                    "Strength scores are withheld when complete corrected training history cannot be verified.")
+            is NativeKotlinMixedFactsReadResult.FactsRejected -> Unit
             is NativeKotlinMixedFactsReadResult.Review -> {
-                if(completed.isEmpty())
-                    PursuitEmptyState("Start building your strength record",
-                        "Complete and save a native barbell workout to see its verified performance here.")
-                PursuitSectionHeading("Strength trend",
-                    "Select an exact barbell lift. Pin your favorites below to keep them first and show them in Profile.")
-                val orderedReferences=favoriteLiftIds.mapNotNull { id ->
-                    publishedReferences.firstOrNull{it.exerciseId==id}
-                }+publishedReferences.filter{it.exerciseId !in favoriteLiftIds}
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                    orderedReferences.forEach { lift ->
-                        FilterChip(selected=trendExerciseId==lift.exerciseId,
-                            onClick={trendExerciseId=lift.exerciseId},
-                            leadingIcon={
-                                if(lift.exerciseId in favoriteLiftIds)
-                                    Icon(Icons.Filled.Star,contentDescription="Pinned favorite",
-                                        modifier=Modifier.size(18.dp))
-                            },
-                            label={Text(lift.title)})
-                    }
-                }
-                favoriteNotice?.let { Text(it,
+                favoriteNotice?.let {Text(it,
                     style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant) }
-                val samples=remember(timeline,trendExerciseId,displayUnit) {
-                    timeline?.let {
-                        verifiedStrengthTrend(it,trendExerciseId,displayUnit)
-                    }.orEmpty()
-                }
-                PursuitStrengthTrendChart(samples,displayUnit,
-                    onOpenHistory={historyExerciseId=trendExerciseId})
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)}
                 PursuitSectionHeading("Your exercise favorites",
                     "Pin and arrange any movement in your verified training history. Open its complete actual sets, including corrections.")
                 PursuitCard {
@@ -616,13 +646,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 PursuitSectionHeading("Strength standards",
                     "Broad community reference levels for four source-matched barbell lifts.")
                 orderedReferences.forEach { standard ->
-                    val best=completed.filter{it.key.exerciseId==standard.exerciseId}
-                        .mapNotNull {lift->
-                            epleyEstimate(lift.actualLoad,lift.reps)?.let{estimate->
-                                lift to StrengthStandardsMeasurementDomain.convert(
-                                    estimate,lift.key.unit,displayUnit)
-                            }
-                        }.maxByOrNull{it.second}
+                    val best=bestByExercise[standard.exerciseId]
                     PursuitCard {
                         PursuitExerciseHeading(standard.exerciseId,
                             onHistory={historyExerciseId=standard.exerciseId},

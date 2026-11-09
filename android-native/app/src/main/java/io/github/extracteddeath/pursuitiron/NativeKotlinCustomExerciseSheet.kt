@@ -140,16 +140,18 @@ internal fun NativeKotlinCustomExerciseSheet(
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
     val needle=search.trim()
+    fun matchesName(value:String?):Boolean = value?.let {name->
+        name.contains(needle,true) ||
+        name.replace('_',' ').replace('-',' ').contains(needle,true)
+    } ?: false
     val labeled=available.filter {choice ->
-        needle.isBlank() || choice.exerciseId.contains(needle,true) ||
-            choice.familyId.contains(needle,true) ||
-            choice.variantId.contains(needle,true) ||
-            choice.attachmentId?.contains(needle,true)==true ||
-            kotlinExerciseLabel(choice.exerciseId).contains(needle,true) ||
-            choice.pattern?.name?.contains(needle,true)==true ||
-            choice.muscleCredits.any {
-                it.muscle.name.contains(needle,true)
-            }
+        needle.isBlank() || matchesName(choice.exerciseId) ||
+            matchesName(choice.familyId) ||
+            matchesName(choice.variantId) ||
+            matchesName(choice.attachmentId) ||
+            matchesName(kotlinExerciseLabel(choice.exerciseId)) ||
+            matchesName(choice.pattern?.name) ||
+            choice.muscleCredits.any {matchesName(it.muscle.name)}
     }
     // Rank using the FULL eligible current-gym catalog first. Search only
     // filters the visible candidates; it must never remove the source

@@ -45,7 +45,7 @@ class CustomExerciseSwapRankingDomainTest {
             CustomExerciseSwapRankingDomain.rank(rows,"press-original",
                 sharedMusclesOnly=true).map{it.choice.exerciseId})
         val unknown=CustomExerciseSwapRankingDomain.rank(rows,
-            "not-in-current-gym","lateral")
+            "not-in-current-gym","pulldown")
         assertEquals(listOf("lat-pulldown"),unknown.map{it.choice.exerciseId})
         assertEquals(CustomSwapFit.SOURCE_UNRESOLVED,unknown.single().fit)
         assertEquals(emptyList<CustomSwapRankedOption>(),

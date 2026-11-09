@@ -315,3 +315,16 @@ The native Program screen now exposes a **real, cycle-scoped adaptation permissi
 - Regression tests cover a base 30→11 set drop, actual week-override measurements, stale/partial audit rejection, unrelated absolute-week rejection, separately accounted arm/forearm direct-set credits, repeated-exercise exposure counting and lack of automatic change authority. Source navigation assertions verify Plan integration.
 
 **Still required:** real generator inputs and multiple audited candidate future blocks; their independent full-cycle comparison, transparent option ranking, source/permission checking, actual version-fenced native approval and post-save re-audit, then phone/tablet accessibility acceptance. This new panel compares **already authored** adjacent blocks: it must not be described as generating a better future cycle. Native first-launch theme remains Amethyst. No APK or AAB before the full app design is complete.
+
+
+## Verified exercise favorites across Progress and Profile — 2026-11-09
+
+**Implemented in source; device screenshot and accessibility approval remain open.**
+
+- The four published, source-matched barbell Strength Standards remain separate from **arbitrary exercise favorites**. A cable, machine, dumbbell or bodyweight movement cannot acquire a fabricated barbell tier or estimated-1RM chart by being favorited.
+- Progress now lets the athlete search **only movement IDs actually present in the complete owner-verified mixed native workout history**, pin up to 12, reorder with separately named Move up / Move down actions, remove a pin and open the exact movement's complete correction-aware set history.
+- The new lightweight favorite store keeps an explicit, ordered, athlete-scoped preference and validates IDs and the currently observed history allowlist on every write. It never stores calculated strength outcomes, issues workouts or modifies program and journal records. Broken/unavailable history exposes no arbitrary favorites.
+- Profile shows the saved order of these actual exercise-history shortcuts alongside (but distinct from) the four existing source-matched strength-chart favorites. Navigation to arbitrary exercise histories performs **a second eligibility check** against the currently verified owner timeline; an old or foreign athlete's exercise ID cannot authorize a drilldown.
+- Recorded sessions are intentionally identified by authoritative completion order, not fabricated dates. This feature is a full-history shortcut, **not** a cross-variant strength trend or a replacement for age/bodyweight-matched licensed standards.
+
+**Further work:** broader exercise progression charts with equipment/rep-range comparability and real phone/foldable/TalkBack verification; first-class customizable Profile sections and strength-standard source-specific reference tables. App-source compilation passing is not a claim of visual acceptance. The feature is isolated in Kotlin Lab and has no effect on the existing web app. No APK/AAB until the complete app-wide design is approved.

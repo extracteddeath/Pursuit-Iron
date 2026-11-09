@@ -62,6 +62,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
@@ -155,7 +157,16 @@ fun ExerciseChips(vm: AppViewModel, exs: List<JSONObject>, ei: Int, onList: () -
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(ei) { state.animateScrollToItem(ei.coerceAtLeast(0)) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, end = 12.dp)) {
-        androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f), state = state, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // The row fades out under its right edge instead of cutting a chip off flat against the list button.
+        val fadeEnd = state.canScrollForward
+        androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f)
+            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                if (fadeEnd) { val w = 28.dp.toPx()
+                    drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - w, endX = size.width),
+                        topLeft = androidx.compose.ui.geometry.Offset(size.width - w, 0f), size = androidx.compose.ui.geometry.Size(w, size.height), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn) }
+            }, state = state, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(exs.size) { k ->
                 val e = exs[k]
                 val work = e.list("sets").filter { !it.b("warm") && !it.b("sub") && !it.b("skipped") }
@@ -348,7 +359,7 @@ fun StartingEstimateCard(s: JSONObject, ex: JSONObject, est: JSONObject) {
 
 /** The design's "Why 82.5 kg?": a chip that opens in place, with the engine's reason, its read and the lift's recent e1RM. */
 @Composable
-fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> Unit) {
+fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, trailing: (@Composable () -> Unit)? = null, onHistory: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val ei = ex.i("ei")
     var open by remember(ex.s("id")) { mutableStateOf(false) }
@@ -364,15 +375,21 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> 
         else -> "Why ${first.s("weight")} ${s.s("unit")}?"
     }
     // Nothing to explain before a first exposure: the chip appears once there's a load to explain.
-    if (first == null && !open) return
+    // The chip and whatever rides beside it (Skip warm-up) share one line instead of a row each.
     if (!open) {
-        Surface(onClick = { open = true }, color = cs.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.height(36.dp)) {
-            Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(PiIcons.Help, null, modifier = Modifier.size(16.dp)); Text(title, style = MaterialTheme.typography.labelLarge)
+        if (first == null && trailing == null) return
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (first != null) Surface(onClick = { open = true }, color = cs.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.height(36.dp)) {
+                Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(PiIcons.Help, null, modifier = Modifier.size(16.dp)); Text(title, style = MaterialTheme.typography.labelLarge)
+                }
             }
+            Spacer(Modifier.weight(1f))
+            trailing?.invoke()
         }
         return
     }
+    trailing?.let { t -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { t() } }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))

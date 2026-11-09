@@ -375,6 +375,13 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
             vm.toast("Warm-up card hidden · Settings can bring it back") { vm.updateSetting("warmupCard", true); warmHidden = false }
         }) }
         item {
+            // The design: skip the remaining warm-ups in one tap, right above the sets (tap ✓ on one to bring it back).
+            val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
+            val skipWarm: (@Composable () -> Unit)? = if (warmLeft.isEmpty() || focus) null else ({
+                TextButton(onClick = {
+                    warmLeft.forEach { w -> vm.act("skipSet", "ei" to ei, "si" to w.i("i")) }; vm.toast("Warm-ups skipped · tap ✓ on one to bring it back")
+                }) { Text("Skip warm-up →") }
+            })
             ExerciseSurface(wide) {
                 ExerciseHead(s, ex, onInfo = { open(WSheet.Info(ex.s("id"))) }, onProg = { open(WSheet.Progression(ei)) },
                     onSetup = { open(WSheet.Pin(ex.s("id"))) }, onMenu = { open(WSheet.Menu(ei)) },
@@ -385,7 +392,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 if (!focus) {
                     LastNoteCard(ex, s.s("dayLabel"))
                     s.o("reentry")?.let { r -> ReentryBanner(r) }
-                    ex.o("estimate")?.let { est -> StartingEstimateCard(s, ex, est) } ?: WhyInline(vm, s, ex) { open(WSheet.History(ex.s("id"))) }
+                    ex.o("estimate")?.let { est -> StartingEstimateCard(s, ex, est) } ?: WhyInline(vm, s, ex, trailing = skipWarm) { open(WSheet.History(ex.s("id"))) }
                 }
                 if (injury != null || ex.has("injuryAdjusted") && !ex.isNull("injuryAdjusted")) {
                     Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(18.dp)) {
@@ -411,11 +418,8 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                         TextButton(onClick = { vm.prefs.markEffortTip() }) { Text("Got it") }
                     }
                 }
-                // The design: skip the remaining warm-ups in one tap, right above the sets (tap ✓ on one to bring it back).
-                val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
-                if (warmLeft.isNotEmpty() && !focus) TextButton(onClick = {
-                    warmLeft.forEach { w -> vm.act("skipSet", "ei" to ei, "si" to w.i("i")) }; vm.toast("Warm-ups skipped · tap ✓ on one to bring it back")
-                }, modifier = Modifier.align(Alignment.End)) { Text("Skip warm-up →") }
+                // Skip warm-up sits on the Why line (above); only with a starting-estimate card does it keep a line of its own.
+                if (ex.o("estimate") != null && !focus) skipWarm?.let { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { it() } }
                 if (!focus) {
                 // The header and the rows share one set of column widths, so KG and Reps sit over their cells; the
                 // rows sit closer together than the card's sections (6 dp, not 10).
@@ -494,6 +498,8 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
     val fmtW = { v: String -> if (tag && (v.toDoubleOrNull() ?: 0.0) <= 0.0) ex.s("loadTag") else v }
     val tw = target?.s("w")?.takeIf { it.isNotBlank() && it != "—" && it != "null" }
     val sub = when {
+        // A warm-up's weight and reps are already in its cells; "27.5×8" beside 27.5 and 8 said it twice.
+        warm && !vm.prefs.lastMode -> "Warm-up"
         vm.prefs.lastMode -> prev?.takeIf { it.d("w") > 0 || it.s("r").isNotBlank() }?.let { "${fmtW(com.pursuitiron.app.ui.common.fmtNum(it.d("w")))}×${it.s("r")}" } ?: "—"
         tw != null && target.s("reps").isNotBlank() -> "${fmtW(tw)}×${target.s("reps").replace("-", "–")}"
         target != null && target.s("reps").isNotBlank() -> "${target.s("reps").replace("-", "–")} reps"
@@ -514,7 +520,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         !done && set.s("hint") == "down" -> "Retuned ↓"
         done && !set.isNull("rir") -> "Rated " + set.i("rir").let { if (vm.settings.s("loadMode") == "rpe") (if (it >= 4) "RPE ≤6" else "RPE ${10 - it}") else (if (it >= 4) "4+" else "$it") + " RIR" }
         vm.prefs.lastMode -> if (prev == null) "nothing logged" else "tap to use"
-        warm -> "Warm-up"
+        warm -> ""
         set.b("sub") -> if (set.s("kind") == "drop") "Drop · to failure" else "Myo mini"
         set.s("type") == "failure" -> "to failure"
         // A percentage set: its share of max, and the top set as an AMRAP rather than "@0 RIR".
@@ -539,7 +545,12 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                 // where the check was, and the chips arrive one after another.
                 Row(Modifier.weight(1f).popIn(from = 0.4f, origin = androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)).clip(CircleShape).background(cs.primary).padding(4.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Reps left?", style = MaterialTheme.typography.labelMedium, color = cs.onPrimary, modifier = Modifier.padding(start = 8.dp).weight(1f))
+                    // What was just logged stays in view while it's rated (the pill used to cover it).
+                    Column(Modifier.padding(start = 8.dp).weight(1f)) {
+                        val logged = listOfNotNull(set.s("weight").takeIf { it.isNotBlank() && !tag }?.let { if (assisted) assistShown(it) else it }, set.s("reps").takeIf { it.isNotBlank() }).joinToString(" × ")
+                        if (logged.isNotEmpty()) Text(logged, style = MaterialTheme.typography.titleSmall, color = cs.onPrimary, maxLines = 1)
+                        Text("Reps left?", style = MaterialTheme.typography.labelSmall, color = cs.onPrimary.copy(alpha = 0.85f), maxLines = 1)
+                    }
                     (0..4).forEach { r ->
                         Box(Modifier.chipIn(r).size(if (grip) 44.dp else 36.dp).clip(CircleShape).background(cs.onPrimary.copy(alpha = 0.16f))
                             .clickable { vm.act("rir", "ei" to ei, "si" to si, "rir" to r) }

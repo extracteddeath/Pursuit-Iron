@@ -111,9 +111,12 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 FinishHero()
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Workout done", style = MaterialTheme.typography.displaySmall.copy(fontSize = 38.sp, lineHeight = 42.sp), color = cs.onPrimaryContainer, textAlign = TextAlign.Center,
+                    // Finishing early with most sets unlogged read as a full "Workout done"; it says what was logged.
+                    val doneN = x?.i("doneSets") ?: 0; val totalN = x?.i("totalSets") ?: 0
+                    val partial = totalN > 0 && doneN < totalN
+                    Text(if (partial && doneN * 2 < totalN) "Workout saved" else "Workout done", style = MaterialTheme.typography.displaySmall.copy(fontSize = 38.sp, lineHeight = 42.sp), color = cs.onPrimaryContainer, textAlign = TextAlign.Center,
                         modifier = Modifier.semantics { heading() })
-                    Text(x?.s("title").orEmpty(), style = MaterialTheme.typography.bodyLarge, color = cs.onPrimaryContainer.copy(alpha = 0.85f), modifier = Modifier.padding(top = 6.dp))
+                    Text(x?.s("title").orEmpty() + if (partial) " · $doneN of $totalN sets" else "", style = MaterialTheme.typography.bodyLarge, color = cs.onPrimaryContainer.copy(alpha = 0.85f), modifier = Modifier.padding(top = 6.dp))
                 }
                 if (x == null) return@Column
                 val u = x.s("unit", "kg")

@@ -66,7 +66,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     initialCycleId: String? = null,
     onOpenIssuedWorkout:(String)->Unit = {},
     onOpenHistory:()->Unit = {},
-    onBuildProgram:()->Unit = {}
+    onBuildProgram:()->Unit = {},
+    permissionHost:NativeKotlinCandidateHost?=null
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val draft = state.draft
@@ -369,6 +370,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     }
                     null -> {}
                 }
+            }
+            // Change rights are durable and separately approved by the
+            // athlete, not inferred from a selected split name or coach badge.
+            // The permission store grants only review rights for this cycle.
+            permissionHost?.let { ownerHost ->
+                NativeKotlinAdaptiveCyclePermissionsPanel(ownerHost,draft.cycleId)
             }
             // The full plan is a primary Plan action, not buried beneath
             // coaching/calibration. Keep its actual saved exercise outline

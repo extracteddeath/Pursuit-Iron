@@ -103,6 +103,29 @@ class KotlinGlobalHistoryIndexDomainTest {
         (KotlinGlobalHistoryIndexDomain.project(read)
             as KotlinGlobalHistoryResult.Candidate).index
 
+    @Test fun noteContentChangesHistoryAuditFingerprintWithoutChangingLiftFacts() {
+        val reference=completed(1)
+        fun withNote(text:String):KotlinWorkoutJournalState {
+            var j=KotlinWorkoutJournalDomain.begin(
+                reference.originalSnapshot,reference.storedIdentity)
+            for(receipt in reference.receipts.dropLast(1))
+                j=(KotlinWorkoutJournalDomain.reduce(j,receipt.operation)
+                    as KotlinJournalDecision.Proposed).state
+            j=(KotlinWorkoutJournalDomain.reduce(j,
+                KotlinJournalOperation.SessionNote("note-audit",j.revision,text))
+                as KotlinJournalDecision.Proposed).state
+            return (KotlinWorkoutJournalDomain.reduce(j,
+                KotlinJournalOperation.Finish("finish-1",j.revision))
+                as KotlinJournalDecision.Proposed).state
+        }
+        val a=index(snapshot(item(withNote("First note"),1)))
+        val b=index(snapshot(item(withNote("Different note"),1)))
+        assertNotEquals(a.contentFingerprint,b.contentFingerprint)
+        assertEquals(a.highestCompletedLoad,b.highestCompletedLoad)
+        assertEquals(a.mostRepsAtLoad,b.mostRepsAtLoad)
+        assertEquals(a.lastByExercise,b.lastByExercise)
+    }
+
     @Test fun lastShowsActualLatestWorkoutEvenWhenEverySetSkippedOrFailed() {
         val first = completed(1)
         val last = completed(2, outcomes = listOf(

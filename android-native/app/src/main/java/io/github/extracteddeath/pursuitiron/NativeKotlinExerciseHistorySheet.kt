@@ -103,14 +103,17 @@ internal fun NativeKotlinExerciseHistorySheet(
                     NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
             }
         }
-        history=verified
-        favoriteIds=if(verified is NativeKotlinMixedHistoryReadResult.Review) {
+        val loadedFavorites=if(verified is NativeKotlinMixedHistoryReadResult.Review) {
             withContext(Dispatchers.IO) {
                 NativeExerciseFavorites.read(preferences,
                     verified.timeline.athleteId,
                     NativeExerciseFavorites.loggedIds(verified.timeline).toSet())
             }
         } else emptyList()
+        // Publish the matching history and its current preference together;
+        // an early tap must not overwrite other previously pinned movements.
+        favoriteIds=loadedFavorites
+        history=verified
         favoriteNotice=null
     }
     ModalBottomSheet(onDismissRequest=onDismiss) {

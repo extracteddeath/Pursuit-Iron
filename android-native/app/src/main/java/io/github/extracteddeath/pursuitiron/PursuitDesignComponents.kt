@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 
 /**
@@ -149,7 +151,8 @@ internal fun PursuitDisclosureRow(
 ) {
     Surface(
         onClick=onToggle,
-        modifier=modifier.fillMaxWidth().heightIn(min=56.dp),
+        modifier=modifier.fillMaxWidth().heightIn(min=56.dp)
+            .semantics { stateDescription=if(expanded)"Expanded" else "Collapsed" },
         shape=MaterialTheme.shapes.medium,
         color=MaterialTheme.colorScheme.surfaceContainerLow
     ) {
@@ -168,7 +171,7 @@ internal fun PursuitDisclosureRow(
             }
             Icon(
                 if(expanded)Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                contentDescription=if(expanded)"Collapse $title" else "Expand $title"
+                contentDescription=null
             )
         }
     }

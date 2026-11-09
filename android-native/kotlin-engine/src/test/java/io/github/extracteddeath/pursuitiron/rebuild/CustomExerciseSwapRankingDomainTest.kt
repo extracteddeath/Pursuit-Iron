@@ -133,4 +133,48 @@ class CustomExerciseSwapRankingDomainTest {
         assertTrue(CustomExerciseSwapRankingDomain.rank(candidates,
             "missing-source",sameFamilyOnly=true).isEmpty())
     }
+
+    @Test fun keepsSoleReviewedDirectMuscleCoverageWithinOtherwiseEqualSwapFit() {
+        val muscles=listOf(chest,TrainingMuscle.TRICEPS)
+        val day=listOf(
+            option("source-press","press",ComposerPattern.HORIZONTAL_PRESS,muscles),
+            option("alpha-chest","press",ComposerPattern.HORIZONTAL_PRESS,listOf(chest)),
+            option("zulu-triceps","press",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(TrainingMuscle.TRICEPS)),
+            option("other-chest","fly",ComposerPattern.ISOLATION,listOf(chest))
+        )
+        val noContext=CustomExerciseSwapRankingDomain.rank(day,"source-press")
+        assertEquals("alpha-chest",noContext.first().choice.exerciseId)
+        assertTrue(noContext.all{it.uniqueDayCoverage.isEmpty()})
+        val contextual=CustomExerciseSwapRankingDomain.rank(day,"source-press",
+            otherDayExerciseIds=listOf("other-chest"))
+        assertEquals("zulu-triceps",contextual.first().choice.exerciseId)
+        assertEquals(setOf(TrainingMuscle.TRICEPS),contextual.first().uniqueDayCoverage)
+        assertEquals(setOf(TrainingMuscle.TRICEPS),contextual.first().preservedDayCoverage)
+        assertTrue(contextual.first().explanation.contains("Retains sole reviewed direct-day coverage"))
+        val losing=contextual.first{it.choice.exerciseId=="alpha-chest"}
+        assertTrue(losing.preservedDayCoverage.isEmpty())
+        assertTrue(losing.explanation.contains("Review lost direct-day coverage"))
+    }
+
+    @Test fun unavailableOtherDayMovementNeverInventsACoverageScore() {
+        val day=listOf(
+            option("source-press","press",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(chest,TrainingMuscle.TRICEPS)),
+            option("alpha-chest","press",ComposerPattern.HORIZONTAL_PRESS,listOf(chest)),
+            option("zulu-triceps","press",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(TrainingMuscle.TRICEPS))
+        )
+        val unknown=CustomExerciseSwapRankingDomain.rank(day,"source-press",
+            otherDayExerciseIds=listOf("not-in-reviewed-catalog"))
+        assertEquals("alpha-chest",unknown.first().choice.exerciseId)
+        assertTrue(unknown.all {
+            it.uniqueDayCoverage.isEmpty() && it.preservedDayCoverage.isEmpty() &&
+                !it.explanation.contains("direct-day coverage")
+        })
+        val singleMovement=CustomExerciseSwapRankingDomain.rank(day,"source-press",
+            otherDayExerciseIds=emptyList())
+        assertEquals(setOf(chest,TrainingMuscle.TRICEPS),
+            singleMovement.first().uniqueDayCoverage)
+    }
 }

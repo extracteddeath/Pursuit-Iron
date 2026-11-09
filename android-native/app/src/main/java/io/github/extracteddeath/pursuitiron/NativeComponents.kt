@@ -87,8 +87,10 @@ internal fun NativeSetEditSheet(busy: Boolean,onDismiss: ()->Unit,content: @Comp
 @Composable
 internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: String,enabled: Boolean,
     onLoad: (String)->Unit,onReps: (String)->Unit,onRir: (String)->Unit,
-    allowFailedAttempt: Boolean=false) {
-    OutlinedTextField(value=load,onValueChange={input->
+    allowFailedAttempt: Boolean=false,showLoad:Boolean=true) {
+    // A source-verified bodyweight prescription has NO external load.
+    // Do not show a fake zero-pound entry; retain real rep/RIR controls.
+    if(showLoad) OutlinedTextField(value=load,onValueChange={input->
         if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
     },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
         keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
@@ -132,7 +134,8 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             }
         }
     }
-    Text(if(load=="0")"0 load is not automatically bodyweight · check this exercise’s loading. RIR is optional."
+    Text(if(!showLoad)"Bodyweight movement · no external weight. RIR is optional; leave blank if unknown."
+        else if(load=="0")"0 load is not automatically bodyweight · check this exercise’s loading. RIR is optional."
         else "RIR is optional · leave blank if unknown.",
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)

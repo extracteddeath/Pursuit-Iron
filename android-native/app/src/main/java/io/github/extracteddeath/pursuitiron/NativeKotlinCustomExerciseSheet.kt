@@ -121,10 +121,13 @@ internal fun NativeKotlinCustomExerciseSheet(
     /** Issued-workout replacement is not a program-draft edit. */
     workoutOnlySwap: Boolean = false,
     /** Exact other exercises in this program day or issued workout, if known. */
-    otherDayExerciseIds: List<String>? = null
+    otherDayExerciseIds: List<String>? = null,
+    /** Search suggestion only. Never preselects or transfers a load/target. */
+    initialSearchQuery:String = ""
 ) {
-    var search by remember(existing?.slotId) { mutableStateOf("") }
-    var exerciseId by remember(existing?.slotId) {
+    var search by remember(existing?.slotId,replacing?.slotId,
+        initialSearchQuery) { mutableStateOf(initialSearchQuery) }
+    var exerciseId by remember(existing?.slotId,replacing?.slotId) {
         mutableStateOf(existing?.exerciseId.orEmpty())
     }
     var samePatternOnly by remember(replacing?.slotId) {mutableStateOf(false)}

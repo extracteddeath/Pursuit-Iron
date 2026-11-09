@@ -43,7 +43,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
     private val issued by lazy {
         NativeKotlinCustomWorkoutJournalFileStore(
             temp.root.toPath(),fence,identity,prepared,preflight,
-            history,composerJournal)
+            history,composerJournal,null,sources)
     }
     private fun enroll() {
         val ready=history.enroll("owner-1","athlete-1") { o,a ->
@@ -71,7 +71,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             KotlinPerformedSet(null,null,reps,1)
         )
     private fun n(value:String)=BigDecimal(value)
-    private fun setup()=CoachAthleteSetupDomain.review(AthleteSetupDraft(
+    private fun setup(withPullup:Boolean=false)=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="rev-1",athleteProfileId="athlete-1",
         goal=AthleteTrainingGoal.HYPERTROPHY,
         experience=AthleteExperience.ADVANCED,
@@ -80,7 +80,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
         gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
-            emptySet(),emptySet()),
+            if(withPullup)setOf("pullup-bar") else emptySet(),emptySet()),
         allowBodyweight=true,allowSupersets=false,
         allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
@@ -88,8 +88,11 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
         declaredRestDays=setOf(1,3,5,6)
     ))
-    private fun source(rev:Long=1)=NativeCustomAuthoringSnapshot(
-        "owner-1","athlete-1",rev,setup(),StarterExerciseTranche.movements())
+    private fun source(
+        rev:Long=1,withPullup:Boolean=false
+    )=NativeCustomAuthoringSnapshot(
+        "owner-1","athlete-1",rev,setup(withPullup),
+        StarterExerciseTranche.movements())
     private fun set(reps:Int)=CustomAuthoredSet(
         DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
         RepBand(reps,reps+2),2,55,75)
@@ -131,14 +134,14 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             )),
         nonSetSecondsByWeekday=mapOf(0 to 200,2 to 200,4 to 200)
     )
-    private fun initialize() {
+    private fun initialize(withPullup:Boolean=false) {
         assertEquals(NativeAuthoringSourceWrite.Committed(1),
-            sources.publish("owner-1",0,source()))
+            sources.publish("owner-1",0,source(withPullup=withPullup)))
         assertEquals(NativeCustomDraftWriteResult.Committed(1),
             drafts.save("owner-1","cycle-1",0,cycle()))
         assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
             CustomCycleCoachAuditDomain.review(
-                cycle(),setup(),source().catalog,input()).status)
+                cycle(),setup(withPullup),source(withPullup=withPullup).catalog,input()).status)
     }
     private fun approve() {
         assertTrue(consent.confirm(
@@ -599,6 +602,75 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(NativeCustomResumeReview.Rejected(
             NativeCustomResumeRefusal.WORKOUT_INVENTORY_UNVERIFIED),
             resumeReview().review("owner-1"))
+    }
+
+
+    @Test fun durableLiveSwapSurvivesColdReopenAndVerifiedFinish() {
+        initialize(withPullup=true);approve();prepareWeek();enroll()
+        val initial=issueWeek().issued.journal
+        assertEquals("bodyweight_crunch",
+            initial.originalSnapshot.slots.single().exerciseId)
+        val chosen=listOf(set(8))
+        val swapped=issued.swap("owner-1","workout-2",
+            "swap-live-1",0L,"slot-0","pullup",chosen,"Fresh pullup setup")
+        assertTrue(swapped.toString(),swapped is NativeCustomJournalResult.Durable)
+        val live=(swapped as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals("bodyweight_crunch",
+            live.originalSnapshot.slots.single().exerciseId)
+        assertEquals("pullup",live.snapshot.slots.single().exerciseId)
+        assertEquals(1L,live.revision)
+        val fresh=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(
+                temp.root.toPath()),identity,prepared,preflight,
+            history,composerJournal,null,sources)
+        val opened=fresh.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable
+        assertEquals(live,opened.issued.journal)
+        assertTrue((fresh.swap("owner-1","workout-2",
+            "swap-live-1",0L,"slot-0","pullup",chosen,
+            "Fresh pullup setup") as NativeCustomJournalResult.Durable).replayed)
+        val key=live.snapshot.slots.single().sets.single().setKey
+        val updated=fresh.record("owner-1","workout-2",
+            CustomWorkoutJournalOperation.Record(
+                "record-new",1L,CustomWorkoutVisitKey(
+                    key,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,9,2)))
+        assertTrue(updated.toString(),updated is NativeCustomJournalResult.Durable)
+        val journal=(updated as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(1,journal.effectiveVisits.size)
+        assertTrue(journal.canProposeFinish)
+        val finished=NativeKotlinCustomHistoryTransaction(
+            history,fresh,fence,identity).complete(
+                "owner-1","athlete-1","workout-2",
+                CustomWorkoutJournalOperation.Finish(
+                    "finish-after-swap",journal.revision))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val restored=fresh.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable
+        assertEquals("finish-after-swap",
+            restored.issued.journal.finishedByEventId)
+        assertEquals(1,restored.issued.journal.effectiveVisits.size)
+        assertEquals("pullup",restored.issued.journal.snapshot.slots.single().exerciseId)
+        assertEquals("bodyweight_crunch",
+            restored.issued.journal.originalSnapshot.slots.single().exerciseId)
+    }
+
+    @Test fun liveSwapRejectsStartedOriginalAndUnverifiedEquipment() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        assertEquals(NativeCustomJournalRefusal.SWAP_TARGET_UNAVAILABLE,
+            (issued.swap("owner-1","workout-2","try-pullup",0L,
+                "slot-0","pullup",listOf(set(8)),"")
+                as NativeCustomJournalResult.Rejected).reason)
+        val logged=issued.record("owner-1","workout-2",
+            recordSet("saved-before-swap",0))
+        assertTrue(logged is NativeCustomJournalResult.Durable)
+        val refused=issued.swap("owner-1","workout-2",
+            "try-after-log",1L,"slot-0","bodyweight_crunch",
+            listOf(set(8)),"")
+        assertTrue(refused is NativeCustomJournalResult.Rejected)
+        assertEquals(1L,(issued.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal.revision)
     }
 
 }

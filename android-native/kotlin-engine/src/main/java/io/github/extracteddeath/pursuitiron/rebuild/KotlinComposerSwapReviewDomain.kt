@@ -28,6 +28,7 @@ object KotlinComposerSwapRankingDomain {
      */
     private fun matchesSearch(option:ComposerExerciseOption,search:String):Boolean {
         val needle=search.trim().take(80).lowercase()
+            .replace('_',' ').replace('-',' ')
         if(needle.isBlank()) return true
         fun readable(value:String)=value.lowercase().replace('_',' ').replace('-',' ')
         val catalogText=(listOf(option.exerciseId,option.pattern.name)+

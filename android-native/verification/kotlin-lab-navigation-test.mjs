@@ -33,6 +33,11 @@ const swapRank=read('android-native/kotlin-engine/src/main/java/io/github/extrac
 const customAuthoring=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
 const customBuilder=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomCycleBuilderDomain.kt');
 const cycleController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleController.kt');
+const liveWorkout=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
+const liveJournalDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutJournalDomain.kt');
+const liveHistoryEvidence=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutHistoryEvidenceDomain.kt');
+const liveJournalCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeCustomWorkoutJournalCodec.kt');
+const liveJournalStore=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutJournalFileStore.kt');
 const adaptiveRights=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinAdaptiveCyclePermissionsPanel.kt');
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
@@ -208,6 +213,36 @@ assert.ok(history.includes('onOpenExerciseTrend:(String)->Unit={}') &&
   standards.includes('exercise in availableMovements') &&
   standards.includes('performanceExerciseId=exercise'),
   'History search trends require verified movement routing and an origin-preserving Back action');
+
+// In-session swap cannot be superficial: issued workout source, physical
+// loading, journal event replay and saved History must agree across cold start.
+assert.ok(
+  liveWorkout.includes('fun reviewSwap(slot:CustomWorkoutSlotSnapshot)') &&
+  liveWorkout.includes('host.readCustomAuthoringSource()') &&
+  liveWorkout.includes('source.revision==stamp.gymCatalogSourceRevision') &&
+  liveWorkout.includes('CustomExerciseAuthoringDomain.picker(') &&
+  liveWorkout.includes('Text("Swap exercise")') &&
+  liveWorkout.includes('hasRecordedWork') &&
+  liveWorkout.includes('fun confirmSwap(') &&
+  liveWorkout.includes('host.swapIssuedCustomExercise(') &&
+  liveWorkout.includes('This workout only · no program change') &&
+  liveJournalDomain.includes('data class Swap(') &&
+  liveJournalDomain.includes('val originalSnapshot:CustomWorkoutDaySnapshot=snapshot') &&
+  liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
+  liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
+  liveJournalDomain.includes('prior.receipts.any') &&
+  liveJournalCodec.includes('private const val VERSION=2') &&
+  liveJournalCodec.includes('version !in 1..VERSION') &&
+  liveJournalCodec.includes('state.originalSnapshot') &&
+  liveJournalCodec.includes('stored workout swap state differs from events') &&
+  liveJournalStore.includes('actual.snapshot!=loaded.journal.originalSnapshot') &&
+  liveJournalStore.includes('fun swap(') &&
+  liveJournalStore.includes('fence.withOwnerTransaction(ownerKey)') &&
+  liveJournalStore.includes('CustomExerciseAuthoringDomain.reviewFreshSets(') &&
+  liveJournalStore.includes('atomic(path(ownerKey,workoutId),encode(updated))') &&
+  liveHistoryEvidence.includes('journal.workoutId,journal.originalSnapshot,') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt').includes('fun swapIssuedCustomExercise('),
+  'A live swap must be an authenticated source-verified, cold-replayable workout-only journal event with unchanged History ownership');
 
 // Web changelog 2523/2677/2248: ranked search and verified equipment are
 // native PROGRAM-DRAFT parity, not an unfounded claim of in-workout swapping.

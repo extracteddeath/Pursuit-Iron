@@ -36,6 +36,19 @@ sealed interface CustomWorkoutJournalOperation {
         val correctsEventId: String? = null
     ): CustomWorkoutJournalOperation
 
+    /**
+     * Explicit one-workout-only substitution of an UNSTARTED slot. Never
+     * transfers performed work, targets, progression or program identity.
+     * A durable authority must independently verify replacement catalog,
+     * physical gym stock and newly authored sets before recording this event.
+     */
+    data class Swap(
+        override val eventId:String,
+        override val expectedRevision:Long,
+        val previousSlotId:String,
+        val replacement:CustomWorkoutSlotSnapshot
+    ):CustomWorkoutJournalOperation
+
     data class Finish(
         override val eventId: String,
         override val expectedRevision: Long
@@ -54,7 +67,9 @@ data class CustomWorkoutJournalDraft(
     val revision: Long,
     val receipts: List<CustomWorkoutJournalReceipt>,
     val effectiveVisits: Map<CustomWorkoutVisitKey, CustomWorkoutJournalReceipt>,
-    val finishedByEventId: String?
+    val finishedByEventId: String?,
+    /** Never changes: exact originally prepared/consent-approved workout. */
+    val originalSnapshot:CustomWorkoutDaySnapshot=snapshot
 ) {
     /** A skipped or failed main set makes follow-up non-applicable, never done. */
     val unresolvedVisitCount: Int get() {
@@ -85,7 +100,9 @@ enum class CustomWorkoutJournalRefusal {
     INVALID_WORKOUT, INVALID_OPERATION, STALE_REVISION, FINISHED,
     EVENT_ID_COLLISION, UNKNOWN_VISIT, FOLLOW_UP_NOT_AUTHORED,
     MAIN_NOT_COMPLETED, ALREADY_RECORDED, INVALID_CORRECTION,
-    INVALID_ACTUAL, INCOMPLETE_WORKOUT, TOO_MANY_EVENTS
+    INVALID_ACTUAL, INCOMPLETE_WORKOUT, TOO_MANY_EVENTS,
+    SWAP_ALREADY_STARTED, SWAP_PROTECTED, SWAP_IDENTITY_CONFLICT,
+    SWAP_INVALID_TARGET
 }
 
 sealed interface CustomWorkoutJournalDecision {
@@ -187,6 +204,7 @@ object CustomWorkoutJournalDomain {
                 CustomWorkoutJournalRefusal.TOO_MANY_EVENTS)
 
         val nextEffective=LinkedHashMap(prior.effectiveVisits)
+        var nextSnapshot=prior.snapshot
         val finish=when(operation) {
             is CustomWorkoutJournalOperation.Record -> {
                 val target=prior.snapshot.slots.asSequence()
@@ -238,6 +256,79 @@ object CustomWorkoutJournalDomain {
                         CustomWorkoutJournalRefusal.INVALID_CORRECTION)
                 null
             }
+            is CustomWorkoutJournalOperation.Swap -> {
+                val previous=prior.snapshot.slots.firstOrNull {
+                    it.slotId==operation.previousSlotId
+                } ?:return CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.UNKNOWN_VISIT)
+                val next=operation.replacement
+                val previousKeys=previous.sets.map {it.setKey}.toSet()
+                if(prior.receipts.any {r->
+                    (r.operation as? CustomWorkoutJournalOperation.Record)
+                        ?.visit?.setKey in previousKeys
+                })return CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED)
+                if(previous.supersetGroup!=null || next.supersetGroup!=null)
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_PROTECTED)
+                val usedSlotIds=prior.originalSnapshot.slots.map {it.slotId}+
+                    prior.receipts.mapNotNull {
+                        (it.operation as? CustomWorkoutJournalOperation.Swap)
+                            ?.replacement?.slotId
+                    }
+                val usedSetKeys=prior.originalSnapshot.slots.flatMap{
+                    it.sets.map {set->set.setKey}
+                }+prior.receipts.flatMap{
+                    (it.operation as? CustomWorkoutJournalOperation.Swap)
+                        ?.replacement?.sets?.map {set->set.setKey}.orEmpty()
+                }
+                if(!id.matches(next.slotId) ||
+                    !id.matches(next.exerciseId) ||
+                    !id.matches(next.familyId) ||
+                    !id.matches(next.variantId) ||
+                    next.slotId in usedSlotIds ||
+                    next.exerciseId==previous.exerciseId ||
+                    next.sets.any {it.setKey in usedSetKeys})
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_IDENTITY_CONFLICT)
+                val count=next.sets.size
+                if(count !in 1..20 || next.coachNote.length>1000 ||
+                    !next.pinned || next.sets.any {set->
+                        set.slotId!=next.slotId ||
+                        set.ordinalInSlot !in 1..count ||
+                        set.setKey!=
+                            "${prior.snapshot.stamp.cycleId}:w${prior.snapshot.absoluteWeek}:d${prior.snapshot.weekday}:${next.slotId}:s${set.ordinalInSlot}" ||
+                        set.prescription.reps.minimum !in 1..100 ||
+                        set.prescription.reps.maximum !in set.prescription.reps.minimum..100 ||
+                        set.prescription.targetRir?.let{it !in 0..10}==true ||
+                        set.prescription.activeSeconds !in 1..3600 ||
+                        set.prescription.restSeconds !in 0..3600 ||
+                        (set.prescription.type==DraftSetType.WARMUP &&
+                            set.prescription.amplifier!=null)
+                    } || next.sets.map{it.ordinalInSlot}.toSet().size!=count)
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
+                val changed=prior.snapshot.slots.map {slot->
+                    if(slot.slotId==previous.slotId)next else slot
+                }
+                if(changed.sumOf{it.sets.size}>256)
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
+                val duration=changed.sumOf { slot ->
+                    slot.sets.sumOf{set ->
+                        set.prescription.activeSeconds.toLong()+
+                        set.prescription.restSeconds.toLong()+
+                        (set.prescription.amplifier?.followUpRestSeconds ?:0)
+                    }
+                }
+                if(duration !in 1L..10_000_000L)
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
+                nextSnapshot=prior.snapshot.copy(
+                    slots=Collections.unmodifiableList(changed),
+                    knownSetAndRestSeconds=duration)
+                null
+            }
             is CustomWorkoutJournalOperation.Finish -> {
                 if(prior.unresolvedVisitCount!=0)
                     return CustomWorkoutJournalDecision.Rejected(
@@ -249,6 +340,7 @@ object CustomWorkoutJournalDomain {
         if(operation is CustomWorkoutJournalOperation.Record)
             nextEffective[operation.visit]=receipt
         val updated=prior.copy(
+            snapshot=nextSnapshot,
             revision=prior.revision+1,
             receipts=Collections.unmodifiableList(prior.receipts+receipt),
             effectiveVisits=Collections.unmodifiableMap(nextEffective),

@@ -106,7 +106,14 @@ internal fun NativeKotlinProfileScreen(
             NativeStrengthFavorites.read(favoritePreferences,athleteId)
         }
     }
-    val timeline=(history as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+    // Keep visible metrics tied to the currently approved athlete, even
+    // during an asynchronous profile switch or an old history response.
+    val timeline=(history as? NativeKotlinMixedHistoryReadResult.Review)
+        ?.timeline?.takeIf { it.athleteId==current?.athleteProfileId }
+    val strengthClub=remember(timeline) {
+        ((timeline?.reviewWorkingSetFacts()) as? NativeMixedFactsResult.Review)
+            ?.facts?.let(NativeStrengthClubDomain::review)
+    }
     LaunchedEffect(current?.athleteProfileId,timeline?.manifestRevision) {
         favoriteExercises=emptyList()
         val athleteId=current?.athleteProfileId
@@ -205,6 +212,7 @@ internal fun NativeKotlinProfileScreen(
         }
         PursuitSectionHeading("Your progress",
             "Strength Standards and workout records from your verified training.")
+        NativeKotlinStrengthClubPanel(strengthClub,onOpenStandards=onProgress)
         PursuitDestinationRow(
             title="Strength Standards",
             description="Compare your recorded lifts with sourced community benchmarks.",

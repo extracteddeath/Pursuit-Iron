@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -183,6 +184,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+        .widthIn(max=920.dp).align(Alignment.CenterHorizontally)
         .padding(horizontal=16.dp,vertical=20.dp),
         verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageHeading("TODAY'S TRAINING",
@@ -412,7 +414,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
     }
     if(journal!=null && journal.unresolvedSetCount>0 && journal.finishedByEventId==null)
-        Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp)) {
+        Column(Modifier.widthIn(max=920.dp).fillMaxWidth()
+            .align(Alignment.CenterHorizontally)
+            .padding(horizontal=16.dp,vertical=8.dp)) {
             NativeKotlinWorkoutRestTimer(workoutId,
                 KotlinWorkoutRestDomain.inspect(journal,selected?.target?.setKey),
                 enabled=!state.busy)

@@ -165,3 +165,55 @@ internal fun PursuitStrengthTrendChart(
         }
     }
 }
+
+
+/**
+ * Shared, read-only line plot for factual exercise measurements. Callers
+ * decide whether these are working loads or bodyweight repetitions. The plot
+ * is purely visual and never infers improvement, PRs or training decisions.
+ */
+internal data class PursuitFactualTrendPoint(
+    val sessionOrder:Long,
+    val value:BigDecimal
+)
+
+@Composable
+internal fun PursuitFactualLinePlot(
+    points:List<PursuitFactualTrendPoint>,
+    measureLabel:String,
+    formatValue:(BigDecimal)->String
+) {
+    if(points.size<2)return
+    val ordered=points.sortedBy {it.sessionOrder}
+    val low=ordered.minOf {it.value}.toFloat()
+    val high=ordered.maxOf {it.value}.toFloat()
+    val span=(high-low).takeIf {it>0f} ?:1f
+    val lineColor=MaterialTheme.colorScheme.primary
+    val guideColor=MaterialTheme.colorScheme.outlineVariant
+    val spoken=ordered.joinToString("; ") {
+        "Session ${it.sessionOrder}, ${formatValue(it.value)}"
+    }
+    Canvas(Modifier.fillMaxWidth().height(164.dp)
+        .semantics {contentDescription="$measureLabel trend. $spoken"}) {
+        val left=14.dp.toPx()
+        val right=size.width-14.dp.toPx()
+        val top=10.dp.toPx()
+        val bottom=size.height-10.dp.toPx()
+        for(fraction in listOf(0f,0.5f,1f)) {
+            val y=top+(bottom-top)*fraction
+            drawLine(guideColor,Offset(left,y),Offset(right,y),
+                strokeWidth=1.dp.toPx())
+        }
+        fun position(index:Int):Offset {
+            val x=index.toFloat()/(ordered.size-1).toFloat()
+            val y=(ordered[index].value.toFloat()-low)/span
+            return Offset(left+(right-left)*x,
+                bottom-(bottom-top)*y)
+        }
+        for(index in 0 until ordered.lastIndex)
+            drawLine(lineColor,position(index),position(index+1),
+                strokeWidth=3.dp.toPx(),cap=StrokeCap.Round)
+        for(index in ordered.indices)
+            drawCircle(lineColor,radius=4.dp.toPx(),center=position(index))
+    }
+}

@@ -155,6 +155,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var exerciseEditor by remember {
         mutableStateOf<Triple<String, Int, String?>?>(null)
     }
+    /** Only explicitly approved program edits may change exercise identity. */
+    var swapExerciseEditor by remember {
+        mutableStateOf<Triple<String,Int,String>?>(null)
+    }
     var weekExerciseEditor by remember(draft?.cycleId,draft?.revision) {
         mutableStateOf<Triple<Int,Int,String>?>(null)
     }
@@ -519,6 +523,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                                 block.blockId, day.weekday, slot.slotId) },
                                             enabled = !busy
                                         ) { Text("Edit sets") }
+                                        val hasProtectedWeekEdit=current.weekOverrides[
+                                            block.blockId].orEmpty().any {
+                                            it.weekday==day.weekday && it.slotId==slot.slotId
+                                        }
+                                        TextButton(
+                                            onClick={swapExerciseEditor=Triple(
+                                                block.blockId,day.weekday,slot.slotId)},
+                                            enabled=!busy && slot.supersetGroup==null &&
+                                                !hasProtectedWeekEdit
+                                        ) {Text("Swap")}
                                         TextButton(onClick = {
                                             controller.moveExercise(
                                                 block.blockId, day.weekday,
@@ -1108,6 +1122,32 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 }
             }
         }
+        swapExerciseEditor?.let { target ->
+            val (blockId,weekday,slotId)=target
+            val source=current.blocks.firstOrNull {it.blockId==blockId}
+                ?.days?.firstOrNull {it.weekday==weekday}
+                ?.slots?.firstOrNull {it.slotId==slotId}
+            if(source==null) {
+                LaunchedEffect(target) {swapExerciseEditor=null}
+            } else {
+                key(target,current.cycleId) {
+                    NativeKotlinCustomExerciseSheet(
+                        busy=busy,
+                        available=controller.availableExerciseChoices(),
+                        existing=null,
+                        replacing=source,
+                        scopeLabel="Program day · ${customWeekdays[weekday]} · ${blockId}",
+                        onSave={exerciseId,sets,note->
+                            controller.swapReviewedExercise(
+                                blockId,weekday,slotId,exerciseId,sets,note)
+                            swapExerciseEditor=null
+                        },
+                        onDismiss={swapExerciseEditor=null}
+                    )
+                }
+            }
+        }
+
         exerciseEditor?.let { target ->
             val (blockId, weekday, slotId) = target
             val selectedSlot = current.blocks.firstOrNull {

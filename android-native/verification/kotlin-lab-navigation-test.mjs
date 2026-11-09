@@ -234,6 +234,7 @@ assert.ok(
   liveJournalCodec.includes('private const val VERSION=2') &&
   liveJournalCodec.includes('version !in 1..VERSION') &&
   liveJournalCodec.includes('state.originalSnapshot') &&
+  liveJournalCodec.includes('replay(state.originalSnapshot,state.workoutId,') &&
   liveJournalCodec.includes('stored workout swap state differs from events') &&
   liveJournalStore.includes('actual.snapshot!=loaded.journal.originalSnapshot') &&
   liveJournalStore.includes('fun swap(') &&

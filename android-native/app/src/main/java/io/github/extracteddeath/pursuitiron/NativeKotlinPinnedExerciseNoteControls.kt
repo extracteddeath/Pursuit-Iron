@@ -7,19 +7,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
+import org.json.JSONObject
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val pinnedSetupFields=listOf(
-    "attachment" to "Attachment / handle",
-    "seat" to "Seat / bench setting",
-    "grip" to "Grip / stance",
-    "other" to "Other setup"
-)
-
-/**
+ /**
  * Applies to the SAME exact exercise ID across independently issued workouts
  * for one signed-in athlete. Displays only verified owner-scoped storage,
  * never infers a machine setting, weight or exercise authorization.
@@ -35,9 +29,12 @@ internal fun NativeKotlinPinnedExerciseControl(
     var loaded by remember(host,workoutId,exerciseId,custom) {
         mutableStateOf<NativePinnedNoteRead?>(null)
     }
+    var previewFields by remember(host,workoutId,exerciseId,custom) {
+        mutableStateOf<List<NativePinnedSetupField>>(emptyList())
+    }
     LaunchedEffect(host,workoutId,exerciseId,custom,opened) {
         if(opened)return@LaunchedEffect
-        loaded=withContext(Dispatchers.IO){
+        val response=withContext(Dispatchers.IO){
             runCatching {
                 host.readPinnedExerciseNote(workoutId,exerciseId,custom)
             }.getOrElse {
@@ -45,6 +42,12 @@ internal fun NativeKotlinPinnedExerciseControl(
                     NativePinnedNoteRefusal.STORAGE_UNAVAILABLE)
             }
         }
+        val note=(response as? NativePinnedNoteRead.Current)?.note
+        previewFields=if(note!=null)withContext(Dispatchers.IO) {
+            host.reviewedPinnedExerciseSetupFields(
+                workoutId,exerciseId,custom,note.setup)
+        }.orEmpty() else emptyList()
+        loaded=response
     }
     val saved=(loaded as? NativePinnedNoteRead.Current)?.note
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -54,9 +57,13 @@ internal fun NativeKotlinPinnedExerciseControl(
                 color=MaterialTheme.colorScheme.primary)
             if(saved.text.isNotBlank())Text(saved.text,
                 style=MaterialTheme.typography.bodyMedium)
-            pinnedSetupFields.forEach { (key,label) ->
-                saved.setup[key]?.let { value ->
-                    Text(label+": "+value,style=MaterialTheme.typography.bodySmall,
+            val shown=previewFields.ifEmpty {
+                NativePinnedSetupFieldDomain.fields(null,saved.setup)
+            }
+            shown.forEach { field ->
+                saved.setup[field.key]?.let { value ->
+                    Text(field.label+": "+value,
+                        style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -99,10 +106,14 @@ internal fun NativeKotlinPinnedExerciseNoteSheet(
     var error by remember {mutableStateOf<String?>(null)}
     var initialized by rememberSaveable(workoutId,exerciseId){mutableStateOf(false)}
     var draft by rememberSaveable(workoutId,exerciseId){mutableStateOf("")}
-    var attachment by rememberSaveable(workoutId,exerciseId){mutableStateOf("")}
-    var seat by rememberSaveable(workoutId,exerciseId){mutableStateOf("")}
-    var grip by rememberSaveable(workoutId,exerciseId){mutableStateOf("")}
-    var other by rememberSaveable(workoutId,exerciseId){mutableStateOf("")}
+    // JSON is only a saveable UI draft container. The owner-authenticated
+    // store accepts an independently validated bounded string map.
+    var setupJson by rememberSaveable(workoutId,exerciseId) {
+        mutableStateOf("{}")
+    }
+    var reviewedFields by remember(host,workoutId,exerciseId,custom) {
+        mutableStateOf<List<NativePinnedSetupField>>(emptyList())
+    }
     var eventId by rememberSaveable(workoutId,exerciseId){mutableStateOf<String?>(null)}
     var confirmDiscard by remember {mutableStateOf(false)}
 
@@ -116,13 +127,18 @@ internal fun NativeKotlinPinnedExerciseNoteSheet(
             }
         }
         if(response is NativePinnedNoteRead.Current) {
+            val fields=withContext(Dispatchers.IO) {
+                runCatching {
+                    host.reviewedPinnedExerciseSetupFields(
+                        workoutId,exerciseId,custom,response.note.setup)
+                }.getOrNull()
+            }
+            reviewedFields=fields ?:
+                NativePinnedSetupFieldDomain.fields(null,response.note.setup)
             loaded=response.note
             if(!initialized) {
                 draft=response.note.text
-                attachment=response.note.setup["attachment"].orEmpty()
-                seat=response.note.setup["seat"].orEmpty()
-                grip=response.note.setup["grip"].orEmpty()
-                other=response.note.setup["other"].orEmpty()
+                setupJson=JSONObject(response.note.setup).toString()
                 initialized=true
             }
             error=null
@@ -130,12 +146,11 @@ internal fun NativeKotlinPinnedExerciseNoteSheet(
         busy=false
     }
 
-    val setup=linkedMapOf(
-        "attachment" to attachment,
-        "seat" to seat,
-        "grip" to grip,
-        "other" to other
-    ).filterValues{it.isNotBlank()}
+    val setup=remember(setupJson) {
+        val values=JSONObject(setupJson)
+        values.keys().asSequence()
+            .associateWith{values.getString(it)}
+    }
     val saved=loaded
     val dirty=saved!=null && (saved.text!=draft || saved.setup!=setup)
     val valid=NativePinnedExerciseNotePolicy.validContent(draft,setup)
@@ -211,33 +226,45 @@ internal fun NativeKotlinPinnedExerciseNoteSheet(
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(loaded==null && busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         if(loaded!=null) {
-            pinnedSetupFields.forEach { (key,label) ->
-                val value=when(key) {
-                    "attachment"->attachment
-                    "seat"->seat
-                    "grip"->grip
-                    else->other
-                }
+            val fields=reviewedFields.ifEmpty {
+                NativePinnedSetupFieldDomain.fields(null,setup)
+            }
+            val current=fields.filterNot{it.savedEarlier}
+            val savedEarlier=fields.filter{it.savedEarlier}
+            if(savedEarlier.isNotEmpty()) {
+                Text("Saved earlier",
+                    style=MaterialTheme.typography.titleSmall)
+                Text("These settings are no longer in the reviewed equipment fields. They are preserved until you explicitly clear them.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            (current+savedEarlier).forEach { field ->
+                val value=setup[field.key].orEmpty()
                 OutlinedTextField(
                     value=value,
                     onValueChange={ updated ->
                         val bounded=updated.take(
                             NativePinnedExerciseNotePolicy.MAX_SETUP_VALUE_CHARS+1)
-                        when(key) {
-                            "attachment"->attachment=bounded
-                            "seat"->seat=bounded
-                            "grip"->grip=bounded
-                            else->other=bounded
-                        }
+                        val next=JSONObject(setupJson)
+                        if(bounded.isBlank())next.remove(field.key)
+                        else next.put(field.key,bounded)
+                        setupJson=next.toString()
                         onEdited()
                     },
                     enabled=!busy,
                     singleLine=true,
-                    isError=value.length>NativePinnedExerciseNotePolicy.MAX_SETUP_VALUE_CHARS,
-                    label={Text(label)},
+                    isError=value.length>
+                        NativePinnedExerciseNotePolicy.MAX_SETUP_VALUE_CHARS,
+                    label={Text(field.label)},
+                    supportingText=if(field.savedEarlier) ({
+                        Text("Saved earlier · clear the value to remove")
+                    }) else null,
                     modifier=Modifier.fillMaxWidth()
                 )
             }
+            if(!valid)Text("Check the note and setup values. Up to 32 setup fields, 200 characters per field.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.error)
             OutlinedTextField(
                 value=draft,
                 onValueChange={
@@ -267,7 +294,7 @@ internal fun NativeKotlinPinnedExerciseNoteSheet(
         Row(Modifier.fillMaxWidth(),
             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
             OutlinedButton(onClick={
-                draft="";attachment="";seat="";grip="";other=""
+                draft="";setupJson="{}"
                 onEdited()
             },enabled=!busy && (draft.isNotBlank() || setup.isNotEmpty()),
                 modifier=Modifier.weight(1f).heightIn(min=48.dp)) {

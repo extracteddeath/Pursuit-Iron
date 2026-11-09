@@ -544,6 +544,62 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return NativePinnedSetupFieldDomain.fields(movement,savedSetup)
     }
 
+    /**
+     * READ-ONLY plate math. The exact target must still exist in an
+     * authenticated, issued workout and in the athlete's currently reviewed
+     * gym stock. Never default to a 45 lb bar or fabricate Smith plates.
+     */
+    fun reviewVerifiedBarbellPlates(
+        workoutId:String,exerciseId:String,custom:Boolean,
+        target:DraftSetLoad.Verified
+    ):VerifiedPlateLoadReview {
+        val unavailable=VerifiedPlateLoadReview.Unavailable(
+            PlateLoadUnavailable.NO_BAR_STOCK)
+        if(target.basis!=LoadBasis.BARBELL_TOTAL)return
+            VerifiedPlateLoadReview.Unavailable(
+                PlateLoadUnavailable.INCOMPATIBLE_BASIS)
+        val owner=localAthlete.signedInIdentity() ?:return unavailable
+        if(!canAccessPinnedExercise(owner,workoutId,exerciseId,custom,false))
+            return unavailable
+        fun matches(issued:DraftSetLoad):Boolean {
+            val basis=issued as? DraftSetLoad.Verified ?:return false
+            return basis.basis==target.basis && basis.unit==target.unit &&
+                basis.value.compareTo(target.value)==0
+        }
+        val exactIssuedTarget=if(custom) {
+            val found=customIssuedStore.open(owner.ownerKey,workoutId)
+                as? NativeCustomJournalResult.Durable
+            found?.issued?.athleteId==owner.athleteId &&
+                found.issued.journal.snapshot.slots.any{slot->
+                    slot.exerciseId==exerciseId &&
+                    slot.sets.any{matches(it.prescription.load)}
+                }
+        } else {
+            val found=trackedWorkout.open(
+                owner.ownerKey,owner.athleteId,workoutId)
+                as? NativeJournalFileResult.Durable
+            found?.journal?.snapshot?.targets?.any{
+                it.exerciseId==exerciseId && matches(it.load)
+            }==true
+        }
+        if(!exactIssuedTarget)return unavailable
+        val source=(authoringSourceStore.read(owner.ownerKey)
+            as? NativeAuthoringSourceRead.Found)?.source
+            ?.takeIf {
+                it.ownerKey==owner.ownerKey &&
+                    it.athleteId==owner.athleteId &&
+                    it.setup.mayReviewProgramCandidate &&
+                    it.setup.reviewed?.athleteProfileId==owner.athleteId
+            } ?:return unavailable
+        val movement=source.catalog.singleOrNull{
+            it.exerciseId==exerciseId
+        } ?:return unavailable
+        val implement=movement.equipmentId ?:return unavailable
+        val stock=source.setup.reviewed?.gym?.confirmedStock?.get(implement)
+        if(localAthlete.signedInIdentity()!=owner)return unavailable
+        return VerifiedPlateLoadingDomain.review(stock,target.value,target.unit)
+    }
+
     /** CAS-protected user text/setup; no training plan or journal mutation. */
     fun savePinnedExerciseNote(
         workoutId:String,exerciseId:String,custom:Boolean,

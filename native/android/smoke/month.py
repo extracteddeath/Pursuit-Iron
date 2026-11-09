@@ -243,8 +243,11 @@ def train(day_no):
                 # The weight cell in the same row (a first-time lift has none): type a start weight, Save & log.
                 cells = [center(n) for n in nodes if re.match(r"^Weight not set, edit", label(n)) and center(n)]
                 cell = min(cells, key=lambda q: abs(q[1] - c[1])) if cells else None
-                if not cell:
-                    swipe_up(500); continue
+                if not cell or abs(cell[1] - c[1]) > 150:
+                    # Bodyweight or band: no weight to type, the check logs it.
+                    tap_xy(c); mine.add(lift + "|" + sid)
+                    tap(rf"^{[2, 1, 3, 2][len(mine) % 4]} reps left", timeout=2); tap(r"^\|Skip$", timeout=1)
+                    continue
                 tap_xy(cell)
                 tap(r"^Weight \((kg|lb)\), tap to type", timeout=3)
                 adb("shell", "input", "text", start_weight(lift))
@@ -267,7 +270,10 @@ def train(day_no):
         if not tap(r"^Next exercise: ", timeout=2):
             break
     note(f"logged {len(mine)} sets on {len(lifts)} lifts in {time.time() - t0:.0f}s")
-    # Finish
+    return finish_session()
+
+
+def finish_session():
     to_top(2)
     tap(r"^\|Finish$|^Finish$", timeout=4)
     tap(r"^\|Finish$|^Finish$", timeout=3)
@@ -275,11 +281,11 @@ def train(day_no):
     shot("finish")
     fin = text_of(dump())
     m = re.search(r"(\d+) of (\d+) sets", fin)
-    check(re.search(r"Workout (saved|complete)|Nice work|Session complete", fin) is not None, "the finish page opens")
+    check(re.search(r"Workout (saved|done|complete)", fin) is not None, "the finish page opens")
     check(m is None, "every working set was logged" + (f" (finish page says {m.group(0)})" if m else ""))
     for ans in ("About right", "About right", "About right", "About right", "Moderate", "Recovered"):
         tap(rf"^\|{ans}$", timeout=1)
-    if scroll_to(r"^\|Save session$", tries=8, step=700):
+    if scroll_to(r"^\|Save session$", tries=16, step=700):
         shot("finish-bottom")
         tap(r"^\|Save session$")
     else:
@@ -328,6 +334,12 @@ for d in range(int(os.environ.get("MONTH_DAYS", "29"))):
     for _ in range(2):  # whatever greets the lifter today (a review, a prompt) gets one look and is closed
         if find(r"(?i)block .* review|review this block|what's new", timeout=1):
             shot("greeting"); back()
+    if find(r"^Minimise workout\|", timeout=2):
+        # Yesterday's workout is still open: the banner says so; finish it as the lifter would.
+        check(find(r"Still open from", timeout=2) is not None, "a workout left open says how long ago it started")
+        shot("left-open")
+        finish_session(); sessions += 1
+        launch()
     to_top()
     rest = find(r"Recover today|Rest day", timeout=2)
     scheduled = now.weekday() in (0, 2, 4, 6)  # the wizard's default four days: Mon, Wed, Fri, Sun

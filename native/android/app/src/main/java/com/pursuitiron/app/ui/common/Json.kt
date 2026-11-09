@@ -21,7 +21,8 @@ fun JSONObject?.strings(key: String): List<String> {
 fun jsonOf(vararg pairs: Pair<String, Any?>): JSONObject = JSONObject().apply { pairs.forEach { (k, v) -> put(k, v ?: JSONObject.NULL) } }
 /** Whole numbers bare, otherwise up to two decimals with trailing zeros dropped (1.25 kg plates stay 1.25). */
 fun fmtNum(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else java.math.BigDecimal(Math.round(v * 100) / 100.0).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
-fun mmss(sec: Long): String { val s = if (sec < 0) 0 else sec; return "${s / 60}:${(s % 60).toString().padStart(2, '0')}" }
+/** "4:05", and past an hour "1:04:05" (a workout left open overnight read "1439:38"). */
+fun mmss(sec: Long): String { val s = if (sec < 0) 0 else sec; val ss = (s % 60).toString().padStart(2, '0'); return if (s >= 3600) "${s / 3600}:${((s / 60) % 60).toString().padStart(2, '0')}:$ss" else "${s / 60}:$ss" }
 
 /** "1 workout", "3 workouts". */
 fun plural(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"

@@ -63,6 +63,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import com.pursuitiron.app.ui.common.plural
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -185,6 +186,20 @@ fun WorkoutScreen(vm: AppViewModel) {
             WorkoutHeader(vm, s, wide, vm.prefs.focus, onFocus = { vm.prefs.changeFocus(!vm.prefs.focus) }, onNote = { sheet = WSheet.SessionNote },
                 onTime = { sheet = WSheet.Time }, onMenu = { sheet = WSheet.SessionMenu }, onFinish = tryFinish)
             ProgressBar(if (total > 0) done.toFloat() / total else 0f, Modifier.padding(horizontal = 16.dp))
+            // A workout left open (the app closed before Save): after six hours the clock means nothing, so say so and offer the two ways out.
+            val openH = ((vm.now - s.optLong("startedAt")) / 3_600_000L).toInt()
+            if (s.optLong("startedAt") > 0 && openH >= 6) Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Still open from ${if (openH >= 24) plural(openH / 24, "day") + " ago" else "$openH hours ago"}", style = MaterialTheme.typography.titleSmall)
+                    Text(if (done > 0) "Save the $done ${if (done == 1) "set" else "sets"} you logged, or discard it to start today fresh." else "Nothing was logged. Discard it to start today fresh.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (done > 0) Button(onClick = tryFinish, modifier = Modifier.height(40.dp)) { Text("Finish & save") }
+                        OutlinedButton(onClick = { confirmDiscard = true }, modifier = Modifier.height(40.dp)) { Text("Discard") }
+                    }
+                }
+            }
             if (wide) {
                 Row(Modifier.fillMaxSize()) {
                     // The design's tablet rail: each lift with its count on the right, Reorder exercises at the foot.

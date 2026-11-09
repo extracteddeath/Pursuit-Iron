@@ -75,6 +75,36 @@ class KotlinComposerSwapReviewDomainTest {
                 ComposerFocus.UPPER,"fly").map{it.option.exerciseId})
     }
 
+    @Test fun swapSearchUsesCreditedMusclesWithoutChangingVerifiedOrder() {
+        val lat=option("cable-pulldown",ComposerPattern.VERTICAL_PULL,
+            TrainingMuscle.LATS)
+        val ranked=KotlinComposerSwapRankingDomain.rank(
+            first,listOf(lat,different,same,wrongRole),
+            setOf("db-press"),ComposerFocus.UPPER)
+        // Both chest options remain eligible, but the original movement
+        // pattern stays ahead even after filtering by its credited muscle.
+        assertEquals(listOf("chest-machine","chest-fly"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"chest",sharedMusclesOnly=true)
+                .map{it.option.exerciseId})
+        assertEquals(listOf("chest-machine"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"horizontal chest",samePatternOnly=true)
+                .map{it.option.exerciseId})
+        assertEquals(listOf("cable-pulldown"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"lats").map{it.option.exerciseId})
+        assertTrue(KotlinComposerSwapRankingDomain.filterRanked(
+            ranked,"lats",sharedMusclesOnly=true).isEmpty())
+        assertEquals(listOf("chest-machine","chest-fly"),
+            KotlinComposerSwapRankingDomain.rank(
+                first,listOf(lat,different,same),
+                setOf("db-press"),ComposerFocus.UPPER,"chest")
+                .map{it.option.exerciseId})
+        assertEquals(ranked, KotlinComposerSwapRankingDomain
+            .filterRanked(ranked))
+    }
+
     @Test fun swapPreservesOtherSetActualAndCanUndoThenFinishOriginal() {
         val recorded=accept(start(),KotlinJournalOperation.RecordSet(
             "other-actual",0L,"row-0",KotlinJournalSetOutcome.COMPLETED,

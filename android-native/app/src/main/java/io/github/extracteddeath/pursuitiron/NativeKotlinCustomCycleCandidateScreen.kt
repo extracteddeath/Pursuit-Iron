@@ -358,9 +358,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 Text(if(showProgramEditor)"Close full program editor"
                     else "Open full program editor")
             }
-            NativeKotlinCustomCycleOverview(draft,currentSelection)
-            NativeKotlinCustomCycleCalibrationPanel(
-                controller,state,onOpenIssuedWorkout)
+            // Switching modes reveals the requested content immediately.
+            // Do not force the athlete to scroll past the whole outline and
+            // optional calibration panel to reach the actual editor.
+            if(!showProgramEditor) {
+                NativeKotlinCustomCycleOverview(draft,currentSelection)
+                NativeKotlinCustomCycleCalibrationPanel(
+                    controller,state,onOpenIssuedWorkout)
+            }
             // Incomplete custom programs keep their existing editor and policy
             // controls visible. Reviewed programs open them only on request.
             if(showProgramEditor) {

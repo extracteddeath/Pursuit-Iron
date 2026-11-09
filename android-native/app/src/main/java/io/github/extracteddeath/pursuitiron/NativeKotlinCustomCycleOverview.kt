@@ -27,7 +27,9 @@ private fun authoredSetDescription(set:CustomAuthoredSet,number:Int):String {
 }
 @Composable
 internal fun NativeKotlinCustomCycleOverview(
-    cycle:CustomTrainingCycle,selection:NativeCustomNextCycleSlot?
+    cycle:CustomTrainingCycle,
+    selection:NativeCustomNextCycleSlot?,
+    onEditDay:((blockId:String,weekday:Int)->Unit)?=null
 ) {
     val week=when(selection) {
         is NativeCustomNextCycleSlot.Next -> selection.absoluteWeek
@@ -68,6 +70,11 @@ internal fun NativeKotlinCustomCycleOverview(
                     subtitle="${day.slots.size} exercises",
                     expanded=expanded,onToggle={expanded=!expanded}
                 )
+                if(expanded && onEditDay!=null)
+                    OutlinedButton(
+                        onClick={onEditDay(block.blockId,day.weekday)},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Edit this training day")}
                 if(expanded)day.slots.forEach { slot ->
                     val working=slot.sets.count{it.type==DraftSetType.WORKING}
                     val warmups=slot.sets.count{it.type==DraftSetType.WARMUP}

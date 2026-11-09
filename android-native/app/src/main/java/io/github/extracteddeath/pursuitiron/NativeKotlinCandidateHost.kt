@@ -2049,6 +2049,45 @@ internal class NativeKotlinCandidateHost(context:Context) {
             focus,search)
     }
 
+    /**
+     * Read-only plate viewer proof for an already issued generated workout.
+     * A source-matched, owner-approved program AND exact exercise inventory
+     * are required on every review. The target need not equal the entered
+     * load, because this displays plates for the athlete's edited value.
+     * Nothing is written to the journal or approved training program.
+     */
+    fun reviewComposerPlateLayout(
+        workoutId:String,exerciseId:String,
+        entered:BigDecimal,unit:LoadUnit
+    ):KotlinVerifiedPlateLayout? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        val saved=trackedWorkout.open(
+            owner.ownerKey,owner.athleteId,workoutId)
+            as? NativeJournalFileResult.Durable ?:return null
+        val journal=saved.journal
+        if(journal.snapshot.targets.none{
+            it.exerciseId==exerciseId &&
+                (it.load as? DraftSetLoad.Verified)?.basis==
+                    LoadBasis.BARBELL_TOTAL
+        })return null
+        val approval=gymCoherentAuthority.currentApprovedWorkout(
+            owner.ownerKey,workoutId) ?:return null
+        if(approval.approvedSource!=journal.originalSnapshot.source ||
+            approval.athleteId!=owner.athleteId)
+            return null
+        val sourceExercise=approval.program.exercises.singleOrNull{
+            it.exerciseId==exerciseId
+        } ?:return null
+        val equipment=sourceExercise.equipment as?
+            ComposerEquipment.Verified ?:return null
+        val stock=equipment.inventory as?
+            VerifiedLoadStock.Barbell ?:return null
+        if(equipment.unit!=unit || stock.unit!=unit ||
+            stock.basis!=LoadBasis.BARBELL_TOTAL)
+            return null
+        return KotlinVerifiedPlateLayoutDomain.inspect(stock,entered,unit)
+    }
+
     fun swapIssuedComposerExercise(
         workoutId:String,eventId:String,expectedRevision:Long,
         previousExerciseId:String,replacementExerciseId:String,

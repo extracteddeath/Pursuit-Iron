@@ -1,0 +1,49 @@
+name: PR456 apply reviewed Plan fix once
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  apply-approved-plan:
+    # Exact in-repository PR/branch only. Never apply this to forks or other branches.
+    if: ${{ github.event.pull_request.number == 456 && github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'web-approved-engine-fixes-20261109' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Apply uniquely anchored Plan completion markers
+        run: |
+          node scripts/apply-approved-plan-pass-fix.mjs
+          node --check modules/App.js
+          git diff --check
+      - name: Commit only the verified Plan edit on this PR branch
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- modules/App.js; then
+            echo "Plan change already committed, nothing to do."
+            exit 0
+          fi
+          test "$(git diff --name-only | wc -l | tr -d ' ')" = 1
+          test "$(git diff --name-only)" = modules/App.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- modules/App.js
+          git commit -m "Fix repeated-block completion markers in web Plan"
+          git push origin "HEAD:refs/heads/${TARGET_BRANCH}"

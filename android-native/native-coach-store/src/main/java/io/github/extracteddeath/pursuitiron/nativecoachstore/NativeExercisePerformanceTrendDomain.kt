@@ -75,7 +75,7 @@ object NativeExercisePerformanceTrendDomain {
             MutableMap<Long,NativeExerciseTrendPoint>>()
         for(entry in timeline.completions) {
             val order=entry.manifest.completionOrder
-            val sets:List<Visit>=when(entry) {
+            val sets: List<Visit> = when(entry) {
                 is NativeKotlinMixedHistoryCompletion.Composer ->
                     entry.evidence.sets.filter {
                         it.exerciseId==exerciseId &&

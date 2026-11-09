@@ -361,25 +361,25 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     onOpenHistory={historyExerciseId=trendExerciseId})
             }
         }
-        PursuitCard {
-            PursuitSectionHeading("Community comparison",
-                "Optional settings; they do not alter workouts, progressions or achievements.")
-            val ready=comparisonGroup!=null && bodyweight!=null
-            Text(when {
-                !ready -> "Not set · you can still explore verified strength charts."
-                Triple(comparisonGroup.orEmpty(),bodyweightText,bodyweightUnit)==savedComparison ->
-                    "Saved locally · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
-                    "${bodyweightText} ${displayUnit.name.lowercase()} bodyweight"
-                else -> "Unsaved · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
-                    "${bodyweightText} ${displayUnit.name.lowercase()} bodyweight"
-            },style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick={comparisonExpanded=!comparisonExpanded},
-                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-                Text(if(comparisonExpanded)"Hide comparison settings" else "Edit comparison settings")
-            }
-            if(comparisonExpanded) {
-            Text("Community comparison group",style=MaterialTheme.typography.labelLarge)
+        val ready=comparisonGroup!=null && bodyweight!=null
+        val comparisonStatus=when {
+            !ready -> "Not set · verified charts work without comparison settings"
+            Triple(comparisonGroup.orEmpty(),bodyweightText,bodyweightUnit)==savedComparison ->
+                "Saved on device · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
+                    "${bodyweightText} ${displayUnit.name.lowercase()}"
+            else -> "Unsaved · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
+                "${bodyweightText} ${displayUnit.name.lowercase()}"
+        }
+        PursuitDisclosureRow(
+            title="Community comparison",
+            subtitle=comparisonStatus,
+            expanded=comparisonExpanded,
+            onToggle={comparisonExpanded=!comparisonExpanded}
+        )
+        if(comparisonExpanded) {
+            PursuitCard {
+                Text("Community comparison group",
+                    style=MaterialTheme.typography.labelLarge)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 FilterChip(selected=comparisonGroup=="male",
@@ -432,8 +432,8 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 else "Comparison settings are not saved until you choose Save.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.fillMaxWidth(),
-                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+            PursuitResponsiveActionPair(
+                primary={ actionModifier ->
                 Button(onClick={
                     val owner=checkNotNull(profileId)
                     val current=checkNotNull(chosen)
@@ -455,7 +455,9 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         comparisonBusy=false
                     }
                 },enabled=profileId!=null && chosen!=null && !comparisonBusy,
-                    modifier=Modifier.weight(1f)) {Text("Save comparison")}
+                    modifier=actionModifier.heightIn(min=48.dp)) {Text("Save comparison")}
+                },
+                secondary={ actionModifier ->
                 OutlinedButton(onClick={
                     val owner=checkNotNull(profileId)
                     comparisonBusy=true
@@ -480,8 +482,9 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         comparisonBusy=false
                     }
                 },enabled=profileId!=null && savedComparison!=null && !comparisonBusy,
-                    modifier=Modifier.weight(1f)) {Text("Clear saved")}
-            }
+                    modifier=actionModifier.heightIn(min=48.dp)) {Text("Clear saved")}
+                }
+            )
             if(profileId==null)Text("Confirm your native athlete setup to save a comparison. You can still compare without saving.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

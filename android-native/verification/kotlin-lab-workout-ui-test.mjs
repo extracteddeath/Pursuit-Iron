@@ -174,6 +174,22 @@ assert.ok(journal.includes('NativeKotlinCustomPlateSheet(host,request,') &&
   verifiedPlateDomain.includes('private const val MAX_STATES=100_000') &&
   !customPlate.includes('controller.record('),
   'Plate viewer may only display exact current owner-matched custom barbell stock and must not log or change workout loads');
+const workoutHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+assert.ok(composer.includes('NativeKotlinComposerPlateSheet(host,workoutId,request,') &&
+  composer.includes('onShowPlates={load,unit->') &&
+  composer.includes('verifiedLoad?.basis==LoadBasis.BARBELL_TOTAL') &&
+  composer.includes('onClick={onShowPlates(weight,verifiedLoad.unit)}') &&
+  customPlate.includes('internal fun NativeKotlinComposerPlateSheet(') &&
+  customPlate.includes('host.reviewComposerPlateLayout(') &&
+  customPlate.includes('private fun NativeKotlinPlateResultSheet(') &&
+  workoutHost.includes('fun reviewComposerPlateLayout(') &&
+  workoutHost.includes('owner.ownerKey,owner.athleteId,workoutId') &&
+  workoutHost.includes('approval.approvedSource!=journal.originalSnapshot.source') &&
+  workoutHost.includes('sourceExercise.equipment as?') &&
+  workoutHost.includes('stock=equipment.inventory as?') &&
+  workoutHost.includes('VerifiedLoadStock.Barbell') &&
+  workoutHost.includes('KotlinVerifiedPlateLayoutDomain.inspect(stock,entered,unit)'),
+  'Generated workout plates must use source-coherent owner approval, exact barbell inventory and the same read-only sheet');
 const restBridge=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt');
 const timer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt');
 for(const source of [journal,composer]) {

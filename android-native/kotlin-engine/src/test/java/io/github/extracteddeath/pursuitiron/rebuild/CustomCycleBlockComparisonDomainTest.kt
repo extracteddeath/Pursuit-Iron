@@ -39,9 +39,10 @@ class CustomCycleBlockComparisonDomainTest {
     }
 
     private fun measurement(week:Int,blockId:String,phase:TrainingPhase,
-        count:Int)=CustomCoachWeekMeasurement(
+        count:Int,direct:Map<TrainingMuscle,BigDecimal> = emptyMap())=
+        CustomCoachWeekMeasurement(
             week,blockId,phase,CustomBlockPurpose.TRAINING,count,
-            emptyMap(),emptyMap(),emptyMap(),emptyMap(),emptyMap())
+            direct,emptyMap(),emptyMap(),emptyMap(),emptyMap())
     private fun audit(c:CustomTrainingCycle)=CustomCoachAudit(
         CustomCoachAuditStatus.UNRESOLVED,
         listOf(CustomCoachIssue(
@@ -50,9 +51,19 @@ class CustomCycleBlockComparisonDomainTest {
         CustomCycleReview(CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,
             emptyList(),4,c),
         listOf(
-            measurement(1,"base",TrainingPhase.HYPERTROPHY,28),
+            measurement(1,"base",TrainingPhase.HYPERTROPHY,28,
+                mapOf(
+                    TrainingMuscle.BICEPS to BigDecimal("8"),
+                    TrainingMuscle.BRACHIALIS to BigDecimal("2"),
+                    TrainingMuscle.WRIST_FLEXORS to BigDecimal("3"),
+                    TrainingMuscle.WRIST_EXTENSORS to BigDecimal("1"))),
             measurement(2,"base",TrainingPhase.HYPERTROPHY,30),
-            measurement(3,"strength",TrainingPhase.STRENGTH,14),
+            measurement(3,"strength",TrainingPhase.STRENGTH,14,
+                mapOf(
+                    TrainingMuscle.BICEPS to BigDecimal("3"),
+                    TrainingMuscle.BRACHIALIS to BigDecimal("1"),
+                    TrainingMuscle.WRIST_FLEXORS to BigDecimal("1"),
+                    TrainingMuscle.WRIST_EXTENSORS to BigDecimal("2"))),
             measurement(4,"strength",TrainingPhase.STRENGTH,11)),
         "profile-revision",c.revision,emptyMap())
 
@@ -86,6 +97,17 @@ class CustomCycleBlockComparisonDomainTest {
         assertEquals(CustomCoachAuditStatus.UNRESOLVED,
             result.matchingAuditStatus)
         assertEquals(1,result.auditIssueCount)
+        val muscleChanges=checkNotNull(result.auditedDirectMuscleChanges)
+            .associateBy {it.muscle}
+        assertEquals(4,muscleChanges.size)
+        assertEquals(BigDecimal("-5"),
+            muscleChanges.getValue(TrainingMuscle.BICEPS).delta)
+        assertEquals(BigDecimal("-1"),
+            muscleChanges.getValue(TrainingMuscle.BRACHIALIS).delta)
+        assertEquals(BigDecimal("-2"),
+            muscleChanges.getValue(TrainingMuscle.WRIST_FLEXORS).delta)
+        assertEquals(BigDecimal("1"),
+            muscleChanges.getValue(TrainingMuscle.WRIST_EXTENSORS).delta)
     }
 
     @Test fun rejectsStaleIncompleteOrMismatchedAuditMeasurements() {
@@ -100,6 +122,7 @@ class CustomCycleBlockComparisonDomainTest {
                 c,"strength",bad))
             assertNull(report.firstAuditedWeekDelta)
             assertNull(report.next.auditedWeeklyWorkingSets)
+            assertNull(report.auditedDirectMuscleChanges)
         }
         val missingTarget=CustomCycleBlockComparisonDomain.compare(
             c,"missing",original)

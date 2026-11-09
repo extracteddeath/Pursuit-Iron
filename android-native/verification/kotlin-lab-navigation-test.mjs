@@ -228,7 +228,7 @@ assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
   adaptiveRights.includes('verified?.revision==result.revision') &&
   adaptiveRights.includes('revoked?.revision==result.revision') &&
   adaptiveRights.includes('enabled=confirmed && !saving') &&
-  adaptiveRights.includes('if(result is NativeAdaptivePermissionWrite.Committed)') &&
+  adaptiveRights.includes('if(result is NativeAdaptivePermissionWrite.Committed &&') &&
   adaptiveRights.includes('CustomCycleChangeKind.SPLIT') &&
   adaptiveRights.includes('CustomCycleChangeKind.EXERCISES') &&
   adaptiveRights.includes('CustomCycleChangeKind.SCHEDULE') &&

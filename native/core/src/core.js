@@ -1982,7 +1982,7 @@ export function plan({ programId, weekIndex } = {}) {
     const p = programId ? programById(programId) : nx?.program;
     if (!p) return null;
     const wk = weekIndex || (nx && nx.program.id === p.id ? nx.weekIndex : 1);
-    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
+    return { programId: p.id, name: p.name, description: String(p.description || "").trim(), weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
         nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null, endless: !!p.config?.endless,
         deload: !!p.config?.deload,
         // In-block deload weeks (5/3/1's week 4), beside the separate one after the block.

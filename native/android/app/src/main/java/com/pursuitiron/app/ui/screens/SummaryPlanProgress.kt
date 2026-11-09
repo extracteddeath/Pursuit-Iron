@@ -173,6 +173,13 @@ fun PlanScreen(vm: AppViewModel) {
                     onNew = { vm.openSetup() }, onTm = if (p.b("percent")) ({ vm.tmFor = p.s("programId") }) else null)
             }
         }}
+        // The program's own notes (Program settings → Description), shown where the plan is, as on the web.
+        p.s("description").takeIf { it.isNotBlank() }?.let { desc -> item(span = full) { Rise {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerLow).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(PiIcons.Info, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Text(desc, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            }
+        }}}
         if (p.s("cycleId").isNotBlank()) item(span = full) { Rise { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }}
         item(span = full) { Rise {
             // The design's week chips: W1 … with DONE / NOW, and the deload week as its own chip.

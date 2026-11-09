@@ -15,7 +15,7 @@ class CustomExerciseSwapRankingDomainTest {
             DeclaredMuscleCredit(it,MuscleCreditRole.DIRECT,BigDecimal.ONE)
         })
     private val chest=TrainingMuscle.CHEST
-    private val delts=TrainingMuscle.SIDE_DELTS
+    private val lats=TrainingMuscle.LATS
     private val rows=listOf(
         option("press-original","press",ComposerPattern.HORIZONTAL_PRESS,
             listOf(chest)),
@@ -24,13 +24,13 @@ class CustomExerciseSwapRankingDomainTest {
         option("other-press","other",ComposerPattern.HORIZONTAL_PRESS,
             listOf(chest)),
         option("chest-fly","fly",ComposerPattern.ISOLATION,listOf(chest)),
-        option("lateral-raise","raise",ComposerPattern.ISOLATION,listOf(delts))
+        option("lat-pulldown","raise",ComposerPattern.ISOLATION,listOf(lats))
     )
 
     @Test fun rankedByReviewedPatternFamilyThenMuscleAndNotByNameGuess() {
         val r=CustomExerciseSwapRankingDomain.rank(rows,"press-original")
         assertEquals(listOf("press-variant","other-press","chest-fly",
-            "lateral-raise"),r.map {it.choice.exerciseId})
+            "lat-pulldown"),r.map {it.choice.exerciseId})
         assertEquals(CustomSwapFit.SAME_PATTERN_AND_FAMILY,r[0].fit)
         assertEquals(CustomSwapFit.SAME_PATTERN,r[1].fit)
         assertEquals(CustomSwapFit.SHARED_REVIEWED_MUSCLES,r[2].fit)
@@ -46,7 +46,7 @@ class CustomExerciseSwapRankingDomainTest {
                 sharedMusclesOnly=true).map{it.choice.exerciseId})
         val unknown=CustomExerciseSwapRankingDomain.rank(rows,
             "not-in-current-gym","lateral")
-        assertEquals(listOf("lateral-raise"),unknown.map{it.choice.exerciseId})
+        assertEquals(listOf("lat-pulldown"),unknown.map{it.choice.exerciseId})
         assertEquals(CustomSwapFit.SOURCE_UNRESOLVED,unknown.single().fit)
         assertEquals(emptyList<CustomSwapRankedOption>(),
             CustomExerciseSwapRankingDomain.rank(rows,"press-original",

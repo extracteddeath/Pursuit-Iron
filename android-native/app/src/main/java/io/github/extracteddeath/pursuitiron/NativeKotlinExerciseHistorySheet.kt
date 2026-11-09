@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +22,8 @@ import kotlinx.coroutines.launch
  * mixed Kotlin timeline. Never fall back to a single successful set from an
  * older workout if the latest session was skipped or unsuccessful.
  */
+private enum class ExerciseHistoryView { WORKING, ALL, SETBACKS }
+
 private data class ExerciseVisitDisplay(
     val key:String,
     val sessionOrder:Long,
@@ -95,7 +99,7 @@ internal fun NativeKotlinExerciseHistorySheet(
     }
     var favoriteSaving by remember(host,exerciseId){mutableStateOf(false)}
     var favoriteNotice by remember(host,exerciseId){mutableStateOf<String?>(null)}
-    var showAllVisits by rememberSaveable(exerciseId){mutableStateOf(false)}
+    var historyView by rememberSaveable(exerciseId){mutableStateOf(ExerciseHistoryView.WORKING)}
     LaunchedEffect(host,exerciseId) {
         val verified=withContext(Dispatchers.IO) {
             runCatching {host.reviewVerifiedKotlinHistory()}.getOrElse {
@@ -191,33 +195,70 @@ internal fun NativeKotlinExerciseHistorySheet(
                         PursuitHistoryStatus(
                             "${rows.map{it.sessionOrder}.distinct().size} training sessions · ${rows.size} recorded entries",
                             "Newest session first. Skips and failed attempts remain visible; missing RIR is never estimated.")
-                        Row(Modifier.fillMaxWidth(),
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            FilterChip(selected=!showAllVisits,
-                                onClick={showAllVisits=false},
+                            FilterChip(selected=historyView==ExerciseHistoryView.WORKING,
+                                onClick={historyView=ExerciseHistoryView.WORKING},
                                 label={Text("Working sets")})
-                            FilterChip(selected=showAllVisits,
-                                onClick={showAllVisits=true},
+                            FilterChip(selected=historyView==ExerciseHistoryView.ALL,
+                                onClick={historyView=ExerciseHistoryView.ALL},
                                 label={Text("All entries")})
+                            FilterChip(selected=historyView==ExerciseHistoryView.SETBACKS,
+                                onClick={historyView=ExerciseHistoryView.SETBACKS},
+                                label={Text("Skipped / failed")})
                         }
-                        val visible=if(showAllVisits)rows else rows.filter {
-                            it.type==DraftSetType.WORKING && !it.followUp
+                        val visible=when(historyView) {
+                            ExerciseHistoryView.WORKING -> rows.filter {
+                                it.type==DraftSetType.WORKING && !it.followUp
+                            }
+                            ExerciseHistoryView.ALL -> rows
+                            ExerciseHistoryView.SETBACKS -> rows.filter {
+                                it.outcome!=KotlinJournalSetOutcome.COMPLETED
+                            }
                         }
+                        val sessions=visible.groupBy { it.sessionOrder }
+                        val allSessions=rows.groupBy { it.sessionOrder }
                         LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp),
                             contentPadding=PaddingValues(bottom=PursuitSpace.xl),
                             verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                             if(visible.isEmpty())item {
-                                Text("No working sets in this history. Select All entries.",
+                                Text(if(historyView==ExerciseHistoryView.SETBACKS)
+                                    "No skipped or failed entries in this verified history."
+                                    else "No working sets in this history. Select All entries.",
                                     style=MaterialTheme.typography.bodySmall)
                             }
                             items(visible,key={it.key}) { row ->
+                                val visits=sessions.getValue(row.sessionOrder)
+                                if(visits.first().key==row.key) {
+                                    val completed=visits.count {
+                                        it.outcome==KotlinJournalSetOutcome.COMPLETED
+                                    }
+                                    val skipped=visits.count {
+                                        it.outcome==KotlinJournalSetOutcome.SKIPPED
+                                    }
+                                    val failed=visits.count {
+                                        it.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT
+                                    }
+                                    PursuitHistoryStatus(
+                                        "Session ${row.sessionOrder} · ${visits.size} entries shown",
+                                        "$completed completed · $skipped skipped · $failed failed"
+                                    )
+                                }
                                 PursuitCard {
                                     val kind=when {
                                         row.followUp -> "Amplifier follow-up"
                                         row.type==DraftSetType.WARMUP -> "Warm-up"
                                         else -> "Working set"
                                     }
-                                    Text("Session ${row.sessionOrder} · $kind ${row.entryNumber}",
+                                    // Ordinals must follow the full source visit list,
+                                    // not only filtered results; a working set does
+                                    // not become "set 4" because of three warmups.
+                                    val ordinal=allSessions.getValue(row.sessionOrder)
+                                        .takeWhile { it.key!=row.key }
+                                        .count {
+                                            it.type==row.type && it.followUp==row.followUp
+                                        }+1
+                                    Text("$kind $ordinal",
                                         style=MaterialTheme.typography.titleSmall)
                                     val targetReps=if(row.issuedReps.minimum==row.issuedReps.maximum)
                                         "${row.issuedReps.minimum}"

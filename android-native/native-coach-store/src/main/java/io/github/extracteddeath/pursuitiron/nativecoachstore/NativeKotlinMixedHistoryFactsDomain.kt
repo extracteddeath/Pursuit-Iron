@@ -52,7 +52,10 @@ data class NativeKotlinMixedHistoryFacts(
     val completedWorkoutIds: List<String>,
     val lastByExercise: Map<String, NativeMixedLastExercise>,
     val highestCompletedLoad: Map<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>,
-    val mostRepsAtLoad: List<NativeMixedCompletedLoadFact>
+    val mostRepsAtLoad: List<NativeMixedCompletedLoadFact>,
+    /** Exact completed 1-rep working sets, independent of most-reps-at-load. */
+    val bestLoggedSingleByLoad:Map<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact> =
+        emptyMap()
 ) {
     val canPublishPr: Boolean get() = false
     val canIssueProgression: Boolean get() = false
@@ -109,6 +112,10 @@ object NativeKotlinMixedHistoryFactsDomain {
         val last = linkedMapOf<String, NativeMixedLastExercise>()
         val highest = linkedMapOf<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>()
         val repsAtLoad = linkedMapOf<Pair<NativeMixedPhysicalLoadKey, BigDecimal>,
+            NativeMixedCompletedLoadFact>()
+        // A later five-rep set at the same load must not erase a real
+        // previously completed single from the 1,000 lb club evidence.
+        val bestSingle = linkedMapOf<NativeMixedPhysicalLoadKey,
             NativeMixedCompletedLoadFact>()
         for (completion in timeline.completions) {
             val manifest = completion.manifest
@@ -169,6 +176,14 @@ object NativeKotlinMixedHistoryFactsDomain {
                 val record = NativeMixedCompletedLoadFact(key, physical, actual.reps,
                     manifest.workoutId, manifest.completionOrder, visit.setKey,
                     visit.customSlot, visit.eventId)
+                if (actual.reps == 1) {
+                    val previousSingle = bestSingle[key]
+                    if (previousSingle == null ||
+                        physical > previousSingle.actualLoad ||
+                        (physical.compareTo(previousSingle.actualLoad) == 0 &&
+                            manifest.completionOrder > previousSingle.completionOrder))
+                        bestSingle[key] = record
+                }
                 val old = highest[key]
                 if (old == null || physical > old.actualLoad ||
                     (physical.compareTo(old.actualLoad) == 0 && actual.reps >= old.reps))
@@ -185,7 +200,8 @@ object NativeKotlinMixedHistoryFactsDomain {
                 it.manifest.workoutId }),
             Collections.unmodifiableMap(last),
             Collections.unmodifiableMap(highest),
-            Collections.unmodifiableList(repsAtLoad.values.toList())
+            Collections.unmodifiableList(repsAtLoad.values.toList()),
+            Collections.unmodifiableMap(bestSingle)
         ))
     }
 }

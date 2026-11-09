@@ -1,0 +1,90 @@
+name: Kotlin Compose feature verification (no APK)
+
+on:
+  push:
+    branches:
+      - 'ui/kotlin-*'
+    paths:
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlin*.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt'
+      - 'android-native/kotlin-engine/**'
+      - 'android-native/native-coach-store/**'
+      - 'android-native/verification/kotlin-strength-club-contract-test.mjs'
+      - 'android-native/verification/kotlin-workout-readiness-layout-test.mjs'
+      - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
+      - '.github/workflows/android-kotlin-ui-pr.yml'
+  pull_request:
+    branches:
+      - architecture/kotlin-engine-rebuild
+    paths:
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlin*.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt'
+      - 'android-native/kotlin-engine/**'
+      - 'android-native/native-coach-store/**'
+      - 'android-native/verification/kotlin-strength-club-contract-test.mjs'
+      - 'android-native/verification/kotlin-workout-readiness-layout-test.mjs'
+      - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
+      - '.github/workflows/android-kotlin-ui-pr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kotlin-compose-feature-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile-and-domain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install Android compile platform
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Install checksum-verified Gradle
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='9.3.1'
+          sha='b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06'
+          archive="${RUNNER_TEMP}/gradle-${version}-bin.zip"
+          verified=false
+          for url in \
+            "https://distfiles.macports.org/gradle/gradle-${version}-bin.zip" \
+            "https://github.com/gradle/gradle-distributions/releases/download/v${version}/gradle-${version}-bin.zip" \
+            "https://downloads.gradle.org/distributions/gradle-${version}-bin.zip" \
+            "https://services.gradle.org/distributions/gradle-${version}-bin.zip"; do
+            rm -f "$archive"
+            if curl --fail --location --retry 3 --retry-all-errors \
+                --retry-delay 5 --connect-timeout 15 --max-time 120 \
+                "$url" -o "$archive"; then
+              if echo "${sha}  ${archive}" | sha256sum --check --status; then
+                verified=true
+                break
+              fi
+            fi
+          done
+          if [ "$verified" != true ]; then
+            echo 'Official Gradle download/checksum verification failed' >&2
+            exit 1
+          fi
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          echo "${RUNNER_TEMP}/gradle-${version}/bin" >> "$GITHUB_PATH"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify verified Strength Club source and display boundaries
+        run: node android-native/verification/kotlin-strength-club-contract-test.mjs
+      - name: Verify native workout Focus and shared readiness behavior
+        run: node android-native/verification/kotlin-workout-readiness-layout-test.mjs
+      - name: Verify native Plan hierarchy and current workout
+        run: node android-native/verification/kotlin-plan-hierarchy-test.mjs
+      - name: Compile all native Kotlin UI and test the independent engine (never assembles APK)
+        working-directory: android-native
+        run: gradle :app:compileDebugKotlin :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

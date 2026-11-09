@@ -372,28 +372,20 @@ internal fun NativeKotlinCustomJournalScreen(
                     OutlinedButton(enabled=!busy,
                         onClick={refresh()}){Text("Refresh saved workout")}
                 }
-                if(!finished) {
-                    Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
-                    Row(Modifier.fillMaxWidth(),
-                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        CoachReadiness.entries.forEach {option->
-                            FilterChip(selected=readiness==option,
-                                enabled=!busy,onClick={readiness=option},
-                                label={Text(option.name.lowercase().replaceFirstChar {
-                                    it.uppercase()
-                                })})
-                        }
-                    }
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Checkbox(checked=movementRestricted,enabled=!busy,
-                            onCheckedChange={movementRestricted=it})
-                        Text("Movement restricted")
-                    }
-                    if(movementRestricted)Text(
-                        "Review an adjustment or alternate movement before continuing.",
-                        color=MaterialTheme.colorScheme.error,
-                        style=MaterialTheme.typography.bodyMedium)
+                val readinessControls: @Composable () -> Unit = {
+                    PursuitTrainingReadinessControls(
+                        readiness=readiness,
+                        onReadinessChange={readiness=it},
+                        movementRestricted=movementRestricted,
+                        onRestrictionChange={movementRestricted=it},
+                        enabled=!busy
+                    )
                 }
+                // Full overview surfaces readiness before the ledger. Focus
+                // puts the actual set and Complete action first; both views
+                // use the same owner-scoped coaching state and callbacks.
+                if(!focusOnNext && !finished && current.finishedByEventId==null)
+                    readinessControls()
                 if(!finished && current.finishedByEventId==null) {
                     val upcoming=nextVisit?.let {visit->
                         current.snapshot.slots.firstOrNull {slot->
@@ -545,6 +537,8 @@ internal fun NativeKotlinCustomJournalScreen(
                     }
                 }
                 }
+                if(focusOnNext && !finished && current.finishedByEventId==null)
+                    readinessControls()
                 if(!verifiedFinishedInHistory)PursuitCard {
                     Text("Finish workout",
                         style=MaterialTheme.typography.titleMedium)

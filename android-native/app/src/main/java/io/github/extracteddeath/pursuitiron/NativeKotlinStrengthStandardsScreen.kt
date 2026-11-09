@@ -646,8 +646,13 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     NativeKotlinExercisePerformanceTrend(
                         verifiedTimeline,viewedExercise,displayUnit,
                         onOpenHistory={historyExerciseId=viewedExercise})
-                PursuitSectionHeading("Strength standards",
-                    "Broad community reference levels for four source-matched barbell lifts.")
+                PursuitDisclosureRow(
+                    title="Published reference details",
+                    subtitle="Four source-matched barbell lifts · threshold bands and methodology",
+                    expanded=standardsExpanded,
+                    onToggle={standardsExpanded=!standardsExpanded}
+                )
+                if(standardsExpanded) {
                 orderedReferences.forEach { standard ->
                     val best=bestByExercise[standard.exerciseId]
                     PursuitCard {
@@ -699,6 +704,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
                             Text("Reference methodology and full age/weight tables")
                         }
                     }
+                }
                 }
             }
         }

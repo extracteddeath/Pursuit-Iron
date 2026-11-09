@@ -9,6 +9,7 @@ const screen=read('app/src/main/java/io/github/extracteddeath/pursuitiron/Native
 const sheet=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomSessionNoteSheet.kt');
 const historical=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGeneratedHistoryNote.kt');
 const gateway=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinTrackedWorkoutGateway.kt');
+const rest=read('kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutRestDomain.kt');
 const savedCorrections=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/KotlinNativeSavedCorrectionFileStore.kt');
 const history=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 
@@ -27,6 +28,9 @@ assert.match(gateway,/workout\.append\(owner, workoutId, operation\)/);
 assert.match(savedCorrections,/is KotlinJournalOperation\.SessionNote -> \{/);
 assert.match(savedCorrections,/out\.writeByte\(5\)/);
 assert.match(savedCorrections,/out\.writeUTF\(operation\.text\)/);
+assert.match(rest,/it\.operation !is KotlinJournalOperation\.SessionNote/);
+assert.match(rest,/it\.operation !is CustomWorkoutJournalOperation\.SessionNote/);
+assert.match(rest,/receipt\.appliedRevision<=journal\.revision/);
 assert.match(controller,/fun saveSessionNote\(text:String\)/);
 assert.match(controller,/host\.recordWorkoutOperation\(workoutId,note\)/);
 assert.match(controller,/recoverOnReject=true/);

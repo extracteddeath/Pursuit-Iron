@@ -108,10 +108,20 @@ class CustomExerciseSwapRankingDomainTest {
         )
         assertEquals(listOf("pushdown-b"),CustomExerciseSwapRankingDomain.rank(
             variants,"pushdown-a",search="DUAL_ROPE").map{it.choice.exerciseId})
+        assertEquals(listOf("pushdown-b"),CustomExerciseSwapRankingDomain.rank(
+            variants,"pushdown-a",search="dual rope").map{it.choice.exerciseId})
         assertEquals(listOf("pushdown-c"),CustomExerciseSwapRankingDomain.rank(
             variants,"pushdown-a",search="V-BAR").map{it.choice.exerciseId})
+        assertEquals(listOf("pushdown-c"),CustomExerciseSwapRankingDomain.rank(
+            variants,"pushdown-a",search="v bar").map{it.choice.exerciseId})
         assertTrue(CustomExerciseSwapRankingDomain.rank(variants,"pushdown-a",
             search="single_rope").isEmpty())
+    }
+
+    @Test fun humanReadablePatternSearchKeepsReviewedSourceAndRank() {
+        assertEquals(listOf("press-variant","other-press"),
+            CustomExerciseSwapRankingDomain.rank(rows,"press-original",
+                search="horizontal press").map{it.choice.exerciseId})
     }
 
     @Test fun sameFamilyOnlyUsesReviewedFamilyNotNameOrPatternGuess() {

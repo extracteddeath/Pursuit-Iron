@@ -81,7 +81,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val customIssuedStore=NativeKotlinCustomWorkoutJournalFileStore(
         root,revisionFence,localAthlete,customPreparedStore,
         customWorkoutPreflight,historyStore,journalStore,
-        futureActivationHandoff)
+        futureActivationHandoff,authoringSourceStore)
     private val customLiveSetCoach=NativeKotlinCustomLiveSetCoachReview(
         revisionFence,localAthlete,customIssuedStore,authoringSourceStore,coachSettings)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
@@ -425,6 +425,25 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
         return customIssuedStore.open(owner.ownerKey,workoutId)
+    }
+
+    /**
+     * Owner-locked one-session swap of an unstarted custom exercise.
+     * The journal store rebuilds the replacement from current reviewed
+     * source facts, rechecks every user-entered set and commits atomically.
+     * No plan/cycle update or old-load transfer is implicit.
+     */
+    fun swapIssuedCustomExercise(
+        workoutId:String,eventId:String,expectedRevision:Long,
+        previousSlotId:String,replacementExerciseId:String,
+        sets:List<CustomAuthoredSet>,note:String
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.swap(
+            owner.ownerKey,workoutId,eventId,expectedRevision,
+            previousSlotId,replacementExerciseId,sets,note)
     }
 
     /** Actual observations, never suggestions or virtual completed sets. */

@@ -25,6 +25,9 @@ private val customWeekdays = listOf(
     "Friday", "Saturday", "Sunday"
 )
 
+/** An editor disclosure key, not a durable workout or exercise ID. */
+private fun programDayKey(blockId:String,weekday:Int)="$blockId:$weekday"
+
 @Composable
 private fun <T> CycleChoiceRow(
     label: String, values: List<T>, selected: T,
@@ -75,6 +78,22 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
     var showProgramEditor by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
     var showProgramMetadata by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
+    var expandedBlockId by rememberSaveable(draft?.cycleId) {
+        mutableStateOf(draft?.blocks?.firstOrNull()?.blockId)
+    }
+    var expandedDayKey by rememberSaveable(draft?.cycleId) {
+        mutableStateOf(draft?.blocks?.firstOrNull()?.let { block ->
+            block.days.minByOrNull{it.weekday}?.let{day->
+                programDayKey(block.blockId,day.weekday)
+            }
+        })
+    }
+    val pageScroll=rememberScrollState()
+    LaunchedEffect(showProgramEditor) {
+        // Same page, distinct tasks: the full editor should start at its top
+        // even when the athlete selected a deep day in the prior outline.
+        pageScroll.scrollTo(0)
+    }
     val policyDrafts=rememberSaveableStateHolder()
     var retainedPolicyKey by rememberSaveable {mutableStateOf<String?>(null)}
     val policyKey=draft?.let{"policy:${it.athleteId}:${it.cycleId}:${it.revision}:${state.sourceRevision}"}
@@ -146,7 +165,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         if(state.weekEditReview!=null)weekExerciseEditor=null
     }
 
-    PursuitScreenContent {
+    PursuitScreenContent(scrollState=pageScroll) {
         PageHeading("YOUR TRAINING PLAN",
             if (draft == null) "Your programs" else draft.title,
             if(draft==null)"Build a program around the way you train."
@@ -362,7 +381,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             // Do not force the athlete to scroll past the whole outline and
             // optional calibration panel to reach the actual editor.
             if(!showProgramEditor) {
-                NativeKotlinCustomCycleOverview(draft,currentSelection)
+                NativeKotlinCustomCycleOverview(draft,currentSelection,
+                    onEditDay={blockId,weekday->
+                        // Navigation selects the genuine authored day only;
+                        // all edits still go through the native controller.
+                        expandedBlockId=blockId
+                        expandedDayKey=programDayKey(blockId,weekday)
+                        showProgramEditor=true
+                    })
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)
             }
@@ -400,16 +426,23 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             }
             draft.blocks.forEachIndexed { index, block ->
                 key(block.blockId) {
-                    var blockExpanded by rememberSaveable(draft.cycleId,block.blockId) {
-                        mutableStateOf(index==0)
-                    }
+                    val blockExpanded=expandedBlockId==block.blockId
                     PursuitCard {
                         PursuitDisclosureRow(
                             title="${index+1}. ${block.label}",
                             subtitle="${pretty(block.phase)} · ${block.weeks} weeks · " +
                                 "${splitLabel(block.split)} · ${block.days.size} training days",
                             expanded=blockExpanded,
-                            onToggle={blockExpanded=!blockExpanded}
+                            onToggle={
+                                if(blockExpanded) expandedBlockId=null else {
+                                    expandedBlockId=block.blockId
+                                    if(block.days.none{
+                                        programDayKey(block.blockId,it.weekday)==expandedDayKey
+                                    }) expandedDayKey=block.days.minByOrNull{it.weekday}?.let{
+                                        programDayKey(block.blockId,it.weekday)
+                                    }
+                                }
+                            }
                         )
                         if(blockExpanded) {
                         Text("${pretty(block.purpose)} · changes require renewed review",
@@ -428,17 +461,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 Text("Later")
                             }
                         }
-                        block.days.sortedBy { it.weekday }.forEachIndexed { dayIndex,day ->
-                            var dayExpanded by rememberSaveable(
-                                draft.cycleId,block.blockId,day.weekday
-                            ) { mutableStateOf(index==0 && dayIndex==0) }
+                        block.days.sortedBy { it.weekday }.forEach { day ->
+                            val dayKey=programDayKey(block.blockId,day.weekday)
+                            val dayExpanded=expandedDayKey==dayKey
                             HorizontalDivider()
                             PursuitDisclosureRow(
                                 title="${customWeekdays.getOrElse(day.weekday) { "Day" }} · ${day.label}",
                                 subtitle="${pretty(day.purpose)} · ${day.slots.size} exercises · " +
                                     "${day.slots.sumOf { it.sets.count { set->set.type==DraftSetType.WORKING } }} working sets",
                                 expanded=dayExpanded,
-                                onToggle={dayExpanded=!dayExpanded}
+                                onToggle={expandedDayKey=if(dayExpanded)null else dayKey}
                             )
                             if(dayExpanded) {
                             if (day.slots.isNotEmpty()) {

@@ -2,6 +2,8 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.io.IOException
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -163,6 +165,32 @@ class NativeCustomWorkoutJournalCodecTest {
             NativeCustomWorkoutJournalCodec.encode(
                 record(swapped.copy(snapshot=origin)))
         }
+    }
+
+
+    @Test fun legacyV1UnswappedJournalStillOpensWithoutMigratingFacts() {
+        val initial=initial()
+        val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            initial.snapshot)
+        val out=ByteArrayOutputStream()
+        DataOutputStream(out).use{data->
+            data.writeInt(0x5049434A)
+            data.writeInt(1)
+            data.writeUTF("owner-1")
+            data.writeUTF("workout-1")
+            data.writeUTF(initial.preparedConsentFingerprint)
+            data.writeInt(snapshot.size)
+            data.write(snapshot)
+            data.writeLong(0L)
+            data.writeBoolean(false)
+            data.writeInt(0)
+        }
+        val decoded=NativeCustomWorkoutJournalCodec.decode(out.toByteArray())
+        assertEquals(record(initial),decoded)
+        assertEquals(initial.snapshot,decoded.journal.originalSnapshot)
+        val upgraded=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(decoded))
+        assertEquals(decoded,upgraded)
     }
 
 }

@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
@@ -17,6 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
 
 /**
  * Shared Material 3 presentation primitives. These contain NO training
@@ -206,5 +208,55 @@ internal fun PursuitResponsiveActionPair(
                 secondary(Modifier.weight(1f))
             }
         }
+    }
+}
+
+/**
+ * One source-neutral readiness and movement restriction control for the
+ * generated and custom native workouts. It only forwards deliberate athlete
+ * choices; it never writes prescriptions or infers an injury.
+ *
+ * The scrollable choice row and responsive text keep every state reachable on
+ * narrow phones and at large font sizes without shrinking tap targets.
+ */
+@Composable
+internal fun PursuitTrainingReadinessControls(
+    readiness:CoachReadiness,
+    onReadinessChange:(CoachReadiness)->Unit,
+    movementRestricted:Boolean,
+    onRestrictionChange:(Boolean)->Unit,
+    enabled:Boolean=true
+) {
+    Column(Modifier.fillMaxWidth(),
+        verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+        Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+            verticalAlignment=Alignment.CenterVertically) {
+            CoachReadiness.entries.forEach { option ->
+                FilterChip(
+                    selected=readiness==option,
+                    enabled=enabled,
+                    onClick={onReadinessChange(option)},
+                    label={Text(option.name.lowercase().replaceFirstChar{
+                        it.uppercase()
+                    })}
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth(),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+            Checkbox(checked=movementRestricted,enabled=enabled,
+                onCheckedChange=onRestrictionChange)
+            Text("Movement restricted",
+                style=MaterialTheme.typography.bodyMedium,
+                modifier=Modifier.weight(1f))
+        }
+        if(movementRestricted)Text(
+            "Review an appropriate adjustment before continuing. Nothing changes automatically.",
+            color=MaterialTheme.colorScheme.error,
+            style=MaterialTheme.typography.bodySmall
+        )
     }
 }

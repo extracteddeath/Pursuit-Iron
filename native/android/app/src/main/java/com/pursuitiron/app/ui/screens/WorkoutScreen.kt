@@ -97,6 +97,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
@@ -615,9 +618,16 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                 Modifier.width(checkW).height(cellH).clip(RoundedCornerShape(r.coerceIn(0.dp, cellH / 2)))
                     .background(if (done) cs.primary else Color.Transparent)
                     .then(if (done) Modifier else Modifier.background(Color.Transparent))
-                    // toggleable, not clickable + a hand-set state: it is what reports checked/unchecked to accessibility services.
-                    .toggleable(value = done, role = Role.Checkbox) { vm.act("toggle", "ei" to ei, "si" to si) }
-                    .semantics { stateDescription = if (done) "Logged" else "Not logged"; contentDescription = "Set $label: ${set.s("weight").ifBlank { "no weight" }} ${s.s("unit")} for ${set.s("reps")} reps" },
+                    // One accessibility node for the check: its label, checkbox role, state and tap action set together. With
+                    // toggleable + a separate semantics block, a logged check split in two on the device (an unlabelled
+                    // tappable node over a labelled one that couldn't be tapped or read as checked).
+                    .clearAndSetSemantics {
+                        role = Role.Checkbox; toggleableState = ToggleableState(done)
+                        stateDescription = if (done) "Logged" else "Not logged"
+                        contentDescription = "Set $label: ${set.s("weight").ifBlank { "no weight" }} ${s.s("unit")} for ${set.s("reps")} reps"
+                        onClick(label = if (done) "Unlog" else "Log") { vm.act("toggle", "ei" to ei, "si" to si); true }
+                    }
+                    .toggleable(value = done, role = Role.Checkbox) { vm.act("toggle", "ei" to ei, "si" to si) },
                 contentAlignment = Alignment.Center,
             ) {
                 if (!done) Canvas(Modifier.fillMaxSize()) { drawRoundRect(cs.outlineVariant, cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.minDimension / 2), style = Stroke(1.5.dp.toPx())) }

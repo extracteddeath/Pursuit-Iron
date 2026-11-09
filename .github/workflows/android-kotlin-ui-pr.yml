@@ -15,6 +15,7 @@ on:
       - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
       - 'android-native/verification/kotlin-train-resume-test.mjs'
       - 'android-native/verification/kotlin-workout-set-controls-test.mjs'
+      - 'android-native/verification/kotlin-use-last-draft-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   pull_request:
     branches:
@@ -30,6 +31,7 @@ on:
       - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
       - 'android-native/verification/kotlin-train-resume-test.mjs'
       - 'android-native/verification/kotlin-workout-set-controls-test.mjs'
+      - 'android-native/verification/kotlin-use-last-draft-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   workflow_dispatch:
 
@@ -93,6 +95,8 @@ jobs:
         run: node android-native/verification/kotlin-train-resume-test.mjs
       - name: Verify shared native workout set controls and bodyweight handling
         run: node android-native/verification/kotlin-workout-set-controls-test.mjs
+      - name: Verify source-fenced Use Last copies only editable completed actuals
+        run: node android-native/verification/kotlin-use-last-draft-test.mjs
       - name: Compile all native Kotlin UI and test the independent engine (never assembles APK)
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

@@ -657,6 +657,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     }
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
-            onDismiss={historyExerciseId=null})
+            onDismiss={historyExerciseId=null},
+            onFavoritesChanged={exerciseFavoriteIds=it})
     }
 }

@@ -112,8 +112,13 @@ assert.ok(restBridge.includes('if(!rest.hasRemainingWork)return') &&
   restBridge.includes('NativeRestCue(it.eventId,it.seconds,it.exerciseIndex)'),
   'Both journal paths share the native timer with exact receipt-bound durations and no final rest');
 assert.ok(journey.includes('workoutScreens.SaveableStateProvider("custom:$customWorkoutId")') &&
-  journey.includes('workoutScreens.SaveableStateProvider("composer:$selectedId")'),
-  'Minimize/resume must retain timer and unsubmitted fields by exact journal identity');
+  journey.includes('workoutScreens.SaveableStateProvider("composer:$selectedId")') &&
+  journey.includes('var minimizedGeneratedId by rememberSaveable') &&
+  journey.includes('minimizedGeneratedId=selectedId') &&
+  journey.includes('PursuitPrimaryAction("Resume generated workout"') &&
+  journey.includes('Text("Minimize")') &&
+  journey.includes('minimizedGeneratedId=null'),
+  'Both workout paths must preserve exact identity, timers and drafts, and generated workouts need an explicit resume shortcut');
 assert.ok(timer.includes('var receiptBaselineChecked by remember(workoutId)') &&
   timer.includes('if(!receiptBaselineChecked)') &&
   timer.includes('observedEvent=latestReceiptOperationId') &&

@@ -162,6 +162,55 @@ object CustomCycleBuilderDomain {
         }
     }
 
+    /**
+     * Explicit one-slot replacement. A NEW slot ID is mandatory so recorded
+     * history and prior exercise-specific amendments never appear to belong
+     * to the substituted movement. Week overrides and supersets are blocked
+     * rather than silently migrated or deleted.
+     *
+     * Actual gym/stock/set validation belongs to the reviewed authoring
+     * domain, which is the ONLY caller of this builder operation in the UI.
+     */
+    fun replaceExerciseSlot(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        blockId: String,
+        weekday: Int,
+        oldSlotId: String,
+        newSlot: CustomExerciseSlot
+    ): CustomCycleBuilderResult {
+        val block=current.blocks.firstOrNull { it.blockId==blockId }
+            ?:return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val day=block.days.firstOrNull { it.weekday==weekday }
+            ?:return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        val previous=day.slots.firstOrNull { it.slotId==oldSlotId }
+            ?:return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        if(!id.matches(newSlot.slotId) || !id.matches(newSlot.exerciseId) ||
+            newSlot.slotId==oldSlotId ||
+            day.slots.any{it.slotId==newSlot.slotId} ||
+            newSlot.exerciseId==previous.exerciseId ||
+            previous.supersetGroup!=null || newSlot.supersetGroup!=null ||
+            current.weekOverrides[blockId].orEmpty().any{
+                it.weekday==weekday && it.slotId==oldSlotId
+            })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current,expectedRevision,"replace-exercise-slot") {
+            current.copy(blocks=current.blocks.map {candidate ->
+                if(candidate.blockId!=blockId)candidate else candidate.copy(
+                    days=candidate.days.map {existing ->
+                        if(existing.weekday!=weekday)existing else existing.copy(
+                            slots=existing.slots.map {slot ->
+                                if(slot.slotId==oldSlotId)newSlot else slot
+                            })
+                    })
+            })
+        }
+    }
+
     /** Optional destructive action; pin removal needs separate confirmation. */
     fun removeSlot(
         current: CustomTrainingCycle, expectedRevision: Long,

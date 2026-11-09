@@ -173,7 +173,7 @@ function muscleScore(ex, muscle, role, session, chosen, weeklyMovementUse, reque
     // enforced by the semantic/knowledge-graph overlap gate below; setup economy must never overpower
     // distinct stimulus, functional coverage, user priority, or strength specificity.
     const setupInefficiency = exerciseSetupInefficiencyPenalty(ex, chosen);
-    const stationCrowding = sharedStationCrowding(ex, chosen);
+    const stationCrowding = request?.noStationSpread ? 0 : sharedStationCrowding(ex, chosen);
     return credit * 4 + ex.suitability.hypertrophy * .35 + ex.stability * .15 + compoundFit + intent + preferredBonus + armCoverageBonus + functionalCoverageBonus
         - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty - setupInefficiency - stationCrowding;
 }

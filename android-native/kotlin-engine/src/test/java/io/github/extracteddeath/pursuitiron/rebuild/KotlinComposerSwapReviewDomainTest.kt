@@ -51,7 +51,7 @@ class KotlinComposerSwapReviewDomainTest {
     private fun reviewed(journal:KotlinWorkoutJournalState,
         event:String="swap-1",rev:Long=journal.revision,
         option:ComposerExerciseOption=same,
-        sets:List<KotlinComposerSwapSetIntent>=listOf(intent(0),intent(1))
+        sets:List<KotlinComposerSwapSetIntent> = listOf(intent(0),intent(1))
     )=KotlinComposerSwapReviewDomain.review(
         journal,event,rev,"db-press",option,ComposerFocus.UPPER,sets)
     private fun accept(j:KotlinWorkoutJournalState,

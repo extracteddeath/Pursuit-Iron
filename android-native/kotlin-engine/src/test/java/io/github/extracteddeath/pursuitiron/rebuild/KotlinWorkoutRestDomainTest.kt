@@ -60,6 +60,40 @@ class KotlinWorkoutRestDomainTest {
     private fun rest(j:CustomWorkoutJournalDraft)=KotlinWorkoutRestDomain.inspect(
         j,CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
 
+    @Test fun generatedNoteEditDoesNotResetPriorCompletedSetRest() {
+        val recorded=record(composer(),"warmup")
+        val before=KotlinWorkoutRestDomain.inspect(recorded,"work")
+        val note=KotlinJournalOperation.SessionNote(
+            "rest-note",recorded.revision,"Warm-up complete")
+        val updated=(KotlinWorkoutJournalDomain.reduce(recorded,note)
+            as KotlinJournalDecision.Proposed).state
+        val after=KotlinWorkoutRestDomain.inspect(updated,"work")
+        assertEquals(before.latestReceiptEventId,after.latestReceiptEventId)
+        assertEquals(before.automaticCue,after.automaticCue)
+        assertEquals(before.manualRestSeconds,after.manualRestSeconds)
+        assertEquals(recorded.resolvedSetCount,updated.resolvedSetCount)
+        assertEquals("Warm-up complete",updated.sessionNote)
+        val corrected=record(updated,"warmup",correction="event-0")
+        assertNull(KotlinWorkoutRestDomain.inspect(corrected,"work").automaticCue)
+    }
+
+    @Test fun customNoteEditDoesNotResetMainSetOrAmplifierRest() {
+        val planned=custom(
+            amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20))
+        val logged=record(planned)
+        val before=rest(logged)
+        assertEquals(20,before.automaticCue?.seconds)
+        val note=CustomWorkoutJournalOperation.SessionNote(
+            "custom-rest-note",logged.revision,"Remember setup")
+        val updated=(CustomWorkoutJournalDomain.reduce(logged,note)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val after=rest(updated)
+        assertEquals(before.latestReceiptEventId,after.latestReceiptEventId)
+        assertEquals(before.automaticCue,after.automaticCue)
+        assertEquals("Remember setup",updated.sessionNote)
+        assertEquals(logged.effectiveVisits,updated.effectiveVisits)
+    }
+
     @Test fun freshJournalShowsOnlySelectedIssuedManualDuration() {
         val j=composer()
         val warm=KotlinWorkoutRestDomain.inspect(j,"warmup")

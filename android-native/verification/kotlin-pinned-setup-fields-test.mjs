@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=(path)=>readFileSync('android-native/'+path,'utf8');
+const store=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinPinnedExerciseNoteFileStore.kt');
+const fields=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativePinnedSetupFieldDomain.kt');
+const host=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const editor=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPinnedExerciseNoteControls.kt');
+const tests=read('native-coach-store/src/test/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativePinnedSetupFieldDomainTest.kt');
+
+assert.match(store,/private val version=2/);
+assert.match(store,/val format=if\(note\.setup\.keys\.all/);
+assert.match(store,/if\(format==1 && field !in NativePinnedExerciseNotePolicy\.setupKeys\)/);
+assert.match(store,/val format=data\.readInt\(\)/);
+assert.match(store,/setup\.size<=MAX_SETUP_FIELDS/);
+assert.match(store,/validSetupKey\(key\)/);
+assert.match(store,/reservedKeys=setOf\("__proto__","prototype","constructor"\)/);
+assert.match(store,/NativePinnedNoteRefusal\.REVISION_CONFLICT/);
+assert.match(store,/StandardCopyOption\.ATOMIC_MOVE/);
+
+assert.match(fields,/movement:CatalogMovement\?/);
+assert.match(fields,/movement\?\.equipmentId/);
+assert.match(fields,/movement\?\.requiredFacilityIds/);
+assert.match(fields,/equipment=="leg-extension-machine"/);
+assert.match(fields,/equipment=="seated-leg-curl-machine"/);
+assert.match(fields,/key !in selected/);
+assert.match(fields,/saved\.keys\.sorted\(\)\.filter/);
+assert.match(fields,/savedEarlier:Boolean/);
+assert.match(fields,/validSetupKey\(it\)/);
+assert.match(fields,/Saved earlier/);
+assert.match(host,/fun reviewedPinnedExerciseSetupFields\(/);
+const gate=host.slice(host.indexOf('fun reviewedPinnedExerciseSetupFields('),
+  host.indexOf('/** CAS-protected user text\/setup;',host.indexOf('fun reviewedPinnedExerciseSetupFields(')));
+assert.match(gate,/localAthlete\.signedInIdentity\(\)/);
+assert.match(gate,/if\(!canAccessPinnedExercise\(owner,workoutId,exerciseId,custom,false\)\)/);
+assert.match(gate,/authoringSourceStore\.read\(owner\.ownerKey\)/);
+assert.match(gate,/it\.ownerKey==owner\.ownerKey && it\.athleteId==owner\.athleteId/);
+assert.match(gate,/it\.setup\.mayReviewProgramCandidate/);
+assert.match(gate,/it\.setup\.reviewed\?\.athleteProfileId==owner\.athleteId/);
+assert.match(gate,/it\.exerciseId==exerciseId/);
+
+assert.match(editor,/var setupJson by rememberSaveable\(workoutId,exerciseId\)/);
+assert.match(editor,/JSONObject\(response\.note\.setup\)\.toString\(\)/);
+assert.match(editor,/host\.reviewedPinnedExerciseSetupFields\(/);
+assert.match(editor,/val firstSavedEarlier=fields\.indexOfFirst\{it\.savedEarlier\}/);
+assert.match(editor,/if\(bounded\.isBlank\(\)\)next\.remove\(field\.key\)/);
+assert.match(editor,/else next\.put\(field\.key,bounded\)/);
+assert.match(editor,/setupJson=next\.toString\(\)/);
+assert.match(editor,/setup\.toMap\(\)/);
+assert.match(editor,/persisted\.lastEventId==request/);
+assert.doesNotMatch(editor,/var attachment by rememberSaveable|var seat by rememberSaveable|var grip by rememberSaveable/);
+assert.match(tests,/@Test fun oldOrphanKeysRemainVisibleEvenWhenCurrentMachineDoesNotUseThem/);
+assert.match(tests,/@Test fun sourceAuthoredEquipmentProducesSpecificFieldsNotNameGuesswork/);
+console.log('PASS pinned catalog setup field labels and saved-orphan values retain owner, revision and lossless persistence');

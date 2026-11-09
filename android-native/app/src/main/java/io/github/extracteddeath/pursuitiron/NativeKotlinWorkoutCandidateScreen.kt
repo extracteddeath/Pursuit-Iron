@@ -79,6 +79,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
+    // Retain only the most recent VERIFIED journal reference for an open
+    // note draft. A double storage failure must not discard unsaved text.
+    // The cached reference never authorizes saving or marks a note saved.
+    var noteAnchor by remember(workoutId) {
+        mutableStateOf<KotlinWorkoutJournalState?>(null)
+    }
+    LaunchedEffect(journal) { if(journal!=null)noteAnchor=journal }
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
         enabled=referenceMode==WorkoutReferenceMode.LAST && journal!=null)
     val running=presentation!=null && !presentation.finished
@@ -109,6 +116,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
 
     var showFinishConfirm by rememberSaveable(workoutId){mutableStateOf(false)}
+    var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pendingSkip by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var pendingFail by remember(workoutId) {
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
@@ -178,6 +186,24 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }})
     }
 
+    if(showSessionNote) {
+        val verifiedJournal=journal ?:noteAnchor
+        if(verifiedJournal!=null)NativeKotlinSessionNoteEditor(
+            workoutId=workoutId,
+            committed=verifiedJournal.sessionNote,
+            maxChars=KotlinWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS,
+            validate=KotlinWorkoutJournalDomain::validSessionNote,
+            busy=state.busy,
+            enabled=journal!=null && journal.finishedByEventId==null,
+            error=state.unavailableReason?.let(::humanStatus)
+                ?:state.journalRefusal?.let {
+                    "The session note was not saved: ${it.name.replace('_',' ').lowercase()}."
+                },
+            onSave={controller.saveSessionNote(it)},
+            onDismiss={showSessionNote=false}
+        )
+    }
+
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
         .padding(horizontal=16.dp,vertical=20.dp),
@@ -215,6 +241,22 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             progress={if(allSets.isEmpty())0f else
                 presentation.resolvedCount.toFloat()/allSets.size},
             modifier=Modifier.fillMaxWidth())
+        if(journal!=null && journal.finishedByEventId==null) {
+            OutlinedButton(
+                onClick={showSessionNote=true},
+                enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) {
+                Text(if(journal.sessionNote.isBlank())
+                    "Add session note" else "Edit saved session note")
+            }
+        } else if(journal?.sessionNote?.isNotBlank()==true) {
+            PursuitCard {
+                PursuitSectionHeading("Saved session note",
+                    "Recorded with this finished workout · read-only")
+                Text(journal.sessionNote,style=MaterialTheme.typography.bodyMedium)
+            }
+        }
         state.unavailableReason?.let {
             Text(humanStatus(it),color=MaterialTheme.colorScheme.error)
         }
@@ -241,116 +283,121 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 Text(if(showAll)"Focus mode" else "Show all")
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text("Readiness",style=MaterialTheme.typography.labelLarge)
-            CoachReadiness.entries.forEach{option->
-                FilterChip(selected=readiness==option,
-                    onClick={readiness=option},
-                    label={Text(option.name.lowercase().replaceFirstChar{
-                        it.uppercase()
-                    })})
-            }
-        }
-        Row(Modifier.fillMaxWidth(),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Checkbox(checked=movementRestricted,
-                onCheckedChange={movementRestricted=it})
-            Text("Movement restricted",style=MaterialTheme.typography.bodyMedium)
-        }
-        if(coach!=null && !presentation.finished)PursuitCard(
-            highlighted=coach.coaching.direction==
-                InWorkoutDirection.FOLLOW_PLANNED_BACKOFF) {
-            Text("Coach · next set",style=MaterialTheme.typography.titleMedium)
-            Text(coach.coaching.message,
-                style=MaterialTheme.typography.bodyMedium)
-            coach.coaching.weightForHumanReview?.let{weight->
-                Text("Optional review: ${weight.stripTrailingZeros().toPlainString()} "+
-                    "${selected?.target?.load.let{
-                        (it as? DraftSetLoad.Verified)?.unit?.name?.lowercase()
-                            ?: ""
-                    }} · your original target is unchanged.",
-                    style=MaterialTheme.typography.labelMedium)
-            }
-            Text("Based on saved sets · no automatic weight or rep changes",
-                style=MaterialTheme.typography.labelSmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        val chosenExerciseId=selected?.target?.exerciseId
-        if(chosenExerciseId!=null && journal!=null && !presentation.finished){
-            val touched=journal.snapshot.targets.filter{
-                it.exerciseId==chosenExerciseId
-            }.any{it.setKey in journal.effectiveSets}
-            val swapReceipt=journal.receipts.asReversed()
-                .mapNotNull{
-                    it.operation as? KotlinJournalOperation.SwapExercise
-                }.firstOrNull{event->
-                    event.replacementTargets.firstOrNull()?.exerciseId==
-                        chosenExerciseId &&
-                    journal.receipts.none{receipt->
-                        (receipt.operation as? KotlinJournalOperation.UndoSwap)
-                            ?.swapEventId==event.eventId
-                    }
+        if(selected!=null && journal!=null)
+            NativeKotlinPinnedExerciseControl(
+                host=host,workoutId=workoutId,
+                exerciseId=selected.target.exerciseId,custom=false,
+                enabled=!state.busy && !presentation.finished
+            )
+        // Focus prioritizes the active set and its Complete action.
+        // All-sets review keeps readiness and source-verified swap context
+        // above the full ledger. Neither presentation order changes receipts.
+        val renderSecondaryControls: @Composable () -> Unit = {
+            PursuitTrainingReadinessControls(
+                readiness=readiness,
+                onReadinessChange={readiness=it},
+                movementRestricted=movementRestricted,
+                onRestrictionChange={movementRestricted=it},
+                enabled=!state.busy
+            )
+            if(coach!=null && !presentation.finished)PursuitCard(
+                highlighted=coach.coaching.direction==
+                    InWorkoutDirection.FOLLOW_PLANNED_BACKOFF) {
+                Text("Coach · next set",style=MaterialTheme.typography.titleMedium)
+                Text(coach.coaching.message,
+                    style=MaterialTheme.typography.bodyMedium)
+                coach.coaching.weightForHumanReview?.let{weight->
+                    Text("Optional review: ${weight.stripTrailingZeros().toPlainString()} "+
+                        "${selected?.target?.load.let{
+                            (it as? DraftSetLoad.Verified)?.unit?.name?.lowercase()
+                                ?: ""
+                        }} · your original target is unchanged.",
+                        style=MaterialTheme.typography.labelMedium)
                 }
-            PursuitCard {
-                Text("Exercise options",
-                    style=MaterialTheme.typography.titleMedium)
-                Text("Swap only this workout. The future program, "+
-                    "other saved sets and past weights stay unchanged.",
-                    style=MaterialTheme.typography.bodySmall)
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
-                        enabled=!state.busy && !swapLoading && !touched,
-                        modifier=Modifier.weight(1f)) {
-                        Text(if(swapLoading)"Reviewing…" else "Swap exercise")
-                    }
-                    if(swapReceipt!=null)
-                        OutlinedButton(onClick={
-                            undoConfirm=swapReceipt.eventId
-                        },enabled=!state.busy && !touched,
-                            modifier=Modifier.weight(1f)){
-                            Text("Undo swap")
+                Text("Based on saved sets · no automatic weight or rep changes",
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val chosenExerciseId=selected?.target?.exerciseId
+            if(chosenExerciseId!=null && journal!=null && !presentation.finished){
+                val touched=journal.snapshot.targets.filter{
+                    it.exerciseId==chosenExerciseId
+                }.any{it.setKey in journal.effectiveSets}
+                val swapReceipt=journal.receipts.asReversed()
+                    .mapNotNull{
+                        it.operation as? KotlinJournalOperation.SwapExercise
+                    }.firstOrNull{event->
+                        event.replacementTargets.firstOrNull()?.exerciseId==
+                            chosenExerciseId &&
+                        journal.receipts.none{receipt->
+                            (receipt.operation as? KotlinJournalOperation.UndoSwap)
+                                ?.swapEventId==event.eventId
                         }
+                    }
+                PursuitCard {
+                    Text("Exercise options",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Swap only this workout. The future program, "+
+                        "other saved sets and past weights stay unchanged.",
+                        style=MaterialTheme.typography.bodySmall)
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
+                            enabled=!state.busy && !swapLoading && !touched,
+                            modifier=Modifier.weight(1f)) {
+                            Text(if(swapLoading)"Reviewing…" else "Swap exercise")
+                        }
+                        if(swapReceipt!=null)
+                            OutlinedButton(onClick={
+                                undoConfirm=swapReceipt.eventId
+                            },enabled=!state.busy && !touched,
+                                modifier=Modifier.weight(1f)){
+                                Text("Undo swap")
+                            }
+                    }
+                    if(touched)
+                        Text("This exercise has logged sets. Replacement is "+
+                            "locked to protect its recorded history.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    swapError?.let {
+                        Text(it,style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.error)
+                    }
                 }
-                if(touched)
-                    Text("This exercise has logged sets. Replacement is "+
-                        "locked to protect its recorded history.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                swapError?.let {
-                    Text(it,style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.error)
+            }
+        }
+        val renderSetEntry: @Composable () -> Unit = {
+            PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+            activeKeys.forEach{set->
+                key(set.target.setKey){
+                    NativeKotlinSetCard(set,presentation.finished,state.busy,
+                        referenceMode=referenceMode,lastReferences=lastReferences,
+                        position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
+                            it.target.type==set.target.type}.indexOf(set)+1,
+                        setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
+                            it.target.type==set.target.type},
+                        onHistory={historyExerciseId=set.target.exerciseId},
+                        onRecord={outcome,actual->
+                            controller.record(set.target.setKey,outcome,actual)
+                        },
+                        onSkip={pendingSkip=set.target.setKey},
+                        onFail={attempt->pendingFail=set.target.setKey to attempt})
+                }
+            }
+            if(!showAll && selected!=null) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
+                    OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
+                        enabled=index>0) {Text("Previous set")}
+                    OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
+                        enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
                 }
             }
         }
-        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
-        activeKeys.forEach{set->
-            key(set.target.setKey){
-                NativeKotlinSetCard(set,presentation.finished,state.busy,
-                    referenceMode=referenceMode,lastReferences=lastReferences,
-                    position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type}.indexOf(set)+1,
-                    setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type},
-                    onHistory={historyExerciseId=set.target.exerciseId},
-                    onRecord={outcome,actual->
-                        controller.record(set.target.setKey,outcome,actual)
-                    },
-                    onSkip={pendingSkip=set.target.setKey},
-                    onFail={attempt->pendingFail=set.target.setKey to attempt})
-            }
-        }
-        if(!showAll && selected!=null) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
-                OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
-                    enabled=index>0) {Text("Previous set")}
-                OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
-                    enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
-            }
-        }
-
+        if(showAll) renderSecondaryControls()
+        renderSetEntry()
+        if(!showAll) renderSecondaryControls()
         if(presentation.canFinish)PursuitCard(highlighted=true) {
             Text("All sets have a saved outcome",
                 style=MaterialTheme.typography.titleMedium)
@@ -501,7 +548,7 @@ private fun NativeKotlinSetCard(
             ?: (target.load as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty())
     }
     var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
-        mutableStateOf(existing?.reps?.takeIf{it>0}?.toString()
+        mutableStateOf(existing?.reps?.toString()
             ?:target.reps.minimum.toString())
     }
     var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
@@ -531,23 +578,38 @@ private fun NativeKotlinSetCard(
         Text("Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(verifiedLoad!=null) {
-            OutlinedTextField(value=weight,onValueChange={weight=it},
-                label={Text("Weight · ${verifiedLoad.unit.name.lowercase()}")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-        }
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
-            modifier=Modifier.fillMaxWidth()) {
-            OutlinedTextField(reps,{reps=it},
-                label={Text("Actual reps")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                singleLine=true,modifier=Modifier.weight(1f))
-            OutlinedTextField(effort,{effort=it},
-                label={Text("Actual RIR (optional)")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                singleLine=true,modifier=Modifier.weight(1f))
-        }
+        if(!set.isResolved) PursuitUseLastCompletedSet(
+            mode=referenceMode,
+            history=lastReferences,
+            key=WorkoutReferenceKey(target.setKey),
+            currentLoad=target.load,
+            enabled=!busy,
+            onApply={last->
+                // Last is already source verified for the exact set and load
+                // basis; these are UNSAVED draft fields, not progression.
+                weight=last.load?.stripTrailingZeros()?.toPlainString().orEmpty()
+                reps=last.reps.toString()
+                effort=last.actualRir?.toString().orEmpty()
+            }
+        )
+        NativeSetValueFields(
+            unit=verifiedLoad?.unit?.name?.lowercase() ?: "",
+            load=weight,
+            reps=reps,
+            rir=effort,
+            enabled=!busy,
+            onLoad={weight=it},
+            onReps={reps=it},
+            onRir={effort=it},
+            // Zero reps can describe a genuine failed attempt, but cannot
+            // become a completed working set under the journal's validator.
+            allowFailedAttempt=true,
+            showLoad=verifiedLoad!=null,
+            repsInvalid=reps.isNotBlank() &&
+                (reps.toIntOrNull()?.let{it !in 0..100} ?: true),
+            rirInvalid=effort.isNotBlank() &&
+                (effort.toIntOrNull()?.let{it !in 0..10} ?: true)
+        )
         if(entry is KotlinSetEntryResult.Rejected &&
             (reps.isNotBlank() || (verifiedLoad!=null && weight.isBlank()) ||
                 effort.isNotBlank())) {

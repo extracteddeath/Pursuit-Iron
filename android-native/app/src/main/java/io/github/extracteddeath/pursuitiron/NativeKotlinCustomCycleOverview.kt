@@ -47,28 +47,46 @@ internal fun NativeKotlinCustomCycleOverview(
     var remainingWeek=week
     val selectedBlock=cycle.blocks.firstOrNull {
         if(remainingWeek>it.weeks){remainingWeek-=it.weeks;false}else true
-    }
+    } ?: cycle.blocks.firstOrNull()
     val days=listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
     PursuitCard {
         Text("Program outline",style=MaterialTheme.typography.titleLarge)
         Text("Base training schedule. Your workout preview includes any changes for its specific week.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        cycle.blocks.forEach { block ->
-            Text(block.label,style=MaterialTheme.typography.titleMedium)
-            Text(block.phase.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}+
-                " · ${block.weeks} ${if(block.weeks==1)"week" else "weeks"} · ${block.days.size} days/week",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            block.days.sortedBy{it.weekday}.forEach { day ->
+        cycle.blocks.forEachIndexed { index,block ->
+            val startWeek=1+cycle.blocks.take(index).sumOf{it.weeks}
+            val endWeek=startWeek+block.weeks-1
+            val phase=block.phase.name.lowercase().replace('_',' ')
+                .replaceFirstChar{it.uppercase()}
+            var blockExpanded by rememberSaveable(cycle.cycleId,block.blockId,week) {
+                mutableStateOf(block==selectedBlock)
+            }
+            PursuitDisclosureRow(
+                title=block.label,
+                subtitle="$phase · Week ${if(startWeek==endWeek)"$startWeek" else "$startWeek–$endWeek"}"+
+                    " · ${block.days.size} training days"+
+                    if(block==selectedBlock)" · Current block" else "",
+                expanded=blockExpanded,
+                onToggle={blockExpanded=!blockExpanded}
+            )
+            if(blockExpanded)block.days.sortedBy{it.weekday}.forEach { day ->
                 var expanded by rememberSaveable(cycle.cycleId,block.blockId,day.weekday,week,weekday) {
                     mutableStateOf(block==selectedBlock &&
                         day.weekday==(weekday ?: block.days.minOfOrNull{it.weekday}))
                 }
                 HorizontalDivider()
+                val isSelectedDay=block==selectedBlock && day.weekday==weekday
+                val selectedStatus=when(selection) {
+                    is NativeCustomNextCycleSlot.ResumeIssued -> "Resume workout"
+                    is NativeCustomNextCycleSlot.Prepared -> "Prepared workout"
+                    is NativeCustomNextCycleSlot.Next -> "Next workout"
+                    else -> "Selected workout"
+                }
                 PursuitDisclosureRow(
                     title="${days.getOrElse(day.weekday){"Day"}} · ${day.label}",
-                    subtitle="${day.slots.size} exercises",
+                    subtitle=(if(isSelectedDay)"$selectedStatus · " else "")+
+                        "${day.slots.size} exercises",
                     expanded=expanded,onToggle={expanded=!expanded}
                 )
                 if(expanded && onEditDay!=null)

@@ -117,7 +117,11 @@ class NativeKotlinTrackedWorkoutGateway(
             is KotlinJournalOperation.UndoSwap ->
                 NativeJournalFileResult.Rejected(
                     NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE)
-            is KotlinJournalOperation.RecordSet -> {
+            is KotlinJournalOperation.RecordSet,
+            is KotlinJournalOperation.SessionNote -> {
+                // Both are author-initiated journal receipts; only Finish
+                // may enter the history transaction. The same owner/source
+                // and ready-history checks apply before any store append.
                 val existing = workout.open(owner, workoutId)
                 if (existing !is NativeJournalFileResult.Durable)
                     return@fenced existing

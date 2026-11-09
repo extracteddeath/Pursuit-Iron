@@ -47,6 +47,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val revisionFence=NativeKotlinApprovalRevisionFence(root)
     private val coachSettings=NativeKotlinCoachAssistanceSettingsStore(
         root,revisionFence,localAthlete)
+    private val pinnedExerciseNotes=NativeKotlinPinnedExerciseNoteFileStore(
+        root,revisionFence,localAthlete)
     private val approvalStore=NativeKotlinApprovalFileAuthority(
         root,revisionFence,localAthlete)
     private val customDraftStore=NativeCustomCycleDraftFileStore(
@@ -459,6 +461,103 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
         return customIssuedStore.undoSwap(
             owner.ownerKey,workoutId,eventId,expectedRevision,swapEventId)
+    }
+
+    /** Authenticated custom-session note. This is an actual atomic journal
+     * receipt, not a local-only preference or a planned program note. */
+    fun saveIssuedCustomSessionNote(
+        workoutId:String,
+        operation:CustomWorkoutJournalOperation.SessionNote
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.saveSessionNote(
+            owner.ownerKey,workoutId,operation)
+    }
+
+    /**
+     * An exercise must be present in this athlete's cold-opened, verified
+     * issued native workout before any cross-session pinned note is read.
+     * A history-only exercise ID, autocomplete or nearby pattern is not a
+     * valid editing entitlement. Notes never authorize new training sets.
+     */
+    private fun canAccessPinnedExercise(
+        owner:NativeKotlinOwnerIdentity,
+        workoutId:String,exerciseId:String,
+        custom:Boolean,forWrite:Boolean
+    ):Boolean {
+        if(!NativePinnedExerciseNotePolicy.validExercise(exerciseId) ||
+            !workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")))
+            return false
+        if(custom) {
+            val current=customIssuedStore.open(owner.ownerKey,workoutId)
+                as? NativeCustomJournalResult.Durable ?:return false
+            val journal=current.issued.journal
+            return current.issued.athleteId==owner.athleteId &&
+                (!forWrite || journal.finishedByEventId==null) &&
+                journal.snapshot.slots.any{it.exerciseId==exerciseId}
+        }
+        val current=trackedWorkout.open(
+            owner.ownerKey,owner.athleteId,workoutId)
+            as? NativeJournalFileResult.Durable ?:return false
+        return (!forWrite || current.journal.finishedByEventId==null) &&
+            current.journal.snapshot.targets.any{it.exerciseId==exerciseId}
+    }
+
+    /** Owner-verified pinned note for this exact issued exercise ID. */
+    fun readPinnedExerciseNote(
+        workoutId:String,exerciseId:String,custom:Boolean
+    ):NativePinnedNoteRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePinnedNoteRead.Rejected(
+                NativePinnedNoteRefusal.NOT_AUTHORIZED)
+        if(!canAccessPinnedExercise(owner,workoutId,exerciseId,custom,false))
+            return NativePinnedNoteRead.Rejected(
+                NativePinnedNoteRefusal.NOT_AUTHORIZED)
+        return pinnedExerciseNotes.read(owner.ownerKey,exerciseId)
+    }
+
+    /**
+     * Display-only setup fields from CURRENT owner-reviewed native catalog
+     * metadata. No catalog or exercise name grants access on its own: the
+     * issued-workout entitlement is checked before exposing descriptors.
+     * Old stored keys are preserved as saved-earlier fields even if the
+     * reviewed source has changed or become unavailable.
+     */
+    fun reviewedPinnedExerciseSetupFields(
+        workoutId:String,exerciseId:String,custom:Boolean,
+        savedSetup:Map<String,String>
+    ):List<NativePinnedSetupField>? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        if(!canAccessPinnedExercise(owner,workoutId,exerciseId,custom,false))
+            return null
+        val source=runCatching {
+            (authoringSourceStore.read(owner.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+        }.getOrNull()?.takeIf {
+            it.ownerKey==owner.ownerKey && it.athleteId==owner.athleteId &&
+                it.setup.mayReviewProgramCandidate &&
+                it.setup.reviewed?.athleteProfileId==owner.athleteId
+        }
+        val movement=source?.catalog?.firstOrNull{it.exerciseId==exerciseId}
+        return NativePinnedSetupFieldDomain.fields(movement,savedSetup)
+    }
+
+    /** CAS-protected user text/setup; no training plan or journal mutation. */
+    fun savePinnedExerciseNote(
+        workoutId:String,exerciseId:String,custom:Boolean,
+        expectedRevision:Long,eventId:String,text:String,
+        setup:Map<String,String>
+    ):NativePinnedNoteWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePinnedNoteWrite.Rejected(
+                NativePinnedNoteRefusal.NOT_AUTHORIZED)
+        if(!canAccessPinnedExercise(owner,workoutId,exerciseId,custom,true))
+            return NativePinnedNoteWrite.Rejected(
+                NativePinnedNoteRefusal.NOT_AUTHORIZED)
+        return pinnedExerciseNotes.save(owner.ownerKey,exerciseId,
+            expectedRevision,eventId,text,setup)
     }
 
     /** Actual observations, never suggestions or virtual completed sets. */

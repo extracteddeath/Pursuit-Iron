@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=2
+    private const val VERSION=3
     const val MAX_BYTES=2_000_000
     private const val MAX_RECEIPTS=2048
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -96,10 +96,17 @@ internal object NativeCustomWorkoutJournalCodec {
                 writeLong(event.expectedRevision)
                 writeUTF(event.swapEventId)
             }
+            is CustomWorkoutJournalOperation.SessionNote->{
+                require(CustomWorkoutJournalDomain.validSessionNote(event.text))
+                writeByte(5)
+                writeUTF(event.eventId)
+                writeLong(event.expectedRevision)
+                writeUTF(event.text)
+            }
         }
     }
-    private fun DataInputStream.operation():CustomWorkoutJournalOperation =
-        when(readUnsignedByte()){
+    private fun DataInputStream.operation(version:Int):CustomWorkoutJournalOperation =
+        when(val kind=readUnsignedByte()){
             1->{
                 val eventId=readUTF()
                 val rev=readLong()
@@ -133,7 +140,16 @@ internal object NativeCustomWorkoutJournalCodec {
             }
             4->CustomWorkoutJournalOperation.UndoSwap(
                 readUTF(),readLong(),readUTF())
-            else->throw IOException("invalid workout receipt kind")
+            5->{
+                if(version<3)throw IOException("note in legacy journal")
+                val eventId=readUTF()
+                val revision=readLong()
+                val note=readUTF()
+                if(!CustomWorkoutJournalDomain.validSessionNote(note))
+                    throw IOException("invalid session note")
+                CustomWorkoutJournalOperation.SessionNote(eventId,revision,note)
+            }
+            else->throw IOException("invalid workout receipt kind $kind")
         }
 
     /** Validate the COMPLETE event history, not just its cached map. */
@@ -181,8 +197,13 @@ internal object NativeCustomWorkoutJournalCodec {
         val swapped=state.receipts.any{
             it.operation is CustomWorkoutJournalOperation.Swap
         }
+        val notes=state.receipts.any {
+            it.operation is CustomWorkoutJournalOperation.SessionNote
+        }
         require(swapped || state.originalSnapshot==state.snapshot)
-        val version=if(swapped) VERSION else 1
+        // Legacy 1/2 snapshots and their history-manifest digests MUST retain
+        // byte-identical encodings. Version 3 is used only when notes exist.
+        val version=if(notes) VERSION else if(swapped) 2 else 1
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
         val original=if(swapped)
             NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)
@@ -246,7 +267,7 @@ internal object NativeCustomWorkoutJournalCodec {
                 if(count !in 0..MAX_RECEIPTS || count>data.available()/9)
                     throw IOException("invalid custom journal receipt count")
                 val receipts=List(count) {
-                    CustomWorkoutJournalReceipt(data.readLong(),data.operation())
+                    CustomWorkoutJournalReceipt(data.readLong(),data.operation(version))
                 }
                 if(data.available()!=0)
                     throw IOException("trailing custom workout journal bytes")

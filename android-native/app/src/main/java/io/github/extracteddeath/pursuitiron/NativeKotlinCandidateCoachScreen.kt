@@ -113,6 +113,9 @@ internal fun NativeKotlinCandidateCoachScreen(
     var historyExerciseId by rememberSaveable {mutableStateOf<String?>(null)}
     var showTechnicalDetails by rememberSaveable {mutableStateOf(false)}
     var exerciseChoices by remember { mutableStateOf<List<String>>(emptyList()) }
+    var exerciseSearch by rememberSaveable { mutableStateOf("") }
+    var visibleCoachChoices by rememberSaveable { mutableIntStateOf(10) }
+    LaunchedEffect(exerciseSearch,exerciseChoices) {visibleCoachChoices=10}
     var choicesLoading by remember { mutableStateOf(true) }
     var assistance by remember(host) {mutableStateOf<CoachAssistancePolicy?>(null)}
     var maximumStep by rememberSaveable { mutableStateOf("5") }
@@ -248,12 +251,52 @@ internal fun NativeKotlinCandidateCoachScreen(
                         Text("No current verified Kotlin program and gym catalog. Complete your native gym setup and approve a program before reviewing progression.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    else -> Row(Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        exerciseChoices.forEach { id ->
-                            FilterChip(selected=exerciseId==id,
-                                onClick={exerciseId=id;invalidate()},
-                                label={Text(kotlinExerciseLabel(id))})
+                    else -> {
+                        // Search ONLY the currently approved, source-verified
+                        // exercise IDs. Display filtering cannot authorize an
+                        // unreviewed lift or bypass existing coach permissions.
+                        val matches=CoachExerciseChoiceSearchDomain.filter(
+                            exerciseChoices,exerciseSearch,::kotlinExerciseLabel)
+                        OutlinedTextField(
+                            value=exerciseSearch,
+                            onValueChange={if(it.length<=80)exerciseSearch=it},
+                            label={Text("Search approved exercises")},
+                            singleLine=true,
+                            enabled=!busy,
+                            modifier=Modifier.fillMaxWidth()
+                        )
+                        Text("Selected · ${kotlinExerciseLabel(exerciseId)}",
+                            style=MaterialTheme.typography.labelLarge,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(matches.isEmpty()) {
+                            Text("No approved exercise matches that search. Clear the search to review the other choices.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            matches.take(visibleCoachChoices).forEach { id ->
+                                FilterChip(
+                                    selected=exerciseId==id,
+                                    onClick={exerciseId=id;invalidate()},
+                                    enabled=!busy,
+                                    label={Text(kotlinExerciseLabel(id))},
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                                )
+                            }
+                            if(matches.size>visibleCoachChoices) {
+                                OutlinedButton(
+                                    enabled=!busy,
+                                    onClick={
+                                        visibleCoachChoices=
+                                            (visibleCoachChoices+10).coerceAtMost(matches.size)
+                                    },
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                                ) {
+                                    Text("Show next ${minOf(10,matches.size-visibleCoachChoices)}")
+                                }
+                            }
+                            Text("Showing ${minOf(visibleCoachChoices,matches.size)} of ${matches.size} approved choices.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -265,28 +308,19 @@ internal fun NativeKotlinCandidateCoachScreen(
                     label={Text("Maximum approved increase (gym units)")},
                     singleLine=true,modifier=Modifier.fillMaxWidth(),
                     isError=step==null)
-                if(assistance?.offersFatigueAdvice==true) {
-                    Text("Readiness",style=MaterialTheme.typography.labelLarge)
-                    Row(Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        CoachReadiness.entries.forEach { value ->
-                            FilterChip(
-                                selected=readiness==value,
-                                onClick={readiness=value;invalidate()},
-                                label={Text(value.name.lowercase().replaceFirstChar {
-                                    it.uppercase()
-                                })})
-                        }
-                    }
-                } else {
+                PursuitTrainingReadinessControls(
+                    readiness=readiness,
+                    onReadinessChange={readiness=it;invalidate()},
+                    movementRestricted=restricted,
+                    onRestrictionChange={restricted=it;invalidate()},
+                    enabled=!busy,
+                    showReadiness=assistance?.offersFatigueAdvice==true,
+                    restrictionLabel="Movement restricted or painful"
+                )
+                if(assistance?.offersFatigueAdvice!=true) {
                     Text("Fatigue-aware advice is off. Verified completed sets still guide optional progression.",
                         color=MaterialTheme.colorScheme.onSurfaceVariant,
                         style=MaterialTheme.typography.bodySmall)
-                }
-                Row(verticalAlignment=Alignment.CenterVertically) {
-                    Checkbox(checked=restricted,
-                        onCheckedChange={restricted=it;invalidate()})
-                    Text("Movement is currently restricted or painful")
                 }
                 Button(
                     enabled=!busy && permitted && step!=null,

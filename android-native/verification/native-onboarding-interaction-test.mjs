@@ -880,7 +880,7 @@ assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
   controls.includes('Column(verticalArrangement=Arrangement.spacedBy(8.dp))') &&
   controls.includes('NativeSetCounterField("RIR",rir,enabled') &&
   controls.includes('minWidth=48.dp,minHeight=48.dp') &&
-  controls.includes('if(load=="0")"0 load is not automatically bodyweight') &&
+  controls.includes('if(showLoad && load=="0")"0 load is not automatically bodyweight') &&
   controls.includes('RIR is optional'),
   'Shared Reps/RIR controls must fit normal phones side-by-side, retain equal 48dp touch targets and stack safely on very narrow screens');
 

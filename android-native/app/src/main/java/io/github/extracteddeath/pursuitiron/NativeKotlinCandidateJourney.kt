@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
@@ -465,6 +466,14 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var reviewingResume by remember {mutableStateOf(false)}
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    // A minimized generated workout is only a local navigation shortcut.
+    // It NEVER authorizes resume. The current athlete's saved approval
+    // must be reverified, then the session controller reopens disk receipts.
+    var minimizedGeneratedId by rememberSaveable(host) {
+        mutableStateOf<String?>(null)
+    }
+    var resumeChecking by remember { mutableStateOf(false) }
+    val sessionState by controller.state.collectAsStateWithLifecycle()
     LaunchedEffect(customWorkoutId,selectedId) {
         onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null)
     }
@@ -476,6 +485,7 @@ private fun NativeKotlinCandidateTrainEntry(
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
+    var visibleUnfinishedCount by rememberSaveable(host) { mutableIntStateOf(20) }
     // Minimize removes the logger from composition. Preserve its timer and
     // unsubmitted fields per exact workout, then revalidate native storage
     // when reopening. Another workout must never inherit that UI state.
@@ -485,6 +495,7 @@ private fun NativeKotlinCandidateTrainEntry(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
     suspend fun refreshUnfinishedWorkouts() {
         reviewingResume=true
+        visibleUnfinishedCount=20
         resumable=null
         try {
             resumable=withContext(Dispatchers.IO) {
@@ -515,6 +526,44 @@ private fun NativeKotlinCandidateTrainEntry(
             PageHeading("TRAIN",
                 "Continue your training",
                 "Resume your workout or open the next session in your saved program.")
+            minimizedGeneratedId?.let { awaitingWorkoutId ->
+                PursuitCard(highlighted=true) {
+                    PursuitSectionHeading("Resume workout",
+                        "Continue the approved native session. Recorded sets remain saved.")
+                    PursuitPrimaryAction("Resume workout",
+                        enabled=!resumeChecking && !searching,
+                        onClick={
+                            resumeChecking=true
+                            selectionMessage=null
+                            scope.launch {
+                                val approved=withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        host.currentlyApprovedKotlinWorkoutId()
+                                    }.getOrNull()
+                                }
+                                // Cancel a stale async response after user
+                                // deliberately opens a different workout.
+                                if(minimizedGeneratedId==awaitingWorkoutId &&
+                                    selectedId==null && customWorkoutId==null) {
+                                    if(approved==awaitingWorkoutId)
+                                        selectedId=awaitingWorkoutId
+                                    else {
+                                        minimizedGeneratedId=null
+                                        selectionMessage="This is no longer your current approved workout. Review the saved program before resuming."
+                                    }
+                                }
+                                resumeChecking=false
+                            }
+                        })
+                    Text("This resumes the verified journal. Unsubmitted set edits are not logged results.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            selectionMessage?.takeIf {minimizedGeneratedId==null}?.let {
+                Text(it,style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
+            }
             PursuitCard(highlighted=true) {
                 Text("Your unfinished workouts",
                     style=MaterialTheme.typography.titleMedium)
@@ -534,7 +583,7 @@ private fun NativeKotlinCandidateTrainEntry(
                         } else {
                             Text("${result.workouts.size} unfinished workouts",
                                 style=MaterialTheme.typography.labelMedium)
-                            result.workouts.take(20).forEach { item->
+                            result.workouts.take(visibleUnfinishedCount).forEach { item->
                                 OutlinedButton(
                                     modifier=Modifier.fillMaxWidth(),
                                     onClick={
@@ -552,9 +601,23 @@ private fun NativeKotlinCandidateTrainEntry(
                                     }
                                 }
                             }
-                            if(result.workouts.size>20)
-                                Text("Showing the first 20 by authored week and day. ${result.workouts.size-20} others remain verified; more navigation is still needed.",
-                                    style=MaterialTheme.typography.bodySmall)
+                            if(result.workouts.size>visibleUnfinishedCount) {
+                                val remaining=result.workouts.size-visibleUnfinishedCount
+                                OutlinedButton(
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                    enabled=!reviewingResume,
+                                    onClick={
+                                        visibleUnfinishedCount=
+                                            (visibleUnfinishedCount+20).coerceAtMost(
+                                                result.workouts.size)
+                                    }
+                                ) {
+                                    Text("Show next ${minOf(20,remaining)} workouts")
+                                }
+                                Text("Showing ${minOf(visibleUnfinishedCount,result.workouts.size)} of ${result.workouts.size} verified unfinished workouts.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                     is NativeCustomResumeReview.Rejected ->
@@ -632,11 +695,16 @@ private fun NativeKotlinCandidateTrainEntry(
                 horizontalArrangement=Arrangement.SpaceBetween) {
                 Text("Workout in progress",
                     style=MaterialTheme.typography.labelLarge)
-                TextButton(onClick={
-                    controller.clear()
-                    selectedId=null
-                    onClearGeneratedWorkout()
-                }) { Text("Other workout") }
+                TextButton(enabled=!sessionState.busy,onClick={
+                    // Guard the click as well as the visual disabled state:
+                    // an in-flight set write can start before recomposition.
+                    if(!controller.state.value.busy) {
+                        minimizedGeneratedId=selectedId
+                        controller.clear() // in-memory only, not a journal write
+                        selectedId=null
+                        onClearGeneratedWorkout()
+                    }
+                }) { Text("Minimize") }
             }
             Box(Modifier.weight(1f)) {
                 workoutScreens.SaveableStateProvider("composer:$selectedId") {
@@ -644,11 +712,13 @@ private fun NativeKotlinCandidateTrainEntry(
                     controller,checkNotNull(selectedId),host,
                     onViewHistory={
                         controller.clear()
+                        minimizedGeneratedId=null
                         selectedId=null
                         onViewFinishedHistory()
                     },
                     onReviewNext={exerciseId->
                         controller.clear()
+                        minimizedGeneratedId=null
                         selectedId=null
                         onReviewNext(exerciseId)
                     })

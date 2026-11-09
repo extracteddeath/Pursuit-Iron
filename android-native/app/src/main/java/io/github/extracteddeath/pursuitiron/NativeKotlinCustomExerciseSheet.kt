@@ -144,19 +144,20 @@ internal fun NativeKotlinCustomExerciseSheet(
     }
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
-    val needle=search.trim()
-    fun matchesName(value:String?):Boolean = value?.let {name->
-        name.contains(needle,true) ||
-        name.replace('_',' ').replace('-',' ').contains(needle,true)
-    } ?: false
-    val labeled=available.filter {choice ->
-        needle.isBlank() || matchesName(choice.exerciseId) ||
-            matchesName(choice.familyId) ||
-            matchesName(choice.variantId) ||
-            matchesName(choice.attachmentId) ||
-            matchesName(kotlinExerciseLabel(choice.exerciseId)) ||
-            matchesName(choice.pattern?.name) ||
-            choice.muscleCredits.any {matchesName(it.muscle.name)}
+    // A query can span the movement, equipment variant, attachment and muscle.
+    // Matching is independent of token order; ranking is still calculated from
+    // the ENTIRE verified gym catalog before the search filter is applied.
+    val terms=search.trim().replace('_',' ').replace('-',' ')
+        .lowercase().split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+    val labeled=available.filter { choice ->
+        val searchable=(listOfNotNull(
+            choice.exerciseId,choice.familyId,choice.variantId,choice.attachmentId,
+            kotlinExerciseLabel(choice.exerciseId),choice.pattern?.name,
+            choice.role?.name
+        ) + choice.muscleCredits.map { it.muscle.name })
+            .joinToString(" ").replace('_',' ').replace('-',' ').lowercase()
+        terms.all { searchable.contains(it) }
     }
     // Rank using the FULL eligible current-gym catalog first. Search only
     // filters the visible candidates; it must never remove the source
@@ -171,8 +172,13 @@ internal fun NativeKotlinCustomExerciseSheet(
         sourceHasWorkingSets=replacing?.sets?.any {
             it.type==DraftSetType.WORKING
         }==true)
-    val searched=ranked.filter {it.choice in labeled}
-    val filtered=searched.take(20)
+    val matchingIds=labeled.mapTo(hashSetOf()) { it.exerciseId }
+    val searched=ranked.filter { it.choice.exerciseId in matchingIds }
+    // This is a paging cap, not a catalog cap. The complete verified ranked
+    // pool remains available, even when it contains more than twenty choices.
+    var visibleCount by remember(search,samePatternOnly,sharedMusclesOnly,
+        sameRoleOnly,sameFamilyOnly,replacing?.slotId) { mutableIntStateOf(20) }
+    val filtered=searched.take(visibleCount)
     // Changing the selected replacement must not silently carry even the
     // NEW draft's typed load, technique or setup note into a different variant.
     LaunchedEffect(exerciseId,replacing?.slotId) {
@@ -277,10 +283,22 @@ internal fun NativeKotlinCustomExerciseSheet(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if(searched.size>filtered.size)Text(
-                "Showing first ${filtered.size} of ${searched.size} verified matches. Narrow your search for more.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(searched.size>filtered.size) {
+                Text("Showing ${filtered.size} of ${searched.size} verified ranked choices.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    OutlinedButton(
+                        onClick={visibleCount=(visibleCount+20).coerceAtMost(searched.size)},
+                        modifier=Modifier.heightIn(min=48.dp)
+                    ) { Text("Show next ${minOf(20,searched.size-filtered.size)}") }
+                    TextButton(
+                        onClick={visibleCount=searched.size},
+                        modifier=Modifier.heightIn(min=48.dp)
+                    ) { Text("Show all") }
+                }
+            }
         } else {
             Text(kotlinExerciseLabel(existing.exerciseId),
                 style = MaterialTheme.typography.titleMedium)

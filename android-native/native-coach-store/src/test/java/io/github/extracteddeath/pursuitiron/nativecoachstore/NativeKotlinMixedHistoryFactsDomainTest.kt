@@ -125,6 +125,19 @@ class NativeKotlinMixedHistoryFactsDomainTest {
                 LoadBasis.DUMBBELL_PER_HAND)).actualLoad)
     }
 
+    @Test fun loggedSingleIsRetainedAfterMoreRepsAtIdenticalLoad() {
+        val one=composer(1,composerFact(1,reps=1,actualLoad=200,
+            basis=LoadBasis.BARBELL_TOTAL))
+        val five=composer(2,composerFact(2,reps=5,actualLoad=200,
+            basis=LoadBasis.BARBELL_TOTAL))
+        val result=facts(one,five)
+        val key=NativeMixedPhysicalLoadKey("bench",LoadUnit.LB,
+            LoadBasis.BARBELL_TOTAL)
+        assertEquals(5,result.mostRepsAtLoad.single().reps)
+        assertEquals(1,result.bestLoggedSingleByLoad.getValue(key).reps)
+        assertEquals("workout-1",
+            result.bestLoggedSingleByLoad.getValue(key).workoutId)
+    }
     @Test fun newestFailedOrWarmupOnlyAppearanceStillWinsLast() {
         val old = composer(1, composerFact(1))
         val failed = composer(2, composerFact(2, reps = 0,

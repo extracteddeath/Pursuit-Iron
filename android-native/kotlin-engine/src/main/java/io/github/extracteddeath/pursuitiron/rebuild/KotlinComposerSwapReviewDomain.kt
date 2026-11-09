@@ -127,10 +127,11 @@ object KotlinComposerSwapReviewDomain {
             if(target.reps.minimum !in 1..100 ||
                 target.reps.maximum !in target.reps.minimum..100 ||
                 target.targetRir?.let{it !in 0..10}==true ||
-                selected.sourcePracticalReps?.let{
-                    target.reps.minimum<it.minimum ||
-                        target.reps.maximum>it.maximum
-                }==true)return reject("Replacement reps or effort are unverified.")
+                (target.type==DraftSetType.WORKING &&
+                    selected.sourcePracticalReps?.let{
+                        target.reps.minimum<it.minimum ||
+                            target.reps.maximum>it.maximum
+                    }==true))return reject("Replacement reps or effort are unverified.")
             val allowed=when(val gear=selected.equipment) {
                 ComposerEquipment.Bodyweight ->
                     target.load==DraftSetLoad.ExplicitBodyweight

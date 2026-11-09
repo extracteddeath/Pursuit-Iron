@@ -68,6 +68,49 @@ internal fun PursuitExerciseHeading(
     }
 }
 
+/**
+ * Shared workout focus header for custom and Composer journals. It only
+ * changes which editor is visible. The saved journal and any draft fields
+ * remain owned by the corresponding workout screen.
+ *
+ * The content is single-column and chips scroll horizontally rather than
+ * competing for width at large Android font scales.
+ */
+@Composable
+internal fun PursuitWorkoutFocusHeader(
+    exerciseLabel:String?,
+    setDetail:String?,
+    focusOnNext:Boolean,
+    onFocusChange:(Boolean)->Unit,
+    enabled:Boolean=true,
+    heading:String="UP NEXT"
+) {
+    PursuitCard(highlighted=focusOnNext) {
+        Text(heading,style=MaterialTheme.typography.labelSmall,
+            color=MaterialTheme.colorScheme.primary)
+        Text(exerciseLabel ?: "All entries recorded · review Finish",
+            style=MaterialTheme.typography.titleLarge)
+        if(!setDetail.isNullOrBlank())
+            Text(setDetail,style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+            FilterChip(
+                selected=focusOnNext,
+                onClick={onFocusChange(true)},
+                enabled=enabled,
+                modifier=Modifier.heightIn(min=48.dp),
+                label={Text("Focus on next")})
+            FilterChip(
+                selected=!focusOnNext,
+                onClick={onFocusChange(false)},
+                enabled=enabled,
+                modifier=Modifier.heightIn(min=48.dp),
+                label={Text("All sets")})
+        }
+    }
+}
+
 @Composable
 internal fun PursuitEmptyState(
     title:String,description:String,

@@ -228,8 +228,12 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             }
                         }
                         TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide sets" else "View targets, notes and actuals")}
-                        if(expanded && entry is NativeKotlinMixedHistoryCompletion.Custom)
-                            NativeKotlinCustomHistoryNote(host,entry)
+                        if(expanded)when(entry) {
+                            is NativeKotlinMixedHistoryCompletion.Custom ->
+                                NativeKotlinCustomHistoryNote(host,entry)
+                            is NativeKotlinMixedHistoryCompletion.Composer ->
+                                NativeKotlinGeneratedHistoryNote(host,entry)
+                        }
                         if(expanded)when(entry) {
                             is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEach {set->
                                 NativeKotlinSavedComposerHistorySetRow(

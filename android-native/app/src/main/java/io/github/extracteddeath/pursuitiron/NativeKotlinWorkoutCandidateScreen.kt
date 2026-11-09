@@ -79,6 +79,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
+    // Retain only the most recent VERIFIED journal reference for an open
+    // note draft. A double storage failure must not discard unsaved text.
+    // The cached reference never authorizes saving or marks a note saved.
+    var noteAnchor by remember(workoutId) {
+        mutableStateOf<KotlinWorkoutJournalState?>(null)
+    }
+    LaunchedEffect(journal) { if(journal!=null)noteAnchor=journal }
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
         enabled=referenceMode==WorkoutReferenceMode.LAST && journal!=null)
     val running=presentation!=null && !presentation.finished
@@ -109,6 +116,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
 
     var showFinishConfirm by rememberSaveable(workoutId){mutableStateOf(false)}
+    var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pendingSkip by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var pendingFail by remember(workoutId) {
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
@@ -178,6 +186,24 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }})
     }
 
+    if(showSessionNote) {
+        val verifiedJournal=journal ?:noteAnchor
+        if(verifiedJournal!=null)NativeKotlinSessionNoteEditor(
+            workoutId=workoutId,
+            committed=verifiedJournal.sessionNote,
+            maxChars=KotlinWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS,
+            validate=KotlinWorkoutJournalDomain::validSessionNote,
+            busy=state.busy,
+            enabled=journal!=null && journal.finishedByEventId==null,
+            error=state.unavailableReason?.let(::humanStatus)
+                ?:state.journalRefusal?.let {
+                    "The session note was not saved: ${it.name.replace('_',' ').lowercase()}."
+                },
+            onSave={controller.saveSessionNote(it)},
+            onDismiss={showSessionNote=false}
+        )
+    }
+
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
         .padding(horizontal=16.dp,vertical=20.dp),
@@ -215,6 +241,22 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             progress={if(allSets.isEmpty())0f else
                 presentation.resolvedCount.toFloat()/allSets.size},
             modifier=Modifier.fillMaxWidth())
+        if(journal!=null && journal.finishedByEventId==null) {
+            OutlinedButton(
+                onClick={showSessionNote=true},
+                enabled=!state.busy,
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) {
+                Text(if(journal.sessionNote.isBlank())
+                    "Add session note" else "Edit saved session note")
+            }
+        } else if(journal?.sessionNote?.isNotBlank()==true) {
+            PursuitCard {
+                PursuitSectionHeading("Saved session note",
+                    "Recorded with this finished workout · read-only")
+                Text(journal.sessionNote,style=MaterialTheme.typography.bodyMedium)
+            }
+        }
         state.unavailableReason?.let {
             Text(humanStatus(it),color=MaterialTheme.colorScheme.error)
         }

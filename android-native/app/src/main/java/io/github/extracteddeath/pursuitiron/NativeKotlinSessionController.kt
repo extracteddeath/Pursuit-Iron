@@ -206,6 +206,21 @@ internal class NativeKotlinSessionController(
         }
     }
 
+    /** Explicit per-session note save; the host/store rechecks current
+     * athlete ownership, immutable source and disk revision before append.
+     * Only a durable result updates the controller's visible journal. */
+    fun saveSessionNote(text:String) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId ?:return
+        val journal=prior.journal ?:return
+        if(prior.busy || journal.finishedByEventId!=null)return
+        val note=KotlinJournalOperation.SessionNote(
+            "session-note-"+UUID.randomUUID(),journal.revision,text)
+        run(workoutId,{
+            host.recordWorkoutOperation(workoutId,note)
+        },recoverOnReject=true)
+    }
+
     fun finish() {
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return

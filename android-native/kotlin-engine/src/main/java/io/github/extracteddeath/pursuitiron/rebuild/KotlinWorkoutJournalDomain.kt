@@ -60,6 +60,13 @@ sealed interface KotlinJournalOperation {
         val swapEventId:String
     ):KotlinJournalOperation
 
+    /** User-authored, per-session note. Never a training target or set fact. */
+    data class SessionNote(
+        override val eventId:String,
+        override val expectedJournalRevision:Long,
+        val text:String
+    ):KotlinJournalOperation
+
     data class Finish(
         override val eventId: String,
         override val expectedJournalRevision: Long
@@ -81,6 +88,9 @@ data class KotlinWorkoutJournalState(
     /** Immutable initial issuance: survives every later Swap/Undo receipt. */
     val originalSnapshot:KotlinStagedWorkout=snapshot
 ) {
+    val sessionNote:String get()=receipts.asReversed().firstNotNullOfOrNull {
+        (it.operation as? KotlinJournalOperation.SessionNote)?.text
+    }.orEmpty()
     val resolvedSetCount: Int get()=effectiveSets.size
     val unresolvedSetCount: Int get()=snapshot.targets.size-effectiveSets.size
     val canProposeFinish: Boolean get()=finishedByEventId==null &&
@@ -94,7 +104,7 @@ enum class KotlinJournalRefusal {
     UNKNOWN_SET, ALREADY_RECORDED, INVALID_CORRECTION,
     INVALID_VALUES, INCOMPLETE_WORKOUT,
     SWAP_ALREADY_STARTED, SWAP_INVALID_TARGET, SWAP_IDENTITY_CONFLICT,
-    SWAP_UNDO_UNAVAILABLE
+    SWAP_UNDO_UNAVAILABLE, INVALID_SESSION_NOTE
 }
 
 sealed interface KotlinJournalDecision {
@@ -110,6 +120,11 @@ object KotlinWorkoutJournalDomain {
     private val zero=BigDecimal.ZERO
     private val max=BigDecimal("100000")
     private const val MAX_RECEIPTS=2048
+    const val MAX_SESSION_NOTE_CHARS=2000
+    fun validSessionNote(text:String):Boolean =
+        text.length<=MAX_SESSION_NOTE_CHARS && text.none {
+            it=='\u0000' || (it.code<32 && it!='\n' && it!='\r' && it!='\t')
+        }
 
     internal fun validPerformed(
         target: KotlinWorkoutTarget,
@@ -316,6 +331,12 @@ object KotlinWorkoutJournalDomain {
                 }.toMutableList().apply{addAll(position,historical)}
                 nextSnapshot=journal.snapshot.copy(targets=
                     Collections.unmodifiableList(changed))
+                null
+            }
+            is KotlinJournalOperation.SessionNote -> {
+                if(!validSessionNote(operation.text))
+                    return KotlinJournalDecision.Rejected(
+                        KotlinJournalRefusal.INVALID_SESSION_NOTE)
                 null
             }
             is KotlinJournalOperation.Finish -> {

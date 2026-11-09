@@ -102,7 +102,8 @@ assert.ok(composer.includes('val editorStates=rememberSaveableStateHolder()') &&
   'Switching Focus/All or visiting another set must preserve unsubmitted fields in both workout types');
 
 assert.ok(composer.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') &&
-  composer.includes('PursuitExerciseHeading(target.exerciseId,onHistory=onHistory)'),
+  composer.includes('PursuitExerciseHeading(target.exerciseId,') &&
+  composer.includes('onHistory=onHistory,onInfo=onInfo'),
   'Generated workout must open the same verified full exercise history');
 assert.ok(composer.includes('rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision)') &&
   composer.includes('?:target.reps.minimum.toString()') &&
@@ -122,6 +123,22 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   sharedSetFields.includes('Bodyweight movement · no external weight') &&
   sharedSetFields.includes('RIR is optional · leave blank if unknown.'),
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
+const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt');
+assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
+  sharedFocus.includes('contentDescription="Exercise details"') &&
+  journal.includes('onInfo={infoSlotId=slot.slotId}') &&
+  journal.includes('journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}') &&
+  journal.includes('sets=customWorkoutInfoSets(slot.sets)') &&
+  composer.includes('onInfo={infoExerciseId=set.target.exerciseId}') &&
+  composer.includes('journal?.snapshot?.targets.orEmpty().filter') &&
+  composer.includes('sets=composerWorkoutInfoSets(targets)') &&
+  infoSheet.includes('internal fun composerWorkoutInfoSets(') &&
+  infoSheet.includes('internal fun customWorkoutInfoSets(') &&
+  infoSheet.includes('targetRir?.toString() ?: "Not set"') &&
+  infoSheet.includes('NativeEditSheet(busy=false,onDismiss=onDismiss)') &&
+  infoSheet.includes('Text("Open full exercise history")') &&
+  !infoSheet.includes('controller.record('),
+  'Info must be a read-only, source-backed sheet with exact planned set facts and a full History action for both workout types');
 const restBridge=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt');
 const timer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt');
 for(const source of [journal,composer]) {

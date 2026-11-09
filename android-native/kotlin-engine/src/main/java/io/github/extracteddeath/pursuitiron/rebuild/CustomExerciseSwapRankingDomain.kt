@@ -22,6 +22,7 @@ data class CustomSwapRankedOption(
     val choice: CustomExercisePickerOption,
     val fit: CustomSwapFit,
     val sharedMuscles: Set<TrainingMuscle>,
+    val sameRole: Boolean,
     val explanation: String
 ) {
     val mayTransferWeight:Boolean get()=false
@@ -38,7 +39,8 @@ object CustomExerciseSwapRankingDomain {
         sourceExerciseId:String?,
         search:String="",
         samePatternOnly:Boolean=false,
-        sharedMusclesOnly:Boolean=false
+        sharedMusclesOnly:Boolean=false,
+        sameRoleOnly:Boolean=false
     ):List<CustomSwapRankedOption> {
         // Fail closed on duplicate catalog identities. Do not build a
         // shortlist from invented or unresolved source metadata.
@@ -64,6 +66,8 @@ object CustomExerciseSwapRankingDomain {
                     candidate.pattern==source.pattern
                 val sameFamily=source!=null &&
                     source.familyId==candidate.familyId
+                val sameRole=source?.role!=null &&
+                    candidate.role==source.role
                 val shared=if(source!=null)
                     credits(candidate).intersect(sourceMuscles)
                     else emptySet()
@@ -79,6 +83,7 @@ object CustomExerciseSwapRankingDomain {
                 val reasons=mutableListOf<String>()
                 if(samePattern)reasons+="Same reviewed movement pattern"
                 if(sameFamily)reasons+="Same exercise family"
+                if(sameRole)reasons+="Same reviewed training role"
                 if(shared.isNotEmpty())reasons+=
                     "Shared credited muscles: "+
                         shared.sortedBy {it.name}.joinToString(", "){
@@ -87,18 +92,20 @@ object CustomExerciseSwapRankingDomain {
                 if(reasons.isEmpty())reasons+=if(source==null)
                     "Source pattern unavailable; alphabetical verified options"
                 else "Different pattern; review muscle coverage and the session"
-                CustomSwapRankedOption(candidate,fit,shared,
+                CustomSwapRankedOption(candidate,fit,shared,sameRole,
                     reasons.joinToString(" · "))
             }
             .filter {option->
                 (!samePatternOnly || option.fit in setOf(
                     CustomSwapFit.SAME_PATTERN,
                     CustomSwapFit.SAME_PATTERN_AND_FAMILY)) &&
-                (!sharedMusclesOnly || option.sharedMuscles.isNotEmpty())
+                (!sharedMusclesOnly || option.sharedMuscles.isNotEmpty()) &&
+                (!sameRoleOnly || option.sameRole)
             }
             .sortedWith(compareBy<CustomSwapRankedOption>{
                 it.fit.ordinal
-            }.thenByDescending {it.sharedMuscles.size}
+            }.thenByDescending {it.sameRole}
+                .thenByDescending {it.sharedMuscles.size}
                 .thenBy{it.choice.exerciseId})
             .toList()
         return Collections.unmodifiableList(sorted)

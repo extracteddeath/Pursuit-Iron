@@ -515,7 +515,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     Text("${kotlinExerciseLabel(slot.exerciseId)} · ${slot.sets.size} sets" +
                                         if (slot.pinned) " · Pinned" else "",
                                         style = MaterialTheme.typography.bodyMedium)
-                                    val hasProtectedWeekEdit=current.weekOverrides[
+                                    val hasProtectedWeekEdit=draft.weekOverrides[
                                         block.blockId].orEmpty().any {
                                         it.weekday==day.weekday && it.slotId==slot.slotId
                                     }

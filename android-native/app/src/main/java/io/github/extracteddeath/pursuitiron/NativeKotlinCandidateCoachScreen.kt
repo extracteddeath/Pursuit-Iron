@@ -255,15 +255,8 @@ internal fun NativeKotlinCandidateCoachScreen(
                         // Search ONLY the currently approved, source-verified
                         // exercise IDs. Display filtering cannot authorize an
                         // unreviewed lift or bypass existing coach permissions.
-                        val terms=exerciseSearch.trim()
-                            .replace('_',' ').replace('-',' ')
-                            .lowercase().split(Regex("\\s+"))
-                            .filter {it.isNotEmpty()}
-                        val matches=exerciseChoices.filter { id ->
-                            val text=(kotlinExerciseLabel(id)+" "+id)
-                                .replace('_',' ').replace('-',' ').lowercase()
-                            terms.all {text.contains(it)}
-                        }
+                        val matches=CoachExerciseChoiceSearchDomain.filter(
+                            exerciseChoices,exerciseSearch,::kotlinExerciseLabel)
                         OutlinedTextField(
                             value=exerciseSearch,
                             onValueChange={if(it.length<=80)exerciseSearch=it},

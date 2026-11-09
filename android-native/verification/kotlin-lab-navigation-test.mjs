@@ -257,6 +257,7 @@ assert.ok(
   swapRank.includes('samePatternOnly:Boolean=false') &&
   swapRank.includes('sharedMusclesOnly:Boolean=false') &&
   swapRank.includes('sameRoleOnly:Boolean=false') &&
+  swapRank.includes('it.attachmentId?.contains(needle,ignoreCase=true)==true') &&
   swapRank.includes('thenByDescending {it.sameRole}') &&
   swapRank.includes('Same reviewed training role') &&
   swapRank.includes('CustomSwapFit.SAME_PATTERN_AND_FAMILY') &&
@@ -265,7 +266,9 @@ assert.ok(
   swapRank.includes('val mayApplyWithoutReview:Boolean get()=false') &&
   authoringSheet.includes('replacing: CustomExerciseSlot? = null') &&
   authoringSheet.includes('CustomExerciseSwapRankingDomain.rank(') &&
-  authoringSheet.includes('Search by exercise, family, pattern or muscle') &&
+  authoringSheet.includes('Search exercise, family, pattern, attachment or muscle') &&
+  authoringSheet.includes('choice.attachmentId?.contains(needle,true)==true') &&
+  authoringSheet.includes('" · attachment: "+it.replace(') &&
   authoringSheet.includes('Text("Same pattern")') &&
   authoringSheet.includes('Text("Shared muscles")') &&
   authoringSheet.includes('Text("Same role")') &&

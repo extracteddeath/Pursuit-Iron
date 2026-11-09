@@ -37,7 +37,9 @@ class NativePinnedSetupFieldDomainTest {
         )
         val fields=NativePinnedSetupFieldDomain.fields(
             movement("leg_extension"),saved)
-        assertEquals(listOf("legacyRackHeight","oldPadSetting"),
+        // Grip was saved on a different exercise/equipment context. It too
+        // becomes a preserved orphan rather than a silent deletion.
+        assertEquals(listOf("grip","legacyRackHeight","oldPadSetting"),
             fields.filter{it.savedEarlier}.map{it.key})
         assertTrue(fields.filter{it.savedEarlier}.all{
             it.label.startsWith("Saved earlier")

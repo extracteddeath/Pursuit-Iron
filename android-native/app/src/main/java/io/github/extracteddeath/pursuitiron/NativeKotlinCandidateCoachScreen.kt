@@ -105,10 +105,12 @@ internal fun NativeKotlinCandidateCoachScreen(
     onOpenSettings:()->Unit={},
     onOpenProgram:()->Unit={},
     onOpenFuture:()->Unit={},
+    onOpenHistory:()->Unit={},
     onOpenTrain:(String)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var exerciseId by rememberSaveable { mutableStateOf("") }
+    var historyExerciseId by rememberSaveable {mutableStateOf<String?>(null)}
     var exerciseChoices by remember { mutableStateOf<List<String>>(emptyList()) }
     var choicesLoading by remember { mutableStateOf(true) }
     var assistance by remember(host) {mutableStateOf<CoachAssistancePolicy?>(null)}
@@ -197,6 +199,12 @@ internal fun NativeKotlinCandidateCoachScreen(
                 Button(onClick=onOpenSettings) {Text("Coaching settings")}
             }
             PursuitCoachDestinations(onOpenProgram,onOpenFuture)
+            PursuitDestinationRow(
+                title="My workout history",
+                description="Open your corrected, saved exercise records without coaching.",
+                onClick=onOpenHistory,
+                icon={Icon(Icons.Filled.FitnessCenter,contentDescription=null)}
+            )
         }
         return
     }
@@ -204,8 +212,22 @@ internal fun NativeKotlinCandidateCoachScreen(
         PageHeading("YOUR COACH",
             "Your coaching plan",
             "Review optional suggestions based on verified workouts. Nothing changes automatically.")
-        PursuitCoachDestinations(onOpenProgram,onOpenFuture)
-        OutlinedButton(onClick=onOpenSettings) {Text("Coaching settings")}
+        PursuitCard(highlighted=true) {
+            PursuitSectionHeading(
+                if(assistance==CoachAssistancePolicy.STANDARD) "Full coach"
+                else if(assistance==CoachAssistancePolicy.PROGRESSION_ONLY) "Straightforward progression"
+                else "Custom coaching",
+                "Your saved preferences control which suggestions can appear."
+            )
+            Text(if(assistance?.offersFatigueAdvice==true)
+                "Readiness can inform reviewed coaching suggestions. Movement restrictions and recorded set outcomes still matter."
+            else "Fatigue-aware suggestions are off. Completed sets and restrictions still matter for optional progressions.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick=onOpenSettings,modifier=Modifier.heightIn(min=48.dp)) {
+                Text("Change coaching preferences")
+            }
+        }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text("Choose an approved exercise",
@@ -234,6 +256,9 @@ internal fun NativeKotlinCandidateCoachScreen(
                         }
                     }
                 }
+                if(permitted)PursuitExerciseHeading(exerciseId,
+                    onHistory={historyExerciseId=exerciseId},
+                    subtitle="See your complete verified exercise history before reviewing a progression.")
                 OutlinedTextField(value=maximumStep,
                     onValueChange={ maximumStep=it;invalidate() },
                     label={Text("Maximum approved increase (gym units)")},
@@ -511,8 +536,19 @@ internal fun NativeKotlinCandidateCoachScreen(
             PursuitPrimaryAction("Open approved workout in Train",enabled=!busy) {
                 onOpenTrain(approvedId)
             }
-        Text("Candidate only · no automatic target edits, no JavaScript fallback, no production history cutover.",
+        PursuitCoachDestinations(onOpenProgram,onOpenFuture)
+        PursuitDestinationRow(
+            title="My workout history",
+            description="Review the exact saved sets and corrections behind your progress.",
+            onClick=onOpenHistory,
+            icon={Icon(Icons.Filled.FitnessCenter,contentDescription=null)}
+        )
+        Text("Nothing here changes your workouts automatically. Every new prescription requires a fresh verified review and your approval.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    historyExerciseId?.let { exercise ->
+        NativeKotlinExerciseHistorySheet(host,exercise,
+            onDismiss={historyExerciseId=null})
     }
 }

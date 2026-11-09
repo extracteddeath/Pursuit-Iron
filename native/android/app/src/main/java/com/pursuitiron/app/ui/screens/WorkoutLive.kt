@@ -224,7 +224,7 @@ fun SetOptionsSheet(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose: 
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             if (sub && !done) Text("${if (set.s("kind") == "drop") "Drop" else "Myo"} sets keep their structure; they never set the next load.",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Done", fontWeight = FontWeight.Bold) }
+            androidx.compose.material3.Button(onClick = onClose, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done", fontWeight = FontWeight.Bold) }
         }
     }
 }

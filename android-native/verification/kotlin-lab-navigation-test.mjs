@@ -28,6 +28,8 @@ const adaptiveRights=read('android-native/app/src/main/java/io/github/extractedd
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
 const sessionBrief=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNextSessionBrief.kt');
+const blockComparison=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCycleBlockComparisonPanel.kt');
+const comparisonDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomCycleBlockComparisonDomain.kt');
 const facilityPicker=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
 const gymScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt');
 const onboarding=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinOnboardingCandidateScreen.kt');
@@ -236,6 +238,26 @@ assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
   adaptiveRights.includes('CustomCycleChangeKind.REMOVE_PINNED') &&
   !adaptiveRights.includes('mayApplyAutomatically=true'),
   'Adaptive permissions must be source-backed, explicit, independently revocable and never an automatic edit');
+assert.ok(comparisonDomain.includes('object CustomCycleBlockComparisonDomain') &&
+  comparisonDomain.includes('audit.auditedCycleRevision==cycle.revision') &&
+  comparisonDomain.includes('audit.structuralReview?.verifiedDraft==cycle') &&
+  comparisonDomain.includes('weeks.size==block.weeks') &&
+  comparisonDomain.includes('slots.sumOf{slot->') &&
+  comparisonDomain.includes('slot.sets.count{it.type==DraftSetType.WORKING}') &&
+  comparisonDomain.includes('weekOverrideCount') &&
+  comparisonDomain.includes('val mayApplyAutomatically:Boolean get()=false') &&
+  comparisonDomain.includes('val mayApproveProgram:Boolean get()=false') &&
+  comparisonDomain.includes('val mayIssueWorkout:Boolean get()=false') &&
+  blockComparison.includes('NativeKotlinCycleBlockComparisonPanel(') &&
+  blockComparison.includes('CustomCycleBlockComparisonDomain.compare(cycle,id,currentAudit)') &&
+  blockComparison.includes('PursuitMetricStrip(listOf(') &&
+  blockComparison.includes('firstAuditedWeekDelta') &&
+  blockComparison.includes('onEditBlock(next.blockId)') &&
+  blockComparison.includes('No new program has been generated or approved here.') &&
+  plan.includes('NativeKotlinCycleBlockComparisonPanel(') &&
+  plan.includes('state.auditSourceRevision==state.sourceRevision') &&
+  plan.includes('expandedBlockId=blockId'),
+  'The future block comparison must use exact authored facts and only complete current-source audit evidence');
 assert.ok(coach.includes('if(assistance==CoachAssistancePolicy.STANDARD)') &&
   coach.includes('assistance==CoachAssistancePolicy.PROGRESSION_ONLY') &&
   coach.includes('PursuitExerciseHeading(exerciseId,') &&

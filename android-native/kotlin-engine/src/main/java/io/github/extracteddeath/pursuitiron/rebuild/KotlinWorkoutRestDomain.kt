@@ -29,8 +29,7 @@ object KotlinWorkoutRestDomain {
         // recent non-note receipt, so the cue/event ID remains unchanged
         // after a session-note edit and corrections still suppress a cue.
         val receipt=journal.receipts.lastOrNull {
-            it.operation !is KotlinJournalOperation.SessionNote &&
-                it.operation !is CustomWorkoutJournalOperation.SessionNote
+            it.operation !is KotlinJournalOperation.SessionNote
         }
         val remaining=journal.finishedByEventId==null && journal.unresolvedSetCount>0
         val selected=journal.snapshot.targets.firstOrNull{it.setKey==selectedSetKey}
@@ -58,8 +57,7 @@ object KotlinWorkoutRestDomain {
         // recent non-note receipt, so the cue/event ID remains unchanged
         // after a session-note edit and corrections still suppress a cue.
         val receipt=journal.receipts.lastOrNull {
-            it.operation !is KotlinJournalOperation.SessionNote &&
-                it.operation !is CustomWorkoutJournalOperation.SessionNote
+            it.operation !is CustomWorkoutJournalOperation.SessionNote
         }
         val remaining=journal.finishedByEventId==null && journal.unresolvedVisitCount>0
         val selectedSlot=journal.snapshot.slots.firstOrNull {slot->

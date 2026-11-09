@@ -8,7 +8,7 @@ class KotlinVerifiedPlateLayoutDomainTest {
     private fun d(value:String)=BigDecimal(value)
     private fun stock(
         bar:String="45",
-        plates:Map<String,Int>=mapOf(
+        plates:Map<String,Int> = mapOf(
             "45" to 2,"25" to 1,"10" to 2,"5" to 1,"2.5" to 1)
     ):VerifiedLoadStock.Barbell =VerifiedLoadStock.Barbell(
         LoadUnit.LB,d(bar),plates.mapKeys{d(it.key)})
@@ -50,7 +50,7 @@ class KotlinVerifiedPlateLayoutDomainTest {
     @Test fun usesConfirmedFractionalStockWithoutRounding() {
         val stock=stock("20",mapOf("1.25" to 2,"0.5" to 1))
         val layout=KotlinVerifiedPlateLayoutDomain.inspect(
-            stock,d("24.50"),LoadUnit.LB)
+            stock,d("25"),LoadUnit.LB)
         assertNotNull(layout)
         assertEquals(2,checkNotNull(layout).perSide.first().countPerSide)
         assertEquals(0,layout.perSide.first().weight.compareTo(d("1.25")))

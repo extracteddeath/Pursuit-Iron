@@ -798,6 +798,19 @@ private fun NativeKotlinCustomVisitEditor(
             } else {
             Text("Edit the values to match your set. Blank RIR stays unreported.",
                 style=MaterialTheme.typography.bodySmall)
+            if(saved==null) PursuitUseLastCompletedSet(
+                mode=referenceMode,
+                history=lastReferences,
+                key=WorkoutReferenceKey(
+                    set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP),
+                currentLoad=target,
+                enabled=!locked,
+                onApply={last->
+                    actualLoad=last.load?.stripTrailingZeros()?.toPlainString().orEmpty()
+                    actualReps=last.reps.toString()
+                    actualRir=last.actualRir?.toString().orEmpty()
+                }
+            )
             NativeSetValueFields(
                 unit=verified?.unit?.name?.lowercase() ?: "",
                 load=actualLoad,

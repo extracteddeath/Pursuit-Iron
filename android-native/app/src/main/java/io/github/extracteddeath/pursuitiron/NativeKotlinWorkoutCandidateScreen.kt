@@ -530,6 +530,20 @@ private fun NativeKotlinSetCard(
         Text("Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(!set.isResolved) PursuitUseLastCompletedSet(
+            mode=referenceMode,
+            history=lastReferences,
+            key=WorkoutReferenceKey(target.setKey),
+            currentLoad=target.load,
+            enabled=!busy,
+            onApply={last->
+                // Last is already source verified for the exact set and load
+                // basis; these are UNSAVED draft fields, not progression.
+                weight=last.load?.stripTrailingZeros()?.toPlainString().orEmpty()
+                reps=last.reps.toString()
+                effort=last.actualRir?.toString().orEmpty()
+            }
+        )
         NativeSetValueFields(
             unit=verifiedLoad?.unit?.name?.lowercase() ?: "",
             load=weight,

@@ -179,6 +179,29 @@ object CustomExerciseAuthoringDomain {
     }
 
     /**
+     * Read-only validation shared by program authoring and a proposed
+     * in-session swap. This checks CURRENT reviewed gym stock, variants,
+     * exact physical load, rep range and all advanced-set follow-ups.
+     * A successful review is NOT authority to edit an issued workout.
+     */
+    fun reviewFreshSets(
+        setup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,
+        exerciseId:String,
+        sets:List<CustomAuthoredSet>
+    ):CustomAuthoringRefusal? {
+        if(setup.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW ||
+            setup.reviewed==null)
+            return CustomAuthoringRefusal.SETUP_UNRESOLVED
+        val option=picker(setup,catalog).firstOrNull{
+            it.exerciseId==exerciseId
+        } ?:return CustomAuthoringRefusal.EXERCISE_UNAVAILABLE
+        if(sets.isEmpty() || sets.size>20)
+            return CustomAuthoringRefusal.INVALID_SETS
+        return sets.firstNotNullOfOrNull{validSet(it,option)}
+    }
+
+    /**
      * Re-evaluates the CATALOG + GYM every time. Caller-provided option data
      * can never authorize an unavailable variant or stock. No generated sets:
      * all reps, load, RIR, rest and amplifiers come from the athlete.

@@ -49,9 +49,10 @@ internal fun NativeKotlinComposerSwapSheet(
                 val min=row.min.trim().toInt()
                 val max=row.max.trim().toInt()
                 require(min in 1..100 && max in min..100)
-                choice.option.sourcePracticalReps?.let { range ->
-                    require(min>=range.minimum && max<=range.maximum)
-                }
+                if(target.type==DraftSetType.WORKING)
+                    choice.option.sourcePracticalReps?.let { range ->
+                        require(min>=range.minimum && max<=range.maximum)
+                    }
                 val rir=row.targetRir.trim().takeIf{it.isNotEmpty()}
                     ?.toInt()?.also{require(it in 0..10)}
                 val load=when(val gear=choice.option.equipment){

@@ -146,11 +146,15 @@ internal fun NativeKotlinCustomExerciseSheet(
                 it.muscle.name.contains(needle,true)
             }
     }
+    // Rank using the FULL eligible current-gym catalog first. Search only
+    // filters the visible candidates; it must never remove the source
+    // movement before its pattern/family/muscle context is inspected.
     val ranked=CustomExerciseSwapRankingDomain.rank(
-        labeled,replacing?.exerciseId,
+        available,replacing?.exerciseId,
         samePatternOnly=samePatternOnly,
         sharedMusclesOnly=sharedMusclesOnly)
-    val filtered=ranked.take(20)
+    val searched=ranked.filter {it.choice in labeled}
+    val filtered=searched.take(20)
     // Changing the selected replacement must not silently carry even the
     // NEW draft's typed load, technique or setup note into a different variant.
     LaunchedEffect(exerciseId,replacing?.slotId) {
@@ -230,8 +234,8 @@ internal fun NativeKotlinCustomExerciseSheet(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if(ranked.size>filtered.size)Text(
-                "Showing first ${filtered.size} of ${ranked.size} verified matches. Narrow your search for more.",
+            if(searched.size>filtered.size)Text(
+                "Showing first ${filtered.size} of ${searched.size} verified matches. Narrow your search for more.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         } else {

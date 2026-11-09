@@ -72,6 +72,9 @@ internal fun NativeKotlinProfileScreen(
     val favoritePreferences=remember(context) {
         context.getSharedPreferences(NativeStrengthFavorites.PREFS_NAME,0)
     }
+    val exercisePreferences=remember(context) {
+        context.getSharedPreferences(NativeExerciseFavorites.PREFS_NAME,0)
+    }
     var setup by remember(host) {mutableStateOf<NativeSavedSetupResume?>(null)}
     var history by remember(host) {
         mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)
@@ -79,6 +82,9 @@ internal fun NativeKotlinProfileScreen(
     var refresh by remember{mutableIntStateOf(0)}
     var displayName by remember{mutableStateOf("")}
     var favoriteLifts by remember{mutableStateOf<List<String>>(emptyList())}
+    var favoriteExercises by remember(host){
+        mutableStateOf<List<String>>(emptyList())
+    }
     var draftName by rememberSaveable{mutableStateOf("")}
     var editingName by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(host,refresh) {
@@ -101,6 +107,21 @@ internal fun NativeKotlinProfileScreen(
         }
     }
     val timeline=(history as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+    LaunchedEffect(current?.athleteProfileId,timeline?.manifestRevision) {
+        favoriteExercises=emptyList()
+        val athleteId=current?.athleteProfileId
+        val verified=timeline?.takeIf{it.athleteId==athleteId}
+        if(athleteId!=null && verified!=null) {
+            val stored=withContext(Dispatchers.IO) {
+                NativeExerciseFavorites.read(exercisePreferences,athleteId,
+                    NativeExerciseFavorites.loggedIds(verified).toSet())
+            }
+            if(current?.athleteProfileId==athleteId &&
+                timeline?.athleteId==athleteId &&
+                timeline?.manifestRevision==verified.manifestRevision)
+                favoriteExercises=stored
+        }
+    }
     val finished=timeline?.completions?.size?.toString()?:"—"
     val working=timeline?.let{verifiedWorkingCount(it).toString()}?:"—"
     val days=current?.trainingWeekdays?.size?.toString()?:"—"
@@ -202,6 +223,22 @@ internal fun NativeKotlinProfileScreen(
                     title=NativeStrengthFavorites.title(liftId),
                     description="Open this lift's verified estimated strength trend.",
                     onClick={onProgressLift(liftId)},
+                    icon={Icon(Icons.Filled.Star,contentDescription=null)}
+                )
+            }
+        }
+        if(current!=null && timeline?.athleteId==current.athleteProfileId) {
+            PursuitSectionHeading("Pinned exercise histories",
+                "Your ordered favorite movements from completed, verified sessions.")
+            if(favoriteExercises.isEmpty())Text(
+                "Pin any logged exercise in Progress to keep its history here.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            favoriteExercises.forEach {exerciseId ->
+                PursuitDestinationRow(
+                    title=kotlinExerciseLabel(exerciseId),
+                    description="Open full recorded sets, including corrections.",
+                    onClick={onProgressLift(exerciseId)},
                     icon={Icon(Icons.Filled.Star,contentDescription=null)}
                 )
             }

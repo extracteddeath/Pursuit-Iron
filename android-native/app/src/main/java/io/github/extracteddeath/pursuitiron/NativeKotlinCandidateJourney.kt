@@ -302,7 +302,8 @@ internal fun NativeKotlinCandidateJourney(
                             onOpenHistory={
                                 destination=KotlinCandidateDestination.HISTORY
                             },
-                            onBuildProgram={destination=KotlinCandidateDestination.STARTER})
+                            onBuildProgram={destination=KotlinCandidateDestination.STARTER},
+                            permissionHost=host)
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
                             preferredExerciseId=coachRequestedExerciseId,

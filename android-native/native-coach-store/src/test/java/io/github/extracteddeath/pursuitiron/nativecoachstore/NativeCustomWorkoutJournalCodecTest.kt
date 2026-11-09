@@ -153,6 +153,7 @@ class NativeCustomWorkoutJournalCodecTest {
         val swapped=accept(prior,CustomWorkoutJournalOperation.Swap(
             "event-swap",1L,"raise-1",next))
         val bytes=NativeCustomWorkoutJournalCodec.encode(record(swapped))
+        assertEquals(2,java.nio.ByteBuffer.wrap(bytes,4,4).int)
         val recovered=NativeCustomWorkoutJournalCodec.decode(bytes)
         assertEquals(record(swapped),recovered)
         assertEquals(origin.slots.single().slotId,
@@ -188,8 +189,10 @@ class NativeCustomWorkoutJournalCodecTest {
         val decoded=NativeCustomWorkoutJournalCodec.decode(out.toByteArray())
         assertEquals(record(initial),decoded)
         assertEquals(initial.snapshot,decoded.journal.originalSnapshot)
-        val upgraded=NativeCustomWorkoutJournalCodec.decode(
-            NativeCustomWorkoutJournalCodec.encode(decoded))
+        val preserved=NativeCustomWorkoutJournalCodec.encode(decoded)
+        assertArrayEquals(out.toByteArray(),preserved)
+        assertEquals(1,java.nio.ByteBuffer.wrap(preserved,4,4).int)
+        val upgraded=NativeCustomWorkoutJournalCodec.decode(preserved)
         assertEquals(decoded,upgraded)
     }
 

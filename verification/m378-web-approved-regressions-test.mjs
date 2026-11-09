@@ -1,6 +1,7 @@
 // Focused regression gate for approved web-engine fixes taken from PR #455.
 // Deliberately excludes native-app features, new progression methods and starting-load estimates.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import * as E from '../modules/engine-api.js';
 import { represcribeForWeek } from '../modules/next-engine/workout-history-adapter.js';
 
@@ -87,4 +88,17 @@ import { represcribeForWeek } from '../modules/next-engine/workout-history-adapt
                 }
             }
 }
-console.log('PASS selective web engine: repeating blocks, loadability, week reset, station variety');
+
+ // The Web Plan must exclude prior-pass sessions when marking the current week done.
+ // This is a compiled App.js source contract; the cursor history cases above test the actual pass logic.
+ {
+     const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+     assert.match(app, /historyDayIndex, historyForProgram, earlierPassIds, homeProgramGroups/,
+         'Plan imports the canonical current-pass helper');
+     assert.match(app, /const earlier = earlierPassIds\(program, history\)/,
+         'Plan computes which entries belong to earlier passes');
+     assert.match(app, /h\.id != null && earlier\.has\(h\.id\)/,
+         'Plan excludes an earlier pass before marking a day complete');
+ }
+
+console.log('PASS selective web engine: repeating blocks, loadability, week reset, station variety, Plan current-pass wiring');

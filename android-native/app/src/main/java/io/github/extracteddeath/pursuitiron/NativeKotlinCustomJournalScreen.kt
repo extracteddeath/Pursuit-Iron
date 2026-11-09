@@ -610,7 +610,7 @@ internal fun NativeKotlinCustomJournalScreen(
         val source=(active?.receipts?.firstOrNull{
             it.operation.eventId==swapEventId
         }?.operation as? CustomWorkoutJournalOperation.Swap)
-        if(source!=null && active.finishedByEventId==null) {
+        if(source!=null && active!=null && active.finishedByEventId==null) {
             AlertDialog(
                 onDismissRequest={if(!busy)undoSwapConfirmEventId=null},
                 title={Text("Undo workout swap?")},

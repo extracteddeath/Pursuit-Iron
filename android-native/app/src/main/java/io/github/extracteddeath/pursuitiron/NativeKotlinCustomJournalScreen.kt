@@ -809,25 +809,20 @@ private fun NativeKotlinCustomVisitEditor(
             } else {
             Text("Edit the values to match your set. Blank RIR stays unreported.",
                 style=MaterialTheme.typography.bodySmall)
-            if(verified!=null)
-                OutlinedTextField(value=actualLoad,onValueChange={actualLoad=it},
-                    label={Text("Weight · ${verified.unit.name.lowercase()}")},
-                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
-                    singleLine=true,modifier=Modifier.fillMaxWidth(),
-                    isError=actualLoad.isNotBlank()&&weight==null)
-            val repsField:@Composable (Modifier)->Unit={fieldModifier->
-                OutlinedTextField(value=actualReps,onValueChange={actualReps=it},
-                    label={Text("Reps completed")},singleLine=true,
-                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                    modifier=fieldModifier,
-                    isError=actualReps.isNotBlank()&&reps==null)
-            }
-            val rirField:@Composable (Modifier)->Unit={fieldModifier->
-                OutlinedTextField(value=actualRir,onValueChange={actualRir=it},
-                    label={Text("RIR · optional")},
-                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                    singleLine=true,modifier=fieldModifier,isError=!effortValid)
-            }
+            NativeSetValueFields(
+                unit=verified?.unit?.name?.lowercase().orEmpty(),
+                load=actualLoad,
+                reps=actualReps,
+                rir=actualRir,
+                enabled=!locked,
+                onLoad={actualLoad=it},
+                onReps={actualReps=it},
+                onRir={actualRir=it},
+                showLoad=verified!=null,
+                loadError=actualLoad.isNotBlank()&&weight==null,
+                repsError=actualReps.isNotBlank()&&reps==null,
+                rirError=!effortValid
+            )
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->
                 Button(enabled=loadValid&&reps!=null&&effortValid,
                     modifier=buttonModifier,
@@ -850,27 +845,21 @@ private fun NativeKotlinCustomVisitEditor(
             }
             val largeText=LocalDensity.current.fontScale>=1.35f
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                if(largeText || maxWidth<300.dp) {
+                if(largeText || maxWidth<350.dp) {
                     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                        repsField(Modifier.fillMaxWidth())
-                        rirField(Modifier.fillMaxWidth())
                         completeButton(Modifier.fillMaxWidth())
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                             skipButton(Modifier.weight(1f))
                             failedButton(Modifier.weight(1f))
                         }
                     }
                 } else {
-                    Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            repsField(Modifier.weight(1f))
-                            rirField(Modifier.weight(1f))
-                        }
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            skipButton(Modifier.weight(1f))
-                            failedButton(Modifier.weight(1f))
-                            completeButton(Modifier.weight(1f))
-                        }
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                        skipButton(Modifier.weight(1f))
+                        failedButton(Modifier.weight(1f))
+                        completeButton(Modifier.weight(1f))
                     }
                 }
             }

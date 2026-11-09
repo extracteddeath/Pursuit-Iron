@@ -569,7 +569,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val exactIssuedTarget=if(custom) {
             val found=customIssuedStore.open(owner.ownerKey,workoutId)
                 as? NativeCustomJournalResult.Durable
-            found?.issued?.athleteId==owner.athleteId &&
+            found!=null && found.issued.athleteId==owner.athleteId &&
                 found.issued.journal.snapshot.slots.any{slot->
                     slot.exerciseId==exerciseId &&
                     slot.sets.any{matches(it.prescription.load)}

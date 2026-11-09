@@ -117,7 +117,9 @@ internal fun NativeKotlinCustomExerciseSheet(
     onRestore: (() -> Unit)? = null,
     feedback: String? = null,
     /** Explicit replacement only; existing authored sets are NEVER reused. */
-    replacing: CustomExerciseSlot? = null
+    replacing: CustomExerciseSlot? = null,
+    /** Issued-workout replacement is not a program-draft edit. */
+    workoutOnlySwap: Boolean = false
 ) {
     var search by remember(existing?.slotId) { mutableStateOf("") }
     var exerciseId by remember(existing?.slotId) {
@@ -125,6 +127,7 @@ internal fun NativeKotlinCustomExerciseSheet(
     }
     var samePatternOnly by remember(replacing?.slotId) {mutableStateOf(false)}
     var sharedMusclesOnly by remember(replacing?.slotId) {mutableStateOf(false)}
+    var sameRoleOnly by remember(replacing?.slotId) {mutableStateOf(false)}
     var swapConfirmation by remember(replacing?.slotId) {mutableStateOf(false)}
     var note by remember(existing?.slotId,replacing?.slotId) {
         mutableStateOf(existing?.coachNote.orEmpty())
@@ -152,7 +155,8 @@ internal fun NativeKotlinCustomExerciseSheet(
     val ranked=CustomExerciseSwapRankingDomain.rank(
         available,replacing?.exerciseId,
         samePatternOnly=samePatternOnly,
-        sharedMusclesOnly=sharedMusclesOnly)
+        sharedMusclesOnly=sharedMusclesOnly,
+        sameRoleOnly=sameRoleOnly)
     val searched=ranked.filter {it.choice in labeled}
     val filtered=searched.take(20)
     // Changing the selected replacement must not silently carry even the
@@ -175,9 +179,13 @@ internal fun NativeKotlinCustomExerciseSheet(
             else -> "Edit authored sets"
         },style=MaterialTheme.typography.titleLarge)
         replacing?.let {source ->
-            Text("Replacing ${kotlinExerciseLabel(source.exerciseId)} on this program day only.",
+            Text(if(workoutOnlySwap)
+                "Replacing ${kotlinExerciseLabel(source.exerciseId)} in this workout only. Your saved program will not change."
+                else "Replacing ${kotlinExerciseLabel(source.exerciseId)} on this program day only.",
                 style=MaterialTheme.typography.titleMedium)
-            Text("Choose a new exercise and author new sets. Old weights, advanced techniques, attachments, notes and history are never transferred. Protected week edits and supersets require separate review.",
+            Text(if(workoutOnlySwap)
+                "Choose a verified replacement and author its new sets. Existing recorded work is protected; old loads, techniques, attachments and notes do not carry over. Only an unstarted, unlinked exercise can be swapped."
+                else "Choose a new exercise and author new sets. Old weights, advanced techniques, attachments, notes and history are never transferred. Protected week edits and supersets require separate review.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -198,26 +206,34 @@ internal fun NativeKotlinCustomExerciseSheet(
             if(replacing!=null) {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                    FilterChip(selected=!samePatternOnly && !sharedMusclesOnly,
-                        onClick={samePatternOnly=false;sharedMusclesOnly=false},
+                    FilterChip(selected=!samePatternOnly && !sharedMusclesOnly && !sameRoleOnly,
+                        onClick={samePatternOnly=false;sharedMusclesOnly=false;sameRoleOnly=false},
                         label={Text("All available")})
                     FilterChip(selected=samePatternOnly,
                         onClick={
                             samePatternOnly=!samePatternOnly
                             sharedMusclesOnly=false
+                            sameRoleOnly=false
                         },label={Text("Same pattern")})
                     FilterChip(selected=sharedMusclesOnly,
                         onClick={
                             sharedMusclesOnly=!sharedMusclesOnly
                             samePatternOnly=false
+                            sameRoleOnly=false
                         },label={Text("Shared muscles")})
+                    FilterChip(selected=sameRoleOnly,
+                        onClick={
+                            sameRoleOnly=!sameRoleOnly
+                            samePatternOnly=false
+                            sharedMusclesOnly=false
+                        },label={Text("Same role")})
                 }
                 val source=available.firstOrNull {
                     it.exerciseId==replacing.exerciseId
                 }
                 Text(if(source==null)
                     "The former exercise is not in the current gym/catalog. No similarity score is assumed."
-                    else "Alternatives rank by reviewed movement pattern, family and credited muscles. A match is not a guarantee of equal load or effect.",
+                    else "Alternatives rank by reviewed movement pattern, family, training role and credited muscles. A match is not a guarantee of equal load or effect.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -377,15 +393,20 @@ internal fun NativeKotlinCustomExerciseSheet(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2)
         }
-        Text("Saving checks actual gym loading and every set again. A draft is never automatically approved.",
+        Text(if(workoutOnlySwap)
+            "Your reviewed replacement is rechecked against the gym and saved immediately to this workout only after confirmation. It never edits the approved program."
+            else "Saving checks actual gym loading and every set again. A draft is never automatically approved.",
             style = MaterialTheme.typography.bodySmall)
         val canSubmit=!busy && parsed!=null && option!=null &&
             note.length<=1000 && (replacing==null ||
                 exerciseId!=replacing.exerciseId)
         if(replacing!=null && swapConfirmation) {
             PursuitHistoryStatus(
-                "Confirm program replacement",
-                "${kotlinExerciseLabel(replacing.exerciseId)} → ${kotlinExerciseLabel(exerciseId)}. Only this day changes. The replacement gets a new history-safe slot identity. All new targets are exactly the sets entered here; the edit is undoable, and a fresh program audit is required.")
+                if(workoutOnlySwap) "Confirm workout-only replacement"
+                    else "Confirm program replacement",
+                if(workoutOnlySwap)
+                    "${kotlinExerciseLabel(replacing.exerciseId)} → ${kotlinExerciseLabel(exerciseId)}. Only this active workout changes. The replacement starts with fresh sets and a new slot identity; earlier recorded work and the approved program stay intact. After recording new work, this slot cannot be swapped again."
+                else "${kotlinExerciseLabel(replacing.exerciseId)} → ${kotlinExerciseLabel(exerciseId)}. Only this day changes. The replacement gets a new history-safe slot identity. All new targets are exactly the sets entered here; the edit is undoable, and a fresh program audit is required.")
             OutlinedButton(onClick={swapConfirmation=false},
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                 Text("Keep editing")
@@ -403,7 +424,8 @@ internal fun NativeKotlinCustomExerciseSheet(
             enabled=canSubmit,
             modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
             Text(if(replacing!=null) {
-                if(swapConfirmation)"Confirm this program swap"
+                if(swapConfirmation)if(workoutOnlySwap)
+                    "Confirm workout swap" else "Confirm this program swap"
                 else "Review replacement"
             } else saveLabel)
         }

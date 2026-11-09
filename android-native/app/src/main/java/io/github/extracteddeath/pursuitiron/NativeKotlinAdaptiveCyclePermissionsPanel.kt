@@ -216,7 +216,7 @@ internal fun NativeKotlinAdaptiveCyclePermissionsPanel(
                                 }
                             message=if(result is NativeAdaptivePermissionWrite.Committed &&
                                 verified?.revision==result.revision &&
-                                verified.allowedKinds==chosen)
+                                verified?.allowedKinds==chosen)
                                 "Adaptation permissions saved for this program. Proposals still require review."
                             else "Could not verify saved permissions. Review the reloaded record before continuing."
                             saving=false

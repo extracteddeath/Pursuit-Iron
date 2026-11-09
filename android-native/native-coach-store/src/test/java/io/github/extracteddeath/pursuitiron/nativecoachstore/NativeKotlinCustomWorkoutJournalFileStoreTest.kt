@@ -656,6 +656,84 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             restored.issued.journal.originalSnapshot.slots.single().exerciseId)
     }
 
+    @Test fun undoLiveSwapPersistsOriginalSessionAndAllowsOriginalFinish() {
+        initialize(withPullup=true);approve();prepareWeek();enroll()
+        val approved=issueWeek().issued.journal
+        val original=approved.snapshot
+        val swapped=issued.swap("owner-1","workout-2",
+            "swap-reversible",0L,"slot-0","pullup",
+            listOf(set(8)),"New pullup")
+        assertTrue(swapped is NativeCustomJournalResult.Durable)
+        val restored=issued.undoSwap("owner-1","workout-2",
+            "undo-reversible",1L,"swap-reversible")
+        assertTrue(restored.toString(),
+            restored is NativeCustomJournalResult.Durable)
+        val journal=(restored as NativeCustomJournalResult.Durable)
+            .issued.journal
+        assertEquals(original,journal.snapshot)
+        assertEquals(original,journal.originalSnapshot)
+        assertEquals(2L,journal.revision)
+        assertEquals(2,journal.receipts.size)
+        assertEquals(1,journal.unresolvedVisitCount)
+
+        val fresh=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(
+                temp.root.toPath()),identity,prepared,preflight,
+            history,composerJournal,null,sources)
+        assertEquals(journal,(fresh.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal)
+        val retry=fresh.undoSwap("owner-1","workout-2",
+            "undo-reversible",1L,"swap-reversible")
+        assertTrue((retry as NativeCustomJournalResult.Durable).replayed)
+        val duplicate=fresh.undoSwap("owner-1","workout-2",
+            "undo-again",2L,"swap-reversible")
+        assertEquals(CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE,
+            (duplicate as NativeCustomJournalResult.Rejected).journalReason)
+        val logged=fresh.record("owner-1","workout-2",
+            recordSet("original-after-undo",2))
+        assertTrue(logged is NativeCustomJournalResult.Durable)
+        val finished=NativeKotlinCustomHistoryTransaction(
+            history,fresh,fence,identity).complete(
+                "owner-1","athlete-1","workout-2",
+                CustomWorkoutJournalOperation.Finish("finish-undo",3L))
+        assertTrue(finished.toString(),
+            finished is NativeCustomFinishResult.Committed)
+        val completed=(fresh.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals("finish-undo",completed.finishedByEventId)
+        assertEquals(original,completed.snapshot)
+        assertEquals(4,completed.receipts.size)
+    }
+
+    @Test fun undoLiveSwapRefusesTouchedReplacementAndForeignOwner() {
+        initialize(withPullup=true);approve();prepareWeek();enroll();issueWeek()
+        val new=(issued.swap("owner-1","workout-2",
+            "swap-started",0L,"slot-0","pullup",
+            listOf(set(8)),"") as NativeCustomJournalResult.Durable)
+            .issued.journal
+        val setKey=new.snapshot.slots.single().sets.single().setKey
+        assertTrue(issued.record("owner-1","workout-2",
+            CustomWorkoutJournalOperation.Record(
+                "performed-replacement",1L,CustomWorkoutVisitKey(
+                    setKey,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,9,2)))
+            is NativeCustomJournalResult.Durable)
+        val denied=issued.undoSwap("owner-1","workout-2",
+            "undo-touched",2L,"swap-started")
+        assertEquals(CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED,
+            (denied as NativeCustomJournalResult.Rejected).journalReason)
+        current=NativeKotlinOwnerIdentity("other-owner","athlete-1")
+        assertEquals(NativeCustomJournalRefusal.NOT_AUTHORIZED,
+            (issued.undoSwap("owner-1","workout-2",
+                "foreign-undo",2L,"swap-started")
+                as NativeCustomJournalResult.Rejected).reason)
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals("pullup",(issued.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot
+            .slots.single().exerciseId)
+    }
+
     @Test fun liveSwapRejectsStartedOriginalAndUnverifiedEquipment() {
         initialize();approve();prepareWeek();enroll();issueWeek()
         assertEquals(NativeCustomJournalRefusal.SWAP_TARGET_UNAVAILABLE,

@@ -78,6 +78,15 @@ for(const phrase of [
   'modifier=Modifier.heightIn(min=48.dp)',
   'horizontalScroll(rememberScrollState())'
 ])assert.ok(sharedFocus.includes(phrase),'Missing shared workout focus behavior: '+phrase);
+assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
+  sharedFocus.includes('onReadinessChange(option)') &&
+  sharedFocus.includes('onMovementRestrictedChange') &&
+  sharedFocus.includes('modifier=Modifier.heightIn(min=48.dp)') &&
+  composer.includes('PursuitWorkoutReadinessPanel(') &&
+  journal.includes('PursuitWorkoutReadinessPanel(') &&
+  composer.includes('if(!presentation.finished) {') &&
+  journal.includes('if(!finished && current.finishedByEventId==null) {'),
+  'Both workout types must expose the shared editable readiness/restriction controls only while training');
 assert.ok(composer.includes('PursuitWorkoutFocusHeader(') &&
   journal.includes('PursuitWorkoutFocusHeader('),
   'Custom and generated workouts must share the same accessible focus panel');

@@ -536,7 +536,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
             (authoringSourceStore.read(owner.ownerKey)
                 as? NativeAuthoringSourceRead.Found)?.source
         }.getOrNull()?.takeIf {
-            it.ownerKey==owner.ownerKey && it.athleteId==owner.athleteId
+            it.ownerKey==owner.ownerKey && it.athleteId==owner.athleteId &&
+                it.setup.mayReviewProgramCandidate &&
+                it.setup.reviewed?.athleteProfileId==owner.athleteId
         }
         val movement=source?.catalog?.firstOrNull{it.exerciseId==exerciseId}
         return NativePinnedSetupFieldDomain.fields(movement,savedSetup)

@@ -294,6 +294,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
             verified.second else null
     }
     val facts=(result as? NativeKotlinMixedFactsReadResult.Review)?.facts
+    val strengthClub=remember(facts) { facts?.let(NativeStrengthClubDomain::review) }
     val completed=facts?.mostRepsAtLoad.orEmpty()
         .filter{it.key.basis==LoadBasis.BARBELL_TOTAL}
     val displayUnit=LoadUnit.valueOf(bodyweightUnit)
@@ -352,6 +353,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 NativeKotlinStrengthOverview(overviewItems,trendExerciseId) {
                     trendExerciseId=it
                 }
+                NativeKotlinStrengthClubPanel(strengthClub)
                 val samples=remember(timeline,trendExerciseId,displayUnit) {
                     timeline?.let {
                         verifiedStrengthTrend(it,trendExerciseId,displayUnit)

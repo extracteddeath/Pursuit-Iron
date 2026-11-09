@@ -154,6 +154,26 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   infoSheet.includes('Text("Open full exercise history")') &&
   !infoSheet.includes('controller.record('),
   'Info must be a read-only, source-backed sheet with exact planned set facts and a full History action for both workout types');
+const customPlate=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomPlateSheet.kt');
+const verifiedPlateDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinVerifiedPlateLayoutDomain.kt');
+assert.ok(journal.includes('NativeKotlinCustomPlateSheet(host,request,') &&
+  journal.includes('current.originalSnapshot.stamp') &&
+  journal.includes('onShowPlates={load,unit,basis->') &&
+  journal.includes('verified?.basis==LoadBasis.BARBELL_TOTAL') &&
+  journal.includes('onClick={onShowPlates(actualLoad,verified.unit,verified.basis)}') &&
+  customPlate.includes('host.readCustomAuthoringSource()') &&
+  customPlate.includes('source.revision!=stamp.gymCatalogSourceRevision') &&
+  customPlate.includes('source.athleteId!=stamp.athleteId') &&
+  customPlate.includes('reviewed.gym.gymId!=stamp.gymId') &&
+  customPlate.includes('CustomExerciseAuthoringDomain.picker(') &&
+  customPlate.includes('stock=option.availability.stock') &&
+  customPlate.includes('as? VerifiedLoadStock.Barbell') &&
+  customPlate.includes('KotlinVerifiedPlateLayoutDomain.inspect(') &&
+  customPlate.includes('NativeEditSheet(busy=false,onDismiss=onDismiss)') &&
+  verifiedPlateDomain.includes('EquipmentLoadDomain.inspect(bar,entered,unit)') &&
+  verifiedPlateDomain.includes('private const val MAX_STATES=100_000') &&
+  !customPlate.includes('controller.record('),
+  'Plate viewer may only display exact current owner-matched custom barbell stock and must not log or change workout loads');
 const restBridge=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt');
 const timer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt');
 for(const source of [journal,composer]) {

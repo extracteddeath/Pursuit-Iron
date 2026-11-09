@@ -24,6 +24,7 @@ const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pur
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
 const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
 const facilityPicker=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
 const gymScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt');
@@ -159,6 +160,35 @@ assert.ok(trend.includes('.sortedBy {it.completionOrder}') &&
   trend.includes('CustomWorkoutVisitPart.MAIN') &&
   trend.includes('LoadBasis.BARBELL_TOTAL'),
   'The accessible chart must expose chronological verified points and full history, not predictions');
+assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
+  shared.includes('modifier.fillMaxWidth().heightIn(min=56.dp)') &&
+  shared.includes('onClick=onToggle') &&
+  shared.includes('contentDescription=if(expanded)"Collapse $title" else "Expand $title"') &&
+  outline.includes('PursuitDisclosureRow(') &&
+  plan.includes('PursuitDisclosureRow(') &&
+  plan.includes('var blockExpanded by rememberSaveable(draft.cycleId,block.blockId)') &&
+  plan.includes('var dayExpanded by rememberSaveable(') &&
+  plan.includes('if(blockExpanded) {') &&
+  plan.includes('if(dayExpanded) {') &&
+  plan.includes('controller.reorderBlock(') &&
+  plan.includes('controller.moveExercise(') &&
+  plan.includes('exerciseEditor = Triple(') &&
+  plan.includes('controller.previewAuthoredDay(') &&
+  plan.includes('controller.undo()') &&
+  plan.includes('Advanced program details') &&
+  !plan.includes('Text("Custom authoring",'),
+  'Program editor must have accessible collapsed block/day hierarchy without losing real authoring controls');
+assert.ok(coach.includes('if(assistance==CoachAssistancePolicy.STANDARD)') &&
+  coach.includes('assistance==CoachAssistancePolicy.PROGRESSION_ONLY') &&
+  coach.includes('PursuitExerciseHeading(exerciseId,') &&
+  coach.includes('NativeKotlinExerciseHistorySheet(host,exercise,') &&
+  coach.includes('host.currentVerifiedCoachExerciseChoices()') &&
+  coach.includes('onOpenHistory:()->Unit={}') &&
+  coach.includes('onClick=onOpenHistory') &&
+  journey.includes('onOpenHistory={navigate(KotlinCandidateDestination.HISTORY)}') &&
+  coach.includes('PursuitCoachDestinations(onOpenProgram,onOpenFuture)') &&
+  !coach.includes('Candidate only · no automatic'),
+  'Coach should prioritize verified mode, expose full exercise history, and route to saved workout records');
 assert.ok(strengthMeasure.includes('BigDecimal("0.45359237")') &&
   strengthMeasure.includes('fun epley(') &&
   strengthMeasure.includes('fun relativeStrength('),

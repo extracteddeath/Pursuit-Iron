@@ -101,6 +101,15 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     } ?:return
     val prior=comparison.prior
     val next=comparison.next
+    val selectedBlock=cycle.blocks.single {it.blockId==next.blockId}
+    val protectedVisits=selectedBlock.days.sumOf {day ->
+        day.slots.count {slot ->
+            slot.pinned || slot.attachmentId!=null ||
+                slot.supersetGroup!=null || slot.coachNote.isNotBlank() ||
+                slot.sets.any {it.amplifier!=null}
+        }
+    }
+    val customWeekOverrides=cycle.weekOverrides[next.blockId].orEmpty().size
     // Snapshot cross-module nullable properties before Compose branches.
     // A null check on a public property alone is not a Kotlin smart cast.
     val priorAuditedSets=prior.auditedWeeklyWorkingSets
@@ -235,6 +244,25 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 Text("${comparison.exerciseChanges.size-8} more movement differences " +
                     "are available in the full program editor.",
                     style=MaterialTheme.typography.bodySmall)
+        }
+        if(protectedVisits>0 || customWeekOverrides>0) {
+            HorizontalDivider()
+            PursuitSectionHeading("Protect your custom work",
+                "These are saved athlete-authored details, not coach suggestions.")
+            if(protectedVisits>0)Text(
+                "$protectedVisits protected exercise visit(s): pinned movements, " +
+                    "notes, attachments, supersets or advanced sets.",
+                style=MaterialTheme.typography.bodyMedium)
+            if(customWeekOverrides>0)Text(
+                "$customWeekOverrides week-specific custom override(s) are retained.",
+                style=MaterialTheme.typography.bodyMedium)
+            Text(
+                "An adaptive replacement must keep protected visits in their " +
+                    "exact session and position, including their original sets. " +
+                    "Week-specific overrides still require a separate lossless " +
+                    "migration before that block can be regenerated.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         OutlinedButton(
             onClick={onEditBlock(next.blockId)},

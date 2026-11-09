@@ -225,23 +225,27 @@ internal fun PursuitTrainingReadinessControls(
     onReadinessChange:(CoachReadiness)->Unit,
     movementRestricted:Boolean,
     onRestrictionChange:(Boolean)->Unit,
-    enabled:Boolean=true
+    enabled:Boolean=true,
+    showReadiness:Boolean=true,
+    restrictionLabel:String="Movement restricted"
 ) {
     Column(Modifier.fillMaxWidth(),
         verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-        Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
-            verticalAlignment=Alignment.CenterVertically) {
-            CoachReadiness.entries.forEach { option ->
-                FilterChip(
-                    selected=readiness==option,
-                    enabled=enabled,
-                    onClick={onReadinessChange(option)},
-                    label={Text(option.name.lowercase().replaceFirstChar{
-                        it.uppercase()
-                    })}
-                )
+        if(showReadiness) {
+            Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                verticalAlignment=Alignment.CenterVertically) {
+                CoachReadiness.entries.forEach { option ->
+                    FilterChip(
+                        selected=readiness==option,
+                        enabled=enabled,
+                        onClick={onReadinessChange(option)},
+                        label={Text(option.name.lowercase().replaceFirstChar{
+                            it.uppercase()
+                        })}
+                    )
+                }
             }
         }
         Row(Modifier.fillMaxWidth(),
@@ -249,7 +253,7 @@ internal fun PursuitTrainingReadinessControls(
             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
             Checkbox(checked=movementRestricted,enabled=enabled,
                 onCheckedChange=onRestrictionChange)
-            Text("Movement restricted",
+            Text(restrictionLabel,
                 style=MaterialTheme.typography.bodyMedium,
                 modifier=Modifier.weight(1f))
         }

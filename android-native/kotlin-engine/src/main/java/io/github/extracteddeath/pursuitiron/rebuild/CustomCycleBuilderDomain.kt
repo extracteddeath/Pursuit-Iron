@@ -190,7 +190,11 @@ object CustomCycleBuilderDomain {
                 CustomCycleBuilderRefusal.MISSING_SLOT)
         if(!id.matches(newSlot.slotId) || !id.matches(newSlot.exerciseId) ||
             newSlot.slotId==oldSlotId ||
-            day.slots.any{it.slotId==newSlot.slotId} ||
+            current.blocks.any{blockCandidate ->
+                blockCandidate.days.any{dayCandidate ->
+                    dayCandidate.slots.any{it.slotId==newSlot.slotId}
+                }
+            } ||
             newSlot.exerciseId==previous.exerciseId ||
             previous.supersetGroup!=null || newSlot.supersetGroup!=null ||
             current.weekOverrides[blockId].orEmpty().any{

@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=1
+    private const val VERSION=2
     const val MAX_BYTES=2_000_000
     private const val MAX_RECEIPTS=2048
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -80,6 +80,16 @@ internal object NativeCustomWorkoutJournalCodec {
                 writeUTF(event.eventId)
                 writeLong(event.expectedRevision)
             }
+            is CustomWorkoutJournalOperation.Swap->{
+                writeByte(3)
+                writeUTF(event.eventId)
+                writeLong(event.expectedRevision)
+                writeUTF(event.previousSlotId)
+                val slot=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(
+                    event.replacement)
+                writeInt(slot.size)
+                write(slot)
+            }
         }
     }
     private fun DataInputStream.operation():CustomWorkoutJournalOperation =
@@ -102,6 +112,19 @@ internal object NativeCustomWorkoutJournalCodec {
                     CustomWorkoutVisitKey(setKey,part),outcome,observed,corrected)
             }
             2->CustomWorkoutJournalOperation.Finish(readUTF(),readLong())
+            3->{
+                val eventId=readUTF()
+                val revision=readLong()
+                val previous=readUTF()
+                val length=readInt()
+                if(length !in 24..NativeKotlinCustomWorkoutSnapshotCodec.MAX_BYTES ||
+                    length>available())
+                    throw IOException("invalid swap target bytes")
+                val slot=ByteArray(length)
+                readFully(slot)
+                CustomWorkoutJournalOperation.Swap(eventId,revision,previous,
+                    NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(slot))
+            }
             else->throw IOException("invalid workout receipt kind")
         }
 
@@ -144,12 +167,15 @@ internal object NativeCustomWorkoutJournalCodec {
             "Journal effective state differs from receipt replay"
         }
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
+        val original=NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            state.originalSnapshot)
         val out=ByteArrayOutputStream()
         DataOutputStream(out).use{data->
             data.writeInt(MAGIC);data.writeInt(VERSION)
             data.writeUTF(record.ownerKey)
             data.writeUTF(state.workoutId)
             data.writeUTF(state.preparedConsentFingerprint)
+            data.writeInt(original.size);data.write(original)
             data.writeInt(snapshot.size);data.write(snapshot)
             data.writeLong(state.revision)
             data.textOptional(state.finishedByEventId)
@@ -168,7 +194,9 @@ internal object NativeCustomWorkoutJournalCodec {
         if(bytes.size !in 16..MAX_BYTES)throw IOException("invalid journal size")
         return try{
             DataInputStream(ByteArrayInputStream(bytes)).use{data->
-                if(data.readInt()!=MAGIC || data.readInt()!=VERSION)
+                val header=data.readInt()
+                val version=data.readInt()
+                if(header!=MAGIC || version !in 1..VERSION)
                     throw IOException("unsupported custom journal format")
                 val owner=data.readUTF()
                 val workout=data.readUTF()
@@ -181,8 +209,17 @@ internal object NativeCustomWorkoutJournalCodec {
                     throw IOException("invalid journal target size")
                 val targetBytes=ByteArray(snapshotSize)
                 data.readFully(targetBytes)
-                val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.decode(
+                val original=NativeKotlinCustomWorkoutSnapshotCodec.decode(
                     targetBytes)
+                val snapshot=if(version>=2) {
+                    val size=data.readInt()
+                    if(size !in 16..NativeKotlinCustomWorkoutSnapshotCodec.MAX_BYTES ||
+                        size>data.available())
+                        throw IOException("invalid effective journal target")
+                    val content=ByteArray(size)
+                    data.readFully(content)
+                    NativeKotlinCustomWorkoutSnapshotCodec.decode(content)
+                } else original
                 val revision=data.readLong()
                 val finish=data.textOptional()
                 val count=data.readInt()
@@ -193,8 +230,11 @@ internal object NativeCustomWorkoutJournalCodec {
                 }
                 if(data.available()!=0)
                     throw IOException("trailing custom workout journal bytes")
-                NativeCustomWorkoutJournalRecord(owner,replay(
-                    snapshot,workout,fingerprint,receipts,revision,finish))
+                val result=replay(
+                    original,workout,fingerprint,receipts,revision,finish)
+                if(result.snapshot!=snapshot)
+                    throw IOException("stored workout swap state differs from events")
+                NativeCustomWorkoutJournalRecord(owner,result)
             }
         }catch(ex:Exception){
             throw IOException("invalid stored custom workout journal",ex)

@@ -294,4 +294,92 @@ class CustomWorkoutJournalDomainTest {
         assertEquals(before.originalSnapshot,after.originalSnapshot)
     }
 
+
+    @Test fun undoSwapRestoresExactApprovedSlotAndKeepsUnrelatedActuals() {
+        val original=twoSlotInitial()
+        val untouched=CustomWorkoutJournalOperation.Record(
+            "logged-other",0L,
+            CustomWorkoutVisitKey("cycle-1:w1:d0:slot-b:s1",
+                CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(9,2))
+        val before=accept(original,untouched)
+        val swapped=accept(before,substitute())
+        val undo=CustomWorkoutJournalOperation.UndoSwap(
+            "undo-1",2L,"swap-1")
+        val recovered=accept(swapped,undo)
+        assertEquals(original.snapshot,recovered.snapshot)
+        assertEquals(original.originalSnapshot,recovered.originalSnapshot)
+        assertEquals(before.effectiveVisits,recovered.effectiveVisits)
+        assertEquals(3L,recovered.revision)
+        assertEquals(3,recovered.receipts.size)
+        assertEquals(CustomWorkoutVisitKey(first,CustomWorkoutVisitPart.MAIN),
+            CustomWorkoutJournalDomain.nextUnresolvedVisit(recovered))
+        val exactRetry=CustomWorkoutJournalDomain.reduce(recovered,undo)
+            as CustomWorkoutJournalDecision.Proposed
+        assertTrue(exactRetry.replayed)
+        assertEquals(recovered,exactRetry.draft)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE),
+            CustomWorkoutJournalDomain.reduce(recovered,
+                CustomWorkoutJournalOperation.UndoSwap(
+                    "undo-twice",3L,"swap-1")))
+    }
+
+    @Test fun undoRefusesRecordedReplacementAndUnrelatedOrStaleSwapEvents() {
+        val original=twoSlotInitial()
+        val swapped=accept(original,substitute(revision=0L))
+        val target="cycle-1:w1:d0:slot-new:s1"
+        val active=accept(swapped,CustomWorkoutJournalOperation.Record(
+            "performed-new",1L,
+            CustomWorkoutVisitKey(target,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(10,2)))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED),
+            CustomWorkoutJournalDomain.reduce(active,
+                CustomWorkoutJournalOperation.UndoSwap(
+                    "unsafe-undo",2L,"swap-1")))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE),
+            CustomWorkoutJournalDomain.reduce(swapped,
+                CustomWorkoutJournalOperation.UndoSwap(
+                    "unknown-undo",1L,"missing")))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.STALE_REVISION),
+            CustomWorkoutJournalDomain.reduce(swapped,
+                CustomWorkoutJournalOperation.UndoSwap(
+                    "stale-undo",0L,"swap-1")))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.EVENT_ID_COLLISION),
+            CustomWorkoutJournalDomain.reduce(swapped,
+                CustomWorkoutJournalOperation.UndoSwap(
+                    "swap-1",1L,"swap-1")))
+    }
+
+    @Test fun undoMayReverseLatestSlotInSwapChainButCannotReuseDiscardedSetIds() {
+        val original=twoSlotInitial()
+        val firstSwap=accept(original,substitute(revision=0L))
+        val secondReplacement=substitute().replacement.copy(
+            slotId="slot-next",exerciseId="second_curl",
+            sets=substitute().replacement.sets.map {
+                it.copy(slotId="slot-next",
+                    setKey="cycle-1:w1:d0:slot-next:s1")
+            })
+        val second=accept(firstSwap,CustomWorkoutJournalOperation.Swap(
+            "swap-2",1L,"slot-new",secondReplacement))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE),
+            CustomWorkoutJournalDomain.reduce(second,
+                CustomWorkoutJournalOperation.UndoSwap(
+                    "wrong-order",2L,"swap-1")))
+        val restoreMid=accept(second,CustomWorkoutJournalOperation.UndoSwap(
+            "undo-2",2L,"swap-2"))
+        assertEquals("slot-new",restoreMid.snapshot.slots.first().slotId)
+        val restoreOriginal=accept(restoreMid,
+            CustomWorkoutJournalOperation.UndoSwap("undo-1",3L,"swap-1"))
+        assertEquals(original.snapshot,restoreOriginal.snapshot)
+        val reused=substitute("swap-reuse",4L)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_IDENTITY_CONFLICT),
+            CustomWorkoutJournalDomain.reduce(restoreOriginal,reused))
+    }
 }

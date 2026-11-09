@@ -17,6 +17,7 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 /** Exact input validation belongs to the pure Kotlin engine, not Compose. */
 private fun performed(
@@ -29,6 +30,10 @@ private fun performed(
     )?.performed
 
 private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {
+    NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE ->
+        "Swapping requires a current source-verified program and gym. Your saved workout was not changed."
+    NativeJournalFileRefusal.SWAP_INVALID_TARGET ->
+        "This replacement is unavailable or its newly entered targets do not match your verified gym. The saved workout was restored."
     NativeJournalFileRefusal.HISTORY_NOT_READY ->
         "Native history ownership is not verified yet. Workout changes and Finish are blocked until existing history is safely enrolled or recovered. Nothing was overwritten."
     NativeJournalFileRefusal.NOT_AUTHORIZED -> "Activate your approved local athlete before opening this workout."
@@ -61,6 +66,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     onReviewNext:(String)->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
+    val scope=rememberCoroutineScope()
+    var swapSourceId by remember(workoutId){mutableStateOf<String?>(null)}
+    var swapChoices by remember(workoutId){
+        mutableStateOf<List<KotlinComposerSwapChoice>>(emptyList())
+    }
+    var swapLoading by remember(workoutId){mutableStateOf(false)}
+    var swapError by remember(workoutId){mutableStateOf<String?>(null)}
+    var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     LaunchedEffect(workoutId) { controller.open(workoutId) }
@@ -112,6 +125,27 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         if(presentation!=null)
             selectedKey=presentation.firstUnresolvedSetKey ?:
                 presentation.exercises.lastOrNull()?.sets?.lastOrNull()?.target?.setKey
+    }
+    fun reviewSwap(exerciseId:String) {
+        if(state.busy || swapLoading)return
+        swapLoading=true
+        swapError=null
+        val revision=journal?.revision
+        scope.launch {
+            val verified=withContext(Dispatchers.IO) {
+                runCatching {
+                    host.reviewComposerWorkoutSwapChoices(workoutId,exerciseId)
+                }.getOrDefault(emptyList())
+            }
+            if(journal?.revision==revision && verified.isNotEmpty()){
+                swapSourceId=exerciseId
+                swapChoices=verified
+            } else {
+                swapError="No verified alternatives for this unstarted exercise. "+
+                    "Your currently approved program and gym must match the issued workout."
+            }
+            swapLoading=false
+        }
     }
     val allSets=presentation?.exercises?.flatMap{it.sets}.orEmpty()
     val selected=allSets.firstOrNull{it.target.setKey==selectedKey}
@@ -185,7 +219,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             Text(humanStatus(it),color=MaterialTheme.colorScheme.error)
         }
         state.journalRefusal?.let {
-            Text("Set action refused: ${it.name.replace('_',' ').lowercase()}. The saved workout was refreshed.",
+            Text("Workout action refused: ${it.name.replace('_',' ').lowercase()}. The saved workout was refreshed.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)
         }
@@ -241,6 +275,54 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             Text("Based on saved sets · no automatic weight or rep changes",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val chosenExerciseId=selected?.target?.exerciseId
+        if(chosenExerciseId!=null && journal!=null && !presentation.finished){
+            val touched=journal.snapshot.targets.filter{
+                it.exerciseId==chosenExerciseId
+            }.any{it.setKey in journal.effectiveSets}
+            val swapReceipt=journal.receipts.asReversed()
+                .mapNotNull{
+                    it.operation as? KotlinJournalOperation.SwapExercise
+                }.firstOrNull{event->
+                    event.replacementTargets.firstOrNull()?.exerciseId==
+                        chosenExerciseId &&
+                    journal.receipts.none{receipt->
+                        (receipt.operation as? KotlinJournalOperation.UndoSwap)
+                            ?.swapEventId==event.eventId
+                    }
+                }
+            PursuitCard {
+                Text("Exercise options",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Swap only this workout. The future program, "+
+                    "other saved sets and past weights stay unchanged.",
+                    style=MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
+                        enabled=!state.busy && !swapLoading && !touched,
+                        modifier=Modifier.weight(1f)) {
+                        Text(if(swapLoading)"Reviewing…" else "Swap exercise")
+                    }
+                    if(swapReceipt!=null)
+                        OutlinedButton(onClick={
+                            undoConfirm=swapReceipt.eventId
+                        },enabled=!state.busy && !touched,
+                            modifier=Modifier.weight(1f)){
+                            Text("Undo swap")
+                        }
+                }
+                if(touched)
+                    Text("This exercise has logged sets. Replacement is "+
+                        "locked to protect its recorded history.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                swapError?.let {
+                    Text(it,style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.error)
+                }
+            }
         }
         PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
         activeKeys.forEach{set->
@@ -326,6 +408,50 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
     }
 
+    val swapFrom=swapSourceId
+    val activeSwapJournal=journal
+    if(swapFrom!=null && activeSwapJournal!=null &&
+        activeSwapJournal.finishedByEventId==null) {
+        val sourceTargets=activeSwapJournal.snapshot.targets.filter{
+            it.exerciseId==swapFrom
+        }
+        if(sourceTargets.isNotEmpty())
+            NativeKotlinComposerSwapSheet(
+                fromExerciseId=swapFrom,
+                sourceTargets=sourceTargets,
+                choices=swapChoices,
+                busy=state.busy,
+                onConfirm={replacementId,intents->
+                    controller.swapExercise(swapFrom,replacementId,intents)
+                    swapSourceId=null
+                    swapChoices=emptyList()
+                },
+                onDismiss={
+                    swapSourceId=null
+                    swapChoices=emptyList()
+                }
+            )
+    }
+    undoConfirm?.let {swapId->
+        AlertDialog(
+            onDismissRequest={undoConfirm=null},
+            title={Text("Undo exercise swap?")},
+            text={Text("Restore the exact earlier exercise and approved "+
+                "set targets. This is possible only before logging a "+
+                "replacement set. Other work and the program stay unchanged.")},
+            confirmButton={
+                Button(onClick={
+                    controller.undoExerciseSwap(swapId)
+                    undoConfirm=null
+                },enabled=!state.busy) {Text("Restore previous exercise")}
+            },
+            dismissButton={
+                TextButton(onClick={undoConfirm=null},enabled=!state.busy){
+                    Text("Keep replacement")
+                }
+            }
+        )
+    }
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})

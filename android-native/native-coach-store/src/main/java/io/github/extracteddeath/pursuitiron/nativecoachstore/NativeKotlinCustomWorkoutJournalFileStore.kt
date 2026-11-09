@@ -655,6 +655,55 @@ class NativeKotlinCustomWorkoutJournalFileStore(
     }
 
     /**
+     * Receipt-only reversal of a selected unstarted session swap.
+     * Reuses the originally approved pinned set targets; no current gym
+     * regeneration, program rewrite, history mutation, or receipt deletion.
+     * An exact lost-ack retry returns the same durable saved journal.
+     */
+    fun undoSwap(
+        ownerKey:String,workoutId:String,eventId:String,
+        expectedRevision:Long,swapEventId:String
+    ):NativeCustomJournalResult {
+        if(!id.matches(workoutId) || !id.matches(eventId) ||
+            !id.matches(swapEventId))
+            return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.INVALID_ID)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val existing=read(ownerKey,workoutId,current)
+                if(existing !is NativeCustomJournalResult.Durable)
+                    return@withOwnerTransaction existing
+                val journal=existing.issued.journal
+                val operation=CustomWorkoutJournalOperation.UndoSwap(
+                    eventId,expectedRevision,swapEventId)
+                val decision=CustomWorkoutJournalDomain.reduce(journal,operation)
+                if(decision !is CustomWorkoutJournalDecision.Proposed)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        (decision as CustomWorkoutJournalDecision.Rejected).reason)
+                if(decision.replayed)
+                    return@withOwnerTransaction NativeCustomJournalResult.Durable(
+                        existing.issued,true)
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable ||
+                    !ledger.ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                if(owner(ownerKey)!=current)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val updated=existing.issued.copy(journal=decision.draft)
+                atomic(path(ownerKey,workoutId),encode(updated))
+                NativeCustomJournalResult.Durable(updated,false)
+            }
+        }.getOrElse {NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
      * Durable actual set / amplifier receipt; explicitly excludes Finish.
      * The shared history transaction coordinator commits Finish through
      * manifest redo before making any completed session visible.

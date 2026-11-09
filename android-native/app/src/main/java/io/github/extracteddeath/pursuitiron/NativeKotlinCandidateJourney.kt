@@ -121,6 +121,11 @@ internal fun NativeKotlinCandidateJourney(
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
     }
+    // A workout swap is NEVER program consent. Keep an explicit read-only
+    // handoff until the athlete reviews the exact saved cycle/day/slot.
+    var pendingProgramSwapReview by remember {
+        mutableStateOf<NativeKotlinProgramSwapHandoff?>(null)
+    }
     // Resume the owned native journey after process death; do not send a
     // returning lifter through onboarding again. No silent workout issuance
     // or journal opening: TRAIN independently revalidates saved receipts.
@@ -158,6 +163,8 @@ internal fun NativeKotlinCandidateJourney(
             if(handoff!=null)
                 cycleController.openSavedFirstProgramForReview(
                     handoff.first,handoff.second)
+            else if(pendingProgramSwapReview!=null)
+                cycleController.open(checkNotNull(pendingProgramSwapReview).cycleId)
             else cycleController.openSavedTraining()
         }
     }
@@ -304,6 +311,10 @@ internal fun NativeKotlinCandidateJourney(
                             })
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController,
+                            programSwapReview=pendingProgramSwapReview,
+                            onProgramSwapReviewDismiss={
+                                pendingProgramSwapReview=null
+                            },
                             onOpenIssuedWorkout={id->
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=id
@@ -405,6 +416,12 @@ internal fun NativeKotlinCandidateJourney(
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
                                 destination=KotlinCandidateDestination.PROGRAM
+                            },
+                            onReviewSwapInProgram={request->
+                                selectedGeneratedWorkoutId=null
+                                selectedCustomWorkoutId=null
+                                pendingProgramSwapReview=request
+                                destination=KotlinCandidateDestination.PROGRAM
                             })
                 }
             }
@@ -439,7 +456,8 @@ private fun NativeKotlinCandidateTrainEntry(
     onActiveWorkoutChanged:(Boolean)->Unit,
     onViewFinishedHistory:()->Unit,
     onReviewNext:(String)->Unit,
-    onReturnToProgram:()->Unit
+    onReturnToProgram:()->Unit,
+    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
     var resumable by remember(host) {
@@ -488,7 +506,8 @@ private fun NativeKotlinCandidateTrainEntry(
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
             onClose={onOpenCustomWorkout(null)},
             onViewHistory=onViewFinishedHistory,
-            onReturnToProgram=onReturnToProgram)
+            onReturnToProgram=onReturnToProgram,
+            onReviewSwapInProgram=onReviewSwapInProgram)
         }
     } else if(selectedId == null) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())

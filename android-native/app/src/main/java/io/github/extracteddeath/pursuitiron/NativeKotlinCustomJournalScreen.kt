@@ -36,7 +36,8 @@ internal fun NativeKotlinCustomJournalScreen(
     workoutId:String,
     onClose:()->Unit,
     onViewHistory:()->Unit={},
-    onReturnToProgram:()->Unit={}
+    onReturnToProgram:()->Unit={},
+    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     val workoutScroll=rememberScrollState()
@@ -46,6 +47,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var swapSlotId by remember(workoutId){mutableStateOf<String?>(null)}
+    var undoSwapConfirmEventId by remember(workoutId){mutableStateOf<String?>(null)}
     var swapChoices by remember(workoutId) {
         mutableStateOf<List<CustomExercisePickerOption>>(emptyList())
     }
@@ -218,6 +220,42 @@ internal fun NativeKotlinCustomJournalScreen(
             busy=false
         }
     }
+    fun confirmUndoSwap(swapEventId:String) {
+        if(busy)return
+        val active=journal ?:return
+        undoSwapConfirmEventId=null
+        busy=true
+        scope.launch {
+            val result=withContext(Dispatchers.IO) {
+                runCatching {host.undoIssuedCustomExerciseSwap(
+                    workoutId,"undo-swap-"+UUID.randomUUID(),
+                    active.revision,swapEventId)}.getOrNull()
+            }
+            if(result is NativeCustomJournalResult.Durable) {
+                journal=result.issued.journal
+                error=null
+            } else {
+                val refused=result as? NativeCustomJournalResult.Rejected
+                error=when(refused?.journalReason) {
+                    CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED ->
+                        "The replacement has recorded work and cannot be undone. No work was changed."
+                    CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE ->
+                        "That replacement is no longer active or was already undone."
+                    CustomWorkoutJournalRefusal.STALE_REVISION ->
+                        "Your workout changed. Reload the saved version before trying again."
+                    else ->
+                        "Undo was not saved. The last durable workout will be reloaded."
+                }
+                val restored=withContext(Dispatchers.IO) {
+                    runCatching {host.openIssuedCustomWorkout(workoutId)}
+                        .getOrNull()
+                }
+                journal=(restored as? NativeCustomJournalResult.Durable)
+                    ?.issued?.journal
+            }
+            busy=false
+        }
+    }
     val current=journal
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
         enabled=referenceMode==WorkoutReferenceMode.LAST && current!=null)
@@ -293,6 +331,31 @@ internal fun NativeKotlinCustomJournalScreen(
                         OutlinedButton(onClick=onReturnToProgram,enabled=!busy,
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Continue to my next workout")
+                        }
+                        val programReviews=NativeKotlinProgramSwapHandoffDomain
+                            .review(current)
+                        if(programReviews.isNotEmpty()){
+                            HorizontalDivider()
+                            Text("Use a workout swap in future training?",
+                                style=MaterialTheme.typography.titleMedium)
+                            Text("Your workout replacement was saved only "+
+                                "for this session. Open the exact program "+
+                                "day for a separate exercise review. New "+
+                                "sets, gym availability, week overrides "+
+                                "and full-cycle audit still require approval.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            programReviews.forEach{request->
+                                OutlinedButton(
+                                    enabled=!busy,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={onReviewSwapInProgram(request)}
+                                ){
+                                    Text("Review ${kotlinExerciseLabel(
+                                        request.workoutReplacementExerciseId
+                                    )} in my program")
+                                }
+                            }
                         }
                         TextButton(onClick={showFinishedSets=!showFinishedSets}) {
                             Text(if(showFinishedSets)"Hide recorded sets" else "View recorded sets")
@@ -387,6 +450,27 @@ internal fun NativeKotlinCustomJournalScreen(
                                 modifier=Modifier.heightIn(min=48.dp),
                                 onClick={reviewSwap(slot)}
                             ) {Text("Swap exercise")}
+                            val undoableSwap=current.receipts.asReversed()
+                                .mapNotNull {receipt->
+                                    receipt.operation as?
+                                        CustomWorkoutJournalOperation.Swap
+                                }.firstOrNull {swap->
+                                    swap.replacement.slotId==slot.slotId &&
+                                        current.receipts.none{receipt->
+                                            (receipt.operation as?
+                                                CustomWorkoutJournalOperation.UndoSwap)
+                                                ?.swapEventId==swap.eventId
+                                        }
+                                }
+                            if(undoableSwap!=null && !hasRecordedWork &&
+                                slot.supersetGroup==null) {
+                                OutlinedButton(
+                                    enabled=!busy,
+                                    modifier=Modifier.heightIn(min=48.dp),
+                                    onClick={
+                                        undoSwapConfirmEventId=undoableSwap.eventId
+                                    }) {Text("Undo swap")}
+                            }
                             if(hasRecordedWork || slot.supersetGroup!=null)
                                 Text(if(hasRecordedWork)
                                     "This exercise has recorded work. Its original history is protected; live swapping is only available before its first set."
@@ -545,6 +629,37 @@ internal fun NativeKotlinCustomJournalScreen(
                     onDismiss={swapSlotId=null;swapChoices=emptyList()}
                 )
             }
+        }
+    }
+    undoSwapConfirmEventId?.let {swapEventId->
+        val active=journal
+        val source=(active?.receipts?.firstOrNull{
+            it.operation.eventId==swapEventId
+        }?.operation as? CustomWorkoutJournalOperation.Swap)
+        if(source!=null && active!=null && active.finishedByEventId==null) {
+            AlertDialog(
+                onDismissRequest={if(!busy)undoSwapConfirmEventId=null},
+                title={Text("Undo workout swap?")},
+                text={Text(
+                    "Undo the replacement "+kotlinExerciseLabel(
+                        source.replacement.exerciseId)+
+                    " and restore the previously approved exercise and "+
+                    "sets. Only unstarted swaps are reversible. Other "+
+                    "logged sets and your saved program stay unchanged."
+                )},
+                confirmButton={
+                    Button(enabled=!busy,
+                        onClick={confirmUndoSwap(swapEventId)}) {
+                        Text("Restore previous exercise")
+                    }
+                },
+                dismissButton={
+                    TextButton(enabled=!busy,
+                        onClick={undoSwapConfirmEventId=null}) {
+                        Text("Keep replacement")
+                    }
+                }
+            )
         }
     }
     historyExerciseId?.let { exerciseId ->

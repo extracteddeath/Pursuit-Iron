@@ -67,7 +67,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     onOpenIssuedWorkout:(String)->Unit = {},
     onOpenHistory:()->Unit = {},
     onBuildProgram:()->Unit = {},
-    permissionHost:NativeKotlinCandidateHost?=null
+    permissionHost:NativeKotlinCandidateHost?=null,
+    programSwapReview:NativeKotlinProgramSwapHandoff?=null,
+    onProgramSwapReviewDismiss:()->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val draft = state.draft
@@ -158,6 +160,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     /** Only explicitly approved program edits may change exercise identity. */
     var swapExerciseEditor by remember {
         mutableStateOf<Triple<String,Int,String>?>(null)
+    }
+    var swapSearchSuggestion by remember {
+        mutableStateOf<String?>(null)
     }
     var weekExerciseEditor by remember(draft?.cycleId,draft?.revision) {
         mutableStateOf<Triple<Int,Int,String>?>(null)
@@ -276,6 +281,55 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 }
             }
         } else {
+            programSwapReview?.let {request->
+                val matched=NativeKotlinProgramSwapHandoffDomain
+                    .canOpenExactEdit(request,draft)
+                PursuitCard(highlighted=true) {
+                    Text("Review a workout swap for your program",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text(
+                        "${kotlinExerciseLabel(request.originalExerciseId)} "+
+                        "→ ${kotlinExerciseLabel(
+                            request.workoutReplacementExerciseId)} · "+
+                        "week ${request.absoluteWeek}, "+
+                        "${customWeekdays.getOrElse(request.weekday){"day"}}",
+                        style=MaterialTheme.typography.bodyMedium)
+                    Text("That exercise change affected one workout only. "+
+                        "Updating this program is a separate decision: "+
+                        "re-enter new weights, reps, rest and techniques, "+
+                        "then review the full training cycle before approving.",
+                        style=MaterialTheme.typography.bodySmall)
+                    if(!matched)
+                        Text("The program revision, original slot or "+
+                            "protected week overrides no longer match the "+
+                            "issued workout. Automatic selection is blocked; "+
+                            "inspect the saved day and its week overrides "+
+                            "manually before making any new program edit.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    if(matched)
+                        Button(
+                            enabled=!busy,
+                            modifier=Modifier.fillMaxWidth(),
+                            onClick={
+                                showProgramEditor=true
+                                expandedBlockId=request.blockId
+                                expandedDayKey=programDayKey(
+                                    request.blockId,request.weekday)
+                                swapSearchSuggestion=
+                                    request.workoutReplacementExerciseId
+                                swapExerciseEditor=Triple(
+                                    request.blockId,request.weekday,
+                                    request.originalSlotId)
+                                onProgramSwapReviewDismiss()
+                            }
+                        ){Text("Review this program-day replacement")}
+                    TextButton(
+                        enabled=!busy,
+                        onClick=onProgramSwapReviewDismiss
+                    ){Text("Keep my saved program unchanged")}
+                }
+            }
             PursuitCard(highlighted=true) {
                 Text(if(currentSelection is NativeCustomNextCycleSlot.ResumeIssued)
                     "Continue your workout" else "Next workout in your program",
@@ -1142,6 +1196,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         available=controller.availableExerciseChoices(),
                         existing=null,
                         replacing=source,
+                        initialSearchQuery=swapSearchSuggestion.orEmpty(),
                         otherDayExerciseIds=day?.slots?.filter{
                             it.slotId!=slotId && it.sets.any{set->
                                 set.type==DraftSetType.WORKING
@@ -1152,8 +1207,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             controller.swapReviewedExercise(
                                 blockId,weekday,slotId,exerciseId,sets,note)
                             swapExerciseEditor=null
+                            swapSearchSuggestion=null
                         },
-                        onDismiss={swapExerciseEditor=null}
+                        onDismiss={
+                            swapExerciseEditor=null
+                            swapSearchSuggestion=null
+                        }
                     )
                 }
             }

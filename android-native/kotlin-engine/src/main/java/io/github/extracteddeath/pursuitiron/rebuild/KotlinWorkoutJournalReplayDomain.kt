@@ -73,7 +73,7 @@ object KotlinWorkoutJournalReplayDomain {
      */
     fun verifyStoredState(stored: KotlinWorkoutJournalState): KotlinJournalReplayResult {
         val recovered=replay(
-            stored.snapshot,stored.storedIdentity,stored.receipts,
+            stored.originalSnapshot,stored.storedIdentity,stored.receipts,
             stored.revision,stored.finishedByEventId
         )
         if(recovered !is KotlinJournalReplayResult.Recovered)return recovered

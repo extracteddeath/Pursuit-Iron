@@ -121,9 +121,12 @@ internal fun NativeKotlinCustomExerciseSheet(
     /** Issued-workout replacement is not a program-draft edit. */
     workoutOnlySwap: Boolean = false,
     /** Exact other exercises in this program day or issued workout, if known. */
-    otherDayExerciseIds: List<String>? = null
+    otherDayExerciseIds: List<String>? = null,
+    /** Search suggestion only. Never preselects or transfers a load/target. */
+    initialSearchQuery:String = ""
 ) {
-    var search by remember(existing?.slotId,replacing?.slotId) { mutableStateOf("") }
+    var search by remember(existing?.slotId,replacing?.slotId,
+        initialSearchQuery) { mutableStateOf(initialSearchQuery) }
     var exerciseId by remember(existing?.slotId,replacing?.slotId) {
         mutableStateOf(existing?.exerciseId.orEmpty())
     }
@@ -141,16 +144,18 @@ internal fun NativeKotlinCustomExerciseSheet(
     }
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
-    // Search every token across the whole option, not as one contiguous phrase.
-    // "machine incline" can find an incline movement whose machine is a variant/attachment.
-    val terms=search.trim().lowercase().split(Regex("\\s+")).filter {it.isNotEmpty()}
-    val labeled=available.filter {choice ->
-        val termsText=(listOfNotNull(
+    // A query can span the movement, equipment variant, attachment and muscle.
+    // Matching is independent of token order; ranking is still calculated from
+    // the ENTIRE verified gym catalog before the search filter is applied.
+    val terms=search.trim().lowercase().split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+    val labeled=available.filter { choice ->
+        val searchable=(listOfNotNull(
             choice.exerciseId,choice.familyId,choice.variantId,choice.attachmentId,
             kotlinExerciseLabel(choice.exerciseId),choice.pattern?.name
-        ) + choice.muscleCredits.map {it.muscle.name})
+        ) + choice.muscleCredits.map { it.muscle.name })
             .joinToString(" ").replace('_',' ').replace('-',' ').lowercase()
-        terms.all {termsText.contains(it)}
+        terms.all { searchable.contains(it) }
     }
     // Rank using the FULL eligible current-gym catalog first. Search only
     // filters the visible candidates; it must never remove the source
@@ -165,11 +170,12 @@ internal fun NativeKotlinCustomExerciseSheet(
         sourceHasWorkingSets=replacing?.sets?.any {
             it.type==DraftSetType.WORKING
         }==true)
-    val searched=ranked.filter {it.choice in labeled}
-    // Limit the first composition, not the catalog. The athlete can reveal every verified option.
-    var visibleCount by remember(search,samePatternOnly,sharedMusclesOnly,sameRoleOnly,sameFamilyOnly,replacing?.slotId) {
-        mutableStateOf(20)
-    }
+    val matchingIds=labeled.mapTo(hashSetOf()) { it.exerciseId }
+    val searched=ranked.filter { it.choice.exerciseId in matchingIds }
+    // This is a paging cap, not a catalog cap. The complete verified ranked
+    // pool remains available, even when it contains more than twenty choices.
+    var visibleCount by remember(search,samePatternOnly,sharedMusclesOnly,
+        sameRoleOnly,sameFamilyOnly,replacing?.slotId) { mutableIntStateOf(20) }
     val filtered=searched.take(visibleCount)
     // Changing the selected replacement must not silently carry even the
     // NEW draft's typed load, technique or setup note into a different variant.
@@ -276,15 +282,19 @@ internal fun NativeKotlinCustomExerciseSheet(
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if(searched.size>filtered.size) {
-                Text("Showing ${filtered.size} of ${searched.size} verified ranked alternatives.",
+                Text("Showing ${filtered.size} of ${searched.size} verified ranked choices.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                    OutlinedButton(onClick={visibleCount=(visibleCount+20).coerceAtMost(searched.size)}) {
-                        Text("Show next ${minOf(20,searched.size-filtered.size)}")
-                    }
-                    TextButton(onClick={visibleCount=searched.size}) {Text("Show all")}
+                    OutlinedButton(
+                        onClick={visibleCount=(visibleCount+20).coerceAtMost(searched.size)},
+                        modifier=Modifier.heightIn(min=48.dp)
+                    ) { Text("Show next ${minOf(20,searched.size-filtered.size)}") }
+                    TextButton(
+                        onClick={visibleCount=searched.size},
+                        modifier=Modifier.heightIn(min=48.dp)
+                    ) { Text("Show all") }
                 }
             }
         } else {

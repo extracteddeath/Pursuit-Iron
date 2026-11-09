@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import androidx.compose.foundation.background
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
@@ -108,7 +109,7 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
     val total = w.replace(',', '.').toDoubleOrNull()
     val setTo = { v: Double -> w = fmtNum(kotlin.math.round(v * 100) / 100) }
     Text("Plate calculator", style = MaterialTheme.typography.headlineSmall)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         r.list("bars").forEach { b -> MorphChip("${b.s("label")} · ${fmtNum(b.d("weight"))}", bar == b.s("id"), { bar = b.s("id") }) }
     }
     // The design's total: big, with −/+ by the smallest pair of plates you own. Tap it to type.
@@ -384,7 +385,7 @@ private fun GymBarsAndWeights(g: JSONObject, gym: JSONObject, id: String, patch:
                 if (vals.isNotEmpty()) TextButton(onClick = { setVals(emptyList()) }) { Text("Clear") }
             }
             presets?.optJSONArray(key)?.let { arr ->
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     (0 until arr.length()).map { arr.getJSONObject(it) }.forEach { pr ->
                         val pu = pr.s("unit", "kg"); val f = if (pu == lu) 1.0 else if (lu == "lb") 2.2046226218487757 else 1 / 2.2046226218487757
                         val pv = pr.optJSONArray("v")?.let { a -> (0 until a.length()).map { Math.round(a.optDouble(it) * f * 2) / 2.0 } } ?: emptyList()

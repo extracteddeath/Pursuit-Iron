@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -757,7 +758,7 @@ private fun WzCheckRow(label: String, sub: String?, on: Boolean, shape: RoundedC
 @Composable
 private fun EquipmentStep(opts: JSONObject?, equip: Set<String>, onEquip: (Set<String>) -> Unit, noRack: Boolean, onNoRack: (Boolean) -> Unit, noBw: Boolean, onNoBw: (Boolean) -> Unit) {
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth().fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         PRESETS.forEach { (l, ids) ->
             val on = ids.toSet() == equip
             Box(Modifier.height(38.dp).clip(CircleShape).background(if (on) cs.primary else cs.surfaceContainerLow).clickable { onEquip(ids.toSet()) }

@@ -1,5 +1,6 @@
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.lazyFade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -85,9 +86,10 @@ fun QuickPickerSheet(vm: AppViewModel) {
                 shape = CircleShape, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Search exercises" },
                 colors = TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh,
                     focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            run { val fs = androidx.compose.foundation.lazy.rememberLazyListState()
+            LazyRow(state = fs, modifier = Modifier.lazyFade(fs), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core")) { g -> MorphChip(g, chip == g, { chip = g }, height = 36.dp) }
-            }
+            } }
             LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(shown, key = { it.s("id") }) { x ->
                     val id = x.s("id"); val at = picked.indexOf(id); val on = at >= 0

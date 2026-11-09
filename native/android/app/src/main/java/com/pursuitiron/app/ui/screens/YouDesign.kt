@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import com.pursuitiron.app.ui.common.strings
 import com.pursuitiron.app.ui.common.has
 import com.pursuitiron.app.ui.common.sharedElement
@@ -367,7 +368,7 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
                 val lifts = board.list("repPRs")
                 val cur = lifts.firstOrNull { it.s("id") == repLift } ?: lifts.firstOrNull()
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(Modifier.fillMaxWidth().fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         lifts.forEach { l ->
                             val on = l.s("id") == cur?.s("id")
                             val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "rl")

@@ -1447,7 +1447,7 @@ time.sleep(3)
 launch()
 time.sleep(3)
 shot("tablet-today")
-if tap(r"Start workout|Resume workout|^\|?Train .+ now", required=False):  # a workout in progress reopens on its own
+if tap(r"Start workout|Start it early|Resume workout|^\|?Train .+ now", required=False):  # a workout in progress reopens on its own
     start_from_preview()
 time.sleep(3)
 tap(r"^\|Skip$", required=False)  # readiness check

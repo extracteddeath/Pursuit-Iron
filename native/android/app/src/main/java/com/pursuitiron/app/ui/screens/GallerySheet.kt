@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -61,7 +62,7 @@ fun GallerySheet(vm: AppViewModel, onClose: () -> Unit) {
             val all = rows ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             // Three rows each led by "All" read as one repeated word; each says what it leaves open.
             @Composable fun Filter(sel: String, any: String, vals: List<Pair<String, String>>, pick: (String) -> Unit) {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     (listOf("all" to any) + vals).forEach { (k, l) -> MorphChip(l, sel == k, { pick(k) }, height = 36.dp) }
                 }
             }

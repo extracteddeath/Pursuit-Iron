@@ -1113,6 +1113,16 @@ export function timeOptions() {
 /* The design's lift chips use a short name: equipment dropped, the common long names abbreviated. */
 const SHORT = { 'overhead press': 'OHP', 'romanian deadlift': 'RDL', 'bulgarian split squat': 'BSS', 'stiff-leg deadlift': 'SLDL', 'incline bench press': 'Incline', 'bench press': 'Bench',
     'close-grip bench press': 'CG bench', 'lat pulldown': 'Pulldown', 'leg press': 'Leg press', 'back squat': 'Squat', 'front squat': 'Front squat' };
+/* Technique cues: the lift's own cue first, then its pattern's. When the two speak to the same thing they could
+   disagree (bench: "Tuck elbows ~75°" then "Elbows ~45° from torso"), so a pattern cue on a topic the lift's own
+   cue already covers is dropped. (Same data on the web: modules/training-domain/analytics.js cuesFor.) */
+function cuesOf(ex) {
+    let all = []; try { all = E.cuesFor(ex) || []; } catch { return []; }
+    if (all.length < 2) return all;
+    const spec = String(all[0]).toLowerCase(), topics = ['elbow', 'touch', 'grip', 'wrist', 'knee', 'depth', 'stance', 'arch', 'lean'];
+    const covered = topics.filter((t) => spec.includes(t));
+    return [all[0], ...all.slice(1).filter((c) => !covered.some((t) => String(c).toLowerCase().includes(t)))];
+}
 function shortName(name) {
     const full = String(name || '').trim(); if (full.length <= 12) return full;
     const n0 = full.replace(/^(barbell|dumbbell|db|cable|machine|smith( machine)?|ez[- ]bar|kettlebell|band(ed)?|seated|standing)\s+/i, '').trim();
@@ -1203,7 +1213,7 @@ export function session() {
                 hasWarm: e.sets.some((s) => s.warm), hasDrop: e.sets.some((s) => s.sub && s.kind === 'drop'), hasMyo: e.sets.some((s) => s.sub && s.kind === 'myo'),
                 restCustom: e.restCustom || 0, restDefault, goal: Number(S.store.goals?.[e.id]) || null,
                 step: inc && inc.unit === u ? inc.v : null, stepChoices: u === 'lb' ? [5, 10, 15, 20, 25, 50] : [2.5, 5, 10, 15, 20],
-                cues: (() => { try { return E.cuesFor(ex) || []; } catch { return []; } })(), setup,
+                cues: cuesOf(ex), setup,
                 stretchFocus: (() => { try { return !!E.isStretchFocus(e.id, 3); } catch { return false; } })(),
                 // App.js: assisted lifts carry help as a NEGATIVE load; progress is less help.
                 assisted: (() => { try { return !!E.isAssistedEx(ex); } catch { return false; } })(),
@@ -2253,7 +2263,7 @@ export function library({ q = '', part = null, equip = null } = {}) {
 }
 export function exercise({ id }) {
     const x = EX_BY_ID[id]; if (!x) return null;
-    let cues = []; try { cues = E.cuesFor(x) || []; } catch { cues = []; }
+    const cues = cuesOf(x);
     const H = history().filter((h) => h.perf?.[id]).slice(0, 12);
     return { id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type, cues,
         secondary: (E.secondaryOf(x) || []).map(([p, f]) => ({ part: p, label: E.PART_LABEL?.[p] || p, share: f })),

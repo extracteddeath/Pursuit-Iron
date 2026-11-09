@@ -239,8 +239,12 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
                 }
             }
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(color = cs.primary, contentColor = cs.onPrimary, shape = CircleShape) {
-                    Text("READINESS $ready% · " + when { ready >= 80 -> "GOOD TO GO"; ready >= 70 -> "HOLD BACK A REP"; else -> "SETS WILL TRIM" },
+                // Trained already today: the card says so and when the next one is, instead of offering today's
+                // readiness and a full-strength Start as if nothing had been done.
+                val doneToday = live == null && h.list("weekStrip").any { it.b("today") && it.b("done") }
+                val nextWd = h.list("weekDays").firstOrNull { it.s("id") == next.s("dayId") }?.s("weekday")?.takeIf { it.isNotBlank() && it != "null" }
+                Surface(color = if (doneToday) cs.surface else cs.primary, contentColor = if (doneToday) cs.onSurface else cs.onPrimary, shape = CircleShape) {
+                    Text(if (doneToday) "DONE FOR TODAY · NEXT UP" + (nextWd?.let { " $it" } ?: "") else "READINESS $ready% · " + when { ready >= 80 -> "GOOD TO GO"; ready >= 70 -> "HOLD BACK A REP"; else -> "SETS WILL TRIM" },
                         style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
                 Text(next.s("dayLabel"), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(end = if (h.list("weekDays").size > 1) 64.dp else 0.dp))
@@ -258,7 +262,7 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary),
                 ) { Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text("  Resume workout", style = MaterialTheme.typography.titleSmall) }
-                else StartSplitButton(vm, hasFresher = h.o("alt") != null, onFresher = onFresher)
+                else StartSplitButton(vm, hasFresher = h.o("alt") != null, onFresher = onFresher, early = doneToday)
             }
         }
     }
@@ -268,21 +272,23 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
     ways into today beside it — start straight away, or a fresher day (Quick workout has its own card below). */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StartSplitButton(vm: AppViewModel, hasFresher: Boolean, onFresher: () -> Unit) {
+private fun StartSplitButton(vm: AppViewModel, hasFresher: Boolean, onFresher: () -> Unit, early: Boolean = false) {
     val cs = MaterialTheme.colorScheme
+    val bc = if (early) ButtonDefaults.buttonColors(containerColor = cs.secondaryContainer, contentColor = cs.onSecondaryContainer)
+        else ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)
     var open by remember { mutableStateOf(false) }
     val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, com.pursuitiron.app.ui.theme.Motion.spatialFast(), label = "split")
     // The split button's two halves in a row (the leading half takes the width; SplitButtonLayout sizes to content).
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.SplitButtonDefaults.Spacing)) {
         androidx.compose.material3.SplitButtonDefaults.LeadingButton(onClick = { vm.openPreview() }, modifier = Modifier.weight(1f).height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
-            Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text("  Start workout", style = MaterialTheme.typography.titleSmall)
+            colors = bc) {
+            Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text(if (early) "  Start it early" else "  Start workout", style = MaterialTheme.typography.titleSmall)
         }
         // The menu hangs from the arrow half, not the far edge of the row.
         Box {
             androidx.compose.material3.SplitButtonDefaults.TrailingButton(checked = open, onCheckedChange = { open = it }, modifier = Modifier.height(56.dp)
                 .semantics { contentDescription = "More ways to start" },
-                colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
+                colors = bc) {
                 Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = turn })
             }
             DropdownMenu(open, { open = false }) {
@@ -336,7 +342,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             val u = d.s("unit", "kg")
             val date = java.util.Date(d.optLong("date"))
             val isToday = android.text.format.DateUtils.isToday(d.optLong("date"))
-            val kicker = (if (isToday) "TODAY" else java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault()).format(date).uppercase()) + (d.s("programName").takeIf { it.isNotBlank() }?.let { " · ${it.uppercase()}" } ?: "")
+            val kicker = (if (isToday) "TODAY" else java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault()).format(date).uppercase()) + (d.s("programName").takeIf { it.isNotBlank() && !it.equals(d.s("dayLabel"), true) }?.let { " · ${it.uppercase()}" } ?: "") // "Quick workout" twice
             Column(Modifier.padding(horizontal = 4.dp)) {
                 Text(kicker, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp, lineHeight = 32.sp))

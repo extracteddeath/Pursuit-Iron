@@ -349,7 +349,7 @@ fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onPin: ()
             Surface(onClick = onPin, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(PiIcons.Pin, null, Modifier.size(18.dp))
-                    Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.bodyMedium, color = if (pinned.isBlank()) cs.onSurfaceVariant else cs.onSurface, modifier = Modifier.weight(1f))
+                    Text(pinned.ifBlank { "Add machine settings or a cue" }, style = MaterialTheme.typography.bodyMedium, color = if (pinned.isBlank()) cs.onSurfaceVariant else cs.onSurface, modifier = Modifier.weight(1f))
                 }
             }
             Button(onClick = onClose, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done") }

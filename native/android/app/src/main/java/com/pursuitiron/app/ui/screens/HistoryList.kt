@@ -1,5 +1,6 @@
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -61,15 +62,15 @@ fun HistoryList(vm: AppViewModel, day: Triple<Int, Int, Int>? = null, onOpen: (S
     LaunchedEffect(q, days, prog, by, vm.history.size) { delay(if (q.isNotEmpty()) 180 else 0); d = vm.historyGroups(q, days, prog, by) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Find a workout — lift, day or note") },
-            shape = CircleShape, leadingIcon = { Icon(PiIcons.Focus, null) },
+            shape = CircleShape, leadingIcon = { Icon(PiIcons.Search, null) },
             trailingIcon = { if (q.isNotEmpty()) TextButton(onClick = { q = "" }) { Text("Clear") } },
             colors = TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh, unfocusedIndicatorColor = Color.Transparent))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("all" to "All time", "30" to "Last 30 days", "90" to "Last 90 days", "365" to "Last year").forEach { (k, l) -> MorphChip(l, days == k, { days = k }, height = 36.dp) }
         }
         val x = d ?: return@Column
         val programs = x.list("programs")
-        if (programs.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (programs.size > 1) Row(Modifier.fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MorphChip("All programs", prog == "all", { prog = "all" }, height = 36.dp)
             programs.forEach { p -> MorphChip(p.s("name"), prog == p.s("id"), { prog = p.s("id") }, height = 36.dp) }
         }

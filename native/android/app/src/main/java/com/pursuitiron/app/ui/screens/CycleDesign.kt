@@ -1,5 +1,6 @@
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -227,7 +228,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
             }
             val templates = c?.list("templates") ?: vm.cycles.list("templates")
             Row(Modifier.layout { m, k -> val e = 16.dp.roundToPx(); val pl = m.measure(k.copy(minWidth = 0, maxWidth = k.maxWidth + 2 * e)); layout(pl.width - 2 * e, pl.height) { pl.place(-e, 0) } }
-                .fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                .fillMaxWidth().fadingHScroll().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 templates.forEach { t ->
                     val fut = t.list("blocks").drop(1)
                     val on = blocks.filter { !it.fixed }.map { it.phase to it.weeks } == fut.map { it.s("phase") to it.i("weeks") }

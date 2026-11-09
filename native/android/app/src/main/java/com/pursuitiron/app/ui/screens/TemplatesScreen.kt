@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.lazyFade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -72,10 +73,11 @@ fun TemplatePicker(vm: AppViewModel) {
     val items = t.list("items").filter { (cat == null || it.s("cat") == cat) && (q.isBlank() || it.s("name").contains(q, true) || it.s("desc").contains(q, true)) }
         .sortedWith(compareBy({ if (cat == null && q.isBlank()) (if (it.b("featured")) 0 else 1) else 0 }, { it.optInt("rank", 50) }))
     OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search ${t.list("items").size} templates") })
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    run { val fs = androidx.compose.foundation.lazy.rememberLazyListState()
+LazyRow(state = fs, modifier = Modifier.lazyFade(fs), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         item { MorphChip("All", cat == null, { cat = null }, height = 36.dp) }
         items(t.strings("categories")) { c -> MorphChip(c, cat == c, { cat = if (cat == c) null else c }, height = 36.dp) }
-    }
+    } }
     items.forEach { x ->
         Surface(onClick = { vm.createFromTemplate(x.s("id")) }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(22.dp),
             modifier = Modifier.fillMaxWidth().semantics { role = Role.Button }) {

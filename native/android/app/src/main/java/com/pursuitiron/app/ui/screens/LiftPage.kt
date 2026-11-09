@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.fadingHScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -122,7 +123,7 @@ private fun ChartsTab(x: JSONObject) {
         else -> r.o("heavy")?.d("w") ?: 0.0
     } }
     val fmt = { v: Double -> if (m.vol) "%,d".format(Locale.US, Math.round(v)) else fmtNum(Math.round(v * 10) / 10.0) }
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         METRICS.forEach { mt -> MorphChip(mt.label, mt.id == mId, { mId = mt.id }, height = 36.dp, strong = true) }
     }
     Column {

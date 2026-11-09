@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.lazyFade
 import com.pursuitiron.app.ui.common.Rise
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -118,9 +119,10 @@ fun LibraryScreen(vm: AppViewModel) {
                 colors = TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh, unfocusedIndicatorColor = Color.Transparent))
         }}
         item(span = { GridItemSpan(maxLineSpan) }) { Rise {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+            run { val fs = androidx.compose.foundation.lazy.rememberLazyListState()
+            LazyRow(state = fs, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp).lazyFade(fs)) {
                 items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }, check = true) }
-            }
+            } }
         }}
         // Show and Equipment are dropdown chips on one line with the count (two more rows of chips pushed the list off the first screen).
         item(span = { GridItemSpan(maxLineSpan) }) { Rise {
@@ -234,7 +236,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, dayId: String? = null, onClose: 
             Surface(onClick = { pinOpen = true }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(PiIcons.Pin, null, Modifier.size(18.dp))
-                    Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                    Text(pinned.ifBlank { "Add machine settings or a cue" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

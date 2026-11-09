@@ -375,7 +375,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             // athlete, not inferred from a selected split name or coach badge.
             // The permission store grants only review rights for this cycle.
             permissionHost?.let { ownerHost ->
-                NativeKotlinAdaptiveCyclePermissionsPanel(ownerHost,draft.cycleId)
+                NativeKotlinAdaptiveCyclePermissionsPanel(
+                    ownerHost,draft.cycleId,draft.athleteId,draft.revision)
             }
             // The full plan is a primary Plan action, not buried beneath
             // coaching/calibration. Keep its actual saved exercise outline

@@ -177,7 +177,8 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    val rows=remember(result.timeline.manifestRevision,exerciseId) {
+                    val rows=remember(result.timeline.athleteId,
+                        result.timeline.manifestRevision,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }
                     if(rows.isEmpty())

@@ -112,4 +112,16 @@ assert.ok(composer.includes('NativeKotlinFinishedComposerHandoff.inspect(stored,
   journey.includes('onReviewNext={exerciseId->') &&
   journey.includes('controller.clear()'),
   'Generated Finish navigation requires independently verified committed history, never just the Finish flag');
+const composerSwap=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinComposerSwapSheet.kt');
+const composerSwapDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinComposerSwapReviewDomain.kt');
+assert.ok(composer.includes('NativeKotlinComposerSwapSheet(') &&
+  composerSwap.includes('KotlinComposerSwapRankingDomain.filterRanked(') &&
+  composerSwap.includes('Text("Same pattern")') &&
+  composerSwap.includes('Text("Shared muscles")') &&
+  composerSwap.includes('sourceTargets.indices.forEach') &&
+  composerSwap.includes('EquipmentLoadDomain.inspect(') &&
+  composerSwap.includes('choice.option.sourcePracticalReps') &&
+  composerSwapDomain.includes('fun filterRanked(') &&
+  composerSwapDomain.includes('target.type==DraftSetType.WORKING'),
+  'Generated workout swap must offer ranked muscle/pattern search, separately authored verified targets, and safe working-set rep bounds');
 console.log('PASS native workout recording and verified Finish-to-History/Coach navigation');

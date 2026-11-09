@@ -44,12 +44,17 @@ object NativeStrengthClubDomain {
             val id=fact.key.exerciseId
             if(estimateLb>(projected[id]?:BigDecimal.ZERO))
                 projected[id]=estimateLb
-            if(fact.reps==1) {
-                val loggedLb=StrengthStandardsMeasurementDomain.convert(
-                    fact.actualLoad,fact.key.unit,LoadUnit.LB)
-                if(loggedLb>(singles[id]?:BigDecimal.ZERO))
-                    singles[id]=loggedLb
-            }
+        }
+        // Singles are a SEPARATE immutable fact projection. Choosing the
+        // highest rep-count at a load must never suppress a logged 1RM.
+        for(fact in facts.bestLoggedSingleByLoad.values) {
+            if(fact.key.exerciseId !in requiredLiftIds ||
+                fact.key.basis!=LoadBasis.BARBELL_TOTAL ||
+                fact.reps!=1)continue
+            val lb=StrengthStandardsMeasurementDomain.convert(
+                fact.actualLoad,fact.key.unit,LoadUnit.LB)
+            val id=fact.key.exerciseId
+            if(lb>(singles[id]?:BigDecimal.ZERO))singles[id]=lb
         }
         fun completedTotal(rows:Map<String,BigDecimal>):BigDecimal? =
             if(requiredLiftIds.all {it in rows})

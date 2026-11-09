@@ -225,27 +225,39 @@ assert.ok(
   liveWorkout.includes('hasRecordedWork') &&
   liveWorkout.includes('fun confirmSwap(') &&
   liveWorkout.includes('host.swapIssuedCustomExercise(') &&
+  liveWorkout.includes('host.undoIssuedCustomExerciseSwap(') &&
+  liveWorkout.includes('Text("Undo swap")') &&
+  liveWorkout.includes('Undo workout swap?') &&
   liveWorkout.includes('This workout only · no program change') &&
   liveWorkout.includes('workoutOnlySwap=true') &&
   liveWorkout.includes('otherDayExerciseIds=snap.slots.filter{') &&
   liveWorkout.includes('set.prescription.type==DraftSetType.WORKING') &&
   liveJournalDomain.includes('data class Swap(') &&
+  liveJournalDomain.includes('data class UndoSwap(') &&
+  liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE') &&
+  liveJournalDomain.includes('val discardedKeys=replacement.sets.map') &&
   liveJournalDomain.includes('val originalSnapshot:CustomWorkoutDaySnapshot=snapshot') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
   liveJournalDomain.includes('prior.receipts.any') &&
   liveJournalCodec.includes('private const val VERSION=2') &&
+  liveJournalCodec.includes('is CustomWorkoutJournalOperation.UndoSwap->') &&
+  liveJournalCodec.includes('writeByte(4)') &&
+  liveJournalCodec.includes('4->CustomWorkoutJournalOperation.UndoSwap(') &&
   liveJournalCodec.includes('version !in 1..VERSION') &&
   liveJournalCodec.includes('state.originalSnapshot') &&
   liveJournalCodec.includes('replay(state.originalSnapshot,state.workoutId,') &&
   liveJournalCodec.includes('stored workout swap state differs from events') &&
   liveJournalStore.includes('actual.snapshot!=loaded.journal.originalSnapshot') &&
   liveJournalStore.includes('fun swap(') &&
+  liveJournalStore.includes('fun undoSwap(') &&
+  liveJournalStore.includes('CustomWorkoutJournalOperation.UndoSwap(') &&
   liveJournalStore.includes('fence.withOwnerTransaction(ownerKey)') &&
   liveJournalStore.includes('CustomExerciseAuthoringDomain.reviewFreshSets(') &&
   liveJournalStore.includes('atomic(path(ownerKey,workoutId),encode(updated))') &&
   liveHistoryEvidence.includes('journal.workoutId,journal.originalSnapshot,') &&
-  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt').includes('fun swapIssuedCustomExercise('),
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt').includes('fun swapIssuedCustomExercise(') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt').includes('fun undoIssuedCustomExerciseSwap('),
   'A live swap must be an authenticated source-verified, cold-replayable workout-only journal event with unchanged History ownership');
 
 // Web changelog 2523/2677/2248: ranked search and verified equipment are

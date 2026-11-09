@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
+import java.math.BigDecimal
+
 /**
  * Read-only comparison of TWO ALREADY AUTHORED adjacent cycle blocks.
  *
@@ -25,8 +27,18 @@ data class CustomBlockComparisonFacts(
     val weekOverrideCount:Int,
     val exposuresByExercise:Map<String,Int>,
     /** Present only when every week was measured by a matching cycle audit. */
-    val auditedWeeklyWorkingSets:List<Int>?
+    val auditedWeeklyWorkingSets:List<Int>?,
+    /** Exact declared direct muscle credits for the first audited week. */
+    val firstAuditedWeekDirectSets:Map<TrainingMuscle,BigDecimal>?
 )
+
+data class CustomBlockMuscleChange(
+    val muscle:TrainingMuscle,
+    val previousDirectSets:BigDecimal,
+    val nextDirectSets:BigDecimal
+) {
+    val delta:BigDecimal get()=nextDirectSets.subtract(previousDirectSets)
+}
 
 data class CustomBlockExposureChange(
     val exerciseId:String,
@@ -44,6 +56,18 @@ data class CustomCycleBlockComparison(
     val matchingAuditStatus:CustomCoachAuditStatus?,
     val auditIssueCount:Int?
 ) {
+    val auditedDirectMuscleChanges:List<CustomBlockMuscleChange>? get() {
+        val earlier=prior.firstAuditedWeekDirectSets ?:return null
+        val later=next.firstAuditedWeekDirectSets ?:return null
+        return TrainingMuscle.entries.mapNotNull{muscle->
+            val before=earlier[muscle] ?:BigDecimal.ZERO
+            val after=later[muscle] ?:BigDecimal.ZERO
+            if(before.compareTo(after)==0)null else
+                CustomBlockMuscleChange(muscle,before,after)
+        }.sortedWith(compareByDescending<CustomBlockMuscleChange>{
+            it.delta.abs()
+        }.thenBy{it.muscle.name})
+    }
     val baseWorkingSetDelta:Int get()=
         next.baseWorkingSets-prior.baseWorkingSets
     val firstAuditedWeekDelta:Int? get()=
@@ -86,7 +110,8 @@ object CustomCycleBlockComparisonDomain {
             slots.count{it.pinned},
             cycle.weekOverrides[block.blockId].orEmpty().size,
             slots.groupingBy{it.exerciseId}.eachCount().toSortedMap(),
-            if(validWeeks)weeks.map{it.workingSets} else null
+            if(validWeeks)weeks.map{it.workingSets} else null,
+            if(validWeeks)weeks.first().directSets else null
         )
     }
 

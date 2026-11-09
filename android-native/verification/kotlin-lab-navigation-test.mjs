@@ -268,7 +268,7 @@ assert.ok(
   swapRank.includes('sourceHasWorkingSets:Boolean=false') &&
   swapRank.includes('Retains sole reviewed direct-day coverage') &&
   swapRank.includes('Review lost direct-day coverage') &&
-  swapRank.includes('val dayCoverageKnown=source!=null') &&
+  swapRank.includes('val dayCoverageKnown=sourceHasWorkingSets && source!=null') &&
   swapRank.includes('CustomSwapFit.SAME_PATTERN_AND_FAMILY') &&
   swapRank.includes('CustomSwapFit.SHARED_REVIEWED_MUSCLES') &&
   swapRank.includes('val mayTransferWeight:Boolean get()=false') &&

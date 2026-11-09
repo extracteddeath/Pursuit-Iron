@@ -115,6 +115,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var exerciseFavoriteBusy by remember {mutableStateOf(false)}
     var exerciseFavoriteNotice by remember {mutableStateOf<String?>(null)}
     var exerciseSearch by rememberSaveable {mutableStateOf("")}
+    var exercisePickerExpanded by rememberSaveable {mutableStateOf(false)}
     var favoriteLiftIds by remember(host){mutableStateOf<List<String>>(emptyList())}
     var favoriteBusy by remember{mutableStateOf(false)}
     var favoriteNotice by remember{mutableStateOf<String?>(null)}
@@ -527,6 +528,15 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         Text("${exerciseFavoriteIds.size} of ${NativeExerciseFavorites.MAX_FAVORITES} pinned · ordered as shown",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(
+                            enabled=!exerciseFavoriteBusy &&
+                                exerciseFavoriteIds.size<
+                                    NativeExerciseFavorites.MAX_FAVORITES,
+                            onClick={exercisePickerExpanded=!exercisePickerExpanded},
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                        ) {Text(if(exercisePickerExpanded)
+                            "Close exercise picker" else "Add a recorded exercise")}
+                        if(exercisePickerExpanded) {
                         OutlinedTextField(
                             value=exerciseSearch,
                             onValueChange={exerciseSearch=it.take(80)},
@@ -566,6 +576,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
                             "Showing 6 movements. Search to narrow the list.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         if(exerciseFavoriteIds.size>=
                             NativeExerciseFavorites.MAX_FAVORITES)Text(
                             "Remove a favorite before pinning another exercise.",

@@ -885,25 +885,12 @@ private fun SwapSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Swap exercise", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
-            Text("Same muscle, best fits first, from the gym you're in. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            Text("Replacing ${vm.session?.list("exercises")?.getOrNull(ei)?.s("name").orEmpty()} · from the gym you're in", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             if (!quick) com.pursuitiron.app.ui.common.Segmented(listOf("session" to "Today only", "program" to "In the program too"), scope, { scope = it }, height = 40.dp)
-            val o = opts
-            when {
-                o == null -> Text("Finding alternatives…", modifier = Modifier.padding(4.dp))
-                o.isEmpty() -> Text("No alternatives with your equipment.", modifier = Modifier.padding(4.dp))
-                else -> LazyColumn(Modifier.clip(RoundedCornerShape(22.dp)).height((o.size.coerceAtMost(7) * 66).dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    items(o) { x ->
-                        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { if (scope == "program" && !quick) vm.swapInProgram(ei, x.s("id")) else vm.act("swap", "ei" to ei, "newId" to x.s("id")); vm.toast("Swapped to ${x.s("name")}" + if (scope == "program" && !quick) " in the program" else ""); onClose() }
-                            .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
-                                Text(x.s("equipLabel").ifBlank { (x.optJSONArray("equip")?.let { a -> (0 until a.length()).joinToString(", ") { a.optString(it) } } ?: "").replaceFirstChar { it.uppercase() } },
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Icon(PiIcons.Swap, null, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                }
+            val curEx = vm.session?.list("exercises")?.getOrNull(ei)
+            SwapPicker(opts, curEx?.s("name").orEmpty(), onBan = curEx?.let { c -> { vm.setBan(c.s("id"), true) } }, maxHeight = 460.dp) { x ->
+                if (scope == "program" && !quick) vm.swapInProgram(ei, x.s("id")) else vm.act("swap", "ei" to ei, "newId" to x.s("id"))
+                vm.toast("Swapped to ${x.s("name")}" + if (scope == "program" && !quick) " in the program" else ""); onClose()
             }
         }
     }

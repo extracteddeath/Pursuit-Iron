@@ -267,7 +267,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 }
                 ExerciseCard(vm, e, dId, x, exs.size, paired, openRow?.takeIf { it.first == slot }?.second,
                     onToggle = { what -> openRow = if (openRow == slot to what) null else slot to what },
-                    onWhy = { why = slot }, onInfo = { info = x.s("id") }, modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = Motion.spatial()))
+                    onWhy = { why = slot }, onInfo = { info = x.s("id") }, onSwapAll = { sheet = ESheet.Swap(dId, slot) }, modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = Motion.spatial()))
             }
             item(key = "add") {
                 Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(18.dp))
@@ -438,7 +438,7 @@ private fun dash(s: String) = s.replace(Regex("(\\d)-(\\d)"), "$1–$2")
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSONObject, count: Int, paired: Boolean, open: String?,
-                         onToggle: (String) -> Unit, onWhy: () -> Unit, onInfo: () -> Unit, modifier: Modifier = Modifier) {
+                         onToggle: (String) -> Unit, onWhy: () -> Unit, onInfo: () -> Unit, onSwapAll: () -> Unit = {}, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
     val slot = x.i("slot")
     var alts by remember(x.s("id")) { mutableStateOf<List<JSONObject>?>(null) }
@@ -520,7 +520,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                     a == null -> Text("Finding alternatives…", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     a.isEmpty() -> Text("No other lift for this muscle at your gym.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
                     else -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        a.take(8).forEach { o ->
+                        a.take(6).forEach { o ->
                             Row(Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).border(1.dp, cs.outlineVariant, RoundedCornerShape(12.dp))
                                 .clickable { vm.edit("replace", "dayId" to dayId, "slot" to slot, "newId" to o.s("id")); onToggle("swap") }
                                 .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -528,6 +528,12 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                                 // The equipment in words; the raw list showed as ["dumbbell","bench"].
                                 o.s("equipLabel").takeIf { it.isNotBlank() }?.let { Text(" · $it", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp), color = cs.onSurfaceVariant) }
                             }
+                        }
+                        // The rest of the ranked pool, searchable, with why each one ranks where it does.
+                        Row(Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer).clickable { onSwapAll(); onToggle("swap") }
+                            .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(PiIcons.Search, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(16.dp))
+                            Text("  All ${a.size} · search", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
                         }
                     }
                 }
@@ -636,22 +642,13 @@ private fun EditSwapSheet(vm: AppViewModel, dayId: String, slot: Int, onClose: (
     var opts by remember { mutableStateOf<List<JSONObject>?>(null) }
     LaunchedEffect(dayId, slot) { opts = vm.editSwapOptions(dayId, slot) }
     val cs = MaterialTheme.colorScheme
+    val cur = vm.editor?.list("days")?.firstOrNull { it.s("id") == dayId }?.list("exercises")?.firstOrNull { it.i("slot") == slot }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Swap for", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
-            Text("Same muscle, best fits first, from your gym. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
-            val o = opts
-            when {
-                o == null -> Text("Finding alternatives…")
-                o.isEmpty() -> Text("No alternatives with your equipment.")
-                else -> LazyColumn(Modifier.clip(RoundedCornerShape(22.dp)).heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    items(o) { x ->
-                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { vm.edit("replace", "dayId" to dayId, "slot" to slot, "newId" to x.s("id")); onClose() }.padding(16.dp)) {
-                            Text(x.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                            Icon(PiIcons.Swap, null, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                }
+            Text("Swap exercise", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
+            Text("Replacing ${cur?.s("name").orEmpty()} · every week of this program", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            SwapPicker(opts, cur?.s("name").orEmpty(), onBan = cur?.let { c -> { vm.setBan(c.s("id"), true) } }) { x ->
+                vm.edit("replace", "dayId" to dayId, "slot" to slot, "newId" to x.s("id")); vm.toast("Swapped to ${x.s("name")}"); onClose()
             }
         }
     }

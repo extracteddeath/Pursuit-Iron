@@ -440,8 +440,16 @@ back()
 tap(r"Exercise actions")
 if scroll_to(r"Swap exercise", tries=3, step=400) and tap(r"Swap exercise", "swap-sheet"):
     time.sleep(1.5)
-    if find(r"No alternatives with your equipment", timeout=2):
+    if find(r"No other lift for this muscle", timeout=2):
         FAILS.append("in-workout swap lists no alternatives")
+    # The web's search and badges: every ranked option is searchable, each says why it ranks there
+    if not find(r"(?i)same pattern|top match|fills gap|extra setup", timeout=4):
+        FAILS.append("swap options carry no ranking badge")
+    if tap(r"Search replacements"):
+        adb("shell", "input", "text", "press")
+        time.sleep(1.2)
+        shot("swap-search")
+        hide_keyboard()
     for _ in range(3):
         back()
         if not find(r"^\|?Swap exercise$", timeout=2):

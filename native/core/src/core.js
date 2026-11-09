@@ -1570,6 +1570,22 @@ export function injuryPreview({ region }) {
         .map((e) => EX_BY_ID[e.id]?.name || e.id);
     return { label: area.label, lifts };
 }
+/* App.js SwapSheet rows: the whole ranked pool (the web lists every option and searches it; a 12- or 16-item cut hid
+   real choices such as Incline Machine Press), each with the web's badge and one-line reason. */
+function swapRows(cur, ranked, starved, peers, program, day) {
+    const pat = (x) => { try { return E.movePattern(x); } catch { return null; } };
+    const sub = (x) => { try { return E.subRegionOf(x); } catch { return null; } };
+    const samePart = (a) => a.part === cur.part || (() => { try { return (E.secondaryOf(a) || []).some(([pp]) => pp === cur.part); } catch { return false; } })();
+    const curPat = pat(cur), curSub = sub(cur);
+    return ranked.map((x, rank) => {
+        let overlap = []; try { overlap = E.swapOverlapNames(x, peers, program, day) || []; } catch { overlap = []; }
+        const samePattern = curPat != null && pat(x) === curPat;
+        const fillsGap = !!(starved && starved.has(sub(x)) && sub(x) !== curSub);
+        const reason = overlap.length ? `Overlaps with ${overlap.join(', ')}` : samePattern ? 'Keeps the same movement pattern' : fillsGap ? 'Improves a weekly coverage gap' : samePart(x) ? 'Same target muscle, different stimulus' : 'Compatible substitute';
+        const badge = overlap.length ? 'Extra setup' : samePattern ? 'Same pattern' : fillsGap ? 'Fills gap' : rank < 3 ? 'Top match' : null;
+        return { id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type, badge, reason, warn: overlap.length > 0 };
+    });
+}
 export function swapOptions({ ei }) {
     const l = S.live; if (!l) return [];
     const ctx = sessionContext(l), e = l.data?.[ei]; if (!ctx || !e) return [];
@@ -1578,8 +1594,12 @@ export function swapOptions({ ei }) {
     const kit = E.expandEquipment(new Set(gym?.equipment || ctx.program.config?.equipment || []));
     const banned = new Set(S.store.banned || []);
     const pool = E.availableFor(cur.part, kit, [...banned], !!ctx.program.config?.noBodyweight).filter((x) => x.id !== cur.id && !banned.has(x.id) && !l.data.some((r) => r.id === x.id));
-    let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, null, l.data.map((r) => r.id), ctx.program, ctx.day) || pool; } catch { ranked = pool; }
-    return ranked.slice(0, 12).map((x) => ({ id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type }));
+    // As the web's workout swap: the program's starved regions and the session's other lifts as definitions (ids here
+    // left the ranking blind to them).
+    const starved = (() => { try { return E.starvedRegions(ctx.program); } catch { return new Set(); } })();
+    const peers = l.data.filter((r) => r.id !== cur.id).map((r) => EX_BY_ID[r.id]).filter(Boolean);
+    let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, starved, peers, ctx.program, ctx.day) || pool; } catch { ranked = pool; }
+    return swapRows(cur, ranked, starved, peers, ctx.program, ctx.day);
 }
 
 export function explain({ ei }) {
@@ -3349,8 +3369,9 @@ export function editSwapOptions({ programId, dayId, slot }) {
     const curId = day.exercises[slot], cur = EX_BY_ID[curId]; if (!cur) return [];
     const used = new Set(day.exercises.filter((_, i) => i !== slot));
     const pool = E.availableFor(cur.part, gymKit(p), S.store.banned || [], !!p.config?.noBodyweight).filter((e) => e.id !== curId && !used.has(e.id));
-    let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, E.starvedRegions(p), [...used].map((id) => EX_BY_ID[id]), p, day) || pool; } catch { ranked = pool; }
-    return ranked.slice(0, 16).map((x) => ({ id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part }));
+    const starved = (() => { try { return E.starvedRegions(p); } catch { return new Set(); } })(), peers = [...used].map((id) => EX_BY_ID[id]).filter(Boolean);
+    let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, starved, peers, p, day) || pool; } catch { ranked = pool; }
+    return swapRows(cur, ranked, starved, peers, p, day);
 }
 export function editAddOptions({ programId, dayId, q = '', part = null }) {
     const p = draftOf(programId), day = p?.days.find((d) => d.id === dayId); if (!day) return { parts: [], items: [] };

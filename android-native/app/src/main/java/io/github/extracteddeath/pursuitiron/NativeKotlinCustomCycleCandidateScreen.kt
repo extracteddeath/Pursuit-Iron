@@ -389,6 +389,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         expandedBlockId=blockId
                         expandedDayKey=programDayKey(blockId,weekday)
                         showProgramEditor=true
+                    },
+                    onEditExercise={blockId,weekday,slotId->
+                        expandedBlockId=blockId
+                        expandedDayKey=programDayKey(blockId,weekday)
+                        showProgramEditor=true
+                        exerciseEditor=Triple(blockId,weekday,slotId)
                     })
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)

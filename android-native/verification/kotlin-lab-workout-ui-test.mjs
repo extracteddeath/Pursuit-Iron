@@ -147,6 +147,8 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   composer.includes('sets=composerWorkoutInfoSets(targets)') &&
   infoSheet.includes('internal fun composerWorkoutInfoSets(') &&
   infoSheet.includes('internal fun customWorkoutInfoSets(') &&
+  infoSheet.includes('infoTitle(target.type,target.ordinal+1)') &&
+  infoSheet.includes('infoTitle(target.type,snapshot.ordinalInSlot)') &&
   infoSheet.includes('targetRir?.toString() ?: "Not set"') &&
   infoSheet.includes('NativeEditSheet(busy=false,onDismiss=onDismiss)') &&
   infoSheet.includes('Text("Open full exercise history")') &&

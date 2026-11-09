@@ -245,6 +245,12 @@ assert.ok(comparisonDomain.includes('object CustomCycleBlockComparisonDomain') &
   comparisonDomain.includes('slots.sumOf{slot->') &&
   comparisonDomain.includes('slot.sets.count{it.type==DraftSetType.WORKING}') &&
   comparisonDomain.includes('weekOverrideCount') &&
+  comparisonDomain.includes('auditedDirectMuscleChanges:List<CustomBlockMuscleChange>?') &&
+  comparisonDomain.includes('TrainingMuscle.entries.mapNotNull') &&
+  comparisonDomain.includes('firstAuditedWeekDirectSets') &&
+  blockComparison.includes('Audited direct muscle sets') &&
+  blockComparison.includes('namedMuscle(change.muscle)') &&
+  blockComparison.includes('Biceps, brachialis, wrist flexors and wrist extensors') &&
   comparisonDomain.includes('val mayApplyAutomatically:Boolean get()=false') &&
   comparisonDomain.includes('val mayApproveProgram:Boolean get()=false') &&
   comparisonDomain.includes('val mayIssueWorkout:Boolean get()=false') &&

@@ -17,6 +17,7 @@ const labActivity=read('android-native/app/src/debug/java/io/github/extracteddea
 const tokens=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeDesignTokens.kt');
 const nativeSettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
 const standards=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthStandardsScreen.kt');
+const standardsOverview=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthOverview.kt');
 const sharedDesign=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
 const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
@@ -205,11 +206,33 @@ assert.ok(history.includes('onOpenExerciseTrend:(String)->Unit={}') &&
 
 assert.ok(standards.includes('var comparisonExpanded by rememberSaveable') &&
   standards.includes('if(comparisonExpanded) {') &&
-  standards.includes('Text(if(comparisonExpanded)"Hide comparison settings" else "Edit comparison settings")') &&
+  standards.includes('title="Community comparison"') &&
   standards.includes('Text("Community comparison group"') &&
   standards.includes('comparisonNotice?.let') &&
-  standards.includes('onClick={comparisonExpanded=!comparisonExpanded}'),
-  'Reference settings must remain functional but stay secondary to Progress at first view');
+  standards.includes('onToggle={comparisonExpanded=!comparisonExpanded}') &&
+  standards.includes('PursuitResponsiveActionPair(') &&
+  shared.includes('fun PursuitResponsiveActionPair(') &&
+  shared.includes('LocalDensity.current.fontScale>=1.35f'),
+  'Community reference editor must stay collapsed and its Save/Clear actions must be readable at large text');
+assert.ok(standards.includes('val bestByExercise=remember(completed,displayUnit)') &&
+  standards.includes('NativeKotlinStrengthOverview(overviewItems,trendExerciseId)') &&
+  standards.includes('PursuitStrengthTrendChart(samples,displayUnit,') &&
+  standards.indexOf('NativeKotlinStrengthOverview(overviewItems,trendExerciseId)') <
+    standards.indexOf('title="Community comparison"') &&
+  standards.includes('val best=bestByExercise[standard.exerciseId]') &&
+  standards.includes('var standardsExpanded by rememberSaveable') &&
+  standards.includes('if(standardsExpanded) {') &&
+  standards.includes('onToggle={standardsExpanded=!standardsExpanded}') &&
+  standardsOverview.includes('fun NativeKotlinStrengthOverview(') &&
+  standardsOverview.includes('val fontScale=LocalDensity.current.fontScale') &&
+  standardsOverview.includes('fontScale>=1.35f || maxWidth<360.dp -> 1') &&
+  standardsOverview.includes('maxWidth>=760.dp -> 4') &&
+  standardsOverview.includes('else -> 2') &&
+  standardsOverview.includes('stateDescription=if(selected)') &&
+  standardsOverview.includes('item.estimatedOneRepMax ?: "No qualifying set"') &&
+  !standardsOverview.includes('canApplyProgression'),
+  'Strength Standards must use one verified set summary, prioritize its responsive four-lift overview, and disclose details');
+
 assert.ok(standards.includes('NativeStrengthFavorites.read(favoritePreferences,verified)') &&
   standards.includes('NativeStrengthFavorites.write(favoritePreferences,athleteId,selected)') &&
   standards.includes('profileId==athleteId') &&

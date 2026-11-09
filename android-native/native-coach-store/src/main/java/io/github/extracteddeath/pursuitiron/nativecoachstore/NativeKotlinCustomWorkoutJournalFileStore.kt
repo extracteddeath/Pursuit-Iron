@@ -746,6 +746,51 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
     }
     /**
+     * Only an authenticated, revision-checked SESSION NOTE may be appended
+     * through this path. It has the same owner OS fence, ready-history gate,
+     * atomic receipt write and cold replay as a recorded working set.
+     *
+     * Finish remains exclusive to the shared redo-backed history coordinator.
+     */
+    fun saveSessionNote(
+        ownerKey:String,workoutId:String,
+        operation:CustomWorkoutJournalOperation.SessionNote
+    ):NativeCustomJournalResult {
+        if(!id.matches(workoutId))
+            return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.INVALID_ID)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val existing=read(ownerKey,workoutId,current)
+                if(existing !is NativeCustomJournalResult.Durable)
+                    return@withOwnerTransaction existing
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable ||
+                    !ledger.ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                val decision=CustomWorkoutJournalDomain.reduce(
+                    existing.issued.journal,operation)
+                if(decision !is CustomWorkoutJournalDecision.Proposed)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        (decision as CustomWorkoutJournalDecision.Rejected).reason)
+                if(decision.replayed)return@withOwnerTransaction existing
+                if(owner(ownerKey)!=current)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val saved=existing.issued.copy(journal=decision.draft)
+                atomic(path(ownerKey,workoutId),encode(saved))
+                NativeCustomJournalResult.Durable(saved,false)
+            }
+        }.getOrElse {NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
      * Internal HALF of a redo-backed Finish. The shared ledger must ALREADY
      * contain this exact CustomFinish intent, written under the same owner
      * fence. This cannot be called as an ordinary UI Finish action.

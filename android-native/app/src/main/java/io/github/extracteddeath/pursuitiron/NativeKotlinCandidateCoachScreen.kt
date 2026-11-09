@@ -111,6 +111,7 @@ internal fun NativeKotlinCandidateCoachScreen(
     val scope=rememberCoroutineScope()
     var exerciseId by rememberSaveable { mutableStateOf("") }
     var historyExerciseId by rememberSaveable {mutableStateOf<String?>(null)}
+    var showTechnicalDetails by rememberSaveable {mutableStateOf(false)}
     var exerciseChoices by remember { mutableStateOf<List<String>>(emptyList()) }
     var choicesLoading by remember { mutableStateOf(true) }
     var assistance by remember(host) {mutableStateOf<CoachAssistancePolicy?>(null)}
@@ -447,9 +448,10 @@ internal fun NativeKotlinCandidateCoachScreen(
                     Text("Current: ${candidate.originalLoad}  →  Proposed: ${candidate.candidateLoad}",
                         style=MaterialTheme.typography.titleMedium)
                     Text("Change: ${candidate.kind?.name?.replace('_',' ')}")
-                    Text("Affects days: ${candidate.affectedDayIndices.map { it+1 }.joinToString()}",
+                    Text("Training days affected: " +
+                        candidate.affectedDayIndices.sorted().joinToString { "Day ${it+1}" },
                         style=MaterialTheme.typography.bodyMedium)
-                    Text("Program revision: current approval ${reviewed?.approvalStorageRevision}; new approval is only saved after confirmation.",
+                    Text("Your current workout remains unchanged. The reviewed change affects only a newly approved future workout.",
                         style=MaterialTheme.typography.bodySmall)
                     Text("Choose the NEXT workout day",
                         style=MaterialTheme.typography.labelLarge)
@@ -524,9 +526,26 @@ internal fun NativeKotlinCandidateCoachScreen(
             Text(it,color=if(savedWorkout==null) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.primary)
         }
-        savedWorkout?.let {
-            Text("Approved workout: $it",style=MaterialTheme.typography.labelLarge)
+        if(savedWorkout!=null || repApprovedWorkout!=null) {
+            TextButton(onClick={showTechnicalDetails=!showTechnicalDetails},
+                modifier=Modifier.heightIn(min=48.dp)) {
+                Text(if(showTechnicalDetails)"Hide saved approval details"
+                    else "Advanced: saved approval details")
+            }
+            if(showTechnicalDetails)
+                Text("Saved approval ID: ${repApprovedWorkout ?: savedWorkout}",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if((proposal!=null || repCandidate!=null) && !busy)
+            OutlinedButton(onClick={
+                reviewed=null
+                nextRepReview=null
+                checked=false
+                repAccepted=false
+                notice=null
+                nextRepNotice=null
+            },modifier=Modifier.fillMaxWidth()) {Text("Dismiss unaccepted review")}
         // Once a NEW immutable approval was durably accepted, make the
         // ordinary Train entry reachable without copying proposal facts
         // into the UI or issuing any workout here. Train independently

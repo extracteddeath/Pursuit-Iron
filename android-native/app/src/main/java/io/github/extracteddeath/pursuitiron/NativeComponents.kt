@@ -87,11 +87,17 @@ internal fun NativeSetEditSheet(busy: Boolean,onDismiss: ()->Unit,content: @Comp
 @Composable
 internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: String,enabled: Boolean,
     onLoad: (String)->Unit,onReps: (String)->Unit,onRir: (String)->Unit,
-    allowFailedAttempt: Boolean=false) {
-    OutlinedTextField(value=load,onValueChange={input->
-        if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
-    },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
-        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
+    allowFailedAttempt: Boolean=false,
+    showLoad:Boolean=true,
+    loadInvalid:Boolean=false,
+    repsInvalid:Boolean=false,
+    rirInvalid:Boolean=false) {
+    if(showLoad)
+        OutlinedTextField(value=load,onValueChange={input->
+            if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
+        },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),
+            singleLine=true,enabled=enabled,isError=loadInvalid,
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
     // Reps and RIR share a compact row on normal phones. Their +/- buttons
     // sit below each input so touch targets remain 48dp without stealing
     // space from the editable number. Very narrow devices stack safely.
@@ -105,7 +111,8 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             decrement={NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)?.let(onReps)},
             increment={NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)?.let(onReps)},
             canDecrement=NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)!=null,
-            canIncrement=NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)!=null)
+            canIncrement=NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)!=null,
+            invalid=repsInvalid)
     }
     val rirControl: @Composable () -> Unit = {
         NativeSetCounterField("RIR",rir,enabled,
@@ -115,7 +122,8 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             decrement={NativeSetEntryPolicy.stepRir(rir,-1)?.let(onRir)},
             increment={NativeSetEntryPolicy.stepRir(rir,1)?.let(onRir)},
             canDecrement=NativeSetEntryPolicy.stepRir(rir,-1)!=null,
-            canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null)
+            canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null,
+            invalid=rirInvalid)
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Each column owns its field plus a 48dp-high two-button row.
@@ -132,7 +140,7 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             }
         }
     }
-    Text(if(load=="0")"0 load is not automatically bodyweight · check this exercise’s loading. RIR is optional."
+    Text(if(showLoad && load=="0")"0 load is not automatically bodyweight · check this exercise’s loading. RIR is optional."
         else "RIR is optional · leave blank if unknown.",
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -142,12 +150,14 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
 @Composable
 private fun NativeSetCounterField(
     label:String,value:String,enabled:Boolean,onValueChange:(String)->Unit,
-    decrement:()->Unit,increment:()->Unit,canDecrement:Boolean,canIncrement:Boolean
+    decrement:()->Unit,increment:()->Unit,canDecrement:Boolean,canIncrement:Boolean,
+    invalid:Boolean=false
 ) {
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         OutlinedTextField(value=value,onValueChange=onValueChange,
             label={Text(label)},modifier=Modifier.fillMaxWidth(),singleLine=true,
-            enabled=enabled,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
+            enabled=enabled,isError=invalid,
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             FilledTonalIconButton(onClick=decrement,enabled=enabled && canDecrement,
                 modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)) {

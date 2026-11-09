@@ -419,11 +419,24 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
     const plainWhy = (x) => {
         const est = (x.proposed || []).find((t) => t?.target?.estimate)?.target;
         if (est) { const f = est.estimate?.from || {};
-            return (f.kind === 'own' || f.kind === 'related') && f.name ? `A first guess from your ${f.name}, set a little light. Adjust after your first set.` : 'A light first guess. Adjust after your first set.'; }
+            // "from your Back Squat" on Back Squat read oddly; its own history is "your earlier sessions".
+            const own = f.kind === 'own' || (f.name && f.name === x.name);
+            return own ? 'A first guess from your earlier sessions, set a little light. Adjust after your first set.'
+                : f.kind === 'related' && f.name ? `A first guess from your ${f.name}, set a little light. Adjust after your first set.` : 'A light first guess. Adjust after your first set.'; }
         if (/^Choose a starting load/.test(String(x.reason || ''))) return `First time on this lift: pick a weight you could do for ${x.range?.[0]}–${x.range?.[1]} reps with a couple to spare.`;
         return x.reason;
     };
+    // A percentage main lift with no max set yet: the review's generic first-time line ("pick a weight for 2–5 reps")
+    // contradicted the plan's 4 × 5 at 90%; it says the method's sets and that the max fills the weights in.
+    const pctNoMax = (x) => {
+        const ex = EX_BY_ID[x.id]; if (!ex || !p.config?.percentScheme || E.trainingMaxForUnit(p, x.id, u) > 0) return null;
+        let c = null; try { c = E.computeCell(p, day, x.id, x.slot, wk); } catch { c = null; }
+        return c ? pctCell(p, day, ex, x.slot, wk, c) : null;
+    };
     const gamePlan = ranked.map((x) => {
+        const pc = pctNoMax(x);
+        if (pc) return { id: x.id, slot: x.slot, name: x.name, kind: 'plan', title: x.name, dose: `${pc.sets} × ${pc.range}${pc.load ? ' @' + pc.load : ''}`,
+            guidance: `${pc.sets} × ${pc.range}${pc.load ? ' at ' + pc.load + ' of your max' : ''}. Set this lift's max and the weights fill in.` };
         const pr = x.opportunity;
         const tech = x.protocol.type === 'myo_reps' ? `Myo-reps · ${Math.max(8, Math.round(15 * restScale))}-second rests.` : x.protocol.type === 'drop_set' ? 'Drop set on the last set.' : null;
         const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${Math.round(pr.estimated * 10) / 10} ${u}.` : `Could beat your ${pr.bestReps}-rep best at this load.`) : plainWhy(x);
@@ -477,7 +490,7 @@ export function home() {
             plateaus: S.live ? [] : nx.day.exercises.map((id) => { const pl = plateauFor(nx.program, nx.day, id); return pl && pl.high ? { id, name: exName(id), ...pl,
                 last: lastTop(id), choice: plateauQueue()[`${nx.program.id}:${nx.day.id}`]?.[id] || null, percent: !!nx.program.config?.percentScheme } : null; }).filter(Boolean).sort((a, b) => b.since - a.since).slice(0, 1)
         } : null,
-        week: { sessions: thisWeek.length, planned: nx ? nx.program.days.length : 0, volume: Math.round(thisWeek.reduce((s, h) => s + (Number(h.volume) || 0), 0)) },
+        week: { sessions: thisWeek.length, planned: nx ? nx.program.days.length : 0, volume: Math.round(thisWeek.reduce((s, h) => { let v = 0; try { v = E.historyVolumeIn(h, unit()) || 0; } catch { v = Number(h.volume) || 0; } return s + v; }, 0)) }, // in today's unit: kg sessions read as lb after a switch
         readiness: { today: todayReady, parts: rd, todayParts: partsToday },
         lastSessionId: H[0]?.id || null,
         // The design's protection card: what the next session's lifts do about each open injury.

@@ -111,8 +111,10 @@ fun BodyBwCard(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(saved?.let { f1(it) } ?: "—", style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp, lineHeight = 44.sp))
             Text(buildAnnotatedString {
-                append("$u · 7-day average ")
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = cs.onSurface)) { append(avgNow?.let { f1(it) } ?: "—") }
+                append(u)
+                // One entry is its own "average"; the average shows once there are a few days to average.
+                if (log.size >= 2 && avgNow != null) { append(" · 7-day average ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = cs.onSurface)) { append(f1(avgNow)) } }
             }, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
         }
         if (log.size >= 2) {

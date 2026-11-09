@@ -163,7 +163,10 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 // 13. Unit switch converts loads (App.js switchUnit) and keeps history as logged
 { const before = JSON.parse(C.exportStore());
   const id = Object.keys(before.perf)[0]; const w0 = parseFloat(before.perf[id].weight);
+  const wkKg = C.home().week.volume;
   const r = C.switchUnit({ to: 'lb' }); const after = JSON.parse(C.exportStore());
+  const wkLb = C.home().week.volume;
+  ok(!(wkKg > 0) || Math.abs(wkLb - wkKg * 2.2046226) <= 2, "this week's volume follows the new unit (" + wkKg + ' kg → ' + wkLb + ' lb)');
   ok(r.ok && after.unit === 'lb' && after.saved.every((p) => p.config.unit === 'lb'), 'switchUnit to lb relabels programs');
   ok(!(w0 > 0) || Math.abs(parseFloat(after.perf[id].weight) - Math.round(w0 * 2.2046226 * 2) / 2) < 1e-9, 'perf loads converted (' + w0 + ' kg → ' + after.perf[id].weight + ' lb)');
   ok(JSON.stringify(after.history) === JSON.stringify(before.history), 'history untouched');
@@ -390,6 +393,8 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const h0 = C.home();
   const tms = C.trainingMaxes({ programId: made.programId });
   ok(tms.percent && tms.lifts.length > 0 && h0.needsTrainingMax === tms.lifts.length, 'its main lifts need training maxes (' + tms.lifts.length + ')');
+  { const gp = C.sessionReview({ programId: made.programId }).gamePlan, main = gp.filter((g) => / of your max\. Set this lift's max/.test(g.guidance));
+    ok(main.length > 0 && main.every((g) => !/pick a weight/.test(g.guidance)), "before a max is set, the game plan gives the method's sets: " + (main[0] && main[0].dose)); }
   C.setTrainingMax({ programId: made.programId, exId: tms.lifts[0].id, value: 100, fromOneRm: true });
   const t1 = C.trainingMaxes({ programId: made.programId }).lifts[0];
   ok(t1.tm > 0 && t1.tm <= 90 && t1.week1 && t1.week1.sets.length > 0, '90% of a 100 kg 1RM sets the TM (' + t1.tm + ') and week 1 shows ' + (t1.week1 && t1.week1.sets.join(' ')));

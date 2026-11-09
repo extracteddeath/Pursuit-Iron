@@ -228,7 +228,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                             Text(wk.s("label"), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Text(wk.list("sets").joinToString("  ·  ") { x -> x.s("text") + (x.optDouble("pct").takeIf { !it.isNaN() }?.let { " @${fmtNum(it)}%" } ?: "") },
                                 style = MaterialTheme.typography.bodyMedium)
-                        } else if (tm <= 0) Text("Set a ${basisLabel.let { if (it.length > 1 && it[1].isLowerCase()) it.replaceFirstChar { c -> c.lowercase() } else it }} to see this week's sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        } else if (tm <= 0) Text(if (mode == "orm") "Enter a recent 1RM to see this week's sets." else "Set a ${basisLabel.let { if (it.length > 1 && it[1].isLowerCase()) it.replaceFirstChar { c -> c.lowercase() } else it }} to see this week's sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                 }
             }

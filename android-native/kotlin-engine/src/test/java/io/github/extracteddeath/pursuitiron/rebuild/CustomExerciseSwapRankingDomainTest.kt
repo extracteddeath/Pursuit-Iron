@@ -54,7 +54,7 @@ class CustomExerciseSwapRankingDomainTest {
     }
     @Test fun searchCanHideSourceRowWithoutLosingItsRankingContext() {
         val filtered=CustomExerciseSwapRankingDomain.rank(
-            rows,"press-original",search="chest")
+            rows,"press-original",search="chest-fly")
         assertEquals(listOf("chest-fly"),
             filtered.map {it.choice.exerciseId})
         assertEquals(CustomSwapFit.SHARED_REVIEWED_MUSCLES,

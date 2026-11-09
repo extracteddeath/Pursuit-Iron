@@ -20,6 +20,7 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 
 /** Exact input validation belongs to the pure Kotlin engine, not Compose. */
 private fun performed(
@@ -79,6 +80,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var plateRequest by remember(workoutId) {
+        mutableStateOf<NativeComposerPlateRequest?>(null)
+    }
     // Uncommitted fields must survive Focus/All, previous/next, and configuration changes.
     val editorStates=rememberSaveableStateHolder()
     LaunchedEffect(workoutId) { controller.open(workoutId) }
@@ -349,6 +353,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         it.target.type==set.target.type},
                     onHistory={historyExerciseId=set.target.exerciseId},
                     onInfo={infoExerciseId=set.target.exerciseId},
+                    onShowPlates={load,unit->
+                        plateRequest=NativeComposerPlateRequest(
+                            set.target.exerciseId,load,unit)
+                    },
                     onRecord={outcome,actual->
                         controller.record(set.target.setKey,outcome,actual)
                     },
@@ -469,6 +477,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }
         )
     }
+    plateRequest?.let {request->
+        NativeKotlinComposerPlateSheet(host,workoutId,request,
+            onDismiss={plateRequest=null})
+    }
     // Factual planned set details are derived from the currently recovered
     // journal, not guessed from a movement name or the old web catalog.
     infoExerciseId?.let {exerciseId ->
@@ -530,6 +542,7 @@ private fun NativeKotlinSetCard(
     setCount:Int,
     onHistory:()->Unit,
     onInfo:()->Unit,
+    onShowPlates:(String,LoadUnit)->Unit,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onSkip:()->Unit,
     onFail:(KotlinPerformedSet)->Unit
@@ -586,6 +599,16 @@ private fun NativeKotlinSetCard(
             onRir={effort=it},
             showLoad=verifiedLoad!=null
         )
+        if(verifiedLoad?.basis==LoadBasis.BARBELL_TOTAL) {
+            val amount=weight.toBigDecimalOrNull()
+            OutlinedButton(
+                onClick={onShowPlates(weight,verifiedLoad.unit)},
+                enabled=!busy && amount!=null &&
+                    amount>=BigDecimal.ZERO && amount<=BigDecimal("100000") &&
+                    amount.stripTrailingZeros().scale()<=3,
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) {Text("View plates for entered barbell weight")}
+        }
         if(entry is KotlinSetEntryResult.Rejected &&
             (reps.isNotBlank() || (verifiedLoad!=null && weight.isBlank()) ||
                 effort.isNotBlank())) {

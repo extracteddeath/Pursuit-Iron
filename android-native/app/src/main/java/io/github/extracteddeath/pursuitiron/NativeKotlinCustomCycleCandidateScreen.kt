@@ -404,6 +404,24 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         showProgramEditor=true
                         exerciseEditor=Triple(blockId,weekday,slotId)
                     })
+                NativeKotlinCycleBlockComparisonPanel(
+                    cycle=draft,
+                    currentAudit=state.coachingAudit?.takeIf {
+                        state.auditSourceRevision!=null &&
+                        state.auditSourceRevision==state.sourceRevision &&
+                        it.auditedCycleRevision==draft.revision
+                    },
+                    onEditBlock={blockId->
+                        expandedBlockId=blockId
+                        expandedDayKey=draft.blocks.firstOrNull {
+                            it.blockId==blockId
+                        }?.days?.minByOrNull{it.weekday}?.let{
+                            programDayKey(blockId,it.weekday)
+                        }
+                        showProgramEditor=true
+                    },
+                    enabled=!busy
+                )
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)
             }

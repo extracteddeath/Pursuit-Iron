@@ -8,6 +8,8 @@ const controller=read('app/src/main/java/io/github/extracteddeath/pursuitiron/Na
 const screen=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
 const sheet=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomSessionNoteSheet.kt');
 const historical=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGeneratedHistoryNote.kt');
+const gateway=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinTrackedWorkoutGateway.kt');
+const savedCorrections=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/KotlinNativeSavedCorrectionFileStore.kt');
 const history=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 
 assert.match(journal,/data class SessionNote\(/);
@@ -19,6 +21,12 @@ assert.match(binary,/val version=if\(notes\) VERSION else if\(swapped\) 3 else 2
 assert.match(binary,/writeByte\(5\);writeUTF\(op\.text\)/);
 assert.match(binary,/if\(version<4\)throw IOException/);
 assert.match(binary,/KotlinJournalOperation\.SessionNote\(/);
+assert.match(gateway,/is KotlinJournalOperation\.RecordSet,\s*is KotlinJournalOperation\.SessionNote ->/);
+assert.match(gateway,/if \(!authorized\(owner, athlete, existing\.journal\)\)/);
+assert.match(gateway,/workout\.append\(owner, workoutId, operation\)/);
+assert.match(savedCorrections,/is KotlinJournalOperation\.SessionNote -> \{/);
+assert.match(savedCorrections,/out\.writeByte\(5\)/);
+assert.match(savedCorrections,/out\.writeUTF\(operation\.text\)/);
 assert.match(controller,/fun saveSessionNote\(text:String\)/);
 assert.match(controller,/host\.recordWorkoutOperation\(workoutId,note\)/);
 assert.match(controller,/recoverOnReject=true/);

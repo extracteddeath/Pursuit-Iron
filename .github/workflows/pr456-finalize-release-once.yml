@@ -49,7 +49,8 @@ jobs:
           fi
           PURSUIT_RELEASE_BASE="${RELEASE_BASE}" node scripts/verify-release.mjs
           node engine-lab/canonical-export.mjs /tmp/pursuit-iron-pr456-engine
-          (cd /tmp/pursuit-iron-pr456-engine && npm run verify && npm test)
+          (cd /tmp/pursuit-iron-pr456-engine && npm run verify)
+          # The independent-engine CI job owns the full standalone npm test suite.
       - name: Commit only finalized release identity
         shell: bash
         env:

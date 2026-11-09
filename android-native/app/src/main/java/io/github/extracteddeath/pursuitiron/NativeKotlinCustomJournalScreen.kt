@@ -45,6 +45,10 @@ internal fun NativeKotlinCustomJournalScreen(
     val editorStates=rememberSaveableStateHolder()
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var swapSlotId by remember(workoutId){mutableStateOf<String?>(null)}
+    var swapChoices by remember(workoutId) {
+        mutableStateOf<List<CustomExercisePickerOption>>(emptyList())
+    }
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
     }
@@ -135,6 +139,81 @@ internal fun NativeKotlinCustomJournalScreen(
                 journal=(recovery as? NativeCustomJournalResult.Durable)
                     ?.issued?.journal
             }
+            busy=false
+        }
+    }
+    fun reviewSwap(slot:CustomWorkoutSlotSnapshot) {
+        if(busy)return
+        val active=journal ?:return
+        if(active.finishedByEventId!=null || slot.supersetGroup!=null ||
+            slot.sets.any {set->
+                active.receipts.any {receipt->
+                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                        ?.visit?.setKey==set.setKey
+                }
+            })return
+        busy=true
+        scope.launch {
+            val source=(withContext(Dispatchers.IO) {
+                runCatching{host.readCustomAuthoringSource()}.getOrNull()
+            } as? NativeAuthoringSourceRead.Found)?.source
+            val reviewed=source?.setup?.reviewed
+            val stamp=active.originalSnapshot.stamp
+            val ready=source!=null && reviewed!=null &&
+                source.athleteId==stamp.athleteId &&
+                source.revision==stamp.gymCatalogSourceRevision &&
+                reviewed.athleteProfileId==stamp.athleteId &&
+                reviewed.profileRevision==stamp.athleteProfileRevision &&
+                reviewed.gym.gymId==stamp.gymId
+            val options=if(ready)CustomExerciseAuthoringDomain.picker(
+                checkNotNull(source).setup,source.catalog) else emptyList()
+            if(journal?.revision==active.revision && ready &&
+                options.any {it.exerciseId!=slot.exerciseId}) {
+                swapChoices=options
+                swapSlotId=slot.slotId
+                error=null
+            } else {
+                error="Live swapping requires the same reviewed gym and source revision as this issued workout, plus at least one verified alternative. The original workout is unchanged."
+            }
+            busy=false
+        }
+    }
+    fun confirmSwap(
+        slotId:String,exerciseId:String,
+        sets:List<CustomAuthoredSet>,note:String
+    ) {
+        if(busy)return
+        val active=journal ?:return
+        busy=true
+        scope.launch {
+            val result=withContext(Dispatchers.IO){
+                runCatching{host.swapIssuedCustomExercise(
+                    workoutId,"live-swap-"+UUID.randomUUID(),
+                    active.revision,slotId,exerciseId,sets,note)
+                }.getOrNull()
+            }
+            if(result is NativeCustomJournalResult.Durable) {
+                journal=result.issued.journal
+                error=null
+            } else {
+                val refusal=result as? NativeCustomJournalResult.Rejected
+                error=when(refusal?.reason) {
+                    NativeCustomJournalRefusal.SWAP_SOURCE_UNAVAILABLE ->
+                        "The gym or source revision changed. No swap was saved. Recheck the original workout and gym."
+                    NativeCustomJournalRefusal.SWAP_TARGET_UNAVAILABLE ->
+                        "This exercise, equipment or attachment is not currently verified. Nothing was changed."
+                    NativeCustomJournalRefusal.SWAP_INVALID_SETS ->
+                        "Check the new load, rep range, technique and available increments. No targets were changed."
+                    else -> "Swap was not saved: ${refusal?.journalReason ?: refusal?.reason ?: "storage unavailable"}. The last saved workout will be reopened."
+                }
+                val restored=withContext(Dispatchers.IO){
+                    runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
+                }
+                journal=(restored as? NativeCustomJournalResult.Durable)
+                    ?.issued?.journal
+            }
+            swapSlotId=null
+            swapChoices=emptyList()
             busy=false
         }
     }
@@ -294,6 +373,26 @@ internal fun NativeKotlinCustomJournalScreen(
                         PursuitExerciseHeading(slot.exerciseId,
                             onHistory={historyExerciseId=slot.exerciseId},
                             subtitle="Working sets and saved exercise history")
+                        if(!finished && current.finishedByEventId==null) {
+                            val hasRecordedWork=slot.sets.any{set ->
+                                current.receipts.any{receipt ->
+                                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                                        ?.visit?.setKey==set.setKey
+                                }
+                            }
+                            OutlinedButton(
+                                enabled=!busy && slot.supersetGroup==null &&
+                                    !hasRecordedWork,
+                                modifier=Modifier.heightIn(min=48.dp),
+                                onClick={reviewSwap(slot)}
+                            ) {Text("Swap exercise")}
+                            if(hasRecordedWork || slot.supersetGroup!=null)
+                                Text(if(hasRecordedWork)
+                                    "This exercise has recorded work. Its original history is protected; live swapping is only available before its first set."
+                                    else "Unlink this superset in your program before replacing a linked exercise.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,
                                 style=MaterialTheme.typography.bodySmall)
@@ -412,6 +511,33 @@ internal fun NativeKotlinCustomJournalScreen(
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp)) {
             NativeKotlinWorkoutRestTimer(workoutId,
                 KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy)
+        }
+    }
+    swapSlotId?.let {slotId ->
+        val snap=journal?.snapshot
+        val slot=snap?.slots?.firstOrNull {it.slotId==slotId}
+        if(slot!=null && journal?.finishedByEventId==null) {
+            val origin=CustomExerciseSlot(
+                slotId=slot.slotId,exerciseId=slot.exerciseId,
+                role=slot.role,
+                sets=slot.sets.map{it.prescription},
+                attachmentId=slot.attachmentId,
+                supersetGroup=slot.supersetGroup,
+                pinned=slot.pinned,coachNote=slot.coachNote
+            )
+            key(workoutId,slotId) {
+                NativeKotlinCustomExerciseSheet(
+                    busy=busy,
+                    available=swapChoices,
+                    existing=null,replacing=origin,
+                    scopeLabel="This workout only · no program change",
+                    feedback=error,
+                    onSave={exerciseId,sets,note->
+                        confirmSwap(slotId,exerciseId,sets,note)
+                    },
+                    onDismiss={swapSlotId=null;swapChoices=emptyList()}
+                )
+            }
         }
     }
     historyExerciseId?.let { exerciseId ->

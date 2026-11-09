@@ -140,7 +140,8 @@ still move the load a notch the other way (e.g. 15 kg × 10 → 12.5 kg × 16), 
 - **File:** `verification/b899-stable-screen-browser-test.mjs`.
 - The check measured Program settings' choice buttons as soon as the sheet appeared; on a loaded machine it caught
   the last frame of the scale-in (47.9999 px against a 48 px floor) and failed about one run in three. The animation
-  is the same on Build 933. It now waits for the sheet's animations to finish before measuring.
+  is the same on Build 933. It now waits for the sheet's animations to finish before measuring. Since then it passed
+  15 of 16 solo runs; the one failure wasn't captured, so if it recurs in CI, read its geometry line first.
 
 ## Verification
 

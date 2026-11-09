@@ -91,11 +91,15 @@ object CustomCycleBlockComparisonDomain {
         // measurement. It also must refer to this exact saved draft.
         val weeks=audit?.weeks?.filter{it.blockId==block.blockId}
             ?.sortedBy{it.absoluteWeek}.orEmpty()
-        val validWeeks=audit!=null &&
+        val firstAbsoluteWeek=cycle.blocks.takeWhile{
+            it.blockId!=block.blockId
+        }.sumOf{it.weeks}+1
+        val expectedWeeks=(firstAbsoluteWeek until
+            firstAbsoluteWeek+block.weeks).toList()
+        val validWeeks=audit!=null && block.weeks>=1 &&
             audit.auditedCycleRevision==cycle.revision &&
             audit.structuralReview?.verifiedDraft==cycle &&
-            weeks.size==block.weeks &&
-            weeks.map{it.absoluteWeek}.distinct().size==block.weeks &&
+            weeks.map{it.absoluteWeek}==expectedWeeks &&
             weeks.all{it.phase==block.phase && it.blockPurpose==block.purpose}
         return CustomBlockComparisonFacts(
             block.blockId,block.label,block.phase,block.purpose,

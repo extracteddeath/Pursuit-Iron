@@ -168,8 +168,12 @@ internal fun NativeKotlinCustomJournalScreen(
                 val recovered=withContext(Dispatchers.IO) {
                     runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
                 }
-                journal=(recovered as? NativeCustomJournalResult.Durable)
+                // A second storage failure must NOT unmount the note
+                // sheet or destroy the athlete's unsaved text draft.
+                // Show the refusal and retain the last verified journal.
+                val reopened=(recovered as? NativeCustomJournalResult.Durable)
                     ?.issued?.journal
+                if(reopened!=null)journal=reopened
             }
             busy=false
         }

@@ -1,13 +1,9 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomNextCycleSlot
@@ -66,19 +62,11 @@ internal fun NativeKotlinCustomCycleOverview(
                         day.weekday==(weekday ?: block.days.minOfOrNull{it.weekday}))
                 }
                 HorizontalDivider()
-                TextButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
-                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
-                        Column(Modifier.weight(1f)) {
-                            Text("${days.getOrElse(day.weekday){"Day"}} · ${day.label}",
-                                style=MaterialTheme.typography.titleSmall)
-                            Text("${day.slots.size} exercises",style=MaterialTheme.typography.bodySmall,
-                                color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Icon(if(expanded)Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                            contentDescription=if(expanded)"Hide exercises" else "Show exercises")
-                    }
-                }
+                PursuitDisclosureRow(
+                    title="${days.getOrElse(day.weekday){"Day"}} · ${day.label}",
+                    subtitle="${day.slots.size} exercises",
+                    expanded=expanded,onToggle={expanded=!expanded}
+                )
                 if(expanded)day.slots.forEach { slot ->
                     val working=slot.sets.count{it.type==DraftSetType.WORKING}
                     val warmups=slot.sets.count{it.type==DraftSetType.WARMUP}

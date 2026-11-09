@@ -19,6 +19,7 @@ on:
       - 'android-native/verification/kotlin-coach-choice-search-test.mjs'
       - 'android-native/verification/kotlin-custom-session-note-test.mjs'
       - 'android-native/verification/kotlin-generated-session-note-test.mjs'
+      - 'android-native/verification/kotlin-pinned-exercise-notes-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   pull_request:
     branches:
@@ -39,6 +40,7 @@ on:
       - 'android-native/verification/kotlin-coach-choice-search-test.mjs'
       - 'android-native/verification/kotlin-custom-session-note-test.mjs'
       - 'android-native/verification/kotlin-generated-session-note-test.mjs'
+      - 'android-native/verification/kotlin-pinned-exercise-notes-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   workflow_dispatch:
 
@@ -110,6 +112,8 @@ jobs:
         run: node android-native/verification/kotlin-custom-session-note-test.mjs
       - name: Verify generated session note source guards and shared editor
         run: node android-native/verification/kotlin-generated-session-note-test.mjs
+      - name: Verify owner-verified pinned note persistence and workout controls
+        run: node android-native/verification/kotlin-pinned-exercise-notes-test.mjs
       - name: Compile all native Kotlin UI and test the independent engine (never assembles APK)
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

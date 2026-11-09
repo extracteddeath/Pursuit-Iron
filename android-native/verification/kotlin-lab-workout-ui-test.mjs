@@ -115,6 +115,8 @@ assert.ok(composer.includes('NativeKotlinFinishedComposerHandoff.inspect(stored,
 const composerSwap=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinComposerSwapSheet.kt');
 const composerSwapDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinComposerSwapReviewDomain.kt');
 assert.ok(composer.includes('NativeKotlinComposerSwapSheet(') &&
+  composerSwap.includes('NativeEditSheet(busy=busy,onDismiss=onDismiss)') &&
+  !composerSwap.includes('AlertDialog(') &&
   composerSwap.includes('KotlinComposerSwapRankingDomain.filterRanked(') &&
   composerSwap.includes('Text("Same pattern")') &&
   composerSwap.includes('Text("Shared muscles")') &&

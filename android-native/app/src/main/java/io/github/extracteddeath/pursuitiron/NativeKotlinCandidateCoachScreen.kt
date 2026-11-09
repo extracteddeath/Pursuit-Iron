@@ -265,28 +265,19 @@ internal fun NativeKotlinCandidateCoachScreen(
                     label={Text("Maximum approved increase (gym units)")},
                     singleLine=true,modifier=Modifier.fillMaxWidth(),
                     isError=step==null)
-                if(assistance?.offersFatigueAdvice==true) {
-                    Text("Readiness",style=MaterialTheme.typography.labelLarge)
-                    Row(Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        CoachReadiness.entries.forEach { value ->
-                            FilterChip(
-                                selected=readiness==value,
-                                onClick={readiness=value;invalidate()},
-                                label={Text(value.name.lowercase().replaceFirstChar {
-                                    it.uppercase()
-                                })})
-                        }
-                    }
-                } else {
+                PursuitTrainingReadinessControls(
+                    readiness=readiness,
+                    onReadinessChange={readiness=it;invalidate()},
+                    movementRestricted=restricted,
+                    onRestrictionChange={restricted=it;invalidate()},
+                    enabled=!busy,
+                    showReadiness=assistance?.offersFatigueAdvice==true,
+                    restrictionLabel="Movement restricted or painful"
+                )
+                if(assistance?.offersFatigueAdvice!=true) {
                     Text("Fatigue-aware advice is off. Verified completed sets still guide optional progression.",
                         color=MaterialTheme.colorScheme.onSurfaceVariant,
                         style=MaterialTheme.typography.bodySmall)
-                }
-                Row(verticalAlignment=Alignment.CenterVertically) {
-                    Checkbox(checked=restricted,
-                        onCheckedChange={restricted=it;invalidate()})
-                    Text("Movement is currently restricted or painful")
                 }
                 Button(
                     enabled=!busy && permitted && step!=null,

@@ -518,6 +518,32 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return pinnedExerciseNotes.read(owner.ownerKey,exerciseId)
     }
 
+    /**
+     * Display-only setup fields from CURRENT owner-reviewed native catalog
+     * metadata. No catalog or exercise name grants access on its own: the
+     * issued-workout entitlement is checked before exposing descriptors.
+     * Old stored keys are preserved as saved-earlier fields even if the
+     * reviewed source has changed or become unavailable.
+     */
+    fun reviewedPinnedExerciseSetupFields(
+        workoutId:String,exerciseId:String,custom:Boolean,
+        savedSetup:Map<String,String>
+    ):List<NativePinnedSetupField>? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        if(!canAccessPinnedExercise(owner,workoutId,exerciseId,custom,false))
+            return null
+        val source=runCatching {
+            (authoringSourceStore.read(owner.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+        }.getOrNull()?.takeIf {
+            it.ownerKey==owner.ownerKey && it.athleteId==owner.athleteId &&
+                it.setup.mayReviewProgramCandidate &&
+                it.setup.reviewed?.athleteProfileId==owner.athleteId
+        }
+        val movement=source?.catalog?.firstOrNull{it.exerciseId==exerciseId}
+        return NativePinnedSetupFieldDomain.fields(movement,savedSetup)
+    }
+
     /** CAS-protected user text/setup; no training plan or journal mutation. */
     fun savePinnedExerciseNote(
         workoutId:String,exerciseId:String,custom:Boolean,

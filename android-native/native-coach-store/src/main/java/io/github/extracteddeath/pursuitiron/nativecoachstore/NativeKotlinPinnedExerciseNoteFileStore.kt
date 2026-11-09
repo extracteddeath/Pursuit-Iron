@@ -20,13 +20,22 @@ import java.util.Collections
  * operation. The host must independently verify that the exact exercise is
  * present in the signed-in athlete's current native issued workout.
  *
- * The four generic setup labels are user-entered text, NOT machine-specific
- * metadata. No automatic gym compatibility, attachment, or load inference.
+ * Setup keys can be authored by the reviewed catalog or saved earlier by the
+ * athlete. Unknown old keys must survive unrelated edits and remain labeled
+ * as previous settings, NEVER silently discarded or interpreted as loads.
  */
 object NativePinnedExerciseNotePolicy {
     const val MAX_NOTE_CHARS=2000
-    const val MAX_SETUP_VALUE_CHARS=160
+    const val MAX_SETUP_VALUE_CHARS=200
+    const val MAX_SETUP_FIELDS=32
+    /** Original v1 schema; still accepted on disk without alteration. */
     val setupKeys=setOf("attachment","seat","grip","other")
+    private val reservedKeys=setOf("__proto__","prototype","constructor")
+    fun validSetupKey(key:String):Boolean =
+        key.length in 1..64 &&
+        key !in reservedKeys &&
+        validText(key,64) &&
+        key.none {it=='\n'||it=='\r'||it=='\t'}
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val event=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,127}$")
     fun validExercise(idValue:String)=id.matches(idValue)
@@ -51,8 +60,8 @@ object NativePinnedExerciseNotePolicy {
     }
     fun validContent(note:String,setup:Map<String,String>):Boolean =
         validText(note,MAX_NOTE_CHARS) &&
-        setup.size<=setupKeys.size && setup.all { (key,value) ->
-            key in setupKeys && value.isNotBlank() &&
+        setup.size<=MAX_SETUP_FIELDS && setup.all { (key,value) ->
+            validSetupKey(key) && value.isNotBlank() &&
                 validText(value,MAX_SETUP_VALUE_CHARS)
         }
 }
@@ -99,7 +108,7 @@ class NativeKotlinPinnedExerciseNoteFileStore(
     private val identity:NativeKotlinCurrentIdentity
 ) {
     private val magic=0x5049504e // PIPN
-    private val version=1
+    private val version=2
     private val maxBytes=16_384
     private val maxRevision=9_007_199_254_740_991L
     private fun sha(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes)
@@ -133,7 +142,12 @@ class NativeKotlinPinnedExerciseNoteFileStore(
         require(valid(note))
         val bytes=ByteArrayOutputStream()
         DataOutputStream(bytes).use { out ->
-            out.writeInt(magic);out.writeInt(version)
+            // Preserve original v1 encoding for four-key notes; use v2 only
+            // when the athlete has retained a catalog-specific/orphan key.
+            val format=if(note.setup.keys.all {
+                it in NativePinnedExerciseNotePolicy.setupKeys
+            })1 else version
+            out.writeInt(magic);out.writeInt(format)
             out.writeUTF(note.ownerKey)
             out.writeUTF(note.athleteId)
             out.writeUTF(note.exerciseId)
@@ -177,7 +191,10 @@ class NativeKotlinPinnedExerciseNoteFileStore(
             if(!MessageDigest.isEqual(sha(body),digest))
                 throw IOException("invalid note checksum")
             DataInputStream(ByteArrayInputStream(body)).use { data ->
-                if(data.readInt()!=magic||data.readInt()!=version)
+                if(data.readInt()!=magic)
+                    throw IOException("invalid note magic")
+                val format=data.readInt()
+                if(format !in 1..version)
                     throw IOException("unsupported note version")
                 val storedKey=data.readUTF()
                 val storedAthlete=data.readUTF()
@@ -186,12 +203,16 @@ class NativeKotlinPinnedExerciseNoteFileStore(
                 val event=if(data.readBoolean())data.readUTF() else null
                 val text=data.readUTF()
                 val count=data.readInt()
-                if(count !in 0..NativePinnedExerciseNotePolicy.setupKeys.size)
+                if(count !in 0..if(format==1)
+                    NativePinnedExerciseNotePolicy.setupKeys.size
+                    else NativePinnedExerciseNotePolicy.MAX_SETUP_FIELDS)
                     throw IOException("invalid note setup count")
                 val setup=LinkedHashMap<String,String>()
                 repeat(count) {
                     val field=data.readUTF()
                     val value=data.readUTF()
+                    if(format==1 && field !in NativePinnedExerciseNotePolicy.setupKeys)
+                        throw IOException("unknown legacy setup field")
                     if(setup.put(field,value)!=null)
                         throw IOException("duplicate setup field")
                 }

@@ -116,6 +116,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var exerciseFavoriteNotice by remember {mutableStateOf<String?>(null)}
     var exerciseSearch by rememberSaveable {mutableStateOf("")}
     var exercisePickerExpanded by rememberSaveable {mutableStateOf(false)}
+    var performanceExerciseId by rememberSaveable {mutableStateOf<String?>(null)}
     var favoriteLiftIds by remember(host){mutableStateOf<List<String>>(emptyList())}
     var favoriteBusy by remember{mutableStateOf(false)}
     var favoriteNotice by remember{mutableStateOf<String?>(null)}
@@ -519,9 +520,22 @@ internal fun NativeKotlinStrengthStandardsScreen(
                                         contentDescription="Unpin ${kotlinExerciseLabel(exerciseId)}")
                                 }
                             }
-                            TextButton(onClick={historyExerciseId=exerciseId},
-                                modifier=Modifier.heightIn(min=48.dp)) {
-                                Text("Full history · ${kotlinExerciseLabel(exerciseId)}")
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                TextButton(
+                                    onClick={
+                                        performanceExerciseId=if(
+                                            performanceExerciseId==exerciseId)null
+                                            else exerciseId
+                                    },
+                                    modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
+                                    Text(if(performanceExerciseId==exerciseId)
+                                        "Hide trend" else "View trend")
+                                }
+                                TextButton(onClick={historyExerciseId=exerciseId},
+                                    modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
+                                    Text("Full history")
+                                }
                             }
                             if(index<exerciseFavoriteIds.lastIndex)HorizontalDivider()
                         }
@@ -586,6 +600,13 @@ internal fun NativeKotlinStrengthStandardsScreen(
                             color=MaterialTheme.colorScheme.onSurfaceVariant)}
                     }
                 }
+                val viewedExercise=performanceExerciseId?.takeIf{
+                    it in availableMovements
+                }
+                if(viewedExercise!=null && verifiedTimeline!=null)
+                    NativeKotlinExercisePerformanceTrend(
+                        verifiedTimeline,viewedExercise,displayUnit,
+                        onOpenHistory={historyExerciseId=viewedExercise})
                 PursuitSectionHeading("Strength standards",
                     "Broad community reference levels for four source-matched barbell lifts.")
                 orderedReferences.forEach { standard ->

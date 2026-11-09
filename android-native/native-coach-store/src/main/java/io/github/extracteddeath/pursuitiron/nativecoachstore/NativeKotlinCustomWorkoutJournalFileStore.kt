@@ -30,7 +30,8 @@ enum class NativeCustomJournalRefusal {
     INVALID_ID, NOT_AUTHORIZED, NOT_PREPARED, CONSENT_CHANGED,
     HISTORY_NOT_READY, WORKOUT_ID_CONFLICT, NOT_ISSUED,
     CORRUPT_JOURNAL, STALE_OR_INVALID_SET, FINISH_REQUIRES_HISTORY_TRANSACTION,
-    STORAGE_UNAVAILABLE
+    STORAGE_UNAVAILABLE, SWAP_SOURCE_UNAVAILABLE, SWAP_TARGET_UNAVAILABLE,
+    SWAP_INVALID_SETS
 }
 data class NativeCustomIssuedJournal(
     val ownerKey: String,
@@ -66,7 +67,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
     private val history: NativeKotlinHistoryManifestFileStore,
     /** Prevent collisions with the existing Composer workout journal. */
     private val composerJournals: KotlinNativeJournalFileStore,
-    private val activationHandoff:NativeKotlinFutureActivationHandoffFileStore?=null
+    private val activationHandoff:NativeKotlinFutureActivationHandoffFileStore?=null,
+    private val authoringSource:NativeKotlinCustomAuthoringSourceFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val magic=0x50494349 // PICI
@@ -189,7 +191,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         if(actual.athleteId!=loaded.athleteId ||
             actual.consentRevision!=loaded.consentRevision ||
             actual.consentFingerprint!=loaded.journal.preparedConsentFingerprint ||
-            actual.snapshot!=loaded.journal.snapshot)
+            actual.snapshot!=loaded.journal.originalSnapshot)
             return NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.CORRUPT_JOURNAL)
         return NativeCustomJournalResult.Durable(loaded,true)
@@ -533,6 +535,122 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             atomic(path(ownerKey,workoutId),encode(issued))
             NativeCustomJournalResult.Durable(issued,false)
         }}.getOrElse{NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
+     * The ONLY durable active custom swap path. Preserve the originally
+     * consented snapshot and all other real set receipts; user enters fresh
+     * sets for an unstarted movement, never transferred prior performance.
+     */
+    fun swap(
+        ownerKey:String,workoutId:String,eventId:String,
+        expectedRevision:Long,previousSlotId:String,
+        replacementExerciseId:String,newSets:List<CustomAuthoredSet>,
+        coachNote:String
+    ):NativeCustomJournalResult {
+        if(!id.matches(workoutId) || !id.matches(eventId) ||
+            !id.matches(previousSlotId) ||
+            !id.matches(replacementExerciseId) ||
+            coachNote.length>1000 || newSets.size !in 1..20)
+            return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.SWAP_INVALID_SETS)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val existing=read(ownerKey,workoutId,current)
+                if(existing !is NativeCustomJournalResult.Durable)
+                    return@withOwnerTransaction existing
+                val journal=existing.issued.journal
+                val earlier=journal.receipts.firstOrNull {
+                    it.operation.eventId==eventId
+                }
+                if(earlier!=null) {
+                    val op=earlier.operation as? CustomWorkoutJournalOperation.Swap
+                    if(op==null || op.expectedRevision!=expectedRevision ||
+                        op.previousSlotId!=previousSlotId ||
+                        op.replacement.exerciseId!=replacementExerciseId ||
+                        op.replacement.coachNote!=coachNote ||
+                        op.replacement.sets.map{it.prescription}!=newSets)
+                        return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                            CustomWorkoutJournalRefusal.EVENT_ID_COLLISION)
+                    return@withOwnerTransaction existing
+                }
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable ||
+                    !ledger.ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                if(journal.revision!=expectedRevision ||
+                    journal.finishedByEventId!=null)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        if(journal.finishedByEventId!=null)
+                            CustomWorkoutJournalRefusal.FINISHED
+                        else CustomWorkoutJournalRefusal.STALE_REVISION)
+                val source=(authoringSource?.read(ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                val athlete=source?.setup?.reviewed
+                if(source==null || source.ownerKey!=ownerKey ||
+                    source.athleteId!=current.athleteId ||
+                    source.revision!=journal.originalSnapshot.stamp.gymCatalogSourceRevision ||
+                    athlete==null ||
+                    athlete.athleteProfileId!=current.athleteId ||
+                    athlete.profileRevision!=journal.originalSnapshot.stamp.athleteProfileRevision ||
+                    athlete.gym.gymId!=journal.originalSnapshot.stamp.gymId)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.SWAP_SOURCE_UNAVAILABLE)
+                val option=CustomExerciseAuthoringDomain.picker(
+                    source.setup,source.catalog).firstOrNull {
+                    it.exerciseId==replacementExerciseId
+                } ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.SWAP_TARGET_UNAVAILABLE)
+                val invalid=CustomExerciseAuthoringDomain.reviewFreshSets(
+                    source.setup,source.catalog,replacementExerciseId,newSets)
+                if(invalid!=null)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.SWAP_INVALID_SETS)
+                val move=source.catalog.firstOrNull {
+                    it.exerciseId==replacementExerciseId
+                } ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.SWAP_TARGET_UNAVAILABLE)
+                // A deterministic new identity makes a retried write identical.
+                val slotId="live-"+MessageDigest.getInstance("SHA-256")
+                    .digest(eventId.toByteArray(Charsets.UTF_8))
+                    .take(16).joinToString(""){"%02x".format(it.toInt() and 255)}
+                val replacement=CustomWorkoutSlotSnapshot(
+                    slotId=slotId,
+                    exerciseId=replacementExerciseId,
+                    familyId=move.familyId,
+                    variantId=move.variantId,
+                    role=move.role,
+                    attachmentId=option.attachmentId,
+                    supersetGroup=null,pinned=true,
+                    coachNote=coachNote,
+                    sets=newSets.mapIndexed {i,set->
+                        CustomWorkoutSetSnapshot(
+                            "${journal.snapshot.stamp.cycleId}:w${journal.snapshot.absoluteWeek}:d${journal.snapshot.weekday}:${slotId}:s${i+1}",
+                            slotId,i+1,set.copy(amplifier=set.amplifier?.copy()))
+                    }
+                )
+                val action=CustomWorkoutJournalOperation.Swap(
+                    eventId,expectedRevision,previousSlotId,replacement)
+                val decision=CustomWorkoutJournalDomain.reduce(journal,action)
+                if(decision !is CustomWorkoutJournalDecision.Proposed)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        (decision as CustomWorkoutJournalDecision.Rejected).reason)
+                if(owner(ownerKey)!=current)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val updated=existing.issued.copy(journal=decision.draft)
+                atomic(path(ownerKey,workoutId),encode(updated))
+                NativeCustomJournalResult.Durable(updated,false)
+            }
+        }.getOrElse {NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
     }
 

@@ -97,17 +97,21 @@ private fun AdaptivePermissionGroup(
 @Composable
 internal fun NativeKotlinAdaptiveCyclePermissionsPanel(
     host:NativeKotlinCandidateHost,
-    cycleId:String
+    cycleId:String,
+    expectedAthleteId:String,
+    sourceRevision:Long
 ) {
     var expanded by rememberSaveable(cycleId){mutableStateOf(false)}
-    var state by remember(host,cycleId){mutableStateOf<NativeAdaptivePermissionRead?>(null)}
-    var selected by remember(host,cycleId){
+    var state by remember(host,cycleId,expectedAthleteId){
+        mutableStateOf<NativeAdaptivePermissionRead?>(null)
+    }
+    var selected by remember(host,cycleId,expectedAthleteId){
         mutableStateOf<Set<CustomCycleChangeKind>>(emptySet())
     }
-    var loading by remember(host,cycleId){mutableStateOf(true)}
-    var saving by remember(host,cycleId){mutableStateOf(false)}
-    var confirmed by remember(host,cycleId){mutableStateOf(false)}
-    var message by remember(host,cycleId){mutableStateOf<String?>(null)}
+    var loading by remember(host,cycleId,expectedAthleteId){mutableStateOf(true)}
+    var saving by remember(host,cycleId,expectedAthleteId){mutableStateOf(false)}
+    var confirmed by remember(host,cycleId,expectedAthleteId){mutableStateOf(false)}
+    var message by remember(host,cycleId,expectedAthleteId){mutableStateOf<String?>(null)}
     val scope=rememberCoroutineScope()
     suspend fun refresh() {
         loading=true
@@ -115,15 +119,24 @@ internal fun NativeKotlinAdaptiveCyclePermissionsPanel(
             runCatching{host.readAdaptiveCyclePermissions(cycleId)}.getOrNull()
         } ?: NativeAdaptivePermissionRead.Rejected(
             NativeAdaptivePermissionRefusal.STORAGE_UNAVAILABLE)
-        state=read
-        selected=(read as? NativeAdaptivePermissionRead.Found)
-            ?.receipt?.takeIf{it.cycleId==cycleId}?.allowedKinds.orEmpty()
+        // Never display another athlete's grant if the owner changed
+        // while this panel was mounted.
+        val found=(read as? NativeAdaptivePermissionRead.Found)?.receipt
+        state=if(found!=null &&
+            (found.cycleId!=cycleId || found.athleteId!=expectedAthleteId))
+            NativeAdaptivePermissionRead.Rejected(
+                NativeAdaptivePermissionRefusal.NOT_AUTHORIZED)
+        else read
+        selected=(state as? NativeAdaptivePermissionRead.Found)
+            ?.receipt?.allowedKinds.orEmpty()
         confirmed=false
         loading=false
     }
-    LaunchedEffect(host,cycleId){refresh()}
+    LaunchedEffect(host,cycleId,expectedAthleteId,sourceRevision){refresh()}
     val existing=(state as? NativeAdaptivePermissionRead.Found)
-        ?.receipt?.takeIf{it.cycleId==cycleId}
+        ?.receipt?.takeIf{
+            it.cycleId==cycleId && it.athleteId==expectedAthleteId
+        }
     val revision=when(val read=state) {
         NativeAdaptivePermissionRead.Missing -> 0L
         is NativeAdaptivePermissionRead.Revoked -> read.revision
@@ -196,9 +209,16 @@ internal fun NativeKotlinAdaptiveCyclePermissionsPanel(
                                 }.getOrNull()
                             }
                             refresh()
-                            message=if(result is NativeAdaptivePermissionWrite.Committed)
+                            val verified=(state as? NativeAdaptivePermissionRead.Found)
+                                ?.receipt?.takeIf{
+                                    it.cycleId==cycleId &&
+                                    it.athleteId==expectedAthleteId
+                                }
+                            message=if(result is NativeAdaptivePermissionWrite.Committed &&
+                                verified?.revision==result.revision &&
+                                verified.allowedKinds==chosen)
                                 "Adaptation permissions saved for this program. Proposals still require review."
-                            else "Permissions were not changed. Current rights were reloaded; review them and retry."
+                            else "Could not verify saved permissions. Review the reloaded record before continuing."
                             saving=false
                         }
                     }) {Text(if(saving)"Saving permissions…" else "Save permissions")}
@@ -218,9 +238,11 @@ internal fun NativeKotlinAdaptiveCyclePermissionsPanel(
                                 }.getOrNull()
                             }
                             refresh()
-                            message=if(result is NativeAdaptivePermissionWrite.Committed)
+                            val revoked=state as? NativeAdaptivePermissionRead.Revoked
+                            message=if(result is NativeAdaptivePermissionWrite.Committed &&
+                                revoked?.revision==result.revision)
                                 "All adaptation permissions revoked. Saved workouts remain unchanged."
-                            else "Could not revoke permissions. Saved state was reloaded."
+                            else "Could not verify revocation. Review the current reloaded permissions."
                             saving=false
                         }
                     }) {Text("Revoke all adaptation permissions")}

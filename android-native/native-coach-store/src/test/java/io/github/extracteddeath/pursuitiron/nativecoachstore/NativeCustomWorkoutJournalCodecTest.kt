@@ -121,4 +121,48 @@ class NativeCustomWorkoutJournalCodecTest {
             NativeCustomWorkoutJournalCodec.decode(invalid)
         }
     }
+
+    @Test fun swapReceiptRoundTripPreservesOriginalApprovalAndOtherActuals() {
+        val origin=snapshot()
+        val other=CustomWorkoutSlotSnapshot(
+            "row-2","bodyweight_row","row","bodyweight",
+            ComposerRole.ACCESSORY,null,null,true,"Other exercise",
+            listOf(CustomWorkoutSetSnapshot(
+                "cycle-1:w1:d0:row-2:s1","row-2",1,
+                origin.slots.single().sets.single().prescription.copy(
+                    amplifier=null)))
+        )
+        val initial=CustomWorkoutJournalDomain.begin("swap-workout",
+            origin.copy(slots=origin.slots+other,
+                knownSetAndRestSeconds=290L),"b".repeat(64))
+        val prior=accept(initial,CustomWorkoutJournalOperation.Record(
+            "other-record",0L,
+            CustomWorkoutVisitKey("cycle-1:w1:d0:row-2:s1",
+                CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(11,1)))
+        val next=CustomWorkoutSlotSnapshot(
+            "new-slot","bodyweight_pull","pull","bodyweight",
+            ComposerRole.ACCESSORY,null,null,true,"New explicit targets",
+            listOf(CustomWorkoutSetSnapshot(
+                "cycle-1:w1:d0:new-slot:s1","new-slot",1,
+                origin.slots.single().sets.single().prescription.copy(
+                    amplifier=null)))
+        )
+        val swapped=accept(prior,CustomWorkoutJournalOperation.Swap(
+            "event-swap",1L,"raise-1",next))
+        val bytes=NativeCustomWorkoutJournalCodec.encode(record(swapped))
+        val recovered=NativeCustomWorkoutJournalCodec.decode(bytes)
+        assertEquals(record(swapped),recovered)
+        assertEquals(origin.slots.single().slotId,
+            recovered.journal.originalSnapshot.slots.first().slotId)
+        assertEquals("new-slot",recovered.journal.snapshot.slots.first().slotId)
+        assertEquals(prior.effectiveVisits,recovered.journal.effectiveVisits)
+        assertEquals(bytes.toList(),
+            NativeCustomWorkoutJournalCodec.encode(recovered).toList())
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeCustomWorkoutJournalCodec.encode(
+                record(swapped.copy(snapshot=origin)))
+        }
+    }
+
 }

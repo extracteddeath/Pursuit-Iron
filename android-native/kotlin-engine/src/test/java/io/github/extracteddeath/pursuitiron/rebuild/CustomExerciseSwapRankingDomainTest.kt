@@ -113,4 +113,14 @@ class CustomExerciseSwapRankingDomainTest {
         assertTrue(CustomExerciseSwapRankingDomain.rank(variants,"pushdown-a",
             search="single_rope").isEmpty())
     }
+
+    @Test fun sameFamilyOnlyUsesReviewedFamilyNotNameOrPatternGuess() {
+        val candidates=rows+option("press-isolation","press",
+            ComposerPattern.ISOLATION,listOf(chest))
+        assertEquals(listOf("press-variant","press-isolation"),
+            CustomExerciseSwapRankingDomain.rank(candidates,"press-original",
+                sameFamilyOnly=true).map{it.choice.exerciseId})
+        assertTrue(CustomExerciseSwapRankingDomain.rank(candidates,
+            "missing-source",sameFamilyOnly=true).isEmpty())
+    }
 }

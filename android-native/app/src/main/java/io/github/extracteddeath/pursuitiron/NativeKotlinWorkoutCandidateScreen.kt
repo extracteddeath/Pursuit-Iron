@@ -283,12 +283,19 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 Text(if(showAll)"Focus mode" else "Show all")
             }
         }
-        if(selected!=null && journal!=null)
+        if(selected!=null && journal!=null) {
             NativeKotlinPinnedExerciseControl(
                 host=host,workoutId=workoutId,
                 exerciseId=selected.target.exerciseId,custom=false,
                 enabled=!state.busy && !presentation.finished
             )
+            NativeVerifiedPlateLoadingControl(
+                host=host,workoutId=workoutId,
+                exerciseId=selected.target.exerciseId,
+                custom=false,load=selected.target.load,
+                enabled=!state.busy
+            )
+        }
         // Focus prioritizes the active set and its Complete action.
         // All-sets review keeps readiness and source-verified swap context
         // above the full ledger. Neither presentation order changes receipts.

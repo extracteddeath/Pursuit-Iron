@@ -546,23 +546,20 @@ private fun NativeKotlinSetCard(
         Text("Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(verifiedLoad!=null) {
-            OutlinedTextField(value=weight,onValueChange={weight=it},
-                label={Text("Weight · ${verifiedLoad.unit.name.lowercase()}")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
-                singleLine=true,modifier=Modifier.fillMaxWidth())
-        }
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
-            modifier=Modifier.fillMaxWidth()) {
-            OutlinedTextField(reps,{reps=it},
-                label={Text("Actual reps")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                singleLine=true,modifier=Modifier.weight(1f))
-            OutlinedTextField(effort,{effort=it},
-                label={Text("Actual RIR (optional)")},
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
-                singleLine=true,modifier=Modifier.weight(1f))
-        }
+        // Reuse the same keyboard and 48dp rep/RIR stepper controls as
+        // other native set editors. No inferred load increments, no
+        // transfer of target RIR into reported actual effort.
+        NativeSetValueFields(
+            unit=verifiedLoad?.unit?.name?.lowercase().orEmpty(),
+            load=weight,
+            reps=reps,
+            rir=effort,
+            enabled=!busy,
+            onLoad={weight=it},
+            onReps={reps=it},
+            onRir={effort=it},
+            showLoad=verifiedLoad!=null
+        )
         if(entry is KotlinSetEntryResult.Rejected &&
             (reps.isNotBlank() || (verifiedLoad!=null && weight.isBlank()) ||
                 effort.isNotBlank())) {

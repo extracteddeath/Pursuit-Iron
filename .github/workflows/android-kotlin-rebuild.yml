@@ -28,6 +28,7 @@ on:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlin*.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeExerciseFavorites.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeDesignTokens.kt'

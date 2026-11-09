@@ -309,6 +309,7 @@ internal fun NativeKotlinCandidateJourney(
                             onOpenSettings={navigate(KotlinCandidateDestination.SETTINGS)},
                             onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
                             onOpenFuture={navigate(KotlinCandidateDestination.FUTURE)},
+                            onOpenHistory={navigate(KotlinCandidateDestination.HISTORY)},
                             onOpenTrain={id->
                                 selectedGeneratedWorkoutId=id
                                 selectedCustomWorkoutId=null

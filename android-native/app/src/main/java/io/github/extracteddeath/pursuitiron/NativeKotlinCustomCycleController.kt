@@ -1093,6 +1093,37 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
+    /**
+     * Athlete-confirmed draft swap. The old slot and all its loads/advanced
+     * sets are NOT copied: new sets come only from the explicit editor.
+     * editReviewed rechecks the current gym/catalog source and saves an
+     * undoable revision only after optimistic concurrency has been verified.
+     */
+    fun swapReviewedExercise(
+        blockId:String,weekday:Int,oldSlotId:String,
+        exerciseId:String,sets:List<CustomAuthoredSet>,coachNote:String=""
+    ) = editReviewed {draft,setup,catalog ->
+        val selected=CustomExerciseAuthoringDomain.picker(
+            setup,catalog).firstOrNull {it.exerciseId==exerciseId}
+        if(selected==null)
+            CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.EXERCISE_UNAVAILABLE)
+        else {
+            val newSlot=CustomExerciseSlot(
+                slotId="slot-"+UUID.randomUUID().toString().replace("-",""),
+                exerciseId=selected.exerciseId,
+                role=catalog.first {it.exerciseId==exerciseId}.role,
+                sets=sets,
+                attachmentId=selected.attachmentId,
+                pinned=true,
+                coachNote=coachNote
+            )
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                draft,draft.revision,blockId,weekday,oldSlotId,
+                newSlot,setup,catalog)
+        }
+    }
+
     /** Accessible alternative to drag gestures, stable slot identity intact. */
     fun moveExercise(
         blockId: String, weekday: Int, slotId: String, direction: Int

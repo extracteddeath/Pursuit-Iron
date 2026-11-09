@@ -1,7 +1,7 @@
 name: Native APK branch
 # Copies the debug APK of the latest passing Native Android run (build + smoke) to the scratch branch native-apk,
 # so it can be fetched with plain git where artifact storage isn't reachable.
-# workflow_run only fires once this file is on the default branch; until then a push of this file runs it (touch this line: superset rounds).
+# touch this line: reorder + swap parity build
 on:
   workflow_run:
     workflows: [Native Android]

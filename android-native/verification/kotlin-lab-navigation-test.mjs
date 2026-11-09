@@ -28,6 +28,11 @@ const exerciseTrendDomain=read('android-native/native-coach-store/src/main/java/
 const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
 const exerciseFavorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeExerciseFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const authoringSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt');
+const swapRank=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseSwapRankingDomain.kt');
+const customAuthoring=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
+const customBuilder=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomCycleBuilderDomain.kt');
+const cycleController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleController.kt');
 const adaptiveRights=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinAdaptiveCyclePermissionsPanel.kt');
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
@@ -203,6 +208,42 @@ assert.ok(history.includes('onOpenExerciseTrend:(String)->Unit={}') &&
   standards.includes('exercise in availableMovements') &&
   standards.includes('performanceExerciseId=exercise'),
   'History search trends require verified movement routing and an origin-preserving Back action');
+
+// Web changelog 2523/2677/2248: ranked search and verified equipment are
+// native PROGRAM-DRAFT parity, not an unfounded claim of in-workout swapping.
+assert.ok(
+  customAuthoring.includes('val pattern: ComposerPattern? = null') &&
+  customAuthoring.includes('val muscleCredits: List<DeclaredMuscleCredit> = emptyList()') &&
+  customAuthoring.includes('gym.confirmedStock[move.equipmentId]') &&
+  customAuthoring.includes('move.credits.toList()') &&
+  swapRank.includes('fun rank(') &&
+  swapRank.includes('samePatternOnly:Boolean=false') &&
+  swapRank.includes('sharedMusclesOnly:Boolean=false') &&
+  swapRank.includes('CustomSwapFit.SAME_PATTERN_AND_FAMILY') &&
+  swapRank.includes('CustomSwapFit.SHARED_REVIEWED_MUSCLES') &&
+  swapRank.includes('val mayTransferWeight:Boolean get()=false') &&
+  swapRank.includes('val mayApplyWithoutReview:Boolean get()=false') &&
+  authoringSheet.includes('replacing: CustomExerciseSlot? = null') &&
+  authoringSheet.includes('CustomExerciseSwapRankingDomain.rank(') &&
+  authoringSheet.includes('Search by exercise, family, pattern or muscle') &&
+  authoringSheet.includes('Text("Same pattern")') &&
+  authoringSheet.includes('Text("Shared muscles")') &&
+  authoringSheet.includes('if(swapConfirmation)"Confirm this program swap"') &&
+  authoringSheet.includes('forms=listOf(CustomSetFields())') &&
+  customBuilder.includes('fun replaceExerciseSlot(') &&
+  customBuilder.includes('newSlot.slotId==oldSlotId') &&
+  customBuilder.includes('previous.supersetGroup!=null') &&
+  customBuilder.includes('current.weekOverrides[blockId].orEmpty().any{') &&
+  customAuthoring.includes('fun replaceSelectedExercise(') &&
+  customAuthoring.includes('validSet(it,option)') &&
+  cycleController.includes('fun swapReviewedExercise(') &&
+  cycleController.includes('editReviewed {draft,setup,catalog ->') &&
+  cycleController.includes('CustomExerciseAuthoringDomain.replaceSelectedExercise(') &&
+  cycleController.includes('lastUndo = result.receipt') &&
+  plan.includes('var swapExerciseEditor by remember') &&
+  plan.includes('Text("Swap")') &&
+  plan.includes('controller.swapReviewedExercise('),
+  'Reviewed gym-backed program swaps must be ranked, independently reauthored, confirmed, scoped, source-fenced, and undoable');
 
 assert.ok(standards.includes('var comparisonExpanded by rememberSaveable') &&
   standards.includes('if(comparisonExpanded) {') &&

@@ -140,6 +140,12 @@ private object SavedCorrectionBinary {
                         out.writeByte(4)
                         out.writeUTF(operation.swapEventId)
                     }
+                    is KotlinJournalOperation.SessionNote -> {
+                        // Bind correction history to the exact original text
+                        // without ever treating notes as weight/repetition facts.
+                        out.writeByte(5)
+                        out.writeUTF(operation.text)
+                    }
                     is KotlinJournalOperation.RecordSet -> {
                         out.writeByte(2)
                         out.writeUTF(operation.setKey)

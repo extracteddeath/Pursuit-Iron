@@ -2014,6 +2014,68 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Read-only Composer replacement options from the current independently
+     * approved gym/plan. These are suggestions, NOT a write entitlement.
+     * The selected target is fully reverified when the athlete confirms.
+     */
+    fun reviewComposerWorkoutSwapChoices(
+        workoutId:String,previousExerciseId:String,
+        search:String=""
+    ):List<KotlinComposerSwapChoice> {
+        val owner=localAthlete.signedInIdentity() ?:return emptyList()
+        val saved=trackedWorkout.open(
+            owner.ownerKey,owner.athleteId,workoutId)
+            as? NativeJournalFileResult.Durable ?:return emptyList()
+        val journal=saved.journal
+        if(journal.finishedByEventId!=null ||
+            journal.snapshot.targets.none{it.exerciseId==previousExerciseId} ||
+            journal.snapshot.targets.filter{
+                it.exerciseId==previousExerciseId
+            }.any{it.setKey in journal.effectiveSets})
+            return emptyList()
+        val approval=gymCoherentAuthority.currentApprovedWorkout(
+            owner.ownerKey,workoutId) ?:return emptyList()
+        if(approval.approvedSource!=journal.originalSnapshot.source ||
+            approval.athleteId!=owner.athleteId)
+            return emptyList()
+        val original=approval.program.exercises.singleOrNull {
+            it.exerciseId==previousExerciseId
+        }?:return emptyList()
+        val focus=approval.program.days.getOrNull(
+            journal.snapshot.dayIndex)?.focus ?:return emptyList()
+        return KotlinComposerSwapRankingDomain.rank(
+            original,approval.program.exercises,
+            journal.snapshot.targets.map{it.exerciseId}.toSet(),
+            focus,search)
+    }
+
+    fun swapIssuedComposerExercise(
+        workoutId:String,eventId:String,expectedRevision:Long,
+        previousExerciseId:String,replacementExerciseId:String,
+        intents:List<KotlinComposerSwapSetIntent>
+    ):NativeJournalFileResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.NOT_AUTHORIZED)
+        return trackedWorkout.swapExercise(
+            owner.ownerKey,owner.athleteId,workoutId,
+            eventId,expectedRevision,previousExerciseId,
+            replacementExerciseId,intents)
+    }
+
+    fun undoIssuedComposerExerciseSwap(
+        workoutId:String,eventId:String,expectedRevision:Long,
+        swapEventId:String
+    ):NativeJournalFileResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.NOT_AUTHORIZED)
+        return trackedWorkout.undoSwap(
+            owner.ownerKey,owner.athleteId,workoutId,
+            eventId,expectedRevision,swapEventId)
+    }
+
+    /**
      * Read-only access to the independent Kotlin history index. Unenrolled,
      * pending or incomplete manifests are rejected, never replaced by empty
      * history. This does not publish PRs to the JS runtime.

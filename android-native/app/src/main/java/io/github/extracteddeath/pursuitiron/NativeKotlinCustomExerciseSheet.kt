@@ -143,6 +143,7 @@ internal fun NativeKotlinCustomExerciseSheet(
         needle.isBlank() || choice.exerciseId.contains(needle,true) ||
             choice.familyId.contains(needle,true) ||
             choice.variantId.contains(needle,true) ||
+            choice.attachmentId?.contains(needle,true)==true ||
             kotlinExerciseLabel(choice.exerciseId).contains(needle,true) ||
             choice.pattern?.name?.contains(needle,true)==true ||
             choice.muscleCredits.any {
@@ -200,7 +201,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                 style = MaterialTheme.typography.bodyMedium)
         } else if (existing == null) {
             OutlinedTextField(search, { search = it.take(80) },
-                label = { Text("Search by exercise, family, pattern or muscle") },
+                label = { Text("Search exercise, family, pattern, attachment or muscle") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true)
             if(replacing!=null) {
@@ -245,7 +246,10 @@ internal fun NativeKotlinCustomExerciseSheet(
                     selected=exerciseId==candidate.exerciseId,
                     onClick={exerciseId=candidate.exerciseId},
                     label={Text(kotlinExerciseLabel(candidate.exerciseId)+
-                        " · "+candidate.variantId.replace('-', ' '))})
+                        " · "+candidate.variantId.replace('-', ' ')+
+                        (candidate.attachmentId?.let {
+                            " · attachment: "+it.replace('_',' ').replace('-',' ')
+                        } ?: ""))})
                 if(replacing!=null)Text(optionRow.explanation,
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)

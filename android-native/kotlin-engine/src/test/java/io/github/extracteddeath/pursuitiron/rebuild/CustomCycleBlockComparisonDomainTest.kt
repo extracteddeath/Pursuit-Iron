@@ -115,9 +115,12 @@ class CustomCycleBlockComparisonDomainTest {
         val original=audit(c)
         val stale=original.copy(auditedCycleRevision=c.revision-1)
         val incomplete=original.copy(weeks=original.weeks.dropLast(1))
+        val wrongCalendar=original.copy(weeks=original.weeks.map {week->
+            if(week.absoluteWeek==3)week.copy(absoluteWeek=99) else week
+        })
         val wrongDraft=original.copy(structuralReview=original.structuralReview
             ?.copy(verifiedDraft=c.copy(revision=c.revision+1)))
-        for(bad in listOf(stale,incomplete,wrongDraft)) {
+        for(bad in listOf(stale,incomplete,wrongCalendar,wrongDraft)) {
             val report=checkNotNull(CustomCycleBlockComparisonDomain.compare(
                 c,"strength",bad))
             assertNull(report.firstAuditedWeekDelta)

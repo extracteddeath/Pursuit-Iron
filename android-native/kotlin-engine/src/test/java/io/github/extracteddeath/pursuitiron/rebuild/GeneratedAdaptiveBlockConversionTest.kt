@@ -150,17 +150,90 @@ class GeneratedAdaptiveBlockConversionTest {
         assertNull(impossible.proposedOption)
     }
 
-    @Test fun pinnedAndPerWeekCustomOverridesAreNotOverwritten() {
+    @Test fun pinnedCustomVisitIsPreservedExactlyWhenPlacementMatches() {
+        val original=fixture.cycle()
+        val block=original.blocks.single()
+        val first=block.days.first()
+        val old=first.slots.first()
+        val protected=old.copy(pinned=true,
+            sets=listOf(old.sets.single().copy(restSeconds=140)),
+            coachNote="Keep this setup and my authored rest")
+        val authored=original.copy(blocks=listOf(block.copy(
+            days=listOf(first.copy(slots=listOf(protected)+
+                first.slots.drop(1)))+block.days.drop(1))))
+        val result=GeneratedAdaptiveBlockDomain.propose(
+            fixture.request(original=authored))
+        assertEquals(result.explanation,
+            GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,result.status)
+        val proposed=checkNotNull(result.proposedOption).proposedCycle
+        val preserved=proposed.blocks.single().days.first().slots.first()
+        assertEquals(protected,preserved)
+        assertEquals(old.slotId,preserved.slotId)
+        assertEquals(GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE,
+            result.slotContinuity.first().relationship)
+        // No silent program save, history write or workout issuance.
+        assertEquals(authored,authored.copy())
+        assertEquals(4L,authored.revision)
+        assertFalse(result.maySaveProgram)
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun authoredNoteWithoutPinAlsoSurvivesMatchingGeneration() {
+        val original=fixture.cycle()
+        val block=original.blocks.single()
+        val first=block.days.first()
+        val preserved=first.slots.first().copy(
+            coachNote="Use the comfortable grip")
+        val amended=original.copy(blocks=listOf(block.copy(
+            days=listOf(first.copy(slots=listOf(preserved)+
+                first.slots.drop(1)))+block.days.drop(1))))
+        val result=GeneratedAdaptiveBlockDomain.propose(
+            fixture.request(original=amended))
+        assertEquals(result.explanation,
+            GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,result.status)
+        assertEquals(preserved,checkNotNull(result.proposedOption)
+            .proposedCycle.blocks.single().days.first().slots.first())
+    }
+
+    @Test fun protectedVisitCannotChangeExerciseRoleOrSessionPurpose() {
+        val original=fixture.cycle()
+        val block=original.blocks.single()
+        val first=block.days.first()
+        val protected=first.slots.first().copy(
+            pinned=true,role=ComposerRole.SECONDARY)
+        val changedRole=original.copy(blocks=listOf(block.copy(
+            days=listOf(first.copy(slots=listOf(protected)+
+                first.slots.drop(1)))+block.days.drop(1))))
+        val role=GeneratedAdaptiveBlockDomain.propose(
+            fixture.request(original=changedRole))
+        assertEquals(GeneratedAdaptiveBlockStatus.PROTECTED_CUSTOM_WORK,
+            role.status)
+        assertNull(role.proposedOption)
+        val changedPurpose=original.copy(blocks=listOf(block.copy(
+            days=listOf(first.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                slots=listOf(first.slots.first().copy(pinned=true))+
+                    first.slots.drop(1)))+block.days.drop(1))))
+        val purpose=GeneratedAdaptiveBlockDomain.propose(
+            fixture.request(original=changedPurpose))
+        assertEquals(GeneratedAdaptiveBlockStatus.PROTECTED_CUSTOM_WORK,
+            purpose.status)
+        assertNull(purpose.proposedOption)
+    }
+
+    @Test fun missingProtectedDayAndPerWeekOverridesRemainBlocked() {
         val original=fixture.cycle()
         val prior=original.blocks.single()
         val day=prior.days.first()
-        val pinned=original.copy(blocks=listOf(prior.copy(
-            days=listOf(day.copy(slots=day.slots.mapIndexed {i,slot->
-                if(i==0)slot.copy(pinned=true) else slot
-            }))+prior.days.drop(1))))
+        val moved=original.copy(blocks=listOf(prior.copy(
+            days=listOf(day.copy(weekday=6,
+                slots=day.slots.mapIndexed {index,slot ->
+                    if(index==0)slot.copy(pinned=true) else slot
+                }))+prior.days.drop(1))))
+        val missed=GeneratedAdaptiveBlockDomain.propose(
+            fixture.request(original=moved))
         assertEquals(GeneratedAdaptiveBlockStatus.PROTECTED_CUSTOM_WORK,
-            GeneratedAdaptiveBlockDomain.propose(
-                fixture.request(original=pinned)).status)
+            missed.status)
+        assertNull(missed.proposedOption)
         val existing=day.slots.first()
         val override=CustomWeekSlotOverride(2,day.weekday,existing.slotId,
             existing.sets+existing.sets)
@@ -171,4 +244,5 @@ class GeneratedAdaptiveBlockConversionTest {
                 fixture.request(original=withOverride)).status)
         assertEquals(listOf(override),withOverride.weekOverrides[prior.blockId])
     }
+
 }

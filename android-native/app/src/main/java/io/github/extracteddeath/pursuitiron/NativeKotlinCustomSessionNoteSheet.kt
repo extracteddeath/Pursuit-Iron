@@ -39,6 +39,7 @@ internal fun NativeKotlinSessionNoteEditor(
     maxChars:Int,
     validate:(String)->Boolean,
     busy:Boolean,
+    enabled:Boolean=true,
     error:String?,
     onSave:(String)->Unit,
     onDismiss:()->Unit
@@ -94,7 +95,7 @@ internal fun NativeKotlinSessionNoteEditor(
                 color=MaterialTheme.colorScheme.error)
         }
         Button(
-            enabled=!busy && dirty && valid,
+            enabled=!busy && enabled && dirty && valid,
             modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
             onClick={submitted=draft;onSave(draft)}
         ) {Text(if(busy)"Saving…" else "Save session note")}

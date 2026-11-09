@@ -87,7 +87,8 @@ private fun displayedTier(ratio:Double,thresholds:List<Double>):String {
 @Composable
 internal fun NativeKotlinStrengthStandardsScreen(
     host:NativeKotlinCandidateHost,
-    preferredExerciseId:String?=null
+    preferredExerciseId:String?=null,
+    preferredTrendExerciseId:String?=null
 ) {
     var result by remember(host) {
         mutableStateOf<NativeKotlinMixedFactsReadResult?>(null)
@@ -153,6 +154,11 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 timeline?.manifestRevision==snapshot.manifestRevision)
                 exerciseFavoriteIds=stored
         }
+    }
+    LaunchedEffect(preferredTrendExerciseId,verifiedTimeline?.manifestRevision) {
+        val exercise=preferredTrendExerciseId
+        if(exercise!=null && exercise in availableMovements)
+            performanceExerciseId=exercise
     }
     LaunchedEffect(preferredExerciseId,verifiedTimeline?.manifestRevision) {
         val exercise=preferredExerciseId

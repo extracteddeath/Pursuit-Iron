@@ -163,7 +163,7 @@ assert.ok(trend.includes('.sortedBy {it.completionOrder}') &&
 assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
   shared.includes('modifier.fillMaxWidth().heightIn(min=56.dp)') &&
   shared.includes('onClick=onToggle') &&
-  shared.includes('contentDescription=if(expanded)"Collapse $title" else "Expand $title"') &&
+  shared.includes('.semantics { stateDescription=if(expanded)"Expanded" else "Collapsed" }') &&
   outline.includes('PursuitDisclosureRow(') &&
   plan.includes('PursuitDisclosureRow(') &&
   plan.includes('var blockExpanded by rememberSaveable(draft.cycleId,block.blockId)') &&
@@ -174,6 +174,9 @@ assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
   plan.includes('controller.moveExercise(') &&
   plan.includes('exerciseEditor = Triple(') &&
   plan.includes('controller.previewAuthoredDay(') &&
+  plan.includes('if(!showProgramEditor) {') &&
+  plan.includes('NativeKotlinCustomCycleOverview(draft,currentSelection)') &&
+  plan.includes('NativeKotlinCustomCycleCalibrationPanel(') &&
   plan.includes('controller.undo()') &&
   plan.includes('Advanced program details') &&
   !plan.includes('Text("Custom authoring",'),

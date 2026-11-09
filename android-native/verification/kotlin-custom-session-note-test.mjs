@@ -38,4 +38,15 @@ assert.match(sheet,/if\(!busy && error==null && submitted!=null && committed==su
 assert.match(sheet,/enabled=!busy && dirty && valid/);
 assert.match(sheet,/Discard draft/);
 assert.match(sheet,/Save session note/);
-console.log('PASS owner-authorized, versioned and replayable custom session note with durable UI acknowledgment');
+const history=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
+const historicalNote=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomHistoryNote.kt');
+assert.match(history,/if\(expanded && entry is NativeKotlinMixedHistoryCompletion\.Custom\)/);
+assert.match(history,/NativeKotlinCustomHistoryNote\(host,entry\)/);
+assert.match(historicalNote,/host\.openIssuedCustomWorkout\(id\)/);
+assert.match(historicalNote,/opened\?\.issued\?\.athleteId==source\.athleteId/);
+assert.match(historicalNote,/journal\.finishedByEventId==completed\.manifest\.finishEventId/);
+assert.match(historicalNote,/journal\.revision==source\.journalRevision/);
+assert.match(historicalNote,/journal\.snapshot\.stamp\.cycleRevision==source\.cycleRevision/);
+assert.match(historicalNote,/if\(valid\) note=journal\?\.sessionNote/);
+assert.doesNotMatch(historicalNote,/\.record\(|\.finish\(|\.save\(|\.issue\(/);
+console.log('PASS owner-authorized, versioned, replayable notes and verified read-only completed History');

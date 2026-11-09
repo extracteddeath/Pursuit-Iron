@@ -333,7 +333,7 @@ The native Program screen now exposes a **real, cycle-scoped adaptation permissi
 
 ## Exercise-specific performance trends — 2026-11-09 continuation
 
-**Source implemented; automated Kotlin and Compose gates pending for this revision.**
+**Source implemented; all 33 Kotlin/Compose CI steps passed on 2026-11-09 in run 42570247170. Real-device acceptance remains open.**
 
 - Any exercise with verified, correction-aware completed native history may show a factual **working-set performance** trend from Progress without inventing a strength percentile, calculated 1RM, or target load. The previously published Bench/Squat/Deadlift/Overhead Press standards remain a completely separate comparison with their own source links.
 - The history projection is one pure, read-only native-coach-store domain. It excludes unfinished, skipped, failed, warm-up and custom amplifier follow-up entries; uses actual performed set weights/reps, never the issued prescriptions as achieved performance; and uses the full mixed Composer + Custom history after the owner-verified read.
@@ -344,4 +344,4 @@ The native Program screen now exposes a **real, cycle-scoped adaptation permissi
 - The feature uses existing theme colors and shared cards/metric strips/graph primitives; only an athlete-selected **View trend** opens the chart, keeping the default Progress hierarchy compact. The source contract checks exercise history eligibility and non-authoritative projection status.
 - Dedicated JVM regression fixtures cover real lb/kg conversion, physical load isolation, exact rep windowing, best in each session, omission of warm-ups/failed/skip/amplifier sets, invalid/missing values, unweighted bodyweight, and custom history corrections.
 
-**Outstanding:** completed CI outcome for this change; hands-on screen-reader, narrow-width and 200%-font usability; scientifically valid longitudinal estimates that control for effort and fatigue; sourced demographic standards for other exercise modalities. No new APK or AAB until the full app design is complete.
+**Outstanding:** hands-on screen-reader, narrow-width and 200%-font usability; scientifically valid longitudinal estimates that control for effort and fatigue; sourced demographic standards for other exercise modalities. No new APK or AAB until the full app design is complete.

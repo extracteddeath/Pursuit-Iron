@@ -160,7 +160,7 @@ internal object NativeCustomWorkoutJournalCodec {
         val state=record.journal
         require(id.matches(state.workoutId))
         require(state.receipts.size<=MAX_RECEIPTS)
-        val replayed=replay(state.snapshot,state.workoutId,
+        val replayed=replay(state.originalSnapshot,state.workoutId,
             state.preparedConsentFingerprint,state.receipts,
             state.revision,state.finishedByEventId)
         require(replayed==state) {

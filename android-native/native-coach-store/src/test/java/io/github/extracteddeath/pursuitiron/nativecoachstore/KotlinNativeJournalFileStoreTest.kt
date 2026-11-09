@@ -186,4 +186,85 @@ class KotlinNativeJournalFileStoreTest {
             store().append("owner-1",snapshot,identity,
                 completed("event-2",1,"set-2",9)))
     }
+
+    @Test fun composerSwapUndoColdReopenAndFinishKeepAllIssuedReceipts() {
+        val s=store()
+        ok(s.issue("owner-1",snapshot,identity))
+        val swappedTargets=targets.map{it.copy(
+            exerciseId="chest-machine",
+            setKey="swap:sw-1:working:${it.ordinal}",
+            load=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,BigDecimal("25"))
+        )}
+        val change=KotlinJournalOperation.SwapExercise(
+            "sw-1",0L,"db-press",swappedTargets)
+        val swapped=ok(s.append("owner-1",snapshot,identity,change)).journal
+        assertEquals(snapshot,swapped.originalSnapshot)
+        assertEquals("chest-machine",
+            swapped.snapshot.targets.first().exerciseId)
+        assertEquals(swapped,ok(store().open("owner-1",snapshot,identity)).journal)
+        val newKeys=swapped.snapshot.targets.map{it.setKey}
+        assertEquals("swap:sw-1:working:0",newKeys[0])
+        assertEquals("swap:sw-1:working:1",newKeys[1])
+        val undo=KotlinJournalOperation.UndoSwap("undo-1",1L,"sw-1")
+        val restored=ok(s.append("owner-1",snapshot,identity,undo)).journal
+        assertEquals(snapshot,restored.snapshot)
+        assertEquals(snapshot,restored.originalSnapshot)
+        assertEquals(2L,restored.revision)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,undo))
+            .replayed)
+        assertEquals(restored,
+            ok(store().open("owner-1",snapshot,identity)).journal)
+        ok(s.append("owner-1",snapshot,identity,
+            completed("original-record-0",2L,"set-1",10)))
+        ok(s.append("owner-1",snapshot,identity,
+            completed("original-record-1",3L,"set-2",9)))
+        val finished=ok(s.append("owner-1",snapshot,identity,
+            KotlinJournalOperation.Finish("finish-restored",4L))).journal
+        assertEquals("finish-restored",finished.finishedByEventId)
+        assertEquals(5,finished.receipts.size)
+        assertEquals(snapshot,finished.snapshot)
+        assertTrue(KotlinWorkoutHistoryEvidenceDomain.project(finished)
+            is KotlinHistoryProjectionResult.Candidate)
+        assertEquals(finished,
+            ok(store().open("owner-1",snapshot,identity)).journal)
+    }
+
+    @Test fun startedComposerSwapCannotUndoAndTamperedBytesRefuseColdOpen() {
+        val s=store()
+        ok(s.issue("owner-1",snapshot,identity))
+        val replacement=targets.map{it.copy(
+            exerciseId="chest-machine",
+            setKey="swap:swap-touched:working:${it.ordinal}")
+        }
+        val before=ok(s.append("owner-1",snapshot,identity,
+            KotlinJournalOperation.SwapExercise(
+                "swap-touched",0L,"db-press",replacement))).journal
+        val performed=KotlinJournalOperation.RecordSet(
+            "new-actual",1L,replacement.first().setKey,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("30"),LoadUnit.LB,10,2))
+        ok(s.append("owner-1",snapshot,identity,performed))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.JOURNAL_REJECTED,
+            KotlinJournalRefusal.SWAP_ALREADY_STARTED),
+            s.append("owner-1",snapshot,identity,
+                KotlinJournalOperation.UndoSwap(
+                    "unsafe-undo",2L,"swap-touched")))
+        assertEquals(2L,
+            ok(store().open("owner-1",snapshot,identity)).journal.revision)
+        val files=Files.list(temporary.root.toPath()).use{
+            stream->stream.filter {
+                it.fileName.toString().startsWith("journal-") &&
+                    it.fileName.toString().endsWith(".bin")
+            }.toList()
+        }
+        assertEquals(1,files.size)
+        val bytes=Files.readAllBytes(files.single())
+        bytes[bytes.size-1]=(bytes.last().toInt() xor 0x7f).toByte()
+        Files.write(files.single(),bytes)
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.CORRUPT_RECEIPTS),
+            store().open("owner-1",snapshot,identity))
+    }
 }

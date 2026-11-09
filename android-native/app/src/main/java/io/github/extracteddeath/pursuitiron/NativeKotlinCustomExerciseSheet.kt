@@ -151,6 +151,14 @@ internal fun NativeKotlinCustomExerciseSheet(
         samePatternOnly=samePatternOnly,
         sharedMusclesOnly=sharedMusclesOnly)
     val filtered=ranked.take(20)
+    // Changing the selected replacement must not silently carry even the
+    // NEW draft's typed load, technique or setup note into a different variant.
+    LaunchedEffect(exerciseId,replacing?.slotId) {
+        if(replacing!=null) {
+            forms=listOf(CustomSetFields())
+            note=""
+        }
+    }
     // Any changed target or entered set invalidates previous confirmation.
     LaunchedEffect(exerciseId,forms,note,replacing?.slotId) {
         swapConfirmation=false

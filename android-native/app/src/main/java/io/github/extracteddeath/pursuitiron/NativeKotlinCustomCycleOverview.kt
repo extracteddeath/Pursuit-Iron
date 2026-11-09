@@ -29,7 +29,8 @@ private fun authoredSetDescription(set:CustomAuthoredSet,number:Int):String {
 internal fun NativeKotlinCustomCycleOverview(
     cycle:CustomTrainingCycle,
     selection:NativeCustomNextCycleSlot?,
-    onEditDay:((blockId:String,weekday:Int)->Unit)?=null
+    onEditDay:((blockId:String,weekday:Int)->Unit)?=null,
+    onEditExercise:((blockId:String,weekday:Int,slotId:String)->Unit)?=null
 ) {
     val week=when(selection) {
         is NativeCustomNextCycleSlot.Next -> selection.absoluteWeek
@@ -98,6 +99,11 @@ internal fun NativeKotlinCustomCycleOverview(
                                 Text(if(showTargets)"Hide sets" else "See sets")
                             }
                         }
+                        if(onEditExercise!=null)
+                            TextButton(
+                                onClick={onEditExercise(block.blockId,day.weekday,slot.slotId)},
+                                modifier=Modifier.heightIn(min=48.dp)
+                            ) {Text("Edit exercise sets")}
                         if(showTargets) {
                             slot.sets.forEachIndexed {index,set ->
                                 Text(authoredSetDescription(set,index+1),

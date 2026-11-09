@@ -400,32 +400,24 @@ internal fun NativeKotlinCustomJournalScreen(
                             slot.sets.any{it.setKey==visit.setKey}
                         }?.let{slot->slot to slot.sets.first{it.setKey==visit.setKey}}
                     }
-                    PursuitCard(highlighted=activeFocus!=null) {
-                        Text("UP NEXT",style=MaterialTheme.typography.labelSmall,
-                            color=MaterialTheme.colorScheme.primary)
-                        if(upcoming!=null) {
-                            val (slot,set)=upcoming
-                            Text(kotlinExerciseLabel(slot.exerciseId),
-                                style=MaterialTheme.typography.titleLarge)
-                            val number=slot.sets.indexOfFirst{it.setKey==set.setKey}+1
-                            Text(if(nextVisit?.part==CustomWorkoutVisitPart.FOLLOW_UP)
-                                "Amplifier follow-up · entry $number of ${slot.sets.size}"
-                            else
-                                "${if(set.prescription.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · entry $number of ${slot.sets.size}",
-                                style=MaterialTheme.typography.bodySmall,
-                                color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            Text("All entries recorded · review Finish",
-                                style=MaterialTheme.typography.titleMedium)
-                        }
-                        Row(Modifier.fillMaxWidth(),
-                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            FilterChip(selected=focusOnNext,onClick={focusOnNext=true},
-                                label={Text("Focus on next")})
-                            FilterChip(selected=!focusOnNext,onClick={focusOnNext=false},
-                                label={Text("All sets")})
-                        }
+                    val focusDetail=upcoming?.let { (slot,set) ->
+                        val number=slot.sets.indexOfFirst {
+                            it.setKey==set.setKey
+                        }+1
+                        if(nextVisit?.part==CustomWorkoutVisitPart.FOLLOW_UP)
+                            "Amplifier follow-up · entry $number of ${slot.sets.size}"
+                        else
+                            "${if(set.prescription.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · entry $number of ${slot.sets.size}"
                     }
+                    PursuitWorkoutFocusHeader(
+                        exerciseLabel=upcoming?.let {
+                            kotlinExerciseLabel(it.first.exerciseId)
+                        },
+                        setDetail=focusDetail,
+                        focusOnNext=focusOnNext,
+                        onFocusChange={focusOnNext=it},
+                        enabled=!busy
+                    )
                 }
                 if(!verifiedFinishedInHistory || showFinishedSets) {
                 PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})

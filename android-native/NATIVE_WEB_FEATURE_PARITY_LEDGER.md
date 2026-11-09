@@ -66,6 +66,6 @@
 - Exposed provisional reviewed catalog metadata in `CustomExercisePickerOption`.
 - Added program-draft-only `replaceSelectedExercise`, a new-slot-ID builder transaction and controller wiring with exact gym/load/set verification, override/superset refusal and undo.
 - Added an explicitly confirmed searchable **Swap** picker in the native Program editor, supporting same-pattern and shared-muscle filtering. New target loads and notes start empty for each alternative.
-- Added JVM/domain tests and source-level guards. **Important:** this is *not* complete in-workout swap or program-dose-aware ranking parity.
+- Added JVM/domain tests and source-level guards, including search that excludes the source row from visible results without losing its reviewed pattern/muscle ranking context. **GitHub Actions run 42578839538 passed all 33 Kotlin/Compose checks** on the final code revision. **Important:** this is *not* complete in-workout swap or program-dose-aware ranking parity; real-device acceptance remains open.
 
 **Release rule:** A web change log feature stays open until its user-observable behavior (not just its title or icon) has an equivalent native path or an explicit documented reason to omit it. The changelog is a discovery index, while current web code + native revision tests are the acceptance source. An independent engine superiority test remains necessary.

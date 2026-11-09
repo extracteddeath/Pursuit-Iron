@@ -1143,7 +1143,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         existing=null,
                         replacing=source,
                         otherDayExerciseIds=day?.slots?.filter{
-                            it.slotId!=slotId
+                            it.slotId!=slotId && it.sets.any{set->
+                                set.type==DraftSetType.WORKING
+                            }
                         }?.map{it.exerciseId},
                         scopeLabel="Program day · ${customWeekdays[weekday]} · ${blockId}",
                         onSave={exerciseId,sets,note->

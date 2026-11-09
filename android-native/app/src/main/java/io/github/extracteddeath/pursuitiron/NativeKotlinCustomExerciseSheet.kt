@@ -119,7 +119,9 @@ internal fun NativeKotlinCustomExerciseSheet(
     /** Explicit replacement only; existing authored sets are NEVER reused. */
     replacing: CustomExerciseSlot? = null,
     /** Issued-workout replacement is not a program-draft edit. */
-    workoutOnlySwap: Boolean = false
+    workoutOnlySwap: Boolean = false,
+    /** Exact other exercises in this program day or issued workout, if known. */
+    otherDayExerciseIds: List<String>? = null
 ) {
     var search by remember(existing?.slotId) { mutableStateOf("") }
     var exerciseId by remember(existing?.slotId) {
@@ -161,7 +163,8 @@ internal fun NativeKotlinCustomExerciseSheet(
         samePatternOnly=samePatternOnly,
         sharedMusclesOnly=sharedMusclesOnly,
         sameRoleOnly=sameRoleOnly,
-        sameFamilyOnly=sameFamilyOnly)
+        sameFamilyOnly=sameFamilyOnly,
+        otherDayExerciseIds=otherDayExerciseIds)
     val searched=ranked.filter {it.choice in labeled}
     val filtered=searched.take(20)
     // Changing the selected replacement must not silently carry even the
@@ -248,7 +251,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                 }
                 Text(if(source==null)
                     "The former exercise is not in the current gym/catalog. No similarity score is assumed."
-                    else "Alternatives rank by reviewed movement pattern, family, training role and credited muscles. A match is not a guarantee of equal load or effect.",
+                    else "Alternatives rank by reviewed movement pattern, family, training role and credited muscles. When the full day catalog is verified, sole direct muscle coverage is also considered. A match is not a guarantee of equal load or effect.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

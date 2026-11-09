@@ -147,7 +147,8 @@ class CustomExerciseSwapRankingDomainTest {
         assertEquals("alpha-chest",noContext.first().choice.exerciseId)
         assertTrue(noContext.all{it.uniqueDayCoverage.isEmpty()})
         val contextual=CustomExerciseSwapRankingDomain.rank(day,"source-press",
-            otherDayExerciseIds=listOf("other-chest"))
+            otherDayExerciseIds=listOf("other-chest"),
+            sourceHasWorkingSets=true)
         assertEquals("zulu-triceps",contextual.first().choice.exerciseId)
         assertEquals(setOf(TrainingMuscle.TRICEPS),contextual.first().uniqueDayCoverage)
         assertEquals(setOf(TrainingMuscle.TRICEPS),contextual.first().preservedDayCoverage)
@@ -166,14 +167,21 @@ class CustomExerciseSwapRankingDomainTest {
                 listOf(TrainingMuscle.TRICEPS))
         )
         val unknown=CustomExerciseSwapRankingDomain.rank(day,"source-press",
-            otherDayExerciseIds=listOf("not-in-reviewed-catalog"))
+            otherDayExerciseIds=listOf("not-in-reviewed-catalog"),
+            sourceHasWorkingSets=true)
         assertEquals("alpha-chest",unknown.first().choice.exerciseId)
         assertTrue(unknown.all {
             it.uniqueDayCoverage.isEmpty() && it.preservedDayCoverage.isEmpty() &&
                 !it.explanation.contains("direct-day coverage")
         })
-        val singleMovement=CustomExerciseSwapRankingDomain.rank(day,"source-press",
+        val warmupOnly=CustomExerciseSwapRankingDomain.rank(day,"source-press",
+            otherDayExerciseIds=emptyList(),sourceHasWorkingSets=false)
+        assertTrue(warmupOnly.all {it.uniqueDayCoverage.isEmpty()})
+        val missingWorkingProof=CustomExerciseSwapRankingDomain.rank(day,"source-press",
             otherDayExerciseIds=emptyList())
+        assertTrue(missingWorkingProof.all{it.preservedDayCoverage.isEmpty()})
+        val singleMovement=CustomExerciseSwapRankingDomain.rank(day,"source-press",
+            otherDayExerciseIds=emptyList(),sourceHasWorkingSets=true)
         assertEquals(setOf(chest,TrainingMuscle.TRICEPS),
             singleMovement.first().uniqueDayCoverage)
     }

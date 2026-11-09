@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -98,9 +99,10 @@ internal fun PursuitHistoryStatus(
 @Composable
 internal fun PursuitScreenContent(
     modifier:Modifier=Modifier,
+    scrollState:ScrollState=rememberScrollState(),
     content:@Composable ColumnScope.()->Unit
 ) {
-    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+    Column(modifier.fillMaxSize().verticalScroll(scrollState),
         horizontalAlignment=Alignment.CenterHorizontally) {
         Column(Modifier.fillMaxWidth().widthIn(max=920.dp)
             .padding(horizontal=PursuitSpace.md,vertical=PursuitSpace.lg),

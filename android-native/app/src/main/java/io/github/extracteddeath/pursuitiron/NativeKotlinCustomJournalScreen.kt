@@ -262,6 +262,7 @@ internal fun NativeKotlinCustomJournalScreen(
     val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(workoutScroll)
+        .widthIn(max=920.dp).align(Alignment.CenterHorizontally)
         .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Row(Modifier.fillMaxWidth(),
             horizontalArrangement=Arrangement.SpaceBetween,
@@ -572,7 +573,9 @@ internal fun NativeKotlinCustomJournalScreen(
     // Fixed below the scroll, so focusing a later set cannot hide the timer
     // and the timer never overlays a set-entry control or the Finish button.
     if(current!=null && current.unresolvedVisitCount>0 && !finished)
-        Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp)) {
+        Column(Modifier.widthIn(max=920.dp).fillMaxWidth()
+            .align(Alignment.CenterHorizontally)
+            .padding(horizontal=16.dp,vertical=8.dp)) {
             NativeKotlinWorkoutRestTimer(workoutId,
                 KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy)
         }

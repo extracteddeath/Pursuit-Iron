@@ -128,6 +128,7 @@ internal fun NativeKotlinCustomExerciseSheet(
     var samePatternOnly by remember(replacing?.slotId) {mutableStateOf(false)}
     var sharedMusclesOnly by remember(replacing?.slotId) {mutableStateOf(false)}
     var sameRoleOnly by remember(replacing?.slotId) {mutableStateOf(false)}
+    var sameFamilyOnly by remember(replacing?.slotId) {mutableStateOf(false)}
     var swapConfirmation by remember(replacing?.slotId) {mutableStateOf(false)}
     var note by remember(existing?.slotId,replacing?.slotId) {
         mutableStateOf(existing?.coachNote.orEmpty())
@@ -157,7 +158,8 @@ internal fun NativeKotlinCustomExerciseSheet(
         available,replacing?.exerciseId,
         samePatternOnly=samePatternOnly,
         sharedMusclesOnly=sharedMusclesOnly,
-        sameRoleOnly=sameRoleOnly)
+        sameRoleOnly=sameRoleOnly,
+        sameFamilyOnly=sameFamilyOnly)
     val searched=ranked.filter {it.choice in labeled}
     val filtered=searched.take(20)
     // Changing the selected replacement must not silently carry even the
@@ -207,26 +209,36 @@ internal fun NativeKotlinCustomExerciseSheet(
             if(replacing!=null) {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                    FilterChip(selected=!samePatternOnly && !sharedMusclesOnly && !sameRoleOnly,
-                        onClick={samePatternOnly=false;sharedMusclesOnly=false;sameRoleOnly=false},
+                    FilterChip(selected=!samePatternOnly && !sharedMusclesOnly && !sameRoleOnly && !sameFamilyOnly,
+                        onClick={samePatternOnly=false;sharedMusclesOnly=false;sameRoleOnly=false;sameFamilyOnly=false},
                         label={Text("All available")})
                     FilterChip(selected=samePatternOnly,
                         onClick={
                             samePatternOnly=!samePatternOnly
                             sharedMusclesOnly=false
                             sameRoleOnly=false
+                            sameFamilyOnly=false
                         },label={Text("Same pattern")})
+                    FilterChip(selected=sameFamilyOnly,
+                        onClick={
+                            sameFamilyOnly=!sameFamilyOnly
+                            samePatternOnly=false
+                            sharedMusclesOnly=false
+                            sameRoleOnly=false
+                        },label={Text("Same family")})
                     FilterChip(selected=sharedMusclesOnly,
                         onClick={
                             sharedMusclesOnly=!sharedMusclesOnly
                             samePatternOnly=false
                             sameRoleOnly=false
+                            sameFamilyOnly=false
                         },label={Text("Shared muscles")})
                     FilterChip(selected=sameRoleOnly,
                         onClick={
                             sameRoleOnly=!sameRoleOnly
                             samePatternOnly=false
                             sharedMusclesOnly=false
+                            sameFamilyOnly=false
                         },label={Text("Same role")})
                 }
                 val source=available.firstOrNull {

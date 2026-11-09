@@ -2590,7 +2590,10 @@ function userOwnsRuntimeSet(row) {
 }
 
 function sanitizeWeightInput(v) {
-    let s = String(v).replace(/[^0-9.\-]/g, "");
+    // A decimal keyboard in a comma locale types "82,5": with no point, the comma is the decimal separator (it was
+    // stripped, logging 825). Found on native, which had worked around it on its side.
+    const raw = String(v);
+    let s = (raw.includes(".") ? raw : raw.replace(",", ".")).replace(/[^0-9.\-]/g, "");
     const neg = s.trim().startsWith("-"); // a single leading minus = assistance (assisted lifts)
     s = s.replace(/-/g, "");
     const i = s.indexOf(".");

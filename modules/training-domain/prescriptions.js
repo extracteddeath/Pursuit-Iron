@@ -9,7 +9,7 @@ import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearStat
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { evaluateWorkoutProgression } from "../next-engine/performance.js";
-import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
+import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, loadStepIsUserSet, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 import { startingEstimate, startingWorkLoad } from './starting-load.js';
@@ -728,9 +728,11 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     // The canonical evaluator owns which rows retain or change load. This adapter
     // only makes those decisions loadable; it must not turn a hold into top sets.
     const perSetIncrease = Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
+    // Loads the lifter logged on this lift, in this unit (a converted reference is not a weight they lifted).
     const lastSets = Array.isArray(s.last?.sets) ? s.last.sets : [];
-    const known = [current, ...lastSets.map(x => convertHistoryLoad(x?.w, s.lastUnit || program.config?.unit, unit)),
-        ...(s.setTargets || []).map(t => t.previousLoad)].filter(x => Number(x) > 0).map(Number);
+    const sameUnit = (s.lastUnit || program.config?.unit || unit) === unit;
+    const known = sameUnit ? [current, ...lastSets.map(x => Number(x?.w)), ...(s.setTargets || []).map(t => t.previousLoad)]
+        .filter(x => Number(x) > 0).map(Number) : [];
     const snap = value => loadableForSuggestion(ex, value, unit, known, s.action === "represcribe");
     let w = snap(eng);
     // An earned classic increase uses one new session weight. Dynamic double does not:
@@ -823,8 +825,9 @@ function loadableAbove(ex, w, unit) {
 }
 
 /* The load a suggestion lands on. Three rules on top of loadableAtOrBelow:
-   - A load the lifter has logged on this lift is loadable on their equipment, whatever the step grid says: a hold
-     of a logged 14 kg dumbbell RDL stays 14 (it was floored to the 4 kg grid, 12).
+   - A load the lifter has logged on this lift is loadable on their equipment when the step is the app's guess: a
+     hold of a logged 14 kg dumbbell RDL stays 14 (it was floored to the 4 kg grid, 12). When the lifter set the
+     increment or the gym's rack, that is the authority and an old load off it is history, not loadable.
    - A re-prescription (a new week's reps/RIR, set from the estimated max) is an estimate, so it rounds to the
      nearer loadable weight (ties down): 11.6 kg on a 4 kg grid is 12, not 8.
    - Everything else still rounds down, as before. */
@@ -832,7 +835,8 @@ function loadableForSuggestion(ex, w, unit, known, nearest) {
     if (!ex || !(w > 0))
         return w;
     let best = loadableAtOrBelow(ex, w, unit);
-    const logged = (known || []).filter(k => k > 0 && k <= w + 1e-9);
+    const rack = gymRackFor(ex, unit);
+    const logged = (rack && rack.length) || loadStepIsUserSet(ex, unit) ? [] : (known || []).filter(k => k > 0 && k <= w + 1e-9);
     if (logged.length) {
         const k = Math.max(...logged);
         if (best > w + 1e-9 || k > best)

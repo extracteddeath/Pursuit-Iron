@@ -17,7 +17,18 @@ import { assessWeeklyRecovery, optimizeWeeklyRecovery } from './weekly-recovery.
 import { proposeRecoveryRedistributions } from './recovery-realization.js';
 import { buildProgramExplainability } from './explainability.js';
 import { reconcileRecoverableDose } from './dose-reconciliation.js';
+/* Station spread (realizer-ranking sharedStationCrowding) is a preference: it moves a lift off a crowded cable or
+   Smith station, which costs a changeover. When that tips a tight session over its time limit, build the plan again
+   without it rather than refuse a plan that fits (measured: full gym, 2-day full body, 60 min). */
 export function generateProgram(requestInput, options) {
+    const first = generateProgramOnce(requestInput, options);
+    const findings = first.program?.audit?.findings ?? [];
+    if (first.program?.audit?.result === 'pass' || options?.noStationSpread || !findings.some(f => f?.code === 'TIME_LIMIT'))
+        return first;
+    const retry = generateProgramOnce(requestInput, { ...options, noStationSpread: true });
+    return retry.program?.audit?.result === 'pass' ? retry : first;
+}
+function generateProgramOnce(requestInput, options) {
     const normalized = normalizeRequest(requestInput);
     const requestedPhase = options?.phase;
     const phase = requestedPhase == null ? initialPhaseForGoal(normalized.goal.type)
@@ -53,13 +64,14 @@ export function generateProgram(requestInput, options) {
     // sets and accessories aggressively, but an exercise-count target below three is internally
     // contradictory and forces later structural repairs to look like capacity violations.
     const structuralExerciseFloor = ['full_body', 'full_body_patterns', 'strength_fb', 'texas', 'academy_prep'].includes(split ?? '') ? 3 : 2;
-    const request = capacityMultiplier === 1 && normalized.athlete.experience === 'advanced' ? normalized : {
+    const sized = capacityMultiplier === 1 && normalized.athlete.experience === 'advanced' ? normalized : {
         ...normalized,
         schedule: { days: normalized.schedule.days.map(day => ({
                 ...day,
                 targetExercises: day.targetExercises === undefined ? undefined : Math.max(structuralExerciseFloor, Math.min(experienceExerciseCap, Math.round(day.targetExercises * capacityMultiplier)))
             })) }
     };
+    const request = options?.noStationSpread ? { ...sized, noStationSpread: true } : sized;
     const context = createEngineContext(request);
     const muscles = createMusclePrescriptions(request, phase);
     const strength = createStrengthClaims(request, phase);

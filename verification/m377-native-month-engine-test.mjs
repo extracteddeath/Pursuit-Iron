@@ -81,4 +81,9 @@ import { withGroupRounds } from '../modules/workout-context.js';
         }
     }
 }
-console.log('PASS m377 native month engine fixes: block passes, done ticks, dumbbell steps, load snapping, cues, rounds, station spread');
+// 8. A comma decimal is a decimal: "82,5" was logged as 825.
+assert.equal(E.sanitizeWeightInput('82,5'), '82.5');
+assert.equal(E.sanitizeWeightInput('82.5'), '82.5');
+assert.equal(E.sanitizeWeightInput('100'), '100');
+assert.equal(E.sanitizeWeightInput('-20,5'), '-20.5', 'assistance keeps its sign');
+console.log('PASS m377 native month engine fixes: block passes, done ticks, dumbbell steps, load snapping, cues, rounds, station spread, comma decimals');

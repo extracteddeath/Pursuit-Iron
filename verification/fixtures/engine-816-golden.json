@@ -5,15 +5,15 @@
   },
   {
     "name": "full_body-1",
-    "hash": "314caf89dfabdc17ca5d8d31ad7aba49b3600ea441a8a175bb6e1b348598a40f"
+    "hash": "4b26ffe29368cf3a71a7cd2e2e9d90da9ba27aa0e5e7abb3448506c13a4fe2e6"
   },
   {
     "name": "upper_lower-2",
-    "hash": "f980557c11dfedb09dbb3510466614302437c789c25cb2b9a61c4650643e737c"
+    "hash": "dd7d03631b0095168f58db56273f28dc1441521ad85c878d4c12537d714de364"
   },
   {
     "name": "ulppl-3",
-    "hash": "50d077a9ec37b8753297ffc7c443824d80da45d1057d98f67abcfa096682a55b"
+    "hash": "cc6c61715cf33fbd366bfad9d0df2c0a0de076291cbbb63ffc2d72d99a6f7c70"
   },
   {
     "name": "ppl-4",
@@ -21,7 +21,7 @@
   },
   {
     "name": "full_body_patterns-5",
-    "hash": "45ed2e93f753f6c4dad6923b489d6c9e577b83e33e8a80520352603170bc67a7"
+    "hash": "c59e5b6cbf94e7e458777dc15b891cfaedb2c5a4e2bfe56c9beff6d9b6a56f4f"
   },
   {
     "name": "strength_fb-6",
@@ -29,11 +29,11 @@
   },
   {
     "name": "ulppl-7",
-    "hash": "538ba8c4ad3355e3d2591cf6834d77d1c4a87e997cd85feecca2202e8825cdc4"
+    "hash": "3274350f4e8075be49fbe67dcdc02c7c00aa5202dd61bdb2279f00c0319d47d1"
   },
   {
     "name": "upper_lower-8",
-    "hash": "7dfe69e5f22d0041a4b65e1138172e9fc6c1391d4249cfdc5c845683b30bd9dc"
+    "hash": "735233c5638f5e20f97e19ff2dee7e9623620a08f784e988e3ca1a59ee4c2331"
   },
   {
     "name": "full_body-9",
@@ -41,7 +41,7 @@
   },
   {
     "name": "ppl-10",
-    "hash": "6396ff113473e6d7df5db7ff347df4816426d98c9a1b5a087a4cbf72d7e65d8c"
+    "hash": "eb3e4199d426775c53f78dd041cab1962774024a3f5f75bb27500e41fba5f078"
   },
   {
     "name": "full_body-11",
@@ -49,6 +49,6 @@
   },
   {
     "name": "ulppl-12",
-    "hash": "5b8e49c8f0c0e1c449d496379fa88957a62607eac48f0aa6288b95a2f7a7327c"
+    "hash": "6bb4d84a4b994b4e4901f88b5397421a6aace5f61df2b8c1c0b83d798f916012"
   }
 ]

@@ -118,6 +118,28 @@ class CustomExerciseSwapRankingDomainTest {
             search="single_rope").isEmpty())
     }
 
+    @Test fun multiwordSearchAcrossReviewedFieldsPreservesOriginalRankOrder() {
+        val added=listOf(
+            option("incline-press","press",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(chest),attachment="machine"),
+            option("incline-row","row",ComposerPattern.HORIZONTAL_PULL,
+                listOf(lats),attachment="cable"),
+            option("flat-press","press",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(chest),attachment="machine")
+        )
+        val eligible=rows+added
+        val ranked=CustomExerciseSwapRankingDomain.rank(eligible,"press-original")
+        val searched=CustomExerciseSwapRankingDomain.rank(
+            eligible,"press-original",search="MACHINE incline")
+        assertEquals(listOf("incline-press"),searched.map {it.choice.exerciseId})
+        assertEquals(ranked.filter{it.choice.exerciseId=="incline-press"},searched)
+        assertEquals(listOf("incline-press"),CustomExerciseSwapRankingDomain.rank(
+            eligible,"press-original",search="incline MACHINE")
+            .map{it.choice.exerciseId})
+        assertTrue(CustomExerciseSwapRankingDomain.rank(
+            eligible,"press-original",search="incline missing").isEmpty())
+    }
+
     @Test fun humanReadablePatternSearchKeepsReviewedSourceAndRank() {
         assertEquals(listOf("press-variant","other-press"),
             CustomExerciseSwapRankingDomain.rank(rows,"press-original",

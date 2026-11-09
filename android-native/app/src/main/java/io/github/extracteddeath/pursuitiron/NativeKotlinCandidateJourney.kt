@@ -465,12 +465,20 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var reviewingResume by remember {mutableStateOf(false)}
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Minimize is a UI shortcut, never a Finish, Skip, or journal deletion.
+    // The exact workout ID is revalidated by the native controller on resume.
+    var minimizedGeneratedId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
     LaunchedEffect(customWorkoutId,selectedId) {
         onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null)
     }
     LaunchedEffect(generatedWorkoutId) {
-        if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)
-            selectedId=generatedWorkoutId
+        if(generatedWorkoutId!=null) {
+            if(selectedId!=generatedWorkoutId)
+                selectedId=generatedWorkoutId
+            minimizedGeneratedId=null
+        }
     }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -515,6 +523,21 @@ private fun NativeKotlinCandidateTrainEntry(
             PageHeading("TRAIN",
                 "Continue your training",
                 "Resume your workout or open the next session in your saved program.")
+            minimizedGeneratedId?.let {savedId->
+                PursuitCard(highlighted=true) {
+                    Text("Your minimized workout",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Resume the exact generated workout. Saved set outcomes "+
+                        "will be rechecked against native storage; any "+
+                        "unsubmitted set fields stay local to this screen.",
+                        style=MaterialTheme.typography.bodySmall)
+                    PursuitPrimaryAction("Resume generated workout",
+                        enabled=!searching && !reviewingResume) {
+                        minimizedGeneratedId=null
+                        selectedId=savedId
+                    }
+                }
+            }
             PursuitCard(highlighted=true) {
                 Text("Your unfinished workouts",
                     style=MaterialTheme.typography.titleMedium)
@@ -633,10 +656,11 @@ private fun NativeKotlinCandidateTrainEntry(
                 Text("Workout in progress",
                     style=MaterialTheme.typography.labelLarge)
                 TextButton(onClick={
+                    minimizedGeneratedId=selectedId
                     controller.clear()
                     selectedId=null
                     onClearGeneratedWorkout()
-                }) { Text("Other workout") }
+                }) { Text("Minimize") }
             }
             Box(Modifier.weight(1f)) {
                 workoutScreens.SaveableStateProvider("composer:$selectedId") {
@@ -644,11 +668,13 @@ private fun NativeKotlinCandidateTrainEntry(
                     controller,checkNotNull(selectedId),host,
                     onViewHistory={
                         controller.clear()
+                        minimizedGeneratedId=null
                         selectedId=null
                         onViewFinishedHistory()
                     },
                     onReviewNext={exerciseId->
                         controller.clear()
+                        minimizedGeneratedId=null
                         selectedId=null
                         onReviewNext(exerciseId)
                     })

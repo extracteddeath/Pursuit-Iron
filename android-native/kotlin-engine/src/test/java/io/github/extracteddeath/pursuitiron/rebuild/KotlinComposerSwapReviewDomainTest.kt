@@ -105,6 +105,32 @@ class KotlinComposerSwapReviewDomainTest {
             .filterRanked(ranked))
     }
 
+    @Test fun workingRepEnvelopeDoesNotRejectIndependentWarmupPrescription() {
+        val warmup=target("db-press","old-warmup",0).copy(
+            type=DraftSetType.WARMUP,reps=RepBand(3,5))
+        val warmupJournal=KotlinWorkoutJournalDomain.begin(
+            issued.copy(targets=listOf(warmup,
+                target("db-press","old-working",0))),identity)
+        val freshWarmup=KotlinComposerSwapSetIntent(
+            DraftSetType.WARMUP,0,
+            DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,n("20")),
+            RepBand(3,5),null)
+        val allowed=reviewed(warmupJournal,
+            sets=listOf(freshWarmup,intent(0)))
+        assertTrue(allowed.toString(),
+            allowed is KotlinComposerSwapReview.Ready)
+        val accepted=(allowed as KotlinComposerSwapReview.Ready)
+            .operation.replacementTargets
+        assertEquals(listOf(DraftSetType.WARMUP,DraftSetType.WORKING),
+            accepted.map{it.type})
+        assertEquals(RepBand(3,5),accepted.first().reps)
+        val invalidWork=intent(0).copy(reps=RepBand(3,5))
+        assertTrue(reviewed(warmupJournal,
+            sets=listOf(freshWarmup,invalidWork))
+                is KotlinComposerSwapReview.Rejected)
+    }
+
     @Test fun swapPreservesOtherSetActualAndCanUndoThenFinishOriginal() {
         val recorded=accept(start(),KotlinJournalOperation.RecordSet(
             "other-actual",0L,"row-0",KotlinJournalSetOutcome.COMPLETED,

@@ -9,7 +9,7 @@ import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearStat
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
 import { evaluateWorkoutProgression } from "../next-engine/performance.js";
-import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
+import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, loadStepIsUserSet, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 import { startingEstimate, startingWorkLoad } from './starting-load.js';
@@ -727,7 +727,13 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     // The canonical evaluator owns which rows retain or change load. This adapter
     // only makes those decisions loadable; it must not turn a hold into top sets.
     const perSetIncrease = Array.isArray(s.setTargets) && s.setTargets.some(t => t.earnedLoadIncrease === true);
-    let w = loadableAtOrBelow(ex, eng, unit);
+    // Loads the lifter logged on this lift, in this unit (a converted reference is not a weight they lifted).
+    const lastSets = Array.isArray(s.last?.sets) ? s.last.sets : [];
+    const sameUnit = (s.lastUnit || program.config?.unit || unit) === unit;
+    const known = sameUnit ? [current, ...lastSets.map(x => Number(x?.w)), ...(s.setTargets || []).map(t => t.previousLoad)]
+        .filter(x => Number(x) > 0).map(Number) : [];
+    const snap = value => loadableForSuggestion(ex, value, unit, known, s.action === "represcribe");
+    let w = snap(eng);
     // An earned classic increase uses one new session weight. Dynamic double does not:
     // preserve the individual earned bump, never increase every row (or a
     // heavier but non-qualifying row) just because one other set succeeded.
@@ -737,14 +743,14 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
     const setTargets = s.setTargets?.map(target => {
         if (perSetIncrease) {
             const previous = target.previousLoad;
-            let weight = loadableAtOrBelow(ex, target.weight, unit);
+            let weight = snap(target.weight);
             if (target.earnedLoadIncrease && previous > 0 && weight <= previous)
                 weight = loadableAbove(ex, previous, unit) ?? previous;
             if (!target.earnedLoadIncrease && previous > 0 && weight < previous)
-                weight = loadableAtOrBelow(ex, previous, unit);
+                weight = snap(previous);
             return { ...target, weight, reps: weight < target.weight ? floor : target.reps };
         }
-        const weight = s.action === "increase_load" ? w : loadableAtOrBelow(ex, target.weight, unit);
+        const weight = s.action === "increase_load" ? w : snap(target.weight);
         const resetReps = weight < target.weight;
         return { ...target, weight, reps: resetReps ? floor : target.reps };
     });
@@ -890,6 +896,32 @@ function loadableAbove(ex, w, unit) {
     }
     const step = loadStep(ex, unit) || 0;
     return step > 0 ? (Math.floor(w / step + 1e-9) + 1) * step : null;
+}
+
+/* The load a suggestion lands on. Three rules on top of loadableAtOrBelow:
+   - A load the lifter has logged on this lift is loadable on their equipment when the step is the app's guess: a
+     hold of a logged 14 kg dumbbell RDL stays 14 (it was floored to the 4 kg grid, 12). When the lifter set the
+     increment or the gym's rack, that is the authority and an old load off it is history, not loadable.
+   - A re-prescription (a new week's reps/RIR, set from the estimated max) is an estimate, so it rounds to the
+     nearer loadable weight (ties down): 11.6 kg on a 4 kg grid is 12, not 8.
+   - Everything else still rounds down, as before. */
+function loadableForSuggestion(ex, w, unit, known, nearest) {
+    if (!ex || !(w > 0))
+        return w;
+    let best = loadableAtOrBelow(ex, w, unit);
+    const rack = gymRackFor(ex, unit);
+    const logged = (rack && rack.length) || loadStepIsUserSet(ex, unit) ? [] : (known || []).filter(k => k > 0 && k <= w + 1e-9);
+    if (logged.length) {
+        const k = Math.max(...logged);
+        if (best > w + 1e-9 || k > best)
+            best = k;
+    }
+    if (nearest && best <= w + 1e-9) {
+        const up = loadableAbove(ex, w, unit);
+        if (up != null && up - w < w - best)
+            return up;
+    }
+    return best;
 }
 
 function customExerciseHistoryRefs(program, day, id, history) {
@@ -1415,4 +1447,4 @@ function setGymLimits(gym) {
     GYM_LIMITS = gym ? { limits: gym.limits || {}, inventory: gym.inventory || {}, unit: gym.limitUnit || gym.unit || "kg" } : null;
 }
 
-export { setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };
+export { loadableForSuggestion, setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };

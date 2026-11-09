@@ -8,7 +8,7 @@ import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-res
 import { createSemanticExerciseGraph, transferExerciseStartingReference } from './semantic-exercise-graph.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
-import { availableLoadAtOrBelow, loadingInventoryWithExerciseSteps } from './loading.js';
+import { availableLoadAtOrBelow, loadingInventoryWithExerciseSteps, nextAvailableLoad } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
@@ -390,7 +390,14 @@ export function represcribeForWeek(exerciseId, cell, lastCell, last, request, fr
         return null;
     const repsMid = Math.round((reps[0] + reps[1]) / 2), rirMid = rir ? (rir[0] + rir[1]) / 2 : 2;
     const inventory = request?.equipment?.loading, available = request?.equipment?.available;
-    const recommended = availableLoadAtOrBelow(exerciseId, e1 / (1 + (repsMid + rirMid) / 30), inventory, available);
+    // A new week's reps/RIR change is an estimate, not a failed exposure.
+    // Use the nearest equipment-loadable weight (ties down), rather than repeatedly
+    // flooring and slowly walking an on-target lifter down through the rack.
+    const ideal = e1 / (1 + (repsMid + rirMid) / 30);
+    let recommended = availableLoadAtOrBelow(exerciseId, ideal, inventory, available);
+    const above = nextAvailableLoad(exerciseId, recommended ?? 0, inventory, available);
+    if (above != null && above > ideal && (recommended === null || above - ideal < ideal - recommended))
+        recommended = above;
     if (recommended === null)
         return null;
     // A week-to-week rep/RIR change is not evidence of failure. Avoid a phantom

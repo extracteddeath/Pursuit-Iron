@@ -44,7 +44,7 @@ import {
     FOCUS_CAVEAT, formatSetup, generateNextCycleForShell,
     generateNextProgramForShell, GENERATION_ROUTE, getNextShellCell, goalForDay, groupPctSets,
     groupSessionsByCycle, groupSessionsByMonth, growMyoSets, GYM_LIMIT_KEYS, GYM_PRESETS, gymById,
-    historyDayIndex, historyForProgram, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
+    historyDayIndex, historyForProgram, earlierPassIds, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
     isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, lastDayPerf, lastSetEffort,
     lengthUnitFor, liftBests, linearInc, liveCoachForContext, liveEffortFeedback, loadableAtOrBelow,
     loadingInventoryInUnit, loadStep, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, makeMyoMini,
@@ -81,7 +81,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1008';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1009';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -7778,8 +7778,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
        v584 rule that a normaliser refuses when it cannot tell, rather than guessing wrong. */
     const dayDoneThisWeek = useMemo(() => {
         const m = {};
+        // Only sessions from this pass mark this repeated block's days complete.
+        const earlier = earlierPassIds(program, history);
         historyForProgram(history, program).forEach(h => {
-            if (!h || h.weekIndex == null)
+            if (!h || h.weekIndex == null || (h.id != null && earlier.has(h.id)))
                 return;
             const idx = historyDayIndex(program?.days, h);
             const id = idx >= 0 ? program.days[idx].id : h.dayId;

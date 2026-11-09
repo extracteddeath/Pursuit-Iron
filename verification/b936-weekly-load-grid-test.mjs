@@ -24,7 +24,7 @@ assert.equal(held.target, 10);
 assert.match(held.reason, /keep the last successfully completed load/);
 
 const meaningful = suggest(last, { ...nextWeek, rir: '3-3' });
-assert.equal(meaningful.weight, 48.5, 'genuine larger re-prescriptions still lower the load');
+assert.equal(meaningful.weight, 49, 'a genuine new-week decrease selects the nearest attainable 0.5-lb weight');
 
 const incomplete = suggest({ ...last, sets: [last.sets[0], { ...last.sets[1], r: 7 }] });
 assert.equal(incomplete.weight, 49.5, 'below-floor work never receives a hold exemption');
@@ -35,7 +35,12 @@ assert.equal(mixed.weight, 49.5, 'mixed loads are not automatically treated as a
 const coarse = suggest(last, nextWeek, { equipment: { available: ['machine'], loading: {
     unit: 'lb', exerciseOverrides: { [exerciseId]: { minimum: 0, increment: 5 } }
 } } });
-assert.equal(coarse.weight, 45, 'a meaningful whole-notch reduction is not converted into a hold');
+assert.equal(coarse.weight, 50, 'the nearest available 5-lb step avoids a needless 10% reduction');
+const substantial = suggest(last, { reps: '12-15', rir: '3-3' },
+    { equipment: { available: ['machine'], loading: {
+        unit: 'lb', exerciseOverrides: { [exerciseId]: { minimum: 0, increment: 5 } }
+    } } });
+assert.equal(substantial.weight, 45, 'a materially higher rep target still reduces by a full 5-lb notch');
 
 // The hold is expressed in the prescription's display unit: real 0.25 kg
 // microloading is valid, but the absolute 0.5 lb bound must not bypass the
@@ -50,11 +55,13 @@ assert.match(kgHold.reason, /keep the last successfully completed load/);
 
 const lightSets = { ...last, weight: 10, sets: last.sets.map(set => ({ ...set, w: 10 })) };
 const lightRecalibration = suggest(lightSets);
-assert.equal(lightRecalibration.weight, 9.5, 'a 0.5 lb decline is meaningful at a 10 lb working weight');
+assert.equal(lightRecalibration.weight, 10, 'a sub-0.1 lb estimation difference should not force a 5% lower load');
 assert.doesNotMatch(lightRecalibration.reason, /keep the last successfully completed load/);
+const lightMeaningful = suggest(lightSets, { reps: '12-15', rir: '2.25-2.25' });
+assert.equal(lightMeaningful.weight, 9, 'a materially harder prescription still reduces light loads');
 
 const unfinished = suggest({ ...last, sets: last.sets.map(set => ({ ...set, done: false })) });
 assert.doesNotMatch(unfinished.reason, /keep the last successfully completed load/,
     'a fallback summary without completed set evidence does not earn a hold');
 
-console.log('PASS B936: prevent near-grid phantom reductions while preserving unit boundaries, incomplete evidence and meaningful decreases.');
+console.log('PASS B936: nearest week resets avoid phantom decreases while preserving real reductions and completion evidence.');

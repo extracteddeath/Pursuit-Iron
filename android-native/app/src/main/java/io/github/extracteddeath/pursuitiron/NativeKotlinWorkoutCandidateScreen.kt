@@ -245,23 +245,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         // All-sets review keeps readiness and source-verified swap context
         // above the full ledger. Neither presentation order changes receipts.
         val renderSecondaryControls: @Composable () -> Unit = {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text("Readiness",style=MaterialTheme.typography.labelLarge)
-                CoachReadiness.entries.forEach{option->
-                    FilterChip(selected=readiness==option,
-                        onClick={readiness=option},
-                        label={Text(option.name.lowercase().replaceFirstChar{
-                            it.uppercase()
-                        })})
-                }
-            }
-            Row(Modifier.fillMaxWidth(),
-                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Checkbox(checked=movementRestricted,
-                    onCheckedChange={movementRestricted=it})
-                Text("Movement restricted",style=MaterialTheme.typography.bodyMedium)
-            }
+            PursuitTrainingReadinessControls(
+                readiness=readiness,
+                onReadinessChange={readiness=it},
+                movementRestricted=movementRestricted,
+                onRestrictionChange={movementRestricted=it},
+                enabled=!state.busy
+            )
             if(coach!=null && !presentation.finished)PursuitCard(
                 highlighted=coach.coaching.direction==
                     InWorkoutDirection.FOLLOW_PLANNED_BACKOFF) {

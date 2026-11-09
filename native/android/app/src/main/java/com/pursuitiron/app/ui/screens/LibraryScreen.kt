@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -176,7 +177,7 @@ fun LibraryScreen(vm: AppViewModel) {
    whether your gym has it, muscles, heaviest set, the pinned note, History & records / Form video, tempo,
    technique cues, today's status and Ban. Numbers come from history and the engine. */
 @Composable
-fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
+fun ExerciseSheet(vm: AppViewModel, id: String, dayId: String? = null, onClose: () -> Unit) {
     var x by remember(id) { mutableStateOf<JSONObject?>(null) }
     var pin by remember(id) { mutableStateOf<JSONObject?>(null) }
     var pinOpen by remember(id) { mutableStateOf(false) }
@@ -250,6 +251,31 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                 Column {
                     Text("Tempo", style = MaterialTheme.typography.bodyMedium)
                     Text(e.s("tempo"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+            }
+            // From the editor: this lift's sessions on this program day only (App.js "History on this day").
+            if (dayId != null) {
+                var dh by remember(id, dayId) { mutableStateOf<JSONObject?>(null) }
+                LaunchedEffect(id, dayId) { dh = vm.dayLiftHistory(dayId, id) }
+                dh?.let { h ->
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("HISTORY ON THIS DAY", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (h.i("sessions") > 0) Text("${h.i("sessions")} session${if (h.i("sessions") == 1) "" else "s"}", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                    }
+                    val rows = h.list("rows")
+                    if (rows.isEmpty()) Text("No logged sessions for this lift on this day yet." + if (h.i("elsewhere") > 0) " You've trained it ${h.i("elsewhere")} time${if (h.i("elsewhere") == 1) "" else "s"} on other days." else "",
+                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    else Column(Modifier.clip(RoundedCornerShape(16.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        rows.forEach { r ->
+                            Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()).format(java.util.Date(r.optLong("date"))), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(52.dp))
+                                Text(r.s("sets"), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                if (r.b("pr")) Text("BEST", style = MaterialTheme.typography.labelSmall, color = cs.primary)
+                            }
+                        }
+                    }
+                    if (rows.isNotEmpty() && h.i("elsewhere") > 0) Text("Also trained ${h.i("elsewhere")} time${if (h.i("elsewhere") == 1) "" else "s"} on other days, tracked separately since load and fatigue differ by session.",
+                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
             }
             val cues = e.strings("cues")

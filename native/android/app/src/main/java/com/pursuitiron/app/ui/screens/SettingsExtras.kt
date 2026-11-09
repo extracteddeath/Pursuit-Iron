@@ -306,6 +306,30 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
             val x = sc ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             Text("Tap a day to assign a workout. ${x.i("trainingDays")} training day${if (x.i("trainingDays") == 1) "" else "s"} a week.",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            // App.js "Suggested week": the engine's spacing, one tap to use it (shown while it differs from what's set).
+            val sug = x.list("suggested")
+            val differs = sug.isNotEmpty() && sug.zip(x.list("week")).any { (a, b) -> a.s("dayId") != b.s("dayId") }
+            if (differs) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Suggested week", style = MaterialTheme.typography.titleSmall, color = cs.onSecondaryContainer, modifier = Modifier.weight(1f))
+                    Text("${sug.count { it.s("dayId").isNotBlank() }} train · ${sug.count { it.s("dayId").isBlank() }} rest", style = MaterialTheme.typography.labelMedium, color = cs.onSecondaryContainer)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    sug.forEachIndexed { k, d ->
+                        val on = d.s("dayId").isNotBlank()
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (on) cs.surface else cs.onSecondaryContainer.copy(alpha = 0.06f)).padding(vertical = 6.dp, horizontal = 2.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(names[k], style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                            Text(if (on) d.s("label").substringBefore(" — ") else "Rest", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                                color = if (on) cs.onSurface else cs.onSurfaceVariant, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Spaced so the same muscles aren't trained hard back-to-back.", style = MaterialTheme.typography.bodySmall, color = cs.onSecondaryContainer, modifier = Modifier.weight(1f))
+                    Button(onClick = { scope.launch { sc = vm.applySuggestedSchedule(programId) } }) { Text("Use this") }
+                }
+            }
             x.list("week").forEachIndexed { k, d ->
                 val wd = d.i("weekday"); val label = d.s("label")
                 Surface(onClick = { scope.launch { sc = vm.cycleSchedule(programId, wd) } },

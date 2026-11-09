@@ -250,6 +250,14 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     Text(d.s("note"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
                 }
             }
+            // App.js short-day note: a generated day under three lifts means the gym limits the options.
+            if (exs.size in 1..2 && !e.b("buildOwn")) item(key = "short") {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(PiIcons.Info, null, tint = cs.onTertiaryContainer, modifier = Modifier.size(18.dp))
+                    Text("This day is a little short on exercises: your equipment limits the options. Add equipment to your gym in Settings, or add exercises below.",
+                        style = MaterialTheme.typography.bodySmall, color = cs.onTertiaryContainer)
+                }
+            }
             item(key = "exh") {
                 Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.Bottom) {
                     Text("Exercises", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
@@ -357,7 +365,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
         null -> {}
     }
     why?.let { k -> d?.let { WhyLiftSheet(vm, e.s("programId"), it.s("id"), k, e.i("weekIndex")) { why = null } } }
-    info?.let { id -> ExerciseSheet(vm, id) { info = null } }
+    info?.let { id -> ExerciseSheet(vm, id, dayId = d?.s("id")) { info = null } }
     if (confirmDeleteDay && d != null) AlertDialog(onDismissRequest = { confirmDeleteDay = false }, title = { Text("Delete ${d.s("label")}?") },
         text = { Text("It comes out of the draft. Nothing changes until you save. Logged workouts stay in your history.") },
         confirmButton = { Button(onClick = { confirmDeleteDay = false; dayMenu = false; vm.edit("deleteDay", "dayId" to d.s("id")); dayId = null }) { Text("Delete") } },

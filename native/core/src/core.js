@@ -4229,7 +4229,31 @@ export function schedule({ programId }) {
     const sched = p.schedule || {};
     return { programId, days: p.days.map((d) => ({ id: d.id, label: d.label })),
         week: [1, 2, 3, 4, 5, 6, 0].map((wd) => ({ weekday: wd, dayId: sched[wd] || null, label: sched[wd] ? (p.days.find((d) => d.id === sched[wd])?.label || null) : null })),
-        trainingDays: [1, 2, 3, 4, 5, 6, 0].filter((wd) => sched[wd]).length };
+        trainingDays: [1, 2, 3, 4, 5, 6, 0].filter((wd) => sched[wd]).length,
+        // App.js "Suggested week": the engine's spacing, so the same muscles aren't trained hard back-to-back.
+        suggested: (() => { let wp = null; try { wp = p.weekPlan || E.buildWeekPlan(p, undefined, p.engineV || 0); } catch { wp = null; }
+            if (!Array.isArray(wp) || !wp.some((x) => x != null)) return null;
+            return wp.map((di, k) => ({ weekday: [1, 2, 3, 4, 5, 6, 0][k], dayId: di != null ? p.days[di]?.id || null : null, label: di != null ? p.days[di]?.label || null : null })); })() };
+}
+/* App.js "Use this schedule": the suggested week becomes the program's schedule. */
+export function applySuggestedSchedule({ programId }) {
+    const cur = schedule({ programId }); if (!cur?.suggested) return cur;
+    const sched = {}; cur.suggested.forEach((x) => { if (x.dayId) sched[x.weekday] = x.dayId; });
+    setList('saved', saved().map((x) => (x.id === programId ? { ...x, schedule: sched, scheduleEdited: true } : x)));
+    return schedule({ programId });
+}
+/* App.js editor exercise sheet "History on this day": this lift's sessions on this program day only (the same lift on
+   push day and leg day is two different series), and how often it was trained on other days. */
+export function dayLiftHistory({ dayId, id }) {
+    const H = history(); const u = unit();
+    const anyLabelled = H.some((h) => h && h.dayId);
+    let all = null, day = null;
+    try { all = (E.exerciseTrends(H) || []).find((t) => t.id === id) || null; } catch { all = null; }
+    try { day = anyLabelled ? (E.exerciseTrends(H, dayId) || []).find((t) => t.id === id) || null : all; } catch { day = null; }
+    const rows = day ? [...(day.sessions || [])].slice(-8).reverse().map((x) => ({ date: x.date, best: x.best, pr: Number(x.best) >= Number(day.prBest) - 1e-6,
+        sets: (x.sets || []).map((st) => `${E.fmtSets ? E.fmtSets(st.w) : st.w}${st.r != null ? '×' + st.r : ''}`).join('  ') })) : [];
+    const elsewhere = all && day ? Math.max(0, (all.sessionsCount || 0) - (day.sessionsCount || 0)) : 0;
+    return { unit: u, rows, sessions: day?.sessionsCount || 0, elsewhere };
 }
 export function cycleSchedule({ programId, weekday }) {
     const p = programById(programId); if (!p) return null;

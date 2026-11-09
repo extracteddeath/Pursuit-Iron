@@ -728,6 +728,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     suspend fun schedule(programId: String): JSONObject? = obj("schedule", jsonOf("programId" to programId))
     suspend fun cycleSchedule(programId: String, weekday: Int): JSONObject? = obj("cycleSchedule", jsonOf("programId" to programId, "weekday" to weekday)).also { refreshHomeSide() }
+    suspend fun applySuggestedSchedule(programId: String): JSONObject? = obj("applySuggestedSchedule", jsonOf("programId" to programId)).also { refreshHomeSide() }
+    suspend fun dayLiftHistory(dayId: String, id: String): JSONObject? = obj("dayLiftHistory", jsonOf("dayId" to dayId, "id" to id))
     suspend fun clearSchedule(programId: String): JSONObject? = obj("clearSchedule", jsonOf("programId" to programId)).also { refreshHomeSide() }
     fun setExNote(id: String, text: String) = launchCore { call("setExNote", jsonOf("id" to id, "text" to text)) }
     /* B932: the pinned note and its setup fields, staged in one editor and saved or removed together. */

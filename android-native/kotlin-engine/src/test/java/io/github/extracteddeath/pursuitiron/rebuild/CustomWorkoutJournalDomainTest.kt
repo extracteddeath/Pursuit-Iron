@@ -54,6 +54,48 @@ class CustomWorkoutJournalDomainTest {
         return (result as CustomWorkoutJournalDecision.Proposed).draft
     }
 
+    @Test fun boundedSessionNoteIsRevisionedClearableAndNeverCompletesSets() {
+        val start=initial(makeSet(amplifier=null))
+        val add=CustomWorkoutJournalOperation.SessionNote("note-1",0,"Breathing felt good")
+        val saved=accept(start,add)
+        assertEquals("Breathing felt good",saved.sessionNote)
+        assertEquals(1L,saved.revision)
+        assertEquals(1,saved.unresolvedVisitCount)
+        assertEquals(start.snapshot,saved.snapshot)
+        assertTrue(saved.effectiveVisits.isEmpty())
+        val retry=CustomWorkoutJournalDomain.reduce(saved,add)
+            as CustomWorkoutJournalDecision.Proposed
+        assertTrue(retry.replayed)
+        assertEquals(saved,retry.draft)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.STALE_REVISION),
+            CustomWorkoutJournalDomain.reduce(saved,
+                CustomWorkoutJournalOperation.SessionNote("stale-note",0,"stale")))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.EVENT_ID_COLLISION),
+            CustomWorkoutJournalDomain.reduce(saved,
+                add.copy(text="replaced without permission")))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_SESSION_NOTE),
+            CustomWorkoutJournalDomain.reduce(saved,
+                CustomWorkoutJournalOperation.SessionNote("bad-note",1,"x".repeat(2001))))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_SESSION_NOTE),
+            CustomWorkoutJournalDomain.reduce(saved,
+                CustomWorkoutJournalOperation.SessionNote("control-note",1,"bad\u0000control")))
+        val cleared=accept(saved,
+            CustomWorkoutJournalOperation.SessionNote("note-clear",1,""))
+        assertEquals("",cleared.sessionNote)
+        assertEquals(2,cleared.receipts.size)
+        val main=accept(cleared,record("main-after-note",2))
+        val finished=accept(main,CustomWorkoutJournalOperation.Finish("note-finish",3))
+        assertEquals("",finished.sessionNote)
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.FINISHED),
+            CustomWorkoutJournalDomain.reduce(finished,
+                CustomWorkoutJournalOperation.SessionNote("after-finish",4,"no")))
+    }
+
     @Test fun mainAndFollowupHaveSeparateFactsAndFinishNeverAssumesAmplifier() {
         val initial=initial()
         assertEquals(1,initial.unresolvedVisitCount)

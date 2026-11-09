@@ -36,7 +36,8 @@ internal fun NativeKotlinCustomJournalScreen(
     workoutId:String,
     onClose:()->Unit,
     onViewHistory:()->Unit={},
-    onReturnToProgram:()->Unit={}
+    onReturnToProgram:()->Unit={},
+    onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     val workoutScroll=rememberScrollState()
@@ -330,6 +331,31 @@ internal fun NativeKotlinCustomJournalScreen(
                         OutlinedButton(onClick=onReturnToProgram,enabled=!busy,
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Continue to my next workout")
+                        }
+                        val programReviews=NativeKotlinProgramSwapHandoffDomain
+                            .review(current)
+                        if(programReviews.isNotEmpty()){
+                            HorizontalDivider()
+                            Text("Use a workout swap in future training?",
+                                style=MaterialTheme.typography.titleMedium)
+                            Text("Your workout replacement was saved only "+
+                                "for this session. Open the exact program "+
+                                "day for a separate exercise review. New "+
+                                "sets, gym availability, week overrides "+
+                                "and full-cycle audit still require approval.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            programReviews.forEach{request->
+                                OutlinedButton(
+                                    enabled=!busy,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={onReviewSwapInProgram(request)}
+                                ){
+                                    Text("Review ${kotlinExerciseLabel(
+                                        request.workoutReplacementExerciseId
+                                    )} in my program")
+                                }
+                            }
                         }
                         TextButton(onClick={showFinishedSets=!showFinishedSets}) {
                             Text(if(showFinishedSets)"Hide recorded sets" else "View recorded sets")

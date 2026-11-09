@@ -1,6 +1,8 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,18 +51,49 @@ internal fun NativeKotlinCustomCycleOverview(
         if(remainingWeek>it.weeks){remainingWeek-=it.weeks;false}else true
     }
     val days=listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+    val hasNextSession=selection is NativeCustomNextCycleSlot.Next ||
+        selection is NativeCustomNextCycleSlot.Prepared ||
+        selection is NativeCustomNextCycleSlot.ResumeIssued
+    var onlyNextBlock by rememberSaveable(cycle.cycleId) {
+        mutableStateOf(false)
+    }
     PursuitCard {
         Text("Program outline",style=MaterialTheme.typography.titleLarge)
         Text("Base training schedule. Your workout preview includes any changes for its specific week.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        cycle.blocks.forEach { block ->
+        if(hasNextSession && selectedBlock!=null) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+            ) {
+                FilterChip(
+                    selected=onlyNextBlock,
+                    onClick={onlyNextBlock=true},
+                    modifier=Modifier.heightIn(min=48.dp),
+                    label={Text("Current block")}
+                )
+                FilterChip(
+                    selected=!onlyNextBlock,
+                    onClick={onlyNextBlock=false},
+                    modifier=Modifier.heightIn(min=48.dp),
+                    label={Text("Entire program")}
+                )
+            }
+        }
+        cycle.blocks.filter { block ->
+            !onlyNextBlock || !hasNextSession ||
+                selectedBlock==null || block.blockId==selectedBlock.blockId
+        }.forEach { block ->
             Text(block.label,style=MaterialTheme.typography.titleMedium)
             Text(block.phase.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}+
                 " · ${block.weeks} ${if(block.weeks==1)"week" else "weeks"} · ${block.days.size} days/week",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             block.days.sortedBy{it.weekday}.forEach { day ->
+                val isNextDay=hasNextSession &&
+                    block.blockId==selectedBlock?.blockId &&
+                    day.weekday==weekday
                 var expanded by rememberSaveable(cycle.cycleId,block.blockId,day.weekday,week,weekday) {
                     mutableStateOf(block==selectedBlock &&
                         day.weekday==(weekday ?: block.days.minOfOrNull{it.weekday}))
@@ -68,7 +101,8 @@ internal fun NativeKotlinCustomCycleOverview(
                 HorizontalDivider()
                 PursuitDisclosureRow(
                     title="${days.getOrElse(day.weekday){"Day"}} · ${day.label}",
-                    subtitle="${day.slots.size} exercises",
+                    subtitle=(if(isNextDay)"Next session · " else "")+
+                        "${day.slots.size} exercises",
                     expanded=expanded,onToggle={expanded=!expanded}
                 )
                 if(expanded && onEditDay!=null)

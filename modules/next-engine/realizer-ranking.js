@@ -4,6 +4,7 @@ import { cachedCandidatePool, selectBestCandidate } from './candidate-optimizati
 import { avoidableExerciseOverlap } from './exercise-economy.js';
 import { exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';
 import { functionalCoverageBiases } from './functional-coverage.js';
+import { exerciseSetupDescriptors } from './setup-economy.js';
 import { INTENT_MUSCLES } from './topology.js';
 
 function staticCandidateKey(session, request) {
@@ -172,10 +173,28 @@ function muscleScore(ex, muscle, role, session, chosen, weeklyMovementUse, reque
     // enforced by the semantic/knowledge-graph overlap gate below; setup economy must never overpower
     // distinct stimulus, functional coverage, user priority, or strength specificity.
     const setupInefficiency = exerciseSetupInefficiencyPenalty(ex, chosen);
+    const stationCrowding = sharedStationCrowding(ex, chosen);
     return credit * 4 + ex.suitability.hypertrophy * .35 + ex.stability * .15 + compoundFit + intent + preferredBonus + armCoverageBonus + functionalCoverageBonus
-        - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty - setupInefficiency;
+        - fatigue * .22 - sameSession * 1.65 - weeklyRepeat * .42 - exactRepeat * 1.6 - ex.setupCost * .08 - confidencePenalty - setupInefficiency - stationCrowding;
 }
 /* M230:PRESERVE:top.muscleScore:END */
+
+/* One shared station shouldn't carry the whole session. Cables and the Smith machine are single stations that
+   scored well for every slot (stability, resistance profile), and nothing limited how many slots they took: a
+   commercial-gym hypertrophy Upper came out as six cable lifts and a Lower as Smith work, with the barbell and
+   dumbbells unused (measured: 436 of 1,934 generated days had 4+ lifts and 60%+ of the day on one station).
+   The first two lifts at a station are free; each further one costs more (.45 per lift: stronger made tight sessions
+   miss their time limit from the extra changeovers), so a comparable lift elsewhere wins
+   and a station stays the pick only when it is clearly better. Dumbbell, barbell and machine zones are left
+   alone: a dumbbell-only day is a normal home workout, and machine zones are already one station each. */
+const SHARED_STATIONS = new Set(['cable', 'smith']);
+function sharedStationCrowding(ex, chosen) {
+    const zone = exerciseSetupDescriptors(ex)[0]?.zone;
+    if (!SHARED_STATIONS.has(zone) || !chosen?.length)
+        return 0;
+    const n = chosen.filter(c => exerciseSetupDescriptors(c)[0]?.zone === zone).length;
+    return Math.max(0, n - 1) * .45;
+}
 
 export /* M230:PRESERVE:top.muscleCandidate:BEGIN */
 function muscleCandidate(a, session, request, chosen, weeklyMovementUse, catalog, minCredit = 0, maxSameMovementFamily) {

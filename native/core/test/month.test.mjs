@@ -27,7 +27,8 @@ ok(blockWeeks === 4, 'a four-week block, so the month runs through its end and b
 // The program week after n sessions: a block with no deload repeats, so week 5 is week 1 again.
 const weekAfter = (n) => (Math.floor(n / perWeek) % blockWeeks) + 1;
 
-const W = (n) => (/dumbbell|curl|raise|fly/i.test(n) ? 14 : /barbell|squat|deadlift/i.test(n) ? 60 : 35);
+// Starting loads a lifter would type, on the default equipment lists (dumbbells per hand in 2.5 kg steps to 50).
+const W = (n) => (/dumbbell|curl|raise|fly|bulgarian|split squat|lunge|kickback/i.test(n) ? 15 : /barbell|squat|deadlift/i.test(n) ? 60 : 35);
 const firstLoad = {}, lastLoad = {};
 let sessions = 0;
 for (let d = 0; d < 29; d++) {
@@ -63,8 +64,11 @@ for (let d = 0; d < 29; d++) {
     if (!cur.weight) C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(W(e.name)) });
     const w = Number(C.session().exercises[e.ei].sets[x.i].weight);
     ok(w > 0, `${tag}: ${e.name} set ${x.i} has a load to lift (${w})`);
-    if (!(e.id in firstLoad)) firstLoad[e.id] = w;
-    lastLoad[e.id] = w;
+    // Strength shown: load and reps together (a week that moves the rep target moves the load the other way).
+    const reps = Number(C.session().exercises[e.ei].sets[x.i].reps) || 0, rir = parseFloat(String(C.session().exercises[e.ei].sets[x.i].target?.rir ?? '2')) || 2;
+    const e1 = Math.round(w * (1 + (reps + rir) / 30) * 10) / 10;
+    if (!(e.id in firstLoad)) firstLoad[e.id] = e1;
+    lastLoad[e.id] = e1;
     C.act({ type: 'toggle', ei: e.ei, si: x.i });
     // On target: the low end of the set's own reserve range (2 for "2–3 RIR").
     C.act({ type: 'rir', ei: e.ei, si: x.i, rir: parseFloat(String(C.session().exercises[e.ei].sets[x.i].target?.rir ?? '2')) || 2 }); n++;
@@ -100,10 +104,11 @@ const hist = C.historyList({});
 clean('history', hist);
 const pb = C.profileBoard();
 clean('profile', pb);
-// Engine behaviour (the web engine's, reported rather than failed here): a lifter on target shouldn't lose load.
-const warn = (cond, msg) => { if (!cond) console.log('WARN ' + msg); };
-const fell = Object.keys(lastLoad).filter((id) => lastLoad[id] < firstLoad[id] * 0.9);
-warn(fell.length === 0, 'loads fell >10% over the month with every set on target: ' + fell.map((id) => id + ' ' + firstLoad[id] + '→' + lastLoad[id]).join(', '));
+// A lifter who hits every target doesn't get weaker over the month: the estimated max their prescribed sets show
+// (load with reps and reserve) holds within 5%. A week's new rep target moves the load the other way, which is fine;
+// it fell 20–35% when the engine floored to a grid the rack doesn't use (12 → 8 kg, 10 → 7.5).
+const fell = Object.keys(lastLoad).filter((id) => lastLoad[id] < firstLoad[id] * 0.95);
+ok(fell.length === 0, 'no lift\'s prescribed strength fell >5% over the month with every set on target' + (fell.length ? ': ' + fell.map((id) => id + ' e1RM ' + firstLoad[id] + '→' + lastLoad[id]).join(', ') : ''));
 const rv = C.reviewBlock ? C.reviewBlock({ programId: pid }) : null;
 if (rv) clean('block review', rv);
 

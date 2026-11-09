@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import java.math.BigDecimal
 import io.github.extracteddeath.pursuitiron.rebuild.*
 
 private val compareWeekdays=listOf(
@@ -25,6 +26,10 @@ private fun signedCount(value:Int)=when {
     value>0 -> "+$value"
     else -> value.toString()
 }
+private fun displayedDirectCredits(value:BigDecimal):String=
+    value.stripTrailingZeros().toPlainString()
+private fun namedMuscle(muscle:TrainingMuscle):String=
+    muscle.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}
 private fun auditedRange(sets:List<Int>):String=
     if(sets.minOrNull()==sets.maxOrNull())
         sets.firstOrNull()?.toString() ?: "—"
@@ -97,6 +102,9 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     val prior=comparison.prior
     val next=comparison.next
     val fontScale=LocalDensity.current.fontScale
+    var expandAllMuscles by rememberSaveable(cycle.cycleId,id){
+        mutableStateOf(false)
+    }
     PursuitCard {
         PursuitSectionHeading("Compare training blocks",
             "See how the next authored block differs before you approve a cycle change.")
@@ -162,6 +170,37 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 "the base totals above exclude overrides.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        comparison.auditedDirectMuscleChanges?.let{changes->
+            if(changes.isNotEmpty()) {
+                HorizontalDivider()
+                PursuitSectionHeading("Audited direct muscle sets",
+                    "First week of each block, using your reviewed catalog's " +
+                        "declared direct-set credits. No completion or recovery inferred.")
+                changes.take(if(expandAllMuscles)changes.size else 6).forEach{change->
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm),
+                        verticalAlignment=Alignment.CenterVertically) {
+                        Text(namedMuscle(change.muscle),
+                            modifier=Modifier.weight(1f),
+                            style=MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "${displayedDirectCredits(change.previousDirectSets)} → " +
+                                displayedDirectCredits(change.nextDirectSets),
+                            style=MaterialTheme.typography.labelLarge)
+                    }
+                }
+                if(changes.size>6)TextButton(
+                    onClick={expandAllMuscles=!expandAllMuscles},
+                    modifier=Modifier.heightIn(min=48.dp)
+                ) {Text(if(expandAllMuscles)"Show fewer muscles"
+                    else "Show all ${changes.size} muscle differences")}
+                Text("Biceps, brachialis, wrist flexors and wrist extensors are " +
+                    "counted independently. Differences are measurements, " +
+                    "not a prescription or a safe volume threshold.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         if(comparison.addedWeekdays.isNotEmpty() ||
             comparison.removedWeekdays.isNotEmpty()) {

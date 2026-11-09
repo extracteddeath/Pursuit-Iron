@@ -31,9 +31,8 @@ for(const phrase of [
   'var focusOnNext by rememberSaveable(workoutId)',
   'val editorStates=rememberSaveableStateHolder()',
   'activeFocus=nextVisit.takeIf',
-  'Text("UP NEXT"',
-  'Text("Focus on next")',
-  'Text("All sets")',
+  'val focusDetail=upcoming?.let',
+  'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
   'editorStates.SaveableStateProvider("main:${set.setKey}")',
   'editorStates.SaveableStateProvider("follow:${set.setKey}")',
@@ -71,6 +70,23 @@ assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') 
   exerciseHistory.includes('RIR not reported'),
   'Custom workout History must open complete correction-aware exercise facts, never invent RIR');
 const composer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+const sharedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
+for(const phrase of [
+  'internal fun PursuitWorkoutFocusHeader(',
+  'Text("Focus on next")',
+  'Text("All sets")',
+  'modifier=Modifier.heightIn(min=48.dp)',
+  'horizontalScroll(rememberScrollState())'
+])assert.ok(sharedFocus.includes(phrase),'Missing shared workout focus behavior: '+phrase);
+assert.ok(composer.includes('PursuitWorkoutFocusHeader(') &&
+  journal.includes('PursuitWorkoutFocusHeader('),
+  'Custom and generated workouts must share the same accessible focus panel');
+assert.ok(composer.includes('val editorStates=rememberSaveableStateHolder()') &&
+  composer.includes('editorStates.SaveableStateProvider("composer-set:${set.target.setKey}")') &&
+  journal.includes('val editorStates=rememberSaveableStateHolder()') &&
+  journal.includes('editorStates.SaveableStateProvider("main:${set.setKey}")'),
+  'Switching Focus/All or visiting another set must preserve unsubmitted fields in both workout types');
+
 assert.ok(composer.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') &&
   composer.includes('PursuitExerciseHeading(target.exerciseId,onHistory=onHistory)'),
   'Generated workout must open the same verified full exercise history');

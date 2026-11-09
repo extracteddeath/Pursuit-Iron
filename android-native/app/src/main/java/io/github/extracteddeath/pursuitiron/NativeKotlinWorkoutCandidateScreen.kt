@@ -260,22 +260,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 else -> "SELECTED SET"
             }
         )
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text("Readiness",style=MaterialTheme.typography.labelLarge)
-            CoachReadiness.entries.forEach{option->
-                FilterChip(selected=readiness==option,
-                    onClick={readiness=option},
-                    label={Text(option.name.lowercase().replaceFirstChar{
-                        it.uppercase()
-                    })})
-            }
-        }
-        Row(Modifier.fillMaxWidth(),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Checkbox(checked=movementRestricted,
-                onCheckedChange={movementRestricted=it})
-            Text("Movement restricted",style=MaterialTheme.typography.bodyMedium)
+        if(!presentation.finished) {
+            PursuitWorkoutReadinessPanel(
+                readiness=readiness,
+                onReadinessChange={readiness=it},
+                movementRestricted=movementRestricted,
+                onMovementRestrictedChange={movementRestricted=it},
+                enabled=!state.busy
+            )
         }
         if(coach!=null && !presentation.finished)PursuitCard(
             highlighted=coach.coaching.direction==

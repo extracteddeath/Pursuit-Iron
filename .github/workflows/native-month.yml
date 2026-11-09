@@ -130,7 +130,7 @@ jobs:
           profile: pixel_7
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: adb install -r "$APK" && MONTH_DAYS=1 python3 native/android/smoke/month.py "${{ vars.PI_APP_ID || 'io.github.extracteddeath.pursuitiron' }}.dev" month-out
+          script: adb install -r "$APK" && python3 native/android/smoke/month.py "${{ vars.PI_APP_ID || 'io.github.extracteddeath.pursuitiron' }}.dev" month-out
       - name: Screens to the native-month-out branch
         if: always()
         env:

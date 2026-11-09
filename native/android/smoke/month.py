@@ -27,19 +27,6 @@ def adb(*a, timeout=60):
         return ""
 
 
-def trace(step, nodes=None):
-    """Day one's first session leaves a step-by-step trail: what the bot did and which set controls it saw."""
-    if DAY[0] != "d00" or TRACE[0] > 40:
-        return
-    TRACE[0] += 1
-    nodes = nodes if nodes is not None else dump()
-    seen = [label(n) + ("[x]" if n.get("checked") == "true" else "") for n in nodes
-            if re.search(r"^Set |Weight|Reps|Save|reps left|Skip|Next exercise", label(n))]
-    with open(os.path.join(OUT, "trace.txt"), "a") as f:
-        f.write(f"{TRACE[0]:02d} {step}\n   " + "\n   ".join(seen[:14]) + "\n")
-    shot(f"trace-{TRACE[0]:02d}")
-
-
 TRACE = [0]
 
 
@@ -167,27 +154,42 @@ def start_weight(name):
     return "35"
 
 
-def current_lift():
-    for n in dump():
-        m = re.match(r"^(.+): how to do it\|", label(n))
-        if m:
-            return m.group(1)
-    return ""
+CHECKS = []
 
 
-def unlogged_check():
-    """The next set's log check: a checkbox whose label is "Set N: …" and that isn't checked."""
-    for n in dump():
-        if re.match(r"^Set [0-9W]+: ", n.get("content-desc") or "") and n.get("checked") == "false" and center(n):
-            return center(n)
-    return None
+def check(cond, msg):
+    """A pass/fail line in result.txt: the month is a test, not just a photo album."""
+    CHECKS.append(("PASS " if cond else "FAIL ") + f"{DAY[0]}: {msg}")
+    print(CHECKS[-1], flush=True)
+    if not cond:
+        shot("fail")
+    return cond
+
+
+def text_of(nodes):
+    return " ".join(label(n) for n in nodes)
+
+
+def set_rows(nodes):
+    """Each working set's log check in screen order: (label, centre, raw attrs)."""
+    out = []
+    for n in nodes:
+        d = n.get("content-desc") or ""
+        if re.match(r"^Set [0-9W]+: ", d) and center(n):
+            out.append((d, center(n), n.attrib))
+    return out
+
+
+def tap_xy(p):
+    adb("shell", "input", "tap", str(p[0]), str(p[1])); time.sleep(0.9)
 
 
 def train(day_no):
-    """One session start to finish, the way a lifter who follows the app would."""
+    """One session start to finish, the way a lifter who follows the app would. The bot keeps its own record of
+    which sets it logged (by lift and set), so it never taps a logged set a second time and un-logs it."""
     to_top()
     if not tap(r"Start workout$|Start it early$", timeout=6):
-        note("no Start on a training day"); shot("no-start"); return False
+        check(False, "a training day has Start workout"); return False
     if find(r"(?i)time available", timeout=6):
         if day_no < 3:
             shot("preview")
@@ -199,60 +201,88 @@ def train(day_no):
         shot("workout-first")
     tap(r"Warmed up", timeout=2)
     tap(r"^\|Got it$", timeout=2)
-    lifts_seen, idle, logged, t0 = set(), 0, 0, time.time()
-    while time.time() - t0 < 420:
-        lift = current_lift()
-        if lift and lift not in lifts_seen:
-            lifts_seen.add(lift)
-            if day_no == 0 and len(lifts_seen) <= 2:
+    lifts, mine, stall, last_key, t0 = [], set(), 0, None, time.time()
+    while time.time() - t0 < 600:
+        nodes = dump()
+        lift = next((re.match(r"^(.+): how to do it\|", label(n)).group(1) for n in nodes if re.match(r"^(.+): how to do it\|", label(n))), "")
+        if lift and lift not in lifts:
+            lifts.append(lift)
+            if day_no == 0 and len(lifts) <= 2:
                 shot("lift-" + re.sub(r"[^a-z]+", "-", lift.lower()))
-        tap(r"^\|Skip warm-up →$", timeout=1)
-        trace("loop top")
-        if find(r"Weight not set, edit", timeout=1):
-            tap(r"Weight not set, edit")
-            trace("opened the set editor")
-            tap(r"^Weight \((kg|lb)\), tap to type", timeout=3)
-            adb("shell", "input", "text", start_weight(lift))
-            hide_keyboard()
-            trace("typed the weight")
-            if not tap(r"^\|Save & log$|^Save & log", timeout=3):
-                note("set editor: no Save & log"); tap(r"^\|Save$", timeout=2)
-            trace("after Save & log")
-            logged += 1
-        else:
-            c = unlogged_check()
-            if c:
-                adb("shell", "input", "tap", str(c[0]), str(c[1])); time.sleep(1.0); logged += 1
+        skip = next((center(n) for n in nodes if re.search(r"^\|Skip warm-up →$", label(n))), None)
+        if skip:
+            tap_xy(skip); continue
+        rows = set_rows(nodes)
+        if day_no == 0 and rows and TRACE[0] < 3:
+            TRACE[0] += 1
+            with open(os.path.join(OUT, "trace.txt"), "a") as f:
+                f.write(f"{lift} first set node: {dict(rows[0][2])}\n")
+        todo = [r for r in rows if (lift + "|" + r[0].split(":")[0]) not in mine and r[2].get("checked") != "true"]
+        key = (lift, len(todo), todo[0][0] if todo else "")
+        stall = stall + 1 if key == last_key else 0
+        last_key = key
+        if stall >= 4:
+            note(f"stuck on {lift}: {todo[0][0] if todo else 'no set'}")
+            with open(os.path.join(OUT, f"stuck-{DAY[0]}.xml"), "w") as f:
+                f.write(adb("shell", "cat", "/sdcard/ui.xml"))
+            shot("stuck")
+            to_top(3)
+            if not tap(r"^Next exercise: ", timeout=2):
+                break
+            stall = 0
+            continue
+        if todo:
+            d, c, _ = todo[0]
+            sid = d.split(":")[0]
+            if "no weight" in d:
+                # The weight cell in the same row (a first-time lift has none): type a start weight, Save & log.
+                cells = [center(n) for n in nodes if re.match(r"^Weight not set, edit", label(n)) and center(n)]
+                cell = min(cells, key=lambda q: abs(q[1] - c[1])) if cells else None
+                if not cell:
+                    swipe_up(500); continue
+                tap_xy(cell)
+                tap(r"^Weight \((kg|lb)\), tap to type", timeout=3)
+                adb("shell", "input", "text", start_weight(lift))
+                hide_keyboard()
+                if not tap(r"^\|Save & log$", timeout=3):
+                    check(False, "the set editor has Save & log"); back(); continue
             else:
-                swipe_up(700)
-                c = unlogged_check()
-                if c:
-                    continue
-                to_top(3)
-                if not tap(r"^Next exercise: ", timeout=2):
-                    break
-                continue
-        # Rate it (the pill), alternating the answer the way a real lifter's sets vary.
-        tap(rf"^{[2, 1, 3, 2][logged % 4]} reps left", timeout=2)
-        if logged == 2 and day_no == 0:
-            shot("rest")
-        tap(r"^\|Skip$", timeout=1)
-    note(f"logged {logged} sets on {len(lifts_seen)} lifts in {time.time() - t0:.0f}s")
+                tap_xy(c)
+            mine.add(lift + "|" + sid)
+            tap(rf"^{[2, 1, 3, 2][len(mine) % 4]} reps left", timeout=2)
+            if len(mine) == 2 and day_no == 0:
+                shot("rest")
+            tap(r"^\|Skip$", timeout=1)
+            continue
+        # Nothing left in view: maybe below the fold, else the next lift, else the session is done.
+        swipe_up(700)
+        if any(r for r in set_rows(dump()) if (lift + "|" + r[0].split(":")[0]) not in mine and r[2].get("checked") != "true"):
+            continue
+        to_top(3)
+        if not tap(r"^Next exercise: ", timeout=2):
+            break
+    note(f"logged {len(mine)} sets on {len(lifts)} lifts in {time.time() - t0:.0f}s")
     # Finish
     to_top(2)
     tap(r"^\|Finish$|^Finish$", timeout=4)
     tap(r"^\|Finish$|^Finish$", timeout=3)
     time.sleep(2)
     shot("finish")
+    fin = text_of(dump())
+    m = re.search(r"(\d+) of (\d+) sets", fin)
+    check(re.search(r"Workout (saved|complete)|Nice work|Session complete", fin) is not None, "the finish page opens")
+    check(m is None, "every working set was logged" + (f" (finish page says {m.group(0)})" if m else ""))
     for ans in ("About right", "About right", "About right", "About right", "Moderate", "Recovered"):
         tap(rf"^\|{ans}$", timeout=1)
     if scroll_to(r"^\|Save session$", tries=8, step=700):
         shot("finish-bottom")
         tap(r"^\|Save session$")
     else:
-        note("finish page: no Save session"); shot("finish-stuck")
+        check(False, "the finish page has Save session")
     time.sleep(3)
     shot("after-save")
+    to_top()
+    check(find(r"(?i)done for today", timeout=4) is not None, "Today says done for today after saving")
     return True
 
 
@@ -295,6 +325,10 @@ for d in range(int(os.environ.get("MONTH_DAYS", "29"))):
             shot("greeting"); back()
     to_top()
     rest = find(r"Recover today|Rest day", timeout=2)
+    scheduled = now.weekday() in (0, 2, 4, 6)  # the wizard's default four days: Mon, Wed, Fri, Sun
+    check(bool(rest) != scheduled, ("a scheduled day offers a session" if scheduled else "an unscheduled day reads as a rest day"))
+    wk = find(rf"Week {sessions // 4 + 1} of ", timeout=2)
+    check(wk is not None, f"Today is on week {sessions // 4 + 1} after {sessions} sessions")
     first_week = d < 7
     if first_week or now.weekday() == 0:
         shot("today")
@@ -305,7 +339,7 @@ for d in range(int(os.environ.get("MONTH_DAYS", "29"))):
         if first_week:
             shot("today-after")
     # End of each week: what the lifter would look at
-    if now.weekday() == 6:
+    if now.weekday() == 6 and d in (6, 27):
         tab("Progress"); tour("progress", 6)
         tab("Plan"); tour("plan", 5)
         tab("You"); tour("you", 4)
@@ -324,5 +358,12 @@ if tap(r"^\|History$", timeout=3):
 tab("Exercises"); shot("exercises")
 tab("You"); tour("you", 8)
 note(f"{sessions} sessions over four weeks")
+if int(os.environ.get("MONTH_DAYS", "29")) >= 29:
+    check(sessions == 17, f"17 sessions over four weeks of Mon/Wed/Fri/Sun (got {sessions})")
 with open(os.path.join(OUT, "notes.txt"), "w") as f:
     f.write("\n".join(NOTES))
+fails = [c for c in CHECKS if c.startswith("FAIL")]
+with open(os.path.join(OUT, "result.txt"), "w") as f:
+    f.write(("FAIL" if fails else "PASS") + f" {len(CHECKS) - len(fails)}/{len(CHECKS)} checks\n" + "\n".join(fails + [c for c in CHECKS if c.startswith("PASS")]) + "\n")
+print(open(os.path.join(OUT, "result.txt")).read().splitlines()[0])
+sys.exit(1 if fails else 0)

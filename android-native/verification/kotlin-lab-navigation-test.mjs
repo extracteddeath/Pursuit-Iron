@@ -193,8 +193,14 @@ assert.ok(shared.includes('scrollState:ScrollState=rememberScrollState()') &&
   plan.includes('onEditDay={blockId,weekday->') &&
   outline.includes('onEditDay:((blockId:String,weekday:Int)->Unit)?=null') &&
   outline.includes('onClick={onEditDay(block.blockId,day.weekday)}') &&
-  outline.includes('Text("Edit this training day")'),
-  'Plan day deep link must land in the exact editable block/day and keep source ownership');
+  outline.includes('Text("Edit this training day")') &&
+  outline.includes('onEditExercise:((blockId:String,weekday:Int,slotId:String)->Unit)?=null') &&
+  outline.includes('onClick={onEditExercise(block.blockId,day.weekday,slot.slotId)}') &&
+  outline.includes('Text("Edit exercise sets")') &&
+  plan.includes('onEditExercise={blockId,weekday,slotId->') &&
+  plan.includes('exerciseEditor=Triple(blockId,weekday,slotId)') &&
+  plan.includes('controller.editReviewedExerciseSets('),
+  'Program drilldown must preserve exact exercise-slot identity and native editor writes');
 assert.ok(plan.includes('NativeKotlinNextSessionBrief(draft,week,weekday)') &&
   sessionBrief.includes('cycle.blocks.firstOrNull') &&
   sessionBrief.includes('block.days.firstOrNull{it.weekday==weekday}') &&

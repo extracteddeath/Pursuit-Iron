@@ -152,10 +152,10 @@ class CustomExerciseSwapRankingDomainTest {
         assertEquals("zulu-triceps",contextual.first().choice.exerciseId)
         assertEquals(setOf(TrainingMuscle.TRICEPS),contextual.first().uniqueDayCoverage)
         assertEquals(setOf(TrainingMuscle.TRICEPS),contextual.first().preservedDayCoverage)
-        assertTrue(contextual.first().explanation.contains("Retains sole reviewed direct-day coverage"))
+        assertTrue(contextual.first().explanation.contains("Could cover sole direct-day muscles with working sets"))
         val losing=contextual.first{it.choice.exerciseId=="alpha-chest"}
         assertTrue(losing.preservedDayCoverage.isEmpty())
-        assertTrue(losing.explanation.contains("Review lost direct-day coverage"))
+        assertTrue(losing.explanation.contains("Not directly covered by this candidate"))
     }
 
     @Test fun unavailableOtherDayMovementNeverInventsACoverageScore() {

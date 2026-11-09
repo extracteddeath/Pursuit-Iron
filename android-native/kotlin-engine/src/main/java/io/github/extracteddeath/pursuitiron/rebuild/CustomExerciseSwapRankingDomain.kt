@@ -59,9 +59,11 @@ object CustomExerciseSwapRankingDomain {
         sharedMusclesOnly:Boolean=false,
         sameRoleOnly:Boolean=false,
         sameFamilyOnly:Boolean=false,
-        /** Other slots in THIS authored program day or issued custom workout.
+        /** Other slots with WORKING sets in this program day or workout.
          * Null = unavailable context; never invent day-wide muscle coverage. */
-        otherDayExerciseIds:List<String>?=null
+        otherDayExerciseIds:List<String>?=null,
+        /** Explicit working-set evidence for the original slot is required. */
+        sourceHasWorkingSets:Boolean=false
     ):List<CustomSwapRankedOption> {
         // Fail closed on duplicate catalog identities. Do not build a
         // shortlist from invented or unresolved source metadata.
@@ -72,7 +74,8 @@ object CustomExerciseSwapRankingDomain {
         val sourceMuscles=source?.let(::credits).orEmpty()
         // A day with an unavailable catalog entry cannot support an exact
         // coverage claim. Fall back to pattern/family/role ranking instead.
-        val dayCoverageKnown=source!=null && otherDayExerciseIds!=null &&
+        val dayCoverageKnown=sourceHasWorkingSets && source!=null &&
+            otherDayExerciseIds!=null &&
             otherDayExerciseIds.all{it in byId}
         val uniqueDirect=if(dayCoverageKnown) {
             val otherDirect=otherDayExerciseIds.orEmpty().flatMap{

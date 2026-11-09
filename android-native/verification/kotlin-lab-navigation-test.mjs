@@ -266,8 +266,8 @@ assert.ok(
   swapRank.includes('Same reviewed training role') &&
   swapRank.includes('otherDayExerciseIds:List<String>?=null') &&
   swapRank.includes('sourceHasWorkingSets:Boolean=false') &&
-  swapRank.includes('Retains sole reviewed direct-day coverage') &&
-  swapRank.includes('Review lost direct-day coverage') &&
+  swapRank.includes('Could cover sole direct-day muscles with working sets') &&
+  swapRank.includes('Not directly covered by this candidate') &&
   swapRank.includes('val dayCoverageKnown=sourceHasWorkingSets && source!=null') &&
   swapRank.includes('CustomSwapFit.SAME_PATTERN_AND_FAMILY') &&
   swapRank.includes('CustomSwapFit.SHARED_REVIEWED_MUSCLES') &&

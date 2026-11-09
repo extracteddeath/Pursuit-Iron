@@ -1631,7 +1631,9 @@ function swapRows(cur, ranked, starved, peers, program, day) {
         const reason = overlap.length ? `Overlaps with ${overlap.join(', ')}` : samePattern ? '' : fillsGap ? 'Improves a weekly coverage gap' : samePart(x) ? 'Same target muscle, different stimulus' : 'Compatible substitute';
         // The "Same pattern" badge already says it; a reason line repeating it on every row was noise.
         const badge = overlap.length ? 'Extra setup' : samePattern ? 'Same pattern' : fillsGap ? 'Fills gap' : rank < 3 ? 'Top match' : null;
-        return { id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type, badge, reason, warn: overlap.length > 0 };
+        return { id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type, badge, reason, warn: overlap.length > 0,
+            // Expose ranking evidence to the native picker, not just the badge; an overlap can hide a same-pattern match.
+            rank: rank + 1, samePattern, fillsGap, extraSetup: overlap.length > 0 };
     });
 }
 export function swapOptions({ ei }) {

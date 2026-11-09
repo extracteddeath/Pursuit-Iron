@@ -1,0 +1,69 @@
+name: PR456 finalize approved web engine release once
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  finalize-approved-release:
+    if: ${{ github.event.pull_request.number == 456 && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'web-approved-engine-fixes-20261109' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize monotonic release identity and verify package
+        shell: bash
+        env:
+          RELEASE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base_build="$(git show "${RELEASE_BASE}:RELEASE_MANIFEST.json" | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>console.log(JSON.parse(s).build))')"
+          current_build="$(node -p 'require("./RELEASE_MANIFEST.json").build')"
+          if [[ "${current_build}" == "${base_build}" ]]; then
+            node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const filename = 'RELEASE_MANIFEST.json';
+          const manifest = JSON.parse(fs.readFileSync(filename, 'utf8'));
+          manifest.uiMilestone = `Build ${manifest.build} · Reliable repeating blocks, accurate loads and gym station variety`;
+          fs.writeFileSync(filename, JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+            node scripts/finalize-release.mjs --next-build
+          elif [[ "${current_build}" == "$((base_build + 1))" ]]; then
+            echo "Candidate release already finalized at build ${current_build}."
+          else
+            echo "Unexpected build identity: base=${base_build} candidate=${current_build}" >&2
+            exit 1
+          fi
+          PURSUIT_RELEASE_BASE="${RELEASE_BASE}" node scripts/verify-release.mjs
+          node engine-lab/canonical-export.mjs /tmp/pursuit-iron-pr456-engine
+          (cd /tmp/pursuit-iron-pr456-engine && npm run verify && npm test)
+      - name: Commit only finalized release identity
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- RELEASE_MANIFEST.json BUILD_PROFILE.json modules/App.js index.html sw.js
+          if git diff --cached --quiet; then
+            echo "Release identity already committed."
+            exit 0
+          fi
+          git diff --cached --name-only
+          git commit -m "Build 1009: finalize approved web engine corrections and PWA identity"
+          git push origin "HEAD:refs/heads/${TARGET_BRANCH}"

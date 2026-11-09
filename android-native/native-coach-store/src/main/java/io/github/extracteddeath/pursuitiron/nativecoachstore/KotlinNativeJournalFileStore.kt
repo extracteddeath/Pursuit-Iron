@@ -34,7 +34,8 @@ import java.security.MessageDigest
 enum class NativeJournalFileRefusal {
     INVALID_ARGUMENT, NOT_ISSUED, ISSUE_CONFLICT, SOURCE_CONFLICT,
     CORRUPT_RECEIPTS, JOURNAL_REJECTED, STORAGE_UNAVAILABLE,
-    NOT_AUTHORIZED, HISTORY_NOT_READY
+    NOT_AUTHORIZED, HISTORY_NOT_READY, SWAP_SOURCE_UNAVAILABLE,
+    SWAP_INVALID_TARGET
 }
 
 sealed interface NativeJournalFileResult {
@@ -226,7 +227,10 @@ private object NativeJournalBinary {
                         val applied=readLong()
                         val eventId=readUTF()
                         val expectedRevision=readLong()
-                        val operation=when(readUnsignedByte()) {
+                        val kind=readUnsignedByte()
+                        if(version<3 && kind>=3)
+                            throw IOException("swap operation in legacy journal")
+                        val operation=when(kind) {
                             1 -> KotlinJournalOperation.Finish(eventId,expectedRevision)
                             2 -> {
                                 val setKey=readUTF()
@@ -490,6 +494,12 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         operation: KotlinJournalOperation,
         authorizeCurrent: (String,KotlinTrainingSourceRevision)->Boolean
     ): NativeJournalFileResult {
+        // Generic set/Finish routes must never accept UI-invented exercise
+        // or target changes. Replacements have a separate trusted builder.
+        if(operation is KotlinJournalOperation.SwapExercise ||
+            operation is KotlinJournalOperation.UndoSwap)
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE)
         if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.INVALID_ARGUMENT)
@@ -516,6 +526,53 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         }.getOrElse {
             NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
         }
+    }
+
+    /**
+     * Owner-approved Composer replacement/undo. The trusted factory is
+     * evaluated AFTER replaying the physical disk journal under its OS lock.
+     * Caller MUST also hold the approval/gym owner revision fence and
+     * authenticate current source facts. Never use a UI-supplied factory.
+     */
+    fun appendReviewedWorkoutSwap(
+        ownerKey:String,workoutId:String,
+        authorizeCurrent:(String,KotlinTrainingSourceRevision)->Boolean,
+        reviewed:(KotlinWorkoutJournalState)->KotlinJournalOperation?
+    ):NativeJournalFileResult {
+        if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return runCatching {
+            locked(ownerKey,workoutId){file->
+                val saved=recoverSaved(file,ownerKey,workoutId,authorizeCurrent)
+                if(saved !is NativeJournalFileResult.Durable)
+                    return@locked saved
+                val proposed=reviewed(saved.journal)
+                    ?:return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.SWAP_INVALID_TARGET)
+                if(proposed !is KotlinJournalOperation.SwapExercise &&
+                    proposed !is KotlinJournalOperation.UndoSwap)
+                    return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.SWAP_INVALID_TARGET)
+                val result=KotlinWorkoutJournalDomain.reduce(
+                    saved.journal,proposed)
+                if(result is KotlinJournalDecision.Rejected)
+                    return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.JOURNAL_REJECTED,result.reason)
+                result as KotlinJournalDecision.Proposed
+                if(!result.replayed){
+                    val next=result.state
+                    val original=next.originalSnapshot
+                    val payload=SavedReceipts(
+                        ownerKey,NativeJournalBinary.snapshotHash(original),
+                        next.snapshot,next.storedIdentity,next.receipts,
+                        next.revision,next.finishedByEventId,original)
+                    atomicWrite(file,NativeJournalBinary.encode(payload))
+                }
+                NativeJournalFileResult.Durable(result.state,result.replayed)
+            }
+        }.getOrElse {NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
     }
 
     private fun recoverSaved(

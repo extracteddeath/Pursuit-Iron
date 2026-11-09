@@ -240,7 +240,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
             }
             Text("A template replaces the blocks after this one. The block you’re in keeps running.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
             if (converting) {
-                ConvSwitch("Adapt exercises between blocks", "Real block history may change compatible exercises at the next phase while protecting successful lifts. Off: your exercises carry on and only the prescription changes.", convAdapt) { convAdapt = it }
+                ConvSwitch("Adapt exercises between blocks", "At each new block, lifts that stalled can be swapped for ones that suit the phase; lifts that are progressing stay. Off: your exercises carry on and only sets, reps and effort change.", convAdapt) { convAdapt = it }
                 if (convAdapt) ConvSwitch("Adapt training split", "Compare safe weekly structures for each block’s goal. Your training days and session limits are kept.", convAdaptSplit) { convAdaptSplit = it }
             }
         }
@@ -346,7 +346,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text("Adapt exercises to each phase", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                        Text("Real block history may change compatible exercises at the next phase while protecting successful lifts. Off: the same exercises carry on and only sets, reps, RIR and rest retarget.",
+                        Text("At each new block, lifts that stalled can be swapped for ones that suit the phase; lifts that are progressing stay. Off: the same exercises carry on and only sets, reps, RIR and rest change.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
                     }
                     Switch(adapt, { vm.editCycle(c.s("id"), adapt = it) }, enabled = c.b("reshapable"), modifier = Modifier.semantics { contentDescription = "Adapt exercises to each phase" })

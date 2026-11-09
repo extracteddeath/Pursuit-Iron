@@ -76,13 +76,16 @@ fun GallerySheet(vm: AppViewModel, onClose: () -> Unit) {
                         Text(e.s("title"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         if (e.b("coached")) Badge("Coached", cs.tertiaryContainer, cs.onTertiaryContainer)
                     }
-                    Text(listOfNotNull("${e.i("days")} day", e.s("splitName"), GOAL_LABEL[e.s("goal")] ?: e.s("goal"), e.s("session").takeIf { it.isNotBlank() }?.let(::sessLabel), "by ${e.s("author").let { if (it == "pursuit") "Pursuit Iron" else it }}").joinToString(" · "),
+                    // The title already names the days and split; the line adds what it doesn't say.
+                    val t = e.s("title").lowercase()
+                    Text(listOfNotNull("${e.i("days")} day".takeIf { "${e.i("days")} day" !in t }, e.s("splitName").takeIf { it.isNotBlank() && it.lowercase() !in t }, GOAL_LABEL[e.s("goal")] ?: e.s("goal"), e.s("session").takeIf { it.isNotBlank() }?.let(::sessLabel), "by ${e.s("author").let { if (it == "pursuit") "Pursuit Iron" else it }}").joinToString(" · "),
                         style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                     Text(e.s("note"), style = MaterialTheme.typography.bodyMedium)
                     val eq = e.strings("equipment")
                     Text(if (e.isNull("equipment") || eq.isEmpty()) "Built for your gym's equipment" else "Needs: " + eq.take(4).joinToString(", ") + if (eq.size > 4) " +${eq.size - 4}" else "",
                         style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                    val tags = e.strings("tags")
+                    // Tags that repeat the days or the goal ("6 day", "Hypertrophy" beside "Size") are dropped.
+                    val tags = e.strings("tags").filterNot { Regex("^\\d+-day$").matches(it) || it.lowercase() in setOf("hypertrophy", "strength", "size", "strength-size") }
                     if (tags.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { tags.forEach { Badge(it.replace('-', ' ').replaceFirstChar { c -> c.uppercase() }) } }
                     val added = e.b("added")
                     Button(onClick = { if (!added && busy == null) { busy = e.s("code"); vm.importGallery(e.s("code")) { busy = null; rows = null } } },

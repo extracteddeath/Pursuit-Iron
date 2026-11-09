@@ -71,7 +71,7 @@ fun SwapPicker(opts: List<JSONObject>?, currentName: String, onBan: (() -> Unit)
                 items(shown, key = { it.s("id") }) { x ->
                     val badge = x.s("badge")
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { onPick(x) }
-                        .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "${x.s("name")}${if (badge.isNotBlank()) ", $badge" else ""}. ${x.s("reason")}. ${x.s("equipLabel")}" }
+                        .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = listOf(x.s("name") + (if (badge.isNotBlank()) ", $badge" else ""), x.s("reason"), x.s("equipLabel")).filter { it.isNotBlank() }.joinToString(". ") }
                         .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -84,7 +84,7 @@ fun SwapPicker(opts: List<JSONObject>?, currentName: String, onBan: (() -> Unit)
                                 }
                             }
                             x.s("reason").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = cs.onSurface) }
-                            Text(listOfNotNull(x.s("type").takeIf { it.isNotBlank() }, x.s("equipLabel").takeIf { it.isNotBlank() }).joinToString(" · "),
+                            Text(listOfNotNull(x.s("type").takeIf { it.isNotBlank() }?.replaceFirstChar { it.uppercase() }, x.s("equipLabel").takeIf { it.isNotBlank() }).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
                         }
                         Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))

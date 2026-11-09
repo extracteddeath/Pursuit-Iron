@@ -289,7 +289,6 @@ private fun workCount(e: JSONObject): String {
     val work = e.list("sets").filter { !it.b("warm") && !it.b("sub") }
     return "${work.count { it.b("done") }}/${work.size}"
 }
-private fun shortName(n: String): String = n.split(' ').filter { it.isNotBlank() }.let { w -> if (n.length <= 14) n else w.takeLast(2).joinToString(" ") }
 
 @Composable
 private fun RailItem(name: String, count: String?, on: Boolean, done: Boolean, onClick: () -> Unit) {
@@ -826,10 +825,10 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                     val n = work.size; val minN = work.count { it.b("done") }.coerceAtLeast(1)
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Layers, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
+                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.List, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
                         Column(Modifier.weight(1f)) {
                             Text("Working sets", style = MaterialTheme.typography.titleSmall)
-                            Text("Logged sets stay. Keep the new count after saving, or just today", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            Text("For today. When you finish, choose whether the plan keeps it", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Row(Modifier.clip(CircleShape).background(cs.surface).padding(3.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(36.dp).clip(CircleShape).clickable(enabled = n > minN) { vm.act("setCount", "ei" to ei, "count" to n - 1) }

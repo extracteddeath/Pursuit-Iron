@@ -50,8 +50,9 @@ fun PinNoteSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     val fields = x.list("fields")
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Kicker above the title, as the other lift sheets do (it repeated "Pinned note" below it).
+            Text(x.s("name").uppercase(), style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
             Text("Pinned note", style = MaterialTheme.typography.headlineSmall)
-            Text("PINNED NOTE · ${x.s("name").uppercase()}", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
             fields.forEach { f ->
                 val k = f.s("key")
                 OutlinedTextField(setup[k].orEmpty(), { setup[k] = it.take(40) }, Modifier.fillMaxWidth().semantics { contentDescription = "${f.s("label")} for ${x.s("name")}" },

@@ -1203,6 +1203,23 @@ adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 row_scroll_to(r"^\|Schedule$", r"Review block")
 if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
     tap(r"^Mon", "schedule-monday")
+    # Monday now repeats a workout and skips another, so the engine's week is offered.
+    scroll_up_to(r"^\|Suggested week$", tries=3)
+    if not find(r"^\|Suggested week$", timeout=4):
+        FAILS.append("a week that skips a workout offers no suggested week")
+    # With nothing scheduled the engine's week is offered; two "Lower" days say which lift each is.
+    scroll_to(r"^\|Clear schedule$", tries=3)
+    tap(r"^\|Clear schedule$")
+    scroll_up_to(r"^\|Suggested week$", tries=3)
+    if find(r"^\|Suggested week$", timeout=6):
+        shot("schedule-suggested")
+        if not find(r"^\|back squat$", timeout=3) or not find(r"^\|deadlift$", timeout=3):
+            FAILS.append("suggested week does not tell the two Lower days apart")
+        tap(r"^\|Use this$")
+        if find(r"^\|Suggested week$", timeout=3):
+            FAILS.append("suggested week still offered after Use this")
+    else:
+        FAILS.append("cleared schedule offers no suggested week")
     scroll_to(r"^\|Done$", tries=3)
     tap(r"^\|Done$")
 if tap(r"Edit program", "editor"):

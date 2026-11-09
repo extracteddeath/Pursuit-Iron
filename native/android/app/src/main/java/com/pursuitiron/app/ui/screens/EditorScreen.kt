@@ -174,7 +174,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                                 .padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
                                 val fg = if (on) cs.onPrimary else cs.onSurface
                                 Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
-                                Text("${w.i("sets")} sets · ${com.pursuitiron.app.ui.common.minutesLabel(w.i("minutes"))}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
+                                Text(if (w.i("sets") == 0) "No sets yet" else "${w.i("sets")} sets · ${com.pursuitiron.app.ui.common.minutesLabel(w.i("minutes"))}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                             }
                         }
                     }
@@ -465,7 +465,8 @@ private fun DayCard(x: JSONObject, week: Int, onOpen: () -> Unit) {
                 Text(x.s("label"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (x.b("edited")) Box(Modifier.size(7.dp).clip(CircleShape).background(cs.primary).semantics { contentDescription = "edited" })
             }
-            Text("${exs.size} lifts · ${fmtNum(x.d("sets"))} sets" + (x.i("minutes").takeIf { it > 0 }?.let { " · ~$it min" } ?: ""),
+            // An empty day read "0 lifts · 0 sets" over "No lifts yet"; one line says it.
+            if (exs.isNotEmpty()) Text("${exs.size} lifts · ${fmtNum(x.d("sets"))} sets" + (x.i("minutes").takeIf { it > 0 }?.let { " · ~$it min" } ?: ""),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
             Text(if (exs.isEmpty()) "No lifts yet" else exs.take(3).joinToString(" · ") { it.s("name") } + if (exs.size > 3) " +${exs.size - 3}" else "",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)

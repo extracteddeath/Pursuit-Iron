@@ -404,7 +404,7 @@ private fun GymBarsAndWeights(g: JSONObject, gym: JSONObject, id: String, patch:
 fun gymMeta(gym: JSONObject): String {
     val lu = gym.s("limitUnit", "kg")
     val inv = gym.optJSONObject("inventory")
-    val parts = mutableListOf("${gym.strings("equipment").size} items")
+    val parts = mutableListOf("${gym.strings("equipment").size} kinds of equipment")
     fun last(k: String) = inv?.optJSONArray(k)?.let { a -> if (a.length() > 0) a.optDouble(a.length() - 1) else null }
     (last("dumbbell") ?: gym.optJSONObject("limits")?.takeIf { it.has("dumbbell") }?.optDouble("dumbbell"))?.let { parts += "dumbbells to ${fmtNum(it)} $lu" }
     (last("kettlebell") ?: gym.optJSONObject("limits")?.takeIf { it.has("kettlebell") }?.optDouble("kettlebell"))?.let { parts += "bells to ${fmtNum(it)} $lu" }

@@ -88,8 +88,8 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
                     val sub = when {
                         m == null -> "~${o.i("estimatedMinutes")}m"
                         !o.b("fits") -> "too short"
-                        !o.b("changed") -> "fits"
-                        else -> "−${o.i("cutSets")} sets"
+                        !o.b("changed") -> "no cuts"
+                        else -> "${o.i("sets")} sets"
                     }
                     Surface(onClick = { minutes = m }, color = if (on) cs.primary else cs.surfaceContainerHigh, contentColor = if (on) cs.onPrimary else cs.onSurface,
                         shape = RoundedCornerShape(if (on) 16.dp else 999.dp),

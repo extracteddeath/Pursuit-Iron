@@ -163,7 +163,6 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     p.list("sessions").forEach { o -> PsChip(SESSION_SHORT[o.s("id")] ?: o.s("label"), session == o.s("id")) { session = o.s("id") } }
                 }
-                p.list("sessions").firstOrNull { it.s("id") == session }?.let { o -> PsNote(o.s("label") + (if (o.i("count") > 0) " · ~${o.i("count")} exercises a session" else "")) }
                 PsCap("BLOCK LENGTH")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(3.dp).semantics { contentDescription = "Block length" }, verticalAlignment = Alignment.CenterVertically) {

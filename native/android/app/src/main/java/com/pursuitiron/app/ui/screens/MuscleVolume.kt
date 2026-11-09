@@ -77,7 +77,7 @@ fun MuscleVolumeCard(vm: AppViewModel, programId: String, week: Int, onDetails: 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Sets by muscle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 if (anyHeads) {
-                    Text("Heads", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
+                    Text("By head", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
                     Switch(heads, { vm.prefs.changeVolHeads(it) }, modifier = Modifier.semantics { contentDescription = "Show muscle heads" })
                 }
             }

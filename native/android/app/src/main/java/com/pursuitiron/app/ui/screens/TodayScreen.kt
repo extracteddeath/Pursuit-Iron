@@ -231,7 +231,11 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
                         drawArc(cs.onPrimaryContainer.copy(alpha = 0.15f), 0f, 360f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st))
                         drawArc(cs.primary, -90f, 360f * sweep, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st, cap = androidx.compose.ui.graphics.StrokeCap.Round))
                     }
-                    Text("$done/${wkDays.size}", style = MaterialTheme.typography.labelLarge)
+                    // A bare "0/4" read as a score; the caption says what it counts.
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("$done/${wkDays.size}", style = MaterialTheme.typography.labelLarge, lineHeight = 14.sp)
+                        Text("this week", style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.sp), color = cs.onPrimaryContainer.copy(alpha = 0.7f))
+                    }
                 }
             }
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -338,7 +342,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                 Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp, lineHeight = 32.sp))
             }
             val vol = d.d("volume")
-            val stats = listOf("Time" to (d.i("durationMin").takeIf { it > 0 }?.let { "${it / 60}:${(it % 60).toString().padStart(2, '0')}" } ?: "—"),
+            val stats = listOf("Time" to (d.i("durationMin").takeIf { it > 0 }?.let { if (it < 60) "$it min" else "${it / 60}h ${(it % 60).toString().padStart(2, '0')}m" } ?: "—"),
                 "Sets" to "${d.i("setsDone")}", "Volume" to (if (vol > 0) com.pursuitiron.app.ui.common.volText(vol.toDouble(), u) else "—"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 stats.forEach { (k, v) ->

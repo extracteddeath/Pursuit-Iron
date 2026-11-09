@@ -84,6 +84,7 @@ import com.pursuitiron.app.ui.common.Segmented
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.fmt1
+import com.pursuitiron.app.ui.common.volUnit
 import com.pursuitiron.app.ui.common.fmtNum
 import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
@@ -127,10 +128,11 @@ fun YouStats(board: JSONObject) {
     val cs = MaterialTheme.colorScheme
     val lt = board.o("lifetime") ?: return
     val u = board.s("unit", "kg")
-    val lifted = lt.d("lifted") / (if (u == "lb") 2204.62 else 1000.0)
+    // Same unit as Progress: tonnes for kg, thousands of pounds for lb (it showed metric tonnes to lb users).
+    val lifted = lt.d("lifted") / 1000.0
     val stats = listOf(
         "Sessions" to "${lt.i("sessions")}",
-        "Lifted" to "${if (lifted >= 100) Math.round(lifted).toString() else fmt1(lifted)} t",
+        "Lifted" to "${if (lifted >= 100) Math.round(lifted).toString() else fmt1(lifted)} ${volUnit(u)}",
         "Streak" to "${lt.i("streakWeeks")} wk",
         "PRs · block" to "${board.i("prsBlock")}",
     )

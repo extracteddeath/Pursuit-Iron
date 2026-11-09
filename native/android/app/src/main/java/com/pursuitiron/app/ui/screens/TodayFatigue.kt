@@ -253,12 +253,13 @@ fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
                     Row(Modifier.semantics(mergeDescendants = true) { contentDescription = "${m.s("label")} $v percent ready" + if (bold) ", trained today" else "" },
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(m.s("label"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Medium), modifier = Modifier.width(96.dp), maxLines = 1)
-                        com.pursuitiron.app.ui.common.ProgressBar(v / 100f, Modifier.weight(1f), color = if (v >= 85) cs.primary else if (v >= 60) cs.onTertiaryContainer else cs.outlineVariant, track = cs.surface, height = 12.dp)
+                        com.pursuitiron.app.ui.common.ProgressBar(v / 100f, Modifier.weight(1f), color = if (v >= 85) cs.onTertiaryContainer else if (v >= 60) cs.onTertiaryContainer.copy(alpha = 0.55f) else cs.primary, track = cs.surface, height = 12.dp)
                         Text("$v%", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp), modifier = Modifier.width(44.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
                     }
                 }
             }
-            Text("Estimated from when each muscle was last trained, how many sets and how hard. Bold rows are trained today.",
+            // The bars were drawn in the map's "Fatigued" colour when a muscle was most ready; now only low readiness uses it.
+            Text("Estimated from when each muscle was last trained, how many sets and how hard. Bold rows are trained today; under 60% shows in the Fatigued colour.",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp))
             val rec = h.o("recovery")
             if (rec?.b("restAdvised") == true && h.b("canLight")) {

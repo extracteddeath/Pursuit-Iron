@@ -916,15 +916,19 @@ export function sessionPreview({ programId, dayId, weekIndex, minutes = null } =
         return { slot, id, name: ex.name, sets: cell.sets, reps: cell.reps ?? cell.range ?? null, rir: cell.rir ?? null, primary, cutFrom: cut ? cut.fromSets : null, amplifierOff: !!cut?.amplifierRemoved,
             minutes: sec > 0 ? Math.max(1, Math.round(sec / 60)) : null, rest };
     }).filter(Boolean);
+    const working = exercises.reduce((a, e) => a + (Number(e.sets) || 0), 0);
+    const fullSets = working + (chosen?.cuts || []).reduce((a, c) => a + (c.fromSets - c.toSets), 0);
     return { programId: pid, dayId: did, dayLabel: src.label, weekIndex: wk, minutes,
         fullMinutes: full, estimatedMinutes: chosen && !chosen.error ? chosen.estimatedMinutes : est, fits: chosen ? !!chosen.fits && !chosen.error : true,
-        workingSets: exercises.reduce((a, e) => a + (Number(e.sets) || 0), 0), exercises,
+        workingSets: working, exercises,
         skipped: (chosen?.cuts || []).filter((c) => c.toSets === 0).map((c) => c.name),
         options: (E.SESSION_LENGTH_OPTIONS || [null, 45, 30, 20]).map((m, i) => {
-            const pl = plans[i];
+            const pl = plans[i], cut = m == null || !pl?.cuts ? 0 : pl.cuts.reduce((a, c) => a + (c.fromSets - c.toSets), 0);
             return { minutes: m, label: m == null ? 'Full' : m + 'm', fits: m == null ? true : !!pl && !pl.error && !!pl.fits,
                 estimatedMinutes: m == null ? full : pl?.estimatedMinutes ?? null, changed: m == null ? false : !!pl?.changed,
-                cutSets: m == null || !pl?.cuts ? 0 : pl.cuts.reduce((a, c) => a + (c.fromSets - c.toSets), 0) };
+                cutSets: cut,
+                // What's left at this length: the chip reads "8 sets", not a minus sign that looked like a tilde.
+                sets: Math.max(0, fullSets - cut) };
         }) };
 }
 
@@ -1046,8 +1050,8 @@ function addRules(e, ex, style) {
     const nDrop = sets.filter((x) => x.sub && x.kind === 'drop').length, hasMyo = sets.some((x) => x.sub && x.kind === 'myo');
     const barbell = E.barFor(ex || { equip: [] }) === 'barbell';
     return {
-        drop: { show: !barbell, why: !lastDone ? 'Log a working set first' : pending ? 'Finish the extension you added first' : nDrop >= 2 ? 'Two drops is the limit' : '' },
-        myo: { show: style !== 'myo', why: hasMyo ? 'Already added to this lift' : !lastDone ? 'Log a working set first' : pending ? 'Finish the extension you added first' : '' }
+        drop: { show: !barbell, why: !lastDone ? 'Log your last set first' : pending ? 'Finish the extension you added first' : nDrop >= 2 ? 'Two drops is the limit' : '' },
+        myo: { show: style !== 'myo', why: hasMyo ? 'Already added to this lift' : !lastDone ? 'Log your last set first' : pending ? 'Finish the extension you added first' : '' }
     };
 }
 
@@ -1099,11 +1103,26 @@ const SHORT = { 'overhead press': 'OHP', 'romanian deadlift': 'RDL', 'bulgarian 
     'close-grip bench press': 'CG bench', 'lat pulldown': 'Pulldown', 'leg press': 'Leg press', 'back squat': 'Squat', 'front squat': 'Front squat' };
 function shortName(name) {
     const full = String(name || '').trim(); if (full.length <= 12) return full;
-    const n = full.replace(/^(barbell|dumbbell|db|cable|machine|smith( machine)?|ez[- ]bar|kettlebell|band(ed)?|seated|standing)\s+/i, '').trim();
-    const k = n.toLowerCase(); if (SHORT[k]) return SHORT[k];
+    const n0 = full.replace(/^(barbell|dumbbell|db|cable|machine|smith( machine)?|ez[- ]bar|kettlebell|band(ed)?|seated|standing)\s+/i, '').trim();
+    const n = /\s/.test(n0) || SHORT[n0.toLowerCase()] ? n0 : full; // "Dumbbell Curl" stays, not a bare "Curl"
+    const KEYS = Object.keys(SHORT).sort((a, b) => b.length - a.length);
+    const look = (x) => { const lx = x.toLowerCase(); if (SHORT[lx]) return SHORT[lx];
+        const k = KEYS.find((q) => lx.endsWith(' ' + q)); return k ? x.slice(0, x.length - k.length) + SHORT[k] : x; }; // "Deficit RDL"
+    if (SHORT[n.toLowerCase()]) return SHORT[n.toLowerCase()];
     if (n.length <= 12) return n;
-    const w = n.split(/\s+/), two = w.slice(-2).join(' ');
-    return two.length <= 15 ? two : w[w.length - 1];
+    // Equipment and stance inside the name go before the angle or grip does: "Incline Dumbbell Curl" is "Incline Curl",
+    // "Low-Incline Barbell Press" is "Low-inc Press" (taking the last two words made both "Dumbbell Curl"/"Barbell Press").
+    const EQ = /^(barbell|dumbbell|db|cable|machine|smith|kettlebell|band|banded|seated|standing|prone)$/i;
+    const MOD = { 'low-incline': 'Low-inc', 'high-incline': 'High-inc', 'close-grip': 'CG', 'wide-grip': 'Wide', 'neutral-grip': 'Neutral',
+        'reverse-grip': 'Reverse', 'underhand-grip': 'Underhand', 'snatch-grip': 'Snatch-grip', 'dual-handle': 'Dual', 'chest-supported': 'Supported' };
+    const w0 = n.split(/\s+/), w1 = w0.filter((t) => !EQ.test(t)), w = w1.length >= 2 ? w1 : w0;
+    const lean = look(w.join(' ')); if (lean.length <= 18) return lean;
+    const ab = w.map((t) => MOD[t.toLowerCase()] || t), abj = look(ab.join(' ')); if (abj.length <= 18) return abj;
+    // Still long: the angle or grip and the movement ("Incline Fly"), else the movement's last words.
+    const first = ab[0], two = ab.slice(-2).join(' '), three = ab.slice(-3).join(' '), lead = `${first} ${ab[ab.length - 1]}`;
+    if (/incline|decline|inc$|^cg$|wide|neutral|reverse|underhand|close|single|one-arm/i.test(first) && !/^raise$/i.test(ab[ab.length - 1]) && lead.length <= 18) return lead;
+    const two0 = w0.slice(-2).map((t) => MOD[t.toLowerCase()] || t).join(' ');
+    return [three, two, two0].map(look).find((x, i) => (i > 0 || /^delt$/i.test(ab[ab.length - 2])) && x.length <= 18) || ab[ab.length - 1];
 }
 /* A percentage lift's header line: the wave and its share of max ("5+ reps · 65–85% of max · Barbell"), not a RIR target. */
 function pctLine(plan, ex) {
@@ -1587,7 +1606,8 @@ function swapRows(cur, ranked, starved, peers, program, day) {
         let overlap = []; try { overlap = E.swapOverlapNames(x, peers, program, day) || []; } catch { overlap = []; }
         const samePattern = curPat != null && pat(x) === curPat;
         const fillsGap = !!(starved && starved.has(sub(x)) && sub(x) !== curSub);
-        const reason = overlap.length ? `Overlaps with ${overlap.join(', ')}` : samePattern ? 'Keeps the same movement pattern' : fillsGap ? 'Improves a weekly coverage gap' : samePart(x) ? 'Same target muscle, different stimulus' : 'Compatible substitute';
+        const reason = overlap.length ? `Overlaps with ${overlap.join(', ')}` : samePattern ? '' : fillsGap ? 'Improves a weekly coverage gap' : samePart(x) ? 'Same target muscle, different stimulus' : 'Compatible substitute';
+        // The "Same pattern" badge already says it; a reason line repeating it on every row was noise.
         const badge = overlap.length ? 'Extra setup' : samePattern ? 'Same pattern' : fillsGap ? 'Fills gap' : rank < 3 ? 'Top match' : null;
         return { id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type, badge, reason, warn: overlap.length > 0 };
     });
@@ -1611,7 +1631,11 @@ export function swapOptions({ ei }) {
 export function explain({ ei }) {
     const l = S.live; if (!l) return null;
     const ctx = sessionContext(l), e = l.data?.[ei]; if (!ctx || !e) return null;
-    try { return E.explainPrescription({ program: ctx.program, day: ctx.day, ex: EX_BY_ID[e.id], slot: e.slot, perf: ctx.P, history: ctx.H, weekIndex: ctx.wk }); } catch { return null; }
+    let x = null; try { x = E.explainPrescription({ program: ctx.program, day: ctx.day, ex: EX_BY_ID[e.id], slot: e.slot, perf: ctx.P, history: ctx.H, weekIndex: ctx.wk }); } catch { return null; }
+    // The engine's wording ("log this exposure and the next comparable session…") is for the web's detail view.
+    if (x?.load && x.load.weight == null && /^No comparable completed workout/.test(String(x.load.reason || '')))
+        x = { ...x, load: { ...x.load, reason: 'Your pick: this is your first time on this lift on this day. Next time’s weight builds from what you log today.' } };
+    return x;
 }
 
 /* App.js WorkoutSession finish + App finishSession. */
@@ -1841,7 +1865,6 @@ export function progress({ pinned = null } = {}) {
      effort the lifter reported (0 / 1 / 2 / 3+ RIR; unreported sets are counted separately, never guessed);
    - recovery & feedback per muscle: the last three soreness answers (fbSore) beside its readiness. */
 const SORE_LABEL = { sore: 'Too much', ontime: 'About right', fresh: 'Too easy' };
-function isoWeek(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); const w1 = new Date(d.getFullYear(), 0, 4); return 1 + Math.round(((d - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7); }
 export function progressCharts() {
     const H = history(), u = unit(), DAY = 86400000;
     const ws = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); })();
@@ -1849,7 +1872,8 @@ export function progressCharts() {
         const sd = new Date(ws); sd.setDate(sd.getDate() - (7 - k) * 7); const ed = new Date(sd); ed.setDate(ed.getDate() + 7);
         const start = sd.getTime(), end = ed.getTime(), hs = H.filter((h) => Number(h.date) >= start && Number(h.date) < end);
         let vol = 0; hs.forEach((h) => { try { vol += E.historyVolumeIn(h, u) || 0; } catch { /* unreadable entry */ } });
-        return { label: 'W' + isoWeek(start), start, now: k === 7, volume: Math.round(vol), sessions: hs.length };
+        // Week-of dates ("Nov 9"), not ISO week numbers ("W46") nobody counts in.
+        return { label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][sd.getMonth()] + ' ' + sd.getDate(), start, now: k === 7, volume: Math.round(vol), sessions: hs.length };
     });
     const since = Date.now() - 28 * DAY, reps = [0, 0, 0], eff = [0, 0, 0, 0]; let unrated = 0;
     H.filter((h) => Number(h.date) >= since).forEach((h) => Object.values(h.perf || {}).forEach((pf) => {

@@ -456,7 +456,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     const di = s.exercises.findIndex((e, i) => i !== bi && e.addRules.drop.show && !e.assisted && e.sets.some((x) => !x.warm && !x.sub));
     if (di >= 0) {
       let e = C.session().exercises[di];
-      ok(e.addRules.drop.why === 'Log a working set first', 'drop waits for a logged working set');
+      ok(e.addRules.drop.why === 'Log your last set first', 'drop waits for a logged working set');
       const w = e.sets.filter((x) => !x.warm && !x.sub);
       w.forEach((x) => { C.act({ type: 'edit', ei: di, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: di, si: x.i, field: 'reps', value: '10' }); });
       const last = w[w.length - 1];
@@ -893,6 +893,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const opt = pv.options.slice(1).find((o) => o.fits && o.changed);
   ok(!!opt, 'a shorter option fits and changes the session: ' + pv.options.map((o) => o.label + (o.fits ? '' : '✗') + ' ' + o.estimatedMinutes).join(', '));
   const sp = C.sessionPreview({ minutes: opt.minutes });
+  ok(pv.options[0].sets === pv.workingSets && opt.sets === sp.workingSets && sp.options.find((o) => o.minutes === opt.minutes).sets === sp.workingSets, 'each length option says the sets it leaves: ' + pv.options.map((o) => o.label + ' ' + o.sets).join(', '));
   ok(sp.workingSets < pv.workingSets && sp.estimatedMinutes <= opt.minutes, 'the plan has fewer working sets (' + pv.workingSets + ' → ' + sp.workingSets + ') and fits ' + opt.minutes + ' min');
   const ss = C.startSession({ minutes: opt.minutes });
   const rows = ss.exercises.reduce((a, e) => a + e.sets.filter((x) => !x.warm && !x.sub).length, 0);

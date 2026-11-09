@@ -80,7 +80,7 @@ fun VolumeChartCard(g: JSONObject) {
     val unitLabel = if (mode == "volume") volUnit(u) else if (now.i("sessions") == 1) "session" else "sessions"
     PiCard(radius = 28.dp) {
         Segmented(listOf("volume" to "Volume", "sessions" to "Sessions"), mode, { mode = it }, height = 40.dp)
-        Text((if (mode == "volume") "Volume, ${volUnit(u)}" else "Workouts") + " · ${now.s("label").lowercase().replace("w", "week ")} (this week)", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+        Text((if (mode == "volume") "Volume, ${volUnit(u)}" else "Workouts") + " · this week", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(fmt1(v(now)) + " " + unitLabel, style = MaterialTheme.typography.displaySmall)
             val dl = v(now) - v(prev)

@@ -192,7 +192,7 @@ fun ManageDataCard(vm: AppViewModel) {
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         val banned = st.list("banned")
         Column(Modifier.clip(RoundedCornerShape(20.dp))) {
-            DataRow("Banned exercises", "${banned.size} hidden from generation", if (banned.isNotEmpty()) "Review" else null) { bannedOpen = true }
+            DataRow("Banned exercises", "${banned.size} kept out of programs and swaps", if (banned.isNotEmpty()) "Review" else null) { bannedOpen = true }
         }
         cap("START OVER")
         androidx.compose.material3.FilledTonalButton(onClick = { confirm = "history" }, enabled = st.i("sessions") > 0, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Clear workout history") }
@@ -308,7 +308,14 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             // App.js "Suggested week": the engine's spacing, one tap to use it (shown while it differs from what's set).
             val sug = x.list("suggested")
-            val differs = sug.isNotEmpty() && sug.zip(x.list("week")).any { (a, b) -> a.s("dayId") != b.s("dayId") }
+            // Offered while nothing is scheduled (as on the web), or when the week set skips a workout or repeats one;
+            // a complete week you (or the split preview) set isn't second-guessed.
+            val setIds = x.list("week").map { it.s("dayId") }.filter { it.isNotBlank() }
+            val allIds = x.list("days").map { it.s("id") }
+            val broken = setIds.size != allIds.size || setIds.toSet() != allIds.toSet()
+            val differs = sug.isNotEmpty() && sug.zip(x.list("week")).any { (a, b) -> a.s("dayId") != b.s("dayId") } && (x.i("trainingDays") == 0 || broken)
+            // "Lower" twice can't say which is the squat day: repeated heads also show what follows the dash.
+            val heads = sug.filter { it.s("dayId").isNotBlank() }.distinctBy { it.s("dayId") }.groupingBy { it.s("label").substringBefore(" — ") }.eachCount()
             if (differs) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Suggested week", style = MaterialTheme.typography.titleSmall, color = cs.onSecondaryContainer, modifier = Modifier.weight(1f))
@@ -320,8 +327,12 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (on) cs.surface else cs.onSecondaryContainer.copy(alpha = 0.06f)).padding(vertical = 6.dp, horizontal = 2.dp),
                             horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(names[k], style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
-                            Text(if (on) d.s("label").substringBefore(" — ") else "Rest", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                            val head = d.s("label").substringBefore(" — ")
+                            Text(if (on) head else "Rest", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
                                 color = if (on) cs.onSurface else cs.onSurfaceVariant, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            if (on && (heads[head] ?: 0) > 1 && " — " in d.s("label"))
+                                Text(d.s("label").substringAfter(" — "), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal),
+                                    color = cs.onSurfaceVariant, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
                 }

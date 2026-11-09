@@ -21,6 +21,35 @@ data class KotlinComposerSwapChoice(
 
 /** Candidate discovery only: never issues or changes a session. */
 object KotlinComposerSwapRankingDomain {
+    /**
+     * Search the exact already-reviewed candidate catalog. A muscle search is
+     * discovery, NOT evidence of equal stimulus or a prescription transfer.
+     * Multiple words may match across the name, pattern and credited muscles.
+     */
+    private fun matchesSearch(option:ComposerExerciseOption,search:String):Boolean {
+        val needle=search.trim().take(80).lowercase()
+        if(needle.isBlank()) return true
+        fun readable(value:String)=value.lowercase().replace('_',' ').replace('-',' ')
+        val catalogText=(listOf(option.exerciseId,option.pattern.name)+
+            option.credits.filter{it.fractionalSet.signum()>0}
+                .map{it.muscle.name}).joinToString(" ",transform=::readable)
+        return needle.split(Regex("\\s+")).all{it in catalogText}
+    }
+
+    /** Keep the owner's ranking intact; do not rank filtered search results
+     * against an incomplete source catalog. */
+    fun filterRanked(
+        choices:List<KotlinComposerSwapChoice>,
+        search:String="",
+        samePatternOnly:Boolean=false,
+        sharedMusclesOnly:Boolean=false
+    ):List<KotlinComposerSwapChoice> =
+        Collections.unmodifiableList(choices.filter{
+            (!samePatternOnly || it.samePattern) &&
+                (!sharedMusclesOnly || it.sharedReviewedMuscleCount>0) &&
+                matchesSearch(it.option,search)
+        })
+
     fun rank(
         source:ComposerExerciseOption,
         alternatives:List<ComposerExerciseOption>,
@@ -28,15 +57,12 @@ object KotlinComposerSwapRankingDomain {
         dayFocus:ComposerFocus,
         search:String=""
     ):List<KotlinComposerSwapChoice> {
-        val needle=search.trim().replace('_',' ').lowercase()
         val baseline=source.credits.map{it.muscle}.toSet()
         return alternatives.asSequence().filter{it.exerciseId!=source.exerciseId &&
             it.exerciseId !in currentExerciseIds &&
             dayFocus in it.allowedFocus &&
             it.role==source.role &&
-            (needle.isBlank() || it.exerciseId.replace('_',' ')
-                .replace('-',' ').lowercase().contains(needle) ||
-                it.pattern.name.replace('_',' ').lowercase().contains(needle))
+            matchesSearch(it,search)
         }.map{candidate->
             val shared=candidate.credits.count{it.muscle in baseline}
             val same=candidate.pattern==source.pattern

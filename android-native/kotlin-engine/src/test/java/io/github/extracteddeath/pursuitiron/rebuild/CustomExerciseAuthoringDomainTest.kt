@@ -187,6 +187,69 @@ class CustomExerciseAuthoringDomainTest {
                 setup(),catalog())))
     }
 
+    @Test fun swapReplacesExactlyOneAuthoredVisitWithoutTransferringOldWeights() {
+        val starting=draft()
+        val first=(CustomExerciseAuthoringDomain.addSelected(
+            starting,2,"base",0,slot(listOf(working("30"))),
+            setup(),catalog()) as CustomAuthoringResult.Accepted).proposal.draft
+        val old=first.blocks.single().days.single().slots.single()
+        val replacement=CustomExerciseSlot(
+            "slot-2","straight-pushdown",ComposerRole.SECONDARY,
+            listOf(working("20")),attachmentId="straight-bar",
+            pinned=true,coachNote="Fresh setup for replacement")
+        val swapped=(CustomExerciseAuthoringDomain.replaceSelectedExercise(
+            first,3,"base",0,old.slotId,replacement,setup(),catalog())
+            as CustomAuthoringResult.Accepted).proposal
+        assertEquals("replace-exercise-slot",swapped.receipt.operation)
+        assertEquals(4L,swapped.draft.revision)
+        assertEquals(replacement,swapped.draft.blocks.single()
+            .days.single().slots.single())
+        assertEquals(first,swapped.receipt.original)
+        assertEquals(first.weekOverrides,swapped.draft.weekOverrides)
+        assertTrue(swapped.draft.blocks.single().days.single()
+            .slots.single().sets.none{it==working("30")})
+        assertEquals(CustomAuthoringRefusal.AUTHORING_CONFLICT,refused(
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                first,2,"base",0,old.slotId,replacement,setup(),catalog())))
+    }
+
+    @Test fun swapRejectsOverriddenSupersetAndUnverifiedNewLoading() {
+        val first=(CustomExerciseAuthoringDomain.addSelected(
+            draft(),2,"base",0,slot(),setup(),catalog())
+            as CustomAuthoringResult.Accepted).proposal.draft
+        val replacement=CustomExerciseSlot("slot-2","straight-pushdown",
+            ComposerRole.SECONDARY,listOf(working("25")),
+            attachmentId="straight-bar",pinned=true)
+        val overridden=(CustomCycleBuilderDomain.editWeek(
+            first,3,"base",2,0,"slot-1",listOf(working("30")))
+            as CustomCycleBuilderResult.Proposed).draft
+        assertEquals(CustomAuthoringRefusal.AUTHORING_CONFLICT,refused(
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                overridden,4,"base",0,"slot-1",replacement,setup(),catalog())))
+        assertEquals(listOf(working("30")),
+            overridden.weekOverrides.getValue("base").single().sets)
+        val superset=first.copy(blocks=listOf(first.blocks.single().copy(
+            days=listOf(first.blocks.single().days.single().copy(
+                slots=listOf(first.blocks.single().days.single()
+                    .slots.single().copy(supersetGroup="pair")))))))
+        assertEquals(CustomAuthoringRefusal.AUTHORING_CONFLICT,refused(
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                superset,3,"base",0,"slot-1",replacement,setup(),catalog())))
+        assertEquals(CustomAuthoringRefusal.INATTAINABLE_LOAD,refused(
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                first,3,"base",0,"slot-1",
+                replacement.copy(sets=listOf(working("27.5"))),
+                setup(),catalog())))
+        assertEquals(CustomAuthoringRefusal.EXERCISE_UNAVAILABLE,refused(
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                first,3,"base",0,"slot-1",replacement,
+                setup(attachments=setOf("rope")),catalog())))
+        assertEquals(CustomAuthoringRefusal.ATTACHMENT_UNAVAILABLE,refused(
+            CustomExerciseAuthoringDomain.replaceSelectedExercise(
+                first,3,"base",0,"slot-1",
+                replacement.copy(attachmentId="rope"),setup(),catalog())))
+    }
+
     @Test fun supersetsAndDifferentAthletesRequireExplicitPermission() {
         val before=draft()
         assertEquals(CustomAuthoringRefusal.AUTHORING_CONFLICT,

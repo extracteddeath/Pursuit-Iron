@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -175,6 +176,35 @@ internal fun PursuitDisclosureRow(
                 if(expanded)Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                 contentDescription=null
             )
+        }
+    }
+}
+
+
+/**
+ * Shared two-action layout for Save/Clear, Confirm/Cancel and other paired
+ * actions. Keeps touch targets readable on small screens and at 200% text
+ * without duplicating responsive branches throughout the native app.
+ */
+@Composable
+internal fun PursuitResponsiveActionPair(
+    primary:@Composable (Modifier)->Unit,
+    secondary:@Composable (Modifier)->Unit
+) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stack=maxWidth<380.dp || LocalDensity.current.fontScale>=1.35f
+        if(stack) {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                primary(Modifier.fillMaxWidth())
+                secondary(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+                primary(Modifier.weight(1f))
+                secondary(Modifier.weight(1f))
+            }
         }
     }
 }

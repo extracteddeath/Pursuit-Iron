@@ -122,7 +122,7 @@ object NativeExercisePerformanceTrendDomain {
                     previous==null || sample.performedReps>previous.performedReps
                 else previous==null ||
                     checkNotNull(weight)>checkNotNull(previous.actualLoad) ||
-                    (weight.compareTo(checkNotNull(previous.actualLoad))==0 &&
+                    (checkNotNull(weight).compareTo(checkNotNull(previous.actualLoad))==0 &&
                         sample.performedReps>previous.performedReps)
                 if(improves)bySession[order]=sample
             }

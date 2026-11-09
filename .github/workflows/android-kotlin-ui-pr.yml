@@ -21,6 +21,7 @@ on:
   pull_request:
     branches:
       - architecture/kotlin-engine-rebuild
+      - ui/kotlin-integrated-design-20261109
     paths:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlin*.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt'

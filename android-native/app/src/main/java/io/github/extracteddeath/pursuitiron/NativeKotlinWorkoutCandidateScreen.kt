@@ -500,7 +500,7 @@ private fun NativeKotlinSetCard(
             ?: (target.load as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty())
     }
     var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
-        mutableStateOf(existing?.reps?.takeIf{it>0}?.toString()
+        mutableStateOf(existing?.reps?.toString()
             ?:target.reps.minimum.toString())
     }
     var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){

@@ -10,6 +10,7 @@ on:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt'
       - 'android-native/kotlin-engine/**'
       - 'android-native/native-coach-store/**'
+      - 'android-native/verification/kotlin-workout-readiness-layout-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   pull_request:
     branches:
@@ -20,6 +21,7 @@ on:
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt'
       - 'android-native/kotlin-engine/**'
       - 'android-native/native-coach-store/**'
+      - 'android-native/verification/kotlin-workout-readiness-layout-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   workflow_dispatch:
 
@@ -73,6 +75,8 @@ jobs:
           unzip -q "$archive" -d "$RUNNER_TEMP"
           echo "${RUNNER_TEMP}/gradle-${version}/bin" >> "$GITHUB_PATH"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Verify native workout Focus and shared readiness are owner-neutral
+        run: node android-native/verification/kotlin-workout-readiness-layout-test.mjs
       - name: Compile all native Kotlin UI and test the independent engine (never assembles APK)
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace

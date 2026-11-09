@@ -50,30 +50,54 @@ internal fun PursuitExerciseHeading(
     subtitle:String?=null, enabled:Boolean=true,
     onInfo:(()->Unit)?=null
 ) {
-    Row(Modifier.fillMaxWidth(),
-        verticalAlignment=Alignment.CenterVertically,
-        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-        Column(Modifier.weight(1f),
-            verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+    val titleContent: @Composable (Modifier)->Unit = {modifier->
+        Column(modifier,verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
             Text(kotlinExerciseLabel(exerciseId),
                 style=MaterialTheme.typography.titleLarge)
             if(!subtitle.isNullOrBlank())Text(subtitle,
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        // Optional factual exercise details are available in Focus without
-        // navigating away from set entry. Keep full History one tap away.
-        if(onInfo!=null) OutlinedIconButton(
-            onClick=onInfo,enabled=enabled,
-            modifier=Modifier.size(48.dp)
-        ) { Icon(Icons.Outlined.Info,contentDescription="Exercise details") }
+    }
+    val historyAction: @Composable (Modifier)->Unit = {modifier->
         OutlinedButton(onClick=onHistory,enabled=enabled,
             contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),
-            modifier=Modifier.heightIn(min=48.dp)) {
+            modifier=modifier.heightIn(min=48.dp)) {
             Icon(Icons.Outlined.History,contentDescription=null,
                 modifier=Modifier.size(18.dp))
             Spacer(Modifier.width(PursuitSpace.xxs))
             Text("History")
+        }
+    }
+    val infoAction: @Composable ()->Unit = {
+        if(onInfo!=null) OutlinedIconButton(
+            onClick=onInfo,enabled=enabled,modifier=Modifier.size(48.dp)
+        ) {
+            Icon(Icons.Outlined.Info,contentDescription="Exercise details")
+        }
+    }
+    // The lift title may be long. Don't squeeze it beside two actions at
+    // large Android font scales; keep full History and Info accessible.
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stacked=maxWidth<380.dp || LocalDensity.current.fontScale>=1.35f
+        if(stacked) {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                titleContent(Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    infoAction()
+                    historyAction(Modifier.weight(1f))
+                }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                titleContent(Modifier.weight(1f))
+                infoAction()
+                historyAction(Modifier)
+            }
         }
     }
 }

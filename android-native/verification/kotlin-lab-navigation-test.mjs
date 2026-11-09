@@ -23,6 +23,7 @@ const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
 const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
+const exerciseFavorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeExerciseFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 const adaptiveRights=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinAdaptiveCyclePermissionsPanel.kt');
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
@@ -137,6 +138,31 @@ assert.ok(favorites.includes('private fun key(athleteId:String)') &&
   favorites.includes('exerciseIds.any{it !in supportedIds}') &&
   !favorites.includes('estimatedOneRepMax'),
   'Favorite lifts must be opt-in athlete-scoped UI choices, never strength outcomes');
+// The general exercise-pinning flow is *not* a fifth fabricated Strength
+// Standards reference: every ID is read from authenticated finished workouts.
+assert.ok(exerciseFavorites.includes('NativeKotlinMixedHistoryTimeline') &&
+  exerciseFavorites.includes('history.completions.flatMap') &&
+  exerciseFavorites.includes('NativeKotlinMixedHistoryCompletion.Composer') &&
+  exerciseFavorites.includes('NativeKotlinMixedHistoryCompletion.Custom') &&
+  exerciseFavorites.includes('athlete:$athleteId:history-favorites') &&
+  exerciseFavorites.includes('chosen.any{!validId.matches(it) || it !in loggedIds}') &&
+  exerciseFavorites.includes('chosen.size>MAX_FAVORITES') &&
+  exerciseFavorites.includes('chosen.distinct().size!=chosen.size') &&
+  exerciseFavorites.includes('return editor.commit()') &&
+  standards.includes('NativeExerciseFavorites.loggedIds') &&
+  standards.includes('timeline?.athleteId==owner') &&
+  standards.includes('timeline?.manifestRevision==version') &&
+  standards.includes('NativeExerciseFavorites.write(') &&
+  standards.includes('if(exercisePickerExpanded) {') &&
+  standards.includes('changeExerciseFavorites(moved)') &&
+  standards.includes('onClick={historyExerciseId=exerciseId}') &&
+  profile.includes('NativeExerciseFavorites.read(') &&
+  profile.includes('timeline?.athleteId==athleteId') &&
+  profile.includes('onProgressLift(exerciseId)') &&
+  journey.includes('progressRequestedExerciseId=exerciseId') &&
+  standards.includes('exercise in availableMovements'),
+  'General exercise favorites must be verified, ordered, athlete-scoped and history-only');
+
 assert.ok(standards.includes('var comparisonExpanded by rememberSaveable') &&
   standards.includes('if(comparisonExpanded) {') &&
   standards.includes('Text(if(comparisonExpanded)"Hide comparison settings" else "Edit comparison settings")') &&

@@ -60,6 +60,14 @@ sealed interface CustomWorkoutJournalOperation {
         val swapEventId:String
     ):CustomWorkoutJournalOperation
 
+    /** Athlete-written text. Empty text explicitly clears the session note.
+     * Every edit is a revisioned, owner-fenced receipt; no draft is factual. */
+    data class SessionNote(
+        override val eventId:String,
+        override val expectedRevision:Long,
+        val text:String
+    ):CustomWorkoutJournalOperation
+
     data class Finish(
         override val eventId: String,
         override val expectedRevision: Long
@@ -82,6 +90,10 @@ data class CustomWorkoutJournalDraft(
     /** Never changes: exact originally prepared/consent-approved workout. */
     val originalSnapshot:CustomWorkoutDaySnapshot=snapshot
 ) {
+    /** A note never leaks into the next workout's issued targets or coach. */
+    val sessionNote:String get()=receipts.asReversed().firstNotNullOfOrNull{
+        (it.operation as? CustomWorkoutJournalOperation.SessionNote)?.text
+    }.orEmpty()
     /** A skipped or failed main set makes follow-up non-applicable, never done. */
     val unresolvedVisitCount: Int get() {
         var unresolved=0
@@ -113,7 +125,7 @@ enum class CustomWorkoutJournalRefusal {
     MAIN_NOT_COMPLETED, ALREADY_RECORDED, INVALID_CORRECTION,
     INVALID_ACTUAL, INCOMPLETE_WORKOUT, TOO_MANY_EVENTS,
     SWAP_ALREADY_STARTED, SWAP_PROTECTED, SWAP_IDENTITY_CONFLICT,
-    SWAP_INVALID_TARGET, SWAP_UNDO_UNAVAILABLE
+    SWAP_INVALID_TARGET, SWAP_UNDO_UNAVAILABLE, INVALID_SESSION_NOTE
 }
 
 sealed interface CustomWorkoutJournalDecision {
@@ -130,6 +142,11 @@ object CustomWorkoutJournalDomain {
     private val sha256=Regex("^[a-f0-9]{64}$")
     private val maxWeight=BigDecimal("100000")
     private const val MAX_EVENTS=2048
+    const val MAX_SESSION_NOTE_CHARS=2000
+    fun validSessionNote(text:String):Boolean =
+        text.length<=MAX_SESSION_NOTE_CHARS && text.none {
+            it=='\u0000' || (it.code<32 && it!='\n' && it!='\r' && it!='\t')
+        }
 
     /** Ordered presentation of the next required observation. An authored
      * follow-up becomes required only after its main is actually completed. */
@@ -395,6 +412,12 @@ object CustomWorkoutJournalDomain {
                 nextSnapshot=prior.snapshot.copy(
                     slots=Collections.unmodifiableList(changed),
                     knownSetAndRestSeconds=duration)
+                null
+            }
+            is CustomWorkoutJournalOperation.SessionNote -> {
+                if(!validSessionNote(operation.text))
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.INVALID_SESSION_NOTE)
                 null
             }
             is CustomWorkoutJournalOperation.Finish -> {

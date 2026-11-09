@@ -25,7 +25,7 @@ data class CustomSwapRankedOption(
     val sameRole: Boolean,
     /** Sole reviewed direct-muscle coverage of the removed exercise on this day. */
     val uniqueDayCoverage: Set<TrainingMuscle>,
-    /** Part of that known coverage retained by the candidate's direct credits. */
+    /** Potential overlap from candidate credits, NOT assured without authored working sets. */
     val preservedDayCoverage: Set<TrainingMuscle>,
     val explanation: String
 ) {
@@ -132,10 +132,10 @@ object CustomExerciseSwapRankingDomain {
                             it.name.lowercase().replace('_',' ')
                         }
                     if(retained.isNotEmpty())reasons+=
-                        "Retains sole reviewed direct-day coverage: "+names(retained)
+                        "Could cover sole direct-day muscles with working sets: "+names(retained)
                     val lost=uniqueDirect-retained
                     if(lost.isNotEmpty())reasons+=
-                        "Review lost direct-day coverage: "+names(lost)
+                        "Not directly covered by this candidate: "+names(lost)
                 }
                 if(reasons.isEmpty())reasons+=if(source==null)
                     "Source pattern unavailable; alphabetical verified options"

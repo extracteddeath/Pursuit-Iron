@@ -22,14 +22,34 @@ internal fun NativeKotlinCustomSessionNoteSheet(
     onSave:(String)->Unit,
     onDismiss:()->Unit
 ) {
-    val committed=journal.sessionNote
-    var draft by rememberSaveable(journal.workoutId) {mutableStateOf(committed)}
-    var submitted by rememberSaveable(journal.workoutId) {
+    NativeKotlinSessionNoteEditor(
+        workoutId=journal.workoutId,
+        committed=journal.sessionNote,
+        maxChars=CustomWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS,
+        validate=CustomWorkoutJournalDomain::validSessionNote,
+        busy=busy,error=error,onSave=onSave,onDismiss=onDismiss
+    )
+}
+
+/** The same durable edit UI for both immutable Kotlin journal formats. */
+@Composable
+internal fun NativeKotlinSessionNoteEditor(
+    workoutId:String,
+    committed:String,
+    maxChars:Int,
+    validate:(String)->Boolean,
+    busy:Boolean,
+    error:String?,
+    onSave:(String)->Unit,
+    onDismiss:()->Unit
+) {
+    var draft by rememberSaveable(workoutId) {mutableStateOf(committed)}
+    var submitted by rememberSaveable(workoutId) {
         mutableStateOf<String?>(null)
     }
     var confirmDiscard by remember {mutableStateOf(false)}
     val dirty=draft!=committed
-    val valid=CustomWorkoutJournalDomain.validSessionNote(draft)
+    val valid=validate(draft)
     LaunchedEffect(committed,busy,submitted,error) {
         // The reducer result alone does not count: the caller refreshes from
         // the durable journal before exposing an updated SessionNote.
@@ -56,7 +76,7 @@ internal fun NativeKotlinCustomSessionNoteSheet(
         OutlinedTextField(
             value=draft,
             onValueChange={
-                draft=it.take(CustomWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS+1)
+                draft=it.take(maxChars+1)
                 submitted=null
             },
             enabled=!busy,
@@ -65,7 +85,7 @@ internal fun NativeKotlinCustomSessionNoteSheet(
             maxLines=8,
             isError=!valid,
             supportingText={
-                Text("${draft.length}/${CustomWorkoutJournalDomain.MAX_SESSION_NOTE_CHARS} characters")
+                Text("${draft.length}/$maxChars characters")
             },
             modifier=Modifier.fillMaxWidth()
         )

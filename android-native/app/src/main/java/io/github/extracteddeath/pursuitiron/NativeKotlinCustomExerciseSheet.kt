@@ -164,7 +164,10 @@ internal fun NativeKotlinCustomExerciseSheet(
         sharedMusclesOnly=sharedMusclesOnly,
         sameRoleOnly=sameRoleOnly,
         sameFamilyOnly=sameFamilyOnly,
-        otherDayExerciseIds=otherDayExerciseIds)
+        otherDayExerciseIds=otherDayExerciseIds,
+        sourceHasWorkingSets=replacing?.sets?.any {
+            it.type==DraftSetType.WORKING
+        }==true)
     val searched=ranked.filter {it.choice in labeled}
     val filtered=searched.take(20)
     // Changing the selected replacement must not silently carry even the

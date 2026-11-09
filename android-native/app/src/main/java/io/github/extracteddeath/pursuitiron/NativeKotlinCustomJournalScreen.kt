@@ -46,6 +46,7 @@ internal fun NativeKotlinCustomJournalScreen(
     val editorStates=rememberSaveableStateHolder()
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var infoSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var swapSlotId by remember(workoutId){mutableStateOf<String?>(null)}
     var undoSwapConfirmEventId by remember(workoutId){mutableStateOf<String?>(null)}
     var swapChoices by remember(workoutId) {
@@ -416,7 +417,8 @@ internal fun NativeKotlinCustomJournalScreen(
                     PursuitCard {
                         PursuitExerciseHeading(slot.exerciseId,
                             onHistory={historyExerciseId=slot.exerciseId},
-                            subtitle="Working sets and saved exercise history")
+                            subtitle="Working sets and saved exercise history",
+                            onInfo={infoSlotId=slot.slotId})
                         if(!finished && current.finishedByEventId==null) {
                             val hasRecordedWork=slot.sets.any{set ->
                                 current.receipts.any{receipt ->
@@ -643,6 +645,27 @@ internal fun NativeKotlinCustomJournalScreen(
                 }
             )
         }
+    }
+    // Info reads only the current owner-recovered issued snapshot.
+    // Closing it cannot write a set, alter a target or discard editor drafts.
+    infoSlotId?.let { slotId ->
+        journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}
+            ?.let { slot ->
+                NativeKotlinWorkoutExerciseInfoSheet(
+                    exerciseId=slot.exerciseId,
+                    sourceDescription="Issued custom workout · "+
+                        slot.role.name.lowercase().replace('_',' ')+
+                        (if(slot.supersetGroup!=null)" · superset linked" else "")+
+                        (if(slot.pinned)" · pinned" else ""),
+                    sets=customWorkoutInfoSets(slot.sets),
+                    note=slot.coachNote.takeIf{it.isNotBlank()},
+                    onHistory={
+                        infoSlotId=null
+                        historyExerciseId=slot.exerciseId
+                    },
+                    onDismiss={infoSlotId=null}
+                )
+            }
     }
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,

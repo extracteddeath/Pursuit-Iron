@@ -241,116 +241,125 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 Text(if(showAll)"Focus mode" else "Show all")
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text("Readiness",style=MaterialTheme.typography.labelLarge)
-            CoachReadiness.entries.forEach{option->
-                FilterChip(selected=readiness==option,
-                    onClick={readiness=option},
-                    label={Text(option.name.lowercase().replaceFirstChar{
-                        it.uppercase()
-                    })})
-            }
-        }
-        Row(Modifier.fillMaxWidth(),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Checkbox(checked=movementRestricted,
-                onCheckedChange={movementRestricted=it})
-            Text("Movement restricted",style=MaterialTheme.typography.bodyMedium)
-        }
-        if(coach!=null && !presentation.finished)PursuitCard(
-            highlighted=coach.coaching.direction==
-                InWorkoutDirection.FOLLOW_PLANNED_BACKOFF) {
-            Text("Coach · next set",style=MaterialTheme.typography.titleMedium)
-            Text(coach.coaching.message,
-                style=MaterialTheme.typography.bodyMedium)
-            coach.coaching.weightForHumanReview?.let{weight->
-                Text("Optional review: ${weight.stripTrailingZeros().toPlainString()} "+
-                    "${selected?.target?.load.let{
-                        (it as? DraftSetLoad.Verified)?.unit?.name?.lowercase()
-                            ?: ""
-                    }} · your original target is unchanged.",
-                    style=MaterialTheme.typography.labelMedium)
-            }
-            Text("Based on saved sets · no automatic weight or rep changes",
-                style=MaterialTheme.typography.labelSmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        val chosenExerciseId=selected?.target?.exerciseId
-        if(chosenExerciseId!=null && journal!=null && !presentation.finished){
-            val touched=journal.snapshot.targets.filter{
-                it.exerciseId==chosenExerciseId
-            }.any{it.setKey in journal.effectiveSets}
-            val swapReceipt=journal.receipts.asReversed()
-                .mapNotNull{
-                    it.operation as? KotlinJournalOperation.SwapExercise
-                }.firstOrNull{event->
-                    event.replacementTargets.firstOrNull()?.exerciseId==
-                        chosenExerciseId &&
-                    journal.receipts.none{receipt->
-                        (receipt.operation as? KotlinJournalOperation.UndoSwap)
-                            ?.swapEventId==event.eventId
-                    }
+        // Focus prioritizes the active set and its Complete action.
+        // All-sets review keeps readiness and source-verified swap context
+        // above the full ledger. Neither presentation order changes receipts.
+        val renderSecondaryControls: @Composable () -> Unit = {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("Readiness",style=MaterialTheme.typography.labelLarge)
+                CoachReadiness.entries.forEach{option->
+                    FilterChip(selected=readiness==option,
+                        onClick={readiness=option},
+                        label={Text(option.name.lowercase().replaceFirstChar{
+                            it.uppercase()
+                        })})
                 }
-            PursuitCard {
-                Text("Exercise options",
-                    style=MaterialTheme.typography.titleMedium)
-                Text("Swap only this workout. The future program, "+
-                    "other saved sets and past weights stay unchanged.",
-                    style=MaterialTheme.typography.bodySmall)
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
-                        enabled=!state.busy && !swapLoading && !touched,
-                        modifier=Modifier.weight(1f)) {
-                        Text(if(swapLoading)"Reviewing…" else "Swap exercise")
-                    }
-                    if(swapReceipt!=null)
-                        OutlinedButton(onClick={
-                            undoConfirm=swapReceipt.eventId
-                        },enabled=!state.busy && !touched,
-                            modifier=Modifier.weight(1f)){
-                            Text("Undo swap")
+            }
+            Row(Modifier.fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Checkbox(checked=movementRestricted,
+                    onCheckedChange={movementRestricted=it})
+                Text("Movement restricted",style=MaterialTheme.typography.bodyMedium)
+            }
+            if(coach!=null && !presentation.finished)PursuitCard(
+                highlighted=coach.coaching.direction==
+                    InWorkoutDirection.FOLLOW_PLANNED_BACKOFF) {
+                Text("Coach · next set",style=MaterialTheme.typography.titleMedium)
+                Text(coach.coaching.message,
+                    style=MaterialTheme.typography.bodyMedium)
+                coach.coaching.weightForHumanReview?.let{weight->
+                    Text("Optional review: ${weight.stripTrailingZeros().toPlainString()} "+
+                        "${selected?.target?.load.let{
+                            (it as? DraftSetLoad.Verified)?.unit?.name?.lowercase()
+                                ?: ""
+                        }} · your original target is unchanged.",
+                        style=MaterialTheme.typography.labelMedium)
+                }
+                Text("Based on saved sets · no automatic weight or rep changes",
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val chosenExerciseId=selected?.target?.exerciseId
+            if(chosenExerciseId!=null && journal!=null && !presentation.finished){
+                val touched=journal.snapshot.targets.filter{
+                    it.exerciseId==chosenExerciseId
+                }.any{it.setKey in journal.effectiveSets}
+                val swapReceipt=journal.receipts.asReversed()
+                    .mapNotNull{
+                        it.operation as? KotlinJournalOperation.SwapExercise
+                    }.firstOrNull{event->
+                        event.replacementTargets.firstOrNull()?.exerciseId==
+                            chosenExerciseId &&
+                        journal.receipts.none{receipt->
+                            (receipt.operation as? KotlinJournalOperation.UndoSwap)
+                                ?.swapEventId==event.eventId
                         }
+                    }
+                PursuitCard {
+                    Text("Exercise options",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Swap only this workout. The future program, "+
+                        "other saved sets and past weights stay unchanged.",
+                        style=MaterialTheme.typography.bodySmall)
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
+                            enabled=!state.busy && !swapLoading && !touched,
+                            modifier=Modifier.weight(1f)) {
+                            Text(if(swapLoading)"Reviewing…" else "Swap exercise")
+                        }
+                        if(swapReceipt!=null)
+                            OutlinedButton(onClick={
+                                undoConfirm=swapReceipt.eventId
+                            },enabled=!state.busy && !touched,
+                                modifier=Modifier.weight(1f)){
+                                Text("Undo swap")
+                            }
+                    }
+                    if(touched)
+                        Text("This exercise has logged sets. Replacement is "+
+                            "locked to protect its recorded history.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    swapError?.let {
+                        Text(it,style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.error)
+                    }
                 }
-                if(touched)
-                    Text("This exercise has logged sets. Replacement is "+
-                        "locked to protect its recorded history.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                swapError?.let {
-                    Text(it,style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.error)
+            }
+        }
+        val renderSetEntry: @Composable () -> Unit = {
+            PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+            activeKeys.forEach{set->
+                key(set.target.setKey){
+                    NativeKotlinSetCard(set,presentation.finished,state.busy,
+                        referenceMode=referenceMode,lastReferences=lastReferences,
+                        position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
+                            it.target.type==set.target.type}.indexOf(set)+1,
+                        setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
+                            it.target.type==set.target.type},
+                        onHistory={historyExerciseId=set.target.exerciseId},
+                        onRecord={outcome,actual->
+                            controller.record(set.target.setKey,outcome,actual)
+                        },
+                        onSkip={pendingSkip=set.target.setKey},
+                        onFail={attempt->pendingFail=set.target.setKey to attempt})
+                }
+            }
+            if(!showAll && selected!=null) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
+                    OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
+                        enabled=index>0) {Text("Previous set")}
+                    OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
+                        enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
                 }
             }
         }
-        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
-        activeKeys.forEach{set->
-            key(set.target.setKey){
-                NativeKotlinSetCard(set,presentation.finished,state.busy,
-                    referenceMode=referenceMode,lastReferences=lastReferences,
-                    position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type}.indexOf(set)+1,
-                    setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type},
-                    onHistory={historyExerciseId=set.target.exerciseId},
-                    onRecord={outcome,actual->
-                        controller.record(set.target.setKey,outcome,actual)
-                    },
-                    onSkip={pendingSkip=set.target.setKey},
-                    onFail={attempt->pendingFail=set.target.setKey to attempt})
-            }
-        }
-        if(!showAll && selected!=null) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
-                OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
-                    enabled=index>0) {Text("Previous set")}
-                OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
-                    enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
-            }
-        }
-
+        if(showAll) renderSecondaryControls()
+        renderSetEntry()
+        if(!showAll) renderSecondaryControls()
         if(presentation.canFinish)PursuitCard(highlighted=true) {
             Text("All sets have a saved outcome",
                 style=MaterialTheme.typography.titleMedium)

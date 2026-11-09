@@ -33,15 +33,16 @@ private fun infoReps(reps:RepBand):String =
     if(reps.minimum==reps.maximum)"${reps.minimum} reps"
     else "${reps.minimum}–${reps.maximum} reps"
 
-private fun infoTitle(type:DraftSetType,ordinal:Int):String =
-    "${if(type==DraftSetType.WARMUP)"Warm-up" else "Working set"} ${ordinal+1}"
+/** Receives a visible one-based ordinal; issued custom slots already use it. */
+private fun infoTitle(type:DraftSetType,oneBasedOrdinal:Int):String =
+    "${if(type==DraftSetType.WARMUP)"Warm-up" else "Working set"} $oneBasedOrdinal"
 
 /** Issued generated workout; no actuals and no inferred session advice. */
 internal fun composerWorkoutInfoSets(
     targets:List<KotlinWorkoutTarget>
 ):List<NativeWorkoutInfoSet> = targets.map{target->
     NativeWorkoutInfoSet(
-        title=infoTitle(target.type,target.ordinal),
+        title=infoTitle(target.type,target.ordinal+1),
         load=infoLoad(target.load),
         reps=infoReps(target.reps),
         targetRir=target.targetRir?.toString() ?: "Not set",

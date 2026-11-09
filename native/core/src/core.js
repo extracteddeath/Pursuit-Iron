@@ -217,6 +217,18 @@ function upNext() {
 /* The design's program queue: a program waits for the one you train to finish its block, then takes over.
    A block is finished when every day of every week (deload included) has been logged against it. Endless
    programs never finish and cycle blocks advance with their cycle, so neither can hand over to a queue. */
+/* The program week's logged days: the newest unbroken run of this program's sessions on that week. A block that
+   repeats comes back to week 1, and the first pass's week-1 sessions must not count as this week's. */
+function weekDoneIds(p, wk, H, weekStart) {
+    const out = new Set();
+    for (const h of H) {
+        if (h.programId !== p.id) continue;
+        if (h.weekIndex == null) { if (Number(h.date) >= weekStart) { out.add(h.dayId); continue; } break; }
+        if (Number(h.weekIndex) !== wk) break;
+        out.add(h.dayId);
+    }
+    return out;
+}
 function queuedId() { const q = S.store.queuedProgramId; return q && programById(q) ? q : null; }
 function canHandOver(p) { return !!p && !p.config?.endless && !p.cycleId && !p.quick; }
 function blockFinished(p, H) {
@@ -555,8 +567,7 @@ function todayDesign(nx, H, weekStart) {
             deloadAt: p.config?.deload ? weeks + 1 : (E.isSchemeDeloadWeek(p.config?.percentScheme, 4, weeks) ? 4 : null),
             goal: GOAL_LABEL[p.config?.goal] || null, phase: (() => { try { return E.phaseFor(p, nx.weekIndex)?.label || null; } catch { return null; } })() };
         // This program week's sessions: once a week's days are all logged the cursor moves on, and the new week starts with none done.
-        const inWeek = (h) => (h.weekIndex != null ? Number(h.weekIndex) === nx.weekIndex : Number(h.date) >= weekStart);
-        const doneIds = new Set(H.filter((h) => h.programId === p.id && inWeek(h)).map((h) => h.dayId));
+        const doneIds = weekDoneIds(p, nx.weekIndex, H, weekStart);
         const wdOf = (id) => { const k = Object.keys(sched).find((x) => sched[x] === id); return k == null ? null : Number(k); };
         days = p.days.map((d) => {
             let sets = 0; try { sets = dayPreview(p, d, nx.weekIndex).reduce((a, e) => a + (Number(e.sets) || 0), 0); } catch { sets = 0; }
@@ -2039,7 +2050,7 @@ export function plan({ programId, weekIndex } = {}) {
             // The design's day cards: weekday badge from the schedule, and this week's status when the week shown is the current one.
             const sched = p.schedule || {}, isCur = nx?.program.id === p.id && wk === nx.weekIndex;
             const ws = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); })();
-            const done = new Set(isCur ? history().filter((h) => h.programId === p.id && (h.weekIndex != null ? Number(h.weekIndex) === wk : Number(h.date) >= ws)).map((h) => h.dayId) : []);
+            const done = new Set(isCur ? weekDoneIds(p, wk, history(), ws) : []);
             return p.days.map((d) => {
                 let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; }
                 const ex = dayPreview(p, d, wk), wd = Object.keys(sched).find((k) => sched[k] === d.id);

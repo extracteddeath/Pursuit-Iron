@@ -15,14 +15,17 @@ const clean = (label, v) => { const s = JSON.stringify(v ?? null); const m = s.m
 
 setNow(start);
 C.init({ store: JSON.stringify({ unit: 'kg' }) });
-const made = C.createProgram({ config: { name: 'Month', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60',
+const made = C.createProgram({ config: { name: 'Month', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, weeks: 4, session: 's60',
   equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
 ok(made.ok, 'onboarding builds the program');
 const pid = made.programId;
 const sched = C.schedule({ programId: pid });
 const trainDays = new Set(sched.week.filter((x) => x.dayId).map((x) => x.weekday));
 ok(trainDays.size === 4, 'four scheduled training days (' + [...trainDays] + ')');
-const perWeek = 4;
+const perWeek = 4, blockWeeks = C.plan({ programId: pid }).weeksTotal;
+ok(blockWeeks === 4, 'a four-week block, so the month runs through its end and back to week 1 (' + blockWeeks + ')');
+// The program week after n sessions: a block with no deload repeats, so week 5 is week 1 again.
+const weekAfter = (n) => (Math.floor(n / perWeek) % blockWeeks) + 1;
 
 const W = (n) => (/dumbbell|curl|raise|fly/i.test(n) ? 14 : /barbell|squat|deadlift/i.test(n) ? 60 : 35);
 const firstLoad = {}, lastLoad = {};
@@ -33,7 +36,7 @@ for (let d = 0; d < 29; d++) {
   const h = C.home();
   clean(tag + ' home', h);
   const wd = new Date().getDay();
-  const expWeek = Math.floor(sessions / perWeek) + 1;
+  const expWeek = weekAfter(sessions);
   ok(h.next && h.next.weekIndex === expWeek, `${tag}: Today is on week ${expWeek} after ${sessions} sessions (got ${h.next?.weekIndex})`);
   ok(h.block && h.block.weekIndex === expWeek, `${tag}: the block header agrees (week ${h.block?.weekIndex})`);
   const doneInWeek = sessions % perWeek;
@@ -76,7 +79,7 @@ for (let d = 0; d < 29; d++) {
   const after = C.home();
   ok(after.weekStrip.some((x) => x.today && x.done), `${tag}: today's strip day is ticked after training`);
   // Week rollover: the 4th session moves Today to the next week with nothing done in it.
-  const ew = Math.floor(sessions / perWeek) + 1;
+  const ew = weekAfter(sessions);
   ok(after.next.weekIndex === ew && after.weekDays.filter((x) => x.status === 'done').length === sessions % perWeek,
     `${tag}: after session ${sessions}, Today is on week ${ew} with ${sessions % perWeek} done (got week ${after.next.weekIndex}, ${after.weekDays.filter((x) => x.status === 'done').length})`);
   if (after.recap) {

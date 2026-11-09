@@ -222,6 +222,8 @@ def train(day_no):
         if logged_rows and not a11y_checked[0]:
             a11y_checked[0] = True
             check(all(r[2].get("checked") == "true" for r in logged_rows), "a logged set reports checked to accessibility services")
+            with open(os.path.join(OUT, f"logged-{DAY[0]}.xml"), "w") as f:
+                f.write(adb("shell", "cat", "/sdcard/ui.xml"))
         todo = [r for r in rows if (lift + "|" + r[0].split(":")[0]) not in mine and r[2].get("checked") != "true"]
         key = (lift, len(todo), todo[0][0] if todo else "")
         stall = stall + 1 if key == last_key else 0
@@ -344,8 +346,15 @@ for d in range(int(os.environ.get("MONTH_DAYS", "29"))):
     rest = find(r"Recover today|Rest day", timeout=2)
     scheduled = now.weekday() in (0, 2, 4, 6)  # the wizard's default four days: Mon, Wed, Fri, Sun
     check(bool(rest) != scheduled, ("a scheduled day offers a session" if scheduled else "an unscheduled day reads as a rest day"))
-    wk = find(rf"Week {sessions // 4 + 1} of ", timeout=2)
-    check(wk is not None, f"Today is on week {sessions // 4 + 1} after {sessions} sessions")
+    # A block with no deload repeats: after its last week, Today is back on week 1 with nothing done.
+    find(r"Week [0-9]+ of [0-9]+", timeout=2)
+    m = next((re.search(r"Week ([0-9]+) of ([0-9]+)", label(n)) for n in dump() if re.search(r"Week [0-9]+ of [0-9]+", label(n))), None)
+    total = int(m.group(2)) if m else 4
+    exp = (sessions // 4) % total + 1
+    check(bool(m) and int(m.group(1)) == exp, f"Today is on week {exp} after {sessions} sessions (shows {m.group(0) if m else 'no week'})")
+    if not rest:
+        ring = find(rf"^{sessions % 4} of 4 sessions done in week {exp}\|", timeout=2)
+        check(ring is not None, f"the week ring reads {sessions % 4} of 4 done in week {exp}")
     first_week = d < 7
     if first_week or now.weekday() == 0:
         shot("today")

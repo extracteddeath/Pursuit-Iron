@@ -47,6 +47,9 @@ internal fun NativeKotlinCustomJournalScreen(
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var plateRequest by remember(workoutId){
+        mutableStateOf<NativeCustomPlateRequest?>(null)
+    }
     var swapSlotId by remember(workoutId){mutableStateOf<String?>(null)}
     var undoSwapConfirmEventId by remember(workoutId){mutableStateOf<String?>(null)}
     var swapChoices by remember(workoutId) {
@@ -496,6 +499,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                 onRecord={outcome,actual->
                                     record(set.setKey,CustomWorkoutVisitPart.MAIN,
                                         outcome,actual)
+                                },
+                                onShowPlates={load,unit,basis->
+                                    plateRequest=NativeCustomPlateRequest(
+                                        slot.exerciseId,
+                                        current.originalSnapshot.stamp,
+                                        load,unit,basis)
                                 })
                                 }
                             val main=(observed?.operation
@@ -520,6 +529,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                         record(set.setKey,
                                             CustomWorkoutVisitPart.FOLLOW_UP,
                                             outcome,actual)
+                                    },
+                                    onShowPlates={load,unit,basis->
+                                        plateRequest=NativeCustomPlateRequest(
+                                            slot.exerciseId,
+                                            current.originalSnapshot.stamp,
+                                            load,unit,basis)
                                     })
                                 }
                             }
@@ -646,6 +661,10 @@ internal fun NativeKotlinCustomJournalScreen(
             )
         }
     }
+    plateRequest?.let {request->
+        NativeKotlinCustomPlateSheet(host,request,
+            onDismiss={plateRequest=null})
+    }
     // Info reads only the current owner-recovered issued snapshot.
     // Closing it cannot write a set, alter a target or discard editor drafts.
     infoSlotId?.let { slotId ->
@@ -726,7 +745,8 @@ private fun NativeKotlinCustomVisitEditor(
     position:Int,
     setCount:Int,
     initiallyExpanded:Boolean,
-    onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit
+    onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
+    onShowPlates:(String,LoadUnit,LoadBasis)->Unit
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -823,6 +843,15 @@ private fun NativeKotlinCustomVisitEditor(
                 repsError=actualReps.isNotBlank()&&reps==null,
                 rirError=!effortValid
             )
+            if(verified?.basis==LoadBasis.BARBELL_TOTAL) {
+                OutlinedButton(
+                    onClick={onShowPlates(actualLoad,verified.unit,verified.basis)},
+                    enabled=!locked && weight!=null,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {
+                    Text("View plates for entered barbell weight")
+                }
+            }
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->
                 Button(enabled=loadValid&&reps!=null&&effortValid,
                     modifier=buttonModifier,

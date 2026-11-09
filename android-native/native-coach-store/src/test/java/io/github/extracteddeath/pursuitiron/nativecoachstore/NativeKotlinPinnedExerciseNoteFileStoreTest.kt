@@ -70,8 +70,8 @@ class NativeKotlinPinnedExerciseNoteFileStoreTest {
             save(text="x".repeat(2001)),
             save(text="bad\u0000note"),
             save(text="\uD800"),
-            save(setup=mapOf("invented-machine-metadata" to "3")),
-            save(setup=mapOf("attachment" to "x".repeat(161))),
+            save(setup=mapOf("__proto__" to "3")),
+            save(setup=mapOf("attachment" to "x".repeat(201))),
             save(setup=mapOf("grip" to "  ")),
             save(id="../other"),
             save(revision=-1)
@@ -80,6 +80,62 @@ class NativeKotlinPinnedExerciseNoteFileStoreTest {
         assertFalse(Files.list(temp.root.toPath()).use {stream->
             stream.anyMatch{it.fileName.toString().startsWith("pinned-exercise-")}
         })
+    }
+
+    @Test fun v2CatalogAndSavedOrphanFieldsSurviveLegacyColdUpgradeWithoutLoss() {
+        fun persistedVersion():Int {
+            val path=Files.list(temp.root.toPath()).use { stream->
+                stream.filter{
+                    it.fileName.toString().startsWith("pinned-exercise-") &&
+                        it.fileName.toString().endsWith(".bin")
+                }.findFirst().orElseThrow()
+            }
+            val raw=Files.readAllBytes(path)
+            return java.nio.ByteBuffer.wrap(raw,8,4).int
+        }
+        assertTrue(save(setup=mapOf("grip" to "Pinky on ring"))
+            is NativePinnedNoteWrite.Saved)
+        assertEquals(1,persistedVersion())
+        val first=(read() as NativePinnedNoteRead.Current).note
+        val amended=save(revision=first.revision,event="pin-v2",
+            text="Retain previous observations",
+            setup=mapOf("grip" to "Pinky on ring",
+                "rack_height" to "6", "obsoleteField" to "Keep this"))
+        assertTrue(amended is NativePinnedNoteWrite.Saved)
+        assertEquals(2,persistedVersion())
+        val cold=(read() as NativePinnedNoteRead.Current).note
+        assertEquals("6",cold.setup["rack_height"])
+        assertEquals("Keep this",cold.setup["obsoleteField"])
+        assertEquals("Pinky on ring",cold.setup["grip"])
+        val withoutOrphan=save(revision=cold.revision,
+            event="pin-clear-orphan",text=cold.text,
+            setup=cold.setup-"obsoleteField")
+        assertTrue(withoutOrphan is NativePinnedNoteWrite.Saved)
+        assertFalse((read() as NativePinnedNoteRead.Current)
+            .note.setup.containsKey("obsoleteField"))
+        assertEquals(2,persistedVersion())
+        assertEquals(NativePinnedNoteWrite.Rejected(
+            NativePinnedNoteRefusal.REVISION_CONFLICT),
+            save(revision=cold.revision,event="pin-stale-orphan",
+                setup=cold.setup))
+    }
+
+    @Test fun boundedLegacyOrphanKeysPreserveOwnerSecurityAndRejectInvalidObjects() {
+        assertTrue(NativePinnedExerciseNotePolicy.validContent(
+            "saved",mapOf("oldPadSetting" to "3","back rest" to "5")))
+        assertFalse(NativePinnedExerciseNotePolicy.validContent(
+            "x",mapOf("constructor" to "bad")))
+        assertFalse(NativePinnedExerciseNotePolicy.validContent(
+            "x",mapOf("old\nkey" to "bad")))
+        assertFalse(NativePinnedExerciseNotePolicy.validContent(
+            "x",(1..33).associate{"field_"+it to "1"}))
+        assertTrue(save(setup=mapOf("oldPadSetting" to "3"))
+            is NativePinnedNoteWrite.Saved)
+        assertEquals("3",(read() as NativePinnedNoteRead.Current)
+            .note.setup["oldPadSetting"])
+        active=NativeKotlinOwnerIdentity("owner-a","other-athlete")
+        assertEquals(NativePinnedNoteRead.Rejected(
+            NativePinnedNoteRefusal.CORRUPT_OR_PENDING),read())
     }
 
     @Test fun wrongOwnerAndCorruptOrPendingBytesFailClosed() {

@@ -241,7 +241,7 @@ assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
 assert.ok(comparisonDomain.includes('object CustomCycleBlockComparisonDomain') &&
   comparisonDomain.includes('audit.auditedCycleRevision==cycle.revision') &&
   comparisonDomain.includes('audit.structuralReview?.verifiedDraft==cycle') &&
-  comparisonDomain.includes('weeks.size==block.weeks') &&
+  comparisonDomain.includes('weeks.map{it.absoluteWeek}==expectedWeeks') &&
   comparisonDomain.includes('slots.sumOf{slot->') &&
   comparisonDomain.includes('slot.sets.count{it.type==DraftSetType.WORKING}') &&
   comparisonDomain.includes('weekOverrideCount') &&

@@ -198,4 +198,100 @@ class CustomWorkoutJournalDomainTest {
                 "main",0,performed=actual(6))))
         assertEquals(1,after.receipts.size)
     }
+
+    private fun twoSlotInitial():CustomWorkoutJournalDraft {
+        val old=snapshot(makeSet(amplifier=null))
+        val second=CustomWorkoutSlotSnapshot(
+            "slot-b","bodyweight_row","row","bodyweight",
+            ComposerRole.ACCESSORY,null,null,true,"Keep this work",
+            listOf(CustomWorkoutSetSnapshot(
+                "cycle-1:w1:d0:slot-b:s1","slot-b",1,
+                makeSet(amplifier=null)))
+        )
+        return CustomWorkoutJournalDomain.begin("workout-2",
+            old.copy(slots=old.slots+second,
+                knownSetAndRestSeconds=270L),hash)
+    }
+    private fun substitute(event:String="swap-1",revision:Long=1L)=
+        CustomWorkoutJournalOperation.Swap(
+            event,revision,"slot-a",
+            CustomWorkoutSlotSnapshot(
+                "slot-new","replacement_curl","curl","bodyweight",
+                ComposerRole.ACCESSORY,null,null,true,"Fresh note",
+                listOf(CustomWorkoutSetSnapshot(
+                    "cycle-1:w1:d0:slot-new:s1","slot-new",1,
+                    makeSet(amplifier=null)))))
+
+    @Test fun swapPreservesOtherLoggedSetAndOriginalApprovedSnapshot() {
+        val initial=twoSlotInitial()
+        val row="cycle-1:w1:d0:slot-b:s1"
+        val record=CustomWorkoutJournalOperation.Record(
+            "logged-b",0L,CustomWorkoutVisitKey(row,
+                CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(9,2))
+        val before=accept(initial,record)
+        val changed=accept(before,substitute())
+        assertEquals(before.originalSnapshot,changed.originalSnapshot)
+        assertEquals(2,changed.snapshot.slots.size)
+        assertEquals(listOf("slot-new","slot-b"),
+            changed.snapshot.slots.map{it.slotId})
+        assertEquals(before.effectiveVisits,changed.effectiveVisits)
+        assertEquals(1,changed.unresolvedVisitCount)
+        assertEquals("slot-new",changed.snapshot.slots.first().slotId)
+        assertEquals(2,changed.receipts.size)
+        assertEquals(CustomWorkoutVisitKey(
+            "cycle-1:w1:d0:slot-new:s1",CustomWorkoutVisitPart.MAIN),
+            CustomWorkoutJournalDomain.nextUnresolvedVisit(changed))
+        val repeat=CustomWorkoutJournalDomain.reduce(changed,substitute())
+            as CustomWorkoutJournalDecision.Proposed
+        assertTrue(repeat.replayed)
+        assertEquals(changed,repeat.draft)
+        val complete=accept(changed,CustomWorkoutJournalOperation.Record(
+            "new-performed",2L,CustomWorkoutVisitKey(
+                "cycle-1:w1:d0:slot-new:s1",CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(12,1)))
+        assertTrue(complete.canProposeFinish)
+        assertEquals(2,complete.effectiveVisits.size)
+        assertEquals(3,complete.revision)
+    }
+
+    @Test fun swapRefusesTouchedOrProtectedSlotAndStaleIdentity() {
+        val first=twoSlotInitial()
+        val touched=accept(first,CustomWorkoutJournalOperation.Record(
+            "main-a",0L,CustomWorkoutVisitKey(
+                "cycle-1:w1:d0:slot-a:s1",CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.SKIPPED,null))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED),
+            CustomWorkoutJournalDomain.reduce(touched,substitute()))
+        val linked=first.copy(snapshot=first.snapshot.copy(
+            slots=first.snapshot.slots.mapIndexed{i,slot ->
+                slot.copy(supersetGroup=if(i==0)"pair" else "pair")
+            }))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_PROTECTED),
+            CustomWorkoutJournalDomain.reduce(linked,substitute(revision=0L)))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_IDENTITY_CONFLICT),
+            CustomWorkoutJournalDomain.reduce(first,
+                substitute(revision=0L).copy(replacement=
+                    substitute().replacement.copy(slotId="slot-b"))))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.STALE_REVISION),
+            CustomWorkoutJournalDomain.reduce(first,substitute()))
+    }
+
+    @Test fun multipleSwapsCannotReuseAnyPriorTargetIdentity() {
+        val before=twoSlotInitial()
+        val after=accept(before,substitute(revision=0L))
+        val again=CustomWorkoutJournalOperation.Swap(
+            "swap-b",1L,"slot-b",
+            substitute().replacement.copy(
+                exerciseId="different_curl"))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.SWAP_IDENTITY_CONFLICT),
+            CustomWorkoutJournalDomain.reduce(after,again))
+        assertEquals(before.originalSnapshot,after.originalSnapshot)
+    }
+
 }

@@ -232,3 +232,51 @@ customizable order of arbitrary favorite exercises (currently four supported
 source-matched barbell lifts), Profile share cards, broader Progress dashboards,
 and the remaining Home/Coach/program editing and navigation design passes.
 No APK/AAB generation is authorized by this milestone.
+
+## Plan and Coach hierarchy pass — 2026-11-09
+
+**Source implementation only; visual and device acceptance remains open.**
+
+- Program now uses the shared Material disclosure row for the read-only
+  outline and exact full authoring editor. Expand/collapse is owned by
+  Compose saved UI state, with an accessible expanded/collapsed state and
+  56dp minimum tap target. The active editing actions continue calling the
+  original native controller; the UI cannot directly rewrite prescriptions.
+- The editor opens immediately after the user requests it; the read-only
+  plan outline and optional calibration view are displayed in the separate
+  overview mode, not placed ahead of the actual editor. Training block and
+  weekday exercise lists open progressively rather than expanding every
+  block and day by default. Existing exercise/set editing, move/duplicate,
+  block/day creation, undo, source revision reviews and consent gates remain
+  available when expanded.
+- The Program editor summarizes genuine authored weeks, days and exercises.
+  Developer cycle IDs/revisions are optional advanced details rather than
+  primary athlete-facing content. These UI changes do not change engine
+  calculations, history, workout issuance or signed consent.
+- The Coach landing experience first identifies the *verified saved coaching
+  policy* (Full Coach, progression-only or custom), then puts the live
+  eligible-exercise review ahead of secondary Plan/Future destinations.
+  Existing Manual/off mode remains independent of workout logging.
+- An eligible movement exposes complete correction-aware exercise history
+  directly in the Coach screen. A separate History destination works even
+  when assistance is off. Prior or unapproved exercise focus is independently
+  checked against the current approved program and gym.
+- Review dismissal is *presentation-only* and clears pending unaccepted
+  review inputs without writing a program. Accepting a proposal retains the
+  existing revision-bound native confirmation and independent Train issuance.
+  Internal accepted-grant IDs are behind an advanced disclosure.
+- Source-contract assertions guard shared rows, actual edit wiring,
+  disclosure order, source-verified eligible Coach exercise choices, history
+  and navigation, and non-destructive proposal controls.
+
+**Next validation:** complete source CI (including Compose compilation); then
+manual phone/tablet/foldable visual sweeps at large font sizes, TalkBack
+semantics, keyboard and focus handling, actual back navigation and a real
+long-cycle editing session. A green compilation is not final design approval.
+
+**Remaining high-impact design work:** responsive dual-pane Plan/editor,
+fully guided adaptive split/exercise suggestions across blocks, improved
+next-day coaching summary, richer arbitrary exercise chart favorites and
+equipment/variant-specific Strength Standards with trustworthy source tables.
+All of this is still subject to explicit athlete approval for saved training
+changes; no APK or AAB should be created from this source-only milestone.

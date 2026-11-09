@@ -166,17 +166,29 @@ internal object NativeCustomWorkoutJournalCodec {
         require(replayed==state) {
             "Journal effective state differs from receipt replay"
         }
+        // Preserve byte-for-byte v1 encoding for all previously issued,
+        // unswapped workouts. The history-manifest Finish digest includes
+        // these bytes, so eagerly re-encoding old journals as v2 would break
+        // otherwise valid historical receipt identities.
+        val swapped=state.receipts.any{
+            it.operation is CustomWorkoutJournalOperation.Swap
+        }
+        require(swapped || state.originalSnapshot==state.snapshot)
+        val version=if(swapped) VERSION else 1
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
-        val original=NativeKotlinCustomWorkoutSnapshotCodec.encode(
-            state.originalSnapshot)
+        val original=if(swapped)
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)
+            else snapshot
         val out=ByteArrayOutputStream()
         DataOutputStream(out).use{data->
-            data.writeInt(MAGIC);data.writeInt(VERSION)
+            data.writeInt(MAGIC);data.writeInt(version)
             data.writeUTF(record.ownerKey)
             data.writeUTF(state.workoutId)
             data.writeUTF(state.preparedConsentFingerprint)
             data.writeInt(original.size);data.write(original)
-            data.writeInt(snapshot.size);data.write(snapshot)
+            if(version>=2) {
+                data.writeInt(snapshot.size);data.write(snapshot)
+            }
             data.writeLong(state.revision)
             data.textOptional(state.finishedByEventId)
             data.writeInt(state.receipts.size)

@@ -196,4 +196,47 @@ class NativeCustomWorkoutJournalCodecTest {
         assertEquals(decoded,upgraded)
     }
 
+
+    @Test fun durableSwapUndoReplaysOriginalTargetsWithoutDowngradingJournalV1() {
+        val approved=initial()
+        val next=CustomWorkoutSlotSnapshot(
+            "new-slot","bodyweight_pull","pull","bodyweight",
+            ComposerRole.ACCESSORY,null,null,true,"Replacement",
+            listOf(CustomWorkoutSetSnapshot(
+                "cycle-1:w1:d0:new-slot:s1","new-slot",1,
+                approved.snapshot.slots.single().sets.single().prescription
+                    .copy(amplifier=null)))
+        )
+        val swapped=accept(approved,CustomWorkoutJournalOperation.Swap(
+            "swap-once",0L,"raise-1",next))
+        val undone=accept(swapped,CustomWorkoutJournalOperation.UndoSwap(
+            "undo-once",1L,"swap-once"))
+        assertEquals(approved.snapshot,undone.snapshot)
+        assertEquals(approved.originalSnapshot,undone.originalSnapshot)
+        assertEquals(2L,undone.revision)
+        val bytes=NativeCustomWorkoutJournalCodec.encode(record(undone))
+        // A journal with swap history must remain v2 even when its current
+        // visible roster matches v1. Dropping receipt history would be unsafe.
+        assertEquals(2,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        val reopened=NativeCustomWorkoutJournalCodec.decode(bytes)
+        assertEquals(record(undone),reopened)
+        assertEquals(bytes.toList(),
+            NativeCustomWorkoutJournalCodec.encode(reopened).toList())
+        val originalBytes=NativeCustomWorkoutJournalCodec.encode(record(approved))
+        assertEquals(1,java.nio.ByteBuffer.wrap(originalBytes,4,4).int)
+        assertEquals(record(approved),
+            NativeCustomWorkoutJournalCodec.decode(originalBytes))
+    }
+
+    @Test fun fabricatedSwapUndoCannotBeEncodedAsACompletedJournal() {
+        val invalid=initial().copy(
+            receipts=listOf(CustomWorkoutJournalReceipt(
+                1,CustomWorkoutJournalOperation.UndoSwap(
+                    "invented",0L,"never-swapped"))),
+            revision=1L)
+        assertThrows(IOException::class.java) {
+            // encode's replay rejects invalid causal history before publishing.
+            NativeCustomWorkoutJournalCodec.encode(record(invalid))
+        }
+    }
 }

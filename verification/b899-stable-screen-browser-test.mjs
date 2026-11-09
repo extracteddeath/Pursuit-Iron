@@ -140,6 +140,9 @@ try{
    const trigger=await page.$('[aria-label="Program settings"]');
    await trigger.evaluate(n=>n.scrollIntoView({block:'center'}));await trigger.click();
    await page.waitForSelector('[data-testid="program-settings-sheet"]');
+   // Measure the settled sheet: its scale-in animation (the same on Build 933) left a target at 47.9999px when a
+   // loaded runner measured on the last frame.
+   await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>null))));
    const oldFont=await page.evaluate(large=>{
     const font=document.documentElement.style.fontSize;
     if(large)document.documentElement.style.fontSize='32px';

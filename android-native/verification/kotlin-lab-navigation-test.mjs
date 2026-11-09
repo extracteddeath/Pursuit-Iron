@@ -26,6 +26,7 @@ const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
 const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleOverview.kt');
+const sessionBrief=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNextSessionBrief.kt');
 const facilityPicker=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
 const gymScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt');
 const onboarding=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinOnboardingCandidateScreen.kt');
@@ -166,8 +167,10 @@ assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
   shared.includes('.semantics { stateDescription=if(expanded)"Expanded" else "Collapsed" }') &&
   outline.includes('PursuitDisclosureRow(') &&
   plan.includes('PursuitDisclosureRow(') &&
-  plan.includes('var blockExpanded by rememberSaveable(draft.cycleId,block.blockId)') &&
-  plan.includes('var dayExpanded by rememberSaveable(') &&
+  plan.includes('var expandedBlockId by rememberSaveable(draft?.cycleId)') &&
+  plan.includes('var expandedDayKey by rememberSaveable(draft?.cycleId)') &&
+  plan.includes('val blockExpanded=expandedBlockId==block.blockId') &&
+  plan.includes('val dayExpanded=expandedDayKey==dayKey') &&
   plan.includes('if(blockExpanded) {') &&
   plan.includes('if(dayExpanded) {') &&
   plan.includes('controller.reorderBlock(') &&
@@ -175,12 +178,32 @@ assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
   plan.includes('exerciseEditor = Triple(') &&
   plan.includes('controller.previewAuthoredDay(') &&
   plan.includes('if(!showProgramEditor) {') &&
-  plan.includes('NativeKotlinCustomCycleOverview(draft,currentSelection)') &&
+  plan.includes('NativeKotlinCustomCycleOverview(draft,currentSelection,') &&
   plan.includes('NativeKotlinCustomCycleCalibrationPanel(') &&
   plan.includes('controller.undo()') &&
   plan.includes('Advanced program details') &&
   !plan.includes('Text("Custom authoring",'),
   'Program editor must have accessible collapsed block/day hierarchy without losing real authoring controls');
+assert.ok(shared.includes('scrollState:ScrollState=rememberScrollState()') &&
+  shared.includes('.verticalScroll(scrollState)') &&
+  plan.includes('PursuitScreenContent(scrollState=pageScroll)') &&
+  plan.includes('pageScroll.scrollTo(0)') &&
+  plan.includes('expandedBlockId=blockId') &&
+  plan.includes('expandedDayKey=programDayKey(blockId,weekday)') &&
+  plan.includes('onEditDay={blockId,weekday->') &&
+  outline.includes('onEditDay:((blockId:String,weekday:Int)->Unit)?=null') &&
+  outline.includes('onClick={onEditDay(block.blockId,day.weekday)}') &&
+  outline.includes('Text("Edit this training day")'),
+  'Plan day deep link must land in the exact editable block/day and keep source ownership');
+assert.ok(plan.includes('NativeKotlinNextSessionBrief(draft,week,weekday)') &&
+  sessionBrief.includes('cycle.blocks.firstOrNull') &&
+  sessionBrief.includes('block.days.firstOrNull{it.weekday==weekday}') &&
+  sessionBrief.includes('slot.sets.count{it.type==DraftSetType.WORKING}') &&
+  sessionBrief.includes('PursuitMetricStrip') &&
+  sessionBrief.includes('Base program outline only.') &&
+  !sessionBrief.includes('rememberCoroutineScope') &&
+  !sessionBrief.includes('host.'),
+  'Next session game plan must be display-only sourced from the exact selected day');
 assert.ok(coach.includes('if(assistance==CoachAssistancePolicy.STANDARD)') &&
   coach.includes('assistance==CoachAssistancePolicy.PROGRESSION_ONLY') &&
   coach.includes('PursuitExerciseHeading(exerciseId,') &&
@@ -214,7 +237,9 @@ for(const screen of [
   'NativeKotlinOnboardingCandidateScreen.kt'
 ]) {
   const content=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/'+screen);
-  assert.ok(content.includes('PursuitScreenContent {'),
+  assert.ok(content.includes('PursuitScreenContent {') ||
+    screen==='NativeKotlinCustomCycleCandidateScreen.kt' &&
+    content.includes('PursuitScreenContent(scrollState=pageScroll) {'),
     'Responsive shared Material layout is missing in '+screen);
   assert.ok(!content.includes('PageHeading("KOTLIN COACH · ISOLATED"'),
     'Raw development jargon reached a published screen in '+screen);
@@ -282,7 +307,7 @@ assert.ok(onboarding.includes('NativeKotlinGroupedFacilityChoices("Available gym
 
 // Source contracts only: these guard the important navigation and consent
 // wiring. Runtime accessibility and touch-device acceptance are still pending.
-assert.ok(plan.indexOf('NativeKotlinCustomCycleOverview(draft,currentSelection)') <
+assert.ok(plan.indexOf('NativeKotlinCustomCycleOverview(draft,currentSelection,') <
   plan.indexOf('NativeKotlinCustomCycleCalibrationPanel(') &&
   plan.includes('Open full program editor') &&
   outline.includes('slot.sets.forEachIndexed') &&

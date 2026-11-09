@@ -22,7 +22,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
     host:NativeKotlinCandidateHost,
     onOpenProgram:()->Unit={},
     onOpenCoach:(String?)->Unit={},
-    onOpenProgress:()->Unit={}
+    onOpenProgress:()->Unit={},
+    onOpenExerciseTrend:(String)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var busy by remember{mutableStateOf(false)}
@@ -130,8 +131,14 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                     .horizontalScroll(rememberScrollState()),
                                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                                     filteredMovements.take(8).forEach{exercise->
-                                        OutlinedButton(onClick={historyExerciseId=exercise}) {
-                                            Text(kotlinExerciseLabel(exercise))
+                                        Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                                            OutlinedButton(onClick={historyExerciseId=exercise}) {
+                                                Text(kotlinExerciseLabel(exercise))
+                                            }
+                                            TextButton(onClick={onOpenExerciseTrend(exercise)},
+                                                modifier=Modifier.heightIn(min=48.dp)) {
+                                                Text("Trend: ${kotlinExerciseLabel(exercise)}")
+                                            }
                                         }
                                     }
                                 }

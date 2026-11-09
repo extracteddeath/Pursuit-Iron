@@ -143,6 +143,40 @@ internal class NativeKotlinSessionController(
         },recoverOnReject=true)
     }
 
+    /** A single confirmed Composer exercise replacement is workout-only;
+     * future program edits remain a separately reviewed transaction. */
+    fun swapExercise(
+        previousExerciseId:String,replacementExerciseId:String,
+        intents:List<KotlinComposerSwapSetIntent>
+    ) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId ?:return
+        val journal=prior.journal ?:return
+        if(journal.finishedByEventId!=null ||
+            journal.snapshot.targets.none{it.exerciseId==previousExerciseId} ||
+            journal.snapshot.targets.filter{
+                it.exerciseId==previousExerciseId
+            }.any{it.setKey in journal.effectiveSets})return
+        val eventId="swap-"+UUID.randomUUID()
+        run(workoutId,{
+            host.swapIssuedComposerExercise(workoutId,eventId,
+                journal.revision,previousExerciseId,replacementExerciseId,
+                intents)
+        },recoverOnReject=true)
+    }
+
+    fun undoExerciseSwap(swapEventId:String) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId ?:return
+        val journal=prior.journal ?:return
+        if(journal.finishedByEventId!=null)return
+        val eventId="undo-"+UUID.randomUUID()
+        run(workoutId,{
+            host.undoIssuedComposerExerciseSwap(workoutId,eventId,
+                journal.revision,swapEventId)
+        },recoverOnReject=true)
+    }
+
     /**
      * Nonblocking read-only next-set guidance. Every request rereads saved
      * native receipts and current gym off Main. A newer selection or journal

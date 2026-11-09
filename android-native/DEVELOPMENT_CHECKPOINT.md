@@ -2299,3 +2299,14 @@ exercise-specific interpretation to the authoritative engine/loading
 contract. Existing actual load values, validation, warm-up rules and journal
 receipts are unchanged. The shared wording applies consistently to active
 sets and corrections. No APK or engine rewrite.
+
+
+## 2026-11-09 — Source-verified per-exercise Progress trends and direct History navigation
+
+Completed after the earlier custom-work preservation/adjacent-block comparison work. The native Progress screen now has a collapsed-by-default, explicitly selected **View trend** for pinned logged exercises. Unlike the four existing published Strength Standards barbell comparisons, this is a factual completed-main-working-set metric for ANY movement ID present in the current authenticated mixed native workout history. The pure `NativeExercisePerformanceTrendDomain` groups by exact exercise ID, physical loading basis and performed rep window (1–5, 6–10, 11–15, 16–30, 31–100), converts verified lb/kg without changing journal units, and excludes warm-up, skipped, failed, amplifier follow-up, missing/invalid weight and mismatched-unit data. Unweighted bodyweight has its own *completed reps* series and never borrows assisted/weighted values.
+
+A shared semantic Material chart, readable session-by-session value list and owner-correction-aware complete History drilldown are now available. History exercise search can open a specific trend directly **without pinning**, and Android Back returns to History; Profile favorite deep links return to Profile. All deep links recheck exercise eligibility against the current owner-verified history. Device presentation uses existing Material 3 theme tokens; no additional strength ratings or coaching prescriptions have been invented.
+
+Pure JVM tests cover conversions, exclusion gates, physical basis and rep-band separation, custom corrections, per-session selection and bodyweight reps. A first GitHub CI run exposed a new-file Kotlin parser tokenization issue, which was corrected. The **final combined run 42570247170 passed all 33 workflow steps**, including native history recovery and Android Compose compilation. Design contract documents the remaining scope. The last validated code commit was `eebd29caa91d2226ad6a75fc75d136599efc991b`; subsequent commits only record the result and checkpoint. No APK or AAB was built.
+
+**Next design priorities:** compact, prominent Strength Standards hierarchy; rich exercise-specific progress and Profile presentation on narrow/foldable layouts; Android accessibility and 200%-font verification; then the separately gated source-backed adaptive cycle alternative producer and exact full-cycle review/acceptance flow. **Never equate factual load/rep charts with scientific performance prediction or an engine-vs-web superiority result.** Keep native Coach/Plan/Workout sharing Material 3 components and preserve the user's explicit no-APK-until-design-complete decision.

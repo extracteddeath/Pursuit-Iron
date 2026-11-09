@@ -34,6 +34,8 @@ assert.match(gate,/localAthlete\.signedInIdentity\(\)/);
 assert.match(gate,/if\(!canAccessPinnedExercise\(owner,workoutId,exerciseId,custom,false\)\)/);
 assert.match(gate,/authoringSourceStore\.read\(owner\.ownerKey\)/);
 assert.match(gate,/it\.ownerKey==owner\.ownerKey && it\.athleteId==owner\.athleteId/);
+assert.match(gate,/it\.setup\.mayReviewProgramCandidate/);
+assert.match(gate,/it\.setup\.reviewed\?\.athleteProfileId==owner\.athleteId/);
 assert.match(gate,/it\.exerciseId==exerciseId/);
 
 assert.match(editor,/var setupJson by rememberSaveable\(workoutId,exerciseId\)/);

@@ -1089,7 +1089,8 @@ if seek(r"^\|Rest timer & cues$"):
         out = adb("shell", "dumpsys", "notification", "--noredact")
         if "Sample timer" not in (out or ""):
             FAILS.append("Preview lock screen posted no sample rest notification")
-    back()
+    # The sample notification can take the first Back (heads-up); close until the sheet is gone.
+    close_sheet(r"Preview lock screen")
 else:
     FAILS.append("no Rest timer & cues row")
 if scroll_to(r"^\|Help & about$", tries=6):

@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -33,19 +34,14 @@ internal fun NativeKotlinComposerSwapSheet(
 ) {
     var query by remember(fromExerciseId){mutableStateOf("")}
     var matchingPattern by remember(fromExerciseId){mutableStateOf(false)}
+    var sharedMusclesOnly by remember(fromExerciseId){mutableStateOf(false)}
     var selectedId by remember(fromExerciseId){mutableStateOf<String?>(null)}
     val selected=choices.firstOrNull{it.option.exerciseId==selectedId}
     val rows=remember(fromExerciseId,selectedId) {
         sourceTargets.map {ComposerSwapDraftRow()}.toMutableStateList()
     }
-    val permitted=choices.filter {
-        (!matchingPattern || it.samePattern) &&
-            (query.isBlank() ||
-                it.option.exerciseId.replace('_',' ').replace('-',' ')
-                    .contains(query.trim(),ignoreCase=true) ||
-                it.option.pattern.name.replace('_',' ')
-                    .contains(query.trim(),ignoreCase=true))
-    }
+    val permitted=KotlinComposerSwapRankingDomain.filterRanked(
+        choices,query,matchingPattern,sharedMusclesOnly)
     val approved=selected?.let{choice->
         runCatching {
             sourceTargets.mapIndexed {i,target->
@@ -53,15 +49,26 @@ internal fun NativeKotlinComposerSwapSheet(
                 val min=row.min.trim().toInt()
                 val max=row.max.trim().toInt()
                 require(min in 1..100 && max in min..100)
+                choice.option.sourcePracticalReps?.let { range ->
+                    require(min>=range.minimum && max<=range.maximum)
+                }
                 val rir=row.targetRir.trim().takeIf{it.isNotEmpty()}
                     ?.toInt()?.also{require(it in 0..10)}
                 val load=when(val gear=choice.option.equipment){
                     ComposerEquipment.Bodyweight ->
                         DraftSetLoad.ExplicitBodyweight
                     is ComposerEquipment.Verified -> {
-                        val basis=checkNotNull(gear.inventory).basis
+                        val inventory=checkNotNull(gear.inventory)
+                        val weight=BigDecimal(row.weight.trim())
+                        require(weight>=BigDecimal.ZERO &&
+                            weight<=BigDecimal("100000") &&
+                            weight.stripTrailingZeros().scale()<=3)
+                        val inspection=EquipmentLoadDomain.inspect(
+                            inventory,weight,gear.unit)
+                        require(inspection is LoadInspection.Confirmed &&
+                            inspection.exact)
                         DraftSetLoad.Verified(
-                            gear.unit,basis,BigDecimal(row.weight.trim()))
+                            gear.unit,inventory.basis,weight)
                     }
                 }
                 KotlinComposerSwapSetIntent(
@@ -84,12 +91,25 @@ internal fun NativeKotlinComposerSwapSheet(
                     "will not change.",
                     style=MaterialTheme.typography.bodyMedium)
                 if(selected==null){
-                    OutlinedTextField(query,{query=it},
-                        label={Text("Search exercise or training pattern")},
+                    OutlinedTextField(query,{query=it.take(80)},
+                        label={Text("Search exercise, pattern or muscle")},
                         singleLine=true,modifier=Modifier.fillMaxWidth())
-                    FilterChip(selected=matchingPattern,
-                        onClick={matchingPattern=!matchingPattern},
-                        label={Text("Same movement pattern")})
+                    Row(Modifier.fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        FilterChip(selected=matchingPattern,
+                            onClick={matchingPattern=!matchingPattern},
+                            enabled=!busy,
+                            label={Text("Same pattern")})
+                        FilterChip(selected=sharedMusclesOnly,
+                            onClick={sharedMusclesOnly=!sharedMusclesOnly},
+                            enabled=!busy,
+                            label={Text("Shared muscles")})
+                    }
+                    Text("${permitted.size} verified same-role alternatives · "+
+                        "ranked by pattern and reviewed muscle overlap",
+                        style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(permitted.isEmpty())
                         Text("No verified same-role exercises match these filters. "+
                             "Try all available replacements or review your gym.",
@@ -104,8 +124,11 @@ internal fun NativeKotlinComposerSwapSheet(
                                 Text(candidate.explanation,
                                     style=MaterialTheme.typography.labelSmall)
                                 Text(candidate.option.pattern.name.replace('_',' ')
-                                    .lowercase(),
-                                    style=MaterialTheme.typography.labelSmall)
+                                    .lowercase()+" · "+
+                                    "shared muscle credits: "+
+                                    candidate.sharedReviewedMuscleCount,
+                                    style=MaterialTheme.typography.labelSmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -114,6 +137,11 @@ internal fun NativeKotlinComposerSwapSheet(
                         style=MaterialTheme.typography.titleMedium)
                     Text(selected.explanation,
                         style=MaterialTheme.typography.bodySmall)
+                    selected.option.sourcePracticalReps?.let { envelope ->
+                        Text("Reviewed practical rep range: "+
+                            "${envelope.minimum}–${envelope.maximum} per set",
+                            style=MaterialTheme.typography.labelMedium)
+                    }
                     Text("Enter NEW targets for every set. No previous "+
                         "exercise load, reps or completed set is copied. "+
                         "Weights must match your currently reviewed gym. "+
@@ -157,10 +185,25 @@ internal fun NativeKotlinComposerSwapSheet(
                             keyboardOptions=KeyboardOptions(
                                 keyboardType=KeyboardType.Number),
                             singleLine=true,modifier=Modifier.fillMaxWidth())
+                        if(target.type==DraftSetType.WORKING &&
+                            sourceTargets.count{
+                                it.type==DraftSetType.WORKING}>1)
+                            TextButton(
+                                onClick={
+                                    sourceTargets.indices.forEach{otherIndex->
+                                        if(otherIndex!=i &&
+                                            sourceTargets[otherIndex].type==
+                                                DraftSetType.WORKING)
+                                            rows[otherIndex]=rows[i]
+                                    }
+                                },enabled=!busy
+                            ) {
+                                Text("Use these NEW targets for other working sets")
+                            }
                     }
                     if(approved==null)
-                        Text("Enter a valid rep range and verified weight "+
-                            "for each set to review the replacement.",
+                        Text("Enter new reps and an exact available gym weight "+
+                            "for every set, within any shown practical rep range.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }

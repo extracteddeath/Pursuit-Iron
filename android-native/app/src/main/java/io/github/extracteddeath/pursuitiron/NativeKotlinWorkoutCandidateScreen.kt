@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.KeyboardType
@@ -76,6 +77,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    // Uncommitted fields must survive Focus/All, previous/next, and configuration changes.
+    val editorStates=rememberSaveableStateHolder()
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
@@ -326,7 +329,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
         PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
         activeKeys.forEach{set->
-            key(set.target.setKey){
+            editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
                 NativeKotlinSetCard(set,presentation.finished,state.busy,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&

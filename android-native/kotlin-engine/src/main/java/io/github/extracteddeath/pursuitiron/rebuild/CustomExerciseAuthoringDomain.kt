@@ -22,7 +22,11 @@ data class CustomExercisePickerOption(
     val loadUnit: LoadUnit?,
     val loadBasis: LoadBasis?,
     val bodyweight: Boolean,
-    val availability: CustomExerciseAvailability
+    val availability: CustomExerciseAvailability,
+    /** Provisional author-reviewed catalog facts for transparent sorting. */
+    val pattern: ComposerPattern? = null,
+    val role: ComposerRole? = null,
+    val muscleCredits: List<DeclaredMuscleCredit> = emptyList()
 )
 
 enum class CustomAuthoringRefusal {
@@ -91,7 +95,7 @@ object CustomExerciseAuthoringDomain {
                     attachmentIds = move.attachmentId?.let { setOf(it) } ?: emptySet())
                 CustomExercisePickerOption(move.exerciseId, move.familyId,
                     move.variantId, move.attachmentId, null, null, true,
-                    availability)
+                    availability,move.pattern,move.role,move.credits.toList())
             } else {
                 if (!id.matches(move.equipmentId)) return@mapNotNull null
                 val stock = gym.confirmedStock[move.equipmentId]
@@ -118,7 +122,8 @@ object CustomExerciseAuthoringDomain {
                     attachmentIds = move.attachmentId?.let { setOf(it) } ?: emptySet())
                 CustomExercisePickerOption(move.exerciseId, move.familyId,
                     move.variantId, move.attachmentId, gym.unit,
-                    stock.basis, false, availability)
+                    stock.basis, false, availability,
+                    move.pattern,move.role,move.credits.toList())
             }
         }
         return Collections.unmodifiableList(options)

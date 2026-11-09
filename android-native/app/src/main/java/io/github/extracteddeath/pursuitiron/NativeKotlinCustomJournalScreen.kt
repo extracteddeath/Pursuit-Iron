@@ -372,27 +372,14 @@ internal fun NativeKotlinCustomJournalScreen(
                     OutlinedButton(enabled=!busy,
                         onClick={refresh()}){Text("Refresh saved workout")}
                 }
-                if(!finished) {
-                    Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
-                    Row(Modifier.fillMaxWidth(),
-                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        CoachReadiness.entries.forEach {option->
-                            FilterChip(selected=readiness==option,
-                                enabled=!busy,onClick={readiness=option},
-                                label={Text(option.name.lowercase().replaceFirstChar {
-                                    it.uppercase()
-                                })})
-                        }
-                    }
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Checkbox(checked=movementRestricted,enabled=!busy,
-                            onCheckedChange={movementRestricted=it})
-                        Text("Movement restricted")
-                    }
-                    if(movementRestricted)Text(
-                        "Review an adjustment or alternate movement before continuing.",
-                        color=MaterialTheme.colorScheme.error,
-                        style=MaterialTheme.typography.bodyMedium)
+                if(!finished && current.finishedByEventId==null) {
+                    PursuitWorkoutReadinessPanel(
+                        readiness=readiness,
+                        onReadinessChange={readiness=it},
+                        movementRestricted=movementRestricted,
+                        onMovementRestrictedChange={movementRestricted=it},
+                        enabled=!busy
+                    )
                 }
                 if(!finished && current.finishedByEventId==null) {
                     val upcoming=nextVisit?.let {visit->

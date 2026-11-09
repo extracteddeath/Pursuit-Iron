@@ -33,12 +33,16 @@ data class CustomSwapRankedOption(
     val mayApplyWithoutReview:Boolean get()=false
 }
 object CustomExerciseSwapRankingDomain {
-    private fun matchesName(value:String?,query:String):Boolean =
-        value?.let {name->
-            name.contains(query,ignoreCase=true) ||
-            name.replace('_',' ').replace('-',' ')
-                .contains(query,ignoreCase=true)
-        } ?: false
+    /** Query words may occur across separate verified fields, in any order. */
+    private fun matchesQuery(option:CustomExercisePickerOption,tokens:List<String>):Boolean {
+        if(tokens.isEmpty())return true
+        val searchable=(listOfNotNull(
+            option.exerciseId,option.familyId,option.variantId,option.attachmentId,
+            option.pattern?.name,option.role?.name
+        ) + credits(option).map {it.name})
+            .joinToString(" ").replace('_',' ').replace('-',' ').lowercase()
+        return tokens.all {searchable.contains(it)}
+    }
 
     private fun credits(option:CustomExercisePickerOption):Set<TrainingMuscle> =
         option.muscleCredits.filter {
@@ -83,20 +87,12 @@ object CustomExerciseSwapRankingDomain {
             }.toSet()
             directCredits(checkNotNull(source))-otherDirect
         } else emptySet()
-        val needle=search.trim().take(80)
+        val tokens=search.trim().take(80).replace('_',' ').replace('-',' ')
+            .lowercase().split(Regex("\\s+"))
+            .filter {it.isNotEmpty()}
         val sorted=available.asSequence()
             .filter{it.exerciseId!=sourceExerciseId}
-            .filter {
-                needle.isBlank() ||
-                    matchesName(it.exerciseId,needle) ||
-                    matchesName(it.familyId,needle) ||
-                    matchesName(it.variantId,needle) ||
-                    matchesName(it.attachmentId,needle) ||
-                    matchesName(it.pattern?.name,needle) ||
-                    credits(it).any{muscle->
-                        matchesName(muscle.name,needle)
-                    }
-            }
+            .filter {matchesQuery(it,tokens)}
             .map { candidate ->
                 val samePattern=source?.pattern!=null &&
                     candidate.pattern==source.pattern

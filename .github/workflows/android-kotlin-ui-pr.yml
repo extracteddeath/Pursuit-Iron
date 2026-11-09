@@ -21,6 +21,7 @@ on:
       - 'android-native/verification/kotlin-generated-session-note-test.mjs'
       - 'android-native/verification/kotlin-pinned-exercise-notes-test.mjs'
       - 'android-native/verification/kotlin-pinned-setup-fields-test.mjs'
+      - 'android-native/verification/kotlin-verified-plate-loading-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   pull_request:
     branches:
@@ -43,6 +44,7 @@ on:
       - 'android-native/verification/kotlin-generated-session-note-test.mjs'
       - 'android-native/verification/kotlin-pinned-exercise-notes-test.mjs'
       - 'android-native/verification/kotlin-pinned-setup-fields-test.mjs'
+      - 'android-native/verification/kotlin-verified-plate-loading-test.mjs'
       - '.github/workflows/android-kotlin-ui-pr.yml'
   workflow_dispatch:
 
@@ -118,6 +120,8 @@ jobs:
         run: node android-native/verification/kotlin-pinned-exercise-notes-test.mjs
       - name: Verify source-specific pinned setup labels and orphan-value retention
         run: node android-native/verification/kotlin-pinned-setup-fields-test.mjs
+      - name: Verify plate calculator never guesses stock or writes workout facts
+        run: node android-native/verification/kotlin-verified-plate-loading-test.mjs
       - name: Compile all native Kotlin UI and test the independent engine (never assembles APK)
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :kotlin-engine:testDebugUnitTest :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

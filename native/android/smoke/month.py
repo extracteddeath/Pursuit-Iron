@@ -27,6 +27,22 @@ def adb(*a, timeout=60):
         return ""
 
 
+def trace(step, nodes=None):
+    """Day one's first session leaves a step-by-step trail: what the bot did and which set controls it saw."""
+    if DAY[0] != "d00" or TRACE[0] > 40:
+        return
+    TRACE[0] += 1
+    nodes = nodes if nodes is not None else dump()
+    seen = [label(n) + ("[x]" if n.get("checked") == "true" else "") for n in nodes
+            if re.search(r"^Set |Weight|Reps|Save|reps left|Skip|Next exercise", label(n))]
+    with open(os.path.join(OUT, "trace.txt"), "a") as f:
+        f.write(f"{TRACE[0]:02d} {step}\n   " + "\n   ".join(seen[:14]) + "\n")
+    shot(f"trace-{TRACE[0]:02d}")
+
+
+TRACE = [0]
+
+
 def shot(name):
     STEP[0] += 1
     path = os.path.join(OUT, f"{STEP[0]:03d}-{DAY[0]}-{name}.png")
@@ -184,20 +200,24 @@ def train(day_no):
     tap(r"Warmed up", timeout=2)
     tap(r"^\|Got it$", timeout=2)
     lifts_seen, idle, logged, t0 = set(), 0, 0, time.time()
-    while time.time() - t0 < 900:
+    while time.time() - t0 < 420:
         lift = current_lift()
         if lift and lift not in lifts_seen:
             lifts_seen.add(lift)
             if day_no == 0 and len(lifts_seen) <= 2:
                 shot("lift-" + re.sub(r"[^a-z]+", "-", lift.lower()))
         tap(r"^\|Skip warm-up →$", timeout=1)
+        trace("loop top")
         if find(r"Weight not set, edit", timeout=1):
             tap(r"Weight not set, edit")
+            trace("opened the set editor")
             tap(r"^Weight \((kg|lb)\), tap to type", timeout=3)
             adb("shell", "input", "text", start_weight(lift))
             hide_keyboard()
-            if not tap(r"^\|Save & log$", timeout=3):
-                tap(r"^\|Save$", timeout=2)
+            trace("typed the weight")
+            if not tap(r"^\|Save & log$|^Save & log", timeout=3):
+                note("set editor: no Save & log"); tap(r"^\|Save$", timeout=2)
+            trace("after Save & log")
             logged += 1
         else:
             c = unlogged_check()
@@ -265,7 +285,7 @@ shot("today-day-one")
 tour("today-day-one", 5)
 
 sessions = 0
-for d in range(29):
+for d in range(int(os.environ.get("MONTH_DAYS", "29"))):
     DAY[0] = f"d{d:02d}"
     now = start + dt.timedelta(days=d)
     set_date(now)

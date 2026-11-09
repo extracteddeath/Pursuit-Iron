@@ -197,7 +197,7 @@ fun TodayScreen(vm: AppViewModel) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
                 StatTile("Sessions", "${wk.i("sessions")}", "/ ${wk.i("planned")}", Modifier.weight(1f))
-                StatTile("Volume", com.pursuitiron.app.ui.common.fmt1(wk.i("volume") / 1000.0), com.pursuitiron.app.ui.common.volUnit(h.s("unit", "kg")), Modifier.weight(1f))
+                StatTile("Volume", if (wk.i("volume") < 1000) "${wk.i("volume")}" else com.pursuitiron.app.ui.common.fmt1(wk.i("volume") / 1000.0), if (wk.i("volume") < 1000) h.s("unit", "kg") else com.pursuitiron.app.ui.common.volUnit(h.s("unit", "kg")), Modifier.weight(1f))
                 StatTile("Readiness", "${readinessToday(vm, h)}", "%", Modifier.weight(1f), color = cs.tertiaryContainer, onClick = { readinessOpen = true })
             }
         }}
@@ -223,7 +223,9 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
             val wkDays = h.list("weekDays")
             if (wkDays.size > 1) {
                 val done = wkDays.count { it.s("status") == "done" }
-                Box(Modifier.align(Alignment.TopEnd).padding(16.dp).size(60.dp).semantics(mergeDescendants = true) { contentDescription = "$done of ${wkDays.size} sessions this week" },
+                // Counts the program week (it rolls over once its days are logged), so it names that week, not the calendar's.
+                val wkName = h.o("block")?.i("weekIndex")?.takeIf { it > 0 }?.let { "Week $it" } ?: "This week"
+                Box(Modifier.align(Alignment.TopEnd).padding(16.dp).size(60.dp).semantics(mergeDescendants = true) { contentDescription = "$done of ${wkDays.size} sessions done in ${wkName.lowercase()}" },
                     contentAlignment = Alignment.Center) {
                     val sweep = com.pursuitiron.app.ui.common.ringSweep(if (wkDays.isEmpty()) 0f else done.toFloat() / wkDays.size)
                     androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
@@ -234,7 +236,7 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
                     // A bare "0/4" read as a score; the caption says what it counts.
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("$done/${wkDays.size}", style = MaterialTheme.typography.labelLarge, lineHeight = 14.sp)
-                        Text("this week", style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.sp), color = cs.onPrimaryContainer.copy(alpha = 0.7f))
+                        Text(wkName.lowercase(), style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.sp), color = cs.onPrimaryContainer.copy(alpha = 0.7f))
                     }
                 }
             }

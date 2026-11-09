@@ -149,7 +149,8 @@ fun RecapCard(vm: AppViewModel, h: JSONObject) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val u = h.s("unit", "kg")
     val fmt = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
-    val from = java.util.Date(r.optLong("from")); val to = java.util.Date(r.optLong("to"))
+    // The window is the last 168 hours, which touches eight calendar dates; the label names the seven days ending today.
+    val to = java.util.Date(r.optLong("to")); val from = java.util.Date(r.optLong("to") - 6 * 86_400_000L)
     val sameMonth = java.text.SimpleDateFormat("M", java.util.Locale.US).let { it.format(from) == it.format(to) }
     val range = fmt.format(from).uppercase() + "–" + (if (sameMonth) java.text.SimpleDateFormat("d", java.util.Locale.getDefault()).format(to) else fmt.format(to).uppercase())
     val count = r.i("count"); val planned = r.i("planned")

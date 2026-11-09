@@ -96,7 +96,7 @@ fun SummaryScreen(vm: AppViewModel) {
         Text("Your next session is already planned from these sets.", style = MaterialTheme.typography.bodyLarge, color = cs.onPrimaryContainer, textAlign = TextAlign.Center)
         Row(Modifier.widthIn(max = 520.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile("Sets", "${r.i("setsDone")}", "/ ${r.i("totalSets")}", Modifier.weight(1f), color = cs.surface)
-            StatTile("Volume", com.pursuitiron.app.ui.common.fmt1(r.i("volume") / 1000.0), com.pursuitiron.app.ui.common.volUnit(r.s("unit", "kg")), Modifier.weight(1f), color = cs.surface)
+            StatTile("Volume", if (r.i("volume") < 1000) "${r.i("volume")}" else com.pursuitiron.app.ui.common.fmt1(r.i("volume") / 1000.0), if (r.i("volume") < 1000) r.s("unit", "kg") else com.pursuitiron.app.ui.common.volUnit(r.s("unit", "kg")), Modifier.weight(1f), color = cs.surface)
             StatTile("Time", "${r.i("durationMin")}", "min", Modifier.weight(1f), color = cs.surface)
         }
         val prs = r.list("prs")
@@ -166,7 +166,7 @@ fun PlanScreen(vm: AppViewModel) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
                 PlanProgramHeader(p, onIcon = { iconFor = p.s("programId") }) { programsOpen = true }
                 Text((if (p.b("endless")) (if (wk > weeks) "continuous · deload" else "continuous · week $wk of the wave") else if (wk > weeks) "deload week" else "week $wk of $weeks" + (if (waveDl.contains(wk)) " · deload" else "")) +
-                    p.list("days").let { ds -> val done = ds.count { it.s("status") == "done" }; if (ds.any { !it.isNull("status") }) " · $done/${ds.size} this week" else "" },
+                    p.list("days").let { ds -> val done = ds.count { it.s("status") == "done" }; if (ds.any { !it.isNull("status") }) " · $done/${ds.size} done" else "" },
                     style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                 PlanActions(p, onEdit = { vm.openEditor(p.s("programId")) }, onReview = { reviewOpen = true }, onSchedule = { scheduleOpen = true },
                     onCycle = { openCycle = p.s("cycleId") }, onSettings = { settingsOpen = true }, onDetails = { detailsOpen = true },

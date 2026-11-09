@@ -393,8 +393,8 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const h0 = C.home();
   const tms = C.trainingMaxes({ programId: made.programId });
   ok(tms.percent && tms.lifts.length > 0 && h0.needsTrainingMax === tms.lifts.length, 'its main lifts need training maxes (' + tms.lifts.length + ')');
-  { const gp = C.sessionReview({ programId: made.programId }).gamePlan, main = gp.filter((g) => / of your max\. Set this lift's max/.test(g.guidance));
-    ok(main.length > 0 && main.every((g) => !/pick a weight/.test(g.guidance)), "before a max is set, the game plan gives the method's sets: " + (main[0] && main[0].dose)); }
+  { const gp = C.sessionReview({ programId: made.programId }).gamePlan, main = gp.filter((g) => /Set its max to run the plan's \d+ × /.test(g.guidance));
+    ok(main.length > 0, "before a max is set, the game plan says the max runs the method's sets: " + (main[0] && main[0].guidance)); }
   C.setTrainingMax({ programId: made.programId, exId: tms.lifts[0].id, value: 100, fromOneRm: true });
   const t1 = C.trainingMaxes({ programId: made.programId }).lifts[0];
   ok(t1.tm > 0 && t1.tm <= 90 && t1.week1 && t1.week1.sets.length > 0, '90% of a 100 kg 1RM sets the TM (' + t1.tm + ') and week 1 shows ' + (t1.week1 && t1.week1.sets.join(' ')));

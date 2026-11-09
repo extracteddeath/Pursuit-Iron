@@ -426,8 +426,8 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
         if (/^Choose a starting load/.test(String(x.reason || ''))) return `First time on this lift: pick a weight you could do for ${x.range?.[0]}–${x.range?.[1]} reps with a couple to spare.`;
         return x.reason;
     };
-    // A percentage main lift with no max set yet: the review's generic first-time line ("pick a weight for 2–5 reps")
-    // contradicted the plan's 4 × 5 at 90%; it says the method's sets and that the max fills the weights in.
+    // A percentage main lift with no max set yet runs the generic first-time targets (what the workout shows), while
+    // Plan shows the method's 4 × 5 at 90%; the line says both, so the two screens don't seem to disagree.
     const pctNoMax = (x) => {
         const ex = EX_BY_ID[x.id]; if (!ex || !p.config?.percentScheme || E.trainingMaxForUnit(p, x.id, u) > 0) return null;
         let c = null; try { c = E.computeCell(p, day, x.id, x.slot, wk); } catch { c = null; }
@@ -435,8 +435,7 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
     };
     const gamePlan = ranked.map((x) => {
         const pc = pctNoMax(x);
-        if (pc) return { id: x.id, slot: x.slot, name: x.name, kind: 'plan', title: x.name, dose: `${pc.sets} × ${pc.range}${pc.load ? ' @' + pc.load : ''}`,
-            guidance: `${pc.sets} × ${pc.range}${pc.load ? ' at ' + pc.load + ' of your max' : ''}. Set this lift's max and the weights fill in.` };
+        const pctTail = pc ? ` Set its max to run the plan's ${pc.sets} × ${pc.range}${pc.load ? ' at ' + pc.load : ''}.` : '';
         const pr = x.opportunity;
         const tech = x.protocol.type === 'myo_reps' ? `Myo-reps · ${Math.max(8, Math.round(15 * restScale))}-second rests.` : x.protocol.type === 'drop_set' ? 'Drop set on the last set.' : null;
         const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${Math.round(pr.estimated * 10) / 10} ${u}.` : `Could beat your ${pr.bestReps}-rep best at this load.`) : plainWhy(x);
@@ -447,7 +446,7 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
             : x.category === 'Progression' ? 'up' : x.category === 'Load adjustment' ? 'down' : x.category === 'Programmed targets' ? 'plan' : 'trend';
         return { id: x.id, slot: x.slot, name: x.name, kind, title: pr ? `PR chance · ${x.name}` : x.name,
             // With no load to show yet the reason already says to choose one; leading with "Choose load × 8" repeated it.
-            dose: targetsText(x.effective, u), guidance: (x.effective || []).every((t) => t?.weight === '' || t?.weight == null) ? (tech || why) : `${targetsText(x.effective, u)} · ${tech || why}` };
+            dose: targetsText(x.effective, u), guidance: ((x.effective || []).every((t) => t?.weight === '' || t?.weight == null) ? (tech || why) : `${targetsText(x.effective, u)} · ${tech || why}`) + pctTail };
     });
     const changes = r.changes.map((x) => {
         const prev = x.change.previous, prop = x.proposed;

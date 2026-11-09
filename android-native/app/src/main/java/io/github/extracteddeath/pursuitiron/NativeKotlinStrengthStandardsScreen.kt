@@ -510,6 +510,66 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 favoriteNotice?.let {Text(it,
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)}
+                PursuitDisclosureRow(
+                    title="Published reference details",
+                    subtitle="Four source-matched barbell lifts · threshold bands and methodology",
+                    expanded=standardsExpanded,
+                    onToggle={standardsExpanded=!standardsExpanded}
+                )
+                if(standardsExpanded) {
+                orderedReferences.forEach { standard ->
+                    val best=bestByExercise[standard.exerciseId]
+                    PursuitCard {
+                        PursuitExerciseHeading(standard.exerciseId,
+                            onHistory={historyExerciseId=standard.exerciseId},
+                            subtitle="Source-matched barbell movement")
+                        val isFavorite=standard.exerciseId in favoriteLiftIds
+                        OutlinedButton(onClick={toggleFavorite(standard.exerciseId)},
+                            enabled=profileId!=null && !favoriteBusy,
+                            modifier=Modifier.heightIn(min=48.dp)) {
+                            Icon(if(isFavorite)Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription=null,modifier=Modifier.size(18.dp))
+                            Spacer(Modifier.width(PursuitSpace.xs))
+                            Text(if(isFavorite)"Unpin from favorites" else "Pin to favorites")
+                        }
+                        if(best==null)PursuitHistoryStatus("No qualifying working set",
+                            "Log a completed set of 1–10 reps to calculate an estimated maximum.")
+                        else {
+                            val (lift,estimate)=best
+                            PursuitMetricStrip(listOf(
+                                "Estimated 1RM" to "${scalarLabel(estimate.setScale(1,RoundingMode.HALF_UP))} ${displayUnit.name.lowercase()}",
+                                "From logged" to "${scalarLabel(lift.actualLoad)} ${lift.key.unit.name.lowercase()} × ${lift.reps}",
+                                "Session" to lift.completionOrder.toString()
+                            ))
+                            val eligible=bodyweight!=null && comparisonGroup!=null
+                            if(eligible) {
+                                val ratio=checkNotNull(
+                                    StrengthStandardsMeasurementDomain.relativeStrength(
+                                        estimate,checkNotNull(bodyweight))
+                                ).toDouble()
+                                val bands=if(comparisonGroup=="male")standard.male
+                                    else standard.female
+                                val tier=displayedTier(ratio,bands)
+                                Text("$tier reference · ${"%.2f".format(java.util.Locale.US,ratio)}× bodyweight",
+                                    style=MaterialTheme.typography.titleMedium)
+                                LinearProgressIndicator(
+                                    progress={(ratio / bands.last()).coerceIn(0.0,1.0).toFloat()},
+                                    modifier=Modifier.fillMaxWidth())
+                                Text("Reference thresholds: ${bands.map{"%.2f×".format(java.util.Locale.US,it)}.joinToString(" · ")}",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                Text("Choose a reference group and enter bodyweight to view the broad, unit-corrected comparison.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        TextButton(onClick={uri.openUri(standard.url)}) {
+                            Text("Reference methodology and full age/weight tables")
+                        }
+                    }
+                }
+                }
                 PursuitSectionHeading("Your exercise favorites",
                     "Pin and arrange any movement in your verified training history. Open its complete actual sets, including corrections.")
                 PursuitCard {
@@ -646,66 +706,6 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     NativeKotlinExercisePerformanceTrend(
                         verifiedTimeline,viewedExercise,displayUnit,
                         onOpenHistory={historyExerciseId=viewedExercise})
-                PursuitDisclosureRow(
-                    title="Published reference details",
-                    subtitle="Four source-matched barbell lifts · threshold bands and methodology",
-                    expanded=standardsExpanded,
-                    onToggle={standardsExpanded=!standardsExpanded}
-                )
-                if(standardsExpanded) {
-                orderedReferences.forEach { standard ->
-                    val best=bestByExercise[standard.exerciseId]
-                    PursuitCard {
-                        PursuitExerciseHeading(standard.exerciseId,
-                            onHistory={historyExerciseId=standard.exerciseId},
-                            subtitle="Source-matched barbell movement")
-                        val isFavorite=standard.exerciseId in favoriteLiftIds
-                        OutlinedButton(onClick={toggleFavorite(standard.exerciseId)},
-                            enabled=profileId!=null && !favoriteBusy,
-                            modifier=Modifier.heightIn(min=48.dp)) {
-                            Icon(if(isFavorite)Icons.Filled.Star else Icons.Outlined.StarBorder,
-                                contentDescription=null,modifier=Modifier.size(18.dp))
-                            Spacer(Modifier.width(PursuitSpace.xs))
-                            Text(if(isFavorite)"Unpin from favorites" else "Pin to favorites")
-                        }
-                        if(best==null)PursuitHistoryStatus("No qualifying working set",
-                            "Log a completed set of 1–10 reps to calculate an estimated maximum.")
-                        else {
-                            val (lift,estimate)=best
-                            PursuitMetricStrip(listOf(
-                                "Estimated 1RM" to "${scalarLabel(estimate.setScale(1,RoundingMode.HALF_UP))} ${displayUnit.name.lowercase()}",
-                                "From logged" to "${scalarLabel(lift.actualLoad)} ${lift.key.unit.name.lowercase()} × ${lift.reps}",
-                                "Session" to lift.completionOrder.toString()
-                            ))
-                            val eligible=bodyweight!=null && comparisonGroup!=null
-                            if(eligible) {
-                                val ratio=checkNotNull(
-                                    StrengthStandardsMeasurementDomain.relativeStrength(
-                                        estimate,checkNotNull(bodyweight))
-                                ).toDouble()
-                                val bands=if(comparisonGroup=="male")standard.male
-                                    else standard.female
-                                val tier=displayedTier(ratio,bands)
-                                Text("$tier reference · ${"%.2f".format(java.util.Locale.US,ratio)}× bodyweight",
-                                    style=MaterialTheme.typography.titleMedium)
-                                LinearProgressIndicator(
-                                    progress={(ratio / bands.last()).coerceIn(0.0,1.0).toFloat()},
-                                    modifier=Modifier.fillMaxWidth())
-                                Text("Reference thresholds: ${bands.map{"%.2f×".format(java.util.Locale.US,it)}.joinToString(" · ")}",
-                                    style=MaterialTheme.typography.bodySmall,
-                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            } else {
-                                Text("Choose a reference group and enter bodyweight to view the broad, unit-corrected comparison.",
-                                    style=MaterialTheme.typography.bodySmall,
-                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                        TextButton(onClick={uri.openUri(standard.url)}) {
-                            Text("Reference methodology and full age/weight tables")
-                        }
-                    }
-                }
-                }
             }
         }
         Text("Strength Level community bodyweight-ratio reference tables, accessed November 2026. Ratios are approximate broad bands and are not a training dose prescription, personal-record certification, or exact percentile. Other exercises and equipment variants remain in your full History.",

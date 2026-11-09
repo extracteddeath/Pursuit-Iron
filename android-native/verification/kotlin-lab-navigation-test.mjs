@@ -90,7 +90,10 @@ assert.ok(journey.includes('import androidx.activity.compose.BackHandler') &&
   journey.includes('BackHandler(enabled=destination==KotlinCandidateDestination.PROFILE') &&
   journey.includes('KotlinCandidateDestination.SETTINGS -> destination=settingsReturn') &&
   journey.includes('progressRequestedExerciseId=null') &&
-  journey.includes('destination=KotlinCandidateDestination.PROFILE') &&
+  journey.includes('progressReturn=KotlinCandidateDestination.PROFILE') &&
+  journey.includes('progressReturn=KotlinCandidateDestination.HISTORY') &&
+  journey.includes('destination=progressReturn') &&
+  journey.includes('progressRequestedTrendExerciseId=null') &&
   !journey.includes('BackHandler(enabled=activeWorkout'),
   'Android Back must honor Profile/Settings and pinned lift origin without interfering with Train');
 assert.ok(journey.includes('KotlinCandidateDestination.PROFILE') &&
@@ -188,6 +191,17 @@ assert.ok(exerciseTrendDomain.includes('timeline.completions') &&
   standards.includes('it in availableMovements') &&
   trend.includes('fun PursuitFactualLinePlot('),
   'General exercise trends must be observed, equipment-safe, accessible and source-verified');
+
+assert.ok(history.includes('onOpenExerciseTrend:(String)->Unit={}') &&
+  history.includes('onClick={onOpenExerciseTrend(exercise)}') &&
+  history.includes('Text("Trend: ${kotlinExerciseLabel(exercise)}")') &&
+  journey.includes('onOpenExerciseTrend={exerciseId->') &&
+  journey.includes('progressRequestedTrendExerciseId=exerciseId') &&
+  journey.includes('preferredTrendExerciseId=progressRequestedTrendExerciseId') &&
+  standards.includes('preferredTrendExerciseId:String?=null') &&
+  standards.includes('exercise in availableMovements') &&
+  standards.includes('performanceExerciseId=exercise'),
+  'History search trends require verified movement routing and an origin-preserving Back action');
 
 assert.ok(standards.includes('var comparisonExpanded by rememberSaveable') &&
   standards.includes('if(comparisonExpanded) {') &&

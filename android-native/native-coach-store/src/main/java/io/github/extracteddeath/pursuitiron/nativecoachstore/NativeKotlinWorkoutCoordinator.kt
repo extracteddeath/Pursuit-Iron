@@ -250,6 +250,77 @@ class NativeKotlinWorkoutCoordinator(
             NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
         }
 
+    /**
+     * Only alternatives from the current fully verified Composer program
+     * and gym can enter an in-session replacement. Exact target values are
+     * rebuilt under both the owner revision fence and physical journal lock.
+     * No changes to the future program are implied.
+     */
+    fun swapExercise(
+        ownerKey:String,workoutId:String,eventId:String,
+        expectedRevision:Long,previousExerciseId:String,
+        replacementExerciseId:String,intents:List<KotlinComposerSwapSetIntent>
+    ):NativeJournalFileResult=runCatching {
+        revisionFence.withOwnerTransaction(ownerKey) {
+            store.appendReviewedWorkoutSwap(ownerKey,workoutId,{
+                owner,source->runCatching{
+                    authority.canAccessIssuedWorkout(owner,source)
+                }.getOrDefault(false)
+            }) {journal->
+                val approved=authority.currentApprovedWorkout(
+                    ownerKey,workoutId)
+                if(approved==null ||
+                    approved.approvedSource!=journal.originalSnapshot.source)
+                    return@appendReviewedWorkoutSwap null
+                val selected=approved.program.exercises.singleOrNull{
+                    it.exerciseId==replacementExerciseId
+                }?:return@appendReviewedWorkoutSwap null
+                val day=approved.program.days.getOrNull(
+                    journal.snapshot.dayIndex)
+                    ?:return@appendReviewedWorkoutSwap null
+                // Lost-ack idempotence: reconstruct the EXACT state before the
+                // old event and reauthorize its explicit replacement values.
+                val earlierIndex=journal.receipts.indexOfFirst{
+                    it.operation.eventId==eventId
+                }
+                val before=if(earlierIndex>=0) {
+                    val prior=KotlinWorkoutJournalReplayDomain.replay(
+                        journal.originalSnapshot,journal.storedIdentity,
+                        journal.receipts.take(earlierIndex),
+                        earlierIndex.toLong(),null)
+                    (prior as? KotlinJournalReplayResult.Recovered)?.journal
+                        ?:return@appendReviewedWorkoutSwap null
+                }else journal
+                val result=KotlinComposerSwapReviewDomain.review(
+                    before,eventId,expectedRevision,previousExerciseId,
+                    selected,day.focus,intents)
+                (result as? KotlinComposerSwapReview.Ready)?.operation
+            }
+        }
+    }.getOrElse {NativeJournalFileResult.Rejected(
+        NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
+
+    /** Undo restores the previously issued targets, even if the gym changed.
+     * It cannot restore after the replacement's first recorded set. */
+    fun undoExerciseSwap(
+        ownerKey:String,workoutId:String,eventId:String,
+        expectedRevision:Long,swapEventId:String
+    ):NativeJournalFileResult=runCatching {
+        revisionFence.withOwnerTransaction(ownerKey){
+            store.appendReviewedWorkoutSwap(ownerKey,workoutId,{
+                owner,source->runCatching{
+                    authority.canAccessIssuedWorkout(owner,source)
+                }.getOrDefault(false)
+            }) {journal->
+                if(journal.originalSnapshot.source.athleteId.isBlank())
+                    null
+                else KotlinJournalOperation.UndoSwap(
+                    eventId,expectedRevision,swapEventId)
+            }
+        }
+    }.getOrElse {NativeJournalFileResult.Rejected(
+        NativeJournalFileRefusal.STORAGE_UNAVAILABLE)}
+
     fun append(
         ownerKey:String,workoutId:String,operation:KotlinJournalOperation
     ):NativeJournalFileResult =

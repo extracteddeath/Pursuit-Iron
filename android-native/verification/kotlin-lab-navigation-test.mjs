@@ -257,6 +257,7 @@ assert.ok(
   swapRank.includes('samePatternOnly:Boolean=false') &&
   swapRank.includes('sharedMusclesOnly:Boolean=false') &&
   swapRank.includes('sameRoleOnly:Boolean=false') &&
+  swapRank.includes('sameFamilyOnly:Boolean=false') &&
   swapRank.includes('it.attachmentId?.contains(needle,ignoreCase=true)==true') &&
   swapRank.includes('thenByDescending {it.sameRole}') &&
   swapRank.includes('Same reviewed training role') &&
@@ -272,6 +273,7 @@ assert.ok(
   authoringSheet.includes('Text("Same pattern")') &&
   authoringSheet.includes('Text("Shared muscles")') &&
   authoringSheet.includes('Text("Same role")') &&
+  authoringSheet.includes('Text("Same family")') &&
   authoringSheet.includes('if(workoutOnlySwap) "Confirm workout-only replacement"') &&
   authoringSheet.includes('"Confirm workout swap" else "Confirm this program swap"') &&
   authoringSheet.includes('forms=listOf(CustomSetFields())') &&

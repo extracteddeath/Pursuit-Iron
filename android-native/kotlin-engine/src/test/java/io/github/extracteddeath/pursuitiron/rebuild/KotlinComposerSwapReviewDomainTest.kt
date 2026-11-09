@@ -91,6 +91,13 @@ class KotlinComposerSwapReviewDomainTest {
             KotlinComposerSwapRankingDomain.filterRanked(
                 ranked,"horizontal chest",samePatternOnly=true)
                 .map{it.option.exerciseId})
+        assertEquals(listOf("chest-machine"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"horizontal_press",samePatternOnly=true)
+                .map{it.option.exerciseId})
+        assertEquals(listOf("chest-machine"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"chest-machine").map{it.option.exerciseId})
         assertEquals(listOf("cable-pulldown"),
             KotlinComposerSwapRankingDomain.filterRanked(
                 ranked,"lats").map{it.option.exerciseId})

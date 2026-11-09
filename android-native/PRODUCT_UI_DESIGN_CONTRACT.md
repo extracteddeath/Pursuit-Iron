@@ -329,3 +329,18 @@ The native Program screen now exposes a **real, cycle-scoped adaptation permissi
 - Recorded sessions are intentionally identified by authoritative completion order, not fabricated dates. This feature is a full-history shortcut, **not** a cross-variant strength trend or a replacement for age/bodyweight-matched licensed standards.
 
 **Further work:** broader exercise progression charts with equipment/rep-range comparability and real phone/foldable/TalkBack verification; first-class customizable Profile sections and strength-standard source-specific reference tables. App-source compilation passing is not a claim of visual acceptance. The feature is isolated in Kotlin Lab and has no effect on the existing web app. No APK/AAB until the complete app-wide design is approved.
+
+
+## Exercise-specific performance trends — 2026-11-09 continuation
+
+**Source implemented; automated Kotlin and Compose gates pending for this revision.**
+
+- Any exercise with verified, correction-aware completed native history may show a factual **working-set performance** trend from Progress without inventing a strength percentile, calculated 1RM, or target load. The previously published Bench/Squat/Deadlift/Overhead Press standards remain a completely separate comparison with their own source links.
+- The history projection is one pure, read-only native-coach-store domain. It excludes unfinished, skipped, failed, warm-up and custom amplifier follow-up entries; uses actual performed set weights/reps, never the issued prescriptions as achieved performance; and uses the full mixed Composer + Custom history after the owner-verified read.
+- Trend series are keyed by the exact stable movement ID, **physical load basis**, and fixed performed-rep band (1–5, 6–10, 11–15, 16–30, 31–100). The displayed heaviest completed main working weight per session is converted between verified lb/kg only when the logged physical unit matches the issued verified unit. No barbell total, Smith total, dumbbell-per-hand, cable, machine or exercise-override load is merged into another basis. Distinct load sources not represented by a stable movement ID still require an exercise-catalog identity review.
+- Pure unweighted bodyweight observations can be shown in a **separate best-completed-reps** chart. Logged added/assisted weights are not treated as unweighted bodyweight.
+- The chart shows the selected rep and equipment basis; a limited last-20-session plot; first, latest and raw difference; a readable per-session table; accessibility text for all plotted values; and a direct link to complete correction-aware set history. This is **not** an equal-RIR evaluation, trend-adjusted relative strength score, PR certification, or recommendation to increase weight.
+- The feature uses existing theme colors and shared cards/metric strips/graph primitives; only an athlete-selected **View trend** opens the chart, keeping the default Progress hierarchy compact. The source contract checks exercise history eligibility and non-authoritative projection status.
+- Dedicated JVM regression fixtures cover real lb/kg conversion, physical load isolation, exact rep windowing, best in each session, omission of warm-ups/failed/skip/amplifier sets, invalid/missing values, unweighted bodyweight, and custom history corrections.
+
+**Outstanding:** completed CI outcome for this change; hands-on screen-reader, narrow-width and 200%-font usability; scientifically valid longitudinal estimates that control for effort and fatigue; sourced demographic standards for other exercise modalities. No new APK or AAB until the full app design is complete.

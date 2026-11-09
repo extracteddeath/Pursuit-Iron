@@ -81,16 +81,62 @@ internal fun NativeKotlinCustomPlateSheet(
             else PlateScreenResult.Verified(layout)
     }
 
+    NativeKotlinPlateResultSheet(request.exerciseId,result.value,onDismiss)
+}
+
+internal data class NativeComposerPlateRequest(
+    val exerciseId:String,
+    val enteredLoad:String,
+    val unit:LoadUnit
+)
+
+/**
+ * The generated-workout reader reopens its exact owner and source-approved
+ * journal in the native host. It never receives raw caller-supplied inventory.
+ */
+@Composable
+internal fun NativeKotlinComposerPlateSheet(
+    host:NativeKotlinCandidateHost,
+    workoutId:String,
+    request:NativeComposerPlateRequest,
+    onDismiss:()->Unit
+) {
+    val result=remember(host,workoutId,request) {
+        mutableStateOf<PlateScreenResult>(PlateScreenResult.Checking)
+    }
+    LaunchedEffect(host,workoutId,request) {
+        result.value=PlateScreenResult.Checking
+        val layout=withContext(Dispatchers.IO) {
+            runCatching {
+                val entered=request.enteredLoad.toBigDecimalOrNull()
+                    ?:return@runCatching null
+                host.reviewComposerPlateLayout(
+                    workoutId,request.exerciseId,entered,request.unit)
+            }.getOrNull()
+        }
+        result.value=if(layout==null)PlateScreenResult.Unavailable
+            else PlateScreenResult.Verified(layout)
+    }
+    NativeKotlinPlateResultSheet(request.exerciseId,result.value,onDismiss)
+}
+
+/** One Material 3 presentation for both verified issued-workout sources. */
+@Composable
+private fun NativeKotlinPlateResultSheet(
+    exerciseId:String,
+    current:PlateScreenResult,
+    onDismiss:()->Unit
+) {
     NativeEditSheet(busy=false,onDismiss=onDismiss) {
         Text("Verified barbell plates",
             style=MaterialTheme.typography.headlineSmall)
-        Text(kotlinExerciseLabel(request.exerciseId),
+        Text(kotlinExerciseLabel(exerciseId),
             style=MaterialTheme.typography.bodyMedium)
         Text("Read-only physical loading guide. Your entered weight, "+
             "recorded sets and approved program remain unchanged.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        when(val current=result.value) {
+        when(current) {
             PlateScreenResult.Checking ->
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             PlateScreenResult.Unavailable -> Text(

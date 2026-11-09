@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
@@ -114,12 +116,16 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
         Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo(((total ?: barW) - step).coerceAtLeast(barW)) }
             .semantics { contentDescription = "${fmtNum(step)} $u lighter"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Minus, null) }
         Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
+            // An invisible twin of the unit on the left keeps the number itself on the centre line.
+            Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp).alpha(0f).clearAndSetSemantics { })
             androidx.compose.foundation.text.BasicTextField(w, { v -> w = v.filter { it.isDigit() || it == '.' || it == ',' }.take(7) }, singleLine = true,
-                textStyle = MaterialTheme.typography.displayMedium.copy(color = cs.onSurface, textAlign = TextAlign.End),
+                textStyle = MaterialTheme.typography.displayMedium.copy(color = cs.onSurface, textAlign = TextAlign.Center),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
-                modifier = Modifier.width(150.dp).semantics { contentDescription = "Total weight, $u" },
-                decorationBox = { inner -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
+                // Sized to the number, so "60 kg" sits centred between − and + (a fixed 150 dp field, right-aligned,
+                // pushed short totals off centre).
+                modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min).widthIn(min = 40.dp, max = 200.dp).semantics { contentDescription = "Total weight, $u" },
+                decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
             Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
         }
         Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo((total ?: barW) + step) }

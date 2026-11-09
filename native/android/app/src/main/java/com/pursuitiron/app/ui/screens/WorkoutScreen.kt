@@ -429,16 +429,16 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Set", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
                     // The design's Target ⇄ Last: the reference column shows the plan or what you did last time.
-                    Row(Modifier.weight(1f).padding(start = 8.dp).clip(RoundedCornerShape(8.dp)).clickable { vm.prefs.changeLastMode(!vm.prefs.lastMode) }
+                    Row(Modifier.width(SET_REF_W).padding(start = 8.dp).clip(RoundedCornerShape(8.dp)).clickable { vm.prefs.changeLastMode(!vm.prefs.lastMode) }
                         .semantics { contentDescription = if (vm.prefs.lastMode) "Showing last time. Show targets" else "Showing targets. Show last time"; role = Role.Button },
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(if (vm.prefs.lastMode) "Last" else "Target", style = MaterialTheme.typography.labelMedium, color = cs.primary)
                         Icon(PiIcons.Redo, null, tint = cs.primary, modifier = Modifier.size(12.dp))
                     }
-                    Text(if (ex.b("assisted")) "ASSIST" else s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (gripC) 72.dp else 68.dp), textAlign = TextAlign.Center)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Reps", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (gripC) 58.dp else 54.dp), textAlign = TextAlign.Center)
-                    Spacer(Modifier.width(4.dp + if (gripC) 68.dp else 44.dp))
+                    Text(if (ex.b("assisted")) "ASSIST" else s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.weight(SET_KG_WT), textAlign = TextAlign.Center)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Reps", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                    Spacer(Modifier.width(6.dp + if (gripC) 68.dp else 44.dp))
                 }
                 sets.forEachIndexed { si, set ->
                     val label = setLabels[si]
@@ -479,6 +479,11 @@ private fun skipWithUndo(vm: AppViewModel, ei: Int, name: String) {
     vm.act("skipExercise", "ei" to ei)
     vm.toast("Skipped $name for today") { vm.act("unskipExercise") }
 }
+
+/* The set table's columns: the reference (Target ⇄ Last) column is a fixed width and the weight and reps cells
+   share what's left, so the inputs fill the row instead of sitting in a narrow strip on the right of empty space. */
+private val SET_REF_W = 104.dp
+private const val SET_KG_WT = 1.2f
 
 @Composable
 private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si: Int, set: JSONObject, label: String, showRating: Boolean, onEdit: () -> Unit, onOptions: () -> Unit) {
@@ -564,7 +569,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         } else Row(verticalAlignment = Alignment.CenterVertically) {
             labelCell()
             val useLast = vm.prefs.lastMode && !done && prev != null && (prev.d("w") > 0 || prev.s("r").isNotBlank())
-            Column(Modifier.weight(1f).padding(start = 8.dp).then(if (useLast) Modifier.clip(RoundedCornerShape(10.dp)).clickable {
+            Column(Modifier.width(SET_REF_W).padding(start = 8.dp).then(if (useLast) Modifier.clip(RoundedCornerShape(10.dp)).clickable {
                     if (prev.d("w") > 0) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to com.pursuitiron.app.ui.common.fmtNum(prev.d("w")))
                     if (prev.s("r").isNotBlank()) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to prev.s("r"))
                 }.semantics { contentDescription = "Last time $sub. Use it for this set"; role = Role.Button } else Modifier)) {
@@ -573,18 +578,18 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                     color = if (set.b("pr") || set.s("adjusted") == "load" || set.s("adjusted") == "reps") cs.primary else cs.onSurfaceVariant)
             }
             val cellBg = if (done) Color.Transparent else cs.surfaceContainerHigh
-            Box(Modifier.width(if (grip) 72.dp else 68.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
+            Box(Modifier.weight(SET_KG_WT).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
                 .clickable(onClick = onEdit).semantics { contentDescription = if (tag) "${if (ex.s("loadTag") == "Band") "Band" else "Bodyweight"}, edit" else if (assisted) "${assistAbs(set.s("weight")).ifBlank { "No" }} ${s.s("unit")} of assistance, edit" else "Weight ${set.s("weight").ifBlank { "not set" }}, edit" },
                 contentAlignment = Alignment.Center) {
                 Text(if (tag) ex.s("loadTag") else if (assisted) assistShown(set.s("weight")) else set.s("weight").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
             }
-            Spacer(Modifier.width(4.dp))
-            Box(Modifier.width(if (grip) 58.dp else 54.dp).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
+            Spacer(Modifier.width(6.dp))
+            Box(Modifier.weight(1f).height(cellH).clip(RoundedCornerShape(12.dp)).background(cellBg)
                 .clickable(onClick = onEdit).semantics { contentDescription = "Reps ${set.s("reps").ifBlank { "not set" }}, edit" },
                 contentAlignment = Alignment.Center) {
                 Text(set.s("reps").ifBlank { "—" }, style = if (grip) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium)
             }
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(6.dp))
             // Animate between the two real radii: a spring from a 999 dp "circle" overshoots past zero, and a
             // negative corner size throws while drawing.
             val r by animateDpAsState(if (done) 14.dp else cellH / 2, Motion.spring(), label = "check")
@@ -607,12 +612,13 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         val pl = ex.o("plates")
         if (!showRating && isCur && !skipped && !tag && pl != null && ex.i("platesFor") == si && (set.s("weight").toDoubleOrNull() ?: 0.0) > 0)
             Row(Modifier.fillMaxWidth().padding(top = 2.dp).chipIn(0)) {
-                Spacer(Modifier.weight(1f))
-                Box(Modifier.width(if (grip) 72.dp else 68.dp), contentAlignment = Alignment.Center) {
+                Spacer(Modifier.width(32.dp + SET_REF_W))
+                Box(Modifier.weight(SET_KG_WT), contentAlignment = Alignment.Center) {
                     Text(pl.s("text"), style = MaterialTheme.typography.labelMedium, color = cs.primary, maxLines = 1, softWrap = false,
                         modifier = Modifier.wrapContentWidth(unbounded = true))
                 }
-                Spacer(Modifier.width(4.dp + (if (grip) 58.dp else 54.dp) + 4.dp + (if (grip) 68.dp else 44.dp)))
+                Spacer(Modifier.width(6.dp)); Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(6.dp + (if (grip) 68.dp else 44.dp)))
             }
         if (!showRating && vm.prefs.steppers && !done && !skipped) SetSteppers(vm, s, ex, ei, si, set)
     }

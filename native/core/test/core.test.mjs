@@ -1144,7 +1144,9 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
 
 // The in-workout swap lists alternatives (availableFor was called without its banned list and threw).
 { C.init({ store: JSON.stringify({ unit: 'kg' }) }); C.createFromTemplate({ id: 'ul4' }); C.startSession({});
-  const o = C.swapOptions({ ei: 0 }); ok(Array.isArray(o) && o.length > 0 && o.every((x) => x.equipLabel), 'in-workout swap lists alternatives with equipment labels (' + (o?.length || 0) + ')'); C.discardSession(); }
+  const o = C.swapOptions({ ei: 0 }); ok(Array.isArray(o) && o.length > 0 && o.every((x) => x.equipLabel), 'in-workout swap lists alternatives with equipment labels (' + (o?.length || 0) + ')');
+  ok(o.every((x, i) => x.rank === i + 1 && ['samePattern', 'fillsGap', 'extraSetup'].every((k) => typeof x[k] === 'boolean')),
+    'ranked swap options expose stable order and independent pattern, coverage and extra-setup facets'); C.discardSession(); }
 
 // Equipment reads by what it trains: every id once, related machines side by side, on the gym sheet and in setup alike.
 { C.init({ store: JSON.stringify({ unit: 'kg' }) }); const g = C.gyms(), o = C.setupOptions();

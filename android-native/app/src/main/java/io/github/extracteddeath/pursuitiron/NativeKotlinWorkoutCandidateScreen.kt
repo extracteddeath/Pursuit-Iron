@@ -78,6 +78,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var infoExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     // Uncommitted fields must survive Focus/All, previous/next, and configuration changes.
     val editorStates=rememberSaveableStateHolder()
     LaunchedEffect(workoutId) { controller.open(workoutId) }
@@ -347,6 +348,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type},
                     onHistory={historyExerciseId=set.target.exerciseId},
+                    onInfo={infoExerciseId=set.target.exerciseId},
                     onRecord={outcome,actual->
                         controller.record(set.target.setKey,outcome,actual)
                     },
@@ -467,6 +469,28 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }
         )
     }
+    // Factual planned set details are derived from the currently recovered
+    // journal, not guessed from a movement name or the old web catalog.
+    infoExerciseId?.let {exerciseId ->
+        val targets=journal?.snapshot?.targets.orEmpty().filter {
+            it.exerciseId==exerciseId
+        }
+        if(targets.isNotEmpty()) {
+            val first=targets.first()
+            NativeKotlinWorkoutExerciseInfoSheet(
+                exerciseId=exerciseId,
+                sourceDescription="Issued generated workout · "+
+                    first.role.name.lowercase().replace('_',' ')+
+                    " · "+first.purpose.name.lowercase().replace('_',' '),
+                sets=composerWorkoutInfoSets(targets),
+                onHistory={
+                    infoExerciseId=null
+                    historyExerciseId=exerciseId
+                },
+                onDismiss={infoExerciseId=null}
+            )
+        }
+    }
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})
@@ -505,6 +529,7 @@ private fun NativeKotlinSetCard(
     position:Int,
     setCount:Int,
     onHistory:()->Unit,
+    onInfo:()->Unit,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onSkip:()->Unit,
     onFail:(KotlinPerformedSet)->Unit
@@ -528,7 +553,8 @@ private fun NativeKotlinSetCard(
     val entry=KotlinWorkoutEntryDomain.parse(target,weight,reps,effort)
     val working=target.type==DraftSetType.WORKING
     PursuitCard(highlighted=!set.isResolved && !finished) {
-        PursuitExerciseHeading(target.exerciseId,onHistory=onHistory)
+        PursuitExerciseHeading(target.exerciseId,
+            onHistory=onHistory,onInfo=onInfo)
         Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
             style=MaterialTheme.typography.labelLarge)
         PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,

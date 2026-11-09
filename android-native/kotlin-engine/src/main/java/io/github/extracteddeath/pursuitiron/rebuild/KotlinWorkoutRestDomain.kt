@@ -25,14 +25,22 @@ object KotlinWorkoutRestDomain {
         journal:KotlinWorkoutJournalState,
         selectedSetKey:String?
     ):KotlinWorkoutRestPresentation {
-        val receipt=journal.receipts.lastOrNull()
+        // Note edits must not reset an active rest countdown. Use the most
+        // recent non-note receipt, so the cue/event ID remains unchanged
+        // after a session-note edit and corrections still suppress a cue.
+        val receipt=journal.receipts.lastOrNull {
+            it.operation !is KotlinJournalOperation.SessionNote &&
+                it.operation !is CustomWorkoutJournalOperation.SessionNote
+        }
         val remaining=journal.finishedByEventId==null && journal.unresolvedSetCount>0
         val selected=journal.snapshot.targets.firstOrNull{it.setKey==selectedSetKey}
         val operation=receipt?.operation as? KotlinJournalOperation.RecordSet
         val target=journal.snapshot.targets.firstOrNull{it.setKey==operation?.setKey}
         val cue=if(remaining && operation!=null && target!=null &&
             operation.outcome==KotlinJournalSetOutcome.COMPLETED &&
-            operation.correctsEventId==null && receipt.appliedRevision==journal.revision &&
+            operation.correctsEventId==null && // The last NON-NOTE receipt is still the most recent meaningful
+            // workout event, even when note receipts followed it.
+            receipt.appliedRevision<=journal.revision &&
             journal.effectiveSets[operation.setKey]==receipt && target.restSeconds in 0..3600) {
             val index=journal.snapshot.targets.map{it.exerciseId}.distinct()
                 .indexOf(target.exerciseId)
@@ -46,7 +54,13 @@ object KotlinWorkoutRestDomain {
         journal:CustomWorkoutJournalDraft,
         selectedVisit:CustomWorkoutVisitKey?
     ):KotlinWorkoutRestPresentation {
-        val receipt=journal.receipts.lastOrNull()
+        // Note edits must not reset an active rest countdown. Use the most
+        // recent non-note receipt, so the cue/event ID remains unchanged
+        // after a session-note edit and corrections still suppress a cue.
+        val receipt=journal.receipts.lastOrNull {
+            it.operation !is KotlinJournalOperation.SessionNote &&
+                it.operation !is CustomWorkoutJournalOperation.SessionNote
+        }
         val remaining=journal.finishedByEventId==null && journal.unresolvedVisitCount>0
         val selectedSlot=journal.snapshot.slots.firstOrNull {slot->
             slot.sets.any{it.setKey==selectedVisit?.setKey}
@@ -70,7 +84,9 @@ object KotlinWorkoutRestDomain {
         else target?.prescription?.restSeconds
         val cue=if(remaining && operation!=null && target!=null &&
             operation.outcome==KotlinJournalSetOutcome.COMPLETED &&
-            operation.correctsEventId==null && receipt.appliedRevision==journal.revision &&
+            operation.correctsEventId==null && // The last NON-NOTE receipt is still the most recent meaningful
+            // workout event, even when note receipts followed it.
+            receipt.appliedRevision<=journal.revision &&
             journal.effectiveVisits[operation.visit]==receipt &&
             slot.supersetGroup==null && after!=null && after in 0..3600) {
             KotlinWorkoutRestCue(operation.eventId,checkNotNull(after),index)

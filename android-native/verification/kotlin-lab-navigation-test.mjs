@@ -226,6 +226,7 @@ assert.ok(
   liveWorkout.includes('fun confirmSwap(') &&
   liveWorkout.includes('host.swapIssuedCustomExercise(') &&
   liveWorkout.includes('This workout only · no program change') &&
+  liveWorkout.includes('workoutOnlySwap=true') &&
   liveJournalDomain.includes('data class Swap(') &&
   liveJournalDomain.includes('val originalSnapshot:CustomWorkoutDaySnapshot=snapshot') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
@@ -246,7 +247,7 @@ assert.ok(
   'A live swap must be an authenticated source-verified, cold-replayable workout-only journal event with unchanged History ownership');
 
 // Web changelog 2523/2677/2248: ranked search and verified equipment are
-// native PROGRAM-DRAFT parity, not an unfounded claim of in-workout swapping.
+// visible in both program-draft and separately source-fenced live-workout swaps.
 assert.ok(
   customAuthoring.includes('val pattern: ComposerPattern? = null') &&
   customAuthoring.includes('val muscleCredits: List<DeclaredMuscleCredit> = emptyList()') &&
@@ -255,6 +256,9 @@ assert.ok(
   swapRank.includes('fun rank(') &&
   swapRank.includes('samePatternOnly:Boolean=false') &&
   swapRank.includes('sharedMusclesOnly:Boolean=false') &&
+  swapRank.includes('sameRoleOnly:Boolean=false') &&
+  swapRank.includes('thenByDescending {it.sameRole}') &&
+  swapRank.includes('Same reviewed training role') &&
   swapRank.includes('CustomSwapFit.SAME_PATTERN_AND_FAMILY') &&
   swapRank.includes('CustomSwapFit.SHARED_REVIEWED_MUSCLES') &&
   swapRank.includes('val mayTransferWeight:Boolean get()=false') &&
@@ -264,7 +268,9 @@ assert.ok(
   authoringSheet.includes('Search by exercise, family, pattern or muscle') &&
   authoringSheet.includes('Text("Same pattern")') &&
   authoringSheet.includes('Text("Shared muscles")') &&
-  authoringSheet.includes('if(swapConfirmation)"Confirm this program swap"') &&
+  authoringSheet.includes('Text("Same role")') &&
+  authoringSheet.includes('if(workoutOnlySwap) "Confirm workout-only replacement"') &&
+  authoringSheet.includes('"Confirm workout swap" else "Confirm this program swap"') &&
   authoringSheet.includes('forms=listOf(CustomSetFields())') &&
   customBuilder.includes('fun replaceExerciseSlot(') &&
   customBuilder.includes('newSlot.slotId==oldSlotId') &&

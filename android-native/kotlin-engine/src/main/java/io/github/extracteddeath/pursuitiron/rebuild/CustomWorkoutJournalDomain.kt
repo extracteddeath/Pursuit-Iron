@@ -265,7 +265,7 @@ object CustomWorkoutJournalDomain {
                 val previousKeys=previous.sets.map {it.setKey}.toSet()
                 if(prior.receipts.any {r->
                     (r.operation as? CustomWorkoutJournalOperation.Record)
-                        ?.visit?.setKey in previousKeys
+                        ?.visit?.setKey?.let{it in previousKeys}==true
                 })return CustomWorkoutJournalDecision.Rejected(
                     CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED)
                 if(previous.supersetGroup!=null || next.supersetGroup!=null)

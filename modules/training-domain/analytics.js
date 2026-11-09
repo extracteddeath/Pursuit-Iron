@@ -1398,10 +1398,17 @@ function tempoFor(ex) {
     }
 }
 
+/* The lift's own cue first, then its pattern's. When the two speak to the same thing they could disagree (bench:
+   "Tuck elbows ~75°" then "Elbows ~45° from torso"), so a pattern cue on a topic the lift's own cue already covers is
+   dropped. (Found on native, which applied this on its side of cuesFor.) */
+const CUE_TOPICS = ["elbow", "touch", "grip", "wrist", "knee", "depth", "stance", "arch", "lean"];
 function cuesFor(ex) {
     const spec = EX_SPECIFIC[ex.id];
     const base = patternCues(ex);
-    return spec ? [spec, ...base] : base;
+    if (!spec)
+        return base;
+    const covered = CUE_TOPICS.filter(t => String(spec).toLowerCase().includes(t));
+    return [spec, ...base.filter(c => !covered.some(t => String(c).toLowerCase().includes(t)))];
 }
 
 function patternCues(ex) {

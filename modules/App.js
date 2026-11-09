@@ -34,7 +34,7 @@ import {
     FOCUS_CAVEAT, formatSetup, generateNextCycleForShell,
     generateNextProgramForShell, GENERATION_ROUTE, getNextShellCell, goalForDay, groupPctSets,
     groupSessionsByCycle, groupSessionsByMonth, growMyoSets, GYM_LIMIT_KEYS, GYM_PRESETS, gymById,
-    historyDayIndex, historyForProgram, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
+    historyDayIndex, historyForProgram, earlierPassIds, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
     isMachineLike, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkFor, lastDayPerf, lastSetEffort,
     lengthUnitFor, liftBests, linearInc, liveCoachForContext, liveEffortFeedback, loadableAtOrBelow,
     loadingInventoryInUnit, loadStep, loggedSubVolume, loggedVolume, loggedWorkoutPerformance, makeMyoMini,
@@ -76,7 +76,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
-import { activeSetContext, adjustInjuredExercises, carryLoggedLoad, uncarryLoggedLoad, dockRepSuggestion, removePendingWorkingSet, resizeWorkingSets, workoutTechniqueRest, workoutPlateau, lighterPendingWorkout } from "./workout-context.js";
+import { activeSetContext, adjustInjuredExercises, carryLoggedLoad, uncarryLoggedLoad, dockRepSuggestion, removePendingWorkingSet, resizeWorkingSets, workoutTechniqueRest, workoutPlateau, lighterPendingWorkout, withGroupRounds } from "./workout-context.js";
 import { programLastPerformances } from "./program-last-performance.js";
 import { exitMotion, moveSheet, motionValue, resumeMotion, settleSheet, spring, stopMotion } from "./ui-motion.js";
 
@@ -7846,8 +7846,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
        v584 rule that a normaliser refuses when it cannot tell, rather than guessing wrong. */
     const dayDoneThisWeek = useMemo(() => {
         const m = {};
+        // Only this pass through the block: a block that repeats starts again at week 1 with nothing done.
+        const earlier = earlierPassIds(program, history);
         historyForProgram(history, program).forEach(h => {
-            if (!h || h.weekIndex == null)
+            if (!h || h.weekIndex == null || (h.id != null && earlier.has(h.id)))
                 return;
             const idx = historyDayIndex(program?.days, h);
             const id = idx >= 0 ? program.days[idx].id : h.dayId;
@@ -11077,7 +11079,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         const fresh = day.exercises.map((_id, slot) => {
             const id = ids[slot];
             if (!EX_BY_ID[id] || !(computeCell(program, day, id, slot, weekIndex).sets > 0)) return null;
-            return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), ...(() => { const last = history.find(h => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
+            const rounds = !program.config?.noSupersets && Number(program.rounds?.[`${day.id}:${slot}`]) || 0;
+            return ({ id, slot, sets: withGroupRounds(buildSets(EX_BY_ID[id], slot, suggestions[slot], true), rounds), ...(() => { const last = history.find(h => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
                 const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat); return { note: n.text, noteRepeat: n.repeat }; })(), superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
                 restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 });
         }).filter(Boolean);
@@ -21319,6 +21322,24 @@ function App() {
                 recordReleaseDiag('next_block_failed_closed', { action: 'next_block', engine: ENGINE_VERSION, code: err?.code || 'NEXT_ENGINE_ERROR', reason: String(err?.message || err) });
                 setAppToast({ msg: err instanceof NextShellAdapterError ? err.message : 'The next block could not be created safely. Your current program is unchanged.' });
             }
+            return;
+        }
+        /* Your own program (Build your own, config.split "custom") has no generator to rebuild it from: running the
+           generator on its config produced an unrelated program or failed. The next block carries your days and lifts
+           forward as a fresh block at week 1, and each lift keeps progressing from what you logged. (Native nextBlock.) */
+        if (p?.config?.split === "custom") {
+            const np = JSON.parse(JSON.stringify(p));
+            np.id = uid(); np.createdAt = Date.now();
+            ["buildOwn", "cycleId", "blockIndex", "edited", "nextWeekPrescriptions", "plateauChoices", "layoutHistory", "revisions"].forEach(k => { delete np[k]; });
+            const own = carryTrainingMaxes(p, np, history, unit);
+            const m = (p.name || "").match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
+            own.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
+            own.generationRoute = GENERATION_ROUTE;
+            setSaved(prev => [...prev, own]);
+            setPinnedId(own.id);
+            setProgram(own);
+            rootView("program");
+            setAppToast({ msg: "Next block started: your days and lifts carry on from week 1." });
             return;
         }
         // A legacy standalone program can still be trained, but its next generated block must migrate to

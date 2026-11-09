@@ -372,6 +372,32 @@ function historyDayIndex(days, h) {
     return resolveHistoryDayIndex(days, h);
 }
 
+/* The current pass through a finite block, from entries sorted newest first: everything back to where the logged
+   week number drops (a block that wrapped to week 1 starts a new pass). */
+function currentPassOf(entries) {
+    for (let i = 0; i < entries.length - 1; i++) {
+        if (Number(entries[i].weekIndex) < Number(entries[i + 1].weekIndex))
+            return entries.slice(0, i + 1);
+    }
+    return entries;
+}
+
+/* Ids of this program's sessions from EARLIER passes through its block. A day is "done" for a week only if it was
+   logged in the current pass: the Plan marked a repeated block's week 1 (and every later week) done from the first
+   pass's sessions. Endless programs and entries without a week number have no passes and are never excluded. */
+function earlierPassIds(program, history) {
+    const out = new Set();
+    if (!program || program.config?.endless)
+        return out;
+    const days = program.days || [];
+    const weekly = normalizeHistoryEntries(history, program.id).entries
+        .filter(entry => entry.weekIndex != null && historyDayIndex(days, entry) >= 0)
+        .sort((a, b) => (Number(b?.date) || 0) - (Number(a?.date) || 0));
+    const pass = currentPassOf(weekly).length;
+    weekly.slice(pass).forEach(h => { if (h.id != null) out.add(h.id); });
+    return out;
+}
+
 function nextSessionCursor(program, history) {
     const days = program.days || [];
     const dpw = days.length || 1;
@@ -443,10 +469,16 @@ function nextSessionCursor(program, history) {
     const explicit = entries.length > 0 && entries.every(h => Number.isInteger(Number(h.weekIndex))
         && Number(h.weekIndex) >= 1 && Number(h.weekIndex) <= maxWeek && historyDayIndex(days, h) >= 0);
     if (explicit) {
+        /* ONLY THE CURRENT PASS COUNTS. After a full pass the block wraps to week 1, and the first pass's sessions
+           already fill every week: counting them made each later week read as complete, so the cursor wrapped
+           straight back and the second pass never left week 1 (measured: 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4, then 1
+           for every session after). A pass starts where the logged week number drops (newest-first: the first
+           entry whose older neighbour has a higher week). */
+        const pass = currentPassOf(entries);
         let weekIndex = 1;
         let completed = new Set();
         for (let w = 1; w <= maxWeek; w++) {
-            completed = new Set(entries.filter(h => Number(h.weekIndex) === w).map(h => historyDayIndex(days, h)).filter(i => i >= 0));
+            completed = new Set(pass.filter(h => Number(h.weekIndex) === w).map(h => historyDayIndex(days, h)).filter(i => i >= 0));
             if (completed.size < dpw) {
                 weekIndex = w;
                 break;
@@ -1161,4 +1193,4 @@ const EPLEY_SLOPE = 30;
 const E1RM_REP_CAP = 12;
 
 function e1rmRIR(w, reps, rir, cap = E1RM_REP_CAP, slope = EPLEY_SLOPE) { return w * (1 + (Math.min(reps, cap) + rir) / slope); }
-export { AXIAL_ADJACENT_COST, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, E1RM_REP_CAP, ENGINE_RULES, EPLEY_SLOPE, IDEAL_SLOTS, PART_ORDER, advanceLegacyFirstCycleBlock, axialCost, bitsToCode, buildWeekPlan, codeToBits, cycleConfigForStandaloneProgram, dayMuscleLoad, dayOverlap, decodeProgramCode, e1rm, e1rmRIR, encodeProgramCode, endlessStalled, engHas, engLacks, expandLegacyEquipment, galleryIssueBody, gallerySubmission, getBits, historyDayIndex, isAxialLoad, mergeStandaloneIntoGeneratedCycle, nextDueDayId, nextScheduledIndex, nextSessionCursor, programFingerprint, programSavePlan, propagateCycleEditsPure, putBits, ruleEngine, sameProgramContent };
+export { earlierPassIds, AXIAL_ADJACENT_COST, CODE_ALPHA, CODE_ASSIST, CODE_CARRIED_KEYS, CODE_EQUIP, CODE_EXERCISES, CODE_EXP, CODE_GOALS, CODE_IGNORED_KEYS, CODE_PROG, CODE_SCHEMES, CODE_SESSION, CODE_SPLITS, E1RM_REP_CAP, ENGINE_RULES, EPLEY_SLOPE, IDEAL_SLOTS, PART_ORDER, advanceLegacyFirstCycleBlock, axialCost, bitsToCode, buildWeekPlan, codeToBits, cycleConfigForStandaloneProgram, dayMuscleLoad, dayOverlap, decodeProgramCode, e1rm, e1rmRIR, encodeProgramCode, endlessStalled, engHas, engLacks, expandLegacyEquipment, galleryIssueBody, gallerySubmission, getBits, historyDayIndex, isAxialLoad, mergeStandaloneIntoGeneratedCycle, nextDueDayId, nextScheduledIndex, nextSessionCursor, programFingerprint, programSavePlan, propagateCycleEditsPure, putBits, ruleEngine, sameProgramContent };

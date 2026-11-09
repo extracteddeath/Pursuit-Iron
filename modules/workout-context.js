@@ -124,3 +124,20 @@ export function uncarryLoggedLoad(sets, si) {
         return String(s.weight ?? '').trim() === w ? { ...rest, weight: '' } : rest;
     });
 }
+
+/* A superset or circuit set to a fixed number of rounds (program.rounds, "dayId:slot") gets exactly that many working
+   sets in the workout: extra prescribed sets drop off the end with their own drop/myo sub-sets, and missing ones
+   repeat the last working set's target, not logged. Warm-ups are untouched. The program editor's Rounds control
+   stored this but the workout ignored it (the native app has applied it since its first release). */
+export function withGroupRounds(sets, rounds) {
+    if (!(rounds > 0) || !Array.isArray(sets)) return sets;
+    const isWork = s => !s.warm && !s.sub;
+    const work = sets.filter(isWork);
+    if (!work.length || work.length === rounds) return sets;
+    if (work.length > rounds) {
+        let n = 0;
+        return sets.filter(s => s.warm || (isWork(s) ? ++n <= rounds : n <= rounds));
+    }
+    const last = work[work.length - 1];
+    return [...sets, ...Array.from({ length: rounds - work.length }, () => ({ ...last, done: false }))];
+}

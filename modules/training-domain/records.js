@@ -705,15 +705,21 @@ function loadStep(ex, unit) {
     // its per-exercise increment).
     const eqCable = eq.includes("cable") && !isBarLike(eq) && !eq.includes("dumbbell");
     const coarseMachine = machineJump && !eqCable && ex.type !== "isolation"; // compound plate/pin stack
+    /* A DUMBBELL LOAD IS PER HAND (the engine's dumbbell_per_hand), and with no rack set it moves in the engine's own
+       default notches, 2.5 kg / 5 lb a hand, whatever the lift (next-engine/loading.js DEFAULT_*_LOADING_INVENTORY).
+       Lower-body dumbbell work used 4 kg / 10 lb and upper 2 kg, neither the engine's list: a logged 14 kg Dumbbell
+       RDL was "held" at 12, an 11.6 kg re-prescription floored to 8, and every engine 12.5 became 12 (found by the
+       native month test). Kettlebells keep their coarser lower-body jump; their sizes really do skip. */
+    const kettlebellOnly = eq.includes("kettlebell") && !eq.includes("dumbbell");
     if (unit === "lb") {
         if (fixedJump)
-            return lower ? 10 : 5; // DB/KB pairs move in ~5 lb-per-hand notches
+            return kettlebellOnly && lower ? 10 : 5; // a dumbbell rack moves ~5 lb a hand
         if (coarseMachine)
             return 10; // leg press / hack squat / plate-loaded stack
         return 5; // barbell, freeweight, cables, machine isolations
     }
     if (fixedJump)
-        return lower ? 4 : 2;
+        return kettlebellOnly ? (lower ? 4 : 2) : 2.5;
     if (coarseMachine)
         return 5;
     return 2.5;

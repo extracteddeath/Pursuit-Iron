@@ -7,7 +7,7 @@ import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-res
 import { createSemanticExerciseGraph, transferExerciseStartingReference } from './semantic-exercise-graph.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
-import { availableLoadAtOrBelow, loadingInventoryInUnit } from './loading.js';
+import { availableLoadAtOrBelow, loadingInventoryInUnit, nextAvailableLoad } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
@@ -363,7 +363,7 @@ function pairOf(v) {
 /* Load for a changed prescription, from the lifter's estimated max. The estimate uses each logged set's reps-in-reserve; where
    none was logged it assumes the LOWER bound of the RIR prescribed for the week that set was trained in — the conservative end
    of what the lifter was told to do. (Assuming failure instead would underestimate the max and cancel out the heavier week.) */
-function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit, toUnit) {
+export function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit, toUnit) {
     const reps = pairOf(cell?.reps ?? cell?.range), rir = pairOf(cell?.rir), lastRir = pairOf(lastCell?.rir);
     if (!reps || !last)
         return null;
@@ -380,7 +380,15 @@ function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit,
     if (e1 === null)
         return null;
     const repsMid = Math.round((reps[0] + reps[1]) / 2), rirMid = rir ? (rir[0] + rir[1]) / 2 : 2;
-    const weight = availableLoadAtOrBelow(exerciseId, e1 / (1 + (repsMid + rirMid) / 30), request?.equipment?.loading, request?.equipment?.available);
+    // The estimate rounds to the nearer weight the equipment makes (ties go down): flooring alone lost a notch each
+    // re-set (33.8 kg on a 2.5 kg cable stack became 32.5, then the next pass's 32.1 became 30; 9.1 kg became 7.5),
+    // so a lifter on target drifted down block after block. On heavy lifts a notch is a small share of the load.
+    const ideal = e1 / (1 + (repsMid + rirMid) / 30);
+    const inv = request?.equipment?.loading, avail = request?.equipment?.available;
+    let weight = availableLoadAtOrBelow(exerciseId, ideal, inv, avail);
+    const up = nextAvailableLoad(exerciseId, weight ?? 0, inv, avail);
+    if (up != null && up > ideal && (weight === null || up - ideal < ideal - weight))
+        weight = up;
     if (weight === null)
         return null;
     const range = reps[0] === reps[1] ? String(reps[0]) : `${reps[0]}–${reps[1]}`, reserve = rir ? (rir[0] === rir[1] ? String(rir[0]) : `${rir[0]}–${rir[1]}`) : null;

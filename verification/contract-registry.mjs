@@ -56,7 +56,8 @@ export const contractGroups = Object.freeze({
         'm193-cycle-progression-context-test.mjs',
         'm194-simulation-progression-parity-test.mjs',
         'm214-executable-prescription-sync-test.mjs',
-        'm215-cycle-duration-test.mjs'
+        'm215-cycle-duration-test.mjs',
+        'm377-native-month-engine-test.mjs'
     ]),
     quality: Object.freeze([
         'b888-session-choices-test.mjs',

@@ -146,6 +146,38 @@ object KotlinGlobalHistoryIndexDomain {
         out.writeLong(operation.expectedJournalRevision)
         when (operation) {
             is KotlinJournalOperation.Finish -> out.writeByte(1)
+            is KotlinJournalOperation.SwapExercise -> {
+                out.writeByte(3)
+                out.writeUTF(operation.previousExerciseId)
+                out.writeInt(operation.replacementTargets.size)
+                operation.replacementTargets.forEach {target->
+                    out.writeUTF(target.exerciseId)
+                    out.writeUTF(target.role.name)
+                    out.writeUTF(target.purpose.name)
+                    out.writeUTF(target.setKey)
+                    out.writeUTF(target.type.name)
+                    out.writeInt(target.ordinal)
+                    when(val load=target.load){
+                        DraftSetLoad.ExplicitBodyweight -> out.writeByte(0)
+                        is DraftSetLoad.Verified -> {
+                            out.writeByte(1)
+                            out.writeUTF(load.unit.name)
+                            out.writeUTF(load.basis.name)
+                            out.writeUTF(load.value.toPlainString())
+                        }
+                    }
+                    out.writeInt(target.reps.minimum)
+                    out.writeInt(target.reps.maximum)
+                    out.writeBoolean(target.targetRir!=null)
+                    target.targetRir?.let{out.writeInt(it)}
+                    out.writeInt(target.activeSeconds)
+                    out.writeInt(target.restSeconds)
+                }
+            }
+            is KotlinJournalOperation.UndoSwap -> {
+                out.writeByte(4)
+                out.writeUTF(operation.swapEventId)
+            }
             is KotlinJournalOperation.RecordSet -> {
                 out.writeByte(2)
                 out.writeUTF(operation.setKey)

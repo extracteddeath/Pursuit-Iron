@@ -228,6 +228,7 @@ assert.ok(
   liveWorkout.includes('This workout only · no program change') &&
   liveWorkout.includes('workoutOnlySwap=true') &&
   liveWorkout.includes('otherDayExerciseIds=snap.slots.filter{') &&
+  liveWorkout.includes('set.prescription.type==DraftSetType.WORKING') &&
   liveJournalDomain.includes('data class Swap(') &&
   liveJournalDomain.includes('val originalSnapshot:CustomWorkoutDaySnapshot=snapshot') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
@@ -264,6 +265,7 @@ assert.ok(
   swapRank.includes('thenByDescending {it.sameRole}') &&
   swapRank.includes('Same reviewed training role') &&
   swapRank.includes('otherDayExerciseIds:List<String>?=null') &&
+  swapRank.includes('sourceHasWorkingSets:Boolean=false') &&
   swapRank.includes('Retains sole reviewed direct-day coverage') &&
   swapRank.includes('Review lost direct-day coverage') &&
   swapRank.includes('val dayCoverageKnown=source!=null') &&
@@ -281,7 +283,9 @@ assert.ok(
   authoringSheet.includes('Text("Same role")') &&
   authoringSheet.includes('Text("Same family")') &&
   authoringSheet.includes('otherDayExerciseIds=otherDayExerciseIds') &&
+  authoringSheet.includes('sourceHasWorkingSets=replacing?.sets?.any') &&
   plan.includes('otherDayExerciseIds=day?.slots?.filter{') &&
+  plan.includes('set.type==DraftSetType.WORKING') &&
   authoringSheet.includes('if(workoutOnlySwap) "Confirm workout-only replacement"') &&
   authoringSheet.includes('"Confirm workout swap" else "Confirm this program swap"') &&
   authoringSheet.includes('forms=listOf(CustomSetFields())') &&

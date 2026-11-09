@@ -33,6 +33,8 @@ assert.match(screen,/NativeKotlinCustomSessionNoteSheet\(/);
 assert.match(screen,/host\.saveIssuedCustomSessionNote\(workoutId,operation\)/);
 assert.match(screen,/CustomWorkoutJournalOperation\.SessionNote\(/);
 assert.match(screen,/current\.sessionNote/);
+assert.match(screen,/if\(reopened!=null\)journal=reopened/);
+assert.match(screen,/The session note was not saved/);
 assert.match(sheet,/rememberSaveable\(journal\.workoutId\)/);
 assert.match(sheet,/if\(!busy && error==null && submitted!=null && committed==submitted\)/);
 assert.match(sheet,/enabled=!busy && dirty && valid/);

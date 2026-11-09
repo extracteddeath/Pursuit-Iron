@@ -270,6 +270,12 @@ function readiness() {
 // A dedicated machine reads "Machine" beside the lift's name: "Machine Row · Chest-Supported Row" named the machine twice.
 const EQUIP_LABEL = { ...Object.fromEntries((E.EQUIPMENT || []).map((x) => [x.id, x.cat === 'Machines' && !['cable', 'smith'].includes(x.id) ? 'Machine' : x.label])), barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', pullup: 'Bodyweight', bodyweight: 'Bodyweight' };
 /* The lift's main equipment in words ("Barbell", "Dumbbell"); benches and racks are where you do it, not what you lift. */
+/* Search by words in any order, over the name, the muscle and the equipment: "machine incline" finds Incline Machine Press. */
+function wordsMatch(x, needle) {
+    if (!needle) return true;
+    const hay = `${x.name} ${E.PART_LABEL?.[x.part] || x.part || ''} ${(x.equip || []).join(' ')} ${x.pattern || ''}`.toLowerCase().replace(/[-_]/g, ' ');
+    return needle.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+}
 function equipLabelOf(ex) { const eq = (ex?.equip || []).find((x) => !['bench', 'rack'].includes(x)) || (ex?.equip || [])[0]; return eq ? (EQUIP_LABEL[eq] || eq.replace(/[-_]/g, ' ').replace(/^./, (c) => c.toUpperCase())) : 'Bodyweight'; }
 function exSub(ex) {
     if (!ex) return '';
@@ -2204,7 +2210,7 @@ export function library({ q = '', part = null, equip = null } = {}) {
     const recent = new Set(); history().forEach((h) => Object.keys(h.perf || {}).forEach((id) => recent.add(id)));
     (S.live?.data || []).forEach((e) => { if (e.sets.some((x) => x.done)) recent.add(e.id); });
     const goals = S.store.goals || {};
-    return EXERCISES.filter((x) => (!part || x.part === part || groupOf(x) === part) && (!equip || libEquipOf(x) === equip) && (!needle || x.name.toLowerCase().includes(needle)))
+    return EXERCISES.filter((x) => (!part || x.part === part || groupOf(x) === part) && (!equip || libEquipOf(x) === equip) && wordsMatch(x, needle))
         .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, pattern: x.pattern || '', equip: x.equip, type: x.type,
             equipLabel: { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Bands', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other',
             group: groupOf(x), banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom, recent: recent.has(x.id), goal: Number(goals[x.id]) > 0 }));
@@ -3379,8 +3385,9 @@ export function editAddOptions({ programId, dayId, q = '', part = null }) {
     const parts = (E.PART_ORDER || [...new Set(EXERCISES.map((x) => x.part))]).filter((pt) => E.availableFor(pt, kit, [...banned], !!p.config?.noBodyweight).some((e) => !used.has(e.id)))
         .map((pt) => ({ id: pt, label: E.PART_LABEL?.[pt] || pt }));
     const pool = part ? E.availableFor(part, kit, [...banned], !!p.config?.noBodyweight) : EXERCISES.filter((x) => !banned.has(x.id) && E.availableFor(x.part, kit, [...banned], !!p.config?.noBodyweight).some((e) => e.id === x.id));
-    const items = pool.filter((x) => !used.has(x.id) && (!needle || x.name.toLowerCase().includes(needle)))
-        .sort((a, b) => (a.type === 'compound' ? 0 : 1) - (b.type === 'compound' ? 0 : 1)).slice(0, 60).map((x) => ({ id: x.id, name: x.name, part: x.part, equip: x.equip }));
+    // Every option, as the web's picker (a 60-item cut dropped whole families under All); words match in any order.
+    const items = pool.filter((x) => !used.has(x.id) && wordsMatch(x, needle))
+        .sort((a, b) => (a.type === 'compound' ? 0 : 1) - (b.type === 'compound' ? 0 : 1)).map((x) => ({ id: x.id, name: x.name, part: x.part, equip: x.equip, equipLabel: equipLabelOf(x) }));
     return { parts, items };
 }
 /* App.js handleSave + confirmProgramSave: scope "cycle" carries the edit to the sibling blocks. */

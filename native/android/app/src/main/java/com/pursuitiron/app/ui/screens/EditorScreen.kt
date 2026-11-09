@@ -678,7 +678,10 @@ private fun AddExerciseSheet(vm: AppViewModel, dayId: String, onClose: () -> Uni
                 items(items) { x ->
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { vm.edit("add", "dayId" to dayId, "exId" to x.s("id")); vm.toast("Added ${x.s("name")}"); onClose() }.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Text(x.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Column(Modifier.weight(1f)) {
+                            Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
+                            x.s("equipLabel").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
+                        }
                         Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp))
                     }
                 }

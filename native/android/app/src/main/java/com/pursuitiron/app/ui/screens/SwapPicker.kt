@@ -60,7 +60,9 @@ fun SwapPicker(opts: List<JSONObject>?, currentName: String, onBan: (() -> Unit)
         }
         val all = opts
         val needle = q.trim().lowercase()
-        val shown = all?.filter { needle.isEmpty() || it.s("name").lowercase().contains(needle) }
+        // Words in any order, over the name and the equipment ("machine incline" finds Incline Machine Press).
+        val words = needle.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val shown = all?.filter { x -> val hay = (x.s("name") + " " + x.s("equipLabel")).lowercase(); words.all { hay.contains(it) } }
         when {
             all == null -> com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(4.dp))
             all.isEmpty() -> Text("No other lift for this muscle at your gym.", color = cs.onSurfaceVariant, modifier = Modifier.padding(4.dp))

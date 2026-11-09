@@ -67,6 +67,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -743,7 +744,7 @@ private fun WzCheckRow(label: String, sub: String?, on: Boolean, shape: RoundedC
     val cs = MaterialTheme.colorScheme
     val bg by animateColorAsState(if (on) cs.secondaryContainer else cs.surfaceContainerLow, Motion.effects(), label = "chk")
     Row(Modifier.fillMaxWidth().then(if (shape != null) Modifier.clip(shape) else Modifier).background(bg).clickable(onClick = onClick)
-        .semantics(mergeDescendants = true) { role = Role.Checkbox; stateDescription = if (on) "Checked" else "Not checked" }.padding(horizontal = 14.dp, vertical = 13.dp),
+        .semantics(mergeDescendants = true) { role = Role.Checkbox; toggleableState = androidx.compose.ui.state.ToggleableState(on); }.padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.size(22.dp).clip(RoundedCornerShape(8.dp)).background(if (on) cs.primary else Color.Transparent).border(2.dp, if (on) cs.primary else cs.outline, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
             if (on) Icon(PiIcons.Check, null, Modifier.size(14.dp), tint = cs.onPrimary)

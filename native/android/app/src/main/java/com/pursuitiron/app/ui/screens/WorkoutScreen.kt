@@ -23,12 +23,12 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
@@ -96,6 +96,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -599,8 +600,9 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                 Modifier.width(checkW).height(cellH).clip(RoundedCornerShape(r.coerceIn(0.dp, cellH / 2)))
                     .background(if (done) cs.primary else Color.Transparent)
                     .then(if (done) Modifier else Modifier.background(Color.Transparent))
-                    .clickable { vm.act("toggle", "ei" to ei, "si" to si) }
-                    .semantics { role = Role.Checkbox; toggleableState = androidx.compose.ui.state.ToggleableState(done); stateDescription = if (done) "Logged" else "Not logged"; contentDescription = "Set $label: ${set.s("weight").ifBlank { "no weight" }} ${s.s("unit")} for ${set.s("reps")} reps" },
+                    // toggleable, not clickable + a hand-set state: it is what reports checked/unchecked to accessibility services.
+                    .toggleable(value = done, role = Role.Checkbox) { vm.act("toggle", "ei" to ei, "si" to si) }
+                    .semantics { stateDescription = if (done) "Logged" else "Not logged"; contentDescription = "Set $label: ${set.s("weight").ifBlank { "no weight" }} ${s.s("unit")} for ${set.s("reps")} reps" },
                 contentAlignment = Alignment.Center,
             ) {
                 if (!done) Canvas(Modifier.fillMaxSize()) { drawRoundRect(cs.outlineVariant, cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.minDimension / 2), style = Stroke(1.5.dp.toPx())) }
@@ -1113,7 +1115,7 @@ private fun WarmupCard(w: JSONObject, onDone: () -> Unit, onHide: () -> Unit) {
             moves.withIndex().chunked(cols).forEach { line -> Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(2.dp)) { line.forEach { (k, m) ->
                 val on = k in ticked
                 Row(Modifier.weight(1f).fillMaxHeight().background(cs.surface).clickable { if (on) ticked.remove(k) else ticked.add(k) }
-                    .semantics(mergeDescendants = true) { role = Role.Checkbox; stateDescription = if (on) "Done" else "Not done" }
+                    .semantics(mergeDescendants = true) { role = Role.Checkbox; toggleableState = androidx.compose.ui.state.ToggleableState(on); stateDescription = if (on) "Done" else "Not done" }
                     .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) cs.primary else cs.surface).border(2.dp, if (on) cs.primary else cs.outlineVariant, CircleShape), contentAlignment = Alignment.Center) {
                         if (on) Icon(PiIcons.Check, null, Modifier.size(14.dp), tint = cs.onPrimary)

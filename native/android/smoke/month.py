@@ -202,6 +202,7 @@ def train(day_no):
     tap(r"Warmed up", timeout=2)
     tap(r"^\|Got it$", timeout=2)
     lifts, mine, stall, last_key, t0 = [], set(), 0, None, time.time()
+    a11y_checked = [False]
     while time.time() - t0 < 600:
         nodes = dump()
         lift = next((re.match(r"^(.+): how to do it\|", label(n)).group(1) for n in nodes if re.match(r"^(.+): how to do it\|", label(n))), "")
@@ -217,6 +218,10 @@ def train(day_no):
             TRACE[0] += 1
             with open(os.path.join(OUT, "trace.txt"), "a") as f:
                 f.write(f"{lift} first set node: {dict(rows[0][2])}\n")
+        logged_rows = [r for r in rows if (lift + "|" + r[0].split(":")[0]) in mine]
+        if logged_rows and not a11y_checked[0]:
+            a11y_checked[0] = True
+            check(all(r[2].get("checked") == "true" for r in logged_rows), "a logged set reports checked to accessibility services")
         todo = [r for r in rows if (lift + "|" + r[0].split(":")[0]) not in mine and r[2].get("checked") != "true"]
         key = (lift, len(todo), todo[0][0] if todo else "")
         stall = stall + 1 if key == last_key else 0

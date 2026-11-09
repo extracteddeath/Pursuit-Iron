@@ -41,8 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -95,7 +95,7 @@ fun QuickPickerSheet(vm: AppViewModel) {
                     val id = x.s("id"); val at = picked.indexOf(id); val on = at >= 0
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (on) cs.secondaryContainer else cs.surfaceContainerLow)
                         .clickable { if (on) picked.remove(id) else { picked.add(id); names.value = names.value + (id to x.s("name")) } }
-                        .semantics(mergeDescendants = true) { role = Role.Checkbox; selected = on; contentDescription = (if (on) "Remove " else "Add ") + x.s("name") + if (on) ", number ${at + 1}" else "" }
+                        .semantics(mergeDescendants = true) { role = Role.Checkbox; toggleableState = androidx.compose.ui.state.ToggleableState(on); contentDescription = (if (on) "Remove " else "Add ") + x.s("name") + if (on) ", number ${at + 1}" else "" }
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.size(36.dp).clip(if (on) RoundedCornerShape(12.dp) else CircleShape).background(if (on) cs.primary else Color.Transparent)

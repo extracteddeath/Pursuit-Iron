@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
@@ -599,7 +600,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                     .background(if (done) cs.primary else Color.Transparent)
                     .then(if (done) Modifier else Modifier.background(Color.Transparent))
                     .clickable { vm.act("toggle", "ei" to ei, "si" to si) }
-                    .semantics { role = Role.Checkbox; stateDescription = if (done) "Logged" else "Not logged"; contentDescription = "Set $label: ${set.s("weight").ifBlank { "no weight" }} ${s.s("unit")} for ${set.s("reps")} reps" },
+                    .semantics { role = Role.Checkbox; toggleableState = androidx.compose.ui.state.ToggleableState(done); stateDescription = if (done) "Logged" else "Not logged"; contentDescription = "Set $label: ${set.s("weight").ifBlank { "no weight" }} ${s.s("unit")} for ${set.s("reps")} reps" },
                 contentAlignment = Alignment.Center,
             ) {
                 if (!done) Canvas(Modifier.fillMaxSize()) { drawRoundRect(cs.outlineVariant, cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.minDimension / 2), style = Stroke(1.5.dp.toPx())) }

@@ -49,6 +49,17 @@ sealed interface CustomWorkoutJournalOperation {
         val replacement:CustomWorkoutSlotSnapshot
     ):CustomWorkoutJournalOperation
 
+    /**
+     * Explicit rollback of exactly one durable swap receipt. It restores
+     * the historically approved slot, never recreating targets from UI.
+     * Only an untouched, still-active replacement can be undone.
+     */
+    data class UndoSwap(
+        override val eventId:String,
+        override val expectedRevision:Long,
+        val swapEventId:String
+    ):CustomWorkoutJournalOperation
+
     data class Finish(
         override val eventId: String,
         override val expectedRevision: Long
@@ -102,7 +113,7 @@ enum class CustomWorkoutJournalRefusal {
     MAIN_NOT_COMPLETED, ALREADY_RECORDED, INVALID_CORRECTION,
     INVALID_ACTUAL, INCOMPLETE_WORKOUT, TOO_MANY_EVENTS,
     SWAP_ALREADY_STARTED, SWAP_PROTECTED, SWAP_IDENTITY_CONFLICT,
-    SWAP_INVALID_TARGET
+    SWAP_INVALID_TARGET, SWAP_UNDO_UNAVAILABLE
 }
 
 sealed interface CustomWorkoutJournalDecision {
@@ -319,6 +330,63 @@ object CustomWorkoutJournalDomain {
                         set.prescription.activeSeconds.toLong()+
                         set.prescription.restSeconds.toLong()+
                         (set.prescription.amplifier?.followUpRestSeconds ?:0)
+                    }
+                }
+                if(duration !in 1L..10_000_000L)
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
+                nextSnapshot=prior.snapshot.copy(
+                    slots=Collections.unmodifiableList(changed),
+                    knownSetAndRestSeconds=duration)
+                null
+            }
+            is CustomWorkoutJournalOperation.UndoSwap -> {
+                val swappedReceipt=prior.receipts.firstOrNull {receipt->
+                    receipt.operation.eventId==operation.swapEventId
+                }
+                val swapped=swappedReceipt?.operation as?
+                    CustomWorkoutJournalOperation.Swap
+                    ?:return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE)
+                val replacement=swapped.replacement
+                val replacementIndex=prior.snapshot.slots.indexOfFirst {
+                    it.slotId==replacement.slotId &&
+                        it==replacement
+                }
+                if(replacementIndex<0 || prior.receipts.any {receipt->
+                    (receipt.operation as? CustomWorkoutJournalOperation.UndoSwap)
+                        ?.swapEventId==operation.swapEventId
+                })return CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE)
+                val discardedKeys=replacement.sets.map{it.setKey}.toSet()
+                if(prior.receipts.any {receipt->
+                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                        ?.visit?.setKey?.let{it in discardedKeys}==true
+                })return CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED)
+                // A previous exercise can be the original approved slot or
+                // the exact replacement from an earlier swap. Never derive
+                // it from the current gym, editor or a mutable program.
+                val previous=prior.originalSnapshot.slots.firstOrNull{
+                    it.slotId==swapped.previousSlotId
+                } ?: prior.receipts.takeWhile {
+                    it.operation.eventId!=operation.swapEventId
+                }.mapNotNull{
+                    (it.operation as? CustomWorkoutJournalOperation.Swap)
+                        ?.replacement
+                }.firstOrNull{it.slotId==swapped.previousSlotId}
+                if(previous==null || prior.snapshot.slots.any {
+                    it.slotId==previous.slotId
+                })return CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.SWAP_UNDO_UNAVAILABLE)
+                val changed=prior.snapshot.slots.toMutableList().also{
+                    it[replacementIndex]=previous
+                }
+                val duration=changed.sumOf {slot->
+                    slot.sets.sumOf {set->
+                        set.prescription.activeSeconds.toLong()+
+                            set.prescription.restSeconds.toLong()+
+                            (set.prescription.amplifier?.followUpRestSeconds ?:0)
                     }
                 }
                 if(duration !in 1L..10_000_000L)

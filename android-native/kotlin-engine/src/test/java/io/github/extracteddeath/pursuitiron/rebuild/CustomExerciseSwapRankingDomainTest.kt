@@ -7,11 +7,12 @@ import org.junit.Test
 class CustomExerciseSwapRankingDomainTest {
     private fun option(
         id:String,family:String,pattern:ComposerPattern,
-        muscles:List<TrainingMuscle>
+        muscles:List<TrainingMuscle>,
+        role:ComposerRole=ComposerRole.ACCESSORY
     )=CustomExercisePickerOption(
         id,family,id,null,LoadUnit.LB,LoadBasis.CABLE_STACK,
         false,CustomExerciseAvailability(id,null,false),
-        pattern,ComposerRole.ACCESSORY,muscles.map {
+        pattern,role,muscles.map {
             DeclaredMuscleCredit(it,MuscleCreditRole.DIRECT,BigDecimal.ONE)
         })
     private val chest=TrainingMuscle.CHEST
@@ -67,5 +68,30 @@ class CustomExerciseSwapRankingDomainTest {
             rows+rows.first(),"press-original").isEmpty())
         assertTrue(CustomExerciseSwapRankingDomain.rank(
             rows,null).all {it.fit==CustomSwapFit.SOURCE_UNRESOLVED})
+    }
+
+    @Test fun preservesReviewedTrainingRoleWithinSameFitTier() {
+        val alternatives=listOf(
+            option("original","main",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(chest),ComposerRole.PRIMARY),
+            option("alpha-accessory","alternative",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(chest),ComposerRole.ACCESSORY),
+            option("zulu-primary","alternative",ComposerPattern.HORIZONTAL_PRESS,
+                listOf(chest),ComposerRole.PRIMARY),
+            option("unrelated-primary","other",ComposerPattern.ISOLATION,
+                listOf(lats),ComposerRole.PRIMARY)
+        )
+        val ranked=CustomExerciseSwapRankingDomain.rank(alternatives,"original")
+        assertEquals(listOf("zulu-primary","alpha-accessory","unrelated-primary"),
+            ranked.map{it.choice.exerciseId})
+        assertTrue(ranked[0].sameRole)
+        assertFalse(ranked[1].sameRole)
+        assertTrue(ranked[0].explanation.contains("Same reviewed training role"))
+        val roleFilter=CustomExerciseSwapRankingDomain.rank(alternatives,
+            "original",sameRoleOnly=true)
+        assertEquals(listOf("zulu-primary","unrelated-primary"),
+            roleFilter.map{it.choice.exerciseId})
+        assertTrue(CustomExerciseSwapRankingDomain.rank(alternatives,
+            "unknown",sameRoleOnly=true).isEmpty())
     }
 }

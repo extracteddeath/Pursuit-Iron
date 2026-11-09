@@ -109,6 +109,19 @@ assert.ok(composer.includes('rememberSaveable(target.setKey,set.currentReceipt?.
   composer.includes('existing?.actualRir?.toString().orEmpty()') &&
   composer.includes('Planned reps and load are editable starting points'),
   'Composer must prefill editable reps, preserve unknown RIR, and refresh a saved correction');
+const sharedSetFields=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt');
+assert.ok(composer.includes('NativeSetValueFields(') &&
+  composer.includes('showLoad=verifiedLoad!=null') &&
+  composer.includes('onLoad={weight=it}') &&
+  composer.includes('onReps={reps=it}') &&
+  composer.includes('onRir={effort=it}') &&
+  sharedSetFields.includes('showLoad:Boolean=true') &&
+  sharedSetFields.includes('if(showLoad) OutlinedTextField(') &&
+  sharedSetFields.includes('NativeSetCounterField("Reps"') &&
+  sharedSetFields.includes('NativeSetCounterField("RIR"') &&
+  sharedSetFields.includes('Bodyweight movement · no external weight') &&
+  sharedSetFields.includes('RIR is optional · leave blank if unknown.'),
+  'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
 const restBridge=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt');
 const timer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt');
 for(const source of [journal,composer]) {

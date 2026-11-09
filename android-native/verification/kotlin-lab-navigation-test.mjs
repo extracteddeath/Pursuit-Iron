@@ -22,6 +22,8 @@ const targetLast=read('android-native/app/src/main/java/io/github/extracteddeath
 const profile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
 const shared=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 const trend=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProgressTrend.kt');
+const exerciseTrendUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExercisePerformanceTrend.kt');
+const exerciseTrendDomain=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeExercisePerformanceTrendDomain.kt');
 const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
 const exerciseFavorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeExerciseFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
@@ -162,6 +164,30 @@ assert.ok(exerciseFavorites.includes('NativeKotlinMixedHistoryTimeline') &&
   journey.includes('progressRequestedExerciseId=exerciseId') &&
   standards.includes('exercise in availableMovements'),
   'General exercise favorites must be verified, ordered, athlete-scoped and history-only');
+
+// General exercise trends are descriptive physical-load observations, not
+// estimated 1RM comparisons or additional published strength standards.
+assert.ok(exerciseTrendDomain.includes('timeline.completions') &&
+  exerciseTrendDomain.includes('NativeKotlinMixedHistoryCompletion.Composer') &&
+  exerciseTrendDomain.includes('NativeKotlinMixedHistoryCompletion.Custom') &&
+  exerciseTrendDomain.includes('CustomWorkoutVisitPart.MAIN') &&
+  exerciseTrendDomain.includes('DraftSetType.WORKING') &&
+  exerciseTrendDomain.includes('KotlinJournalSetOutcome.COMPLETED') &&
+  exerciseTrendDomain.includes('StrengthStandardsMeasurementDomain.convert(') &&
+  exerciseTrendDomain.includes('issued.basis,window') &&
+  exerciseTrendDomain.includes('NativeExerciseTrendKey(null,window)') &&
+  exerciseTrendDomain.includes('actual.unit!=issued.unit') &&
+  exerciseTrendDomain.includes('val canPrescribeWorkout:Boolean get()=false') &&
+  exerciseTrendUi.includes('NativeExercisePerformanceTrendDomain.project(') &&
+  exerciseTrendUi.includes('PursuitFactualLinePlot(') &&
+  exerciseTrendUi.includes('Selected')===false &&
+  exerciseTrendUi.includes('Show recorded points') &&
+  exerciseTrendUi.includes('performedReps') &&
+  standards.includes('performanceExerciseId=if(') &&
+  standards.includes('NativeKotlinExercisePerformanceTrend(') &&
+  standards.includes('it in availableMovements') &&
+  trend.includes('fun PursuitFactualLinePlot('),
+  'General exercise trends must be observed, equipment-safe, accessible and source-verified');
 
 assert.ok(standards.includes('var comparisonExpanded by rememberSaveable') &&
   standards.includes('if(comparisonExpanded) {') &&

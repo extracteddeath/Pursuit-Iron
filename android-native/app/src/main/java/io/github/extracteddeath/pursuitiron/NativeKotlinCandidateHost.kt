@@ -446,6 +446,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
             previousSlotId,replacementExerciseId,sets,note)
     }
 
+    /**
+     * Undo an untouched, still-active workout-only swap. No program grant
+     * or authored-cycle mutation; the original issued slot is restored.
+     */
+    fun undoIssuedCustomExerciseSwap(
+        workoutId:String,eventId:String,expectedRevision:Long,
+        swapEventId:String
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.undoSwap(
+            owner.ownerKey,workoutId,eventId,expectedRevision,swapEventId)
+    }
+
     /** Actual observations, never suggestions or virtual completed sets. */
     fun recordIssuedCustomSet(
         workoutId:String,operation:CustomWorkoutJournalOperation.Record

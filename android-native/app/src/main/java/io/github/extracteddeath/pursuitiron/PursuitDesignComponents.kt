@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -129,5 +131,45 @@ internal fun PursuitDestinationRow(
             colors=ListItemDefaults.colors(
                 containerColor=MaterialTheme.colorScheme.surfaceContainerLow)
         )
+    }
+}
+
+/**
+ * Shared, screen-reader-friendly progressive disclosure for long programs,
+ * nested training days and preview lists. Only presentation state changes;
+ * it never mutates program approvals or sets.
+ */
+@Composable
+internal fun PursuitDisclosureRow(
+    title:String,
+    subtitle:String?,
+    expanded:Boolean,
+    onToggle:()->Unit,
+    modifier:Modifier=Modifier
+) {
+    Surface(
+        onClick=onToggle,
+        modifier=modifier.fillMaxWidth().heightIn(min=56.dp),
+        shape=MaterialTheme.shapes.medium,
+        color=MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(
+                horizontal=PursuitSpace.md,vertical=PursuitSpace.sm),
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm),
+            verticalAlignment=Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                Text(title,style=MaterialTheme.typography.titleMedium)
+                if(!subtitle.isNullOrBlank())
+                    Text(subtitle,style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(
+                if(expanded)Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription=if(expanded)"Collapse $title" else "Expand $title"
+            )
+        }
     }
 }

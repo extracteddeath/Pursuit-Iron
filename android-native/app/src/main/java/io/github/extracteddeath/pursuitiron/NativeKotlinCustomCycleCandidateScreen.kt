@@ -74,6 +74,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var showAdvancedId by rememberSaveable {mutableStateOf(false)}
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
     var showProgramEditor by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
+    var showProgramMetadata by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
     val policyDrafts=rememberSaveableStateHolder()
     var retainedPolicyKey by rememberSaveable {mutableStateOf<String?>(null)}
     val policyKey=draft?.let{"policy:${it.athleteId}:${it.cycleId}:${it.revision}:${state.sourceRevision}"}
@@ -364,13 +365,22 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             // controls visible. Reviewed programs open them only on request.
             if(showProgramEditor) {
             PursuitCard(highlighted = true) {
-                Text("Custom authoring", style = MaterialTheme.typography.titleMedium)
-                Text("${draft.blocks.size} blocks · ${draft.blocks.sumOf { it.weeks }} scheduled weeks · revision ${draft.revision}",
-                    style = MaterialTheme.typography.bodyMedium)
-                Text("Cycle ID: ${draft.cycleId}",
-                    style = MaterialTheme.typography.bodySmall)
-                Text(draft.authorNote.ifBlank { "No author notes" },
-                    style = MaterialTheme.typography.bodySmall)
+                PursuitSectionHeading("Edit your program",
+                    "${draft.blocks.size} blocks · ${draft.blocks.sumOf { it.weeks }} weeks · " +
+                    "${draft.blocks.sumOf { it.days.size }} scheduled training days")
+                if(draft.authorNote.isNotBlank())
+                    Text(draft.authorNote,style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick={showProgramMetadata=!showProgramMetadata},
+                    modifier=Modifier.heightIn(min=48.dp)) {
+                    Text(if(showProgramMetadata)"Hide advanced program details"
+                        else "Advanced program details")
+                }
+                if(showProgramMetadata) {
+                    Text("Saved revision ${draft.revision} · Cycle ID ${draft.cycleId}",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { editingCycle = true },
@@ -385,13 +395,21 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             }
             draft.blocks.forEachIndexed { index, block ->
                 key(block.blockId) {
+                    var blockExpanded by rememberSaveable(draft.cycleId,block.blockId) {
+                        mutableStateOf(index==0)
+                    }
                     PursuitCard {
-                        Text("${index + 1}. ${block.label}",
-                            style = MaterialTheme.typography.titleLarge)
-                        Text("${pretty(block.phase)} · ${block.weeks} weeks · ${splitLabel(block.split)}",
-                            style = MaterialTheme.typography.bodyMedium)
-                        Text("${block.days.size} scheduled days · ${pretty(block.purpose)}",
-                            style = MaterialTheme.typography.bodySmall)
+                        PursuitDisclosureRow(
+                            title="${index+1}. ${block.label}",
+                            subtitle="${pretty(block.phase)} · ${block.weeks} weeks · " +
+                                "${splitLabel(block.split)} · ${block.days.size} training days",
+                            expanded=blockExpanded,
+                            onToggle={blockExpanded=!blockExpanded}
+                        )
+                        if(blockExpanded) {
+                        Text("${pretty(block.purpose)} · changes require renewed review",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = { editingBlock = block.blockId },
@@ -405,12 +423,19 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 Text("Later")
                             }
                         }
-                        block.days.sortedBy { it.weekday }.forEach { day ->
+                        block.days.sortedBy { it.weekday }.forEachIndexed { dayIndex,day ->
+                            var dayExpanded by rememberSaveable(
+                                draft.cycleId,block.blockId,day.weekday
+                            ) { mutableStateOf(index==0 && dayIndex==0) }
                             HorizontalDivider()
-                            Text("${customWeekdays.getOrElse(day.weekday) { "Day" }} · ${day.label}",
-                                style = MaterialTheme.typography.titleMedium)
-                            Text("${pretty(day.purpose)} · ${day.slots.size} exercises",
-                                style = MaterialTheme.typography.bodySmall)
+                            PursuitDisclosureRow(
+                                title="${customWeekdays.getOrElse(day.weekday) { "Day" }} · ${day.label}",
+                                subtitle="${pretty(day.purpose)} · ${day.slots.size} exercises · " +
+                                    "${day.slots.sumOf { it.sets.count { set->set.type==DraftSetType.WORKING } }} working sets",
+                                expanded=dayExpanded,
+                                onToggle={dayExpanded=!dayExpanded}
+                            )
+                            if(dayExpanded) {
                             if (day.slots.isNotEmpty()) {
                                 day.slots.forEachIndexed { slotIndex, slot ->
                                     Text("${kotlinExerciseLabel(slot.exerciseId)} · ${slot.sets.size} sets" +
@@ -457,12 +482,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     Text("Add exercise")
                                 }
                             }
+                            } // Collapsed day: no hidden edit controls are lost.
                         }
                         OutlinedButton(onClick = { addingDayFor = block.blockId },
                             enabled = !busy && block.days.size < 7,
                             modifier = Modifier.fillMaxWidth()) {
                             Text("Add a custom training day")
                         }
+                        } // Collapsed block: its label and schedule remain visible.
                     }
                 }
             }

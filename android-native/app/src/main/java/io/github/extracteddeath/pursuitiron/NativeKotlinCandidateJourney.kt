@@ -111,6 +111,12 @@ internal fun NativeKotlinCandidateJourney(
     var progressRequestedExerciseId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    var progressRequestedTrendExerciseId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    var progressReturn by rememberSaveable {
+        mutableStateOf(KotlinCandidateDestination.HISTORY)
+    }
     val savedScreens=rememberSaveableStateHolder()
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
@@ -174,8 +180,10 @@ internal fun NativeKotlinCandidateJourney(
             settingsReturn=destination
         if(to==KotlinCandidateDestination.COACH)
             coachRequestedExerciseId=null // ordinary tab, not a saved-set handoff
-        if(to==KotlinCandidateDestination.PROGRESS)
+        if(to==KotlinCandidateDestination.PROGRESS) {
             progressRequestedExerciseId=null // ordinary tab, not a pinned lift
+            progressRequestedTrendExerciseId=null
+        }
         destination=to
     }
     // Physical Back follows the visible detail route, not the app launcher.
@@ -184,13 +192,15 @@ internal fun NativeKotlinCandidateJourney(
     BackHandler(enabled=destination==KotlinCandidateDestination.PROFILE ||
         destination==KotlinCandidateDestination.SETTINGS ||
         (destination==KotlinCandidateDestination.PROGRESS &&
-            progressRequestedExerciseId!=null)) {
+            (progressRequestedExerciseId!=null ||
+                progressRequestedTrendExerciseId!=null))) {
         when(destination) {
             KotlinCandidateDestination.PROFILE -> destination=profileReturn
             KotlinCandidateDestination.SETTINGS -> destination=settingsReturn
             KotlinCandidateDestination.PROGRESS -> {
                 progressRequestedExerciseId=null
-                destination=KotlinCandidateDestination.PROFILE
+                progressRequestedTrendExerciseId=null
+                destination=progressReturn
             }
             else -> Unit
         }
@@ -341,6 +351,8 @@ internal fun NativeKotlinCandidateJourney(
                                 // exercise IDs against the current owner history.
                                 if(exerciseId.isNotBlank()) {
                                     progressRequestedExerciseId=exerciseId
+                                    progressRequestedTrendExerciseId=null
+                                    progressReturn=KotlinCandidateDestination.PROFILE
                                     destination=KotlinCandidateDestination.PROGRESS
                                 }
                             },
@@ -349,7 +361,8 @@ internal fun NativeKotlinCandidateJourney(
                             onAppearance={appearanceExpanded=true})
                     KotlinCandidateDestination.PROGRESS ->
                         NativeKotlinStrengthStandardsScreen(host,
-                            preferredExerciseId=progressRequestedExerciseId)
+                            preferredExerciseId=progressRequestedExerciseId,
+                            preferredTrendExerciseId=progressRequestedTrendExerciseId)
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
                             onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
@@ -359,6 +372,13 @@ internal fun NativeKotlinCandidateJourney(
                             },
                             onOpenProgress={
                                 progressRequestedExerciseId=null
+                                progressRequestedTrendExerciseId=null
+                                destination=KotlinCandidateDestination.PROGRESS
+                            },
+                            onOpenExerciseTrend={exerciseId->
+                                progressRequestedExerciseId=null
+                                progressRequestedTrendExerciseId=exerciseId
+                                progressReturn=KotlinCandidateDestination.HISTORY
                                 destination=KotlinCandidateDestination.PROGRESS
                             })
                     KotlinCandidateDestination.TRAIN ->

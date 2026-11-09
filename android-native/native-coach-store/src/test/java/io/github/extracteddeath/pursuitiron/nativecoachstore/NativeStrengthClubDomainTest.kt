@@ -19,7 +19,9 @@ class NativeStrengthClubDomainTest {
             athleteId="verified-owner",manifestRevision=1L,
             completedWorkoutIds=listOf("w"),
             lastByExercise=emptyMap(),highestCompletedLoad=emptyMap(),
-            mostRepsAtLoad=rows.toList()
+            mostRepsAtLoad=rows.toList(),
+            bestLoggedSingleByLoad=rows.filter{it.reps==1}
+                .groupBy{it.key}.mapValues{(_,facts)->facts.maxBy{it.actualLoad}}
         )
     @Test fun incompleteLiftEvidenceCannotClaimATotal() {
         val one=NativeStrengthClubDomain.review(history(fact("barbell_bench","300",1)))
@@ -62,6 +64,21 @@ class NativeStrengthClubDomainTest {
         assertTrue(normalized.loggedSinglesTotalLb!!<BigDecimal("1001"))
         assertEquals(0,normalized.projectedByLiftLb.getValue("barbell_bench")
             .compareTo(normalized.loggedSinglesByLiftLb.getValue("barbell_bench")))
+    }
+    @Test fun sameLoadHigherRepCountCannotEraseEarlierLoggedSingle() {
+        val single=fact("barbell_bench","300",1)
+        val later=fact("barbell_bench","300",5)
+        val squat=fact("back_squat","350",1)
+        val deadlift=fact("conventional_deadlift","350",1)
+        // mostRepsAtLoad can retain the later five-rep observation while
+        // the separate single map correctly retains the one-rep record.
+        val full=history(later,squat,deadlift).copy(
+            bestLoggedSingleByLoad=mapOf(single.key to single,
+                squat.key to squat,deadlift.key to deadlift))
+        val review=NativeStrengthClubDomain.review(full)
+        assertTrue(review.hasLoggedThousandPoundTotal)
+        assertEquals(0,review.loggedSinglesTotalLb!!.compareTo(BigDecimal("1000")))
+        assertTrue(review.projectedTotalLb!!>review.loggedSinglesTotalLb!!)
     }
     @Test fun correctedEvidenceReplacesOldHighRatherThanCachedAchievement() {
         val old=NativeStrengthClubDomain.review(history(

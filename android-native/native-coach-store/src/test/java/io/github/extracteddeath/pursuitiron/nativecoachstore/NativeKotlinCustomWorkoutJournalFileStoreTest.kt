@@ -379,6 +379,50 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             issued.issue("owner-1","workout-2","cycle-1",2,0,input()))
     }
 
+    @Test fun customSessionNoteIsOwnerFencedAtomicAndReplayable() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        val note=CustomWorkoutJournalOperation.SessionNote(
+            "note-1",0,"Strong grip today")
+        val durable=issued.saveSessionNote("owner-1","workout-2",note)
+        assertTrue(durable.toString(),durable is NativeCustomJournalResult.Durable)
+        val saved=(durable as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals("Strong grip today",saved.sessionNote)
+        assertEquals(1L,saved.revision)
+        assertEquals(1,saved.unresolvedVisitCount)
+        assertTrue(saved.effectiveVisits.isEmpty())
+        val fresh=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(
+                temp.root.toPath()),identity,prepared,preflight,
+            history,composerJournal)
+        assertEquals("Strong grip today",
+            (fresh.open("owner-1","workout-2")
+                as NativeCustomJournalResult.Durable).issued.journal.sessionNote)
+        assertTrue((fresh.saveSessionNote("owner-1","workout-2",note)
+            as NativeCustomJournalResult.Durable).replayed)
+        val stale=fresh.saveSessionNote("owner-1","workout-2",
+            CustomWorkoutJournalOperation.SessionNote("stale",0,"Not saved"))
+        assertEquals(CustomWorkoutJournalRefusal.STALE_REVISION,
+            (stale as NativeCustomJournalResult.Rejected).journalReason)
+        assertEquals("Strong grip today",
+            (issued.open("owner-1","workout-2")
+                as NativeCustomJournalResult.Durable).issued.journal.sessionNote)
+        current=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        val denied=fresh.saveSessionNote("owner-1","workout-2",
+            CustomWorkoutJournalOperation.SessionNote("wrong-owner",1,"leak"))
+        assertEquals(NativeCustomJournalRefusal.NOT_AUTHORIZED,
+            (denied as NativeCustomJournalResult.Rejected).reason)
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val cleared=fresh.saveSessionNote("owner-1","workout-2",
+            CustomWorkoutJournalOperation.SessionNote("clear",1,""))
+        assertEquals("",(cleared as NativeCustomJournalResult.Durable)
+            .issued.journal.sessionNote)
+        val recorded=issued.record("owner-1","workout-2",
+            recordSet("set-after-note",2))
+        assertTrue(recorded is NativeCustomJournalResult.Durable)
+        assertEquals(1,(recorded as NativeCustomJournalResult.Durable)
+            .issued.journal.effectiveVisits.size)
+    }
+
     @Test fun actualSetWriteIsDurableAndColdRecoveryDoesNotInventRir() {
         initialize();approve();prepareWeek();enroll();issueWeek()
         val operation=recordSet("event-1",0)

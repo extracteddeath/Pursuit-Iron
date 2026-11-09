@@ -41,7 +41,7 @@ assert.match(generatedSection,/if\(showAll\) renderSecondaryControls\(\)\s*rende
 // In custom Focus, the next-workout entry appears ahead of readiness, but the
 // unfocused full-ledger path still keeps readiness above the program's sets.
 const beforeNext=custom.indexOf('if(!focusOnNext && !finished');
-const next=custom.indexOf('if(!finished && current.finishedByEventId==null)');
+const next=custom.indexOf('if(!finished && current.finishedByEventId==null)', beforeNext);
 const entries=custom.indexOf('if(!verifiedFinishedInHistory || showFinishedSets)');
 const afterEntries=custom.indexOf('if(focusOnNext && !finished');
 const finish=custom.indexOf('if(!verifiedFinishedInHistory)PursuitCard {',afterEntries);

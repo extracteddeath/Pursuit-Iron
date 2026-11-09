@@ -461,6 +461,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
             owner.ownerKey,workoutId,eventId,expectedRevision,swapEventId)
     }
 
+    /** Authenticated custom-session note. This is an actual atomic journal
+     * receipt, not a local-only preference or a planned program note. */
+    fun saveIssuedCustomSessionNote(
+        workoutId:String,
+        operation:CustomWorkoutJournalOperation.SessionNote
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.saveSessionNote(
+            owner.ownerKey,workoutId,operation)
+    }
+
     /** Actual observations, never suggestions or virtual completed sets. */
     fun recordIssuedCustomSet(
         workoutId:String,operation:CustomWorkoutJournalOperation.Record

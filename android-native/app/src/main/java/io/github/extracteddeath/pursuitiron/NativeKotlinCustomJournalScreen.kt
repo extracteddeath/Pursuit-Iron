@@ -43,6 +43,7 @@ internal fun NativeKotlinCustomJournalScreen(
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
     var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
+    var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     val editorStates=rememberSaveableStateHolder()
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
@@ -57,6 +58,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var busy by remember(host,workoutId){mutableStateOf(false)}
     var loading by remember(host,workoutId){mutableStateOf(true)}
     var error by remember(host,workoutId){mutableStateOf<String?>(null)}
+    var noteError by remember(host,workoutId){mutableStateOf<String?>(null)}
     var finished by remember(host,workoutId){mutableStateOf(false)}
     var finishConfirm by remember(host,workoutId){mutableStateOf(false)}
     var verifiedFinishedInHistory by remember(host,workoutId){
@@ -144,6 +146,39 @@ internal fun NativeKotlinCustomJournalScreen(
             busy=false
         }
     }
+    fun saveSessionNote(text:String) {
+        if(busy)return
+        val current=journal ?:return
+        if(current.finishedByEventId!=null)return
+        busy=true
+        noteError=null
+        scope.launch {
+            val operation=CustomWorkoutJournalOperation.SessionNote(
+                "custom-note-"+UUID.randomUUID(),current.revision,text)
+            val result=withContext(Dispatchers.IO) {
+                runCatching {
+                    host.saveIssuedCustomSessionNote(workoutId,operation)
+                }.getOrNull()
+            }
+            if(result is NativeCustomJournalResult.Durable) {
+                journal=result.issued.journal
+                noteError=null
+            } else {
+                noteError="The session note was not saved. The draft is still here; review it before trying again."
+                val recovered=withContext(Dispatchers.IO) {
+                    runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
+                }
+                // A second storage failure must NOT unmount the note
+                // sheet or destroy the athlete's unsaved text draft.
+                // Show the refusal and retain the last verified journal.
+                val reopened=(recovered as? NativeCustomJournalResult.Durable)
+                    ?.issued?.journal
+                if(reopened!=null)journal=reopened
+            }
+            busy=false
+        }
+    }
+
     fun reviewSwap(slot:CustomWorkoutSlotSnapshot) {
         if(busy)return
         val active=journal ?:return
@@ -257,6 +292,13 @@ internal fun NativeKotlinCustomJournalScreen(
         }
     }
     val current=journal
+    if(showSessionNote && current!=null)NativeKotlinCustomSessionNoteSheet(
+        journal=current,
+        busy=busy,
+        error=noteError,
+        onSave={saveSessionNote(it)},
+        onDismiss={showSessionNote=false;noteError=null}
+    )
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
         enabled=referenceMode==WorkoutReferenceMode.LAST && current!=null)
     val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
@@ -321,6 +363,22 @@ internal fun NativeKotlinCustomJournalScreen(
                         progress={if(mainTotal==0)0f else
                             mainLogged.toFloat()/mainTotal.toFloat()},
                         modifier=Modifier.fillMaxWidth())
+                    if(!finished && current.finishedByEventId==null) {
+                        OutlinedButton(
+                            onClick={noteError=null;showSessionNote=true},
+                            enabled=!busy,
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                        ) {
+                            Text(if(current.sessionNote.isBlank())
+                                "Add session note" else "Edit saved session note")
+                        }
+                    } else if(current.sessionNote.isNotBlank()) {
+                        Text("Saved session note",
+                            style=MaterialTheme.typography.labelLarge,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(current.sessionNote,
+                            style=MaterialTheme.typography.bodyMedium)
+                    }
                     if(verifiedFinishedInHistory) {
                         Text("Workout saved",style=MaterialTheme.typography.headlineSmall,
                             color=MaterialTheme.colorScheme.primary)

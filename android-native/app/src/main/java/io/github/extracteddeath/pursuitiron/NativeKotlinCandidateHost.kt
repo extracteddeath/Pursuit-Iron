@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron
 import android.content.Context
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import java.math.BigDecimal
 
 /**
  * First REAL Android module integration of the independent Kotlin coaching

@@ -132,8 +132,10 @@ private fun ChartsTab(x: JSONObject) {
     }
     if (rows.isEmpty()) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Nothing logged in this range", style = MaterialTheme.typography.titleSmall)
-            Text("Widen the range below, or log a session with this lift.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            // With All selected there's no wider range to try; it says when the chart fills in instead.
+            val none = x.list("log").isEmpty()
+            Text(if (none) "Nothing logged yet" else "Nothing logged in this range", style = MaterialTheme.typography.titleSmall)
+            Text(if (none) "Finish a workout with this lift and its sessions appear here." else "Pick a longer range below.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
     } else {
         val vals = rows.map(valOf); val n = vals.size

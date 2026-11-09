@@ -523,7 +523,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                         modifier = Modifier.align(Alignment.CenterVertically).border(1.dp, cs.primary, RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
                 }
                 val last = x.optJSONObject("last")
-                Text(listOfNotNull(x.s("partLabel"), x.s("type"), last?.let { l -> "last " + (if (l.d("w") > 0) "${fmtNum(l.d("w"))} ${l.s("unit")}" else "BW") + " × ${l.i("r")}" }).joinToString(" · "),
+                Text(listOfNotNull(x.s("partLabel"), x.s("type").replaceFirstChar { it.uppercase() }, last?.let { l -> "last " + (if (l.d("w") > 0) "${fmtNum(l.d("w"))} ${l.s("unit")}" else "BW") + " × ${l.i("r")}" }).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
             }
             IconButton(onClick = { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to -1) }, enabled = slot > 0, modifier = Modifier.size(40.dp)) { Icon(PiIcons.ChevronUp, "Move ${x.s("name")} earlier", Modifier.size(18.dp)) }

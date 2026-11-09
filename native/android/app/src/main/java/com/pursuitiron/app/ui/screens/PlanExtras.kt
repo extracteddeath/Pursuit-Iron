@@ -61,8 +61,8 @@ import kotlinx.coroutines.launch
 
 /**
  * App.js LoadWaveCard: planned working sets per week, the deload included as the program's own fact.
- * Bars are scaled from the lightest week, not from zero (every week of a block is a large number), and
- * the caption says so. Tapping a bar shows that week in the plan.
+ * Bars start from zero so their heights compare honestly; the caption gives the range. Tapping a bar shows
+ * that week in the plan.
  */
 @Composable
 fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (Int) -> Unit, onMatrix: () -> Unit) {
@@ -82,7 +82,8 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
         Row(Modifier.fillMaxWidth().height(118.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             weeks.forEach { wk ->
                 val w = wk.i("w"); val on = w == selected; val dl = wk.b("deload"); val n = wk.i("sets")
-                val frac = if (peak == low) 1f else (n - low).toFloat() / (peak - low).toFloat()
+                // From zero: scaled from the lightest week, 61 vs 71 sets drew as a sliver beside a full bar.
+                val frac = if (peak <= 0) 1f else n.toFloat() / peak
                 val r by animateDpAsState(if (on) 12.dp else 8.dp, Motion.spring(), label = "bar")
                 Column(
                     Modifier.weight(1f).clickable { onPick(w) }
@@ -90,13 +91,13 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text("$n", style = MaterialTheme.typography.labelSmall, color = if (on) cs.primary else cs.onSurfaceVariant)
-                    Box(Modifier.fillMaxWidth().height((16 + 62 * frac).dp).growY(weeks.indexOf(wk)).clip(RoundedCornerShape(r))
+                    Box(Modifier.fillMaxWidth().height((78 * frac).coerceAtLeast(6f).dp).growY(weeks.indexOf(wk)).clip(RoundedCornerShape(r))
                         .background(when { on -> cs.primary; dl -> cs.tertiaryContainer; else -> cs.primaryContainer }))
                     Text(if (dl) "DL" else "W$w", style = MaterialTheme.typography.labelSmall, color = if (on) cs.primary else cs.onSurfaceVariant)
                 }
             }
         }
-        Text("Scaled from the lightest week ($low sets) to the heaviest ($peak). Tap a week to see it.",
+        Text(if (peak > low) "From $low to $peak sets across the block. Tap a week to see it." else "Tap a week to see it.",
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         FilledTonalButton(onClick = onMatrix) { Icon(PiIcons.Grid, null, Modifier.size(18.dp)); Text("  Every lift, week by week") }
     }

@@ -76,7 +76,7 @@ fun PlatesSheet(vm: AppViewModel, onCalc: () -> Unit, onClose: () -> Unit) {
             Text("Plates & bars", style = MaterialTheme.typography.headlineSmall)
             if (p == null) return@Column
             val u = p.s("unit", "kg")
-            val gymNote = if (p.i("gymCount") > 1 && p.s("gymName").isNotBlank()) " For ${p.s("gymName")} — each gym keeps its own bars and plates (Settings → Gyms)." else ""
+            val gymNote = if (p.i("gymCount") > 1 && p.s("gymName").isNotBlank()) " These are for ${p.s("gymName")}; each of your gyms keeps its own." else ""
             Text("The plate calculator only uses what you own, and tells you the closest load you can actually build.$gymNote",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
             Row(Modifier.fillMaxWidth().height(48.dp).clip(CircleShape).background(cs.secondaryContainer).clickable(onClick = onCalc).semantics(mergeDescendants = true) { role = Role.Button },

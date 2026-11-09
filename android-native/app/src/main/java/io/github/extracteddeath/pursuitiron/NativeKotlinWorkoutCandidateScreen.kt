@@ -237,13 +237,29 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     label={Text("${kotlinExerciseLabel(ex.exerciseId)} · ${ex.resolvedCount}/${ex.sets.size}")})
             }
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            Text(if(showAll)"All issued sets" else "Focus · one set",
-                style=MaterialTheme.typography.titleMedium)
-            TextButton(onClick={showAll=!showAll}) {
-                Text(if(showAll)"Focus mode" else "Show all")
+        val focusDetail=selected?.target?.let { target ->
+            val typeSets=allSets.filter {
+                it.target.exerciseId==target.exerciseId &&
+                    it.target.type==target.type
             }
+            val number=typeSets.indexOfFirst {
+                it.target.setKey==target.setKey
+            }+1
+            "${if(target.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · set $number of ${typeSets.size}"
         }
+        PursuitWorkoutFocusHeader(
+            exerciseLabel=selected?.target?.exerciseId?.let(::kotlinExerciseLabel),
+            setDetail=focusDetail,
+            focusOnNext=!showAll,
+            onFocusChange={showAll=!it},
+            enabled=!state.busy,
+            heading=when {
+                presentation.finished -> "WORKOUT REVIEW"
+                selected?.target?.setKey==presentation.firstUnresolvedSetKey ->
+                    "UP NEXT"
+                else -> "SELECTED SET"
+            }
+        )
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Text("Readiness",style=MaterialTheme.typography.labelLarge)

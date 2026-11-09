@@ -87,6 +87,11 @@ assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
   composer.includes('if(!presentation.finished) {') &&
   journal.includes('if(!finished && current.finishedByEventId==null) {'),
   'Both workout types must expose the shared editable readiness/restriction controls only while training');
+assert.ok(journal.indexOf('PursuitWorkoutFocusHeader(') <
+    journal.indexOf('PursuitWorkoutReadinessPanel(') &&
+  composer.indexOf('PursuitWorkoutFocusHeader(') <
+    composer.indexOf('PursuitWorkoutReadinessPanel('),
+  'Both workout types must place next-set focus before optional readiness input');
 assert.ok(composer.includes('PursuitWorkoutFocusHeader(') &&
   journal.includes('PursuitWorkoutFocusHeader('),
   'Custom and generated workouts must share the same accessible focus panel');

@@ -100,6 +100,57 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         } else null
         return CustomAuthoredSet(type,load,reps,rir,active,rest,amp)
     }
+    private fun DataOutputStream.slot(slot:CustomWorkoutSlotSnapshot) {
+        writeUTF(slot.slotId)
+        writeUTF(slot.exerciseId)
+        writeUTF(slot.familyId)
+        writeUTF(slot.variantId)
+        kind(slot.role)
+        optional(slot.attachmentId)
+        optional(slot.supersetGroup)
+        writeBoolean(slot.pinned)
+        writeUTF(slot.coachNote)
+        writeInt(slot.sets.size)
+        slot.sets.forEach {set->
+            writeUTF(set.setKey)
+            writeUTF(set.slotId)
+            writeInt(set.ordinalInSlot)
+            authored(set.prescription)
+        }
+    }
+    private fun DataInputStream.slot():CustomWorkoutSlotSnapshot {
+        val slotId=readUTF()
+        val exerciseId=readUTF()
+        val familyId=readUTF()
+        val variantId=readUTF()
+        val role=kind<ComposerRole>()
+        val attachment=optional()
+        val group=optional()
+        val pinned=readBoolean()
+        val note=readUTF()
+        val count=readInt()
+        if(count !in 1..20)throw IOException("invalid swap slot set count")
+        val sets=List(count) {
+            CustomWorkoutSetSnapshot(readUTF(),readUTF(),readInt(),authored())
+        }
+        return CustomWorkoutSlotSnapshot(slotId,exerciseId,familyId,
+            variantId,role,attachment,group,pinned,note,
+            Collections.unmodifiableList(sets))
+    }
+    /** One version-stable slot payload for a journal Swap receipt. */
+    internal fun encodeSlot(value:CustomWorkoutSlotSnapshot):ByteArray =
+        ByteArrayOutputStream().also{bytes->
+            DataOutputStream(bytes).use { it.slot(value) }
+        }.toByteArray().also { require(it.size in 24..MAX_BYTES) }
+    internal fun decodeSlot(bytes:ByteArray):CustomWorkoutSlotSnapshot {
+        if(bytes.size !in 24..MAX_BYTES)throw IOException("invalid swap slot size")
+        return DataInputStream(ByteArrayInputStream(bytes)).use { input->
+            val slot=input.slot()
+            if(input.available()!=0)throw IOException("trailing swap slot bytes")
+            slot
+        }
+    }
+
     private fun DataOutputStream.split(split:CustomSplitIdentity) {
         when(split) {
             is CustomSplitIdentity.Named -> {
@@ -212,24 +263,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             out.writeLong(snapshot.knownSetAndRestSeconds)
             out.optionalInt(snapshot.declaredNonSetSeconds)
             out.writeInt(snapshot.slots.size)
-            for(slot in snapshot.slots) {
-                out.writeUTF(slot.slotId)
-                out.writeUTF(slot.exerciseId)
-                out.writeUTF(slot.familyId)
-                out.writeUTF(slot.variantId)
-                out.kind(slot.role)
-                out.optional(slot.attachmentId)
-                out.optional(slot.supersetGroup)
-                out.writeBoolean(slot.pinned)
-                out.writeUTF(slot.coachNote)
-                out.writeInt(slot.sets.size)
-                slot.sets.forEach { set ->
-                    out.writeUTF(set.setKey)
-                    out.writeUTF(set.slotId)
-                    out.writeInt(set.ordinalInSlot)
-                    out.authored(set.prescription)
-                }
-            }
+            snapshot.slots.forEach {out.slot(it)}
         }
         return output.toByteArray().also {
             require(it.size in 16..MAX_BYTES)
@@ -259,26 +293,11 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 if(size !in 1..MAX_SLOTS)throw IOException("invalid number of slots")
                 var totalSets=0
                 val slots=List(size) {
-                    val slotId=input.readUTF()
-                    val exerciseId=input.readUTF()
-                    val familyId=input.readUTF()
-                    val variantId=input.readUTF()
-                    val role=input.kind<ComposerRole>()
-                    val attachment=input.optional()
-                    val group=input.optional()
-                    val pinned=input.readBoolean()
-                    val note=input.readUTF()
-                    val count=input.readInt()
-                    if(count !in 1..20 || totalSets+count>MAX_TARGETS)
-                        throw IOException("invalid set count")
-                    totalSets+=count
-                    val sets=List(count) {
-                        CustomWorkoutSetSnapshot(input.readUTF(),input.readUTF(),
-                            input.readInt(),input.authored())
+                    input.slot().also {slot->
+                        totalSets+=slot.sets.size
+                        if(totalSets>MAX_TARGETS)
+                            throw IOException("invalid set count")
                     }
-                    CustomWorkoutSlotSnapshot(slotId,exerciseId,familyId,
-                        variantId,role,attachment,group,pinned,note,
-                        Collections.unmodifiableList(sets))
                 }
                 if(input.available()!=0)
                     throw IOException("trailing custom snapshot data")

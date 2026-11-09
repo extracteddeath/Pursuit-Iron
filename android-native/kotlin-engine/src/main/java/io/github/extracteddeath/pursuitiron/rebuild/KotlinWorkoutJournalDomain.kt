@@ -237,8 +237,8 @@ object KotlinWorkoutJournalDomain {
                         target.exerciseId!=nextId ||
                         target.role!=earlier.first().role ||
                         target.purpose!=earlier.first().purpose ||
-                        target.type to target.ordinal !in oldOrdinals ||
-                        target.setKey!="swap:${operation.eventId}:s${target.ordinal}" ||
+                        (target.type to target.ordinal) !in oldOrdinals ||
+                        target.setKey!="swap:${operation.eventId}:${target.type.name.lowercase()}:${target.ordinal}" ||
                         target.setKey.length !in 1..100 ||
                         target.reps.minimum !in 1..100 ||
                         target.reps.maximum !in target.reps.minimum..100 ||

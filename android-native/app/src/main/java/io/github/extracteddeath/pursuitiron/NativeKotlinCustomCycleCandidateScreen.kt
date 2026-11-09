@@ -515,6 +515,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     Text("${kotlinExerciseLabel(slot.exerciseId)} · ${slot.sets.size} sets" +
                                         if (slot.pinned) " · Pinned" else "",
                                         style = MaterialTheme.typography.bodyMedium)
+                                    val hasProtectedWeekEdit=current.weekOverrides[
+                                        block.blockId].orEmpty().any {
+                                        it.weekday==day.weekday && it.slotId==slot.slotId
+                                    }
                                     Row(Modifier.fillMaxWidth()
                                         .horizontalScroll(rememberScrollState()),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -523,10 +527,6 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                                 block.blockId, day.weekday, slot.slotId) },
                                             enabled = !busy
                                         ) { Text("Edit sets") }
-                                        val hasProtectedWeekEdit=current.weekOverrides[
-                                            block.blockId].orEmpty().any {
-                                            it.weekday==day.weekday && it.slotId==slot.slotId
-                                        }
                                         TextButton(
                                             onClick={swapExerciseEditor=Triple(
                                                 block.blockId,day.weekday,slot.slotId)},
@@ -549,6 +549,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                             Text("Later")
                                         }
                                     }
+                                    if(hasProtectedWeekEdit || slot.supersetGroup!=null)
+                                        Text(if(hasProtectedWeekEdit)
+                                            "Swap requires reviewing this exercise's week-specific overrides first."
+                                            else "Swap requires unlinking this supersetted exercise first.",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else {
                                 Text("No exercises yet. This day is an unfinished draft.",

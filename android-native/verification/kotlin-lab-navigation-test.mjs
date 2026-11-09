@@ -223,6 +223,8 @@ assert.ok(standards.includes('val bestByExercise=remember(completed,displayUnit)
   standards.includes('var standardsExpanded by rememberSaveable') &&
   standards.includes('if(standardsExpanded) {') &&
   standards.includes('onToggle={standardsExpanded=!standardsExpanded}') &&
+  standards.indexOf('title="Published reference details"') <
+    standards.indexOf('PursuitSectionHeading("Your exercise favorites"') &&
   standardsOverview.includes('fun NativeKotlinStrengthOverview(') &&
   standardsOverview.includes('val fontScale=LocalDensity.current.fontScale') &&
   standardsOverview.includes('fontScale>=1.35f || maxWidth<360.dp -> 1') &&

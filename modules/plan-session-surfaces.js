@@ -58,7 +58,9 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
             const dose = sessionTargetsText(row.effective, review.unit);
             const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${pr.estimated} ${review.unit}.`
                 : `Could beat your ${pr.bestReps}-rep best at this load.`) : row.reason;
-            const guidance = `${dose} · ${technique || why}`;
+            // With no load yet the reason already says to choose one; "Choose load × 8 · Choose a starting load…" repeated it.
+            const noLoad = (row.effective || []).every(t => t?.weight === '' || t?.weight == null);
+            const guidance = noLoad ? (technique || why) : `${dose} · ${technique || why}`;
             return _jsxs("div", { className: "wpb-game-plan-exercise", "data-game-plan-exercise": row.id,
                 ...(pr ? { "data-pr-exercise": row.id } : {}), children: [
                 _jsx("span", { className: "wpb-game-plan-highlight-icon", "aria-hidden": true,

@@ -26,7 +26,7 @@ const runs = values => {
     return groups.map(g => `W${g.start}${g.end !== g.start ? '–' + g.end : ''}: ${g.value}`);
 };
 const settings = [
-    ['goal', 'Goal', v => ({ strength: 'Strength', hypertrophy: 'Muscle', both: 'Both' })[v] || v],
+    ['goal', 'Goal', v => ({ strength: 'Strength', hypertrophy: 'Hypertrophy', both: 'Strength & Size' })[v] || v],
     ['session', 'Session length', v => ({ s20: 'Up to 20 min', s40: '20–40 min', s60: '40–60 min', s90: '60–90 min', s120: '90–120 min', s150: 'Over 120 min' })[v] || v],
     ['progression', 'Progression', v => v === 'manual' ? 'Authored targets' : 'Automatic'],
     ['barbellCap', 'Barbell limit', v => v == null ? 'No limit' : String(v)],

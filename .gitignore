@@ -18,3 +18,14 @@ verification/*.png
 verification/m200-generation-quality-audit.json
 verification/m200-regional-dose-results.json
 verification/m206-working-week-dose-results.json
+
+# Native app local outputs
+verification/r62-*.png
+native/core/node_modules/
+native/android/.gradle/
+native/android/build/
+native/android/app/build/
+native/android/local.properties
+native/android/app/src/main/assets/pi-core.js
+native/android/app/src/main/assets/pi-core.json
+__pycache__/

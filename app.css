@@ -7426,6 +7426,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-home-health-copy{display:grid;gap:4px;flex:1;min-width:0}.wpb-home-health-copy strong{font-size:13px}.wpb-home-health-copy span{font-size:12px;line-height:1.4;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
 .wpb-home-health>button{min-height:44px;padding:8px 10px;border:0;border-radius:12px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:750;cursor:pointer;max-width:100px}
 @media(min-width:700px){.wpb-injury-journal{max-width:600px}.wpb-injury-area-grid{gap:10px}}
+/* Pain flow: severity cards, step dots and the Home protection card. */
+.wpb-injury-levels button{grid-template-columns:auto 1fr;align-items:center;gap:14px;min-height:72px;padding:14px 16px;border-radius:20px}
+.wpb-injury-level-copy{display:grid;gap:3px}.wpb-injury-level-copy strong{font-size:15px}.wpb-injury-level-copy span{font-size:13px}
+.wpb-injury-pips{display:flex;align-items:flex-end;gap:3px;height:22px}.wpb-injury-pips i{display:block;width:6px;border-radius:3px;background:var(--wpb-theme-border)}
+.wpb-injury-pips i:nth-child(1){height:10px}.wpb-injury-pips i:nth-child(2){height:16px}.wpb-injury-pips i:nth-child(3){height:22px}
+.wpb-injury-pips i[data-on=true]{background:var(--wpb-theme-warning,#e0a31e)}
+.wpb-injury-steps{display:flex;gap:6px;margin:4px 0 14px}.wpb-injury-steps i{flex:1;height:4px;border-radius:2px;background:var(--wpb-theme-border);transition:background .3s cubic-bezier(.2,0,0,1)}
+.wpb-injury-steps i[data-on=true]{background:var(--wpb-theme-accent)}
+.wpb-injury-area-all{grid-template-columns:repeat(2,minmax(0,1fr))}.wpb-injury-area-all button{min-height:52px}
+[data-injury-step]{animation:wpbInjuryStep .32s cubic-bezier(.05,.7,.1,1) both}
+@keyframes wpbInjuryStep{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.wpb-injury-change{margin-top:4px;min-height:40px;padding:0 14px;border:0;border-radius:999px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.wpb-home-protect{display:grid;gap:12px;padding:16px;border-radius:24px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);margin:12px 0 0;animation:wpbInjuryStep .4s cubic-bezier(.05,.7,.1,1) both}
+.wpb-home-protect-head{display:flex;gap:12px;align-items:flex-start}.wpb-home-protect-head svg{flex:none;margin-top:1px}
+.wpb-home-protect-head>span{display:grid;gap:3px}.wpb-home-protect-head strong{font-size:15px}.wpb-home-protect-head span span{font-size:13px;line-height:1.4}
+.wpb-home-protect-actions{display:flex;gap:8px}.wpb-home-protect-actions button{min-height:44px;padding:0 18px;border-radius:999px;font:inherit;font-size:14px;font-weight:750;cursor:pointer;border:0}
+.wpb-home-protect-actions button:first-child{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+.wpb-home-protect-actions button:last-child{background:transparent;color:var(--wpb-theme-accent-ink)}
+@media(prefers-reduced-motion:reduce){[data-injury-step],.wpb-home-protect{animation:none}}
 
 .wpb-injury-journal{display:flex;flex-direction:column;overflow:hidden}
 .wpb-injury-journal .wpb-session-dialog-heading{position:static;flex-shrink:0}
@@ -8180,7 +8199,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Cohesion 14: one presentation owner for Cycle list/detail, rows and previews.
    Canonical cycle projections and callbacks remain in their existing components. */
 #root .wpb-cycle-header{display:flex;align-items:center;gap:10px;padding:12px 16px;min-width:0;flex-wrap:wrap;}
-#root .wpb-cycle-heading{flex:1 1 7rem;min-width:min(7rem,100%);margin:0;font-size:1.25rem;overflow-wrap:anywhere;}
+#root .wpb-cycle-heading{flex:1 1 7rem;min-width:min(7rem,100%);margin:0;font-size:1.25rem;line-height:1.25;overflow-wrap:anywhere;}
 #root .wpb-cycle-header>.wpb-ui-action{font-size:.8125rem;white-space:normal;}
 #root .wpb-cycle-title-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:15px;background:var(--wpb-theme-accent-dim);}
 #root .wpb-cycle-scroll{flex:1;overflow-y:auto;min-width:0;padding:8px 16px 28px;}
@@ -9153,3 +9172,28 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-volume-contributors,.wpb-volume-ramp-dose{border:1px solid CanvasText}
   .wpb-volume-track{outline:1px solid CanvasText}
 }
+
+/* First-time lift: the engine's labelled starting estimate. */
+.wpb-starting-estimate{display:grid;gap:5px;margin:0 0 10px;padding:12px 14px;border-radius:18px;background:var(--wpb-theme-card-high,var(--wpb-theme-card));font-size:13px;line-height:1.45}
+.wpb-starting-estimate strong{font-size:15px;color:var(--wpb-theme-text)}.wpb-starting-estimate span{color:var(--wpb-theme-muted)}
+.wpb-pb{background:var(--wpb-theme-card);border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;gap:10px}
+.wpb-pb-note{font-size:13px;color:var(--wpb-theme-muted)}.wpb-pb-label{font-size:12px;font-weight:800;letter-spacing:.4px;color:var(--wpb-theme-muted)}
+.wpb-pb-bars{display:flex;gap:8px}.wpb-pb-bars button{flex:1;height:44px;border-radius:999px;border:0;cursor:pointer;font:inherit;font-size:15px;font-weight:700;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);transition:border-radius .25s cubic-bezier(.2,0,0,1),background .2s}
+.wpb-pb-bars button[aria-checked=true]{border-radius:14px;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+.wpb-pb-list{display:flex;flex-direction:column;gap:2px;border-radius:14px;overflow:hidden}
+.wpb-pb-row{display:flex;align-items:center;gap:12px;padding:6px 10px;background:var(--wpb-theme-bg-tint)}
+.wpb-pb-plate{width:28px;display:flex;justify-content:center}.wpb-pb-plate i{display:block;border-radius:4px;background:var(--wpb-theme-border);opacity:.6}
+.wpb-pb-row[data-owned=true] .wpb-pb-plate i{background:var(--wpb-theme-accent);opacity:1}
+.wpb-pb-size{flex:1;font-size:15px;font-weight:700}.wpb-pb-count{width:26px;text-align:center;font-size:16px;font-weight:800}
+.wpb-pb-step{width:40px;height:40px;border-radius:12px;border:0;cursor:pointer;font:inherit;font-size:20px;font-weight:700;background:var(--wpb-theme-bg);color:var(--wpb-theme-text)}
+.wpb-pb-step[data-round=true]{border-radius:999px;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}.wpb-pb-step:disabled{opacity:.4;cursor:default}
+.wpb-pb-max{padding:12px 14px;border-radius:14px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font-size:14px}
+.wpb-ex-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.wpb-ex-facts>div{display:grid;gap:3px;padding:11px 12px;border-radius:16px;background:var(--wpb-theme-card);min-width:0}
+.wpb-ex-facts span{font-size:11px;font-weight:750;letter-spacing:.4px;text-transform:uppercase;color:var(--wpb-theme-muted)}
+.wpb-ex-facts strong{font-size:14px;color:var(--wpb-theme-text);overflow-wrap:anywhere}
+.wpb-ex-facts>div[data-warn=true] strong{color:var(--wpb-theme-warning)}
+.wpb-share-body{display:grid;gap:14px}.wpb-share-preview{display:block;width:100%;max-width:420px;margin:0 auto;border-radius:20px;aspect-ratio:1080/1350;object-fit:cover;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+.wpb-share-actions{display:flex;gap:8px}.wpb-share-actions button{flex:1;min-height:50px;border-radius:999px;border:0;font:inherit;font-size:15px;font-weight:750;cursor:pointer;background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
+.wpb-share-actions .wpb-share-primary{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}.wpb-share-actions button:disabled{opacity:.45}
+#root .wpb .wpb-wizard-equip-heading{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--wpb-theme-faint);text-transform:uppercase;margin:14px 0 6px}

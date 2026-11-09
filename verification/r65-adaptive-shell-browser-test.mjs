@@ -17,7 +17,9 @@ const program={
 const store=theme=>({
   v:13,savedAt:1,saved:[program],cycles:[],history:[{
     id:'r70-progress-fixture',programId:program.id,programName:program.name,
-    dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-86400000,
+    dayId:'upper',dayLabel:'Upper',weekIndex:1,
+    // Yesterday, but never last month: on the 1st, yesterday falls outside the calendar month on screen.
+    date:Math.max(Date.now()-86400000,new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime()+60000),
     unit:'lb',duration:2400,totalSets:2,tonnage:1320,
     perf:{'bb-bench':{weight:185,reps:6,
       sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},

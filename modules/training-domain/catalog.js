@@ -60,6 +60,30 @@ const EQUIPMENT = [
 
 const ALL_EQUIP_IDS = EQUIPMENT.map(e => e.id);
 
+/* How equipment is SHOWN when someone sets up a gym or a program: grouped by what it trains, related machines side
+   by side. EQUIPMENT's own order is append-only (program codes index into it) and its `cat` drives engine
+   predicates (isMachineLike), so neither can carry this. Alphabetical inside one "Machines" bucket of 26 left
+   Hip Abduction and Hip Adduction apart in the setup list (array order) and buried the leg machines among
+   the rest; here each group reads in the order a lifter thinks of it. Every id appears exactly once; an id
+   added to EQUIPMENT and not placed here still shows, under "Other". */
+const EQUIP_GROUPS = [
+    { name: "Free weights", ids: ["dumbbell", "kettlebell", "bands"] },
+    { name: "Bars", ids: ["barbell", "ezbar", "trapbar", "safetybar", "landmine"] },
+    { name: "Benches & stations", ids: ["bench", "inclinebench", "declinebench", "preacher", "pullup", "dip", "ghd", "reversehyper"] },
+    { name: "Cables & general machines", ids: ["cable", "smith", "machine", "assisted"] },
+    { name: "Leg machines", ids: ["legpress", "hacksquat", "beltsquat", "legext", "legcurl", "calfmachine"] },
+    { name: "Hip & glute machines", ids: ["hipthrustmachine", "kickback", "abduction", "adduction"] },
+    { name: "Upper-body machines", ids: ["machinepress", "pecdeck", "machineshoulder", "machinelatraise", "machinerow", "machinepullover", "machineshrug"] },
+    { name: "Arm & core machines", ids: ["machinecurl", "machineext", "machinecrunch"] },
+];
+function equipmentGroups() {
+    const byId = new Map(EQUIPMENT.map(e => [e.id, e])), placed = new Set();
+    const groups = EQUIP_GROUPS.map(g => ({ name: g.name, items: g.ids.filter(id => byId.has(id) && !placed.has(id)).map(id => { placed.add(id); return byId.get(id); }) }))
+        .filter(g => g.items.length);
+    const rest = EQUIPMENT.filter(e => !placed.has(e.id));
+    return rest.length ? [...groups, { name: "Other", items: rest }] : groups;
+}
+
 const RAW = [
     ["bb-bench", "Barbell Bench Press", "chest", "compound", ["barbell", "bench", "rack"], 5, 10],
     ["inc-db-press", "Incline Dumbbell Press", "chest", "compound", ["dumbbell", "inclinebench"], 8, 12],
@@ -567,9 +591,9 @@ const TEMPLATES = [
     { id: "arnold", cat: "Hypertrophy", name: "Chest + Back / Shoulders + Arms / Legs", tag: "6 days · Hypertrophy", desc: "Chest+Back · Shoulders+Arms · Legs, twice, with Pursuit-owned dose and progression", cfg: { split: "arnold", days: 6, session: "s90", goal: "hypertrophy", experience: "advanced", weeks: 6 } },
     { id: "bro5", cat: "Hypertrophy", name: "Bro Split", tag: "5 days · Hypertrophy", desc: "One muscle group per day, maximum volume", cfg: { split: "bro", days: 5, session: "s90", goal: "hypertrophy", experience: "intermediate", weeks: 6 } },
     { id: "bro6", cat: "Hypertrophy", name: "Bro Split · 6 Day", tag: "6 days · Hypertrophy", desc: "Bro split with an extra leg day for more lower-body volume", cfg: { split: "bro", days: 6, session: "s90", goal: "hypertrophy", experience: "advanced", weeks: 6 } },
-    { id: "p531", cat: "Strength", featured: true, featuredRank: 70, name: "Main-Lift Waves", tag: "4 days · Strength", desc: "One main barbell lift anchors each day while Pursuit adapts the wave, dose and progression", cfg: { split: "five_three_one", days: 4, session: "s60", goal: "strength", experience: "intermediate", weeks: 4, percentScheme: "531" } },
-    { id: "p531beg", cat: "Beginner", featured: true, featuredRank: 80, name: "Main-Lift Waves · Novice", tag: "3 days · Strength + Size", desc: "A novice three-day main-lift wave with two prioritized barbell exposures per session and Pursuit-owned assistance", cfg: { split: "five31_beginner", days: 3, session: "s90", goal: "both", experience: "beginner", weeks: 4, percentScheme: "531beg" } },
-    { id: "p531bbb", cat: "Powerbuilding", name: "Main-Lift Waves · High-Volume Supplemental", tag: "4 days · Strength + Size", desc: "Main-lift wave work plus higher-volume supplemental work, with dose adapted to the training goal", cfg: { split: "five_three_one", days: 4, session: "s90", goal: "both", experience: "intermediate", weeks: 4, percentScheme: "531", assistance: "bbb" } },
+    { id: "p531", cat: "Strength", featured: true, featuredRank: 70, name: "Main-Lift Waves", tag: "4 days · Strength", desc: "One main barbell lift anchors each day while Pursuit adapts the wave, dose and progression", cfg: { split: "five_three_one", days: 4, session: "s60", goal: "strength", experience: "intermediate", weeks: 4, percentScheme: "531", deload: false } },
+    { id: "p531beg", cat: "Beginner", featured: true, featuredRank: 80, name: "Main-Lift Waves · Novice", tag: "3 days · Strength + Size", desc: "A novice three-day main-lift wave with two prioritized barbell exposures per session and Pursuit-owned assistance", cfg: { split: "five31_beginner", days: 3, session: "s90", goal: "both", experience: "beginner", weeks: 4, percentScheme: "531beg", deload: false } },
+    { id: "p531bbb", cat: "Powerbuilding", name: "Main-Lift Waves · High-Volume Supplemental", tag: "4 days · Strength + Size", desc: "Main-lift wave work plus higher-volume supplemental work, with dose adapted to the training goal", cfg: { split: "five_three_one", days: 4, session: "s90", goal: "both", experience: "intermediate", weeks: 4, percentScheme: "531", assistance: "bbb", deload: false } },
     { id: "academy", cat: "Tactical", featured: true, featuredRank: 100, name: "Academy Prep", tag: "3 days · Academy fitness test", desc: "Builds the strength base to pass the law-enforcement academy fitness test — push-up & sit-up endurance plus leg and posterior-chain work for the sprint and 1.5-mile run. Pair with Pursuit Rated for the running side.", cfg: { split: "academy_prep", days: 3, session: "s60", goal: "both", experience: "beginner", weeks: 6 } },
     { id: "academy4", cat: "Tactical", name: "Academy Prep · 4 Day", tag: "4 days · Academy fitness test", desc: "Higher-frequency academy prep — four rotating full-body sessions emphasizing the muscles the Cooper-standard test demands", cfg: { split: "academy_prep", days: 4, session: "s60", goal: "both", experience: "beginner", weeks: 6 } },
     { id: "stronglifts", cat: "Beginner", name: "Straight 5×5", tag: "3 days · Beginner strength", desc: "Straight 5×5 on the big barbell lifts, alternating two workouts", cfg: { split: "strength_fb", days: 3, session: "s60", goal: "strength", experience: "beginner", weeks: 4 } },
@@ -874,4 +898,4 @@ function expandEquipment(list) {
 
 setShellEquipmentExpander(expandEquipment);
 
-export { ALL_EQUIP_IDS, ENGINES, ENGINE_V, EQUIPMENT, EQUIP_IMPLIES, EXERCISES, EXP, EX_BY_ID, PATTERN_BY_ID, RAW, SESSIONS, SPLITS, TEMPLATES, engineInfo, expandEquipment };
+export { ALL_EQUIP_IDS, ENGINES, ENGINE_V, EQUIPMENT, EQUIP_GROUPS, EQUIP_IMPLIES, equipmentGroups, EXERCISES, EXP, EX_BY_ID, PATTERN_BY_ID, RAW, SESSIONS, SPLITS, TEMPLATES, engineInfo, expandEquipment };

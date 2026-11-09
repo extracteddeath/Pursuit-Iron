@@ -198,6 +198,37 @@ function evaluateProgression(session, performedSets, context = {}) {
         // Dynamic double is genuinely set-specific: a completed, comparable session can
         // earn heavier weight on set 1 while set 2 continues building its own reps.
         // The exercise-wide rules above still block interrupted/edited/bad-day work.
+        // Top set + back-offs: the first working set is the top set and alone decides whether the next
+        // load is earned (complete top-of-range exposure at acceptable effort, the M183 invariant applied
+        // to that set). Back-offs follow it at about 90%; the adapter snaps them to a buildable load.
+        if (style === 'top' && !context.percentageLoading && actual.length) {
+            const [repFloor, repCeiling] = ex.prescription.reps;
+            const top = actual[0];
+            const plannedRir = targetFor(top)?.rir ?? targetRirFloor;
+            const effortOkay = top.rir === null || Number(top.rir) >= plannedRir;
+            const earned = top.load > 0 && top.reps >= repCeiling && effortOkay;
+            const next = earned ? loadingRecommendation(ex.exerciseId, top.load, context.loadingInventory, context.equipmentAvailable).suggestedLoad : null;
+            const increased = Number.isFinite(next) && next > top.load + 1e-6;
+            const topLoad = increased ? next : top.load;
+            const topReps = increased ? repFloor : Math.max(repFloor, Math.min(repCeiling, top.reps + (effortOkay && top.reps >= repFloor ? 1 : 0)));
+            const backoff = topLoad > 0 ? Math.round(topLoad * 0.9 * 100) / 100 : topLoad;
+            const setTargets = Array.from({ length: Math.max(1, ex.sets) }, (_, index) => index === 0
+                ? { weight: topLoad, reps: topReps, previousLoad: top.load, earnedLoadIncrease: increased, topSet: true }
+                : { weight: backoff, reps: topReps, previousLoad: null, earnedLoadIncrease: false, backoff: true });
+            const confidence = rirReported.length === actual.length ? 'high' : 'moderate';
+            if (increased) return decision(ex, { outcome: 'success', reasonCode: 'top_set_progression_success', action: 'increase_load', confidence,
+                reason: `Top set + back-offs: the top set reached ${repCeiling} reps at acceptable effort and earned the next available weight. Back-offs follow at about 90% of it.`,
+                currentLoad, suggestedLoad: topLoad, setTargets, estimated1RM });
+            if (earned) return decision(ex, { outcome: 'success_blocked', reasonCode: 'loading_inventory_blocked', action: 'review', confidence: 'moderate',
+                reason: 'The top set reached its rep ceiling, but no heavier selectable weight is available. Review the equipment inventory.',
+                currentLoad, suggestedLoad: currentLoad, setTargets, estimated1RM });
+            if (!effortOkay) return decision(ex, { outcome: 'failure', reasonCode: 'effort_below_target', action: 'hold', confidence,
+                reason: 'The top set was harder than prescribed. Hold its load and re-enter the planned effort before progressing; back-offs stay at about 90% of it.',
+                currentLoad, suggestedLoad: currentLoad, setTargets, estimated1RM });
+            return decision(ex, { outcome: 'productive', reasonCode: 'normal_progression', action: 'add_reps', confidence,
+                reason: `Top set + back-offs: hold the top set's load and build it toward ${repCeiling} reps; back-offs stay at about 90% of it.`,
+                currentLoad, suggestedLoad: currentLoad, setTargets, suggestedReps: topReps, estimated1RM });
+        }
         if (style === 'dynamic' && !context.percentageLoading && allAtLeastBottom) {
             const [repFloor, repCeiling] = ex.prescription.reps;
             let advanced = 0, blocked = 0;
@@ -296,7 +327,7 @@ function evaluateProgression(session, performedSets, context = {}) {
 // to every row, and never estimate extra reps from a load reduction (especially high-rep cables).
 export function progressionSetTargets(exercise, actual, result) {
     const [lo, hi] = exercise.prescription.reps;
-    const dynamic = exercise.progressionStyle === 'dynamic';
+    const dynamic = exercise.progressionStyle === 'dynamic' || exercise.progressionStyle === 'top';
     if (dynamic && Array.isArray(result.setTargets)) return result.setTargets;
     const increasing = result.action === 'increase_load';
     const decreasing = result.action === 'decrease_load';

@@ -107,3 +107,20 @@ export function resizeWorkingSets(row, requested) {
 export function workoutTechniqueRest(set, restScale = 1) {
     return Math.max(8, Math.round((set.kind === 'drop' ? 10 : 15) * (restScale || 1)));
 }
+
+// A logged working set's load carries to the later working sets of the same lift that have no load yet
+// (a first-time lift, a quick workout), so the lifter isn't retyping it. Unlogging takes the carried
+// load back off, unless the lifter has changed it since.
+export function carryLoggedLoad(sets, si) {
+    const w = String(sets?.[si]?.weight ?? '').trim();
+    if (!(parseFloat(w) > 0)) return sets;
+    return sets.map((s, j) => (j <= si || !s || s.done || s.warm || s.sub || String(s.weight ?? '').trim() !== '' ? s : { ...s, weight: w, carriedFrom: si }));
+}
+export function uncarryLoggedLoad(sets, si) {
+    const w = String(sets?.[si]?.weight ?? '').trim();
+    return sets.map((s) => {
+        if (!s || s.done || s.carriedFrom !== si) return s;
+        const { carriedFrom, ...rest } = s;
+        return String(s.weight ?? '').trim() === w ? { ...rest, weight: '' } : rest;
+    });
+}

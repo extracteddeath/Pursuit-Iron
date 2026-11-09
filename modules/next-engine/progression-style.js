@@ -1,4 +1,5 @@
-export const SUPPORTED_PROGRESSION_STYLES = ['auto', 'double', 'dynamic', 'ladder', 'linear', 'wave', 'e1rm'];
+// 'top' (top set + back-offs) is a manual choice only: Auto never selects it.
+export const SUPPORTED_PROGRESSION_STYLES = ['auto', 'double', 'dynamic', 'ladder', 'linear', 'wave', 'e1rm', 'top'];
 
 const ADVANCED_STYLES = new Set(['wave', 'e1rm']);
 
@@ -238,6 +239,7 @@ export function progressionInstruction(style) {
         case 'dynamic': return 'Dynamic double progression: advance reps set-by-set inside the range; increase load once the prescription is owned at the intended effort.';
         case 'wave': return 'Wave loading: progress the performance trend across a short heavy/moderate exposure wave; use load increases only when the wave improves at comparable effort.';
         case 'e1rm': return 'e1RM autoregulation: use comparable effort-adjusted strength estimates to select the next practical load while preserving the phase rep/RIR target.';
+        case 'top': return 'Top set + back-offs: one heavy top set at the prescribed effort, the remaining sets at about 90% of it; the top set earns the next load by owning the top of the range.';
         case 'double': return 'Double progression: add reps within the range, then add the smallest practical load increase once all prescribed work is achieved at target effort.';
         default: return 'Auto progression: build the prescribed work at the planned effort before increasing load.';
     }

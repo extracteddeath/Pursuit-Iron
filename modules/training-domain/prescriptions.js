@@ -12,6 +12,7 @@ import { evaluateWorkoutProgression } from "../next-engine/performance.js";
 import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
+import { startingEstimate, startingWorkLoad } from './starting-load.js';
 
 const PART_LABEL = {
     chest: "Chest", lats: "Lats", upper_back: "Upper Back", shoulders: "Shoulders", biceps: "Biceps",
@@ -119,6 +120,9 @@ function personalRecoveryHours(history, part, clockHours, options = {}) {
     return out;
 }
 
+const FULL_DOSE_COST = 6 * BASE_SET_COST; // six on-plan hard sets' cost (grinding costs more per set): at or above this, recovery starts from 0%
+const MIN_DOSE_DEPTH = 0.15;
+
 function muscleRecoveryUncached(history) {
     const now = Date.now();
     const canonicalHistory = normalizeHistoryRevisions(history).entries;
@@ -205,7 +209,14 @@ function muscleRecoveryUncached(history) {
            second is evidence worth overruling a plan with. */
         const personal = personalRecoveryHours(canonicalHistory, part, clockHours, { normalizedHistory: canonicalHistory });
         const recoveryHours = personal ?? clockHours; // lifter's measured recovery when history earns it, else the clock model
-        const readiness = Math.round(clamp(hours / recoveryHours, 0, 1) * 100);
+        /* DOSE SETS THE DEPTH, NOT ONLY THE LENGTH. Recovery used to start every trained muscle at 0%,
+           so one easy set read exactly as spent as a full session: 0% straight after, 39% twelve hours
+           on, and "sets will trim" on Today. The dip now scales with the session's set cost for that
+           muscle — a full dose (six on-plan hard sets or more) still starts at 0%, a single set starts
+           near 85% — and the clock (or the lifter's measured recovery) still sets how long the climb back
+           takes. A full session is unchanged; only light exposure stops reading as exhausted. */
+        const depth = clamp(l.sets / FULL_DOSE_COST, MIN_DOSE_DEPTH, 1);
+        const readiness = Math.round((1 - depth * (1 - clamp(hours / recoveryHours, 0, 1))) * 100);
         return { part, readiness, hoursSince: hours, measured: personal != null, overBy: l.overBy || 0, plannedRIR: l.plannedRIR != null ? l.plannedRIR : null, daysSince: Math.floor(hours / 24), status: readiness >= 85 ? "fresh" : readiness >= 55 ? "recovering" : "fatigued", sets: l.sets };
     });
 }
@@ -221,8 +232,8 @@ function withTrainingMax(program, exerciseId, value, unit) {
         trainingMax: { ...(program.trainingMax || {}), [exerciseId]: load > 0 ? load : 0 }, edited: true };
 }
 
-function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1") {
-    return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier,
+function pctSetsFor(scheme, tm, weekIndex, weeksTotal, unit, ex, dayType, tier = "t1", assistance = null) {
+    return percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier, assistance,
         snapLoad: value => loadableAtOrBelow(ex, value, unit) });
 }
 
@@ -238,7 +249,7 @@ function percentagePlanFor(program, day, ex, slot, weekIndex, unit, history = []
         const source = gzPlanFor(program, day, ex, slot, sourceUnit, history);
         plan = source ? { ...source, sets: source.sets.map(t => ({ ...t,
             weight: loadableAtOrBelow(ex, convertHistoryLoad(t.weight, sourceUnit, unit), unit) })) } : null;
-    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, day.type, tier);
+    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, day.type, tier, program.config.assistance ?? null);
     if (!plan?.sets?.length) return null;
     if (program.config.percentScheme === 'gzclp' && weekIndex > weeksOf(program))
         plan = { ...plan, label: 'Deload · light', sets: plan.sets.map(t => ({ ...t,
@@ -307,7 +318,8 @@ function gzPlanFor(program, day, ex, slot, unit, history = []) {
     const sets = [];
     for (let i = 0; i < st.n; i++) {
         const amrap = i === st.n - 1; // last set is AMRAP — it drives the progression
-        sets.push({ weight: replay.weight, reps: amrap ? st.reps + "+" : String(st.reps), amrap, pct: 100 });
+        // pct is a fraction like every other method's (1 = all of the stage's working weight); it read 100 here, which shows as 10000%.
+        sets.push({ weight: replay.weight, reps: amrap ? st.reps + "+" : String(st.reps), amrap, pct: 1 });
     }
     return { label: st.label, sets, tier, stage };
 }
@@ -1037,10 +1049,22 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         return [];
     const request = program?.nextEngine?.request || program?.nextEngine?.baseRequest;
     const percentage = percentagePlanFor(program, day, ex, slot, weekIndex, unit, history);
+    // First time on this lift: a labelled starting estimate instead of a blank row.
+    const range0 = cellRepRange(cell, program, ex, slot === day.primaryIndex);
+    let estimate = null, estimateLoad = null;
+    // A session swap is not the program's lift for this slot: by contract it is never seeded from another
+    // lift's history, so the estimate applies only to the planned exercise.
+    const plannedHere = (() => { try { return exerciseAt(program, day, slot, weekIndex) === ex.id; } catch { return false; } })();
+    if (plannedHere && !percentage && !(Number(sug?.weight) > 0) && !(sug?.setTargets || []).some(t => Number(t?.weight) > 0)) {
+        estimate = startingEstimate(ex.id, { history, unit, experience: program?.config?.experience });
+        const raw = startingWorkLoad(estimate, range0[0], parseRIRNum(cell.rir) ?? 2);
+        estimateLoad = raw > 0 ? loadableAtOrBelow(ex, raw, unit) : null;
+        if (!(estimateLoad > 0)) estimate = estimateLoad = null;
+    }
     const targets = buildRuntimeSetTargets({
         exerciseId: resolveNextShellExerciseId(program, day, slot, ex) || ex.id,
         cell,
-        workingLoad: percentage?.sets[0]?.weight ?? sug?.weight ?? null,
+        workingLoad: percentage?.sets[0]?.weight ?? (estimateLoad || sug?.weight) ?? null,
         suggestedReps: sug?.target ?? null,
         setTargets: sug?.setTargets,
         includeWarmups: !!withWarm,
@@ -1061,7 +1085,8 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         ...(sug?.action === "user_hold" && t.kind !== "warmup" ? { planReviewHeld: true } : {}),
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
-            : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps) }
+            : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: estimate ? "estimate" : sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps),
+                ...(estimate ? { estimate: { from: estimate.from, e1rm: Math.round(estimate.e1rm * 10) / 10 } } : {}) }
     }));
     if (percentage) {
         rows = [...rows.filter(r => r.warm), ...percentage.sets.map(t => ({

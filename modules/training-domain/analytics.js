@@ -7,9 +7,10 @@ import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistory
 import { cycleBlockMetadata, editableProgramWeeks } from "../program-duration.js";
 import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
+import { isSchemeDeloadWeek } from "../next-engine/percentage-protocols.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
 import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, exerciseAt, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
-import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
+import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, gzPlanFor, gzTierOf, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
 import { E1RM_REP_CAP, EPLEY_SLOPE, PART_ORDER, decodeProgramCode, e1rm, e1rmRIR, engHas, engLacks, isAxialLoad, nextSessionCursor, sameProgramContent } from './programs.js';
 
 const FOCUS_CAVEAT = { neck: "Rarely fits — most sessions have no room for direct neck work" };
@@ -39,6 +40,43 @@ function sanitizeGymBarWeights(input) {
     return out;
 }
 
+/* Plate pairs this gym owns, per unit: { kg: { 25: 4, 20: 2, … }, lb: { … } }. Absent = not counted
+   (the owned-plate set loads without a ceiling). Only real plate sizes, 0–20 pairs each. */
+function sanitizePlatePairs(input) {
+    if (!input || typeof input !== "object") return null;
+    const out = {};
+    for (const u of ["kg", "lb"]) {
+        const src = input[u];
+        if (!src || typeof src !== "object") continue;
+        const m = {};
+        for (const [k, v] of Object.entries(src)) {
+            const size = Number(k), n = Math.floor(Number(v));
+            if (ALL_PLATES[u].includes(size) && Number.isFinite(n) && n >= 0 && n <= 20) m[size] = n;
+        }
+        out[u] = m;
+    }
+    return Object.keys(out).length ? out : null;
+}
+
+/* A gym's plate pairs in a unit: its own counts once set, otherwise the owned-plate set at a
+   commercial-gym depth (4 pairs of the biggest plate, 2 of the rest). */
+const DEFAULT_PAIRS_TOP = { kg: 25, lb: 45 };
+function platePairsFor(gym, unit, ownedSet) {
+    const own = gym?.platePairs?.[unit];
+    if (own && typeof own === "object")
+        return Object.fromEntries(ALL_PLATES[unit].map(p => [p, Math.max(0, Math.floor(Number(own[p]) || 0))]));
+    const set = (Array.isArray(ownedSet) && ownedSet.length ? ownedSet : PLATES[unit]).map(Number);
+    return Object.fromEntries(ALL_PLATES[unit].map(p => [p, set.includes(p) ? (p === DEFAULT_PAIRS_TOP[unit] ? 4 : 2) : 0]));
+}
+/* What setAvailPlates should hold for the active gym: the sizes it owns per unit, and the pair counts
+   plate math loads within. Web and native share this so a gym's plates mean the same thing in both. */
+function availPlatesFor(plates, gym) {
+    const base = plates || { kg: [...PLATES.kg], lb: [...PLATES.lb] };
+    const pairs = { kg: platePairsFor(gym, "kg", base.kg), lb: platePairsFor(gym, "lb", base.lb) };
+    const owned = (u) => ALL_PLATES[u].filter(p => pairs[u][p] > 0).sort((a, b) => b - a);
+    return { ...base, kg: owned("kg"), lb: owned("lb"), pairs };
+}
+
 function normalizeGyms(list, activeId) {
     const arr = (Array.isArray(list) ? list : []).filter(g => g && typeof g === "object").map((g, i) => ({
         id: typeof g.id === "string" && g.id ? g.id : `gym_${i}`,
@@ -49,6 +87,7 @@ function normalizeGyms(list, activeId) {
         limits: sanitizeLimits(g.limits),
         inventory: sanitizeInventory(g.inventory),
         barWeights: sanitizeGymBarWeights(g.barWeights),
+        ...(sanitizePlatePairs(g.platePairs) ? { platePairs: sanitizePlatePairs(g.platePairs) } : {}),
         limitUnit: g.limitUnit === "kg" || g.limitUnit === "lb" ? g.limitUnit : "kg"
     }));
     const gyms = arr.length ? arr : [
@@ -70,7 +109,7 @@ const RACK_PRESETS = {
     dumbbell: [
         { name: "Commercial rack", unit: "lb", v: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100] },
         { name: "Commercial (kg)", unit: "kg", v: [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 40, 45, 50] },
-        { name: "Adjustable 5–52.5", unit: "lb", v: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 52.5] },
+        { name: "Adjustable 5–52.5 lb", unit: "lb", v: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 52.5] },
         { name: "Adjustable 2–24 kg", unit: "kg", v: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24] },
     ],
     kettlebell: [
@@ -1432,13 +1471,16 @@ function liftBests(history, unit, include = () => true) {
     return out;
 }
 
-function weeklyRecap(history, unit) {
+/* The rolling last 7 days by default (native Today's recap card says LAST 7 DAYS). `from` starts the window at a
+   given time instead — web Home's "This week" passes Monday (weekKeyOf), so its numbers are this calendar week's,
+   compared with the same span of last week rather than a whole week. */
+function weeklyRecap(history, unit, { from = null } = {}) {
     history = normalizeHistoryRevisions(history).entries;
     unit = unit || history.at(-1)?.unit || 'lb';
     const now = Date.now(), wk = 7 * 86400000;
-    const inWin = (h, a, b) => h.date > now - a && h.date <= now - b;
-    const thisW = history.filter(h => h.date > now - wk);
-    const prevW = history.filter(h => inWin(h, 2 * wk, wk));
+    const start = Number.isFinite(from) && from <= now ? from : now - wk;
+    const thisW = history.filter(h => h.date > start && h.date <= now);
+    const prevW = history.filter(h => h.date > start - wk && h.date <= now - wk);
     const sets = arr => arr.reduce((s, h) => s + (h.setsDone || 0), 0);
     const vol = arr => arr.reduce((s, h) => s + historyVolumeIn(h, unit || h?.unit), 0);
     const muscle = {};
@@ -1448,8 +1490,8 @@ function weeklyRecap(history, unit) {
         return; muscle[ex.part] = (muscle[ex.part] || 0) + setsOf(p).filter(isWorkSet).length; }));
     const topMuscle = Object.entries(muscle).sort((a, b) => b[1] - a[1])[0] || null;
     const prUnit = unit || history.at(-1)?.unit || 'lb';
-    const prior = liftBests(history, prUnit, h => h.date <= now - wk);
-    const current = liftBests(history, prUnit, h => h.date > now - wk);
+    const prior = liftBests(history, prUnit, h => h.date <= start);
+    const current = liftBests(history, prUnit, h => h.date > start);
     const prs = Object.entries(current).filter(([id, best]) => prior[id] && best.e1rm > prior[id].e1rm + 1e-9).length;
     return { count: thisW.length, sets: sets(thisW), vol: Math.round(vol(thisW)), prevCount: prevW.length, prevSets: sets(prevW), prevVol: Math.round(vol(prevW)), topMuscle, prs };
 }
@@ -1549,6 +1591,10 @@ function weekIntent(program, weekIndex) {
     const isoRir = isoCell ? String(isoCell.rir) : null;
     const primRange = String(primCell.range || "").split("-");
     const savedPhase = program.nextEngine?.program?.phase;
+    if (!isDeload && isSchemeDeloadWeek(program.config?.percentScheme, weekIndex, weeks)) {
+        // The method's own deload week (5/3/1 week 4): light sets well under the training max, no top set.
+        return { label: "Deload", detail: `${primary.name}: ${primCell.sets} sets of ${String(primCell.reps).replace("+", "")} at 40\u201360% of training max \u2014 the wave's built-in deload, no top set`, deload: true };
+    }
     if (!isDeload && SUPPORTED_PHASES.includes(savedPhase)) {
         const detail = `${primary.name}: ${primCell.sets} sets of ${primCell.reps} at ${primRir} RIR`
             + (isoEx ? ` · ${isoEx.name}: ${isoCell.sets} sets of ${isoCell.reps} at ${isoRir} RIR` : '');
@@ -1953,6 +1999,42 @@ function projectNextTM(program, history, unit) {
     return out;
 }
 
+/* A percentage program's next block keeps working from training maxes: each lift's max moves by its last AMRAP
+   (projectNextTM), stored in the unit the maxes were kept in. The block generators build the plan, not the maxes,
+   so without this the next cycle starts with none and asks for them again. Other programs pass through untouched. */
+function carryTrainingMaxes(previous, next, history, unit) {
+    if (!next || !previous?.config?.percentScheme || !previous.trainingMax || !Object.keys(previous.trainingMax).length)
+        return next;
+    const storageUnit = previous.trainingMaxUnit || previous.config?.unit || unit;
+    if (previous.config.percentScheme === 'gzclp') {
+        /* Tiered Linear moves every session: each tier's stage and load are replayed from this block's logs, and that
+           replay is keyed to the block's id, so the next block would restart from the old maxes. Carry where each
+           lift actually is instead: the T1 load as its max, both stages, and the T2 load. */
+        const trainingMax = {}, gzStage = {}, gz = {};
+        Object.keys(previous.trainingMax).forEach(id => {
+            const ex = EX_BY_ID[id];
+            if (!ex || !(historyNumber(previous.trainingMax[id]) > 0)) return;
+            ["t1", "t2"].forEach(tier => {
+                for (const day of previous.days || []) {
+                    const slot = day.exercises.findIndex((x, k) => x === id && gzTierOf(previous, day, k) === tier);
+                    if (slot < 0) continue;
+                    const pl = gzPlanFor(previous, day, ex, slot, storageUnit, history);
+                    if (!pl?.sets?.length) break;
+                    gzStage[id + ':' + tier] = pl.stage;
+                    if (tier === "t1") trainingMax[id] = pl.sets[0].weight;
+                    else gz[id] = { ...(previous.gz?.[id] || {}), t2w: pl.sets[0].weight };
+                    break;
+                }
+            });
+            if (!(trainingMax[id] > 0)) trainingMax[id] = historyNumber(previous.trainingMax[id]);
+        });
+        return { ...next, trainingMax, trainingMaxUnit: storageUnit, gzStage: { ...(next.gzStage || {}), ...gzStage }, gz: { ...(next.gz || {}), ...gz } };
+    }
+    const projected = projectNextTM(previous, history, unit);
+    const trainingMax = Object.fromEntries(Object.entries(projected).filter(([, v]) => Number(v) > 0));
+    return Object.keys(trainingMax).length ? { ...next, trainingMax, trainingMaxUnit: storageUnit } : next;
+}
+
 const MOBILITY = {
     quads: ["Bodyweight squats × 15", "Walking lunges × 10/side", "Ankle rocks × 10/side"],
     hamstrings: ["Leg swings front-to-back × 10/side", "Bodyweight hip hinges × 12"],
@@ -2110,6 +2192,10 @@ function platesPerSide(total, bar, unit) {
     if (!(perSide > 0))
         return { barW, plates: [], leftover: 0 };
     const list = (((AVAIL_PLATES[unit] && AVAIL_PLATES[unit].length) ? [...AVAIL_PLATES[unit]].sort((a, b) => b - a) : PLATES[unit]) || []).filter(p => Number.isFinite(p) && p > 0); // a 0/negative/NaN plate (possible via a corrupt import) would spin the greedy loop forever; unknown unit → empty list, not a throw
+    // Counted pairs (AVAIL_PLATES.pairs[unit]): a size can only go on as many times per side as you own pairs.
+    const pairs = AVAIL_PLATES && AVAIL_PLATES.pairs && AVAIL_PLATES.pairs[unit] && typeof AVAIL_PLATES.pairs[unit] === "object" ? AVAIL_PLATES.pairs[unit] : null;
+    if (pairs)
+        return countedPlatesPerSide(perSide, barW, list.filter(p => (pairs[p] || 0) > 0), pairs);
     // Greedy largest-first — the conventional loading order lifters expect, and provably exact for the
     // canonical default sets (every denomination is a multiple of the smallest).
     const gPlates = [];
@@ -2167,6 +2253,44 @@ function platesPerSide(total, bar, unit) {
     return { barW, plates: gPlates, leftover: gLeft };
 }
 
+/* platesPerSide with a pair count per size: greedy largest-first within the counts, then an exact
+   bounded solver (0/1 over each owned plate, fewest plates) when greedy strands a remainder it could close. */
+function countedPlatesPerSide(perSide, barW, list, pairs) {
+    const sizes = [...new Set(list)].sort((a, b) => b - a);
+    const gPlates = [];
+    let rem = perSide;
+    for (const p of sizes) {
+        let n = Math.max(0, Math.floor(pairs[p] || 0));
+        while (n > 0 && rem >= p - 1e-6) { gPlates.push(p); rem -= p; n--; }
+    }
+    const gLeft = Math.round(rem * 100) / 100;
+    if (gLeft <= 1e-6)
+        return { barW, plates: gPlates, leftover: 0 };
+    const grid = 0.25, T = Math.floor(perSide / grid + 1e-9);
+    const items = [];
+    for (const p of sizes) { const u = Math.round(p / grid); if (u > 0 && u <= T) for (let i = 0; i < Math.min(20, pairs[p] || 0); i++) items.push({ p, u }); }
+    if (items.length && T <= 4000) {
+        const cnt = new Array(T + 1).fill(Infinity); cnt[0] = 0;
+        const took = items.map(() => new Uint8Array(T + 1));
+        items.forEach((it, i) => {
+            for (let s = T; s >= it.u; s--) {
+                if (cnt[s - it.u] + 1 < cnt[s]) { cnt[s] = cnt[s - it.u] + 1; took[i][s] = 1; }
+            }
+        });
+        let s = T;
+        while (s > 0 && cnt[s] === Infinity) s--;
+        if (s * grid > perSide - gLeft + 1e-6) {
+            const plates = [];
+            for (let i = items.length - 1, cur = s; i >= 0 && cur > 0; i--) {
+                if (took[i][cur]) { plates.push(items[i].p); cur -= items[i].u; }
+            }
+            plates.sort((a, b) => b - a);
+            return { barW, plates, leftover: Math.round((perSide - s * grid) * 100) / 100 };
+        }
+    }
+    return { barW, plates: gPlates, leftover: gLeft };
+}
+
 function linearInc(ex, unit) {
     const lower = lowerBodyLift(ex);
     return unit === "lb" ? (lower ? 10 : 5) : (lower ? 5 : 2.5);
@@ -2179,7 +2303,8 @@ const PROG_STYLES = {
     ladder: "Rep ladder",
     linear: "Linear LP",
     wave: "Wave loading",
-    e1rm: "e1RM autoregulation"
+    e1rm: "e1RM autoregulation",
+    top: "Top set + back-offs"
 };
 
 function explainPrescription(o) {
@@ -2347,7 +2472,7 @@ const PHASES = {
 
 function phaseFor(program, weekIndex) {
     const weeks = weeksOf(program);
-    if (program.config?.deload && weekIndex > weeks)
+    if (program.config?.deload && weekIndex > weeks || isSchemeDeloadWeek(program.config?.percentScheme, weekIndex, weeks))
         return PHASES.deload;
     const phase = program.nextEngine?.program?.phase;
     if (SUPPORTED_PHASES.includes(phase)) {
@@ -2990,7 +3115,7 @@ function workoutPlanCoachFact(program, day, weekIndex) {
         return null;
     const cfg = program.config || {};
     const phaseRaw = String(program.nextEngine?.phase || program.nextEngine?.program?.phase || "").replace(/_/g, " ").toLowerCase();
-    if (cfg.deload && weekIndex > weeksOf(program) || phaseRaw.includes("deload") || phaseRaw.includes("recovery")) {
+    if (cfg.deload && weekIndex > weeksOf(program) || isSchemeDeloadWeek(cfg.percentScheme, weekIndex, weeksOf(program)) || phaseRaw.includes("deload") || phaseRaw.includes("recovery")) {
         return { icon: "plan", short: "Today: recover", title: "Today is a recovery session", text: "Keep the work easy, leave plenty in reserve, and finish feeling better than you started." };
     }
     if (phaseRaw.includes("peak")) {
@@ -3634,6 +3759,8 @@ function blockRetro(history, opts = {}) {
     // Per-lift e1RM series within the window
     const byLift = {};
     for (const h of [...win].sort((a, b) => a.date - b.date)) {
+        if (opts.trendExclude?.(h))
+            continue;
         for (const [id, p] of Object.entries(h.perf || {})) {
             const ex = EX_BY_ID[id];
             if (!ex)
@@ -3690,10 +3817,12 @@ function blockRetro(history, opts = {}) {
         return { part, avgSets: r1(avgWk), mev: L.mev, mav: r1(mav), mavPersonal: Math.abs(mav - gmav) > 0.05, mrv: L.mrv, zone, trend, drove, rec };
     }).sort((a, b) => ({ regressed: 0, flat: 1, unknown: 2, progressed: 3 }[a.trend] - { regressed: 0, flat: 1, unknown: 2, progressed: 3 }[b.trend]) || a.avgSets - b.avgSets);
     const gained = lifts.filter(l => l.state === "progressed").length;
-    const stalled = lifts.filter(l => l.state === "flat" || l.state === "regressed").length;
+    const flat = lifts.filter(l => l.state === "flat").length, down = lifts.filter(l => l.state === "regressed").length;
+    const stalled = flat + down;
+    // Regressed lifts were counted as "flat": "4 lifts up, 18 flat" over a list where 14 had gone down.
     return {
         ok: true, weeks: Math.round(spanWeeks), sessions: win.length,
-        headline: `${win.length} sessions over ~${Math.round(spanWeeks)} wk · ${gained} lift${gained !== 1 ? "s" : ""} up, ${stalled} flat`,
+        headline: `${win.length} sessions over ~${Math.round(spanWeeks)} wk · ${gained} lift${gained !== 1 ? "s" : ""} up` + (down ? `, ${down} down` : "") + (flat ? `, ${flat} flat` : ""),
         lifts: lifts.sort((a, b) => b.deltaPct - a.deltaPct),
         muscles,
         recs: muscles.filter(m => m.rec).map(m => ({ part: m.part, trend: m.trend, rec: m.rec }))
@@ -4039,9 +4168,13 @@ function strengthScore(history, bw, bwUnit, sex, age) {
                terms sitting next to a per-hand best, which is not a harder goal but a different unit, and
                would send someone after more than double the weight they need. */
             const target = Math.ceil(scoreEquivalentInverse(l.id, l.lvl.thresh[idx], l.unit, bw, bwUnit));
+            /* Shown in the unit the app is in (the bodyweight unit callers pass), not the unit the lift
+               happened to be logged in: a lifter who switched to lb was told "57 kg reaches Beginner". */
+            const shownUnit = bwUnit === "lb" || bwUnit === "kg" ? bwUnit : l.unit;
+            const inShown = (v) => convertHistoryLoad(v, l.unit, shownUnit);
             if (target > l.prBest)
                 nextMilestone = { id: l.id, name: l.name, pattern: weakest.label,
-                    current: Math.round(l.prBest), target, unit: l.unit, est: !!l.est,
+                    current: Math.round(inShown(l.prBest)), target: Math.ceil(inShown(target)), unit: shownUnit, est: !!l.est,
                     level: STD_LEVELS[idx + 1] || STD_LEVELS[STD_LEVELS.length - 1] };
         }
     }
@@ -5229,7 +5362,7 @@ function cycleProgress(cycle, saved = [], history = [], cycleInfo = null) {
     };
 }
 
-function blockReview(history, cycle, i) {
+function blockReview(history, cycle, i, program = null) {
     const meta = (cycle?.blockMeta || [])[i] || null;
     const id = (cycle?.blockIds || [])[i] || meta?.id || null;
     const hs = (history || []).filter(h => h && h.programId === id && h.date);
@@ -5237,7 +5370,14 @@ function blockReview(history, cycle, i) {
         return { ok: false, block: meta, sessions: hs.length, reason: hs.length ? `Only ${hs.length} session${hs.length === 1 ? "" : "s"} logged in this block — not enough to say anything honest about it.` : "No sessions were logged against this block." };
     const dates = hs.map(h => h.date);
     const from = Math.min(...dates), to = Math.max(...dates);
-    const r = blockRetro(hs, { sinceDate: from - 1, untilDate: to + 1 });
+    /* ⚠ A DELOAD IS NOT A REGRESSION. Each lift's trend ran first session → last, and a block that ends on its
+       deload week (the standard block's week n+1, 5/3/1's week 4) ended on its lightest loads — every lift read
+       "regressed" in the review of a block that went exactly to plan. With the program in hand, deload-week
+       sessions still count as sessions but stay out of the lift trends. */
+    const weeks = program ? weeksOf(program) : null;
+    const deloadEntry = program ? (h => h.weekIndex != null && ((program.config?.deload || program.config?.endless) && h.weekIndex > weeks
+        || isSchemeDeloadWeek(program.config?.percentScheme, h.weekIndex, weeks))) : null;
+    const r = blockRetro(hs, { sinceDate: from - 1, untilDate: to + 1, trendExclude: deloadEntry });
     return { ...r, block: meta, from, to };
 }
 
@@ -5268,7 +5408,7 @@ const RELEASE_DIAG_FIELDS = new Set(["code", "source", "action", "phase", "engin
 function isRuntimeProgram(p) {
     return !!p && (p.engineSource === "pursuit-next" || p.artifactType === "freestyle" || p.custom === true);
 }
-export { ALL_PLATES, ASSIST_IDS, AVAIL_PLATES, BARS, BAR_LABEL, BIG_THREE, BIRTH_RE, COVERED_MUSCLES, DELT_HEAD, EQUIP_CATS, EX_ABBREV, EX_FAMILY, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMIT_KEYS, INTENT_FROM_CAT, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PATTERNS, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, STANDARDS, STD_LEVELS, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, SUBMUSCLE_LABEL, TECHNICAL_LIFTS, TEMPLATE_CATS, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, ageFactor, ageFrom, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, availableFor, backupRecordImpact, barFor, barWeightFor, betterTopSet, birthParts, blockChangeSummary, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, classifyPlateau, clearSetup, coachFacts, completionRate, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, cycleProgress, dayMuscleBreakdown, dayMuscleVolume, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, deloadAdvice, distributeVolBias, effectiveRest, effortLabel, effortValueLabel, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkOf, lastSetEffort, lastTopSet, lengthUnitFor, lifterModelKey, linearInc, liveCoachForContext, logWindow, loggedSubVolume, loggedVolume, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergedSetCount, newGymId, nextTMEvidence, normalizeBwLog, normalizeGyms, normalizeMeasureLog, overreachSignal, paceFactor, patternCues, patternTrainable, perWeekOf, perfAfterDelete, personalMav, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribedRIRofAny, programChangeLabels, projectNextTM, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, repsLow, restSec, rirTrend, rmAt, rotationOf, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, setAvailPlates, setGymBarWeights, setRestScaleGlobal, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, subRegionOf, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, toLength, todayISO, uid, underRecoveredWeekly, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, workoutPlanCoachFact };
+export { ALL_PLATES, ASSIST_IDS, AVAIL_PLATES, BARS, BAR_LABEL, BIG_THREE, BIRTH_RE, COVERED_MUSCLES, DELT_HEAD, EQUIP_CATS, EX_ABBREV, EX_FAMILY, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMIT_KEYS, INTENT_FROM_CAT, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PATTERNS, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, STANDARDS, STD_LEVELS, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, SUBMUSCLE_LABEL, TECHNICAL_LIFTS, TEMPLATE_CATS, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, ageFactor, ageFrom, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, availableFor, backupRecordImpact, barFor, barWeightFor, betterTopSet, birthParts, blockChangeSummary, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, classifyPlateau, clearSetup, coachFacts, completionRate, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, cycleProgress, dayMuscleBreakdown, dayMuscleVolume, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, deloadAdvice, distributeVolBias, effectiveRest, effortLabel, effortValueLabel, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkOf, lastSetEffort, lastTopSet, lengthUnitFor, lifterModelKey, linearInc, liveCoachForContext, logWindow, loggedSubVolume, loggedVolume, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergedSetCount, newGymId, nextTMEvidence, normalizeBwLog, normalizeGyms, normalizeMeasureLog, overreachSignal, paceFactor, patternCues, patternTrainable, perWeekOf, perfAfterDelete, personalMav, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribedRIRofAny, programChangeLabels, projectNextTM, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, repsLow, restSec, rirTrend, rmAt, rotationOf, sanitizeInventory, sanitizeLimits, sanitizePlatePairs, platePairsFor, availPlatesFor, carryTrainingMaxes, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, setAvailPlates, setGymBarWeights, setRestScaleGlobal, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, subRegionOf, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, toLength, todayISO, uid, underRecoveredWeekly, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, workoutPlanCoachFact };
 
 export { liftBests };
 

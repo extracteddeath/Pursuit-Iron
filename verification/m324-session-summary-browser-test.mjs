@@ -102,8 +102,12 @@ try {
         const p={id:'m332-cursor',name:'Strength and Muscle · Weekly Training',custom:true,weeks:4,
             config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',weeks:4,deload:false},days,
             overrides:Object.fromEntries(days.map(d=>[d.id+':0',{sets:3,reps:'6-8',rir:2}]))};
+        // Home's set tile counts this calendar week (from Monday), so the three sessions must fall inside it on any
+        // weekday; three days back crossed into last week on a Monday or Tuesday and the tile read 1.
+        const m332Mon=(()=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7);return d.getTime();})();
+        const m332Span=Math.max(3000,Date.now()-m332Mon-1000),m332Dates=[0,1,2].map(i=>m332Mon+Math.round(m332Span*(i+1)/4));
         const h=[2,1,0].map((di,i)=>({id:'m332-log-'+i,programId:p.id,dayId:days[di].id,weekIndex:1,
-            date:Date.now()-(3-i)*86400000,updatedAt:1700000000000+i,unit:'lb',setsDone:1,totalSets:3,durationMin:20,
+            date:m332Dates[i],updatedAt:1700000000000+i,unit:'lb',setsDone:1,totalSets:3,durationMin:20,
             perf:{[days[di].exercises[0]]:{sets:[{w:100,r:6,done:true,rir:2,rirReported:true}]}}}));
         await page.setViewport({width,height:880,isMobile:width<600,hasTouch:true});
         await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);

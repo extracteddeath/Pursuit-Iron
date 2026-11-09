@@ -213,7 +213,7 @@ try {
         // Injury reduction preserves typed/logged values and removes pending drop extensions.
         const before = await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data);
         await option('Report an injury');
-        await page.waitForSelector('.wpb-injury-reduce'); await page.click('.wpb-injury-reduce');
+        await page.waitForSelector('.wpb-injury-next'); await page.click('.wpb-injury-next'); await page.waitForSelector('[data-injury-level="sore"]'); await page.click('[data-injury-level="sore"]'); await page.waitForSelector('.wpb-injury-reduce'); await page.click('.wpb-injury-reduce');
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).injuryReports?.length===1);
         const adjusted=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
         assert.deepEqual(adjusted.data[0].sets,before[0].sets.slice(0,3));
@@ -223,7 +223,7 @@ try {
         await (await page.$('xpath/.//button[normalize-space(.)="Undo"]')).click();
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).injuryReports?.length===0);
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data),before);
-        await option('Report an injury'); await page.waitForSelector('.wpb-injury-reduce'); await page.click('.wpb-injury-reduce');
+        await option('Report an injury'); await page.waitForSelector('.wpb-injury-next'); await page.click('.wpb-injury-next'); await page.waitForSelector('[data-injury-level="sore"]'); await page.click('[data-injury-level="sore"]'); await page.waitForSelector('.wpb-injury-reduce'); await page.click('.wpb-injury-reduce');
         await page.reload({waitUntil:'networkidle0'});
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
         await page.waitForSelector('.wpb-workout');

@@ -1,3 +1,4 @@
+import { startingEstimateText } from './training-domain/starting-load.js';
 import { sessionPlanChange } from './session-plan.js';
 import { completedHistorySets, convertHistoryLoad, normalizeHistoryRevisions } from './next-engine/history-contract.js';
 import { sessionSuggestion, prescribeSets, loadableAtOrBelow, resolveStyle } from './training-domain/prescriptions.js';
@@ -10,7 +11,7 @@ import { programWorkingWeeks } from './program-duration.js';
 import { buildUserAddedSlotPrescriptions } from './next-engine/workout-runtime.js';
 import { markUserPrescriptionOverride, nextExerciseIdForShellExercise, shellPrescriptionFieldOwner } from './next-engine/app-shell-adapter.js';
 
-const SESSION_PROGRESSION_STYLES = new Set(['auto','double','dynamic','ladder','linear','wave','e1rm']);
+const SESSION_PROGRESSION_STYLES = new Set(['auto','double','dynamic','ladder','linear','wave','e1rm','top']);
 
 // Session choices are independent from program edits until the completed workout is saved.
 export function withProgressionChoices(program, choices = {}) {
@@ -211,6 +212,8 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
         }
         const proposedReason = proposed.some(set => set.target?.nextAction === 'percentage')
             ? 'This lift follows the saved percentage program and training max for this week. Its programmed weights and reps stay together.'
+            : proposed.find(set => set.target?.estimate)
+                ? `Starting estimate ${proposed.find(set => set.target?.estimate).target.w} ${unit}. ${startingEstimateText(proposed.find(set => set.target?.estimate).target.estimate, unit)} Your first set calibrates the rest.`
             : proposedSuggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
         const reason = change.undone ? suggestion.reason : proposedReason;
         const action = proposedSuggestion?.action;

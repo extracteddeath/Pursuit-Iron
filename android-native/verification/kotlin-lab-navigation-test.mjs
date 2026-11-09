@@ -212,7 +212,8 @@ assert.ok(plan.includes('NativeKotlinNextSessionBrief(draft,week,weekday)') &&
   !sessionBrief.includes('host.'),
   'Next session game plan must be display-only sourced from the exact selected day');
 assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
-  plan.includes('NativeKotlinAdaptiveCyclePermissionsPanel(ownerHost,draft.cycleId)') &&
+  plan.includes('NativeKotlinAdaptiveCyclePermissionsPanel(') &&
+  plan.includes('ownerHost,draft.cycleId,draft.athleteId,draft.revision)') &&
   journey.includes('permissionHost=host)') &&
   adaptiveRights.includes('host.readAdaptiveCyclePermissions(cycleId)') &&
   adaptiveRights.includes('host.confirmAdaptiveCyclePermissions(') &&
@@ -222,6 +223,10 @@ assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
   adaptiveRights.includes('is NativeAdaptivePermissionRead.Revoked -> read.revision') &&
   adaptiveRights.includes('is NativeAdaptivePermissionRead.Found -> existing?.revision') &&
   adaptiveRights.includes('val canEdit=!loading && !saving && revision!=null') &&
+  adaptiveRights.includes('LaunchedEffect(host,cycleId,expectedAthleteId,sourceRevision)') &&
+  adaptiveRights.includes('found.athleteId!=expectedAthleteId') &&
+  adaptiveRights.includes('verified?.revision==result.revision') &&
+  adaptiveRights.includes('revoked?.revision==result.revision') &&
   adaptiveRights.includes('enabled=confirmed && !saving') &&
   adaptiveRights.includes('if(result is NativeAdaptivePermissionWrite.Committed)') &&
   adaptiveRights.includes('CustomCycleChangeKind.SPLIT') &&
@@ -229,7 +234,7 @@ assert.ok(plan.includes('permissionHost:NativeKotlinCandidateHost?=null') &&
   adaptiveRights.includes('CustomCycleChangeKind.SCHEDULE') &&
   adaptiveRights.includes('CustomCycleChangeKind.DAY_COUNT') &&
   adaptiveRights.includes('CustomCycleChangeKind.REMOVE_PINNED') &&
-  adaptiveRights.includes('Change rights')===false,
+  !adaptiveRights.includes('mayApplyAutomatically=true'),
   'Adaptive permissions must be source-backed, explicit, independently revocable and never an automatic edit');
 assert.ok(coach.includes('if(assistance==CoachAssistancePolicy.STANDARD)') &&
   coach.includes('assistance==CoachAssistancePolicy.PROGRESSION_ONLY') &&

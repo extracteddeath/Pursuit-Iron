@@ -485,6 +485,7 @@ private fun NativeKotlinCandidateTrainEntry(
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
+    var visibleUnfinishedCount by rememberSaveable(host) { mutableIntStateOf(20) }
     // Minimize removes the logger from composition. Preserve its timer and
     // unsubmitted fields per exact workout, then revalidate native storage
     // when reopening. Another workout must never inherit that UI state.
@@ -494,6 +495,7 @@ private fun NativeKotlinCandidateTrainEntry(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
     suspend fun refreshUnfinishedWorkouts() {
         reviewingResume=true
+        visibleUnfinishedCount=20
         resumable=null
         try {
             resumable=withContext(Dispatchers.IO) {
@@ -581,7 +583,7 @@ private fun NativeKotlinCandidateTrainEntry(
                         } else {
                             Text("${result.workouts.size} unfinished workouts",
                                 style=MaterialTheme.typography.labelMedium)
-                            result.workouts.take(20).forEach { item->
+                            result.workouts.take(visibleUnfinishedCount).forEach { item->
                                 OutlinedButton(
                                     modifier=Modifier.fillMaxWidth(),
                                     onClick={
@@ -599,9 +601,23 @@ private fun NativeKotlinCandidateTrainEntry(
                                     }
                                 }
                             }
-                            if(result.workouts.size>20)
-                                Text("Showing the first 20 by authored week and day. ${result.workouts.size-20} others remain verified; more navigation is still needed.",
-                                    style=MaterialTheme.typography.bodySmall)
+                            if(result.workouts.size>visibleUnfinishedCount) {
+                                val remaining=result.workouts.size-visibleUnfinishedCount
+                                OutlinedButton(
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                    enabled=!reviewingResume,
+                                    onClick={
+                                        visibleUnfinishedCount=
+                                            (visibleUnfinishedCount+20).coerceAtMost(
+                                                result.workouts.size)
+                                    }
+                                ) {
+                                    Text("Show next ${minOf(20,remaining)} workouts")
+                                }
+                                Text("Showing ${minOf(visibleUnfinishedCount,result.workouts.size)} of ${result.workouts.size} verified unfinished workouts.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                     is NativeCustomResumeReview.Rejected ->

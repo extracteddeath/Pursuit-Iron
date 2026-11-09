@@ -102,6 +102,16 @@ private object SavedCorrectionBinary {
             val issued = KotlinIssuedSnapshotCodec.encode(journal.snapshot)
             out.writeInt(issued.size)
             out.write(issued)
+            // Legacy journals keep identical fingerprints. Replacement
+            // journals must also bind their immutable pre-swap issuance.
+            if(journal.receipts.any{
+                it.operation is KotlinJournalOperation.SwapExercise
+            }){
+                val original=KotlinIssuedSnapshotCodec.encode(
+                    journal.originalSnapshot)
+                out.writeInt(original.size)
+                out.write(original)
+            }
             out.writeUTF(journal.storedIdentity.storageReceiptId)
             out.writeUTF(journal.storedIdentity.workoutId)
             out.writeLong(journal.storedIdentity.storedRevision)
@@ -115,6 +125,21 @@ private object SavedCorrectionBinary {
                 out.writeLong(operation.expectedJournalRevision)
                 when (operation) {
                     is KotlinJournalOperation.Finish -> out.writeByte(1)
+                    is KotlinJournalOperation.SwapExercise -> {
+                        out.writeByte(3)
+                        out.writeUTF(operation.previousExerciseId)
+                        out.writeInt(operation.replacementTargets.size)
+                        operation.replacementTargets.forEach{target->
+                            val single=KotlinIssuedSnapshotCodec.encode(
+                                journal.snapshot.copy(targets=listOf(target)))
+                            out.writeInt(single.size)
+                            out.write(single)
+                        }
+                    }
+                    is KotlinJournalOperation.UndoSwap -> {
+                        out.writeByte(4)
+                        out.writeUTF(operation.swapEventId)
+                    }
                     is KotlinJournalOperation.RecordSet -> {
                         out.writeByte(2)
                         out.writeUTF(operation.setKey)

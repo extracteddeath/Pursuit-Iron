@@ -1130,9 +1130,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         }
         swapExerciseEditor?.let { target ->
             val (blockId,weekday,slotId)=target
-            val source=current.blocks.firstOrNull {it.blockId==blockId}
+            val day=current.blocks.firstOrNull {it.blockId==blockId}
                 ?.days?.firstOrNull {it.weekday==weekday}
-                ?.slots?.firstOrNull {it.slotId==slotId}
+            val source=day?.slots?.firstOrNull {it.slotId==slotId}
             if(source==null) {
                 LaunchedEffect(target) {swapExerciseEditor=null}
             } else {
@@ -1142,6 +1142,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         available=controller.availableExerciseChoices(),
                         existing=null,
                         replacing=source,
+                        otherDayExerciseIds=day?.slots?.filter{
+                            it.slotId!=slotId
+                        }?.map{it.exerciseId},
                         scopeLabel="Program day · ${customWeekdays[weekday]} · ${blockId}",
                         onSave={exerciseId,sets,note->
                             controller.swapReviewedExercise(

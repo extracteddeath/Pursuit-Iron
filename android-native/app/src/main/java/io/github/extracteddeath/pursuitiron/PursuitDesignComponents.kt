@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
 
 /**
  * Shared Material 3 presentation primitives. These contain NO training
@@ -65,6 +66,64 @@ internal fun PursuitExerciseHeading(
                 modifier=Modifier.size(18.dp))
             Spacer(Modifier.width(PursuitSpace.xxs))
             Text("History")
+        }
+    }
+}
+
+/**
+ * One shared readiness / movement-restriction surface for both native journal
+ * types. These are athlete-provided inputs to the optional coach review only:
+ * they cannot mutate the issued prescription, recorded sets or program.
+ * Keep all selection state in the parent screen's saved state owner.
+ */
+@Composable
+internal fun PursuitWorkoutReadinessPanel(
+    readiness:CoachReadiness,
+    onReadinessChange:(CoachReadiness)->Unit,
+    movementRestricted:Boolean,
+    onMovementRestrictedChange:(Boolean)->Unit,
+    enabled:Boolean=true
+) {
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+    ) {
+        Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+        ) {
+            CoachReadiness.entries.forEach { option ->
+                FilterChip(
+                    selected=readiness==option,
+                    onClick={onReadinessChange(option)},
+                    enabled=enabled,
+                    modifier=Modifier.heightIn(min=48.dp),
+                    label={Text(option.name.lowercase().replaceFirstChar{
+                        it.uppercase()
+                    })}
+                )
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+        ) {
+            Checkbox(
+                checked=movementRestricted,
+                onCheckedChange=onMovementRestrictedChange,
+                enabled=enabled
+            )
+            Column(Modifier.weight(1f)) {
+                Text("Movement restricted",
+                    style=MaterialTheme.typography.bodyMedium)
+                if(movementRestricted) Text(
+                    "Review a safer adjustment or alternative. Nothing changes until you approve it.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ const source=(file)=>readFileSync(dir+file,'utf8');
 const shared=source('PursuitDesignComponents.kt');
 const generated=source('NativeKotlinWorkoutCandidateScreen.kt');
 const custom=source('NativeKotlinCustomJournalScreen.kt');
+const coach=source('NativeKotlinCandidateCoachScreen.kt');
 
 // Both real native loggers must use the same editable readiness UI.
 assert.match(shared,/internal fun PursuitTrainingReadinessControls\(/);
@@ -16,6 +17,14 @@ assert.match(shared,/onReadinessChange\(option\)/);
 assert.match(shared,/onCheckedChange=onRestrictionChange/);
 assert.match(generated,/PursuitTrainingReadinessControls\(/);
 assert.match(custom,/PursuitTrainingReadinessControls\(/);
+assert.match(coach,/PursuitTrainingReadinessControls\(/);
+// Coach must never show readiness UI when assistance explicitly disables it.
+assert.match(shared,/if\(showReadiness\)/);
+assert.match(coach,/showReadiness=assistance\?\.offersFatigueAdvice==true/);
+assert.match(coach,/onReadinessChange=\{readiness=it;invalidate\(\)\}/);
+assert.match(coach,/onRestrictionChange=\{restricted=it;invalidate\(\)\}/);
+assert.match(coach,/restrictionLabel="Movement restricted or painful"/);
+assert.match(coach,/Fatigue-aware advice is off/);
 
 // Never turn a display preference or readiness selection into a journal write.
 const sharedReadiness=shared.slice(shared.indexOf('internal fun PursuitTrainingReadinessControls('));
@@ -42,4 +51,4 @@ assert.ok(beforeNext>0 && beforeNext<next && next<entries &&
 // All actuals, history and coaching remain owned by the durable controllers.
 assert.match(custom,/CustomWorkoutJournalDomain\.nextUnresolvedVisit/);
 assert.match(generated,/controller\.record\(set\.target\.setKey,outcome,actual\)/);
-console.log('PASS Kotlin workout Focus order and shared accessible readiness; no training-state writes in UI component');
+console.log('PASS Kotlin workouts and Coach share guarded readiness controls without training-state writes');

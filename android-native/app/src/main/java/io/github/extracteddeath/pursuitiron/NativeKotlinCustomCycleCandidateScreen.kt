@@ -311,6 +311,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         }
                         Text("Week ${week} · ${customWeekdays.getOrElse(weekday){"Day"}} · ${label}",
                             style=MaterialTheme.typography.titleMedium)
+                        NativeKotlinNextSessionBrief(draft,week,weekday)
                         Button(onClick={
                             inspectedWeek=week.toString()
                             inspectedWeekday=weekday

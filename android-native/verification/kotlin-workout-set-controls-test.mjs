@@ -27,6 +27,8 @@ assert.match(custom,/NativeSetValueFields\([\s\S]*?showLoad=verified!=null/);
 // Working-set Complete is still gated by native domain validation.
 assert.match(generated,/enabled=!busy && actual!=null/);
 assert.match(generated,/KotlinWorkoutEntryDomain\.parse\(target,weight,reps,effort\)/);
+assert.match(generated,/existing\?\.reps\?\.toString\(\)/);
+assert.doesNotMatch(generated,/existing\?\.reps\?\.takeIf\{it>0\}/);
 assert.match(custom,/val effort=if\(actualRir\.isBlank\(\)\)null else/);
 assert.match(custom,/enabled=loadValid&&reps!=null&&effortValid/);
 // These controls never save a skip or failure without its original flow.

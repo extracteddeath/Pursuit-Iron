@@ -29,6 +29,13 @@ data class CustomSwapRankedOption(
     val mayApplyWithoutReview:Boolean get()=false
 }
 object CustomExerciseSwapRankingDomain {
+    private fun matchesName(value:String?,query:String):Boolean =
+        value?.let {name->
+            name.contains(query,ignoreCase=true) ||
+            name.replace('_',' ').replace('-',' ')
+                .contains(query,ignoreCase=true)
+        } ?: false
+
     private fun credits(option:CustomExercisePickerOption):Set<TrainingMuscle> =
         option.muscleCredits.filter {
             it.fractionalSet.signum()>0
@@ -54,13 +61,13 @@ object CustomExerciseSwapRankingDomain {
             .filter{it.exerciseId!=sourceExerciseId}
             .filter {
                 needle.isBlank() ||
-                    it.exerciseId.contains(needle,ignoreCase=true) ||
-                    it.familyId.contains(needle,ignoreCase=true) ||
-                    it.variantId.contains(needle,ignoreCase=true) ||
-                    it.attachmentId?.contains(needle,ignoreCase=true)==true ||
-                    it.pattern?.name?.contains(needle,ignoreCase=true)==true ||
+                    matchesName(it.exerciseId,needle) ||
+                    matchesName(it.familyId,needle) ||
+                    matchesName(it.variantId,needle) ||
+                    matchesName(it.attachmentId,needle) ||
+                    matchesName(it.pattern?.name,needle) ||
                     credits(it).any{muscle->
-                        muscle.name.contains(needle,ignoreCase=true)
+                        matchesName(muscle.name,needle)
                     }
             }
             .map { candidate ->

@@ -34,7 +34,7 @@
     {
       "key": "top.muscleScore",
       "file": "modules/next-engine/realizer-ranking.js",
-      "sha256": "e66be53866d8b0f93341f4f2592eac4385b5895f2b6a7887681957ff23af19ad"
+      "sha256": "b71d0324e34bd25a0476595c6dfdf1215fe71b8fde7460d5b060c5266cb6ab32"
     },
     {
       "key": "top.muscleCandidate",

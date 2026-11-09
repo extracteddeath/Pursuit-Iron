@@ -696,10 +696,14 @@ private fun NativeKotlinCandidateTrainEntry(
                 Text("Workout in progress",
                     style=MaterialTheme.typography.labelLarge)
                 TextButton(enabled=!sessionState.busy,onClick={
-                    minimizedGeneratedId=selectedId
-                    controller.clear() // in-memory only, not a journal write
-                    selectedId=null
-                    onClearGeneratedWorkout()
+                    // Guard the click as well as the visual disabled state:
+                    // an in-flight set write can start before recomposition.
+                    if(!controller.state.value.busy) {
+                        minimizedGeneratedId=selectedId
+                        controller.clear() // in-memory only, not a journal write
+                        selectedId=null
+                        onClearGeneratedWorkout()
+                    }
                 }) { Text("Minimize") }
             }
             Box(Modifier.weight(1f)) {

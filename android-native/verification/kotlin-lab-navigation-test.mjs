@@ -190,8 +190,14 @@ assert.ok(coach.includes('if(assistance==CoachAssistancePolicy.STANDARD)') &&
   coach.includes('onClick=onOpenHistory') &&
   journey.includes('onOpenHistory={navigate(KotlinCandidateDestination.HISTORY)}') &&
   coach.includes('PursuitCoachDestinations(onOpenProgram,onOpenFuture)') &&
+  coach.includes('showTechnicalDetails by rememberSaveable') &&
+  coach.includes('if(showTechnicalDetails)') &&
+  coach.includes('Text("Dismiss unaccepted review")') &&
+  coach.includes('reviewed=null') &&
+  coach.includes('nextRepReview=null') &&
+  coach.includes('onOpenTrain(approvedId)') &&
   !coach.includes('Candidate only · no automatic'),
-  'Coach should prioritize verified mode, expose full exercise history, and route to saved workout records');
+  'Coach should prioritize verified mode, history, non-destructive review dismiss and hidden advanced IDs');
 assert.ok(strengthMeasure.includes('BigDecimal("0.45359237")') &&
   strengthMeasure.includes('fun epley(') &&
   strengthMeasure.includes('fun relativeStrength('),

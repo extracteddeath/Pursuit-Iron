@@ -56,6 +56,7 @@ object CustomExerciseSwapRankingDomain {
                     it.exerciseId.contains(needle,ignoreCase=true) ||
                     it.familyId.contains(needle,ignoreCase=true) ||
                     it.variantId.contains(needle,ignoreCase=true) ||
+                    it.attachmentId?.contains(needle,ignoreCase=true)==true ||
                     it.pattern?.name?.contains(needle,ignoreCase=true)==true ||
                     credits(it).any{muscle->
                         muscle.name.contains(needle,ignoreCase=true)

@@ -8,10 +8,12 @@ class CustomExerciseSwapRankingDomainTest {
     private fun option(
         id:String,family:String,pattern:ComposerPattern,
         muscles:List<TrainingMuscle>,
-        role:ComposerRole=ComposerRole.ACCESSORY
+        role:ComposerRole=ComposerRole.ACCESSORY,
+        attachment:String?=null
     )=CustomExercisePickerOption(
-        id,family,id,null,LoadUnit.LB,LoadBasis.CABLE_STACK,
-        false,CustomExerciseAvailability(id,null,false),
+        id,family,id,attachment,LoadUnit.LB,LoadBasis.CABLE_STACK,
+        false,CustomExerciseAvailability(id,null,false,
+            attachmentIds=attachment?.let{setOf(it)} ?: emptySet()),
         pattern,role,muscles.map {
             DeclaredMuscleCredit(it,MuscleCreditRole.DIRECT,BigDecimal.ONE)
         })
@@ -93,5 +95,22 @@ class CustomExerciseSwapRankingDomainTest {
             roleFilter.map{it.choice.exerciseId})
         assertTrue(CustomExerciseSwapRankingDomain.rank(alternatives,
             "unknown",sameRoleOnly=true).isEmpty())
+    }
+
+    @Test fun searchesVerifiedAttachmentEvenWhenExerciseIdDoesNotContainName() {
+        val variants=listOf(
+            option("pushdown-a","pushdown",ComposerPattern.ISOLATION,
+                listOf(chest),attachment="straight_bar"),
+            option("pushdown-b","pushdown",ComposerPattern.ISOLATION,
+                listOf(chest),attachment="dual_rope"),
+            option("pushdown-c","pushdown",ComposerPattern.ISOLATION,
+                listOf(chest),attachment="v-bar")
+        )
+        assertEquals(listOf("pushdown-b"),CustomExerciseSwapRankingDomain.rank(
+            variants,"pushdown-a",search="DUAL_ROPE").map{it.choice.exerciseId})
+        assertEquals(listOf("pushdown-c"),CustomExerciseSwapRankingDomain.rank(
+            variants,"pushdown-a",search="V-BAR").map{it.choice.exerciseId})
+        assertTrue(CustomExerciseSwapRankingDomain.rank(variants,"pushdown-a",
+            search="single_rope").isEmpty())
     }
 }

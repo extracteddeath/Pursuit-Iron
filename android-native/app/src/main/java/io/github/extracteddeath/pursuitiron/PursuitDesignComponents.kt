@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -46,7 +47,8 @@ internal fun PursuitSectionHeading(
 @Composable
 internal fun PursuitExerciseHeading(
     exerciseId:String, onHistory:()->Unit,
-    subtitle:String?=null, enabled:Boolean=true
+    subtitle:String?=null, enabled:Boolean=true,
+    onInfo:(()->Unit)?=null
 ) {
     Row(Modifier.fillMaxWidth(),
         verticalAlignment=Alignment.CenterVertically,
@@ -59,6 +61,12 @@ internal fun PursuitExerciseHeading(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        // Optional factual exercise details are available in Focus without
+        // navigating away from set entry. Keep full History one tap away.
+        if(onInfo!=null) OutlinedIconButton(
+            onClick=onInfo,enabled=enabled,
+            modifier=Modifier.size(48.dp)
+        ) { Icon(Icons.Outlined.Info,contentDescription="Exercise details") }
         OutlinedButton(onClick=onHistory,enabled=enabled,
             contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),
             modifier=Modifier.heightIn(min=48.dp)) {

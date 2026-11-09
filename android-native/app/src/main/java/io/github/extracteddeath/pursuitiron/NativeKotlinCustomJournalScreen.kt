@@ -533,6 +533,9 @@ internal fun NativeKotlinCustomJournalScreen(
                     existing=null,replacing=origin,
                     scopeLabel="This workout only · no program change",
                     workoutOnlySwap=true,
+                    otherDayExerciseIds=snap.slots.filter{
+                        it.slotId!=slotId
+                    }.map{it.exerciseId},
                     feedback=error,
                     onSave={exerciseId,sets,note->
                         confirmSwap(slotId,exerciseId,sets,note)

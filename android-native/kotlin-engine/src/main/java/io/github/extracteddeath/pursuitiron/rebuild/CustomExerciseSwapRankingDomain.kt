@@ -40,7 +40,8 @@ object CustomExerciseSwapRankingDomain {
         search:String="",
         samePatternOnly:Boolean=false,
         sharedMusclesOnly:Boolean=false,
-        sameRoleOnly:Boolean=false
+        sameRoleOnly:Boolean=false,
+        sameFamilyOnly:Boolean=false
     ):List<CustomSwapRankedOption> {
         // Fail closed on duplicate catalog identities. Do not build a
         // shortlist from invented or unresolved source metadata.
@@ -101,7 +102,10 @@ object CustomExerciseSwapRankingDomain {
                     CustomSwapFit.SAME_PATTERN,
                     CustomSwapFit.SAME_PATTERN_AND_FAMILY)) &&
                 (!sharedMusclesOnly || option.sharedMuscles.isNotEmpty()) &&
-                (!sameRoleOnly || option.sameRole)
+                (!sameRoleOnly || option.sameRole) &&
+                (!sameFamilyOnly || option.fit in setOf(
+                    CustomSwapFit.SAME_PATTERN_AND_FAMILY,
+                    CustomSwapFit.SAME_FAMILY))
             }
             .sortedWith(compareBy<CustomSwapRankedOption>{
                 it.fit.ordinal

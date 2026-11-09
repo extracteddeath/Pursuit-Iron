@@ -608,7 +608,10 @@ assert.ok(coach.includes('preferredExerciseId?.takeIf{it in choices}') &&
   coach.includes('host.currentVerifiedCoachExerciseChoices()') &&
   coach.includes('onOpenTrain(approvedId)') &&
   journey.includes('selectedGeneratedWorkoutId=id') &&
-  journey.includes('if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)'),
+  journey.includes('if(generatedWorkoutId!=null) {') &&
+  journey.includes('if(selectedId!=generatedWorkoutId)') &&
+  journey.includes('selectedId=generatedWorkoutId') &&
+  journey.includes('minimizedGeneratedId=null'),
   'Coach focus requires current owner-verified program, and accepted grant must open the exact Train entry');
 assert.ok((host.match(/enableRepeatedFatigueReview=assistance.offersFatigueAdvice/g)||[]).length===2,
   'Both next-rep preview and final acceptance must preserve the athlete fatigue-advice switch');

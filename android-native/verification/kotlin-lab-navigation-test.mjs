@@ -227,6 +227,7 @@ assert.ok(
   liveWorkout.includes('host.swapIssuedCustomExercise(') &&
   liveWorkout.includes('This workout only · no program change') &&
   liveWorkout.includes('workoutOnlySwap=true') &&
+  liveWorkout.includes('otherDayExerciseIds=snap.slots.filter{') &&
   liveJournalDomain.includes('data class Swap(') &&
   liveJournalDomain.includes('val originalSnapshot:CustomWorkoutDaySnapshot=snapshot') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
@@ -262,6 +263,10 @@ assert.ok(
   swapRank.includes("name.replace('_',' ').replace('-',' ')") &&
   swapRank.includes('thenByDescending {it.sameRole}') &&
   swapRank.includes('Same reviewed training role') &&
+  swapRank.includes('otherDayExerciseIds:List<String>?=null') &&
+  swapRank.includes('Retains sole reviewed direct-day coverage') &&
+  swapRank.includes('Review lost direct-day coverage') &&
+  swapRank.includes('val dayCoverageKnown=source!=null') &&
   swapRank.includes('CustomSwapFit.SAME_PATTERN_AND_FAMILY') &&
   swapRank.includes('CustomSwapFit.SHARED_REVIEWED_MUSCLES') &&
   swapRank.includes('val mayTransferWeight:Boolean get()=false') &&
@@ -275,6 +280,8 @@ assert.ok(
   authoringSheet.includes('Text("Shared muscles")') &&
   authoringSheet.includes('Text("Same role")') &&
   authoringSheet.includes('Text("Same family")') &&
+  authoringSheet.includes('otherDayExerciseIds=otherDayExerciseIds') &&
+  plan.includes('otherDayExerciseIds=day?.slots?.filter{') &&
   authoringSheet.includes('if(workoutOnlySwap) "Confirm workout-only replacement"') &&
   authoringSheet.includes('"Confirm workout swap" else "Confirm this program swap"') &&
   authoringSheet.includes('forms=listOf(CustomSetFields())') &&

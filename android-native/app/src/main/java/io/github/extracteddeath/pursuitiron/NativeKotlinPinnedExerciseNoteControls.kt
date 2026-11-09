@@ -229,16 +229,15 @@ internal fun NativeKotlinPinnedExerciseNoteSheet(
             val fields=reviewedFields.ifEmpty {
                 NativePinnedSetupFieldDomain.fields(null,setup)
             }
-            val current=fields.filterNot{it.savedEarlier}
-            val savedEarlier=fields.filter{it.savedEarlier}
-            if(savedEarlier.isNotEmpty()) {
-                Text("Saved earlier",
-                    style=MaterialTheme.typography.titleSmall)
-                Text("These settings are no longer in the reviewed equipment fields. They are preserved until you explicitly clear them.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            (current+savedEarlier).forEach { field ->
+            val firstSavedEarlier=fields.indexOfFirst{it.savedEarlier}
+            fields.forEachIndexed {index,field ->
+                if(index==firstSavedEarlier && firstSavedEarlier!=-1) {
+                    Text("Saved earlier",
+                        style=MaterialTheme.typography.titleSmall)
+                    Text("These settings are no longer in the reviewed equipment fields. They are preserved until you explicitly clear them.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 val value=setup[field.key].orEmpty()
                 OutlinedTextField(
                     value=value,

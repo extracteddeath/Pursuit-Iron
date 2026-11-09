@@ -231,8 +231,7 @@ class NativeKotlinPinnedExerciseNoteFileStore(
             return NativePinnedNoteRead.Rejected(NativePinnedNoteRefusal.INVALID_EXERCISE)
         return runCatching {
             fence.withOwnerTransaction(key) {
-                val current=owner(key) ?:return@withOwnerTransaction
-                    NativePinnedNoteRead.Rejected(NativePinnedNoteRefusal.NOT_AUTHORIZED)
+                val current=owner(key) ?:return@withOwnerTransaction NativePinnedNoteRead.Rejected(NativePinnedNoteRefusal.NOT_AUTHORIZED)
                 try {NativePinnedNoteRead.Current(
                     readDisk(key,current.athleteId,exercise))}
                 catch(_:Exception){NativePinnedNoteRead.Rejected(
@@ -254,11 +253,9 @@ class NativeKotlinPinnedExerciseNoteFileStore(
             return NativePinnedNoteWrite.Rejected(NativePinnedNoteRefusal.INVALID_CONTENT)
         return runCatching {
             fence.withOwnerTransaction(key) {
-                val current=owner(key) ?:return@withOwnerTransaction
-                    NativePinnedNoteWrite.Rejected(NativePinnedNoteRefusal.NOT_AUTHORIZED)
+                val current=owner(key) ?:return@withOwnerTransaction NativePinnedNoteWrite.Rejected(NativePinnedNoteRefusal.NOT_AUTHORIZED)
                 val previous=try{readDisk(key,current.athleteId,exercise)}
-                    catch(_:Exception){return@withOwnerTransaction
-                        NativePinnedNoteWrite.Rejected(
+                    catch(_:Exception){return@withOwnerTransaction NativePinnedNoteWrite.Rejected(
                             NativePinnedNoteRefusal.CORRUPT_OR_PENDING)}
                 // A lost write acknowledgment must not double-apply a note.
                 if(previous.lastEventId==eventId) {
@@ -276,8 +273,7 @@ class NativeKotlinPinnedExerciseNoteFileStore(
                     text=text,
                     setup=Collections.unmodifiableMap(LinkedHashMap(setup)),
                     lastEventId=eventId)
-                if(owner(key)!=current)return@withOwnerTransaction
-                    NativePinnedNoteWrite.Rejected(NativePinnedNoteRefusal.NOT_AUTHORIZED)
+                if(owner(key)!=current)return@withOwnerTransaction NativePinnedNoteWrite.Rejected(NativePinnedNoteRefusal.NOT_AUTHORIZED)
                 atomic(key,exercise,updated)
                 NativePinnedNoteWrite.Saved(updated,false)
             }

@@ -15,7 +15,7 @@ import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSess
 import { withSessionPlanChoice } from '../../../modules/session-plan.js';
 import { reviewProgramChanges, withProgramRevision } from '../../../modules/program-review.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
-import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout, resizeWorkingSets, carryLoggedLoad, uncarryLoggedLoad } from '../../../modules/workout-context.js';
+import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout, resizeWorkingSets, carryLoggedLoad, uncarryLoggedLoad, withGroupRounds } from '../../../modules/workout-context.js';
 
 const { EX_BY_ID, EXERCISES } = E;
 const now = () => Date.now();
@@ -867,20 +867,6 @@ function sessionContext(l) {
     return { program, day, wk, H, P, dayPerf, lifterModel };
 }
 
-/* A grouped lift with a set number of rounds gets exactly that many working sets: extra prescribed ones drop off the
-   end, and missing ones repeat the last working set's target. Warm-ups are untouched. */
-function withRounds(sets, rounds) {
-    if (!(rounds > 0) || !Array.isArray(sets)) return sets;
-    const work = sets.filter(isWork);
-    if (!work.length || work.length === rounds) return sets;
-    if (work.length > rounds) {
-        // Keep warm-ups, the first `rounds` working sets and their own drop/myo sub-sets.
-        let n = 0; return sets.filter((x) => x.warm || (isWork(x) ? ++n <= rounds : n <= rounds));
-    }
-    const last = work[work.length - 1], extra = Array.from({ length: rounds - work.length }, () => ({ ...last, done: false }));
-    return [...sets, ...extra];
-}
-
 // App.js WorkoutSession `data` initializer (fresh path).
 function freshData(ctx) {
     const { program, day, wk, H, P, dayPerf } = ctx, u = unit();
@@ -893,7 +879,7 @@ function freshData(ctx) {
         const last = H.find((h) => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
         const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat);
         const rounds = !program.config?.noSupersets && Number(program.rounds?.[`${day.id}:${slot}`]) || 0;
-        return { id, slot, sets: withRounds(prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true), rounds),
+        return { id, slot, sets: withGroupRounds(prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true), rounds),
             note: n.text, noteRepeat: n.repeat, superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 };
     }).filter(Boolean);
@@ -1129,12 +1115,9 @@ const SHORT = { 'overhead press': 'OHP', 'romanian deadlift': 'RDL', 'bulgarian 
 /* Technique cues: the lift's own cue first, then its pattern's. When the two speak to the same thing they could
    disagree (bench: "Tuck elbows ~75°" then "Elbows ~45° from torso"), so a pattern cue on a topic the lift's own
    cue already covers is dropped. (Same data on the web: modules/training-domain/analytics.js cuesFor.) */
+// The engine's cuesFor drops a pattern cue that contradicts the lift's own (bench: 75° vs 45° elbows).
 function cuesOf(ex) {
-    let all = []; try { all = E.cuesFor(ex) || []; } catch { return []; }
-    if (all.length < 2) return all;
-    const spec = String(all[0]).toLowerCase(), topics = ['elbow', 'touch', 'grip', 'wrist', 'knee', 'depth', 'stance', 'arch', 'lean'];
-    const covered = topics.filter((t) => spec.includes(t));
-    return [all[0], ...all.slice(1).filter((c) => !covered.some((t) => String(c).toLowerCase().includes(t)))];
+    try { return E.cuesFor(ex) || []; } catch { return []; }
 }
 function shortName(name) {
     const full = String(name || '').trim(); if (full.length <= 12) return full;

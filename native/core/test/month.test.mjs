@@ -31,7 +31,10 @@ const weekAfter = (n) => (Math.floor(n / perWeek) % blockWeeks) + 1;
 const W = (n) => (/dumbbell|curl|raise|fly|bulgarian|split squat|lunge|kickback/i.test(n) ? 15 : /barbell|squat|deadlift/i.test(n) ? 60 : 35);
 const firstLoad = {}, lastLoad = {};
 let sessions = 0;
-for (let d = 0; d < 29; d++) {
+// Two passes through the four-week block and into a third: the second pass must advance (it stuck on week 1).
+const DAYS = 57;
+const weeksSeen = [], sessionDates = [];
+for (let d = 0; d < DAYS; d++) {
   setNow(start + d * DAY);
   const tag = new Date().toDateString();
   const h = C.home();
@@ -54,6 +57,7 @@ for (let d = 0; d < 29; d++) {
   ok(!h.restDay, `${tag}: a scheduled day is not a rest day`);
   const pv = C.sessionPreview({});
   clean(tag + ' preview', pv);
+  weeksSeen.push(h.next.weekIndex);
   const s = C.startSession({});
   ok(!s.error, `${tag}: the session starts (${s.error || 'ok'})`);
   let n = 0, total = 0;
@@ -78,7 +82,7 @@ for (let d = 0; d < 29; d++) {
   if (fp) clean(tag + ' finish page', fp);
   const fin = C.finishSession();
   ok(fin?.ok !== false, `${tag}: the session saves (${fin?.error || 'ok'})`);
-  sessions++;
+  sessions++; sessionDates.push(Date.now());
   ok(total >= 10 && n === total, `${tag}: every working set logged (${n}/${total})`);
   const after = C.home();
   ok(after.weekStrip.some((x) => x.today && x.done), `${tag}: today's strip day is ticked after training`);
@@ -91,15 +95,18 @@ for (let d = 0; d < 29; d++) {
     ok(days === 7 && after.recap.count <= perWeek + 1, `${tag}: recap is a 7-day window with at most a week's sessions (${days} days, ${after.recap.count})`);
   }
 }
-ok(sessions === 17, 'Mon/Wed/Fri/Sun over 29 days is 17 sessions (' + sessions + ')');
+ok(sessions === 33, 'Mon/Wed/Fri/Sun over 57 days is 33 sessions (' + sessions + ')');
+ok(weeksSeen.join('') === '1111222233334444'.repeat(2) + '1', 'the block runs 1–4 twice, then week 1 again (' + weeksSeen.join('') + ')');
 
 // After the month: progress, history and the profile read the month back.
-setNow(start + 29 * DAY);
+setNow(start + DAYS * DAY);
 const pc = C.progressCharts();
 clean('progress charts', pc);
 const wk = pc.weeks.filter((x) => x.sessions > 0);
 ok(wk.length >= 4 && wk.every((x) => x.volume > 0), 'progress has volume in each trained week (' + pc.weeks.map((x) => x.label + ':' + x.sessions).join(' ') + ')');
-ok(pc.weeks.reduce((a, x) => a + x.sessions, 0) === sessions, 'the weekly chart counts every session');
+// The chart covers the last 8 weeks: every session in that window (the first week's Monday falls out after 57 days).
+const inChart = sessionDates.filter((t) => t >= pc.weeks[0].start).length;
+ok(pc.weeks.reduce((a, x) => a + x.sessions, 0) === inChart, 'the weekly chart counts every session in its 8 weeks (' + pc.weeks.reduce((a, x) => a + x.sessions, 0) + ' of ' + inChart + ')');
 const hist = C.historyList({});
 clean('history', hist);
 const pb = C.profileBoard();

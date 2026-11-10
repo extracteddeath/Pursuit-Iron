@@ -296,6 +296,7 @@ object CustomCycleCoachAuditDomain {
                 val estimated=linkedMapOf<Int,Long?>()
                 for (day in week.days) {
                     var seconds=0L
+                    var missingAdvancedWork=false
                     val touched=mutableSetOf<TrainingMuscle>()
                     for (slot in day.slots) {
                         val workingSets=slot.sets.count {it.type==DraftSetType.WORKING}
@@ -316,6 +317,8 @@ object CustomCycleCoachAuditDomain {
                             seconds+=set.activeSeconds.toLong()+set.restSeconds
                             val amp=set.amplifier
                             if (amp!=null) {
+                                if(amp.followUpActiveSeconds==null)
+                                    missingAdvancedWork=true
                                 // Authored follow-up work time is counted;
                                 // missing active seconds remain unresolved.
                                 seconds+=amp.followUpRestSeconds+
@@ -329,7 +332,8 @@ object CustomCycleCoachAuditDomain {
                     known[day.weekday]=seconds
                     val overhead=(prospectiveByBlock[week.blockId]
                         ?.nonSetSecondsByWeekday ?:inputs.nonSetSecondsByWeekday)[day.weekday]
-                    estimated[day.weekday]=overhead?.let {seconds+it}
+                    estimated[day.weekday]=if(missingAdvancedWork)null
+                        else overhead?.let {seconds+it}
                     val hard=checkNotNull(blockProfiles[week.blockId])
                         .explicitHardMaximumMinutes
                     if (hard!=null && estimated[day.weekday]!=null &&

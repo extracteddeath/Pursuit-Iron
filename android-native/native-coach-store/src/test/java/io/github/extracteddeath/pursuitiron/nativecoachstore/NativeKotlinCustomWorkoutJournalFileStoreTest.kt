@@ -269,7 +269,37 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertTrue(replay.toString(),replay is NativeCustomJournalResult.Durable)
         assertTrue((replay as NativeCustomJournalResult.Durable).replayed)
         assertEquals(finished,replay.issued.journal)
+        val finish=CustomWorkoutJournalOperation.Finish(
+            "short-finish-a",finished.revision)
+        val done=NativeKotlinCustomHistoryTransaction(
+            history,issued,fence,identity)
+            .complete("owner-1","athlete-1","short-session-1",finish)
+        assertTrue(done.toString(),done is NativeCustomFinishResult.Committed)
+        assertTrue(NativeKotlinCustomHistoryTransaction(
+            history,issued,fence,identity)
+            .complete("owner-1","athlete-1","short-session-1",finish)
+            is NativeCustomFinishResult.Committed)
+        val historical=(issued.open("owner-1","short-session-1")
+            as NativeCustomJournalResult.Durable).issued.journal
+        val evidence=CustomWorkoutHistoryEvidenceDomain.project(historical)
+            as CustomHistoryEvidenceResult.Candidate
+        assertEquals(20,evidence.evidence.shortSessionLimitMinutes)
+        assertEquals(preview.omittedSetKeys,
+            evidence.evidence.shortSessionOmittedSetKeys)
+        assertTrue(evidence.evidence.prescriptionEditedForTime)
+        assertEquals(listOf("cycle-1:w2:d0:slot-0:s1"),
+            evidence.evidence.visits.map{it.setKey})
+        assertEquals(16,evidence.evidence.visits.single().actual?.reps)
+        assertEquals(1,evidence.evidence.visits.single().actual?.actualRir)
+        assertFalse(evidence.evidence.canApplyProgression)
+        val completed=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions
+        assertEquals(listOf("short-session-1"),
+            completed.map{it.workoutId})
         assertEquals(2,approved.session.slots.size)
+        assertEquals(shortenedCycle(),
+            (drafts.read("owner-1","cycle-1")
+                as NativeCustomDraftReadResult.Found).draft)
     }
 
     @Test fun shortCustomPreparationRefusesNoConsentUnconfirmedAndStaleRevision() {

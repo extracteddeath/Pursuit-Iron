@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=7
+    private const val VERSION=8
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -308,10 +308,25 @@ internal object NativeKotlinApprovalCodec {
             "Cannot persist a partially reviewed or infeasible approval"
         }
         value.acceptedRepTargets?.let {verifiedRepProof(it,staged.snapshot)}
+        if(value.shortSessionLimitMinutes!=null) {
+            require(value.acceptedRepTargets==null) {
+                "A shortened session cannot silently discard an approved per-set rep change"
+            }
+            val review=KotlinShorterSessionReviewDomain.review(
+                KotlinWorkoutSnapshotRequest(value.approvedSource,
+                    value.currentSource,value.grant,value.program,value.policies),
+                value.shortSessionLimitMinutes)
+            require(review.status in setOf(
+                KotlinShortSessionStatus.ALREADY_FITS,
+                KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW)) {
+                "Time-limited approval must preserve the protected workload"
+            }
+        }
         val bytes=ByteArrayOutputStream()
-        // Retain the exact v6 bytes for approvals without the new timing
-        // model. Cold reopening must not reinterpret existing workouts.
-        val version=if(value.program.visitTimings.isEmpty())6 else VERSION
+        // Older v6/v7 approvals remain byte-identical; only an explicit
+        // time-limited approval introduces the v8 trailing selection.
+        val version=if(value.shortSessionLimitMinutes!=null)VERSION
+            else if(value.program.visitTimings.isEmpty())6 else 7
         DataOutputStream(bytes).use {out->
             with(out){
                 writeInt(MAGIC);writeInt(version)
@@ -332,6 +347,7 @@ internal object NativeKotlinApprovalCodec {
                     // v6 adds target-RIR adjustments; v1 single-set receipts stay immutable.
                     writeEnum(proof.decisionKind)
                 }
+                if(version>=8)optionalInt(value.shortSessionLimitMinutes)
             }
         }
         return bytes.toByteArray().also {require(it.size<=MAX_BYTES)}
@@ -366,8 +382,9 @@ internal object NativeKotlinApprovalCodec {
                         proof.decisionKind.policyVersion!=AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1)
                         throw IOException("target-RIR decisions require approval encoding v6")
                     if(available()!=0)throw IOException("trailing approval bytes")
+                    val timeLimit=if(version>=8)optionalInt() else null
                     NativeKotlinWorkoutApproval(owner,athlete,approved,current,
-                        grant,program,policies,receipt,revision,proof)
+                        grant,program,policies,receipt,revision,proof,timeLimit)
                 }
             }
             // Reject malformed but checksum-valid contents too.

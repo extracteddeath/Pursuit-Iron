@@ -158,3 +158,26 @@ This closes the source-level **pinned exercise note and setup** path,
 not general session notes, exercise history annotation, multi-gym
 migration, physical Android device acceptance, or the complete native
 web-feature parity gate.
+
+
+## Kotlin per-workout session notes — verified 2026-11-09
+
+The native source and compiled app now support **session-specific** athlete
+notes in both custom and generated workout journals. Unlike reusable
+pinned exercise notes, the text applies only to the original issued
+workout and may be viewed read-only from verified completed History.
+Both journals have bounded, revisioned, owner-fenced, replayable
+`SessionNote` receipts and explicit clear operations. A note edit
+cannot author a working set, change weight/reps/RIR, reset rest, or
+contaminate the next workout.
+
+Cold storage is backward-compatible: legacy journal formats retain their
+original encodings until an actual note event is appended. History
+fingerprints account for note edits but set-performance aggregates do not.
+The prior missing global-index `when` branch was corrected and tested.
+
+**Evidence:** [33/33 green Kotlin + Compose CI steps](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42740194036)
+at `7af9dedd4243c4b97d40e7dd10164375066a32ab`.
+This closes the session-note *source / compile* parity slice, **not**
+real-device accessibility/UI acceptance or the native-versus-web
+coaching-superiority gate.

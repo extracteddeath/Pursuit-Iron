@@ -65,7 +65,9 @@ assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') 
   exerciseHistory.includes('host.reviewVerifiedKotlinHistory()') &&
   exerciseHistory.includes('CustomWorkoutVisitPart.FOLLOW_UP') &&
   exerciseHistory.includes('Text("All entries")') &&
-  exerciseHistory.includes('showAllVisits') &&
+  exerciseHistory.includes('ExerciseHistoryView.SETBACKS') &&
+  exerciseHistory.includes('it.outcome!=KotlinJournalSetOutcome.COMPLETED') &&
+  exerciseHistory.includes('val allSessions=rows.groupBy { it.sessionOrder }') &&
   exerciseHistory.includes('DraftSetType.WORKING') &&
   exerciseHistory.includes('RIR not reported'),
   'Custom workout History must open complete correction-aware exercise facts, never invent RIR');

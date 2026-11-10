@@ -71,6 +71,10 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     val sc = vm.profile?.o("score")
+    // Never substitute a fabricated age in the comparison controls.
+    val age = vm.profile?.s("age")?.toIntOrNull()?.takeIf { it in 14..90 }
+    var ageEditing by remember { mutableStateOf(false) }
+    var ageInput by remember(age) { mutableStateOf(age?.toString().orEmpty()) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val lightBars = cs.surface.luminance() > 0.5f
         (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
@@ -105,24 +109,42 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
                         Text(sc.s("level"), style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimaryContainer)
                         if (sc.has("delta8w") && !sc.isNull("delta8w")) { val dl = sc.i("delta8w")
                             Text((if (dl >= 0) "+$dl" else "−${-dl}") + " in 8 wk", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer) }
-                        Text("Your four movement patterns averaged against lifters of your sex, bodyweight and age.", style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
+                        Text(if (age != null) "Your four movement patterns compared with lifters of your sex, bodyweight and age."
+                            else "Your four movement patterns compared by sex and bodyweight. Add your age to refine the comparison.", style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
                             color = cs.onPrimaryContainer.copy(alpha = 0.85f), modifier = Modifier.padding(top = 4.dp))
                     }
                 }
                 val p = vm.profile
-                val age = p?.optString("age")?.toIntOrNull() ?: 31
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Segmented(listOf("male" to "Male", "female" to "Female"), p?.s("sex", "male") ?: "male", { vm.setProfile(sex = it) })
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Age", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
-                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceContainerHigh).clickable { vm.setProfile(age = (age - 1).coerceAtLeast(14)) }.semantics { contentDescription = "Younger"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−", fontSize = 18.sp) }
-                        Text("$age", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
-                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceContainerHigh).clickable { vm.setProfile(age = (age + 1).coerceAtMost(90)) }.semantics { contentDescription = "Older"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 18.sp) }
+                        if (age != null) {
+                            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceContainerHigh).clickable { vm.setProfile(age = (age - 1).coerceAtLeast(14)) }.semantics { contentDescription = "Younger"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−", fontSize = 18.sp) }
+                            Text("$age", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
+                            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceContainerHigh).clickable { vm.setProfile(age = (age + 1).coerceAtMost(90)) }.semantics { contentDescription = "Older"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 18.sp) }
+                        } else {
+                            Text("Not set", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                            androidx.compose.material3.TextButton(onClick = { ageEditing = true }) { Text("Add age") }
+                        }
                         Text("· ${p?.s("bodyweight")?.takeIf { it.isNotBlank() }?.let { "$it ${p.s("unit")}" } ?: "no bodyweight"}", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
                     }
-                    Text("Used only for these comparisons, and kept on this phone.", style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp), color = cs.onSurfaceVariant)
+                    if (ageEditing) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.OutlinedTextField(ageInput, { ageInput = it.filter { c -> c.isDigit() }.take(2) },
+                            modifier = Modifier.weight(1f), singleLine = true, label = { Text("Age (14–90)") },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+                        androidx.compose.material3.Button(onClick = { vm.setProfile(age = ageInput.toInt()); ageEditing = false },
+                            enabled = ageInput.toIntOrNull()?.let { it in 14..90 } == true) { Text("Save") }
+                    }
+                    Text(if (age == null) "Age is optional. Add it to use age-adjusted standards; nothing is guessed."
+                        else "Used only for these comparisons, and kept on this phone.",
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp), color = cs.onSurfaceVariant)
                 }
                 val x = d
+                if (x?.b("ready") == true && x.s("cohort").isNotBlank()) {
+                    Text("Compared with ${x.s("cohort")}.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp))
+                }
                 when {
                     x == null -> {}
                     !x.b("ready") -> Text(if (x.s("missing") == "sex") "Pick your sex above to compare each lift against lifters like you." else "Log your bodyweight on Body to compare each lift against lifters like you.",

@@ -53,7 +53,8 @@ data class CustomWorkoutDaySnapshot(
     val dayLabel: String,
     val sessionPurpose: ComposerSessionPurpose,
     val slots: List<CustomWorkoutSlotSnapshot>,
-    /** This is not a full duration when an amplifier lacks work timing. */
+    /** Full set+rest duration only if EVERY amplifier includes separately
+     * declared active follow-up seconds; otherwise a known partial time. */
     val knownSetAndRestSeconds: Long,
     val declaredNonSetSeconds: Int?,
     /** Selected on an explicitly authorized single-workout time review.
@@ -168,7 +169,8 @@ object CustomWorkoutSnapshotDomain {
                     return CustomWorkoutSnapshotResult.Rejected(
                         CustomWorkoutSnapshotRefusal.DUPLICATE_SET_IDENTITY)
                 knownSeconds+=set.activeSeconds.toLong()+set.restSeconds+
-                    (set.amplifier?.followUpRestSeconds ?:0)
+                    (set.amplifier?.followUpRestSeconds ?:0)+
+                    (set.amplifier?.followUpActiveSeconds ?:0)
                 CustomWorkoutSetSnapshot(key,slot.slotId,index+1,
                     set.copy(amplifier=set.amplifier?.copy()))
             }

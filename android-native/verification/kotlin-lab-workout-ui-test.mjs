@@ -278,4 +278,29 @@ assert.ok(composer.includes('NativeKotlinComposerSwapSheet(') &&
   composerSwapDomain.includes('fun filterRanked(') &&
   composerSwapDomain.includes('target.type==DraftSetType.WORKING'),
   'Generated workout swap must offer ranked muscle/pattern search, separately authored verified targets, and safe working-set rep bounds');
-console.log('PASS native workout recording and verified Finish-to-History/Coach navigation');
+// The old UI draft's safe "Use Last" behavior is now carried forward into
+// the current engine/Compose branch, NOT a wholesale rollback to its screens.
+const draftPolicy=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastDraftDomain.kt');
+const lastPicker=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
+assert.match(draftPolicy,/history as\? WorkoutLastReferenceResult\.Ready/);
+assert.match(draftPolicy,/record\.outcome!=KotlinJournalSetOutcome\.COMPLETED/);
+assert.match(draftPolicy,/CustomWorkoutJournalDomain\.actualValid\(/);
+assert.match(draftPolicy,/record\.loadBasis==currentLoad\.basis/);
+assert.match(draftPolicy,/record\.loadBasis==null/);
+assert.match(lastPicker,/if\(mode!=WorkoutReferenceMode\.LAST\)return/);
+assert.match(lastPicker,/WorkoutLastDraftDomain\.reviewedActual\(history,key,currentLoad\)/);
+assert.match(lastPicker,/onClick=\{onApply\(actual\)\}/);
+assert.match(lastPicker,/Missing last RIR stays blank/);
+assert.match(lastPicker,/heightIn\(min=48\.dp\)/);
+assert.match(composer,/if\(!set\.isResolved\) PursuitUseLastCompletedSet\(/);
+assert.match(composer,/key=WorkoutReferenceKey\(target\.setKey\)/);
+assert.match(composer,/effort=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
+assert.match(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
+assert.match(journal,/part==CustomWorkoutVisitPart\.FOLLOW_UP\)/);
+assert.match(journal,/actualRir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
+const lastHelper=lastPicker.slice(
+    lastPicker.indexOf('internal fun PursuitUseLastCompletedSet('),
+    lastPicker.indexOf('internal fun kotlinLoadBasisLabel('));
+assert.doesNotMatch(lastHelper,/\.record\(|\.finish\(|\.write\(|\.approve\(|changePrescription\(/);
+
+console.log('PASS native workout recording and verified Finish-to-History/Coach navigation and safe Last draft');

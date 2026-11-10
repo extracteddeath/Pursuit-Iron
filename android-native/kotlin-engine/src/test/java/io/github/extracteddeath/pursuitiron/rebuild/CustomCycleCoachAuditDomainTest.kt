@@ -777,4 +777,41 @@ class CustomCycleCoachAuditDomainTest {
             CustomCoachActionReviewResult.Rejected)
     }
 
+    @Test fun advancedWorkoutNeedsExplicitFollowupActiveTimeForFullCoachAudit() {
+        fun authored(seconds:Int?)=cycle(days=listOf(0,2,4).map{day->
+            if(day!=0)authoredDay(day)
+            else authoredDay(day).copy(slots=authoredDay(day).slots.map{slot->
+                slot.copy(sets=slot.sets.map{set->
+                    set.copy(amplifier=CustomSetAmplifier(
+                        CustomAmplifierKind.MYO_REPS,5,20,
+                        followUpActiveSeconds=seconds))
+                })
+            })
+        })
+        val old=CustomCycleCoachAuditDomain.review(
+            authored(null),setup(),StarterExerciseTranche.movements(),inputs())
+        assertNotEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,old.status)
+        assertTrue(old.issues.any{
+            it.kind==CustomCoachIssueKind.NON_SET_TIME_UNDECLARED &&
+                it.location=="amplifiers"
+        })
+        val reviewed=CustomCycleCoachAuditDomain.review(
+            authored(60),setup(),StarterExerciseTranche.movements(),inputs())
+        assertEquals(reviewed.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,reviewed.status)
+        assertEquals(410L,reviewed.weeks.first()
+            .estimatedSecondsByDay.getValue(0))
+        assertEquals(210L,reviewed.weeks.first()
+            .knownSecondsByDay.getValue(0))
+        assertEquals(330L,reviewed.weeks.first()
+            .estimatedSecondsByDay.getValue(2))
+        val invalid=CustomTrainingCycleDomain.review(
+            authored(0),listOf(CustomExerciseAvailability(
+                "bodyweight_crunch",null,true)))
+        assertTrue(invalid.issues.any{
+            it.kind==CustomCycleIssueKind.INVALID_SET
+        })
+        assertFalse(invalid.canIssueWorkout)
+    }
+
 }

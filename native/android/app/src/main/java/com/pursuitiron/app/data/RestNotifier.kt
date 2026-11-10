@@ -112,11 +112,12 @@ class RestNotifier(private val context: Context) {
             .setContentText(next)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(open)
             .setRequestPromotedOngoing(true)
+        // Not setSilent: that files the card under "Silent", collapsed with its Log set hidden. The channel is already
+        // soundless and setOnlyAlertOnce keeps updates quiet, so it sits with the alerting cards, open.
         if (startedAt != null && startedAt > 0) b.setWhen(startedAt).setShowWhen(true).setUsesChronometer(true) else b.setShowWhen(false)
         // Log the next set at its target from the lock screen; the rest card follows, as after a tap in the app.
         if (canLog) b.addAction(R.mipmap.ic_launcher_monochrome, "Log set", actionIntent("log"))

@@ -577,9 +577,8 @@ if tap(r"(?i)^\|?skip$", required=False, timeout=3):
     time.sleep(2.5)
 if not find(r"(?i)^\|?log set$", timeout=4):
     # A card below another in the shade shows collapsed, its buttons hidden: pull it open as a person would.
-    p = find(r"Next: |Tap to finish", timeout=3)
-    if p:
-        adb("shell", "input", "swipe", str(p[0]), str(p[1]), str(p[0]), str(p[1] + 400), "300")
+    # Its expand chevron, not the card body: a tap on the body opens the app.
+    if tap(r"(?i)^expand", required=False, timeout=3):
         time.sleep(1.5)
 if not tap(r"(?i)^\|?log set$", "shade-log-set", required=False, timeout=5):
     nd = adb("shell", "dumpsys", "notification", "--noredact") or ""

@@ -172,7 +172,7 @@ object NativeKotlinMixedHistoryFactsDomain {
                 val record = NativeMixedCompletedLoadFact(key, physical, actual.reps,
                     manifest.workoutId, manifest.completionOrder, visit.setKey,
                     visit.customSlot, visit.eventId)
-                if (actual.reps==1) {
+                if (actual.reps == 1) {
                     val previous=bestSingle[key]
                     if(previous==null || physical>previous.actualLoad ||
                         (physical.compareTo(previous.actualLoad)==0 &&

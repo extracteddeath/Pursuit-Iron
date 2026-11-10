@@ -2517,3 +2517,41 @@ acceptance; all-screen Material 3 consistency; adaptive cycle review,
 approval and persistence; web Build 1009 functional parity; and
 athlete-specific longitudinal proof that the Kotlin coach actually
 outperforms the former web engine.
+
+
+## 2026-11-09 — Coach approved-movement search and shared readiness
+
+The Kotlin-native **Coach** screen now offers searched, accessible, paginated
+movement selection rather than an unbounded horizontal chip strip. The
+`CoachExerciseChoiceSearchDomain` is **presentation-only**: it matches
+order-independent words against the readable label and exact exercise ID,
+deduplicates previously approved choices, preserves authorized source order
+and NEVER adds an item. The host still verifies the signed-in athlete,
+currently authorized program, current gym/equipment and allowed exercise
+before progression advice or a workout can be issued. A preferred exercise
+from History remains only a focus hint, not an authorization.
+
+Coach now shares the Material 3 `PursuitWorkoutReadinessPanel` with both
+custom and independently generated workout loggers. The component retains
+accessible 48dp-tall, horizontally scrollable readiness choices and a
+separate explicit movement-restriction toggle. When fatigue coaching is
+disabled, Coach hides the readiness picker but **never** hides restriction
+input; edits invalidate any earlier review before a new coaching request.
+This refactor is UI-only and does not change a plan, logged set, fatigue
+model, load, RIR or progression decision.
+
+Added pure Kotlin exercise-search JUnit tests, native UI source-gate tests,
+and the exact new test path as a trigger for the strict CI workflow.
+
+**Verification:** [GitHub Actions run
+42742630049](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42742630049)
+passed **33/33** checks at code SHA
+`360b8c96acb318ef0f8c6af1b8d84836320cfd65`,
+including the Coach search/authority checks, engine regression and paired
+comparison, journal recovery and Android Compose compilation.
+
+**Still pending:** physical phone/tablet/foldable UX and TalkBack/large-font
+acceptance, full-screen design integration and remaining features of draft
+PR #448, approved adaptive-cycle change review, full web Build 1009 parity,
+and actual evidence of superior Kotlin coaching over the web implementation.
+No APK/AAB or web changes were made.

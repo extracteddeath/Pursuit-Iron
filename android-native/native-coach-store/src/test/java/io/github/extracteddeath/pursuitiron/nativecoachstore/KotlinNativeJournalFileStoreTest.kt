@@ -36,6 +36,43 @@ class KotlinNativeJournalFileStoreTest {
         return result as NativeJournalFileResult.Durable
     }
 
+    @Test fun generatedSessionNoteIsOwnerScopedV4DurableClearableAndReplayed() {
+        val s=store()
+        ok(s.issue("owner-1",snapshot,identity))
+        val op=KotlinJournalOperation.SessionNote("note-1",0,"Good pace")
+        val saved=ok(s.append("owner-1",snapshot,identity,op)).journal
+        assertEquals("Good pace",saved.sessionNote)
+        assertEquals(1L,saved.revision)
+        assertEquals(2,saved.unresolvedSetCount)
+        val reopened=ok(store().open("owner-1",snapshot,identity)).journal
+        assertEquals("Good pace",reopened.sessionNote)
+        assertEquals(saved,reopened)
+        val bytes=Files.list(temporary.root.toPath()).use {stream->
+            val path=stream.filter{it.fileName.toString().endsWith(".bin")}
+                .findFirst().orElseThrow()
+            Files.readAllBytes(path)
+        }
+        assertEquals(4,java.nio.ByteBuffer.wrap(bytes,8,4).int)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,op)).replayed)
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.JOURNAL_REJECTED,KotlinJournalRefusal.STALE_REVISION),
+            s.append("owner-1",snapshot,identity,
+                KotlinJournalOperation.SessionNote("old-note",0,"not saved")))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            store().open("other-owner",snapshot,identity))
+        val cleared=ok(s.append("owner-1",snapshot,identity,
+            KotlinJournalOperation.SessionNote("clear-note",1,""))).journal
+        assertEquals("",cleared.sessionNote)
+        assertEquals(2,cleared.receipts.size)
+        assertEquals(0,cleared.resolvedSetCount)
+        val set=ok(s.append("owner-1",snapshot,identity,
+            completed("set-after-note",2,"set-1",10))).journal
+        assertEquals(1,set.resolvedSetCount)
+        assertEquals("",set.sessionNote)
+        assertEquals(snapshot,set.snapshot)
+    }
+
     @Test fun coldRestartRestoresReceiptsAndOnlyAckAfterFileCommit() {
         val storage=store()
         assertEquals(NativeJournalFileResult.Rejected(

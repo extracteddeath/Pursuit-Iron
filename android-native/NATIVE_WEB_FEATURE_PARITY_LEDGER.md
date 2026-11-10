@@ -230,3 +230,24 @@ implementation SHA `5d1ebfc8717f6021bb25290934123f09f9a04901`.
 Kotlin engine tests, native journal crash recovery and Compose compilation
 also passed; this does **not** establish physical Android device or
 large-font/TalkBack acceptance, nor superiority over Build 1009.
+
+
+## Native verified exercise history filters — 2026-11-09
+
+The Kotlin-native **full Exercise History** sheet now exposes
+**Working sets**, **All entries**, and **Skipped / failed** filters
+with explicit per-workout grouped counts. Entries and ordinals remain
+tied to source-authorized, correction-aware completed workouts;
+warm-ups and amplifier visits cannot falsify the numbering of a
+working set. Failed and skipped outcomes stay factual, with unknown
+RIR still shown as unreported. A fresh verified owner/manifest
+continues to gate private exercise favorite changes.
+
+**Verified code:** `611721cbb1fa719bbb75b1972683678981dccb2b`.
+[GitHub Actions run 42755678765](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42755678765)
+passed **33/33** native source, engine, crash-recovery, and Compose
+compilation steps.
+
+This is source-level UI feature parity, **not** a claim of physical
+Android accessibility acceptance, data migration completion, or
+Kotlin-over-web coaching superiority.

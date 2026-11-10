@@ -210,6 +210,10 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         approve()
     }
 
+    private fun signedShortReview(minutes:Int=20)=
+        preflight.reviewShorter("owner-1","cycle-1",2,0,input(),minutes)
+            as NativeCustomShortSessionPreflight.Reviewed
+
     @Test fun trueShortCustomWorkoutIssuesAndColdReopensWithoutPhantomSets() {
         initializeShortenedCycle();enroll()
         val approved=preflight.inspect("owner-1","cycle-1",2,0,input())
@@ -221,9 +225,11 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             preview.status)
         assertEquals(listOf("cycle-1:w2:d0:optional-0:s1"),
             preview.omittedSetKeys)
+        val shown=signedShortReview()
+        assertEquals(preview,shown.review)
         val plan=prepared.prepareShorter(
             "owner-1","short-session-1","cycle-1",2,0,input(),
-            20,athleteConfirmed=true)
+            shown,athleteConfirmed=true)
         assertTrue(plan.toString(),plan is NativeCustomPrepareResult.Prepared)
         val saved=(plan as NativeCustomPrepareResult.Prepared).workout
         assertEquals(20,saved.snapshot.shortSessionLimitMinutes)
@@ -234,7 +240,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             saved.snapshot.slots.flatMap{it.sets}.map{it.setKey})
         assertEquals(NativeCustomPrepareResult.Prepared(saved,true),
             prepared.prepareShorter("owner-1","short-session-1",
-                "cycle-1",2,0,input(),20,true))
+                "cycle-1",2,0,input(),shown,true))
         assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
             prepared.prepare("owner-1","short-session-1",
@@ -304,16 +310,29 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
 
     @Test fun shortCustomPreparationRefusesNoConsentUnconfirmedAndStaleRevision() {
         initializeShortenedCycle()
+        val shown=signedShortReview()
         assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.CONFIRMATION_REQUIRED),
             prepared.prepareShorter("owner-1","short-session-2","cycle-1",
-                2,0,input(),20,false))
+                2,0,input(),shown,false))
         assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.INVALID_SELECTION),
             prepared.prepareShorter("owner-1","short-session-2","cycle-1",
-                2,0,input(),32,true))
+                2,0,input(),shown.copy(
+                    review=shown.review.copy(requestedMinutes=32)),true))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.INVALID_SELECTION),
+            prepared.prepareShorter("owner-1","short-session-2","cycle-1",
+                2,0,input(),shown.copy(weekday=2),true))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_CHANGED),
+            prepared.prepareShorter("owner-1","short-session-2","cycle-1",
+                2,0,input(),shown.copy(
+                    review=shown.review.copy(omittedSetKeys=emptyList())),true))
+        assertEquals(NativeCustomPreparedRead.Missing,
+            prepared.open("owner-1","short-session-2"))
         val saved=prepared.prepareShorter(
-            "owner-1","short-session-2","cycle-1",2,0,input(),20,true)
+            "owner-1","short-session-2","cycle-1",2,0,input(),shown,true)
         assertTrue(saved.toString(),saved is NativeCustomPrepareResult.Prepared)
         assertEquals(NativeAuthoringSourceWrite.Committed(2),
             sources.publish("owner-1",1,source(2)))
@@ -331,7 +350,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.NOT_AUTHORIZED),
             prepared.prepareShorter("owner-1","other-1","cycle-1",2,0,
-                input(),20,true))
+                input(),shown,true))
     }
 
     @Test fun coldReturnToTrainingTraversesWholeCycleWithoutRepeatingFinishedWork() {

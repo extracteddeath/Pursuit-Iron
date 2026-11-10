@@ -75,6 +75,41 @@ class KotlinIssuedSnapshotStoreTest {
         }
     }
 
+    @Test fun limitedIssuedTargetsColdReopenWithoutReindexingOrRewritingLegacy() {
+        val normal=KotlinIssuedSnapshotCodec.encode(original)
+        assertEquals(1,normal[7].toInt())
+        assertEquals(original,KotlinIssuedSnapshotCodec.decode(normal))
+        val reduced=original.copy(
+            estimatedMinutes=20,
+            targets=original.targets.take(2),
+            shortSessionLimitMinutes=20,
+            shortSessionOmittedSetKeys=listOf("chin:s1"))
+        val data=KotlinIssuedSnapshotCodec.encode(reduced)
+        assertEquals(2,data[7].toInt())
+        assertEquals(reduced,KotlinIssuedSnapshotCodec.decode(data))
+        assertTrue(reduced.prescriptionEditedForTime)
+        assertFalse(original.prescriptionEditedForTime)
+        assertEquals(original.targets.take(2).map{it.setKey},
+            KotlinIssuedSnapshotCodec.decode(data).targets.map{it.setKey})
+        val durable=accepted(store().issueAuthorized(
+            "owner-1",reduced,identity,authorize))
+        assertEquals(reduced,durable.journal.snapshot)
+        val cold=accepted(store().openStored("owner-1","workout-1",authorize))
+        assertEquals(reduced,cold.journal.snapshot)
+        assertEquals(listOf("chin:s1"),
+            cold.journal.snapshot.shortSessionOmittedSetKeys)
+        // The omitted exercise is not a missing/failed log entry.
+        assertEquals(2,cold.journal.unresolvedSetCount)
+        val forged=reduced.copy(shortSessionOmittedSetKeys=listOf("bench:s1"))
+        assertThrows(IllegalArgumentException::class.java) {
+            KotlinIssuedSnapshotCodec.encode(forged)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            KotlinIssuedSnapshotCodec.encode(reduced.copy(
+                shortSessionLimitMinutes=null))
+        }
+    }
+
     @Test fun coldRestorationNeedsOnlyPrivateStorageAndCurrentOwnerApproval() {
         val first=store()
         accepted(first.issueAuthorized("owner-1",original,identity,authorize))

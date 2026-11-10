@@ -251,3 +251,28 @@ compilation steps.
 This is source-level UI feature parity, **not** a claim of physical
 Android accessibility acceptance, data migration completion, or
 Kotlin-over-web coaching superiority.
+
+
+## Native full ranked custom exercise discovery — 2026-11-09
+
+Kotlin-native custom-program authoring and issued-workout swap pickers
+now search all **currently verified available** exercises by independent
+multiword tokens across names, source family, pattern, training role,
+variant, attachment, and muscles. The existing source-backed
+`CustomExerciseSwapRankingDomain` ranks the **full candidate universe**
+before the UI search and athlete-selected similarity filters narrow the
+display. An attachment/variant search matches only the **exact source
+choice** rather than unconditionally including the same exercise ID.
+The previous hard `take(20)` cap is replaced by **Show next** (20)
+and **Show all**, with reset on query/filter/slot changes.
+
+No substitution accepts silently, inherits the prior load or sets,
+adds unreviewed stock or changes a program without explicit review.
+The updated navigation and dedicated search/pagination source
+contracts, native Kotlin engine tests, journal recovery and Compose
+compilation passed [run 42757615033, 33/33 steps](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42757615033)
+at `ef2b4e6291ab626750e7a705ffe43286e799fcd0`.
+
+**Remaining:** physical-device accessibility and very large catalog UX,
+multi-instance variant selection model if ever authorized, and
+full native-web feature parity and training-quality superiority.

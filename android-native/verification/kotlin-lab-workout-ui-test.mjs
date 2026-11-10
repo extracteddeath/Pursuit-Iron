@@ -261,12 +261,17 @@ assert.ok(composer.includes('NativeKotlinFinishedComposerHandoff.inspect(stored,
   'Generated Finish navigation requires independently verified committed history, never just the Finish flag');
 const composerSwap=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinComposerSwapSheet.kt');
 const composerSwapDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinComposerSwapReviewDomain.kt');
+assert.ok(composerSwapDomain.includes('it.role==MuscleCreditRole.DIRECT') &&
+  composerSwapDomain.includes('it.fractionalSet.signum()>0') &&
+  composerSwapDomain.includes('reviewedDirectMuscles(candidate).intersect(baseline).size') &&
+  composerSwap.includes('shared directly trained muscles: '),
+  'Composer workout substitutes must rank by unique positive DIRECT credits, not duplicates or incidental muscle mentions');
 assert.ok(composer.includes('NativeKotlinComposerSwapSheet(') &&
   composerSwap.includes('NativeEditSheet(busy=busy,onDismiss=onDismiss)') &&
   !composerSwap.includes('AlertDialog(') &&
   composerSwap.includes('KotlinComposerSwapRankingDomain.filterRanked(') &&
   composerSwap.includes('Text("Same pattern")') &&
-  composerSwap.includes('Text("Shared muscles")') &&
+  composerSwap.includes('Text("Shared direct muscles")') &&
   composerSwap.includes('sourceTargets.indices.forEach') &&
   composerSwap.includes('EquipmentLoadDomain.inspect(') &&
   composerSwap.includes('choice.option.sourcePracticalReps') &&

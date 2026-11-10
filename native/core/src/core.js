@@ -520,8 +520,39 @@ export function home() {
         restDay: nx && !S.live ? restDayView(nx, H, rd) : null,
         backup: S.live ? null : backupNudge(H),
         ...todayDesign(nx, H, weekStart),
-        ...todayInsights(nx, H)
+        ...todayInsights(nx, H),
+        blockEnd: blockEndOffer(nx, H)
     };
+}
+/* A block that has just run its last week. The cursor quietly wraps back to week 1 (a block with no queue repeats),
+   and Today used to show "Week 1 of 4" the morning after the final session with nothing to say the block was over —
+   no review, no next block, for standalone programs and cycle blocks alike. This is the moment the block review and
+   "build the next block" exist for. It shows while the newest session of this program is in its final week and the
+   next session is back at week 1, until the lifter starts the block again or says to run it again. */
+function blockEndOffer(nx, H) {
+    if (!nx || S.live) return null;
+    const p = nx.program; if (p.config?.endless || p.quick || p.buildOwn) return null;
+    const lastWeek = Math.max(1, E.weeksOf(p) + (p.config?.deload ? 1 : 0));
+    if (nx.weekIndex !== 1 || lastWeek < 2) return null;
+    const mine = H.filter((h) => h && h.programId === p.id);
+    const newest = mine[0]; if (!newest || Number(newest.weekIndex) !== lastWeek) return null;
+    const endedAt = Number(newest.date) || 0;
+    if ((S.store.blockEndSeen || {})[p.id] === endedAt) return null;
+    const cyc = p.cycleId ? cycles().find((c) => c.id === p.cycleId) : null;
+    const blockIndex = cyc ? Math.max(0, (cyc.blockIds || []).indexOf(p.id)) : 0;
+    // This pass only: sessions since the block last started at week 1 (a block run twice counts its second pass).
+    const pass = []; for (const h of mine) { pass.push(h); const w = Number(h.weekIndex); if (w === 1 && !(mine[pass.length] && Number(mine[pass.length].weekIndex) === 1)) break; }
+    const hasNext = !!cyc && blockIndex + 1 < (cyc.blockIds || []).length;
+    return { programId: p.id, name: p.name, cycleId: cyc?.id || null, cycleName: cyc?.name || null, blockIndex, weeks: lastWeek,
+        sessions: pass.length, planned: p.days.length * lastWeek, endedAt, nextBlockInCycle: hasNext };
+}
+/* "Run it again": the block repeats from week 1 and the offer stays away until this block's next final week. */
+export function dismissBlockEnd({ programId } = {}) {
+    const p = programById(programId); if (!p) return { ok: false };
+    const newest = history().find((h) => h && h.programId === p.id);
+    S.store.blockEndSeen = { ...(S.store.blockEndSeen || {}), [p.id]: Number(newest?.date) || 0 };
+    markStore();
+    return { ok: true };
 }
 /* The design's welcome back (scenario "Back after a break"): after REENTRY_DAYS without training, offer
    one easier session before the plan resumes — two working sets per lift at 90% of today's loads.
@@ -1943,7 +1974,8 @@ export function progressCharts() {
     const feedback = Object.entries(fb).map(([part, answers]) => ({ part, label: E.PART_LABEL?.[part] || part, readiness: rd.find((r) => r.part === part)?.readiness ?? null, answers: answers.slice().reverse(),
         note: (answers[0] === 'About right' ? 'On target. ' : answers[0] === 'Too much' ? 'Too much last time. ' : 'Felt easy last time. ') + (NEXT[Math.sign(nextOf[part] || 0)] || 'Sets hold.') }))
         .sort((a, b) => (a.readiness ?? 100) - (b.readiness ?? 100));
-    return { unit: u, weeks, intensity: { reps: [{ label: 'Strength', sub: '1–5 reps', sets: reps[0] }, { label: 'Hypertrophy', sub: '6–12 reps', sets: reps[1] }, { label: 'Endurance', sub: '13+ reps', sets: reps[2] }],
+    return { unit: u, weeks, intensity: { /* Named by load, not by goal: "Endurance" for 13+ reps called the program's own 12–20 hypertrophy isolation sets endurance work, and the note below says 5–30 reps all build muscle. */
+        reps: [{ label: 'Heavy', sub: '1–5 reps', sets: reps[0] }, { label: 'Moderate', sub: '6–12 reps', sets: reps[1] }, { label: 'Light', sub: '13+ reps', sets: reps[2] }],
         effort: [{ label: 'To failure', sub: '0 RIR', sets: eff[0] }, { label: 'Hard', sub: '1 RIR', sets: eff[1] }, { label: 'Productive', sub: '2 RIR', sets: eff[2] }, { label: 'Easy', sub: '3+ RIR', sets: eff[3] }], unrated },
         feedback };
 }
@@ -2094,7 +2126,7 @@ function pctCell(p, d, ex, slot, w, c) {
     // A nominal 1000 max (fine enough that plate rounding doesn't show): each set's load is then its share of training max, weekly creep and deload scaling included.
     let plan = null, nominal = false;
     if (scheme === 'gzclp') { try { plan = E.percentagePlanFor(p, d, ex, slot, w, unit(), history()); } catch { plan = null; } }
-    else { try { plan = E.adaptPercentageSetBudget(E.pctSetsFor(scheme, 1000, w, E.weeksOf(p), unit(), ex, d.type, tier, p.config.assistance ?? null), Number(c.sets)); nominal = true; } catch { plan = null; } }
+    else { try { plan = E.adaptPercentageSetBudget(E.pctSetsFor(scheme, 1000, w, E.weeksOf(p), unit(), ex, E.percentDayType(p, d, slot), tier, p.config.assistance ?? null), Number(c.sets)); nominal = true; } catch { plan = null; } }
     const sets = plan?.sets || []; if (!sets.length) return null;
     const reps = sets.map((x) => String(x.reps).replace('+', '')), amrap = sets.some((x) => x.amrap);
     const uniq = [...new Set(reps)], falling = uniq.every((r, i) => i === 0 || Number(r) < Number(uniq[i - 1]));
@@ -2338,6 +2370,9 @@ export function setupOptions() {
         equipment: E.equipmentGroups().flatMap((g) => g.items.map((e) => ({ id: e.id, label: e.label || e.name || e.id, cat: g.name }))),
         goals: ['strength', 'hypertrophy', 'both'], experience: Object.keys(E.EXP || { novice: 1, intermediate: 1, advanced: 1 }),
         injuryAreas: INJURY_AREAS, injuryImpacts: INJURY_IMPACTS,
+        // The web app's gym presets (records.js GYM_PRESETS), so a "full gym" here is the same 40 kinds of equipment the
+        // web wizard and the Gyms sheet mean. The native list once had its own 11-item copy and hid 72 lifts.
+        presets: (E.GYM_PRESETS || []).map((p) => ({ key: p.key, name: p.name, equipment: [...(p.equipment || [])] })),
         parts: (E.PART_ORDER || []).filter((p) => E.PART_LABEL?.[p]).map((p) => ({ id: p, label: E.PART_LABEL[p] })) };
 }
 /* The same defaults createProgram uses, so the recommendation describes the program that gets built. */
@@ -2413,6 +2448,18 @@ export function rankSplitsPlan({ config } = {}) {
     return out;
 }
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
+/* When no split builds (Strength in 20 minutes: a full-body strength day with real rest doesn't fit), the nearest
+   setups that do: the next longer session first, then one more training day. Each is checked by building it, the
+   same way the ranked list does, so the wizard never offers a change that would also fail. */
+export function rankAlternatives({ config } = {}) {
+    const cfg = programConfig(config);
+    const order = (E.SESSIONS || []).map((x) => x.id), i = order.indexOf(cfg.session);
+    const builds = (c) => { const pl = rankSplitsPlan({ config: c }); return (pl?.ids || []).some((id) => !rankSplit({ config: c, id })?.failed); };
+    const out = [];
+    for (let k = i + 1; k < order.length && out.length < 1; k++) if (builds({ ...cfg, session: order[k] })) out.push({ kind: 'session', session: order[k], label: (E.SESSIONS || []).find((x) => x.id === order[k])?.label || order[k] });
+    if ((cfg.days || 0) < 6 && builds({ ...cfg, days: (cfg.days || 0) + 1 })) out.push({ kind: 'days', days: (cfg.days || 0) + 1 });
+    return { alternatives: out };
+}
 export function rankSplit({ config, id } = {}) {
     const cfg = programConfig(config), key = rankKey(cfg) + '#' + id;
     S.rankCache = S.rankCache || new Map();
@@ -2421,9 +2468,12 @@ export function rankSplit({ config, id } = {}) {
     const avail = splitOptions({ config })[id] || { ok: true };
     const cap = SES_CAP[cfg.session] || 60, r1 = (v) => Math.round(v * 10) / 10;
     const ses = avail.okSessions?.length && !avail.okSessions.includes(cfg.session) ? avail.okSessions[0] : cfg.session;
-    let p = null;
-    try { p = E.generateNextProgramForShell({ config: { ...cfg, split: id, session: ses }, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: () => 'rank-' + E.uid() })?.program; } catch { p = null; }
-    if (!p?.days?.length) { const o = { id, name: sp.name, failed: true }; S.rankCache.set(key, o); return o; }
+    let p = null, why = null;
+    try { p = E.generateNextProgramForShell({ config: { ...cfg, split: id, session: ses }, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: () => 'rank-' + E.uid() })?.program; }
+    catch (err) { p = null; why = err?.recovery || err?.details || null; }
+    // The engine's own reason (TIME_LIMIT, FULL_BODY_INCOMPLETE…) travels with the failure so the wizard can say what
+    // to change instead of spinning on an empty list when no split fits.
+    if (!p?.days?.length) { const o = { id, name: sp.name, failed: true, codes: why?.blockingCodes || [], suggestions: (why?.suggestions || []).map((x) => x.code) }; S.rankCache.set(key, o); return o; }
     const focus = Object.keys(cfg.focus || {}).filter((k) => cfg.focus[k] > 0);
     let vol = {}; try { vol = E.weeklyVolume(p, 1) || {}; } catch { vol = {}; }
     const daysHit = {}, mins = []; let total = 0, heavy = 0;
@@ -2547,12 +2597,31 @@ function importDecoded(d, title, code) {
     S.store.galleryAdded = { ...(S.store.galleryAdded || {}), [code]: r.programId }; markStore();
     return { ...r, title };
 }
+/* A new block starts today. The engine lays its training days on fixed weekdays (Mon/Wed/Fri/Sun for four), so a
+   program built on a Tuesday opened on "Rest day" and the lifter's first session was tomorrow. When today isn't one of
+   the scheduled days, the whole week rotates so the first day lands today — the spacing between days, and so the
+   recovery the schedule was built around, is unchanged. The suggested week (weekPlan, Monday-first slots) rotates
+   with it, and scheduleBase too, so the schedule doesn't read as hand-edited. Programs with a schedule the lifter
+   set themselves are never touched. */
+function anchorScheduleToToday(p, at = now()) {
+    if (!p || p.scheduleEdited || !p.schedule || !p.days?.length) return p;
+    const sched = p.schedule, today = new Date(at).getDay();
+    if (sched[today]) return p;
+    const firstWd = [1, 2, 3, 4, 5, 6, 0].find((wd) => sched[wd] === p.days[0].id);
+    if (firstWd == null) return p;
+    const k = (today - firstWd + 7) % 7;
+    const rot = (m) => { const out = {}; Object.entries(m || {}).forEach(([wd, id]) => { out[(Number(wd) + k) % 7] = id; }); return out; };
+    const next = { ...p, schedule: rot(sched) };
+    if (p.scheduleBase) next.scheduleBase = rot(p.scheduleBase);
+    if (Array.isArray(p.weekPlan) && p.weekPlan.length === 7) next.weekPlan = p.weekPlan.map((_, i) => p.weekPlan[(i - k + 7) % 7]);
+    return next;
+}
 export function createProgram({ config, seed }) {
     const cfg = programConfig(config);
     let r;
     try { r = E.generateNextProgramForShell({ config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, ...(Number.isFinite(seed) ? { seed } : {}), makeId: () => 'p-' + E.uid() }); }
     catch (err) { return { ok: false, error: String(err?.message || err) }; }
-    const p = r?.program; if (!p) return { ok: false, error: 'The engine could not build that program.' };
+    const p = anchorScheduleToToday(r?.program); if (!p) return { ok: false, error: 'The engine could not build that program.' };
     p.generationRoute = E.GENERATION_ROUTE;
     S.store.equipDefault = cfg.equipment;
     adoptConfigUnit(cfg.unit);
@@ -2671,6 +2740,7 @@ export function createCycle({ config, templateId, blocks, adapt = false, adaptSp
         S.store.equipDefault = cfg.equipment;
         adoptConfigUnit(cfg.unit);
         cycle.startedAt = now();
+        if (progs[0]) progs[0] = anchorScheduleToToday(progs[0]);
         setList('saved', [...saved(), ...progs]); setList('cycles', [...cycles(), cycle]); S.store.pinnedId = progs[0].id;
         markStore();
         return { ok: true, cycleId: cycle.id, name: cycle.name, blocks: meta.length, first: meta[0]?.label || 'first block' };
@@ -2889,6 +2959,7 @@ export function nextBlock({ programId }) {
         const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
         np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
         np.folder = p.folder; np.description = p.description; np.generationRoute = E.GENERATION_ROUTE;
+        np = anchorScheduleToToday(np);
         setList('saved', [...saved(), np]); S.store.pinnedId = np.id; markStore();
         return { ok: true, programId: np.id, name: np.name, own: p.config?.split === 'custom' };
     } catch (err) { return cycleFail(err, 'The next block could not be created safely. Your current program is unchanged.'); }
@@ -4378,4 +4449,42 @@ export function clearSchedule({ programId }) {
     if (!programById(programId)) return null;
     setList('saved', saved().map((x) => (x.id === programId ? { ...x, schedule: {}, scheduleEdited: true } : x)));
     return schedule({ programId });
+}
+
+/* ------------------------------------------------------------------ self-test (App.js runSelfTest, the lifter's own data) */
+/* Every set of every saved program, week by week, through the engine's auditSets — the same physical-sense rules the web
+   self-test applies (a load that is finite and loadable on that implement, reps inside the printed range, warm-ups that
+   climb and stay under the work set, an extension never heavier than its parent…) — against the lifter's REAL logged
+   history; the weekly structure through auditProgramWeek; and the program being trained driven four weeks forward by a
+   simulated lifter who hits, misses and stalls, so the progression machinery itself is exercised. The engine matrix
+   (every template on four gyms) is the build's own CI; on a phone it took minutes and gave the same answer every time. */
+export function selfTest() {
+    const t0 = Date.now(), u = unit(), H0 = history(), P = perf();
+    const H = [...H0].filter((h) => h && Number.isFinite(Number(h.date))).sort((a, b) => Number(b.date) - Number(a.date)).slice(0, E.SELF_TEST_HISTORY_LIMIT || 400);
+    const supported = E.SELF_TEST_SUPPORTED_ENGINES;
+    const progs = saved().filter((p) => p && Array.isArray(p.days) && p.days.length && !p.quick && !p.buildOwn
+        && (!supported || (p.engineSource === 'pursuit-next' && supported.has(p.engineSourceVersion || p.nextEngine?.version))));
+    const failures = [], advisories = [];
+    let sets = 0;
+    for (const p of progs) {
+        const ph = H.filter((h) => h.programId === p.id);
+        for (let w = 1; w <= E.weeksOf(p); w++) for (const d of p.days) for (let slot = 0; slot < d.exercises.length; slot++) {
+            const ex = EX_BY_ID[E.exerciseAt(p, d, slot, w)] || EX_BY_ID[d.exercises[slot]]; if (!ex) continue;
+            sets++;
+            try { E.auditSets({ program: p, day: d, ex, slot, weekIndex: w, unit: u, perf: P, history: ph, dayPerf: P })
+                .forEach((x) => (x.severity === 'advisory' || x.severity === 'info' ? advisories : failures).push({ program: p.name, week: w, day: d.label, lift: x.exName, rule: x.rule, detail: x.detail })); }
+            catch (err) { failures.push({ program: p.name, week: w, day: d.label, lift: ex.name, rule: 'audit-threw', detail: String(err?.message || err) }); }
+        }
+        try { E.auditProgramWeek(p, E.weeksOf(p), { focusList: Object.keys(p.config?.focus || {}) })
+            .forEach((x) => { if (x.severity === 'info') return; (x.severity === 'error' ? failures : advisories).push({ program: p.name, week: x.weekIndex, rule: x.rule, detail: x.detail }); }); }
+        catch { /* an advisory pass never breaks the test */ }
+    }
+    const nx = upNext(); let simulated = 0;
+    if (nx) for (const behaviour of ['hit', 'miss', 'stall']) {
+        try { const f = E.simulateAndAudit({ program: nx.program, unit: u, behaviour }) || []; simulated++;
+            f.forEach((x) => (x.severity === 'advisory' || x.severity === 'info' ? advisories : failures).push({ program: nx.program.name + ' (simulated, ' + behaviour + ')', week: x.weekIndex, day: x.dayLabel, lift: x.exName, rule: x.rule, detail: x.detail })); }
+        catch (err) { failures.push({ program: nx.program.name, rule: 'simulation-threw', detail: String(err?.message || err) }); }
+    }
+    return { ok: failures.length === 0, programs: progs.length, skipped: saved().length - progs.length, setsChecked: sets, historyChecked: H.length, simulations: simulated,
+        failures: failures.slice(0, 50), failureCount: failures.length, advisories: advisories.slice(0, 50), advisoryCount: advisories.length, ms: Date.now() - t0 };
 }

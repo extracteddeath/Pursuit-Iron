@@ -110,6 +110,15 @@ switching), the lift page (Charts with six metrics and ranges, History, Records 
 search / time and program filters / grouping by cycle or month, library status filters, measurements in cm or
 inches, and gym bars (empty weight) and available weights with rack presets.
 
+Also native: Help → Check every set (the engine's set audit over every saved program against the lifter's own
+history, the weekly-structure audit, and the current program simulated forward), a Today card when a block has run
+its last week (review it, build the next block, or run it again), and a wizard that says which setup builds when no
+split fits the answers. A new program's week starts on the day it is built.
+
+Performance: engine replies are parsed off the main thread, Today paints before the other tabs load, History pages
+40 rows at a time, `androidx.profileinstaller` installs the libraries' baseline profiles outside Play, and CI measures
+the `benchmark` build type (release code, debug signing) with a year of imported history (`smoke/perf.py`).
+
 Not native yet: Wear OS (a separate watch app that needs Google Play services on the phone for the data link; the
 design is in the prototype). The design's fixed EZ bars and per-gym plate counts need engine support first (the
 engine keeps one plate set and barbell / Smith bar weights per gym).

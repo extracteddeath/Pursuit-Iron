@@ -1074,7 +1074,7 @@ internal class NativeKotlinCustomCycleController(
             .replace("-","")
         val result=host.prepareReviewedCustomShorterWorkout(
             workoutId,draft.cycleId,absoluteWeek,weekday,inputs,
-            minutes,true)
+            reviewed,true)
         val opened=if(result is NativeCustomPrepareResult.Prepared)
             host.openPreparedCustomWorkout(workoutId)
         else null

@@ -203,4 +203,36 @@ class CustomShorterSessionReviewDomainTest {
             review(src,20).status)
         assertTrue(review(src,20).omittedSetKeys.isEmpty())
     }
+    @Test fun projectedShorterSnapshotRetainsExactPrefixAndNeverAltersAuthoredProgram() {
+        val primary=slot("press",5,ComposerRole.PRIMARY,pinned=true)
+        val accessory=slot("curl",6)
+        val full=snapshot(listOf(primary,accessory))
+        val cut=CustomShorterSessionReviewDomain.project(full,20)
+        assertNotNull(cut)
+        val selected=checkNotNull(cut)
+        assertEquals(20,selected.shortSessionLimitMinutes)
+        assertTrue(selected.prescriptionEditedForTime)
+        assertEquals(listOf("press"),selected.slots.map{it.slotId})
+        assertEquals(primary.sets,selected.slots.single().sets)
+        assertEquals(accessory.sets.map{it.setKey},
+            selected.shortSessionOmittedSetKeys)
+        assertEquals(primary.sets.sumOf{
+            it.prescription.activeSeconds+it.prescription.restSeconds
+        }.toLong(),selected.knownSetAndRestSeconds)
+        assertEquals(full.slots,listOf(primary,accessory))
+        assertNull(full.shortSessionLimitMinutes)
+        assertTrue(full.shortSessionOmittedSetKeys.isEmpty())
+        assertNull(CustomShorterSessionReviewDomain.project(
+            full.copy(declaredNonSetSeconds=null),20))
+        assertNull(CustomShorterSessionReviewDomain.project(
+            full.copy(phase=TrainingPhase.STRENGTH,
+                slots=listOf(primary,accessory.copy(role=ComposerRole.SECONDARY))),20))
+        assertNull(CustomShorterSessionReviewDomain.project(
+            full.copy(slots=listOf(primary,
+                accessory.copy(sets=accessory.sets.map {
+                    it.copy(prescription=it.prescription.copy(amplifier=
+                        CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,12)))
+                }))),20))
+    }
+
 }

@@ -240,4 +240,58 @@ object CustomShorterSessionReviewDomain {
             explain
         )
     }
+
+    /**
+     * Projects ONLY a recomputed safe preview from current authoritative
+     * original source. The caller's formerly displayed list is not a grant.
+     * A time selection may be ready yet have zero cuts; that remains factual.
+     *
+     * Surviving sets keep original ordinal and key; removal is trailing-only
+     * within a slot, or whole linked superset slots. Never reindex workout
+     * history or produce phantom skipped sets.
+     */
+    fun project(
+        original:CustomWorkoutDaySnapshot,
+        minutes:Int
+    ):CustomWorkoutDaySnapshot? {
+        if(original.shortSessionLimitMinutes!=null ||
+            original.shortSessionOmittedSetKeys.isNotEmpty())return null
+        val reviewed=inspect(original,minutes)
+        if(reviewed.status !in setOf(
+            CustomShortSessionStatus.ALREADY_FITS,
+            CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW))return null
+        val setKeys=reviewed.retainedSetKeys.toSet()
+        val omitted=reviewed.omittedSetKeys
+        val survivors=original.slots.mapNotNull{slot->
+            val sets=slot.sets.filter{it.setKey in setKeys}
+            if(sets.isEmpty())null
+            else {
+                // Truncated optional visits must keep a contiguous PREFIX.
+                if(sets != slot.sets.take(sets.size))return null
+                slot.copy(sets=Collections.unmodifiableList(sets))
+            }
+        }
+        if(survivors.isEmpty())return null
+        val kept=survivors.flatMap{it.sets}.map{it.setKey}
+        if(kept!=reviewed.retainedSetKeys ||
+            omitted!=original.slots.flatMap{it.sets}
+                .map{it.setKey}.filterNot{it in setKeys})return null
+        val duration=survivors.flatMap{it.sets}.sumOf{
+            it.prescription.activeSeconds.toLong()+
+                it.prescription.restSeconds+
+                (it.prescription.amplifier?.followUpRestSeconds?:0)
+        }
+        val groups=survivors.mapNotNull{it.supersetGroup}.distinct()
+        if(groups.any{group->
+            survivors.count{it.supersetGroup==group}!=
+                original.slots.count{it.supersetGroup==group}
+        })return null
+        return original.copy(
+            slots=Collections.unmodifiableList(survivors),
+            knownSetAndRestSeconds=duration,
+            shortSessionLimitMinutes=minutes,
+            shortSessionOmittedSetKeys=Collections.unmodifiableList(
+                omitted.toList())
+        )
+    }
 }

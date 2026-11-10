@@ -93,4 +93,40 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
                 bytes + byteArrayOf(0))
         }
     }
+    @Test fun v2ReducedSnapshotColdRoundTripsWithoutChangingLegacyV1Bytes() {
+        val old=fixture()
+        val legacy=NativeKotlinCustomWorkoutSnapshotCodec.encode(old)
+        assertEquals(1,legacy[7].toInt())
+        val safe=old.copy(slots=old.slots.map{slot->
+            slot.copy(supersetGroup=null,sets=slot.sets.map {set->
+                set.copy(prescription=set.prescription.copy(amplifier=null))
+            })
+        },knownSetAndRestSeconds=3L*145)
+        val shortened=safe.copy(
+            slots=listOf(safe.slots.first()),
+            knownSetAndRestSeconds=290,
+            shortSessionLimitMinutes=20,
+            shortSessionOmittedSetKeys=listOf(safe.slots.last().sets.single().setKey))
+        val encoded=NativeKotlinCustomWorkoutSnapshotCodec.encode(shortened)
+        assertEquals(2,encoded[7].toInt())
+        assertEquals(shortened,
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(encoded))
+        assertArrayEquals(encoded,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(encoded)))
+        assertArrayEquals(legacy,NativeKotlinCustomWorkoutSnapshotCodec.encode(old))
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(shortened.copy(
+                shortSessionLimitMinutes=null))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(shortened.copy(
+                shortSessionOmittedSetKeys=shortened.slots.first().sets
+                    .map{it.setKey}))
+        }
+        assertThrows(IOException::class.java) {
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(
+                encoded.copyOf(encoded.size-1))
+        }
+    }
+
 }

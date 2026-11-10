@@ -324,12 +324,29 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         pre.session)!=NativeAuthoredLoadPreparationGate.CLEAR)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)
-                if(pre !is NativeCustomPreflightResult.ReviewedPreview ||
-                    pre.receipt.recordRevision!=selected.consentRevision ||
+                if(pre !is NativeCustomPreflightResult.ReviewedPreview)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
+                // Neither UI-selected keys nor cold-prepared targets are a
+                // grant. Recompute the entire optional-cut protocol against
+                // the current signed cycle, gym, week and source revisions
+                // at the FINAL issuing boundary.
+                val limit=selected.snapshot.shortSessionLimitMinutes
+                val actuallyApproved=if(limit!=null) {
+                    if(approvedCalibration!=null || authoredReturn!=null ||
+                        selected.resetToAuthored ||
+                        selected.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
+                        return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                    CustomShorterSessionReviewDomain.project(pre.session,limit)
+                        ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                } else approvedCalibration?.projected ?:pre.session
+                if(pre.receipt.recordRevision!=selected.consentRevision ||
                     pre.receipt.fingerprintSha256!=selected.consentFingerprint ||
                     (approvedCalibration!=null && approvedCalibration.original!=pre.session) ||
                     selected.calibrationApprovalFingerprint!=approvedCalibration?.receipt?.fingerprint ||
-                    (approvedCalibration?.projected ?:pre.session)!=selected.snapshot)
+                    actuallyApproved!=selected.snapshot)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)
                 if(owner(ownerKey)!=current)

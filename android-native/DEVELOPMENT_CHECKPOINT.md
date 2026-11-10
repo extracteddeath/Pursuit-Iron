@@ -2644,3 +2644,50 @@ prove superiority over the old web engine. Phone/tablet/foldable
 visual inspection, large-font and TalkBack acceptance, adaptive-cycle
 approval UX, broader feature parity, and a signed-device release
 remain open. No APK, AAB, web update, or PR #448 merge occurred.
+
+
+## 2026-11-09 — Exact-variant full-catalog search for custom exercises and workout swaps
+
+The new Kotlin-native **program editor and in-session exercise-swap sheet**
+no longer strand eligible reviewed movements after the first 20 rows.
+The picker searches **multiple independent words in any order** across
+verified exercise ID, display label, family, variant, attachment, reviewed
+pattern/training role and credited muscles. It ranks the **full** current
+athlete/gym-approved set first using the existing
+`CustomExerciseSwapRankingDomain` (pattern, role, family, shared muscles
+and source-day direct-credit considerations), and only then applies the
+visible query filter. Search can narrow presentation; it cannot grant
+training permission, invent equipment, widen source stock, transfer a
+load or save a replacement.
+
+The previous fixed `searched.take(20)` cap has become athlete-controlled,
+20-at-a-time **Show next** and **Show all** pagination; page size resets
+when search, similarity filters or the replacement slot changes. A
+critical detail: filtering now compares **exact reviewed picker options**
+rather than matching only exercise IDs, so a name/attachment query cannot
+implicitly display a different sibling variant. The native catalog
+already checks exercise-identity uniqueness, and all actual save/write
+authorization remains in the existing audited stores.
+
+The new `kotlin-custom-exercise-search-paging-test.mjs` checks exact
+option filtering, all search fields, ranked-before-search ordering,
+availability of the complete reviewed catalog, filter reset,
+and untouched replacement confirmation and fresh-set authoring.
+An older navigation source contract initially failed because it checked
+for retired single-string attachment matching. It now requires exact
+token/variant matching without weakening program or journal gates.
+
+**Verification:** [GitHub Actions run 42757615033](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42757615033)
+passed **33/33** workflow steps on code SHA
+`ef2b4e6291ab626750e7a705ffe43286e799fcd0`, including
+source guards, headless Kotlin engine decisions, paired comparisons,
+offline journal recovery, and Android Compose compilation.
+
+**Remaining:** confirm live ranked option discovery/selection and large
+catalog behavior on a physical device, verify typography/voice access,
+and finish all-screen design and engine-superiority evidence. An option
+is still selected by canonical exercise ID; the source-authorized
+catalog currently requires unique IDs, and introducing multiple
+simultaneous attachment instances per movement would require an explicit
+data-model/UI redesign, not a silent name-based fallback.
+No APK, AAB, production-web edit or integration of draft PR #448.

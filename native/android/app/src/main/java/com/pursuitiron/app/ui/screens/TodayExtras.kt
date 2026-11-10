@@ -107,18 +107,15 @@ fun IntroScreen(vm: AppViewModel) {
                     }
                 }
             }
-            // The web wizard's first question, asked here so every way in (build, templates) starts in the lifter's unit.
+        }
+        Column(Modifier.padding(horizontal = 22.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // The web wizard's first question, kept beside the buttons (never below the fold) so every way in starts in the lifter's unit.
             if (askUnit) {
-                Spacer(Modifier.height(18.dp))
-                Text("Which units do you train in?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-                Text("Plates, targets and history all use it. You can change it later in Settings.",
-                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
-                Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Which units do you train in?", style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+                Row(Modifier.fillMaxWidth().selectableGroup().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("kg" to "Kilograms · kg", "lb" to "Pounds · lb").forEach { (u, l) -> WzSeg(l, unit == u, Modifier.weight(1f)) { unit = u } }
                 }
             }
-        }
-        Column(Modifier.padding(horizontal = 22.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { leave { vm.openSetupMode("program", full = true) } }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Build my program") }
             OutlinedButton(onClick = { leave { vm.openSetupMode("template") } }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Browse templates instead") }
             TextButton(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION) }, modifier = Modifier.fillMaxWidth()) { Text("I already use the web app") }

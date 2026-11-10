@@ -55,8 +55,15 @@ data class CustomWorkoutDaySnapshot(
     val slots: List<CustomWorkoutSlotSnapshot>,
     /** This is not a full duration when an amplifier lacks work timing. */
     val knownSetAndRestSeconds: Long,
-    val declaredNonSetSeconds: Int?
+    val declaredNonSetSeconds: Int?,
+    /** Selected on an explicitly authorized single-workout time review.
+     * Null means original authored Full; never changes the custom cycle. */
+    val shortSessionLimitMinutes:Int?=null,
+    /** Stable set keys omitted before issuance, not skipped/failed sets. */
+    val shortSessionOmittedSetKeys:List<String> =emptyList()
 ) {
+    val prescriptionEditedForTime:Boolean
+        get()=shortSessionOmittedSetKeys.isNotEmpty()
     val isIssued: Boolean get() = false
     val mayRecordSets: Boolean get() = false
     val mayFinishWorkout: Boolean get() = false

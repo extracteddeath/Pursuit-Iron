@@ -151,4 +151,20 @@ class OverloadRecoveryLoadReviewTest {
         assertEquals(OverloadRecoveryReason.NO_HIGHER_LOAD_ATTEMPT,
             review(latest = unchanged).reason)
     }
+    @Test fun rollbackMustUsePriorCapacityFromTheSameProgramDay() {
+        val previous=demonstrated.copy(trainingDayId="upper-bench")
+        val correct=overload.copy(trainingDayId="upper-bench")
+        assertEquals(OverloadRecoveryReason.RETURN_TO_DEMONSTRATED_LOAD_FOR_REVIEW,
+            review(earlier=previous,latest=correct).reason)
+        val different=overload.copy(trainingDayId="push-bench")
+        assertEquals(OverloadRecoveryReason.INCOMPARABLE_WORKOUTS,
+            review(earlier=previous,latest=different).reason)
+        assertNull(review(earlier=previous,latest=different).candidateReturnLoad)
+        assertEquals(OverloadRecoveryReason.INCOMPARABLE_WORKOUTS,
+            review(earlier=previous,latest=overload).reason)
+        assertEquals(OverloadRecoveryReason.INCOMPARABLE_WORKOUTS,
+            review(earlier=demonstrated,latest=different).reason)
+        assertEquals(n(200),correct.observations.first().actualLoad)
+    }
+
 }

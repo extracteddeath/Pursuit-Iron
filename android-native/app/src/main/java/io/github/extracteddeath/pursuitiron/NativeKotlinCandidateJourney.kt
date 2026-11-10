@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeApprovalWriteResult
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinShortSessionStatus
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -482,6 +484,12 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedTimeBudget by rememberSaveable {mutableStateOf<Int?>(45)}
+    var timePreview by remember(host) {
+        mutableStateOf<NativeKotlinTimeLimitChoiceReview?>(null)
+    }
+    var timePreviewBusy by remember {mutableStateOf(false)}
+    var timeAcceptanceBusy by remember {mutableStateOf(false)}
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
     var showOtherWorkouts by rememberSaveable {mutableStateOf(false)}
     var visibleUnfinishedCount by rememberSaveable(host) {mutableIntStateOf(20)}
@@ -503,6 +511,27 @@ private fun NativeKotlinCandidateTrainEntry(
         } finally {
             reviewingResume=false
         }
+    }
+    LaunchedEffect(host,selectedTimeBudget,selectedId,customWorkoutId) {
+        timePreview=null
+        if(selectedId!=null || customWorkoutId!=null)return@LaunchedEffect
+        timePreviewBusy=true
+        try {
+            timePreview=withContext(Dispatchers.IO) {
+                runCatching {
+                    val id=host.currentlyApprovedKotlinWorkoutId()
+                    if(id==null)null
+                    else host.reviewCurrentKotlinShortSession(
+                        id,selectedTimeBudget?:45)
+                }.getOrNull()
+            }
+            // A locked issued session displays ITS saved choice, not the
+            // initial 45-minute picker default after process recreation.
+            val locked=timePreview
+            if(locked?.alreadyIssued==true &&
+                selectedTimeBudget!=locked.currentLimitMinutes)
+                selectedTimeBudget=locked.currentLimitMinutes
+        } finally {timePreviewBusy=false}
     }
     LaunchedEffect(host,customWorkoutId,selectedId) {
         // A past review is never an access grant after Finish or an athlete
@@ -638,6 +667,110 @@ private fun NativeKotlinCandidateTrainEntry(
                     style=MaterialTheme.typography.bodySmall)
                 PursuitPrimaryAction("Open my program",enabled=!reviewingResume) {
                     onReturnToProgram()
+                }
+            }
+            PursuitCard {
+                PursuitSectionHeading("Time available",
+                    "Choose Full, 45, 30 or 20 minutes before opening this approved workout.")
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf<Int?>(null,45,30,20).forEach {choice ->
+                        FilterChip(
+                            selected=selectedTimeBudget==choice,
+                            enabled=!timeAcceptanceBusy &&
+                                timePreview?.alreadyIssued!=true,
+                            onClick={
+                                selectedTimeBudget=choice
+                                selectionMessage=null
+                            },
+                            label={Text(if(choice==null)"Full" else "$choice min")}
+                        )
+                    }
+                }
+                val available=timePreview
+                val status=available?.proposal?.status
+                val mayStart=available?.alreadyIssued==true ||
+                    selectedTimeBudget==null ||
+                    status==KotlinShortSessionStatus.ALREADY_FITS ||
+                    status==KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW
+                if(timePreviewBusy) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text("Checking the current approved workout…",
+                        style=MaterialTheme.typography.bodySmall)
+                } else if(available==null) {
+                    Text("Save an approved generated workout to review its time options.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    val review=available.proposal
+                    if(available.alreadyIssued)
+                        Text("Saved time choice: ${available.currentLimitMinutes?.let{"$it minutes"}?:"Full"}. This workout is already issued; its targets are locked. Open it to resume.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    val total=review.originalEstimatedSeconds
+                    val planned=review.estimatedSeconds
+                    val estimate=if(selectedTimeBudget==null)total else planned
+                    if(!available.alreadyIssued)Text(
+                        "Estimated session: " +
+                            (if(estimate==null)"not available"
+                                else "${(estimate+59L)/60L} min") +
+                            " · ${if(selectedTimeBudget==null)"Full workout"
+                                else "${review.omittedWorkingSets} optional sets omitted"}",
+                        style=MaterialTheme.typography.bodyMedium
+                    )
+                    if(selectedTimeBudget!=null && !available.alreadyIssued) {
+                        Text(review.explanation,
+                            style=MaterialTheme.typography.bodySmall,
+                            color=if(!mayStart)MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if(!available.alreadyIssued) {
+                        Text("Full uses the original approved prescription.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if(review.omittedExerciseIds.isNotEmpty() &&
+                        selectedTimeBudget!=null && !available.alreadyIssued)
+                        Text("Removed optional exercises: " +
+                            review.omittedExerciseIds.joinToString(", "),
+                            style=MaterialTheme.typography.bodySmall)
+                    val selection=selectedTimeBudget
+                    PursuitPrimaryAction(
+                        if(available.alreadyIssued)"Resume saved workout"
+                        else if(selection==null)"Open full workout"
+                            else "Use ${selection}-minute workout",
+                        enabled=mayStart && !timeAcceptanceBusy &&
+                            !timePreviewBusy && !searching && !resumeChecking
+                    ) {
+                        if(available.alreadyIssued ||
+                            selection==available.currentLimitMinutes) {
+                            selectedId=available.workoutId
+                        } else {
+                            timeAcceptanceBusy=true
+                            selectionMessage=null
+                            scope.launch {
+                                try {
+                                    val updated=withContext(Dispatchers.IO) {
+                                        host.acceptCurrentKotlinShortSession(
+                                            available.workoutId,
+                                            available.expectedApprovalRevision,
+                                            selection,java.util.UUID.randomUUID().toString())
+                                    }
+                                    if(updated is NativeApprovalWriteResult.Committed)
+                                        selectedId=available.workoutId
+                                    else {
+                                        selectionMessage="The selected time option could not be saved. The original workout remains unchanged; refresh and review again."
+                                        timePreview=null
+                                    }
+                                } catch(_:Exception) {
+                                    selectionMessage="Could not save the time option. No workout was started."
+                                } finally {
+                                    timeAcceptanceBusy=false
+                                }
+                            }
+                        }
+                    }
                 }
             }
             TextButton(onClick={showOtherWorkouts=!showOtherWorkouts}) {

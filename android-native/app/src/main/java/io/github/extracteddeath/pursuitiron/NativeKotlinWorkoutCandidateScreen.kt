@@ -243,6 +243,23 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             return@Column
         }
 
+        journal?.snapshot?.shortSessionLimitMinutes?.let {minutes->
+            val omitted=journal.snapshot.shortSessionOmittedSetKeys.size
+            PursuitCard {
+                PursuitSectionHeading(
+                    "$minutes-minute approved session",
+                    if(omitted==0)"The complete plan fits this time preference."
+                    else "$omitted original set(s) were omitted before this workout was issued."
+                )
+                Text(
+                    if(omitted==0)
+                        "All original set targets remain intact. This is not an edited training exposure."
+                    else "Only the approved retained sets are included in this workout. Recorded performance and personal records remain factual; the reduced prescription is not used as proof of full-session load progression.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         PursuitSessionMetrics(
             logged=presentation.completedCount+presentation.failedCount,
             skipped=presentation.skippedCount,

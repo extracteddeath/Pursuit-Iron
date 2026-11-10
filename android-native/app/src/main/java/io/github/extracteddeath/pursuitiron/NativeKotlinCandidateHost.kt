@@ -40,6 +40,16 @@ internal sealed interface NativeRecoveredFirstProgramReview {
         NativeRecoveredFirstProgramReview
 }
 
+internal data class NativeKotlinTimeLimitChoiceReview(
+    val workoutId:String,
+    val expectedApprovalRevision:Long,
+    val currentLimitMinutes:Int?,
+    val proposal:KotlinShortSessionReview,
+    /** Saved journal already exists: its original time choice is immutable. */
+    val alreadyIssued:Boolean
+)
+
+/** Read-only preview and explicit pre-issuance approval are separate actions. */
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -2033,6 +2043,106 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return null
         return gymCoherentAuthority.currentApprovedWorkout(
             owner.ownerKey,pending.grant.workoutId)?.grant?.workoutId
+    }
+
+    /**
+     * The screen receives only a read-only, revision-bound budget preview.
+     * Reopen the currently approved gym/program under the owner fence. This
+     * does not grant an issued workout or change the accepted plan.
+     */
+    fun reviewCurrentKotlinShortSession(
+        workoutId:String,minutes:Int
+    ):NativeKotlinTimeLimitChoiceReview? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction null
+                val approval=gymCoherentAuthority.currentApprovedWorkout(
+                    owner.ownerKey,workoutId)
+                    ?:return@withOwnerTransaction null
+                if(approval.athleteId!=owner.athleteId ||
+                    approval.approvedSource.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction null
+                val existing=coordinator.open(owner.ownerKey,workoutId)
+                if(existing is NativeJournalFileResult.Rejected &&
+                    existing.reason!=NativeJournalFileRefusal.NOT_ISSUED)
+                    return@withOwnerTransaction null
+                val proposal=KotlinShorterSessionReviewDomain.review(
+                    KotlinWorkoutSnapshotRequest(
+                        approval.approvedSource,approval.currentSource,
+                        approval.grant,approval.program,approval.policies),minutes)
+                NativeKotlinTimeLimitChoiceReview(
+                    workoutId,approval.storageRevision,
+                    approval.shortSessionLimitMinutes,proposal,
+                    existing is NativeJournalFileResult.Durable)
+            }
+        }.getOrNull()
+    }
+
+    /**
+     * Explicit user acceptance or Undo-to-Full BEFORE first issuance.
+     * Never trust a preview as the current program: re-open the complete
+     * approved plan and current gym, require the exact approval revision,
+     * reject an already-issued journal, re-stage the budget and atomically
+     * publish a NEW accepted revision under the same owner transaction.
+     */
+    fun acceptCurrentKotlinShortSession(
+        workoutId:String,expectedApprovalRevision:Long,
+        minutes:Int?,receiptId:String
+    ):NativeApprovalWriteResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeApprovalWriteResult.Rejected(
+                NativeApprovalWriteRefusal.NOT_AUTHORIZED)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.NOT_AUTHORIZED)
+                val approval=gymCoherentAuthority.currentApprovedWorkout(
+                    owner.ownerKey,workoutId)
+                    ?:return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.NOT_AUTHORIZED)
+                if(approval.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.NOT_AUTHORIZED)
+                if(expectedApprovalRevision!=approval.storageRevision ||
+                    approval.storageRevision>=9_007_199_254_740_990L)
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.STALE_REVISION)
+                if(!Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$").matches(receiptId))
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
+                if(minutes!=null) {
+                    val preview=KotlinShorterSessionReviewDomain.review(
+                        KotlinWorkoutSnapshotRequest(
+                            approval.approvedSource,approval.currentSource,
+                            approval.grant,approval.program,approval.policies),minutes)
+                    if(preview.status !in setOf(
+                            KotlinShortSessionStatus.ALREADY_FITS,
+                            KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW))
+                        return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                            NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
+                }
+                // Must be NOT_ISSUED, never treat corruption, storage failure
+                // or an existing finished/unsubmitted journal as disposable.
+                val existing=coordinator.open(owner.ownerKey,workoutId)
+                if(existing!=NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.NOT_ISSUED))
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
+                approvalStore.publish(
+                    owner.ownerKey,expectedApprovalRevision,
+                    approval.copy(
+                        storageReceiptId=receiptId,
+                        storageRevision=expectedApprovalRevision+1,
+                        shortSessionLimitMinutes=minutes)
+                )
+            }
+        }.getOrElse {
+            NativeApprovalWriteResult.Rejected(
+                NativeApprovalWriteRefusal.STORAGE_UNAVAILABLE)
+        }
     }
 
     fun issueWorkout(workoutId:String):NativeKotlinIssueResult {

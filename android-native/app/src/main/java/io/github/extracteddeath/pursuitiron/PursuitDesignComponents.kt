@@ -114,12 +114,15 @@ internal fun PursuitWorkoutReadinessPanel(
     onReadinessChange:(CoachReadiness)->Unit,
     movementRestricted:Boolean,
     onMovementRestrictedChange:(Boolean)->Unit,
-    enabled:Boolean=true
+    enabled:Boolean=true,
+    showReadiness:Boolean=true,
+    restrictionLabel:String="Movement restricted"
 ) {
     Column(
         Modifier.fillMaxWidth(),
         verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
     ) {
+        if(showReadiness) {
         Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -137,6 +140,7 @@ internal fun PursuitWorkoutReadinessPanel(
                 )
             }
         }
+        }
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment=Alignment.CenterVertically,
@@ -148,7 +152,7 @@ internal fun PursuitWorkoutReadinessPanel(
                 enabled=enabled
             )
             Column(Modifier.weight(1f)) {
-                Text("Movement restricted",
+                Text(restrictionLabel,
                     style=MaterialTheme.typography.bodyMedium)
                 if(movementRestricted) Text(
                     "Review a safer adjustment or alternative. Nothing changes until you approve it.",

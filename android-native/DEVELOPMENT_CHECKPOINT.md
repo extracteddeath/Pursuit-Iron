@@ -2608,3 +2608,39 @@ device checks, adaptive-cycle changes with explicit review/approval,
 web Build 1009 feature parity, and evidence that Kotlin coaching is
 actually superior over longitudinal athlete scenarios. A green
 source/compile check is not an Android usability certification.
+
+
+## 2026-11-09 — Verified exercise-history session grouping and setback filter
+
+The independent Kotlin-native **Exercise History** sheet now has
+three explicit, saveable filters: **Working sets**, **All entries**,
+and **Skipped / failed**. These are presentation-only views of the
+complete, owner-fenced, correction-aware mixed generated/custom history;
+the UI cannot insert an actual, infer RIR, or alter journal receipts.
+
+Each filtered workout shows an accurate per-session heading with
+completed, skipped, and failed counts. Working, warm-up, and amplifier
+follow-up entry ordinals are computed against the **entire original
+session** before filtering. They do not jump when only working sets
+are displayed and do not assign a fake position based on a filtered
+list. The newest verified completed workout remains first.
+Existing private exercise favorites still require a fresh owner and
+manifest-revision match before saving.
+
+An earlier source-only UI guard required the retired two-option
+`showAllVisits` variable. The new guard requires all three factual
+views, grouping, and unchanged RIR/record authorization. A new
+dedicated test checks 34 history source assertions, with no skipped
+test or weakened journal integrity gate.
+
+**Verification:** [GitHub Actions run 42755678765](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42755678765)
+completed **33/33 successful steps** on code commit
+`611721cbb1fa719bbb75b1972683678981dccb2b`: strict source
+contracts, Kotlin training/paired comparisons, native offline journal
+recovery, and Android Compose compilation.
+
+**Not completed:** this does not change training predictions or
+prove superiority over the old web engine. Phone/tablet/foldable
+visual inspection, large-font and TalkBack acceptance, adaptive-cycle
+approval UX, broader feature parity, and a signed-device release
+remain open. No APK, AAB, web update, or PR #448 merge occurred.

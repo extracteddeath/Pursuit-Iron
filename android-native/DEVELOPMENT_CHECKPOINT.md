@@ -2477,3 +2477,43 @@ acceptance, session notes in the new Kotlin journaling owners, signed
 release testing, reviewed adaptive-cycle proposal/acceptance, complete
 web Build 1009 feature parity, and evidence-backed Kotlin coaching
 superiority. Do not treat this source-verified slice as a finished app.
+
+
+## 2026-11-09 — Replayable per-workout session notes verified
+
+Both signed-in, issued **custom** and independently generated Kotlin workout
+journals now have a user-authored **session note**. An edit or explicit clear
+is a revisioned, event-ID-checked, workout-specific receipt, not a temporary
+preference, coach instruction, recorded set or program mutation. The entry
+editor preserves unsaved text across ordinary configuration restoration and
+only acknowledges a Save after a durable journal read reflects it. Failed
+writes keep the draft and expose the refusal for recheck.
+
+Custom notes use version 3 of the custom journal codec; generated notes use
+version 4 of the independent Kotlin journal codec. **Unmodified legacy
+journals retain their old byte-level encoding**, while new note receipts
+validate, replay, clear and survive an offline reopen. The rest timer
+deliberately ignores note-only receipts, and the global History
+fingerprint includes the factual note text without changing any
+highest-load, reps-at-load, progression, actual set or coach fact.
+
+Both workout screens show Add/Edit while the workout is open and saved
+text read-only once finished. Verified History opens private note text
+read-only only after matching the exact owner, workout identity, completed
+manifest and journal revision. Nothing is copied into a subsequent workout.
+
+**Verification:** The initial attempt exposed a missing exhaustive branch in
+`KotlinGlobalHistoryIndexDomain` for the new note receipt. It was corrected
+and regression-tested, not bypassed. The final implementation
+[`7af9dedd4243c4b97d40e7dd10164375066a32ab`](https://github.com/extracteddeath/Pursuit-Iron/commit/7af9dedd4243c4b97d40e7dd10164375066a32ab)
+passed **33/33** workflow steps in
+[GitHub Actions run 42740194036](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42740194036),
+including new note contracts, Kotlin unit/engine-comparison tests,
+journal crash-recovery tests and Compose compilation.
+No APK, AAB, device testing, web release, or PR merge was done.
+
+**Remaining:** full physical Android phone/tablet/foldable and TalkBack
+acceptance; all-screen Material 3 consistency; adaptive cycle review,
+approval and persistence; web Build 1009 functional parity; and
+athlete-specific longitudinal proof that the Kotlin coach actually
+outperforms the former web engine.

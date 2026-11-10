@@ -55,8 +55,9 @@ object CustomShorterSessionReviewDomain {
     private const val MAX_SETS = 256
 
     private fun invalid(
-        kind: CustomShortSessionStatus, minutes: Int, message: String
-    ) = CustomShortSessionReview(kind,minutes,null,null,null,
+        kind: CustomShortSessionStatus, minutes: Int, message: String,
+        sourceStamp: CustomWorkoutSourceStamp? = null
+    ) = CustomShortSessionReview(kind,minutes,sourceStamp,null,null,
         emptyList(),emptyList(),emptyList(),emptyList(),0,message)
 
     private data class UnitOfWork(
@@ -80,7 +81,7 @@ object CustomShorterSessionReviewDomain {
     ): CustomShortSessionReview {
         if(requestedMinutes !in allowed)
             return invalid(CustomShortSessionStatus.INVALID_LIMIT,
-                requestedMinutes,"Choose 20, 30 or 45 minutes, or keep the full custom workout.")
+                requestedMinutes,"Choose 20, 30 or 45 minutes, or keep the full custom workout.",source.stamp)
         val ordered=source.slots.flatMap {it.sets}
         val keySet=ordered.map{it.setKey}
         val sourceValid=source.slots.size in 1..MAX_SLOTS &&
@@ -100,7 +101,7 @@ object CustomShorterSessionReviewDomain {
             }
         if(!sourceValid)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
-                requestedMinutes,"The full custom session has invalid slot or set identities.")
+                requestedMinutes,"The full custom session has invalid slot or set identities.",source.stamp)
         val knownSetSeconds=ordered.sumOf {
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
@@ -108,16 +109,16 @@ object CustomShorterSessionReviewDomain {
         }
         if(knownSetSeconds!=source.knownSetAndRestSeconds)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
-                requestedMinutes,"The current set timing no longer matches the approved snapshot.")
+                requestedMinutes,"The current set timing no longer matches the approved snapshot.",source.stamp)
         val overhead=source.declaredNonSetSeconds
             ?:return invalid(CustomShortSessionStatus.NON_SET_TIME_UNDECLARED,
-                requestedMinutes,"Declare and review session setup and transition time before calculating a shorter custom workout.")
+                requestedMinutes,"Declare and review session setup and transition time before calculating a shorter custom workout.",source.stamp)
         if(overhead !in 0..21600)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
-                requestedMinutes,"The declared preparation time is invalid.")
+                requestedMinutes,"The declared preparation time is invalid.",source.stamp)
         if(ordered.any {it.prescription.amplifier!=null})
             return invalid(CustomShortSessionStatus.ADVANCED_SET_TIME_UNDECLARED,
-                requestedMinutes,"Advanced-set follow-up WORK time has not been declared. No myo-rep, drop, cluster or rest-pause follow-up will be removed or assigned an invented duration.")
+                requestedMinutes,"Advanced-set follow-up WORK time has not been declared. No myo-rep, drop, cluster or rest-pause follow-up will be removed or assigned an invented duration.",source.stamp)
 
         // Sum every declared rest and active duration, even where rest might
         // overlap inside a superset. This is deliberately conservative and

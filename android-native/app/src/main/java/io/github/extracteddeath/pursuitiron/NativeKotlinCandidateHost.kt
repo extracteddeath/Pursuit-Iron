@@ -376,7 +376,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun prepareReviewedCustomShorterWorkout(
         workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,
-        inputs:CustomCoachAuditInputs,minutes:Int,
+        inputs:CustomCoachAuditInputs,
+        shown:NativeCustomShortSessionPreflight.Reviewed,
         athleteConfirmed:Boolean
     ):NativeCustomPrepareResult {
         val owner=localAthlete.signedInIdentity()
@@ -384,7 +385,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomPrepareRefusal.NOT_AUTHORIZED)
         return customPreparedStore.prepareShorter(
             owner.ownerKey,workoutId,cycleId,absoluteWeek,weekday,
-            inputs,minutes,athleteConfirmed,blockCalibrations)
+            inputs,shown,athleteConfirmed,blockCalibrations)
     }
 
     fun openPreparedCustomWorkout(workoutId:String):NativeCustomPreparedRead {

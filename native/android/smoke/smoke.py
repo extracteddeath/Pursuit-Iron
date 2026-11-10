@@ -105,21 +105,36 @@ def find(pattern, timeout=12):
 
 
 def value_of(pattern, timeout=4, field=0):
-    """A text field's value. Compose reports a filled field by its text, not its description, so after the
-    description, fall back to the screen's text fields in order (`field` = which one)."""
+    """A text field's value. uiautomator gives a Compose text field's description but not its text, so read the
+    number off a screenshot inside the field's bounds."""
     rx = re.compile(pattern)
     end = time.time() + timeout
     while time.time() < end:
-        edits = []
         for n in nodes():
             if rx.search(n.get("content-desc") or ""):
-                return (n.get("text") or "").strip()
-            if "EditText" in (n.get("class") or ""):
-                edits.append((n.get("text") or "").strip())
-        if len(edits) > field:
-            return edits[field]
+                t = (n.get("text") or "").strip()
+                if t:
+                    return t
+                b = list(map(int, re.findall(r"\d+", n.get("bounds", ""))))
+                return ocr_number(b) if len(b) == 4 else None
         time.sleep(0.6)
     return None
+
+
+def ocr_number(b):
+    try:
+        from PIL import Image
+        png = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout
+        path = os.path.join(OUT, "_field.png")
+        with open(path, "wb") as f:
+            f.write(png)
+        Image.open(path).crop(tuple(b)).convert("L").save(path)
+        out = subprocess.run(["tesseract", path, "-", "--psm", "7", "-c", "tessedit_char_whitelist=0123456789.,"],
+                             capture_output=True, text=True, timeout=60).stdout.strip()
+        print("field ocr", b, "->", repr(out), flush=True)
+        return out or None
+    except Exception as e:
+        print("field ocr failed", e, flush=True); return None
 
 
 def find_desc(pattern, timeout=4):

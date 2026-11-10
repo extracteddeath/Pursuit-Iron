@@ -126,7 +126,7 @@ jobs:
           echo "APK=$(find out -name '*-debug.apk' | head -1)" >> "$GITHUB_ENV"
       - name: OCR for the shade
         # The workout card's ticking clock keeps uiautomator from dumping the open shade; the smoke finds its buttons by OCR instead.
-        run: sudo apt-get install -y -qq tesseract-ocr >/dev/null
+        run: sudo apt-get install -y -qq tesseract-ocr python3-pil >/dev/null
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

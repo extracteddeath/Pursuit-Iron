@@ -123,13 +123,19 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
         Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
             // An invisible twin of the unit on the left keeps the number itself on the centre line.
             Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp).alpha(0f).clearAndSetSemantics { })
+            val totalStyle = MaterialTheme.typography.displayMedium.copy(color = cs.onSurface, textAlign = TextAlign.Center)
+            // Sized to the number by measuring it: IntrinsicSize.Min on a text field doesn't follow a value set from
+            // outside (− and +), so a stepped total showed as a sliver.
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val fieldW = with(density) { measurer.measure(w.ifEmpty { "0" }, totalStyle, maxLines = 1).size.width.toDp() } + 6.dp
             androidx.compose.foundation.text.BasicTextField(w, { v -> w = v.filter { it.isDigit() || it == '.' || it == ',' }.take(7) }, singleLine = true,
-                textStyle = MaterialTheme.typography.displayMedium.copy(color = cs.onSurface, textAlign = TextAlign.Center),
+                textStyle = totalStyle,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
                 // Sized to the number, so "60 kg" sits centred between − and + (a fixed 150 dp field, right-aligned,
                 // pushed short totals off centre).
-                modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Min).widthIn(min = 40.dp, max = 200.dp).semantics { contentDescription = "Total weight, $u" },
+                modifier = Modifier.width(fieldW.coerceIn(40.dp, 220.dp)).semantics { contentDescription = "Total weight, $u" },
                 decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
             Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
         }

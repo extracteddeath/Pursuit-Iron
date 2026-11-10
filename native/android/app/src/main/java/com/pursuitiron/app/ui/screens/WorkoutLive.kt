@@ -141,9 +141,8 @@ fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var pressed by remember { mutableStateOf(false) }
     val base = bg ?: if (filled) cs.primary else cs.surfaceContainerHighest
-    Box(Modifier.size(size).clip(shape).background(base)
+    Box(Modifier.size(size).alpha(if (enabled) 1f else 0.38f).clip(shape).background(base)
         .background(if (pressed) (fg ?: if (filled) cs.onPrimary else cs.onSurface).copy(alpha = 0.12f) else Color.Transparent)
-        .alpha(if (enabled) 1f else 0.38f)
         .semantics { contentDescription = label; role = Role.Button
             if (enabled) onClick(label) { step(); true } else disabled() }
         .pointerInput(Unit) {

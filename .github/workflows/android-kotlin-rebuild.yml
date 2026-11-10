@@ -132,6 +132,7 @@ jobs:
           node android-native/verification/kotlin-custom-session-note-test.mjs
           node android-native/verification/kotlin-generated-session-note-test.mjs
           node android-native/verification/kotlin-strength-club-contract-test.mjs
+          node android-native/verification/kotlin-coach-choice-search-test.mjs
           node android-native/verification/kotlin-lab-disposable-test.mjs
           node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify durable private signing gate for future Kotlin Lab APKs

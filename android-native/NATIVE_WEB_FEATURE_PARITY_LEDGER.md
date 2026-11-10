@@ -91,3 +91,46 @@ The custom workout screen now provides a separate **Undo swap** action for an un
 The codec adds a receipt type to the existing v2 journal; journals containing swaps retain v2 even after undo, while untouched legacy v1 encoding remains byte-identical. Regression suites now cover cold replay, lost-ack idempotence, chain unwinding, immutable original targets, started-replacement refusal, exact recorded other-set preservation, foreign-owner denial and completing History after undo. These are source/integration assertions, **not** evidence of emulator/phone user acceptance until the latest CI and device interaction runs pass.
 
 Still open: independent source-approved update of future program, Composer workout swaps, richer context-aware swap scoring, actual device undo/turn-screen-off recovery, and coach superiority comparisons. No APK/AAB is produced by this change.
+
+
+## Published web Build 1009 baseline — 2026-11-09
+
+The production WEB reference was updated by merged PR #456 at commit
+`47ab1f2e0ad0dfa533906e25bf479145c7059463` (Build 1009).
+This is a **benchmark**, not an implementation of the same changes in the
+independent Kotlin engine; the other programmer's native project is unrelated.
+
+The Kotlin superiority scorecard must explicitly exercise the following:
+1. **Repeating finite programs:** after four-week completion, the next pass
+   starts with week 1 and clear current-pass Plan completion markers, while
+   retaining prior sessions as history. Check interruption, undo and repeated
+   passes without counting old sessions twice.
+2. **Physically possible loading:** 2.5 kg / 5 lb per-hand dumbbell increments
+   where supported; athlete-configured racks and overrides have priority.
+   A successfully logged off-grid load must not be silently lowered by default
+   guessed increments. Changed rep/RIR prescriptions should choose a defensible
+   attainable load without repeated downward rounding or overriding real fatigue.
+3. **Practical gym station diversity:** avoid excessive cable/Smith-station
+   selection when equivalent equipment is available, without trading away
+   required muscle dose, split validity, physical inventory or time-feasibility.
+   Test the compact-session fallback instead of failing an otherwise workable day.
+
+These are **open comparison gates**, even if existing Kotlin unit tests happen
+to pass; direct paired Build-1009-vs-native longitudinal scenarios and device
+inspection have not been completed. The Kotlin coach is not yet established
+as more accurate than this refreshed baseline.
+
+### Native continuation in this pass
+
+- The two independently authorized Kotlin workout plate viewers now share
+  a schematic symmetric Material 3 loading diagram showing exact confirmed
+  per-side plate counts, with a bounded preview and accessible complete labels.
+  It is **display-only**; it never prescribes, logs or changes a weight, and
+  verified Smith totals are still deliberately excluded from barbell layouts.
+- The generated-workout exercise swap ranker now counts **distinct, positive
+  DIRECT reviewed muscle credits** for a shared-muscle claim. Duplicate and
+  zero-value credits cannot artificially raise the score; other eligibility,
+  equipment gates and fresh target authoring remain authoritative.
+- Actual large-font phone/foldable presentation and physical equipment-use
+  acceptance still require device verification. No APK or web changes are part
+  of this isolated Kotlin work.

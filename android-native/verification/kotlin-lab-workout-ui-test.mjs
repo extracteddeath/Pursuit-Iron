@@ -190,6 +190,31 @@ assert.ok(composer.includes('NativeKotlinComposerPlateSheet(host,workoutId,reque
   workoutHost.includes('VerifiedLoadStock.Barbell') &&
   workoutHost.includes('KotlinVerifiedPlateLayoutDomain.inspect(stock,entered,unit)'),
   'Generated workout plates must use source-coherent owner approval, exact barbell inventory and the same read-only sheet');
+// Both independently verified workout routes must present the SAME source-backed
+// physical plate geometry, with responsive overflow and a complete readable count.
+const visualPlates=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinVerifiedPlateDiagram.kt');
+for(const phrase of [
+  'internal fun NativeKotlinVerifiedPlateDiagram(layout: KotlinVerifiedPlateLayout)',
+  'layout.perSide.flatMapIndexed',
+  'shownTypes.asReversed().forEach',
+  'shownTypes.forEach',
+  'horizontalScroll(rememberScrollState())',
+  'clearAndSetSemantics',
+  'contentDescription=',
+  'The full verified counts are below.',
+  'layout.perSide.forEachIndexed',
+  'Matching plates on both ends',
+  'diagram not to scale'
+])assert.ok(visualPlates.includes(phrase),
+  'Missing safe, symmetric Material plate presentation: '+phrase);
+assert.ok(customPlate.includes('NativeKotlinVerifiedPlateDiagram(layout)') &&
+  customPlate.includes('private fun NativeKotlinPlateResultSheet(') &&
+  visualPlates.includes('MAX_DIAGRAM_PLATES_PER_SIDE = 12') &&
+  !visualPlates.includes('KotlinVerifiedPlateLayoutDomain.inspect(') &&
+  !visualPlates.includes('controller.') &&
+  !visualPlates.includes('host.') &&
+  !visualPlates.includes('onRecord('),
+  'The diagram must stay presentation-only and share the approved plate result from custom and Composer workouts');
 const restBridge=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutRestTimer.kt');
 const timer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRestTimer.kt');
 for(const source of [journal,composer]) {

@@ -2555,3 +2555,56 @@ acceptance, full-screen design integration and remaining features of draft
 PR #448, approved adaptive-cycle change review, full web Build 1009 parity,
 and actual evidence of superior Kotlin coaching over the web implementation.
 No APK/AAB or web changes were made.
+
+
+## 2026-11-09 — Source-verified native Train minimize/resume and Plan block hierarchy
+
+Continued the **native Kotlin app experience** rather than changing the
+independent coaching engine or bulk-merging diverged PR #448.
+
+**Train:** The generated workout's minimized ID is an athlete/host-scoped
+navigation shortcut, **never a saved approval grant**. Before restoring it,
+Train cold-checks the currently authorized workout ID through
+`currentlyApprovedKotlinWorkoutId()`. A stale response cannot replace a
+workout that the athlete has opened in the meantime; a revoked grant
+removes the shortcut and provides a usable recovery message. The
+Minimize button is disabled during a controller journal write and
+rechecks busy synchronously before clearing *in-memory* controller state.
+No Finish, Skip, journal deletion, or implicit recorded-set action is
+executed. Saveable per-workout Compose editor state remains keyed by
+the exact generated workout ID; recovered results are still loaded
+from the disk-backed native journal on reopen.
+
+The verified unfinished **custom** workout list now uses bounded
+20-at-a-time pagination with a **Show next** action, instead of
+stranding records after the twentieth. Refresh restarts that page
+at 20 and reads the current authorized source again.
+
+**Plan:** Kept the explicit **Entire program** default and optional
+**Current block** filter. The native custom-cycle overview now
+has per-block Material disclosure controls, cumulative original-week
+labels, and verified **Next workout / Prepared workout / Resume workout**
+day markers. The next verified block initially expands; without a
+verified next session the first block initially expands, with no
+fabricated "current" status. All authored exercises, warm-ups, set
+targets, amplifiers, day edits, and exercise edits remain inspectable.
+
+New strict navigation, Train, and Plan source tests were added to the
+normal CI workflow. Two older assertions initially failed because they
+required the retired generic "Next session" and "Resume generated workout"
+text. Those contracts were updated to require stronger owner-approved
+resume and source-specific status behaviors; **no journal gate was bypassed**.
+
+**Verification:** [GitHub Actions run 42744944590](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42744944590)
+passed **33 of 33** steps at native code SHA
+`f5e7940e5546b51ada1dda8b56bba410cbe3b1b0`, including strict
+new source UI assertions, independent Kotlin engine unit/paired
+comparison, durable journal recovery, and Android Compose compilation.
+The JavaScript web release was unchanged; no APK/AAB was created.
+
+**Still open:** complete native visual hierarchy and screen-by-screen
+Material 3 acceptance, large-font/foldable/TalkBack and physical
+device checks, adaptive-cycle changes with explicit review/approval,
+web Build 1009 feature parity, and evidence that Kotlin coaching is
+actually superior over longitudinal athlete scenarios. A green
+source/compile check is not an Android usability certification.

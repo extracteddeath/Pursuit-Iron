@@ -570,6 +570,21 @@ time.sleep(2.5)
 nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
 if PKG not in nd or not re.search(r"Next: |Tap to finish|Rest", nd):
     FAILS.append("no ongoing workout notification out of the app")
+# Log set from the shade: Skip any rest, then the workout card's Log set logs the next set and starts its rest.
+adb("shell", "cmd", "statusbar", "expand-notifications")
+time.sleep(2)
+if tap(r"(?i)^\|?skip$", required=False, timeout=3):
+    time.sleep(2.5)
+if not tap(r"(?i)^\|?log set$", "shade-log-set", required=False, timeout=5):
+    FAILS.append("no Log set on the workout card out of the app")
+else:
+    time.sleep(3)
+    nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
+    if not re.search(r"android\.title=String \((Rest|Warm-up rest|Myo rest)\)", nd):
+        FAILS.append("Log set from the shade did not log the set and start the rest")
+    shot("shade-after-log")
+adb("shell", "cmd", "statusbar", "collapse")
+time.sleep(1)
 adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
 time.sleep(2)
 find(r"Finish", timeout=8)

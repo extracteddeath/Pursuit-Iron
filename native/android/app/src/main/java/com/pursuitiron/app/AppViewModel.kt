@@ -85,10 +85,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // The lock-screen rest card's buttons (RestActionReceiver).
         viewModelScope.launch {
             RestActions.flow.collect { a ->
+                if (a == "log") { logFromCard(); return@collect }
                 if (session?.o("rest") == null) return@collect
                 val s = if (a == "skip") obj("act", jsonOf("type" to "restDone")) else obj("act", jsonOf("type" to "restAdjust", "delta" to if (a == "minus") -15 else 15))
                 if (s != null) session = s
-                if (a == "skip") rest.cancel() else if (!inForeground) onBackground()
+                // Skipped out of the app: the rest card gives way to the workout card (next set, Log set).
+                if (a == "skip") { rest.cancel(); if (!inForeground) onBackground() } else if (!inForeground) onBackground()
             }
         }
         viewModelScope.launch {
@@ -862,19 +864,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onBackground() {
         inForeground = false
         val s = session?.takeIf { it.b("active") } ?: return
-        val ex = s.list("exercises").getOrNull(s.i("exIdx"))
-        val next = ex?.list("sets")?.firstOrNull { !it.b("done") }
-        val text = if (ex != null && next != null) "Next: ${ex.s("name")} · ${next.s("weight").ifBlank { "?" }} ${s.s("unit")} × ${next.s("reps")}" else "Next set when it ends"
-        val end = restEndsAt()
-        if (end == null || restPaused() || end <= System.currentTimeMillis()) {
-            // No rest running: the workout itself stays one glance away (clock held when the workout is paused).
-            val paused = s.optLong("pausedAt") > 0
-            rest.showWorkout(if (paused) null else s.optLong("startedAt"), s.s("dayLabel").ifBlank { "Workout" } + if (paused) " · paused" else "",
-                if (ex != null && next != null) text else "Tap to finish your workout")
-            return
-        }
-        val kind = s.o("rest")?.s("kind")
-        rest.show(end, when (kind) { "mini" -> "Myo rest"; "warm" -> "Warm-up rest"; else -> "Rest" }, text)
+        // The rest countdown, or (no rest running) the session clock with the next set and Log set.
+        com.pursuitiron.app.data.LiveCard.post(rest, s, System.currentTimeMillis())
+    }
+
+    /** Log set on the lock-screen card or the Rest over alert: the next set at its target, exactly as the in-app check. */
+    private suspend fun logFromCard() {
+        val s = session?.takeIf { it.b("active") } ?: return
+        val n = com.pursuitiron.app.data.LiveCard.next(s)?.takeIf { it.loggable } ?: return
+        if (n.ei != s.i("exIdx")) obj("act", jsonOf("type" to "select", "ei" to n.ei))
+        val payload = jsonOf("type" to "toggle", "ei" to n.ei, "si" to n.si)
+        val after = obj("act", payload) ?: return
+        session = after
+        onToggled(s, after, payload)
+        publishWidget()
+        runCatching { androidx.core.app.NotificationManagerCompat.from(getApplication()).cancel(com.pursuitiron.app.data.RestNotifier.DONE_ID) }
+        if (!inForeground) onBackground()
     }
     /** Settings → Rest timer & cues → Preview lock screen: a sample rest card in the shade and on the lock screen. */
     fun previewLockScreen(): Boolean {

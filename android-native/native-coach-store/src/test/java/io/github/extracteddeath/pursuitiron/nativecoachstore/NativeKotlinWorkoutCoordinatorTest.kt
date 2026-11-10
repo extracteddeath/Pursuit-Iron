@@ -131,6 +131,65 @@ class NativeKotlinWorkoutCoordinatorTest {
         assertFalse(issued.journal.snapshot.persisted)
     }
 
+    @Test fun optionalAccessoriesAreActuallyOmittedFromDurableJournalDenominator() {
+        val curl=ComposerExerciseOption(
+            "db-curl",ComposerPattern.ISOLATION,
+            setOf(ComposerFocus.FULL_BODY),
+            ComposerEquipment.Verified(LoadUnit.LB,n("30"),stock),
+            listOf(DeclaredMuscleCredit(
+                TrainingMuscle.BICEPS,MuscleCreditRole.DIRECT,n("1"))),
+            90,600,4,4,3,0,1,1,role=ComposerRole.ACCESSORY)
+        val allPolicies=policies()+listOf(
+            policy("db-curl",ComposerSessionPurpose.STRENGTH_SKILL,
+                RepBand(8,12),2,600),
+            policy("db-curl",ComposerSessionPurpose.HYPERTROPHY,
+                RepBand(8,12),2,600))
+        val original=program()
+        val expanded=original.copy(
+            maximumDifferentExercisesPerDay=3,
+            exercises=original.exercises+curl,
+            bounds=original.bounds.map{
+                if(it.muscle==TrainingMuscle.BICEPS)
+                    it.copy(mev=n("12"),mav=n("16"),mrv=n("18"),
+                        minimumDirectDays=3)
+                else it
+            },
+            visitTimings=CoachSessionPrescriptionDomain
+                .timingsForPolicies(allPolicies))
+        val proposed=approval().copy(
+            program=expanded,policies=allPolicies,shortSessionLimitMinutes=45)
+        val preview=KotlinShorterSessionReviewDomain.review(
+            KotlinWorkoutSnapshotRequest(source,source,grant,expanded,allPolicies),45)
+        assertEquals(KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW,
+            preview.status)
+        assertTrue(preview.omittedWorkingSets>0)
+        assertTrue(preview.omittedSetKeys.all{it.startsWith("db-curl:")})
+        assertTrue(preview.keptSetKeys.isNotEmpty())
+
+        val auth=FakeAuthority(proposed)
+        val service=coordinator(auth)
+        val saved=issued(service.issue("owner-1","session-1")).journal
+        val short=saved.snapshot
+        assertEquals(45,short.shortSessionLimitMinutes)
+        assertEquals(preview.omittedSetKeys,short.shortSessionOmittedSetKeys)
+        assertEquals(preview.keptSetKeys,short.targets.map{it.setKey})
+        assertTrue(short.prescriptionEditedForTime)
+        assertEquals(short.targets.size,saved.unresolvedSetCount)
+        assertTrue(short.targets.none {
+            it.setKey in short.shortSessionOmittedSetKeys
+        })
+        assertEquals(short,durable(coordinator(auth)
+            .open("owner-1","session-1")).journal.snapshot)
+        val full=(KotlinWorkoutSnapshotDomain.stage(
+            KotlinWorkoutSnapshotRequest(source,source,grant,expanded,allPolicies))
+            as KotlinWorkoutSnapshotResult.Staged).snapshot
+        assertEquals(full.targets.filter {
+            it.setKey in preview.keptSetKeys.toSet()
+        },short.targets)
+        assertEquals(full.targets.size,
+            short.targets.size+short.shortSessionOmittedSetKeys.size)
+    }
+
     @Test fun changingShortSessionApprovalInsideTheIssuanceLockIsRefused() {
         val requested=approval().copy(shortSessionLimitMinutes=45)
         val auth=FakeAuthority(requested)

@@ -740,11 +740,18 @@ class NativeKotlinCustomWorkoutPreparedStore(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,
         coachingInputs:CustomCoachAuditInputs,
-        minutes:Int,athleteConfirmed:Boolean,
+        shown:NativeCustomShortSessionPreflight.Reviewed,
+        athleteConfirmed:Boolean,
         calibration:NativeKotlinBlockCalibrationConsentStore?=null
     ):NativeCustomPrepareResult {
+        val minutes=shown.review.requestedMinutes
         if(!id.matches(workoutId) || !id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6 ||
+            shown.absoluteWeek!=absoluteWeek || shown.weekday!=weekday ||
+            shown.review.source?.cycleId!=cycleId ||
+            shown.review.status !in setOf(
+                CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW,
+                CustomShortSessionStatus.ALREADY_FITS) ||
             minutes !in setOf(20,30,45))
             return NativeCustomPrepareResult.Rejected(
                 NativeCustomPrepareRefusal.INVALID_SELECTION)
@@ -763,6 +770,17 @@ class NativeKotlinCustomWorkoutPreparedStore(
                     as? NativeCustomPreflightResult.ReviewedPreview
                     ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                         NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                // A fresh valid workout is NOT necessarily the same
+                // workout the athlete reviewed. Fence the exact signed
+                // consent revision AND complete selected/omitted set list.
+                // Any gym, cycle, week, timing or policy change must require
+                // a new explicit Preview -> Confirm step.
+                if(pre.receipt!=shown.receipt ||
+                    pre.session.stamp!=shown.review.source ||
+                    CustomShorterSessionReviewDomain.inspect(
+                        pre.session,minutes)!=shown.review)
+                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.REVIEW_CHANGED)
                 val snapshot=CustomShorterSessionReviewDomain.project(
                     pre.session,minutes)
                     ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(

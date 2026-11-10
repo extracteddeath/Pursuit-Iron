@@ -571,22 +571,29 @@ nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
 if PKG not in nd or not re.search(r"Next: |Tap to finish|Rest", nd):
     FAILS.append("no ongoing workout notification out of the app")
 # Log set from the shade: Skip any rest, then the workout card's Log set logs the next set and starts its rest.
+# Out of the app, so no tap(): its recovery closes the shade and brings the app back to the front.
+def shade_tap(pattern, timeout):
+    p = find(pattern, timeout=timeout)
+    if p:
+        adb("shell", "input", "tap", str(p[0]), str(p[1]))
+        time.sleep(1.2)
+    return bool(p)
 adb("shell", "cmd", "statusbar", "expand-notifications")
 time.sleep(2)
-if tap(r"(?i)^\|?skip$", required=False, timeout=3):
+if shade_tap(r"(?i)^\|?skip$", 3):
     time.sleep(2.5)
 if not find(r"(?i)^\|?log set$", timeout=4):
-    # A card below another in the shade shows collapsed, its buttons hidden: pull it open as a person would.
-    # Its expand chevron, not the card body: a tap on the body opens the app.
-    if tap(r"(?i)^expand", required=False, timeout=3):
+    # A collapsed card hides its buttons: its expand chevron opens it (a tap on the body would open the app).
+    if shade_tap(r"(?i)^expand", 3):
         time.sleep(1.5)
-if not tap(r"(?i)^\|?log set$", "shade-log-set", required=False, timeout=5):
+if not shade_tap(r"(?i)^\|?log set$", 5):
     nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
-    mine = [l.strip() for l in nd.splitlines() if re.search(r"android\.(title|text)=|actions=|Log set|\[\d+\] \"", l)]
+    mine = [l.strip() for l in nd.splitlines() if re.search(r"android\.(title|text)=|Log set", l)]
     print("shade notification:", "\n".join(mine[:40]), flush=True)
     shot("missing-shade-log-set")
     FAILS.append("no Log set on the workout card out of the app" + (" (posted, not shown)" if "Log set" in nd else " (not posted)"))
 else:
+    shot("shade-log-set")
     time.sleep(3)
     nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
     if not re.search(r"android\.title=String \((Rest|Warm-up rest|Myo rest)\)", nd):

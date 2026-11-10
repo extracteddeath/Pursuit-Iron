@@ -868,6 +868,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 style=MaterialTheme.typography.bodySmall)
                             target.amplifier?.let {amp ->
                                 Text("${pretty(amp.kind)} · ${amp.followUpReps} follow-up reps · ${amp.followUpRestSeconds}s intra-set rest · " +
+                                    (amp.followUpActiveSeconds?.let{
+                                        "${it}s extra work · "
+                                    }?:"extra work time missing · ") +
                                     (when(val extra=amp.followUpLoad) {
                                         null -> "Same confirmed load"
                                         DraftSetLoad.ExplicitBodyweight -> "Bodyweight"

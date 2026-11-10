@@ -115,6 +115,35 @@ class NativeKotlinWorkoutCoordinatorTest {
         assertTrue(issued(service.issue("owner-1","session-1")).replayed)
     }
 
+    @Test fun approvedShortSessionIsFencedAndDurablyRetainsItsTimeChoice() {
+        val accepted=approval().copy(shortSessionLimitMinutes=45)
+        val auth=FakeAuthority(accepted)
+        val service=coordinator(auth)
+        val issued=issued(service.issue("owner-1","session-1"))
+        assertFalse(issued.replayed)
+        assertEquals(45,issued.journal.snapshot.shortSessionLimitMinutes)
+        assertEquals(45,durable(service.open(
+            "owner-1","session-1")).journal.snapshot.shortSessionLimitMinutes)
+        val cold=coordinator(auth)
+        assertTrue(issued(cold.issue("owner-1","session-1")).replayed)
+        assertEquals(issued.journal.snapshot,
+            durable(cold.open("owner-1","session-1")).journal.snapshot)
+        assertFalse(issued.journal.snapshot.persisted)
+    }
+
+    @Test fun changingShortSessionApprovalInsideTheIssuanceLockIsRefused() {
+        val requested=approval().copy(shortSessionLimitMinutes=45)
+        val auth=FakeAuthority(requested)
+        auth.afterFirstQuery={ auth.approved=approval() }
+        val response=coordinator(auth).issue("owner-1","session-1")
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.APPROVAL_CHANGED,
+            storageReason=NativeJournalFileRefusal.NOT_AUTHORIZED),response)
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            coordinator(auth).open("owner-1","session-1"))
+    }
+
     @Test fun completeSessionAndFinishColdReopenWithoutJavaScript() {
         val auth=FakeAuthority(approval())
         val service=coordinator(auth)

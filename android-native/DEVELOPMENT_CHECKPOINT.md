@@ -2369,3 +2369,37 @@ Remaining UI priorities: full physical-device/200% text/TalkBack review,
 Smith-specific verified loading support, adaptive cycle choices with explicit
 approval, broader full-app feature parity and outcome-based coach assessment.
 Do not produce an APK or modify the web release before the full UI is ready.
+
+
+## 2026-11-09 — Integrated safe Use Last draft, full native CI green
+
+The official Kotlin native workout paths now provide **Use last completed set**
+when the athlete explicitly switches the persistent Target/Last reference to
+Last. This feature was selectively carried from the older integrated UI draft,
+**without** replacing newer custom/Composer screens or changing journal owners.
+
+`WorkoutLastDraftDomain` accepts only the latest owner/slot/day-aligned
+**COMPLETED** historical set with compatible unit and physical load basis,
+preserving actual reps/load and reported RIR exactly. Skipped/failed,
+unknown, cross-basis, and unverified observations cannot prefill an actual.
+The action edits only an unsaved entry field; no program, prescription,
+accepted receipt, History, or progression changes until explicit Complete.
+The button stays unavailable for already recorded custom visits and resolved
+generated sets. JVM and source contracts cover partial history, bodyweight,
+warmups/follow-ups, missing RIR, and explicit draft-only behavior.
+
+**Verification:** GitHub Actions
+[run 42731530968](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42731530968)
+passed **33 of 33** workflow steps at implementation commit
+`87a33a251ee73caa8277afee1e53998bd1544723`, including the new Kotlin
+unit tests, independent engine comparison, journal recovery and Android Compose
+compilation. No APK or AAB was produced.
+
+**Integration status:** PR #448's older integrated UI branch remains draft
+and separate. Its 34 unique commits are not safe to merge wholesale because
+the newer Kotlin engine/screens have diverged; future work should port
+functionality through reviewed, source-fenced slices. Remaining priority
+items include source-backed pinned exercise notes and setup, workout
+session notes, Strength Club, updated Material presentation/accessibility
+and explicit adaptive-cycle review and approval. Full real-device acceptance
+and validated Kotlin-vs-web Build 1009 coaching superiority remain open.

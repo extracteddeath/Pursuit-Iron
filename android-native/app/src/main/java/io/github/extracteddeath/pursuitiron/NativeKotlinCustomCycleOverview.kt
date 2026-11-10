@@ -81,16 +81,31 @@ internal fun NativeKotlinCustomCycleOverview(
                 )
             }
         }
-        cycle.blocks.filter { block ->
-            !onlyNextBlock || !hasNextSession ||
+        // Entire program remains visible by default; individual block
+        // disclosures prevent many weeks of exercises from overwhelming Train.
+        // Keep original block indices for the real cumulative week labels.
+        cycle.blocks.forEachIndexed { index,block ->
+            val showBlock=!onlyNextBlock || !hasNextSession ||
                 selectedBlock==null || block.blockId==selectedBlock.blockId
-        }.forEach { block ->
-            Text(block.label,style=MaterialTheme.typography.titleMedium)
-            Text(block.phase.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}+
-                " · ${block.weeks} ${if(block.weeks==1)"week" else "weeks"} · ${block.days.size} days/week",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            block.days.sortedBy{it.weekday}.forEach { day ->
+            if(showBlock) {
+                val startWeek=1+cycle.blocks.take(index).sumOf{it.weeks}
+                val endWeek=startWeek+block.weeks-1
+                val phase=block.phase.name.lowercase().replace('_',' ')
+                    .replaceFirstChar{it.uppercase()}
+                var blockExpanded by rememberSaveable(cycle.cycleId,block.blockId,week) {
+                    mutableStateOf(
+                        if(hasNextSession)block==selectedBlock else index==0
+                    )
+                }
+                PursuitDisclosureRow(
+                    title=block.label,
+                    subtitle="$phase · Week ${if(startWeek==endWeek)"$startWeek" else "$startWeek–$endWeek"}"+
+                        " · ${block.days.size} training days"+
+                        if(block==selectedBlock && hasNextSession)" · Current block" else "",
+                    expanded=blockExpanded,
+                    onToggle={blockExpanded=!blockExpanded}
+                )
+                if(blockExpanded)block.days.sortedBy{it.weekday}.forEach { day ->
                 val isNextDay=hasNextSession &&
                     block.blockId==selectedBlock?.blockId &&
                     day.weekday==weekday
@@ -99,9 +114,15 @@ internal fun NativeKotlinCustomCycleOverview(
                         day.weekday==(weekday ?: block.days.minOfOrNull{it.weekday}))
                 }
                 HorizontalDivider()
+                val selectedStatus=when(selection) {
+                    is NativeCustomNextCycleSlot.ResumeIssued -> "Resume workout"
+                    is NativeCustomNextCycleSlot.Prepared -> "Prepared workout"
+                    is NativeCustomNextCycleSlot.Next -> "Next workout"
+                    else -> "Selected workout"
+                }
                 PursuitDisclosureRow(
                     title="${days.getOrElse(day.weekday){"Day"}} · ${day.label}",
-                    subtitle=(if(isNextDay)"Next session · " else "")+
+                    subtitle=(if(isNextDay)"$selectedStatus · " else "")+
                         "${day.slots.size} exercises",
                     expanded=expanded,onToggle={expanded=!expanded}
                 )
@@ -157,6 +178,7 @@ internal fun NativeKotlinCustomCycleOverview(
                         }
                     }
                 }
+            }
             }
         }
     }

@@ -55,6 +55,9 @@ internal data class NativeKotlinCustomCycleState(
     val authoredPreview: CustomWorkoutDaySnapshot? = null,
     val authoredPreviewRefusal: CustomWorkoutSnapshotRefusal? = null,
     val consentBoundPreview: NativeCustomPreflightResult.ReviewedPreview? = null,
+    /** Current native custom consent, exact week/day and time-review result.
+     * Never a signed short-session issuance grant. */
+    val customShortReview: NativeCustomShortSessionPreflight.Reviewed? = null,
     val preparedWorkout: NativeCustomPreparedWorkout? = null,
     val preparationRefusal: NativeCustomPrepareRefusal? = null,
     val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null,
@@ -100,7 +103,7 @@ internal class NativeKotlinCustomCycleController(
     private fun run(action: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
         current.value = current.value.copy(busy = true, refusal = null,
-            authoringRefusal = null, message = null)
+            authoringRefusal = null, message = null,customShortReview=null)
         scope.launch {
             try {
                 action()
@@ -990,6 +993,44 @@ internal class NativeKotlinCustomCycleController(
                     consentBoundPreview=null,
                     authoredPreview=null,
                     message="Custom workout preflight rejected: ${result.reason.name.replace('_',' ').lowercase()}.")
+        }
+    }
+
+    /**
+     * Read-only "time available" preview for an EXACT consent-verified
+     * custom week/day. This never calls the generated Composer issuer and
+     * cannot save a shorter session, even when the estimate fits.
+     */
+    fun reviewCustomShorterDay(
+        absoluteWeek:Int,weekday:Int,minutes:Int
+    )=run {
+        val draft=current.value.draft ?:return@run
+        val inputs=auditedInputs
+        val approved=current.value.consentBoundPreview?.session
+        if(inputs==null || approved==null ||
+            approved.stamp.cycleId!=draft.cycleId ||
+            approved.stamp.cycleRevision!=draft.revision ||
+            approved.absoluteWeek!=absoluteWeek ||
+            approved.weekday!=weekday) {
+            current.value=current.value.copy(
+                message="Verify exact current athlete consent and this week/day before reviewing a shorter custom session.")
+            return@run
+        }
+        val result=host.previewConsentBoundCustomShorterSession(
+            draft.cycleId,absoluteWeek,weekday,inputs,minutes)
+        current.value=when(result) {
+            is NativeCustomShortSessionPreflight.Reviewed ->
+                current.value.copy(
+                    customShortReview=result,
+                    message=if(result.review.status in setOf(
+                            CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW,
+                            CustomShortSessionStatus.ALREADY_FITS))
+                        "Shorter custom session checked against this signed program. Read-only: no workout was changed or issued."
+                    else "Custom time review is blocked: ${result.review.explanation}")
+            is NativeCustomShortSessionPreflight.Rejected ->
+                current.value.copy(
+                    customShortReview=null,
+                    message="Custom time review refused: ${result.reason.name.replace('_',' ').lowercase()}. No workout was changed.")
         }
     }
 

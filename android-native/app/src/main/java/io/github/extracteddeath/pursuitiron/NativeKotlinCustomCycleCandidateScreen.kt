@@ -142,6 +142,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var confirmConsent by remember { mutableStateOf(false) }
     var inspectedWeek by rememberSaveable { mutableStateOf("1") }
     var inspectedWeekday by rememberSaveable { mutableIntStateOf(0) }
+    var customShortMinutes by rememberSaveable(
+        draft?.cycleId,draft?.revision,inspectedWeek,inspectedWeekday
+    ) {mutableIntStateOf(30)}
     var coachMaxStep by rememberSaveable {mutableStateOf("5")}
     var coachReadiness by remember {mutableStateOf(CoachReadiness.NORMAL)}
     var coachRestricted by rememberSaveable {mutableStateOf(false)}
@@ -694,6 +697,66 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         enabled=!busy && validWeek,
                         modifier=Modifier.fillMaxWidth()
                     ) {Text("Verify exact consent and session")}
+                }
+                if(validWeek &&
+                    state.consentBoundPreview?.session?.absoluteWeek==weekNumber &&
+                    state.consentBoundPreview?.session?.weekday==inspectedWeekday &&
+                    state.consentBoundPreview?.session?.stamp?.cycleRevision==draft.revision) {
+                    HorizontalDivider()
+                    PursuitSectionHeading(
+                        "Shorter-session review",
+                        "A safe, read-only preview for this exact signed custom week."
+                    )
+                    CycleChoiceRow("Time available",
+                        listOf(45,30,20),customShortMinutes,
+                        {"$it min"}) { customShortMinutes=it }
+                    OutlinedButton(
+                        enabled=!busy && validWeek,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                        onClick={
+                            val week=weekNumber
+                            if(week!=null)controller.reviewCustomShorterDay(
+                                week,inspectedWeekday,customShortMinutes)
+                        }
+                    ) {Text("Review optional cuts · do not change workout")}
+                    val timeReview=state.customShortReview?.takeIf{
+                        it.absoluteWeek==weekNumber &&
+                        it.weekday==inspectedWeekday &&
+                        it.review.requestedMinutes==customShortMinutes &&
+                        it.review.source==state.consentBoundPreview?.session?.stamp
+                    }?.review
+                    if(timeReview!=null) {
+                        val canFit=timeReview.status in setOf(
+                            CustomShortSessionStatus.ALREADY_FITS,
+                            CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW)
+                        Text(
+                            if(canFit)"Time review: ${pretty(timeReview.status)}"
+                            else "Not safe to shorten: ${pretty(timeReview.status)}",
+                            color=if(canFit)MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.titleSmall
+                        )
+                        val original=timeReview.originalEstimatedSeconds
+                        val shortened=timeReview.reviewedEstimatedSeconds
+                        if(original!=null && shortened!=null) {
+                            Text(
+                                "Conservative declared-time estimate: " +
+                                    "${(original+59L)/60L} → ${(shortened+59L)/60L} min · " +
+                                    "${timeReview.omittedWorkingSets} working sets omitted",
+                                style=MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Text(timeReview.explanation,
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(timeReview.omittedSlotIds.isNotEmpty())
+                            Text("Optional slots omitted: " +
+                                timeReview.omittedSlotIds.joinToString(", "),
+                                style=MaterialTheme.typography.bodySmall)
+                        Text("Preview only. The complete authored program, saved preparation, and any issued workout are unchanged. Shortened custom issuance and Undo are not yet enabled.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 if(state.calibrationReceipt==null && validWeek && state.consentBoundPreview?.session?.absoluteWeek==weekNumber &&
                     state.consentBoundPreview?.session?.weekday==inspectedWeekday) {

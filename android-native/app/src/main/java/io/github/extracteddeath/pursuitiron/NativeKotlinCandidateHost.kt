@@ -392,6 +392,23 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Source-verified custom shorter-session REVIEW only. Pinned, superset,
+     * strength and amplifier semantics cannot be altered by a UI preview.
+     * The custom issuer still requires its own future signed shortened
+     * preparation, and will NOT accept this proposal as an issued workout.
+     */
+    fun previewConsentBoundCustomShorterSession(
+        cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,minutes:Int
+    ):NativeCustomShortSessionPreflight {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomShortSessionPreflight.Rejected(
+                NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return customWorkoutPreflight.reviewShorter(
+            owner.ownerKey,cycleId,absoluteWeek,weekday,inputs,minutes)
+    }
+
+    /**
      * Candidate-only Kotlin CUSTOM workout issuance. First issue requires
      * authenticated, enrolled history, exact durable prepared targets and
      * CURRENT coach-reviewed consent. A prepared preview by itself cannot

@@ -26,6 +26,25 @@ sealed interface NativeCustomPreflightResult {
 }
 
 /**
+ * Authenticated consent review of the shorter-session calculation.
+ * This is a read-only proposal, NOT a changed prepared custom workout or
+ * signed shorter-session grant. No journal or future program can be mutated.
+ */
+sealed interface NativeCustomShortSessionPreflight {
+    data class Reviewed(
+        val receipt:NativeKotlinCustomCycleSignoff,
+        val absoluteWeek:Int,
+        val weekday:Int,
+        val review:CustomShortSessionReview
+    ):NativeCustomShortSessionPreflight {
+        val mayIssue:Boolean get()=false
+        val maySave:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeCustomPreflightRefusal):
+        NativeCustomShortSessionPreflight
+}
+
+/**
  * Real native, owner-fenced preflight for custom week/day selection. It does
  * not run through the lossy ComposerRequest snapshot. A caller's displayed
  * 'approved' flag is ignored: full policy+cycle+gym fingerprint is recomputed
@@ -39,6 +58,30 @@ class NativeKotlinCustomWorkoutPreflight(
     private val consents:NativeKotlinCustomCycleSignoffFileStore
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
+    /**
+     * The SAME owner-fenced, source-revalidated athlete signoff must be
+     * reviewed before calculating optional cuts. Never trust a UI-supplied
+     * CustomWorkoutDaySnapshot or a previous preview as current approval.
+     */
+    fun reviewShorter(
+        ownerKey:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,
+        coachingInputs:CustomCoachAuditInputs,
+        minutes:Int
+    ):NativeCustomShortSessionPreflight =
+        when(val approved=inspect(ownerKey,cycleId,
+            absoluteWeek,weekday,coachingInputs)) {
+            is NativeCustomPreflightResult.Rejected ->
+                NativeCustomShortSessionPreflight.Rejected(approved.reason)
+            is NativeCustomPreflightResult.ReviewedPreview ->
+                NativeCustomShortSessionPreflight.Reviewed(
+                    approved.receipt,approved.session.absoluteWeek,
+                    approved.session.weekday,
+                    CustomShorterSessionReviewDomain.inspect(
+                        approved.session,minutes)
+                )
+        }
+
     fun inspect(
         ownerKey:String,
         cycleId:String,

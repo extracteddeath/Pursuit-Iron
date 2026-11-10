@@ -136,6 +136,43 @@ class NativeKotlinCustomWorkoutPreflightTest {
             ).session.slots.single().sets.single().prescription.reps.minimum)
     }
 
+    @Test fun shorterCustomPreviewNeedsCurrentSignedCycleAndNeverIssuesOrEdits() {
+        initialize();approve()
+        val checked=preflight.reviewShorter(
+            "owner-1","cycle-1",2,0,input(),20)
+        assertTrue(checked.toString(),
+            checked is NativeCustomShortSessionPreflight.Reviewed)
+        val proposal=(checked as NativeCustomShortSessionPreflight.Reviewed)
+        assertEquals(1L,proposal.receipt.recordRevision)
+        assertEquals("athlete-1",proposal.review.source?.athleteId)
+        assertEquals(1L,proposal.review.source?.gymCatalogSourceRevision)
+        assertEquals(CustomShortSessionStatus.ALREADY_FITS,
+            proposal.review.status)
+        assertEquals(330L,proposal.review.reviewedEstimatedSeconds)
+        assertEquals(listOf("cycle-1:w2:d0:slot-0:s1"),
+            proposal.review.retainedSetKeys)
+        assertTrue(proposal.review.omittedSetKeys.isEmpty())
+        assertFalse(proposal.mayIssue)
+        assertFalse(proposal.maySave)
+        assertFalse(proposal.review.canIssueWorkout)
+        assertFalse(proposal.review.canSaveCustomCycle)
+        assertEquals(NativeCustomShortSessionPreflight.Rejected(
+            NativeCustomPreflightRefusal.CONSENT_NOT_CURRENT),
+            preflight.reviewShorter("owner-1","cycle-1",2,0,
+                input().copy(nonSetSecondsByWeekday=mapOf(0 to 210,2 to 200,4 to 200)),
+                20))
+        current=NativeKotlinOwnerIdentity("other-owner","athlete-1")
+        assertEquals(NativeCustomShortSessionPreflight.Rejected(
+            NativeCustomPreflightRefusal.NOT_AUTHORIZED),
+            preflight.reviewShorter("owner-1","cycle-1",2,0,input(),20))
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeCustomShortSessionPreflight.Rejected(
+            NativeCustomPreflightRefusal.INVALID_SELECTION),
+            preflight.reviewShorter("owner-1","cycle-1",105,0,input(),20))
+        assertTrue(prepared.open("owner-1","unused-time-review")
+            is NativeCustomPreparedRead.Missing)
+    }
+
     @Test fun neverPreparesWithoutAthleteConsentOrWithChangedPolicy() {
         initialize()
         assertEquals(NativeCustomPreflightResult.Rejected(

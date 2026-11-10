@@ -795,6 +795,8 @@ class CustomCycleCoachAuditDomainTest {
             it.kind==CustomCoachIssueKind.NON_SET_TIME_UNDECLARED &&
                 it.location=="amplifiers"
         })
+        assertNull(old.weeks.first().estimatedSecondsByDay.getValue(0))
+        assertEquals(330L,old.weeks.first().estimatedSecondsByDay.getValue(2))
         val reviewed=CustomCycleCoachAuditDomain.review(
             authored(60),setup(),StarterExerciseTranche.movements(),inputs())
         assertEquals(reviewed.issues.toString(),

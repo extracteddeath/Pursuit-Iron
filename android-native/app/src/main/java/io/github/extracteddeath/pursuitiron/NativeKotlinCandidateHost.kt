@@ -368,6 +368,25 @@ internal class NativeKotlinCandidateHost(context:Context) {
             cycleId,absoluteWeek,weekday,inputs,blockCalibrations)
     }
 
+    /**
+     * Explicit custom-time approval is saved as a separate immutable
+     * prepared workout, not as a change to the authored training cycle.
+     * The native store rechecks CURRENT consent and physical history.
+     */
+    fun prepareReviewedCustomShorterWorkout(
+        workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,minutes:Int,
+        athleteConfirmed:Boolean
+    ):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(
+                NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.prepareShorter(
+            owner.ownerKey,workoutId,cycleId,absoluteWeek,weekday,
+            inputs,minutes,athleteConfirmed,blockCalibrations)
+    }
+
     fun openPreparedCustomWorkout(workoutId:String):NativeCustomPreparedRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomPreparedRead.Rejected(

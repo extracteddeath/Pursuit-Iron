@@ -108,6 +108,31 @@ object CoachExerciseDecisionDomain {
                 it.unit==last.unit && it.targetReps==last.targetReps &&
                 it.expectedWorkingSets==last.expectedWorkingSets
         })
+        // A caller may supply the complete mixed exercise history. Upper and
+        // Push performances have independent load progressions even when the
+        // exercise, rep range and weight happen to match. Keep only the
+        // latest workout's exact owner-verified training-day cell, preserving
+        // original order and every intervening same-cell setback.
+        // Mixed unknown/known IDs never get pooled. Legacy entirely-null
+        // history retains its pre-existing diagnostic behavior.
+        val distinctDayIds=chronologicalSessions.map {it.trainingDayId}.distinct()
+        if(distinctDayIds.size>1) {
+            val scoped=chronologicalSessions.filter {
+                it.trainingDayId==last.trainingDayId
+            }
+            val decision=review(scoped,context)
+            return decision.copy(
+                explanation=decision.explanation+
+                    " Other program-day appearances were excluded from this review.")
+        }
+        // A blank known day ID is not a verified cell identity.
+        if(last.trainingDayId!=null && last.trainingDayId.isBlank())
+            return CoachExerciseReview(
+                CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+                CoachConfidence.LIMITED,null,
+                "Verify the exact training day before comparing lift progress.",
+                emptySet(),1,null)
+
         // This validates every observation, including older incomplete
         // sessions, before any coaching explanation can be emitted.
         val assessments=chronologicalSessions.map {

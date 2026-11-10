@@ -129,4 +129,56 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
         }
     }
 
+    @Test fun v3TimedAmplifierPersistsThroughFullAndReducedSnapshotsAndSwap() {
+        val old=fixture()
+        val legacy=NativeKotlinCustomWorkoutSnapshotCodec.encode(old)
+        assertEquals(1,legacy[7].toInt())
+        val timed=old.copy(slots=old.slots.map{slot->
+            slot.copy(sets=slot.sets.map{set->
+                val amp=set.prescription.amplifier
+                if(amp==null)set else set.copy(
+                    prescription=set.prescription.copy(
+                        amplifier=amp.copy(followUpActiveSeconds=45)))
+            })
+        },knownSetAndRestSeconds=old.knownSetAndRestSeconds+90)
+        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(timed)
+        assertEquals(3,bytes[7].toInt())
+        assertEquals(timed,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
+        assertArrayEquals(legacy,NativeKotlinCustomWorkoutSnapshotCodec.encode(old))
+        val withSelection=timed.copy(shortSessionLimitMinutes=30)
+        val selected=NativeKotlinCustomWorkoutSnapshotCodec.encode(withSelection)
+        assertEquals(3,selected[7].toInt())
+        assertEquals(withSelection,
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(selected))
+        val timedSlot=timed.slots.first()
+        val framed=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(timedSlot)
+        assertEquals(timedSlot,
+            NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(framed))
+        val oldSlot=old.slots.first()
+        val plain=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(oldSlot)
+        assertEquals(oldSlot,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(plain))
+        assertThrows(java.io.IOException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(
+                framed.copyOf(framed.size-1))
+        }
+        assertThrows(java.io.IOException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(
+                bytes.copyOf(bytes.size-1))
+        }
+        assertThrows(IllegalArgumentException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(timed.copy(
+                knownSetAndRestSeconds=old.knownSetAndRestSeconds))
+        }
+        assertThrows(IllegalArgumentException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(timed.copy(
+                slots=timed.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                    val amp=set.prescription.amplifier
+                    if(amp==null)set else set.copy(
+                        prescription=set.prescription.copy(
+                            amplifier=amp.copy(followUpActiveSeconds=0)))
+                })},knownSetAndRestSeconds=old.knownSetAndRestSeconds))
+        }
+    }
 }

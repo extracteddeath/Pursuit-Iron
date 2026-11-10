@@ -239,4 +239,51 @@ class NativeCustomCycleDraftFileStoreTest {
             store.listOwned("owner-1"))
     }
 
+    @Test fun v2AuthoredAmplifierWorkSecondsPersistAcrossOverrideAndColdOpen() {
+        val legacy=original()
+        val bytes=NativeCustomCycleDraftCodec.encode(legacy)
+        assertEquals(1,bytes[7].toInt())
+        val timed=legacy.copy(
+            blocks=legacy.blocks.map{block->
+                block.copy(days=block.days.map{day->
+                    day.copy(slots=day.slots.map{slot->
+                        slot.copy(sets=slot.sets.map{set->
+                            val amp=set.amplifier
+                            if(amp==null)set else set.copy(
+                                amplifier=amp.copy(followUpActiveSeconds=45))
+                        })
+                    })
+                })
+            },
+            weekOverrides=legacy.weekOverrides.mapValues{(_,rows)->
+                rows.map{row->row.copy(sets=row.sets.map{set->
+                    set.copy(amplifier=CustomSetAmplifier(
+                        CustomAmplifierKind.MYO_REPS,4,12,
+                        followUpActiveSeconds=30))
+                })}
+            }
+        )
+        val v2=NativeCustomCycleDraftCodec.encode(timed)
+        assertEquals(2,v2[7].toInt())
+        val recovered=NativeCustomCycleDraftCodec.decode(v2)
+        assertEquals(timed,recovered)
+        assertArrayEquals(v2,NativeCustomCycleDraftCodec.encode(recovered))
+        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(legacy))
+        assertEquals(45,timed.blocks.first().days.first().slots.first()
+            .sets.last().amplifier?.followUpActiveSeconds)
+        assertEquals(30,timed.weekOverrides.getValue("base").single()
+            .sets.single().amplifier?.followUpActiveSeconds)
+        assertEquals(saved(1),repository().save("owner-1","cycle-1",0,timed))
+        assertEquals(NativeCustomDraftReadResult.Found(timed),
+            repository().read("owner-1","cycle-1"))
+        val cold=NativeCustomCycleDraftFileStore(
+            temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            NativeKotlinCurrentIdentity{signedIn})
+        assertEquals(NativeCustomDraftReadResult.Found(timed),
+            cold.read("owner-1","cycle-1"))
+        assertThrows(java.io.IOException::class.java){
+            NativeCustomCycleDraftCodec.decode(v2.copyOf(v2.size-1))
+        }
+    }
 }

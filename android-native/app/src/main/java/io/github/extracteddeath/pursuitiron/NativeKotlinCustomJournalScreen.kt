@@ -888,6 +888,16 @@ private fun NativeKotlinCustomVisitEditor(
             "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
         else "Amplifier · ${follower?.kind?.name?.replace('_',' ')}"
         Text(label,style=MaterialTheme.typography.titleMedium)
+        if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null)
+            Text(
+                "Planned follow-up: ${follower.followUpReps} reps · " +
+                    (follower.followUpActiveSeconds?.let{
+                        "$it s additional active work"
+                    }?:"additional active work time not authored") +
+                    " · ${follower.followUpRestSeconds}s intra-set rest",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant
+            )
         if(editing || initiallyExpanded) {
             val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
                 follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps

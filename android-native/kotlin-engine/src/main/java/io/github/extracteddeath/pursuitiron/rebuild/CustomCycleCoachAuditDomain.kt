@@ -296,6 +296,7 @@ object CustomCycleCoachAuditDomain {
                 val estimated=linkedMapOf<Int,Long?>()
                 for (day in week.days) {
                     var seconds=0L
+                    var missingAdvancedWork=false
                     val touched=mutableSetOf<TrainingMuscle>()
                     for (slot in day.slots) {
                         val workingSets=slot.sets.count {it.type==DraftSetType.WORKING}
@@ -316,9 +317,12 @@ object CustomCycleCoachAuditDomain {
                             seconds+=set.activeSeconds.toLong()+set.restSeconds
                             val amp=set.amplifier
                             if (amp!=null) {
-                                // Follow-up working time is not a declared
-                                // duration: never invent its seconds.
-                                seconds+=amp.followUpRestSeconds
+                                if(amp.followUpActiveSeconds==null)
+                                    missingAdvancedWork=true
+                                // Authored follow-up work time is counted;
+                                // missing active seconds remain unresolved.
+                                seconds+=amp.followUpRestSeconds+
+                                    (amp.followUpActiveSeconds?:0)
                             }
                         }
                     }
@@ -328,7 +332,8 @@ object CustomCycleCoachAuditDomain {
                     known[day.weekday]=seconds
                     val overhead=(prospectiveByBlock[week.blockId]
                         ?.nonSetSecondsByWeekday ?:inputs.nonSetSecondsByWeekday)[day.weekday]
-                    estimated[day.weekday]=overhead?.let {seconds+it}
+                    estimated[day.weekday]=if(missingAdvancedWork)null
+                        else overhead?.let {seconds+it}
                     val hard=checkNotNull(blockProfiles[week.blockId])
                         .explicitHardMaximumMinutes
                     if (hard!=null && estimated[day.weekday]!=null &&
@@ -472,10 +477,14 @@ object CustomCycleCoachAuditDomain {
         // time audit impossible; do not treat under-estimated minutes as ready.
         if (structural.verifiedDraft!=null &&
             cycle.blocks.any {block->block.days.any{day->day.slots.any{slot->
-                slot.sets.any{it.amplifier!=null}
+                slot.sets.any{set->
+                    set.amplifier?.let{amp->
+                        amp.followUpActiveSeconds==null
+                    }==true
+                }
             }}}) {
             add(CustomCoachIssueKind.NON_SET_TIME_UNDECLARED,"amplifiers",
-                "Advanced-set follow-up work duration must be explicitly specified before a hard total-time audit can pass.")
+                "Advanced-set follow-up active-work duration must be explicitly authored; unknown seconds cannot pass a hard time audit.")
         }
         val status=when {
             profile.athleteProfileId!=cycle.athleteId ||

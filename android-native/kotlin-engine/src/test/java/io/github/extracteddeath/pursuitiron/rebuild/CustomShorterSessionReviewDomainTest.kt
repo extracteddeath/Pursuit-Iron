@@ -51,7 +51,8 @@ class CustomShorterSessionReviewDomainTest {
         slots,slots.flatMap{it.sets}.sumOf{
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
-                (it.prescription.amplifier?.followUpRestSeconds?:0)
+                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.followUpActiveSeconds?:0)
         },overhead)
     private fun review(
         source:CustomWorkoutDaySnapshot,minutes:Int
@@ -233,6 +234,52 @@ class CustomShorterSessionReviewDomainTest {
                     it.copy(prescription=it.prescription.copy(amplifier=
                         CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,12)))
                 }))),20))
+    }
+
+    @Test fun fullyTimedAdvancedProtocolCountsRestAndWorkWithoutPartialAmplifierCuts() {
+        val primary=slot("main",4,ComposerRole.PRIMARY,pinned=true)
+        val advanced=slot("myo",4,amplified=true).let{slot->
+            slot.copy(sets=slot.sets.map{set->
+                val amp=set.prescription.amplifier
+                if(amp==null)set else set.copy(
+                    prescription=set.prescription.copy(
+                        amplifier=amp.copy(followUpActiveSeconds=60)))
+            })
+        }
+        val full=snapshot(listOf(primary,advanced))
+        assertEquals(1575L,full.knownSetAndRestSeconds+300L)
+        val short=review(full,20)
+        assertEquals(CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW,
+            short.status)
+        assertEquals(1575L,short.originalEstimatedSeconds)
+        assertEquals(900L,short.reviewedEstimatedSeconds)
+        assertEquals(4,short.omittedWorkingSets)
+        assertEquals(advanced.sets.map{it.setKey},short.omittedSetKeys)
+        assertEquals(listOf("myo"),short.omittedSlotIds)
+        assertEquals(primary.sets.map{it.setKey},short.retainedSetKeys)
+        val saved=CustomShorterSessionReviewDomain.project(full,20)
+        assertEquals(primary.sets,saved?.slots?.single()?.sets)
+        assertEquals(20,saved?.shortSessionLimitMinutes)
+        assertEquals(600L,saved?.knownSetAndRestSeconds)
+        assertEquals(60,advanced.sets.last().prescription.amplifier
+            ?.followUpActiveSeconds)
+        val unchanged=review(full,30)
+        assertEquals(CustomShortSessionStatus.ALREADY_FITS,unchanged.status)
+        assertTrue(unchanged.omittedSetKeys.isEmpty())
+        val pinned=review(snapshot(listOf(primary,advanced.copy(pinned=true))),20)
+        assertEquals(CustomShortSessionStatus.PROTECTED_WORK_EXCEEDS_LIMIT,
+            pinned.status)
+        assertTrue(pinned.omittedSetKeys.isEmpty())
+        val withoutTiming=advanced.copy(sets=advanced.sets.map{set->
+            set.copy(prescription=set.prescription.copy(
+                amplifier=set.prescription.amplifier?.copy(
+                    followUpActiveSeconds=null)))
+        })
+        val unknown=review(snapshot(listOf(primary,withoutTiming)),20)
+        assertEquals(CustomShortSessionStatus.ADVANCED_SET_TIME_UNDECLARED,
+            unknown.status)
+        assertNull(unknown.reviewedEstimatedSeconds)
+        assertFalse(short.canIssueWorkout)
     }
 
 }

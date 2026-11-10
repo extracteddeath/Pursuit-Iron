@@ -5,17 +5,12 @@ import java.util.Collections
 /**
  * Safe, read-only 20/30/45-minute custom-session preview.
  *
- * This is NOT a change to an athlete-authored custom program, its approved
- * weekly dose, issued journal, supersets or advanced-set protocol. Its source
- * must come from the current, owner-fenced native custom consent preflight.
- * A future issued short custom workout will need its OWN durable, versioned
- * grant, history provenance and recovery tests, not this preview object.
+ * This never edits an athlete-authored cycle or issued workout. An owner-
+ * fenced native issuer must rederive every accepted shortened prescription.
  *
- * Unlike generated sessions, custom follow-ups have declared follow-up rest
- * but no separately declared follow-up ACTIVE duration. Never claim a total
- * time, or drop only part of a myo/drop/rest-pause/cluster set, when an
- * advanced-set prescription is present. Ask the author to choose Full or
- * supply separately reviewed full timing instead.
+ * An advanced set is eligible ONLY when additional active-work seconds are
+ * explicitly authored. Missing work time blocks the review, and an amplifier
+ * is never split, approximated, or silently dropped.
  */
 enum class CustomShortSessionStatus {
     INVALID_LIMIT,
@@ -95,7 +90,10 @@ object CustomShorterSessionReviewDomain {
                     set.slotId==slot.slotId && set.ordinalInSlot==i+1 &&
                     set.prescription.activeSeconds>0 &&
                     set.prescription.restSeconds>=0 &&
-                    (set.prescription.amplifier?.followUpRestSeconds?:0)>=0
+                    (set.prescription.amplifier?.followUpRestSeconds?:0)>=0 &&
+                    (set.prescription.amplifier?.followUpActiveSeconds?.let{
+                        it in 1..3600
+                    }!=false)
                 } &&
                 slot.sets.any {it.prescription.type==DraftSetType.WORKING}
             }
@@ -105,7 +103,8 @@ object CustomShorterSessionReviewDomain {
         val knownSetSeconds=ordered.sumOf {
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
-                (it.prescription.amplifier?.followUpRestSeconds?:0)
+                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.followUpActiveSeconds?:0)
         }
         if(knownSetSeconds!=source.knownSetAndRestSeconds)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
@@ -116,9 +115,13 @@ object CustomShorterSessionReviewDomain {
         if(overhead !in 0..21600)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
                 requestedMinutes,"The declared preparation time is invalid.",source.stamp)
-        if(ordered.any {it.prescription.amplifier!=null})
+        if(ordered.any {set->
+                set.prescription.amplifier?.let{amp->
+                    amp.followUpActiveSeconds==null
+                }==true
+            })
             return invalid(CustomShortSessionStatus.ADVANCED_SET_TIME_UNDECLARED,
-                requestedMinutes,"Advanced-set follow-up WORK time has not been declared. No myo-rep, drop, cluster or rest-pause follow-up will be removed or assigned an invented duration.",source.stamp)
+                requestedMinutes,"Advanced-set follow-up ACTIVE seconds are missing. Enter the additional work seconds; no myo-rep, drop, cluster or rest-pause will be partly removed or assigned an invented duration.",source.stamp)
 
         // Sum every declared rest and active duration, even where rest might
         // overlap inside a superset. This is deliberately conservative and
@@ -154,7 +157,9 @@ object CustomShorterSessionReviewDomain {
         fun selected()=ordered.filter{it.setKey in keys}
         fun seconds()=overhead+selected().sumOf {
             it.prescription.activeSeconds.toLong()+
-                it.prescription.restSeconds
+                it.prescription.restSeconds+
+                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.followUpActiveSeconds?:0)
         }
         fun remainingWorking()=selected().count{
             it.prescription.type==DraftSetType.WORKING
@@ -180,11 +185,10 @@ object CustomShorterSessionReviewDomain {
                 val work=slot.sets.filter {
                     it.prescription.type==DraftSetType.WORKING
                 }
-                val signatures=work.map {
-                    Triple(it.prescription.load,
-                        it.prescription.reps,
-                        it.prescription.targetRir)
-                }.distinct()
+                // Distinct amplifiers, loading schemes, rest or set timing
+                // are authored special prescriptions. Do not classify
+                // them as interchangeable excess straight sets.
+                val signatures=work.map {it.prescription}.distinct()
                 if(signatures.size!=1)continue
                 for(set in work.asReversed()) {
                     if(seconds()<=limit)break
@@ -279,7 +283,8 @@ object CustomShorterSessionReviewDomain {
         val duration=survivors.flatMap{it.sets}.sumOf{
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
-                (it.prescription.amplifier?.followUpRestSeconds?:0)
+                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.followUpActiveSeconds?:0)
         }
         val groups=survivors.mapNotNull{it.supersetGroup}.distinct()
         if(groups.any{group->

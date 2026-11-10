@@ -28,7 +28,10 @@ data class CustomSetAmplifier(
     val followUpReps: Int,
     val followUpRestSeconds: Int,
     /** An extra physical weight must be independently attainable. */
-    val followUpLoad: DraftSetLoad? = null
+    val followUpLoad: DraftSetLoad? = null,
+    /** Separately athlete-authored ACTIVE seconds for the complete
+     * follow-up protocol, not its rest. Null is unknown, not zero. */
+    val followUpActiveSeconds: Int? = null
 )
 
 data class CustomAuthoredSet(
@@ -270,7 +273,10 @@ object CustomTrainingCycleDomain {
                 val amplifier = set.amplifier
                 if (amplifier != null) {
                     if (amplifier.followUpReps !in 1..100 ||
-                        amplifier.followUpRestSeconds !in 0..3600)
+                        amplifier.followUpRestSeconds !in 0..3600 ||
+                        amplifier.followUpActiveSeconds?.let{
+                            it !in 1..3600
+                        }==true)
                         issue(CustomCycleIssueKind.INVALID_SET, here,
                             "Amplifier reps and intra-set rest require explicit valid values.")
                     // DROP_SET requires a separately authored lower follow-up

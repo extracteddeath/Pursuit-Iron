@@ -18,7 +18,7 @@ import java.util.Collections
  */
 internal object NativeCustomCycleDraftCodec {
     private const val MAGIC = 0x50494344 // PICD
-    private const val VERSION = 1
+    private const val VERSION = 2
     const val MAX_BYTES = 2_500_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -66,7 +66,7 @@ internal object NativeCustomCycleDraftCodec {
             enum<LoadUnit>(), enum<LoadBasis>(), BigDecimal(readUTF()))
         else -> throw IOException("Unknown custom load kind")
     }
-    private fun DataOutputStream.set(value: CustomAuthoredSet) {
+    private fun DataOutputStream.set(value: CustomAuthoredSet,version:Int) {
         enum(value.type)
         load(value.load)
         writeInt(value.reps.minimum)
@@ -82,9 +82,10 @@ internal object NativeCustomCycleDraftCodec {
             writeInt(amplifier.followUpRestSeconds)
             writeBoolean(amplifier.followUpLoad != null)
             amplifier.followUpLoad?.let { load(it) }
+            if(version>=2)optionalInt(amplifier.followUpActiveSeconds)
         }
     }
-    private fun DataInputStream.set(): CustomAuthoredSet {
+    private fun DataInputStream.set(version:Int): CustomAuthoredSet {
         val type = enum<DraftSetType>()
         val weight = load()
         val reps = RepBand(readInt(), readInt())
@@ -95,35 +96,36 @@ internal object NativeCustomCycleDraftCodec {
             val kind = enum<CustomAmplifierKind>()
             val repsExtra = readInt()
             val restExtra = readInt()
-            CustomSetAmplifier(kind, repsExtra, restExtra,
-                if (readBoolean()) load() else null)
+            val nextLoad=if(readBoolean())load() else null
+            CustomSetAmplifier(kind,repsExtra,restExtra,nextLoad,
+                if(version>=2)optionalInt() else null)
         } else null
         return CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier)
     }
-    private fun DataOutputStream.slot(value: CustomExerciseSlot) {
+    private fun DataOutputStream.slot(value: CustomExerciseSlot,version:Int) {
         writeUTF(value.slotId)
         writeUTF(value.exerciseId)
         enum(value.role)
-        items(value.sets) { set(it) }
+        items(value.sets) { set(it,version) }
         optionalString(value.attachmentId)
         optionalString(value.supersetGroup)
         writeBoolean(value.pinned)
         writeUTF(value.coachNote)
     }
-    private fun DataInputStream.slot(): CustomExerciseSlot =
+    private fun DataInputStream.slot(version:Int): CustomExerciseSlot =
         CustomExerciseSlot(readUTF(), readUTF(), enum<ComposerRole>(),
-            items(20) { set() }, optionalString(), optionalString(),
+            items(20) { set(version) }, optionalString(), optionalString(),
             readBoolean(), readUTF())
 
-    private fun DataOutputStream.day(value: CustomTrainingDay) {
+    private fun DataOutputStream.day(value: CustomTrainingDay,version:Int) {
         writeInt(value.weekday)
         writeUTF(value.label)
         enum(value.purpose)
-        items(value.slots) { slot(it) }
+        items(value.slots) { slot(it,version) }
     }
-    private fun DataInputStream.day(): CustomTrainingDay =
+    private fun DataInputStream.day(version:Int): CustomTrainingDay =
         CustomTrainingDay(readInt(), readUTF(), enum<ComposerSessionPurpose>(),
-            items(32) { slot() })
+            items(32) { slot(version) })
 
     private fun DataOutputStream.split(value: CustomSplitIdentity) {
         when (value) {
@@ -142,27 +144,27 @@ internal object NativeCustomCycleDraftCodec {
             else -> throw IOException("Unknown custom split")
         }
 
-    private fun DataOutputStream.block(value: CustomTrainingBlock) {
+    private fun DataOutputStream.block(value: CustomTrainingBlock,version:Int) {
         writeUTF(value.blockId)
         writeUTF(value.label)
         enum(value.phase)
         enum(value.purpose)
         writeInt(value.weeks)
         split(value.split)
-        items(value.days) { day(it) }
+        items(value.days) { day(it,version) }
     }
-    private fun DataInputStream.block(): CustomTrainingBlock =
+    private fun DataInputStream.block(version:Int): CustomTrainingBlock =
         CustomTrainingBlock(readUTF(), readUTF(), enum<TrainingPhase>(),
-            enum<CustomBlockPurpose>(), readInt(), split(), items(7) { day() })
+            enum<CustomBlockPurpose>(), readInt(), split(), items(7) { day(version) })
 
-    private fun DataOutputStream.writeOverride(value: CustomWeekSlotOverride) {
+    private fun DataOutputStream.writeOverride(value: CustomWeekSlotOverride,version:Int) {
         writeInt(value.weekInBlock)
         writeInt(value.weekday)
         writeUTF(value.slotId)
-        items(value.sets) { set(it) }
+        items(value.sets) { set(it,version) }
     }
-    private fun DataInputStream.readOverride(): CustomWeekSlotOverride =
-        CustomWeekSlotOverride(readInt(), readInt(), readUTF(), items(20) { set() })
+    private fun DataInputStream.readOverride(version:Int): CustomWeekSlotOverride =
+        CustomWeekSlotOverride(readInt(), readInt(), readUTF(), items(20) { set(version) })
 
     /**
      * Structural bounds only. Coach/equipment approval is ALWAYS a separate
@@ -223,13 +225,21 @@ internal object NativeCustomCycleDraftCodec {
         val buffer = ByteArrayOutputStream()
         DataOutputStream(buffer).use { output ->
             with(output) {
-                writeInt(MAGIC); writeInt(VERSION)
+                val hasNewTime=value.blocks.any{block->block.days.any{day->
+                    day.slots.any{slot->slot.sets.any{
+                        it.amplifier?.followUpActiveSeconds!=null
+                    }}
+                }} || value.weekOverrides.values.any{entries->entries.any{row->
+                    row.sets.any{it.amplifier?.followUpActiveSeconds!=null}
+                }}
+                val version=if(hasNewTime)VERSION else 1
+                writeInt(MAGIC); writeInt(version)
                 writeUTF(value.cycleId); writeLong(value.revision)
                 writeUTF(value.athleteId); enum(value.goal)
                 writeUTF(value.title); writeUTF(value.authorNote)
-                items(value.blocks) { block(it) }
+                items(value.blocks) { block(it,version) }
                 items(value.weekOverrides.toSortedMap().entries) { (key, edits) ->
-                    writeUTF(key); items(edits) { writeOverride(it) }
+                    writeUTF(key); items(edits) { writeOverride(it,version) }
                 }
             }
         }
@@ -242,7 +252,9 @@ internal object NativeCustomCycleDraftCodec {
         return try {
             val cycle = DataInputStream(ByteArrayInputStream(bytes)).use { input ->
                 with(input) {
-                    if (readInt() != MAGIC || readInt() != VERSION)
+                    if(readInt()!=MAGIC)throw IOException("Unknown custom draft magic")
+                    val version=readInt()
+                    if(version !in 1..VERSION)
                         throw IOException("Unknown custom draft version")
                     val cycleId = readUTF()
                     val revision = readLong()
@@ -250,9 +262,9 @@ internal object NativeCustomCycleDraftCodec {
                     val goal = enum<AthleteTrainingGoal>()
                     val title = readUTF()
                     val note = readUTF()
-                    val blocks = items(26) { block() }
+                    val blocks = items(26) { block(version) }
                     val entries = items(26) {
-                        readUTF() to items(3000) { readOverride() }
+                        readUTF() to items(3000) { readOverride(version) }
                     }
                     if (entries.map { it.first }.distinct().size != entries.size ||
                         available() != 0)

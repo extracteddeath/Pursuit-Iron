@@ -15,7 +15,7 @@ private fun CustomAuthoredSet.editDescription(): String {
         is DraftSetLoad.Verified -> "${load.value.toPlainString()} ${load.unit} · ${load.basis.editLabel()}"
     }
     return "${type.editLabel()} · ${loadText(load)} · ${reps.minimum}–${reps.maximum} reps · RIR ${targetRir ?: "unset"} · ${activeSeconds}s work / ${restSeconds}s rest"+
-        (amplifier?.let { amp -> " · ${amp.kind.editLabel()} · ${amp.followUpReps} follow-up reps / ${amp.followUpRestSeconds}s rest"+
+        (amplifier?.let { amp -> " · ${amp.kind.editLabel()} · ${amp.followUpReps} follow-up reps / ${amp.followUpRestSeconds}s rest / ${amp.followUpActiveSeconds?.let{"${it}s extra work"}?:"extra work time unset"}"+
             (amp.followUpLoad?.let { " · ${loadText(it)}" } ?: " · same load") } ?: "")
 }
 

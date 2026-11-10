@@ -794,6 +794,54 @@ class CoachWeekComposerTest {
     }
 
 
+    @Test fun equivalentVerifiedFreeWeightReplacementAvoidsUnnecessaryCableCrowding() {
+        val cableStock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.CABLE_STACK,listOf(n("30")))
+        val cable=ComposerEquipment.Verified(LoadUnit.LB,n("30"),cableStock)
+        val cableChest=option("cable-chest",chest,
+            ComposerPattern.HORIZONTAL_PRESS,equipment=cable,
+            visits=1,gap=1)
+        val cableBack=option("cable-back",lats,
+            ComposerPattern.HORIZONTAL_PULL,equipment=cable,
+            visits=1,gap=1)
+        val dbChest=chestOption.copy(maximumVisits=1)
+        val dbBack=backOption.copy(maximumVisits=1)
+        val dbLeg=legOption.copy(maximumVisits=1)
+        fun request(options:List<ComposerExerciseOption>)=base(
+            exerciseOptions=options,
+            bands=bounds(dose(chest,"4","4","8",1),
+                dose(lats,"2","2","8",1),
+                dose(quads,"2","2","8",1)),
+            schedule=days(listOf(0,2,4),min=1,max=90,overhead=0),
+            patterns=1,maxPerDay=2)
+        val original=listOf(
+            ComposerVisit(0,"cable-chest",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(0,"cable-back",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(1,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
+        val available=listOf(cableChest,cableBack,dbChest,dbBack,dbLeg)
+        val candidate=request(available)
+        val reviewed=CoachWeekComposer.rebalanceForReview(candidate,original,
+            ComposerRepairPermissions(mayReplaceExercises=true))
+        assertEquals(original.size,reviewed.size)
+        assertTrue(reviewed.any {it.dayIndex==0 && it.exerciseId=="db-row"})
+        assertFalse(reviewed.any {it.exerciseId=="cable-back"})
+        assertTrue(reviewed.any {it.exerciseId=="cable-chest"})
+        assertEquals(original.sumOf {it.sets},reviewed.sumOf {it.sets})
+        assertEquals(reviewed,CoachWeekComposer.rebalanceForReview(candidate,
+            original,ComposerRepairPermissions(mayReplaceExercises=true)))
+
+        // Diversity is NEVER permission to invent stock or to remove a
+        // required pinned movement. The exact authored arrangement remains.
+        assertEquals(original,CoachWeekComposer.rebalanceForReview(
+            request(available.filterNot {it.exerciseId=="db-row"}),original,
+            ComposerRepairPermissions(mayReplaceExercises=true)))
+        assertEquals(original,CoachWeekComposer.rebalanceForReview(
+            request(available.map {
+                if(it.exerciseId=="cable-back")it.copy(requiredVisits=1) else it
+            }),original,ComposerRepairPermissions(mayReplaceExercises=true)))
+    }
+
     @Test fun feasibleWeekHasSearchEvidenceWithoutClaimingWorkoutIssuance() {
         val first=CoachWeekComposer.compose(base())
         val second=CoachWeekComposer.compose(base())

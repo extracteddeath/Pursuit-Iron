@@ -28,6 +28,8 @@ data class KotlinHistoricalSetFact(
 
 enum class KotlinHistoryProgressionGate {
     COMPARABLE_FOR_REVIEW,
+    /** Time-limited altered sessions count for history/PR but not earned load. */
+    TIME_LIMIT_EDITED_PRESCRIPTION,
     NO_WORKING_SETS,
     TOO_MANY_WORKING_SETS,
     DUPLICATE_OR_GAPPED_ORDINALS,
@@ -57,8 +59,12 @@ data class KotlinWorkoutHistoryEvidence(
     val journalRevision: Long,
     /** Exact original issued order, including warmups and corrected facts. */
     val sets: List<KotlinHistoricalSetFact>,
-    val exerciseReviews: List<KotlinExerciseHistoryEvidence>
+    val exerciseReviews: List<KotlinExerciseHistoryEvidence>,
+    val shortSessionLimitMinutes:Int?=null,
+    val shortSessionOmittedSetKeys:List<String> =emptyList()
 ) {
+    val prescriptionEditedForTime:Boolean
+        get()=shortSessionOmittedSetKeys.isNotEmpty()
     /** A projection is never proof of a storage transaction or an issued plan. */
     val canPublishHistory: Boolean get() = false
     val canApplyProgression: Boolean get() = false
@@ -115,6 +121,9 @@ object KotlinWorkoutHistoryEvidenceDomain {
         }
         val reviews = grouped.map { (exerciseId, working) ->
             val gate = when {
+                journal.originalSnapshot.prescriptionEditedForTime ||
+                    journal.snapshot.prescriptionEditedForTime ->
+                        KotlinHistoryProgressionGate.TIME_LIMIT_EDITED_PRESCRIPTION
                 working.isEmpty() -> KotlinHistoryProgressionGate.NO_WORKING_SETS
                 working.size > 32 -> KotlinHistoryProgressionGate.TOO_MANY_WORKING_SETS
                 working.map { it.originalOrdinal }.sorted() !=
@@ -166,7 +175,10 @@ object KotlinWorkoutHistoryEvidenceDomain {
         return KotlinWorkoutHistoryEvidence(
             journal.snapshot.source, journal.snapshot.workoutId, finishId,
             journal.revision, Collections.unmodifiableList(facts),
-            Collections.unmodifiableList(reviews)
+            Collections.unmodifiableList(reviews),
+            journal.originalSnapshot.shortSessionLimitMinutes,
+            Collections.unmodifiableList(
+                journal.originalSnapshot.shortSessionOmittedSetKeys.toList())
         )
     }
 

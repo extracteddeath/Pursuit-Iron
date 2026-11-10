@@ -24,8 +24,12 @@ data class CustomWorkoutHistoricalEvidence(
     val cycleRevision: Long,
     val finishedEventId: String,
     val journalRevision: Long,
-    val visits: List<CustomHistoricalVisitFact>
+    val visits: List<CustomHistoricalVisitFact>,
+    val shortSessionLimitMinutes:Int?=null,
+    val shortSessionOmittedSetKeys:List<String> =emptyList()
 ) {
+    val prescriptionEditedForTime:Boolean
+        get()=shortSessionOmittedSetKeys.isNotEmpty()
     /** No derived PRs or progression until these facts join the global index. */
     val canPublishGlobalHistory: Boolean get()=false
     val canApplyProgression: Boolean get()=false
@@ -104,6 +108,9 @@ object CustomWorkoutHistoryEvidenceDomain {
                 journal.snapshot.stamp.cycleId,
                 journal.snapshot.stamp.cycleRevision,
                 checkNotNull(journal.finishedByEventId),
-                journal.revision,Collections.unmodifiableList(facts)))
+                journal.revision,Collections.unmodifiableList(facts),
+                journal.originalSnapshot.shortSessionLimitMinutes,
+                Collections.unmodifiableList(
+                    journal.originalSnapshot.shortSessionOmittedSetKeys.toList())))
     }
 }

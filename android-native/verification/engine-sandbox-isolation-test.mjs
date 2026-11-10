@@ -12,7 +12,10 @@ const bundle = fs.readFileSync('.github/workflows/android-engine-bundle.yml','ut
 const manifest = read('engine-contract/create-bundle-manifest.mjs');
 const settings = read('settings.gradle.kts');
 
-assert.match(settings, /include\(":app", ":domain-contract", ":engine-runtime"\)/);
+assert.match(settings, /include\(":app", ":domain-contract", ":engine-runtime"(?:,\s*"[^"]+")*\)/,
+  'The original read-only sandbox modules must stay registered, even after the independent Kotlin engine and coach store are included');
+assert.match(settings, /":kotlin-engine"/);
+assert.match(settings, /":native-coach-store"/);
 assert.match(app, /implementation\(project\(":engine-runtime"\)\)/,
   'App needs the independently gated read-only metadata runtime');
 const shell = read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt');

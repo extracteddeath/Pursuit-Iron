@@ -58,14 +58,22 @@ object KotlinComposerSwapRankingDomain {
         dayFocus:ComposerFocus,
         search:String=""
     ):List<KotlinComposerSwapChoice> {
-        val baseline=source.credits.map{it.muscle}.toSet()
+        // Only unique, positive, DIRECT reviewed credits establish actual
+        // overlap. Secondary/zero-credit mentions are useful for discovery,
+        // but must never inflate a replacement's shared-muscle ranking.
+        fun reviewedDirectMuscles(option:ComposerExerciseOption)=
+            option.credits.asSequence().filter{
+                it.role==MuscleCreditRole.DIRECT &&
+                    it.fractionalSet.signum()>0
+            }.map{it.muscle}.toSet()
+        val baseline=reviewedDirectMuscles(source)
         return alternatives.asSequence().filter{it.exerciseId!=source.exerciseId &&
             it.exerciseId !in currentExerciseIds &&
             dayFocus in it.allowedFocus &&
             it.role==source.role &&
             matchesSearch(it,search)
         }.map{candidate->
-            val shared=candidate.credits.count{it.muscle in baseline}
+            val shared=reviewedDirectMuscles(candidate).intersect(baseline).size
             val same=candidate.pattern==source.pattern
             KotlinComposerSwapChoice(candidate,same,shared,
                 if(same)"Same training pattern and role"

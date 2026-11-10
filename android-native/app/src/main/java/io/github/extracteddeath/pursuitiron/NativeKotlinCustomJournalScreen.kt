@@ -361,6 +361,24 @@ internal fun NativeKotlinCustomJournalScreen(
                 PageHeading("TODAY'S TRAINING",
                     current.snapshot.dayLabel,
                     "Week ${current.snapshot.absoluteWeek} · ${current.snapshot.phase.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}}")
+                current.originalSnapshot.shortSessionLimitMinutes?.let {minutes->
+                    val omitted=current.originalSnapshot.shortSessionOmittedSetKeys.size
+                    PursuitCard {
+                        PursuitSectionHeading(
+                            "$minutes-minute saved custom session",
+                            if(omitted==0)
+                                "The full authored session fits the selected time."
+                            else "$omitted optional authored set(s) were omitted before issuance."
+                        )
+                        Text(
+                            if(omitted==0)
+                                "Your original set targets are unchanged."
+                            else "Only the reviewed retained sets count toward this workout. Omitted sets were not skipped, failed or completed. Your original custom program is unchanged.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 PursuitCard(highlighted=true) {
                     Text("${mainLogged} of ${mainTotal} sets recorded",
                         style=MaterialTheme.typography.titleLarge)

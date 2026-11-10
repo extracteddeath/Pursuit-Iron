@@ -95,12 +95,12 @@ class KotlinShorterSessionReviewDomainTest {
         assertFalse(at45.canSaveProgram)
     }
 
-    @Test fun twentyMinuteSessionKeepsTwoKeyAndCompanionSetsAndOriginalOrder() {
+    @Test fun shorterSessionKeepsTwoKeyAndCompanionSetsAndOriginalOrder() {
         val stage=snapshot(warmups=2)
         val reviewed=KotlinShorterSessionReviewDomain.inspectStaged(
-            stage,program(overhead=300),20)
+            stage,program(overhead=300),30)
         assertEquals(KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW,reviewed.status)
-        assertTrue(checkNotNull(reviewed.estimatedSeconds)<=1200L)
+        assertTrue(checkNotNull(reviewed.estimatedSeconds)<=1800L)
         val targets=stage.targets.filter {it.setKey in reviewed.keptSetKeys}
         assertEquals(2,targets.count {it.type==DraftSetType.WARMUP &&
             it.exerciseId=="press"})
@@ -114,6 +114,20 @@ class KotlinShorterSessionReviewDomainTest {
         assertTrue(targets.all {it.targetRir==2 ||
             it.type==DraftSetType.WARMUP})
         assertFalse(stage.persisted)
+    }
+
+    @Test fun twentyMinuteChoiceDoesNotRequireAnUnnecessaryWarmupShortcut() {
+        val stage=snapshot()
+        val reviewed=KotlinShorterSessionReviewDomain.inspectStaged(
+            stage,program(),20)
+        assertEquals(KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW,
+            reviewed.status)
+        assertTrue(checkNotNull(reviewed.estimatedSeconds)<=1200L)
+        assertEquals(2,stage.targets.count {it.exerciseId=="press" &&
+            it.setKey in reviewed.keptSetKeys})
+        assertEquals(2,stage.targets.count {it.exerciseId=="row" &&
+            it.setKey in reviewed.keptSetKeys})
+        assertEquals(listOf("curl"),reviewed.omittedExerciseIds)
     }
 
     @Test fun protectedStrengthAndPinnedMovementsBlockImpossibleShortcuts() {

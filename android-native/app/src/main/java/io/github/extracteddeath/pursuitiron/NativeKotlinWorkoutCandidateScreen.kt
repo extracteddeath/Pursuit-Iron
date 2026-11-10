@@ -343,6 +343,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }
         }
         PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+        if(selected!=null && journal!=null)
+            NativeKotlinPinnedExerciseControl(
+                host=host,workoutId=workoutId,
+                exerciseId=selected.target.exerciseId,custom=false,
+                enabled=!state.busy && !presentation.finished
+            )
         activeKeys.forEach{set->
             editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
                 NativeKotlinSetCard(set,presentation.finished,state.busy,

@@ -204,4 +204,26 @@ class ConservativeProgressionReviewTest {
             review(cap=BigDecimal("1.0001"))
         }
     }
+    @Test fun upperAndPushBenchNeverBorrowOneAnothersProgressionEvidence() {
+        val upper=one.copy(trainingDayId="ul-upper-bench")
+        val sameCell=workout("week-two").copy(trainingDayId="ul-upper-bench")
+        assertEquals(IncreaseReviewReason.QUALIFIED_FOR_REVIEW,
+            review(old=upper,next=sameCell).reason)
+        val push=sameCell.copy(trainingDayId="ul-push-bench")
+        val different=review(old=upper,next=push)
+        assertEquals(IncreaseReviewReason.NEEDS_SECOND_COMPARABLE_SESSION,
+            different.reason)
+        assertNull(different.reviewCandidate)
+        assertFalse(different.canOfferIncrease)
+        assertEquals(IncreaseReviewReason.NEEDS_SECOND_COMPARABLE_SESSION,
+            review(old=one,next=push).reason)
+        assertEquals(IncreaseReviewReason.NEEDS_SECOND_COMPARABLE_SESSION,
+            review(old=upper,next=workout("week-two")).reason)
+        assertEquals(IncreaseReviewReason.NEEDS_SECOND_COMPARABLE_SESSION,
+            review(old=upper,next=push.copy(trainingDayId=" ")).reason)
+        // Cross-day evidence is immutable; it cannot be silently relabelled.
+        assertEquals("ul-upper-bench",upper.trainingDayId)
+        assertEquals("ul-push-bench",push.trainingDayId)
+    }
+
 }

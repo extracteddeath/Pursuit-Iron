@@ -62,6 +62,9 @@ object OverloadRecoveryLoadReviewDomain {
             previous.workoutId != latest.workoutId &&
             previous.exerciseId.isNotBlank() &&
             previous.exerciseId == latest.exerciseId &&
+            previous.trainingDayId == latest.trainingDayId &&
+            (previous.trainingDayId==null ||
+                previous.trainingDayId.isNotBlank()) &&
             previous.unit == latest.unit &&
             previous.targetReps == latest.targetReps &&
             previous.expectedWorkingSets == latest.expectedWorkingSets &&

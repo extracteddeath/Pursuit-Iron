@@ -256,4 +256,40 @@ class CoachExerciseDecisionDomainTest {
         assertEquals(CoachDirection.REVIEW_WORKING_LOAD,
             review(exhausted,context=verified).direction)
     }
+    @Test fun mixedUpperAndPushWorkoutHistoryKeepsEachDaysCoachingIndependent() {
+        val upperA=workout("upper-1").copy(trainingDayId="ul-upper")
+        val push=workout("push-1").copy(trainingDayId="ul-push")
+        val upperB=workout("upper-2").copy(trainingDayId="ul-upper")
+        val initialPush=review(upperA,push)
+        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+            initialPush.direction)
+        assertNull(initialPush.nextLoadToReview)
+        assertEquals(1,initialPush.sessionsExamined)
+        assertTrue(initialPush.explanation.contains("Other program-day appearances"))
+
+        // Returning to Upper later can compare the two actual Upper sessions
+        // without borrowing either the Push weight or its outcomes.
+        val resumedUpper=review(upperA,push,upperB)
+        assertEquals(CoachDirection.REVIEW_SMALL_INCREASE,resumedUpper.direction)
+        assertEquals(n(35),resumedUpper.nextLoadToReview)
+        assertEquals(2,resumedUpper.sessionsExamined)
+        assertTrue(resumedUpper.explanation.contains("excluded"))
+
+        // A PUSH failure is not an UPPER failure, nor is a successful Upper
+        // workout allowed to certify a first Push-day increment.
+        val failedPush=workout("push-2",reps=listOf(4,3,2))
+            .copy(trainingDayId="ul-push")
+        val pushReview=review(upperA,upperB,failedPush)
+        assertEquals(CoachDirection.REVIEW_WORKING_LOAD,pushReview.direction)
+        assertNull(pushReview.nextLoadToReview)
+        assertEquals(1,pushReview.sessionsExamined)
+        assertEquals(2,review(upperA,failedPush,upperB).sessionsExamined)
+
+        // Partial identity must not pool a legacy unscoped session with an
+        // owner-verified day cell to grant an increment.
+        val unscoped=upperA.copy(trainingDayId=null)
+        assertNull(review(unscoped,upperB).nextLoadToReview)
+        assertEquals(1,review(unscoped,upperB).sessionsExamined)
+    }
+
 }

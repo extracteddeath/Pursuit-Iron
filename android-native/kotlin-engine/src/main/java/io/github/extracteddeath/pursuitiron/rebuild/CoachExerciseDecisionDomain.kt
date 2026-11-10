@@ -114,6 +114,31 @@ object CoachExerciseDecisionDomain {
             DoubleProgressionEvidenceDomain.assess(
                 it.targetReps,it.expectedWorkingSets,it.observations)
         }
+        // A caller may supply the complete mixed exercise history. Upper and
+        // Push performances have independent load progressions even when the
+        // exercise, rep range and weight happen to match. Keep only the
+        // latest workout's exact owner-verified training-day cell, preserving
+        // original order and every intervening same-cell setback.
+        // Mixed unknown/known IDs never get pooled. Legacy entirely-null
+        // history retains its pre-existing diagnostic behavior.
+        val distinctDayIds=chronologicalSessions.map {it.trainingDayId}.distinct()
+        if(distinctDayIds.size>1) {
+            val scoped=chronologicalSessions.filter {
+                it.trainingDayId==last.trainingDayId
+            }
+            val decision=review(scoped,context)
+            return decision.copy(
+                explanation=decision.explanation+
+                    " Other program-day appearances were excluded from this review.")
+        }
+        // A blank known day ID is not a verified cell identity.
+        if(last.trainingDayId!=null && last.trainingDayId.isBlank())
+            return CoachExerciseReview(
+                CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+                CoachConfidence.LIMITED,null,
+                "Verify the exact training day before comparing lift progress.",
+                emptySet(),chronologicalSessions.size,null)
+
         val latestFacts=assessments.last()
         val currentLoad=observedUniformLoad(last)
         val observedRir=last.observations.filter {

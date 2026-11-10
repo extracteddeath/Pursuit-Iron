@@ -101,6 +101,45 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertEquals(4, j.receipts.size) // uncommitted Finish is not in this journal
     }
 
+    @Test fun timeReducedCompletedWorkRemainsFactualWithoutEarningFullSessionProgression() {
+        val base=start(target("first",0),target("second",1))
+        val issued=base.snapshot.copy(
+            shortSessionLimitMinutes=20,
+            shortSessionOmittedSetKeys=listOf("press:d0:s2"))
+        var reduced=KotlinWorkoutJournalDomain.begin(
+            issued,base.storedIdentity)
+        reduced=record(reduced,"event-a","first",
+            KotlinJournalSetOutcome.COMPLETED,actual(12,2))
+        reduced=record(reduced,"event-b","second",
+            KotlinJournalSetOutcome.COMPLETED,actual(12,2))
+        val history=evidence(finish(reduced))
+        assertEquals(20,history.shortSessionLimitMinutes)
+        assertEquals(listOf("press:d0:s2"),
+            history.shortSessionOmittedSetKeys)
+        assertTrue(history.prescriptionEditedForTime)
+        assertEquals(listOf("first","second"),history.sets.map{it.setKey})
+        assertEquals(2,history.sets.size)
+        assertEquals(listOf(12,12),history.sets.map{it.actual?.reps})
+        val exercise=history.exerciseReviews.single()
+        assertEquals(KotlinHistoryProgressionGate.TIME_LIMIT_EDITED_PRESCRIPTION,
+            exercise.progressionGate)
+        assertNull(exercise.progressionReview)
+        assertNull(exercise.progressionWorkout)
+        // Merely selecting a limit that DOES NOT omit sets is not an edited
+        // prescription and must not disable ordinary eligible progression.
+        val fitting=base.snapshot.copy(shortSessionLimitMinutes=45)
+        var ordinary=KotlinWorkoutJournalDomain.begin(
+            fitting,base.storedIdentity)
+        ordinary=record(ordinary,"event-a","first",
+            KotlinJournalSetOutcome.COMPLETED,actual(12,2))
+        ordinary=record(ordinary,"event-b","second",
+            KotlinJournalSetOutcome.COMPLETED,actual(12,2))
+        val unchanged=evidence(finish(ordinary))
+        assertFalse(unchanged.prescriptionEditedForTime)
+        assertEquals(KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW,
+            unchanged.exerciseReviews.single().progressionGate)
+    }
+
     @Test fun missingActualRirRemainsMissingWhenPrescribedRirExists() {
         var j = start(target("first", 0), target("second", 1))
         j = record(j, "event-a", "first", KotlinJournalSetOutcome.COMPLETED,

@@ -214,6 +214,149 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         preflight.reviewShorter("owner-1","cycle-1",2,0,input(),minutes)
             as NativeCustomShortSessionPreflight.Reviewed
 
+    private fun createShortForUndo(workoutId:String):NativeCustomPreparedWorkout {
+        val saved=prepared.prepareShorter(
+            "owner-1",workoutId,"cycle-1",2,0,input(),signedShortReview(),true)
+        assertTrue(saved.toString(),saved is NativeCustomPrepareResult.Prepared)
+        return (saved as NativeCustomPrepareResult.Prepared).workout
+    }
+
+    @Test fun fullUndoShowsExactAuthoredSetsAndPersistsUntilIssueAndFinish() {
+        initializeShortenedCycle();enroll()
+        val short=createShortForUndo("undo-time-1")
+        assertEquals(20,short.snapshot.shortSessionLimitMinutes)
+        assertEquals(1,short.snapshot.slots.size)
+        val preview=prepared.previewTimeUndo(
+            "owner-1","undo-time-1","cycle-1",2,0,input(),issued)
+        assertTrue(preview.toString(),preview is NativeCustomTimeUndoPreview.Ready)
+        val shown=preview as NativeCustomTimeUndoPreview.Ready
+        assertEquals(short,shown.shortened)
+        assertEquals(2,shown.full.slots.size)
+        assertEquals(listOf("slot-0","optional-0"),shown.full.slots.map{it.slotId})
+        assertNull(shown.full.shortSessionLimitMinutes)
+        assertEquals(short,(prepared.open("owner-1","undo-time-1")
+            as NativeCustomPreparedRead.Found).workout)
+        assertEquals(NativeCustomTimeUndoWrite.Rejected(
+            NativeCustomTimeUndoRefusal.CONFIRMATION_REQUIRED),
+            prepared.acceptTimeUndo(shown,input(),issued,athleteConfirmed=false))
+        val accepted=prepared.acceptTimeUndo(
+            shown,input(),issued,athleteConfirmed=true)
+        assertTrue(accepted.toString(),accepted is NativeCustomTimeUndoWrite.Restored)
+        val full=(accepted as NativeCustomTimeUndoWrite.Restored).prepared
+        assertEquals(shown.full,full.snapshot)
+        assertNull(full.snapshot.shortSessionLimitMinutes)
+        assertTrue(full.snapshot.shortSessionOmittedSetKeys.isEmpty())
+        assertEquals(short.consentFingerprint,full.consentFingerprint)
+        assertEquals(short.workoutId,full.workoutId)
+        assertEquals(full,(prepared.open("owner-1","undo-time-1")
+            as NativeCustomPreparedRead.Found).workout)
+        val coldStore=NativeKotlinCustomWorkoutPreparedStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            identity,preflight)
+        assertEquals(full,(coldStore.open("owner-1","undo-time-1")
+            as NativeCustomPreparedRead.Found).workout)
+        assertEquals(NativeCustomTimeUndoPreview.Rejected(
+            NativeCustomTimeUndoRefusal.NOT_SHORTENED),
+            prepared.previewTimeUndo(
+                "owner-1","undo-time-1","cycle-1",2,0,input(),issued))
+        val opened=issued.issue("owner-1","undo-time-1","cycle-1",2,0,input())
+        assertTrue(opened.toString(),opened is NativeCustomJournalResult.Durable)
+        val original=(opened as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(2,original.unresolvedVisitCount)
+        assertEquals(listOf("slot-0","optional-0"),
+            original.snapshot.slots.map{it.slotId})
+        assertNull(original.originalSnapshot.shortSessionLimitMinutes)
+        assertTrue(original.originalSnapshot.shortSessionOmittedSetKeys.isEmpty())
+        val first=issued.record("owner-1","undo-time-1",
+            CustomWorkoutJournalOperation.Record(
+                "log-restore-1",0,
+                CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,16,1)))
+        assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)
+        val second=issued.record("owner-1","undo-time-1",
+            CustomWorkoutJournalOperation.Record(
+                "log-restore-2",1,
+                CustomWorkoutVisitKey("cycle-1:w2:d0:optional-0:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,12,null)))
+        assertTrue(second.toString(),second is NativeCustomJournalResult.Durable)
+        val factual=(second as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(0,factual.unresolvedVisitCount)
+        val finished=NativeKotlinCustomHistoryTransaction(
+            history,issued,fence,identity).complete(
+                "owner-1","athlete-1","undo-time-1",
+                CustomWorkoutJournalOperation.Finish(
+                    "finish-restore-1",factual.revision))
+        assertTrue(finished.toString(),finished is NativeCustomFinishResult.Committed)
+        val coldJournal=(issued.open("owner-1","undo-time-1")
+            as NativeCustomJournalResult.Durable).issued.journal
+        val historical=CustomWorkoutHistoryEvidenceDomain.project(coldJournal)
+            as CustomHistoryEvidenceResult.Candidate
+        assertNull(historical.evidence.shortSessionLimitMinutes)
+        assertFalse(historical.evidence.prescriptionEditedForTime)
+        assertEquals(listOf("cycle-1:w2:d0:slot-0:s1",
+            "cycle-1:w2:d0:optional-0:s1"),
+            historical.evidence.visits.map{it.setKey})
+        assertEquals(shortenedCycle(),
+            (drafts.read("owner-1","cycle-1")
+                as NativeCustomDraftReadResult.Found).draft)
+    }
+
+    @Test fun customFullUndoRefusesStaleReviewForeignOwnerAndIssuedSession() {
+        initializeShortenedCycle();enroll()
+        val short=createShortForUndo("undo-time-2")
+        val preview=(prepared.previewTimeUndo(
+            "owner-1","undo-time-2","cycle-1",2,0,input(),issued)
+            as NativeCustomTimeUndoPreview.Ready)
+        assertEquals(NativeCustomTimeUndoWrite.Rejected(
+            NativeCustomTimeUndoRefusal.STALE_PREVIEW),
+            prepared.acceptTimeUndo(preview.copy(
+                preparedFingerprint="a".repeat(64)),
+                input(),issued,athleteConfirmed=true))
+        assertEquals(NativeCustomTimeUndoWrite.Rejected(
+            NativeCustomTimeUndoRefusal.STALE_PREVIEW),
+            prepared.acceptTimeUndo(preview.copy(
+                full=preview.full.copy(dayLabel="Different day")),
+                input(),issued,athleteConfirmed=true))
+        current=NativeKotlinOwnerIdentity("foreign-owner","athlete-1")
+        assertEquals(NativeCustomTimeUndoPreview.Rejected(
+            NativeCustomTimeUndoRefusal.NOT_AUTHORIZED),
+            prepared.previewTimeUndo(
+                "owner-1","undo-time-2","cycle-1",2,0,input(),issued))
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(short,(prepared.open("owner-1","undo-time-2")
+            as NativeCustomPreparedRead.Found).workout)
+        assertTrue(issued.issue("owner-1","undo-time-2",
+            "cycle-1",2,0,input()) is NativeCustomJournalResult.Durable)
+        assertEquals(NativeCustomTimeUndoPreview.Rejected(
+            NativeCustomTimeUndoRefusal.ALREADY_ISSUED),
+            prepared.previewTimeUndo(
+                "owner-1","undo-time-2","cycle-1",2,0,input(),issued))
+        assertEquals(NativeCustomTimeUndoWrite.Rejected(
+            NativeCustomTimeUndoRefusal.ALREADY_ISSUED),
+            prepared.acceptTimeUndo(preview,input(),issued,
+                athleteConfirmed=true))
+        assertEquals(short,(prepared.open("owner-1","undo-time-2")
+            as NativeCustomPreparedRead.Found).workout)
+        // A separate unissued preparation must refuse changed cycle/gym
+        // consent rather than "undo" against an obsolete authored source.
+        createShortForUndo("undo-time-3")
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeCustomTimeUndoPreview.Rejected(
+            NativeCustomTimeUndoRefusal.CONSENT_CHANGED),
+            prepared.previewTimeUndo(
+                "owner-1","undo-time-3","cycle-1",2,0,input(),issued))
+        assertEquals(NativeCustomTimeUndoWrite.Rejected(
+            NativeCustomTimeUndoRefusal.CONSENT_CHANGED),
+            prepared.acceptTimeUndo(preview.copy(
+                shortened=short.copy(workoutId="undo-time-3")),
+                input(),issued,athleteConfirmed=true))
+    }
+
     @Test fun trueShortCustomWorkoutIssuesAndColdReopensWithoutPhantomSets() {
         initializeShortenedCycle();enroll()
         val approved=preflight.inspect("owner-1","cycle-1",2,0,input())

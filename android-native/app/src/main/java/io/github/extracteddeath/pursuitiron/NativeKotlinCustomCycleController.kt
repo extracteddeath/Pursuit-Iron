@@ -58,6 +58,8 @@ internal data class NativeKotlinCustomCycleState(
     /** Current native custom consent, exact week/day and time-review result.
      * Never a signed short-session issuance grant. */
     val customShortReview: NativeCustomShortSessionPreflight.Reviewed? = null,
+    /** Two-step, before-issuance Full restoration of the visible short plan. */
+    val customTimeUndo:NativeCustomTimeUndoPreview.Ready?=null,
     val preparedWorkout: NativeCustomPreparedWorkout? = null,
     val preparationRefusal: NativeCustomPrepareRefusal? = null,
     val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null,
@@ -887,8 +889,17 @@ internal class NativeKotlinCustomCycleController(
         val snap=stored.snapshot
         val verified=host.previewConsentBoundCustomWorkout(
             draft.cycleId,snap.absoluteWeek,snap.weekday,inputs)
+        // A saved short session is supposed to differ from the full
+        // authored source. Cold recovery must rederive its exact optional
+        // cuts, not falsely reject every valid shortened preparation.
+        val verifiedSnapshot=if(verified is NativeCustomPreflightResult.ReviewedPreview) {
+            val selectedMinutes=snap.shortSessionLimitMinutes
+            if(selectedMinutes==null)verified.session
+            else CustomShorterSessionReviewDomain.project(
+                verified.session,selectedMinutes)
+        } else null
         if(verified !is NativeCustomPreflightResult.ReviewedPreview ||
-            verified.session!=snap ||
+            verifiedSnapshot!=snap ||
             verified.receipt.recordRevision!=stored.consentRevision ||
             verified.receipt.fingerprintSha256!=stored.consentFingerprint) {
             current.value=before.copy(preparedWorkout=null,
@@ -940,6 +951,47 @@ internal class NativeKotlinCustomCycleController(
             message=if(result is NativeCustomPrepareResult.Prepared)
                 "Your choice of these exact authored targets is saved. Review the workout before issuing."
             else "Acceptance refused because the review changed. Recheck the weights before confirming again.")
+    }
+
+    /** Show exact authored Full sets for a shortened custom preparation.
+     * A read-only preview cannot undo an already-issued or logged workout. */
+    fun reviewCustomTimeUndo() = run {
+        val prepared=current.value.preparedWorkout ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val snapshot=prepared.snapshot
+        val result=host.previewUndoCustomShorterWorkout(
+            prepared.workoutId,snapshot.stamp.cycleId,
+            snapshot.absoluteWeek,snapshot.weekday,inputs)
+        current.value=current.value.copy(
+            customTimeUndo=(result as? NativeCustomTimeUndoPreview.Ready)
+                ?.takeIf{it.shortened==prepared},
+            message=if(result is NativeCustomTimeUndoPreview.Ready &&
+                    result.shortened==prepared)
+                "Review the entire original Full custom workout before explicitly restoring this unissued preparation."
+            else "Full restore refused. The saved workout may have been issued or its consent may have changed.")
+    }
+
+    /** No automatic Full selection; accept the exact displayed Full target
+     * under the native owner/consent/checksum CAS and first-issue fence. */
+    fun acceptCustomTimeUndo() = run {
+        val shown=current.value.customTimeUndo ?:return@run
+        val inputs=auditedInputs ?:return@run
+        if(current.value.preparedWorkout!=shown.shortened) {
+            current.value=current.value.copy(customTimeUndo=null,
+                message="The saved custom workout changed. Review Full again before confirming.")
+            return@run
+        }
+        val result=host.acceptUndoCustomShorterWorkout(
+            shown,inputs,true)
+        current.value=current.value.copy(
+            preparedWorkout=(result as? NativeCustomTimeUndoWrite.Restored)
+                ?.prepared ?:current.value.preparedWorkout,
+            customTimeUndo=null,
+            customShortReview=if(result is NativeCustomTimeUndoWrite.Restored)
+                null else current.value.customShortReview,
+            message=if(result is NativeCustomTimeUndoWrite.Restored)
+                "Your original Full custom workout is restored and cold-recoverable. Its authored cycle and performed history were not changed. Issue it separately when ready."
+            else "Full restore refused: ${(result as NativeCustomTimeUndoWrite.Rejected).reason.name.replace('_',' ').lowercase()}. Review again.")
     }
 
     fun reviewCalibrationReset() = run {

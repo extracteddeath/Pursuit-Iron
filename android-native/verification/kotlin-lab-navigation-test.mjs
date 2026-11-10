@@ -628,11 +628,12 @@ assert.ok(coach.includes('preferredExerciseId?.takeIf{it in choices}') &&
   coach.includes('host.currentVerifiedCoachExerciseChoices()') &&
   coach.includes('onOpenTrain(approvedId)') &&
   journey.includes('selectedGeneratedWorkoutId=id') &&
-  journey.includes('if(generatedWorkoutId!=null) {') &&
-  journey.includes('if(selectedId!=generatedWorkoutId)') &&
+  journey.includes('if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)') &&
   journey.includes('selectedId=generatedWorkoutId') &&
-  journey.includes('minimizedGeneratedId=null'),
-  'Coach focus requires current owner-verified program, and accepted grant must open the exact Train entry');
+  journey.includes('minimizedGeneratedId=null') &&
+  journey.includes('host.currentlyApprovedKotlinWorkoutId()') &&
+  journey.includes('if(approved==awaitingWorkoutId)'),
+  'Coach focus requires current owner-verified program; Train resume also rechecks exact owner approval without clearing a minimized workout on stale navigation');
 assert.ok((host.match(/enableRepeatedFatigueReview=assistance.offersFatigueAdvice/g)||[]).length===2,
   'Both next-rep preview and final acceptance must preserve the athlete fatigue-advice switch');
 assert.ok(tokens.includes('const val DEFAULT_ID="amethyst"') &&

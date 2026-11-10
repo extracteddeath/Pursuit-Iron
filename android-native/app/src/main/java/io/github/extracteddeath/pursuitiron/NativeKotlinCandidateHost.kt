@@ -44,7 +44,9 @@ internal data class NativeKotlinTimeLimitChoiceReview(
     val workoutId:String,
     val expectedApprovalRevision:Long,
     val currentLimitMinutes:Int?,
-    val proposal:KotlinShortSessionReview
+    val proposal:KotlinShortSessionReview,
+    /** Saved journal already exists: its original time choice is immutable. */
+    val alreadyIssued:Boolean
 )
 
 /** Read-only preview and explicit pre-issuance approval are separate actions. */
@@ -2062,13 +2064,18 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 if(approval.athleteId!=owner.athleteId ||
                     approval.approvedSource.athleteId!=owner.athleteId)
                     return@withOwnerTransaction null
+                val existing=coordinator.open(owner.ownerKey,workoutId)
+                if(existing is NativeJournalFileResult.Rejected &&
+                    existing.reason!=NativeJournalFileRefusal.NOT_ISSUED)
+                    return@withOwnerTransaction null
                 val proposal=KotlinShorterSessionReviewDomain.review(
                     KotlinWorkoutSnapshotRequest(
                         approval.approvedSource,approval.currentSource,
                         approval.grant,approval.program,approval.policies),minutes)
                 NativeKotlinTimeLimitChoiceReview(
                     workoutId,approval.storageRevision,
-                    approval.shortSessionLimitMinutes,proposal)
+                    approval.shortSessionLimitMinutes,proposal,
+                    existing is NativeJournalFileResult.Durable)
             }
         }.getOrNull()
     }

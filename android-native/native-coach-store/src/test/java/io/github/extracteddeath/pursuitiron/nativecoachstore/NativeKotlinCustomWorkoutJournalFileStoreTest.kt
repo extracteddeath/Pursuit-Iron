@@ -405,8 +405,21 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         val logged=issued.record("owner-1","timed-advanced-1",
             recordSet("advanced-main-1",0))
         assertTrue(logged.toString(),logged is NativeCustomJournalResult.Durable)
-        val actual=(logged as NativeCustomJournalResult.Durable).issued.journal
+        val main=(logged as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(1,main.unresolvedVisitCount)
+        val followUp=issued.record("owner-1","timed-advanced-1",
+            CustomWorkoutJournalOperation.Record(
+                "advanced-follow-1",main.revision,
+                CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s1",
+                    CustomWorkoutVisitPart.FOLLOW_UP),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,5,null)))
+        assertTrue(followUp.toString(),
+            followUp is NativeCustomJournalResult.Durable)
+        val actual=(followUp as NativeCustomJournalResult.Durable)
+            .issued.journal
         assertEquals(0,actual.unresolvedVisitCount)
+        assertEquals(2,actual.receipts.size)
         val commit=NativeKotlinCustomHistoryTransaction(
             history,issued,fence,identity).complete(
                 "owner-1","athlete-1","timed-advanced-1",

@@ -103,7 +103,7 @@ internal class NativeKotlinCustomCycleController(
     private fun run(action: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
         current.value = current.value.copy(busy = true, refusal = null,
-            authoringRefusal = null, message = null,customShortReview=null)
+            authoringRefusal = null, message = null)
         scope.launch {
             try {
                 action()

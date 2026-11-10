@@ -164,6 +164,14 @@ class NativeKotlinCustomWorkoutPreparedStore(
             workout.futureWeekApprovalFingerprint,
             workout.calibrationApprovalFingerprint,
             workout.authoredReturnFingerprint).count{it!=null}<=1)
+        require(workout.snapshot.shortSessionLimitMinutes==null ||
+            (workout.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                !workout.resetToAuthored &&
+                workout.repApprovalFingerprint==null &&
+                workout.loadApprovalFingerprint==null &&
+                workout.futureWeekApprovalFingerprint==null &&
+                workout.calibrationApprovalFingerprint==null &&
+                workout.authoredReturnFingerprint==null))
         require(!workout.resetToAuthored ||
             (workout.repApprovalFingerprint==null &&
                 workout.loadApprovalFingerprint==null &&
@@ -175,7 +183,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic)
-            out.writeInt(if(workout.authoredReturnFingerprint!=null)9 else
+            out.writeInt(if(workout.snapshot.shortSessionLimitMinutes!=null)10 else
+                if(workout.authoredReturnFingerprint!=null)9 else
                 if(workout.resetToAuthored &&
                     workout.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE)8 else
                 if(workout.calibrationApprovalFingerprint!=null)7 else
@@ -192,7 +201,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
             out.writeUTF(workout.consentFingerprint)
             if(workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
                 workout.calibrationApprovalFingerprint!=null || workout.resetToAuthored ||
-                workout.authoredReturnFingerprint!=null)
+                workout.authoredReturnFingerprint!=null ||
+                workout.snapshot.shortSessionLimitMinutes!=null)
                 out.writeUTF(workout.authority.name)
             if(workout.repApprovalFingerprint!=null)
                 out.writeUTF(workout.repApprovalFingerprint)
@@ -239,7 +249,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(data.readInt()!=magic)
                     throw IOException("unsupported prepared custom snapshot magic")
                 val schema=data.readInt()
-                if(schema !in 1..9)
+                if(schema !in 1..10)
                     throw IOException("unsupported prepared custom snapshot version")
                 val owner=data.readUTF()
                 val athlete=data.readUTF()
@@ -261,7 +271,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(schema==5 &&
                     authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
                     throw IOException("invalid manual-reset preparation authority")
-                if(schema in 7..9 && authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
+                if(schema in 7..10 && authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
                     throw IOException("invalid ordinary calibration authority")
                 val repProof=if(schema==3)data.readUTF() else null
                 val loadProof=if(schema==4)data.readUTF() else null
@@ -287,9 +297,11 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 data.readFully(session)
                 if(data.available()!=0)
                     throw IOException("trailing prepared data")
+                val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.decode(session)
+                if((schema==10)!=(snapshot.shortSessionLimitMinutes!=null))
+                    throw IOException("time selection schema does not match approved snapshot")
                 NativeCustomPreparedWorkout(owner,athlete,workoutId,
-                    revision,receiptHash,
-                    NativeKotlinCustomWorkoutSnapshotCodec.decode(session),
+                    revision,receiptHash,snapshot,
                     authority,repProof,loadProof,schema==5||schema==8,
                     futureProof,futureSlot,calibration,authoredReturn).also{
                         encode(it)

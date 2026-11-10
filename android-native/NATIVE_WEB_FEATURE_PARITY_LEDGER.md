@@ -181,3 +181,24 @@ at `7af9dedd4243c4b97d40e7dd10164375066a32ab`.
 This closes the session-note *source / compile* parity slice, **not**
 real-device accessibility/UI acceptance or the native-versus-web
 coaching-superiority gate.
+
+
+## Source-verified Coach search and shared readiness — 2026-11-09
+
+**Kotlin-native Coach exercise choice search** now filters only the signed-in
+athlete's currently reviewed program/gym-approved exercises by order-independent
+tokens from user-entered names and exercise IDs. It paginates 10 visible
+results at a time, keeps an explicitly selected movement visible in a separate
+label, and never grants new coaching or set-issuance authority. The existing
+host gate still verifies actual eligibility before review.
+
+Coach, custom workouts and generated workouts now use the same shared
+Material 3 readiness/restriction component. Fatigue-assistance OFF hides
+Coach readiness only, not the movement restriction checkbox. UI changes
+invalidate the previous review; they do not auto-write training facts.
+
+**Evidence:** [CI run 42742630049, 33/33 successful](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42742630049)
+at `360b8c96acb318ef0f8c6af1b8d84836320cfd65`.
+The native source and Compose compile gates for these interactions are closed.
+Real-device usability, large text/TalkBack, all-screen visual completion,
+adaptive-cycle decision approval and overall engine superiority remain open.

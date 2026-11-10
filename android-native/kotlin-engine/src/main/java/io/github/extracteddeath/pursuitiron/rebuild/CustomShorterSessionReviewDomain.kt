@@ -182,11 +182,10 @@ object CustomShorterSessionReviewDomain {
                 val work=slot.sets.filter {
                     it.prescription.type==DraftSetType.WORKING
                 }
-                val signatures=work.map {
-                    Triple(it.prescription.load,
-                        it.prescription.reps,
-                        it.prescription.targetRir)
-                }.distinct()
+                // Distinct amplifiers, loading schemes, rest or set timing
+                // are authored special prescriptions. Do not classify
+                // them as interchangeable excess straight sets.
+                val signatures=work.map {it.prescription}.distinct()
                 if(signatures.size!=1)continue
                 for(set in work.asReversed()) {
                     if(seconds()<=limit)break

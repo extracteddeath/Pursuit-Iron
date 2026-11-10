@@ -127,6 +127,7 @@ jobs:
       - name: Verify focused editable Kotlin workout logging
         run: |
           node android-native/verification/kotlin-lab-workout-ui-test.mjs
+          node android-native/verification/kotlin-strength-club-contract-test.mjs
           node android-native/verification/kotlin-lab-disposable-test.mjs
           node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify durable private signing gate for future Kotlin Lab APKs

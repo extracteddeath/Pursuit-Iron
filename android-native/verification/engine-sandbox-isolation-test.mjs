@@ -12,7 +12,15 @@ const bundle = fs.readFileSync('.github/workflows/android-engine-bundle.yml','ut
 const manifest = read('engine-contract/create-bundle-manifest.mjs');
 const settings = read('settings.gradle.kts');
 
-assert.match(settings, /include\(":app", ":domain-contract", ":engine-runtime"\)/);
+// The native Kotlin engine and durable coach store are now first-class
+// Gradle modules. Gate the complete allowlist rather than matching the
+// obsolete three-module declaration, preserving sandbox separation.
+const declaredModules = settings.match(/include\(([^)]*)\)/)?.[1]
+  ?.match(/"[^"]+"/g) ?? [];
+assert.deepEqual(declaredModules.slice().sort(), [
+  '":app"', '":domain-contract"', '":engine-runtime"',
+  '":kotlin-engine"', '":native-coach-store"'
+].sort(), 'Native Gradle modules must match the reviewed sandbox allowlist');
 assert.match(app, /implementation\(project\(":engine-runtime"\)\)/,
   'App needs the independently gated read-only metadata runtime');
 const shell = read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt');

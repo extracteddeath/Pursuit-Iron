@@ -127,6 +127,11 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var savedComparison by remember(host) {
         mutableStateOf<Triple<String,String,String>?>(null)
     }
+    // Optional age is a user-entered, local comparison CONTEXT only.
+    // Published ratio bands below do not perform age-adjusted ranking.
+    var savedComparisonAge by remember(host) { mutableStateOf<String?>(null) }
+    var ageText by rememberSaveable { mutableStateOf("") }
+    var ageDraftTouched by rememberSaveable { mutableStateOf(false) }
     var comparisonNotice by remember{mutableStateOf<String?>(null)}
     var comparisonBusy by remember{mutableStateOf(false)}
     var bodyweightText by rememberSaveable{mutableStateOf("")}
@@ -223,6 +228,9 @@ internal fun NativeKotlinStrengthStandardsScreen(
             comparisonGroup=null
             bodyweightText=""
             bodyweightUnit=LoadUnit.LB.name
+            ageText=""
+            ageDraftTouched=false
+            savedComparisonAge=null
             savedComparison=null
             comparisonNotice=null
         }
@@ -238,19 +246,24 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 Triple(
                     preferences.getString(prefix+"group",null),
                     preferences.getString(prefix+"bodyweight",null),
-                    preferences.getString(prefix+"unit",null))
+                    preferences.getString(prefix+"unit",null)) to
+                    preferences.getString(prefix+"age",null)
             }
-            val group=stored.first?.takeIf{it=="male"||it=="female"}
-            val weight=stored.second?.takeIf {
+            val group=stored.first.first?.takeIf{it=="male"||it=="female"}
+            val weight=stored.first.second?.takeIf {
                 runCatching{BigDecimal(it)}.getOrNull()?.let { value ->
                     value>BigDecimal.ZERO && value<=BigDecimal("1000")
                 }==true
             }
-            val unit=stored.third?.takeIf{saved ->
+            val unit=stored.first.third?.takeIf{saved ->
                 LoadUnit.entries.any{it.name==saved}
             }
             if(group!=null && weight!=null && unit!=null) {
+                val storedAge=stored.second?.toIntOrNull()
+                    ?.takeIf { it in 14..90 }?.toString().orEmpty()
                 savedComparison=Triple(group,weight,unit)
+                savedComparisonAge=storedAge
+                if(!ageDraftTouched) ageText=storedAge
                 // Preserve unsaved edits restored by Compose after rotation.
                 if(comparisonGroup==null && bodyweightText.isBlank()) {
                     comparisonGroup=group
@@ -300,6 +313,9 @@ internal fun NativeKotlinStrengthStandardsScreen(
     val displayUnit=LoadUnit.valueOf(bodyweightUnit)
     val bodyweight=runCatching{BigDecimal(bodyweightText.trim())}.getOrNull()
         ?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("1000")}
+    val enteredAge=ageText.trim().toIntOrNull()?.takeIf { it in 14..90 }
+    val ageValid=ageText.isBlank() || enteredAge!=null
+    val ageForSave=enteredAge?.toString().orEmpty()
     // A single corrected-history evidence selection powers BOTH overview
     // and the detailed reference cards. Do not derive two definitions of
     // best performance from different samples or issued targets.
@@ -363,14 +379,16 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     onOpenHistory={historyExerciseId=trendExerciseId})
             }
         }
-        val ready=comparisonGroup!=null && bodyweight!=null
+        val ready=comparisonGroup!=null && bodyweight!=null && ageValid
+        val isSaved=ready &&
+            Triple(comparisonGroup.orEmpty(),bodyweightText,bodyweightUnit)==savedComparison &&
+            ageForSave==savedComparisonAge.orEmpty()
+        val ageLabel=enteredAge?.let { "Age $it (context only)" } ?: "Age not set"
         val comparisonStatus=when {
+            !ageValid -> "Enter a valid age (14–90), or leave it blank"
             !ready -> "Not set · verified charts work without comparison settings"
-            Triple(comparisonGroup.orEmpty(),bodyweightText,bodyweightUnit)==savedComparison ->
-                "Saved on device · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
-                    "${bodyweightText} ${displayUnit.name.lowercase()}"
-            else -> "Unsaved · ${comparisonGroup?.replaceFirstChar{it.uppercase()}} reference · " +
-                "${bodyweightText} ${displayUnit.name.lowercase()}"
+            isSaved -> "Saved on device · $ageLabel · broad community comparison"
+            else -> "Unsaved · $ageLabel · broad community comparison"
         }
         PursuitDisclosureRow(
             title="Community comparison",
@@ -425,11 +443,27 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 isError=bodyweightText.isNotEmpty()&&bodyweight==null,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value=ageText,
+                onValueChange={ input ->
+                    if(input.length<=2 && input.all(Char::isDigit)) {
+                        ageText=input
+                        ageDraftTouched=true
+                    }
+                },
+                singleLine=true,
+                label={Text("Age (optional, 14–90)")},
+                supportingText={Text("Age is context only. These published ratio bands are NOT age-adjusted.")},
+                isError=!ageValid,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
+                modifier=Modifier.fillMaxWidth()
+            )
             val chosen=comparisonGroup?.let{ group ->
-                if(bodyweight!=null)Triple(group,bodyweightText,bodyweightUnit)
+                if(bodyweight!=null && ageValid)
+                    Triple(group,bodyweightText,bodyweightUnit)
                 else null
             }
-            Text(if(chosen!=null && chosen==savedComparison)
+            Text(if(chosen!=null && isSaved)
                 "Comparison saved privately on this device for your current athlete."
                 else "Comparison settings are not saved until you choose Save.",
                 style=MaterialTheme.typography.bodySmall,
@@ -439,18 +473,25 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 Button(onClick={
                     val owner=checkNotNull(profileId)
                     val current=checkNotNull(chosen)
+                    val currentAge=ageForSave
                     comparisonBusy=true
                     comparisonNotice=null
                     scope.launch {
                         val saved=withContext(Dispatchers.IO) {
-                            preferences.edit()
+                            val editor=preferences.edit()
                                 .putString("athlete:$owner:group",current.first)
                                 .putString("athlete:$owner:bodyweight",current.second)
                                 .putString("athlete:$owner:unit",current.third)
-                                .commit()
+                            if(currentAge.isBlank())editor.remove("athlete:$owner:age")
+                            else editor.putString("athlete:$owner:age",currentAge)
+                            editor.commit()
                         }
                         if(profileId==owner) {
-                            if(saved)savedComparison=current
+                            if(saved) {
+                                savedComparison=current
+                                savedComparisonAge=currentAge
+                                ageDraftTouched=false
+                            }
                             comparisonNotice=if(saved)"Saved on this device only."
                                 else "Could not save comparison settings."
                         }
@@ -470,13 +511,17 @@ internal fun NativeKotlinStrengthStandardsScreen(
                                 .remove("athlete:$owner:group")
                                 .remove("athlete:$owner:bodyweight")
                                 .remove("athlete:$owner:unit")
+                                .remove("athlete:$owner:age")
                                 .commit()
                         }
                         if(profileId==owner) {
                             if(cleared) {
                                 savedComparison=null
+                                savedComparisonAge=null
                                 comparisonGroup=null
                                 bodyweightText=""
+                                ageText=""
+                                ageDraftTouched=false
                             }
                             comparisonNotice=if(cleared)"Saved comparison cleared."
                                 else "Could not clear saved comparison."
@@ -499,7 +544,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
             Text("Changing units converts your entered bodyweight. Saved sets retain their original weight units.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Broad entire-community reference only, not an age- or bodyweight-specific ranking. The estimated 1RM is not a tested maximum.",
+            Text("Broad entire-community reference only. Even with age saved, this is NOT an age- or bodyweight-specific percentile. Estimated 1RM is not a tested maximum.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

@@ -3,7 +3,6 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
@@ -152,29 +151,7 @@ private fun NativeKotlinPlateResultSheet(
                 Text("${amount(layout.total)} $unit total · "+
                     "${amount(layout.barWeight)} $unit confirmed bar",
                     style=MaterialTheme.typography.titleMedium)
-                Text("Load the same plates on each side:",
-                    style=MaterialTheme.typography.bodySmall)
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp),
-                    verticalAlignment=Alignment.CenterVertically
-                ) {
-                    listOf("LEFT","RIGHT").forEach { side ->
-                        OutlinedCard(Modifier.weight(1f)) {
-                            Column(Modifier.padding(12.dp),
-                                verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                                Text(side,style=MaterialTheme.typography.labelLarge,
-                                    color=MaterialTheme.colorScheme.primary)
-                                if(layout.perSide.isEmpty()) Text("Bar only")
-                                layout.perSide.forEach {plate->
-                                    Text("${amount(plate.weight)} $unit × "+
-                                        "${plate.countPerSide}",
-                                        style=MaterialTheme.typography.bodyMedium)
-                                }
-                            }
-                        }
-                    }
-                }
+                NativeKotlinVerifiedPlateDiagram(layout)
                 Text("Pair counts are per side, not total individual plates. "+
                     "Confirm collars, balance, and safe loading yourself. "+
                     "Smith machines are not treated as barbells.",

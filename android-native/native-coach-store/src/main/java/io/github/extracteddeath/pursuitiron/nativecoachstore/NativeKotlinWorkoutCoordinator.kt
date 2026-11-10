@@ -59,7 +59,10 @@ data class NativeKotlinWorkoutApproval(
     val policies: List<ExercisePrescriptionPolicy>,
     val storageReceiptId: String,
     val storageRevision: Long,
-    val acceptedRepTargets: NativeKotlinAcceptedRepTargets? = null
+    val acceptedRepTargets: NativeKotlinAcceptedRepTargets? = null,
+    /** Athlete-approved choice for THIS grant only, never a program edit.
+     * An explicit approval revision is required to choose or undo it. */
+    val shortSessionLimitMinutes: Int? = null
 )
 
 enum class NativeKotlinIssueRefusal {
@@ -117,12 +120,48 @@ class NativeKotlinWorkoutCoordinator(
             approval.approvedSource!=approval.currentSource ||
             approval.storageRevision<1)
             return null
-        val baseline=KotlinWorkoutSnapshotDomain.stage(
-            KotlinWorkoutSnapshotRequest(
-                approval.approvedSource,approval.currentSource,approval.grant,
-                approval.program,approval.policies
-            )
+        val sourceRequest=KotlinWorkoutSnapshotRequest(
+            approval.approvedSource,approval.currentSource,approval.grant,
+            approval.program,approval.policies
         )
+        val baseline=KotlinWorkoutSnapshotDomain.stage(sourceRequest)
+        val shortLimit=approval.shortSessionLimitMinutes
+        // An individually history-approved set change and a shortening
+        // decision require a combined review that is not yet available.
+        // Refuse the combination rather than discard either approval.
+        if(shortLimit!=null && approval.acceptedRepTargets!=null)
+            return KotlinWorkoutSnapshotResult.Rejected(
+                KotlinSnapshotRejection.UNVERIFIED_TARGET)
+        if(shortLimit!=null) {
+            val full=(baseline as? KotlinWorkoutSnapshotResult.Staged)?.snapshot
+                ?:return baseline
+            val reviewed=KotlinShorterSessionReviewDomain.review(
+                sourceRequest,shortLimit)
+            if(reviewed.status !in setOf(
+                    KotlinShortSessionStatus.ALREADY_FITS,
+                    KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW) ||
+                reviewed.sourceWorkoutId!=full.workoutId ||
+                reviewed.keptSetKeys.isEmpty() ||
+                reviewed.keptSetKeys!=full.targets.map{it.setKey}
+                    .filter{it in reviewed.keptSetKeys.toSet()} ||
+                reviewed.omittedSetKeys!=full.targets.map{it.setKey}
+                    .filter{it in reviewed.omittedSetKeys.toSet()})
+                return KotlinWorkoutSnapshotResult.Rejected(
+                    KotlinSnapshotRejection.UNVERIFIED_TARGET)
+            val kept=reviewed.keptSetKeys.toSet()
+            val elapsed=reviewed.estimatedSeconds
+                ?:return KotlinWorkoutSnapshotResult.Rejected(
+                    KotlinSnapshotRejection.UNVERIFIED_TARGET)
+            return KotlinWorkoutSnapshotResult.Staged(full.copy(
+                targets=java.util.Collections.unmodifiableList(
+                    full.targets.filter{it.setKey in kept}),
+                estimatedMinutes=(elapsed+59L)/60L,
+                shortSessionLimitMinutes=shortLimit,
+                shortSessionOmittedSetKeys=
+                    java.util.Collections.unmodifiableList(
+                        reviewed.omittedSetKeys.toList())
+            ))
+        }
         val proof=approval.acceptedRepTargets ?:return baseline
         val base=(baseline as? KotlinWorkoutSnapshotResult.Staged)?.snapshot
             ?:return baseline

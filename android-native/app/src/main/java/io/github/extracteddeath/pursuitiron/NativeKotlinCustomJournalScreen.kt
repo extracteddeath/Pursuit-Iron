@@ -422,6 +422,12 @@ internal fun NativeKotlinCustomJournalScreen(
                             onHistory={historyExerciseId=slot.exerciseId},
                             subtitle="Working sets and saved exercise history",
                             onInfo={infoSlotId=slot.slotId})
+                        NativeKotlinPinnedExerciseControl(
+                            host=host,workoutId=workoutId,
+                            exerciseId=slot.exerciseId,custom=true,
+                            enabled=!busy && !finished &&
+                                current.finishedByEventId==null
+                        )
                         if(!finished && current.finishedByEventId==null) {
                             val hasRecordedWork=slot.sets.any{set ->
                                 current.receipts.any{receipt ->

@@ -726,6 +726,84 @@ class NativeKotlinCustomWorkoutPreparedStore(
             NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
 
+    /**
+     * Explicit athlete-confirmed short workout preparation. The optional
+     * cuts are recomputed from CURRENT coach-reviewed, owner-fenced custom
+     * consent under the same OS lock. Unlike a UI preview, this persists
+     * versioned and self-contained approved targets. Still not an issuance
+     * grant, and impossible/unknown amplifier time is always refused.
+     *
+     * No automatic combination with calibrated future weights, individual
+     * rep amendments, or previous already-prepared workout identities.
+     */
+    fun prepareShorter(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,
+        coachingInputs:CustomCoachAuditInputs,
+        minutes:Int,athleteConfirmed:Boolean,
+        calibration:NativeKotlinBlockCalibrationConsentStore?=null
+    ):NativeCustomPrepareResult {
+        if(!id.matches(workoutId) || !id.matches(cycleId) ||
+            absoluteWeek !in 1..104 || weekday !in 0..6 ||
+            minutes !in setOf(20,30,45))
+            return NativeCustomPrepareResult.Rejected(
+                NativeCustomPrepareRefusal.INVALID_SELECTION)
+        if(!athleteConfirmed)return NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.CONFIRMATION_REQUIRED)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val owner=current(ownerKey)
+                    ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+                if(activationHandoff?.blocksNewIssuance(ownerKey)==true)
+                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                val pre=preflight.inspect(ownerKey,cycleId,
+                    absoluteWeek,weekday,coachingInputs)
+                    as? NativeCustomPreflightResult.ReviewedPreview
+                    ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                val snapshot=CustomShorterSessionReviewDomain.project(
+                    pre.session,minutes)
+                    ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                val existing=openFenced(ownerKey,workoutId,owner)
+                if(existing is NativeCustomPreparedRead.Rejected)
+                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        existing.reason)
+                if(calibration!=null) {
+                    // Shorter sessions cannot bypass the personalized
+                    // last-same-day load regression review.
+                    when(calibration.authoredPreparationGate(ownerKey,cycleId,
+                        coachingInputs,pre.session)) {
+                        NativeAuthoredLoadPreparationGate.CLEAR -> Unit
+                        NativeAuthoredLoadPreparationGate.LOWER_ISSUED_LOAD_NEEDS_REVIEW ->
+                            return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                                NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED)
+                        NativeAuthoredLoadPreparationGate.UNVERIFIED_HISTORY ->
+                            return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                                NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                    }
+                }
+                val candidate=NativeCustomPreparedWorkout(
+                    ownerKey,owner.athleteId,workoutId,
+                    pre.receipt.recordRevision,pre.receipt.fingerprintSha256,
+                    snapshot)
+                if(existing is NativeCustomPreparedRead.Found)
+                    return@withOwnerTransaction if(existing.workout==candidate)
+                        NativeCustomPrepareResult.Prepared(existing.workout,true)
+                    else NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
+                if(current(ownerKey)!=owner)
+                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+                atomicWrite(path(ownerKey,workoutId),encode(candidate))
+                NativeCustomPrepareResult.Prepared(candidate,false)
+            }
+        }.getOrElse {NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     /** Accept exact displayed targets and persist their consent in ONE atomic preparation. */
     fun prepareAuthoredReturn(shown:NativeAuthoredLoadReturnPreview.Ready,
         inputs:CustomCoachAuditInputs,athleteConfirmed:Boolean,

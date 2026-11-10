@@ -56,6 +56,10 @@ on:
       - '.github/workflows/android-kotlin-lab-disposable.yml'
       - 'android-native/verification/kotlin-lab-disposable-test.mjs'
       - 'android-native/verification/no-apk-before-end-to-end-test.mjs'
+  pull_request:
+    paths:
+      - 'android-native/**'
+      - '.github/workflows/android-kotlin-rebuild.yml'
   workflow_dispatch:
 concurrency:
   group: kotlin-engine-rebuild-${{ github.ref }}

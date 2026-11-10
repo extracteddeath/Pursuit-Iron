@@ -357,7 +357,10 @@ object CoachWeekComposer {
         val emptyScheduledDays:Int,
         val missingDirectMuscleDays:Int,
         val mevDeficitThousandths:Long,
-        val soft:Long
+        val soft:Long,
+        /** Tie-break only: never compete with dose, time or training priority. */
+        val sameStationCrowding:Int,
+        val cableSmithVisits:Int
     ):Comparable<Cost> {
         val hardSatisfied:Boolean get()=missingPrimaryDays==0 &&
             missingRequiredVisits==0 && emptyScheduledDays==0 &&
@@ -365,7 +368,8 @@ object CoachWeekComposer {
         override fun compareTo(other:Cost):Int=compareValuesBy(this,other,
             {it.missingPrimaryDays},{it.missingRequiredVisits},
             {it.emptyScheduledDays},{it.missingDirectMuscleDays},
-            {it.mevDeficitThousandths},{it.soft})
+            {it.mevDeficitThousandths},{it.soft},
+            {it.sameStationCrowding},{it.cableSmithVisits})
     }
     private fun unmetPrimaryDays(request:ComposerRequest,
         visits:List<ComposerVisit>):Set<Int> =
@@ -428,9 +432,29 @@ object CoachWeekComposer {
         val priority=visits.sumOf {
             checkNotNull(options[it.exerciseId]).priority.toLong()*it.sets
         }
+        // A cable station and a Smith rack are distinct. A machine stack
+        // might be an entirely separate machine, so never invent a shared
+        // physical station for it. These are the only known bases whose
+        // repeated use can be distinguished from an otherwise equivalent
+        // dumbbell/barbell option using the verified input model.
+        val stationVisits=visits.mapNotNull { visit ->
+            val stock=(options.getValue(visit.exerciseId).equipment
+                as? ComposerEquipment.Verified)?.inventory
+            val basis=stock?.basis
+            if(basis==LoadBasis.CABLE_STACK || basis==LoadBasis.SMITH_TOTAL)
+                visit.dayIndex to basis else null
+        }
+        val crowding=stationVisits.groupingBy {it}.eachCount()
+            .values.sumOf {(it-1).coerceAtLeast(0)}
+        // This comes AFTER every existing hard and soft cost. The composer
+        // will prefer a source-verified free-weight alternative only when
+        // it is equally good on dose, time, priority and pattern coverage.
+        // It never adds stock, removes required exercise appearances, or
+        // changes the athlete's actual prescribed loads.
         return Cost(missingPrimary,missingPinned,emptyDays,missingDirect,
             mevGap,mavGap*2L+short*180L+long*250L+
-                patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L)
+                patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L,
+            crowding,stationVisits.size)
     }
     /**
      * One candidate safety policy for BOTH initial generation and local

@@ -76,17 +76,56 @@ private val CKV = mapOf(
 )
 private fun todayKey() = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
-/** Today's check-in answers (empty when none today) and whether it was put away. */
-data class CheckIn(val answers: Map<String, String>, val done: Boolean) {
+/** Today's check-in answers (empty when none today) and whether it was put away. [suggested] holds Health Connect's
+ *  answer for Sleep until the lifter picks one; "x" stored for a question means they cleared it, so none is suggested. */
+data class CheckIn(val stored: Map<String, String>, val done: Boolean, val suggested: Map<String, String> = emptyMap()) {
+    val answers: Map<String, String> get() = (suggested + stored).filterValues { it != "x" }
     val mod: Int get() = answers.entries.sumOf { (k, v) -> CKV[k]?.get(v) ?: 0 }
 }
+
+/** Last night's sleep from Health Connect as the check-in's Sleep answer: short is poor, a full night (or more than usual) great. */
+fun sleepAnswer(min: Int?, usual: Int?): String? = when {
+    min == null || min < 120 -> null
+    min < 360 -> "poor"
+    min >= 450 || (usual != null && min >= usual + 30 && min >= 420) -> "great"
+    else -> "ok"
+}
+
 fun checkInOf(vm: AppViewModel): CheckIn {
+    val r = vm.recovery
+    val sug = sleepAnswer(r?.sleepMin, r?.sleepUsualMin)?.let { mapOf("sleep" to it) } ?: emptyMap()
     val p = vm.prefs.checkIn.split('|')
-    if (p.size < 5 || p[0] != todayKey()) return CheckIn(emptyMap(), false)
-    return CheckIn(listOf("sleep", "sore", "energy").zip(p.subList(1, 4)).filter { it.second.isNotBlank() }.toMap(), p[4] == "1")
+    if (p.size < 5 || p[0] != todayKey()) return CheckIn(emptyMap(), false, sug)
+    return CheckIn(listOf("sleep", "sore", "energy").zip(p.subList(1, 4)).filter { it.second.isNotBlank() }.toMap(), p[4] == "1", sug)
 }
 private fun saveCheckIn(vm: AppViewModel, c: CheckIn) =
-    vm.prefs.changeCheckIn(listOf(todayKey(), c.answers["sleep"].orEmpty(), c.answers["sore"].orEmpty(), c.answers["energy"].orEmpty(), if (c.done) "1" else "0").joinToString("|"))
+    vm.prefs.changeCheckIn(listOf(todayKey(), c.stored["sleep"].orEmpty(), c.stored["sore"].orEmpty(), c.stored["energy"].orEmpty(), if (c.done) "1" else "0").joinToString("|"))
+
+private fun hm(min: Int) = "${min / 60}h ${"%02d".format(min % 60)}m"
+
+/** What Health Connect recorded, each beside the lifter's two-week usual: "Slept 6h 10m (usual 7h 20m) · Resting HR 61 (usual 55)". */
+fun recoveryLine(r: com.pursuitiron.app.data.HealthSync.Recovery?): String? {
+    r ?: return null
+    val parts = listOfNotNull(
+        r.sleepMin?.let { "Slept ${hm(it)}" + (r.sleepUsualMin?.let { u -> " (usual ${hm(u)})" } ?: "") },
+        r.restingHr?.let { "Resting HR $it" + (r.restingHrUsual?.let { u -> " (usual $u)" } ?: "") },
+        r.hrv?.let { "HRV $it ms" + (r.hrvUsual?.let { u -> " (usual $u)" } ?: "") },
+    )
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
+/** Resting heart rate well above usual, or HRV well below it: the body hasn't caught up, whatever the muscles say. */
+fun recoveryFlag(r: com.pursuitiron.app.data.HealthSync.Recovery?): String? {
+    r ?: return null
+    val hrUp = r.restingHr != null && r.restingHrUsual != null && r.restingHr - r.restingHrUsual >= 7
+    val hrvDown = r.hrv != null && r.hrvUsual != null && r.hrvUsual > 0 && r.hrv <= r.hrvUsual * 0.75
+    return when {
+        hrUp && hrvDown -> "Resting HR up and HRV down — consider Energy: Low"
+        hrUp -> "Resting HR is up on your usual — consider Energy: Low"
+        hrvDown -> "HRV is down on your usual — consider Energy: Low"
+        else -> null
+    }
+}
 
 /** Readiness for today: muscle freshness for the session, moved by the check-in. */
 fun readinessToday(vm: AppViewModel, h: JSONObject): Int = (h.o("readiness").i("today", 100) + checkInOf(vm).mod).coerceIn(0, 100)
@@ -208,7 +247,7 @@ fun CheckInCard(vm: AppViewModel) {
     }
     // Folded to one row until opened: three questions shouldn't stand between Today and the session.
     var expanded by remember { mutableStateOf(false) }
-    if (!expanded && c.answers.isEmpty()) {
+    if (!expanded && c.stored.isEmpty()) {
         Surface(onClick = { expanded = true }, color = cs.surfaceContainerLow, shape = RoundedCornerShape(22.dp),
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = "How are you today? Optional check-in" }) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -217,7 +256,7 @@ fun CheckInCard(vm: AppViewModel) {
                 }
                 Column(Modifier.weight(1f)) {
                     Text("How are you today?", style = MaterialTheme.typography.titleSmall)
-                    Text("Optional · three taps tune today's readiness", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    Text(recoveryLine(vm.recovery) ?: "Optional · three taps tune today's readiness", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
                 Icon(PiIcons.ChevronDown, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
@@ -229,6 +268,11 @@ fun CheckInCard(vm: AppViewModel) {
             Text("How are you today?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Text(effect, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
+        recoveryLine(vm.recovery)?.let { line ->
+            Text("Health Connect · $line" + (if (c.suggested.isNotEmpty() && c.stored["sleep"] == null) " · Sleep set from it" else ""),
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        }
+        recoveryFlag(vm.recovery)?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = cs.tertiary) }
         CK_DEFS.forEach { (key, label, opts) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(84.dp))
@@ -236,7 +280,7 @@ fun CheckInCard(vm: AppViewModel) {
                     opts.forEach { (k, l) ->
                         val on = c.answers[key] == k
                         Box(Modifier.weight(1f).height(36.dp).clip(CircleShape).background(if (on) cs.secondaryContainer else Color.Transparent)
-                            .clickable { saveCheckIn(vm, c.copy(answers = if (on) c.answers - key else c.answers + (key to k))) }
+                            .clickable { saveCheckIn(vm, c.copy(stored = if (!on) c.stored + (key to k) else if (c.suggested[key] != null) c.stored + (key to "x") else c.stored - key)) }
                             .semantics { contentDescription = "$label: $l"; role = Role.Button; stateDescriptionOf(on) }, contentAlignment = Alignment.Center) {
                             Text(l, style = MaterialTheme.typography.labelLarge, color = if (on) cs.onSecondaryContainer else cs.onSurfaceVariant)
                         }
@@ -246,7 +290,7 @@ fun CheckInCard(vm: AppViewModel) {
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Adjusts readiness before any sets are trimmed. Skip it and the plan runs as written.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
-            Button(onClick = { saveCheckIn(vm, c.copy(done = true)) }) { Text(when (c.answers.size) { 3 -> "Done"; 0 -> "Skip"; else -> "Save" }) }
+            Button(onClick = { saveCheckIn(vm, c.copy(done = true, stored = c.suggested.filterKeys { c.stored[it] == null } + c.stored)) }) { Text(when (c.answers.size) { 3 -> "Done"; 0 -> "Skip"; else -> "Save" }) }
         }
     }
 }

@@ -56,15 +56,25 @@
   </ul>
 
   <h2>Health Connect (Android app)</h2>
-  <p>The Android app can send data to Health Connect, Android's on-device health data store, if you turn on
+  <p>The Android app can send data to, and read data from, Health Connect, Android's on-device health data store, if you turn on
     <em>Send to Health Connect</em> in Data &amp; storage and grant Android's permission. When it is on, the app writes:</p>
   <ul>
     <li>Each finished workout as a strength-training session: its start and end time, its name, and a note with its set count and total weight lifted.</li>
     <li>The bodyweight you log, once per day.</li>
   </ul>
-  <p>The app only writes. It does not read any data from Health Connect. Data in Health Connect is stored on your
+  <p>Separately, if you turn on <em>Read sleep, heart rate &amp; weight</em> in Data &amp; storage and grant Android's
+    permission for each, the app reads:</p>
+  <ul>
+    <li>Sleep sessions from the last two weeks, to show last night's sleep beside your usual on Today's check-in and suggest its Sleep answer.</li>
+    <li>Resting heart rate and heart rate variability (RMSSD) from the last two weeks, shown on the check-in beside your usual.</li>
+    <li>Weigh-ins recorded by other apps (a smart scale, for example) in the last 60 days, added to your bodyweight log for days you have not logged here.</li>
+  </ul>
+  <p>What is read is used only on your device, to show these figures and tune that day's readiness; it is not uploaded,
+    sold or shared, and is not used for advertising. Weigh-ins added to your log stay in the app's own data like any you
+    type. You can grant only some of these permissions, and turn reading off at any time.</p>
+  <p>Data in Health Connect is stored on your
     device and is controlled by you in Health Connect's settings, where you can see, delete or stop sharing it at any
-    time. Turning the option off stops new entries; entries already sent stay in Health Connect until you delete them
+    time. Turning sending off stops new entries; entries already sent stay in Health Connect until you delete them
     there. Data sent to Health Connect is not used for advertising and is not sold or shared with anyone by this app.</p>
   <h2>Network use</h2>
   <ul>

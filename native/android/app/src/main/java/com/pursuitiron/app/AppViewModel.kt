@@ -101,6 +101,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 refreshAll()
                 if (session?.b("active") == true) screen = Screen.Workout
                 ready = true
+                refreshHealth()
                 publishWidget()
                 com.pursuitiron.app.data.Reminders.save(app, settings?.o("reminders"))
                 if (pendingWidgetStart) { pendingWidgetStart = false; fromWidget() }
@@ -860,7 +861,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /* ---------------------------------------------------------------- lifecycle */
-    fun onForeground() { inForeground = true; rest.cancel() }
+    fun onForeground() { inForeground = true; rest.cancel(); refreshHealth() }
+
+    /** Last night's sleep, resting heart rate and HRV from Health Connect, for Today's check-in (null: off or nothing recorded). */
+    var recovery by mutableStateOf<com.pursuitiron.app.data.HealthSync.Recovery?>(null)
+        private set
+    /** Read what Health Connect has: recovery for the check-in, and other apps' weigh-ins into the bodyweight log. */
+    fun refreshHealth() {
+        if (!prefs.healthRead) { recovery = null; return }
+        viewModelScope.launch {
+            recovery = health.recovery()
+            val w = health.weighIns()
+            if (w.isNotEmpty() && core != null) launchCore {
+                val arr = org.json.JSONArray(w.map { (at, kg) -> org.json.JSONObject().put("at", at).put("kg", kg) })
+                val r = obj("importBodyweights", org.json.JSONObject().put("rows", arr))
+                if ((r?.optInt("added") ?: 0) > 0) { body = obj("body"); profile = obj("profile") }
+            }
+        }
+    }
     fun onBackground() {
         inForeground = false
         val s = session?.takeIf { it.b("active") } ?: return

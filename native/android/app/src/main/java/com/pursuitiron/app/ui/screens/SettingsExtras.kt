@@ -174,7 +174,7 @@ fun ManageDataCard(vm: AppViewModel) {
             Column(Modifier.weight(1f)) {
                 Text("Send to Health Connect", style = MaterialTheme.typography.titleSmall)
                 Text(if (!hcAvailable) "Health Connect isn't on this phone. Install it from the Play Store to use this."
-                    else "Each finished workout as strength training, and the bodyweight you log. Nothing is read back.",
+                    else "Each finished workout as strength training, and the bodyweight you log.",
                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             androidx.compose.material3.Switch(vm.prefs.healthSync && hcAvailable, { on ->
@@ -184,6 +184,29 @@ fun ManageDataCard(vm: AppViewModel) {
                     else askHealth.launch(com.pursuitiron.app.data.HealthSync.PERMISSIONS)
                 }
             }, enabled = hcAvailable, modifier = Modifier.semantics { contentDescription = "Send to Health Connect" })
+        }
+        // Reading is its own switch and its own Android permissions: someone can send without being read, or the reverse.
+        val askRead = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.health.connect.client.PermissionController.createRequestPermissionResultContract()) { got ->
+            val ok = got.any { it in com.pursuitiron.app.data.HealthSync.READ }
+            vm.prefs.changeHealthRead(ok); vm.refreshHealth()
+            vm.toast(if (ok) "Today's check-in will show what Health Connect has" else "Health Connect access wasn't given")
+        }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Read sleep, heart rate & weight", style = MaterialTheme.typography.titleSmall)
+                Text(if (!hcAvailable) "Needs Health Connect on this phone."
+                    else "Last night's sleep, resting heart rate and HRV on Today's check-in, beside your usual. Weigh-ins from a scale app fill days you didn't log here. Stays on this phone.",
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(vm.prefs.healthRead && hcAvailable, { on ->
+                if (!on) { vm.prefs.changeHealthRead(false); vm.refreshHealth(); vm.toast("Stopped reading from Health Connect") }
+                else hcScope.launch {
+                    if (vm.health.granted().any { it in com.pursuitiron.app.data.HealthSync.READ }) { vm.prefs.changeHealthRead(true); vm.refreshHealth(); vm.toast("Today's check-in will show what Health Connect has") }
+                    else askRead.launch(com.pursuitiron.app.data.HealthSync.READ)
+                }
+            }, enabled = hcAvailable, modifier = Modifier.semantics { contentDescription = "Read sleep, heart rate and weight from Health Connect" })
         }
         cap("IMPORT · FROM ANOTHER APP")
         androidx.compose.material3.FilledTonalButton(onClick = { openCsv.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/octet-stream")) },

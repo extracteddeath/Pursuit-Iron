@@ -2918,6 +2918,28 @@ export function logBodyweight({ value }) {
     S.store.bodyweight = String(v); markStore();
     return { ok: true };
 }
+/* Health Connect weigh-ins from other apps (a smart scale, a phone's health app): kg in, one per local day, never over a
+   day already logged here. The newest becomes the current bodyweight only when it is newer than anything logged. */
+export function importBodyweights({ rows }) {
+    const log = S.store.bwLog || [];
+    const days = new Set(log.map((e) => new Date(e.date).toDateString()));
+    const u = unit(), add = [];
+    for (const r of (Array.isArray(rows) ? rows : []).slice().sort((a, b) => b.at - a.at)) {
+        const kg = Number(r?.kg), at = Number(r?.at);
+        if (!(kg > 0) || !(at > 0) || at > now() + 60000) continue;
+        const day = new Date(at).toDateString();
+        if (days.has(day)) continue;
+        days.add(day);
+        add.push({ date: at, w: Math.round((u === 'lb' ? kg * 2.2046226 : kg) * 10) / 10, unit: u });
+    }
+    if (!add.length) return { ok: true, added: 0 };
+    const merged = [...log, ...add].sort((a, b) => a.date - b.date).slice(-(E.BW_LOG_CAP || 2000));
+    const newest = merged[merged.length - 1];
+    S.store.bwLog = merged;
+    if (add.includes(newest)) S.store.bodyweight = String(newest.w);
+    markStore();
+    return { ok: true, added: add.length };
+}
 /* App.js logMeasurement: { date: ms, v, unit: length unit }. */
 export function logMeasurement({ key, value }) {
     const v = Number(value); if (!key || !(v > 0)) return { ok: false };

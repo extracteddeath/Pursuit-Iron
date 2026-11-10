@@ -51,6 +51,10 @@ class Prefs(context: Context) {
     var healthSync by mutableStateOf(sp.getBoolean("healthSync", false))
         private set
     fun changeHealthSync(v: Boolean) { healthSync = v; sp.edit().putBoolean("healthSync", v).apply() }
+    /** Read sleep, resting heart rate, HRV and other apps' weigh-ins from Health Connect (opt-in, separate from sending). */
+    var healthRead by mutableStateOf(sp.getBoolean("healthRead", false))
+        private set
+    fun changeHealthRead(v: Boolean) { healthRead = v; sp.edit().putBoolean("healthRead", v).apply() }
     /** Plan's sets-by-muscle card: show each head (delts, upper traps, obliques…) under its muscle (App.js VolumeBars granular). */
     var volHeads by mutableStateOf(sp.getBoolean("volHeads", false))
     fun changeVolHeads(v: Boolean) { volHeads = v; sp.edit().putBoolean("volHeads", v).apply() }

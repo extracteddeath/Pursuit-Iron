@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const read = (p) => readFileSync('android-native/'+p,'utf8');
+const facts=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinMixedHistoryFactsDomain.kt');
+const club=read('native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeStrengthClubDomain.kt');
+const panel=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthClubPanel.kt');
+const profile=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinProfileScreen.kt');
+const standards=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthStandardsScreen.kt');
+
+assert.match(facts,/bestLoggedSingleByLoad/);
+assert.match(facts,/if \(actual\.reps == 1\)/);
+assert.match(club,/fact\.key\.basis!=LoadBasis\.BARBELL_TOTAL/);
+assert.match(club,/facts\.bestLoggedSingleByLoad\.values/);
+assert.match(club,/fact\.reps!=1/);
+assert.match(club,/if\(requiredLiftIds\.all \{it in rows\}\)/);
+assert.match(panel,/Estimated 1RM total/);
+assert.match(panel,/logged-single milestone/);
+assert.match(profile,/it\.athleteId==current\?\.athleteProfileId/);
+assert.match(profile,/NativeKotlinStrengthClubPanel\(strengthClub/);
+assert.match(standards,/NativeKotlinStrengthClubPanel\(strengthClub/);
+assert.doesNotMatch(panel,/approve\(|record\(|issue\(|saveWorkout\(/);
+console.log('PASS strength club evidence is owner-scoped, barbell-only, singles-aware, display-only');

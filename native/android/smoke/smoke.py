@@ -580,13 +580,13 @@ def shade_tap(pattern, timeout):
     return bool(p)
 adb("shell", "cmd", "statusbar", "expand-notifications")
 time.sleep(2)
-if shade_tap(r"(?i)^\|?skip$", 3):
+if shade_tap(r"(?i)(^|\|)skip(\||$)", 3):
     time.sleep(2.5)
-if not find(r"(?i)^\|?log set$", timeout=4):
+if not find(r"(?i)(^|\|)log set(\||$)", timeout=4):
     # A collapsed card hides its buttons: its expand chevron opens it (a tap on the body would open the app).
-    if shade_tap(r"(?i)^expand", 3):
+    if shade_tap(r"(?i)(^|\|)expand", 3):
         time.sleep(1.5)
-if not shade_tap(r"(?i)^\|?log set$", 5):
+if not shade_tap(r"(?i)(^|\|)log set(\||$)", 5):
     nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
     mine = [l.strip() for l in nd.splitlines() if re.search(r"android\.(title|text)=|Log set", l)]
     print("shade notification:", "\n".join(mine[:40]), flush=True)

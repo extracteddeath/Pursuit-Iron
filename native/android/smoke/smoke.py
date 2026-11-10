@@ -104,14 +104,20 @@ def find(pattern, timeout=12):
     return None
 
 
-def value_of(pattern, timeout=4):
-    """The text of the first node whose description matches (a field's typed value)."""
+def value_of(pattern, timeout=4, field=0):
+    """A text field's value. Compose reports a filled field by its text, not its description, so after the
+    description, fall back to the screen's text fields in order (`field` = which one)."""
     rx = re.compile(pattern)
     end = time.time() + timeout
     while time.time() < end:
+        edits = []
         for n in nodes():
             if rx.search(n.get("content-desc") or ""):
                 return (n.get("text") or "").strip()
+            if "EditText" in (n.get("class") or ""):
+                edits.append((n.get("text") or "").strip())
+        if len(edits) > field:
+            return edits[field]
         time.sleep(0.6)
     return None
 
@@ -406,9 +412,9 @@ if tap(r"Weight not set, edit", "set-editor"):
     W = r"^Weight \((kg|lb)\), tap to type"
     if tap(r"^More weight\|", required=False):
         time.sleep(1)
-        up = num(value_of(W))
+        up = num(value_of(W, field=0))
         tap(r"^Less weight\|", required=False); time.sleep(1)
-        back_to = num(value_of(W))
+        back_to = num(value_of(W, field=0))
         if not (up and up > 60 and back_to == 60):
             FAILS.append(f"set editor steppers: typed 60, + gave {up}, − gave {back_to}")
         shot("set-editor-stepped")
@@ -467,11 +473,11 @@ if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
         FAILS.append("a logged set's editor is not titled Set 1 with Save only")
     # A logged set's − and + correct it in place (they did nothing: the core locks logged sets to edits).
     R = r"^Reps, tap to type"
-    r0 = num(value_of(R))
+    r0 = num(value_of(R, field=1))
     tap(r"^Fewer reps\|", required=False); time.sleep(1)
-    r1 = num(value_of(R))
+    r1 = num(value_of(R, field=1))
     tap(r"^More reps\|", required=False); time.sleep(1)
-    r2 = num(value_of(R))
+    r2 = num(value_of(R, field=1))
     if r0 is None or r1 != r0 - 1 or r2 != r0:
         FAILS.append(f"a logged set's rep stepper does not correct it ({r0} → {r1} → {r2})")
     shot("logged-set-stepped")
@@ -1230,6 +1236,22 @@ if seek(r"^\|Plates & bars$"):
     back()
 else:
     FAILS.append("no Plates & bars row")
+# The calculator's + and − land on totals the plates make: empty → the bar, then the next buildable total.
+if seek(r"^\|Plates & bars$") and tap(r"^\|Plates & bars$") and tap(r"Open the plate calculator", "plates-calc", required=False):
+    seq = []
+    for _ in range(2):
+        hv = find_desc(r"^Heavier: [\d.]+ ")
+        tap(r"^Heavier: ", required=False); time.sleep(1.2)
+        seq.append((hv, num(value_of(r"^Total weight, "))))
+    lt = find_desc(r"^Lighter: [\d.]+ ")
+    tap(r"^Lighter: ", required=False); time.sleep(1.2)
+    back_t = num(value_of(r"^Total weight, "))
+    shot("plates-calc-stepped")
+    if any(a is None or a != b for a, b in seq) or not seq[1][1] > seq[0][1] or back_t != seq[0][1] or lt != seq[0][1]:
+        FAILS.append(f"plate calculator steps: {seq}, − to {lt} gave {back_t}")
+    back(); time.sleep(1)
+else:
+    FAILS.append("Plates & bars has no Open the plate calculator")
 if seek(r"^\|Rest timer & cues$"):
     tap(r"^\|Rest timer & cues$", "settings-cues")
     if not find(r"^\|Play the cue$", timeout=4) or not find(r"^\|Preview lock screen$", timeout=2):

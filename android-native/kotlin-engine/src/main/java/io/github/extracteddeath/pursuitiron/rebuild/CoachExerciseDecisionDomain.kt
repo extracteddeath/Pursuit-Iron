@@ -108,6 +108,12 @@ object CoachExerciseDecisionDomain {
                 it.unit==last.unit && it.targetReps==last.targetReps &&
                 it.expectedWorkingSets==last.expectedWorkingSets
         })
+        // This validates every observation, including older incomplete
+        // sessions, before any coaching explanation can be emitted.
+        val assessments=chronologicalSessions.map {
+            DoubleProgressionEvidenceDomain.assess(
+                it.targetReps,it.expectedWorkingSets,it.observations)
+        }
         // A caller may supply the complete mixed exercise history. Upper and
         // Push performances have independent load progressions even when the
         // exercise, rep range and weight happen to match. Keep only the
@@ -131,14 +137,8 @@ object CoachExerciseDecisionDomain {
                 CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
                 CoachConfidence.LIMITED,null,
                 "Verify the exact training day before comparing lift progress.",
-                emptySet(),1,null)
+                emptySet(),chronologicalSessions.size,null)
 
-        // This validates every observation, including older incomplete
-        // sessions, before any coaching explanation can be emitted.
-        val assessments=chronologicalSessions.map {
-            DoubleProgressionEvidenceDomain.assess(
-                it.targetReps,it.expectedWorkingSets,it.observations)
-        }
         val latestFacts=assessments.last()
         val currentLoad=observedUniformLoad(last)
         val observedRir=last.observations.filter {

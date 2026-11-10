@@ -673,7 +673,8 @@ private fun NativeKotlinCandidateTrainEntry(
                     listOf<Int?>(null,45,30,20).forEach {choice ->
                         FilterChip(
                             selected=selectedTimeBudget==choice,
-                            enabled=!timeAcceptanceBusy,
+                            enabled=!timeAcceptanceBusy &&
+                                timePreview?.alreadyIssued!=true,
                             onClick={
                                 selectedTimeBudget=choice
                                 selectionMessage=null
@@ -684,7 +685,8 @@ private fun NativeKotlinCandidateTrainEntry(
                 }
                 val available=timePreview
                 val status=available?.proposal?.status
-                val mayStart=selectedTimeBudget==null ||
+                val mayStart=available?.alreadyIssued==true ||
+                    selectedTimeBudget==null ||
                     status==KotlinShortSessionStatus.ALREADY_FITS ||
                     status==KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW
                 if(timePreviewBusy) {
@@ -697,10 +699,14 @@ private fun NativeKotlinCandidateTrainEntry(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     val review=available.proposal
+                    if(available.alreadyIssued)
+                        Text("This workout has already been issued. Its saved time choice and logged targets are locked; open the workout to resume.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     val total=review.originalEstimatedSeconds
                     val planned=review.estimatedSeconds
                     val estimate=if(selectedTimeBudget==null)total else planned
-                    Text(
+                    if(!available.alreadyIssued)Text(
                         "Estimated session: " +
                             (if(estimate==null)"not available"
                                 else "${(estimate+59L)/60L} min") +
@@ -708,29 +714,31 @@ private fun NativeKotlinCandidateTrainEntry(
                                 else "${review.omittedWorkingSets} optional sets omitted"}",
                         style=MaterialTheme.typography.bodyMedium
                     )
-                    if(selectedTimeBudget!=null) {
+                    if(selectedTimeBudget!=null && !available.alreadyIssued) {
                         Text(review.explanation,
                             style=MaterialTheme.typography.bodySmall,
                             color=if(!mayStart)MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
+                    } else if(!available.alreadyIssued) {
                         Text("Full uses the original approved prescription.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if(review.omittedExerciseIds.isNotEmpty() &&
-                        selectedTimeBudget!=null)
+                        selectedTimeBudget!=null && !available.alreadyIssued)
                         Text("Removed optional exercises: " +
                             review.omittedExerciseIds.joinToString(", "),
                             style=MaterialTheme.typography.bodySmall)
                     val selection=selectedTimeBudget
                     PursuitPrimaryAction(
-                        if(selection==null)"Open full workout"
+                        if(available.alreadyIssued)"Resume saved workout"
+                        else if(selection==null)"Open full workout"
                             else "Use ${selection}-minute workout",
                         enabled=mayStart && !timeAcceptanceBusy &&
                             !timePreviewBusy && !searching && !resumeChecking
                     ) {
-                        if(selection==available.currentLimitMinutes) {
+                        if(available.alreadyIssued ||
+                            selection==available.currentLimitMinutes) {
                             selectedId=available.workoutId
                         } else {
                             timeAcceptanceBusy=true

@@ -2597,7 +2597,7 @@ resume and source-specific status behaviors; **no journal gate was bypassed**.
 
 **Verification:** [GitHub Actions run 42744944590](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42744944590)
 passed **33 of 33** steps at native code SHA
-`f5e7940e5546b51ada1dda8b56bba410cbe3b1b0`, including strict
+`5d1ebfc8717f6021bb25290934123f09f9a04901`, including strict
 new source UI assertions, independent Kotlin engine unit/paired
 comparison, durable journal recovery, and Android Compose compilation.
 The JavaScript web release was unchanged; no APK/AAB was created.

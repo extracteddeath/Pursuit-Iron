@@ -104,6 +104,14 @@ object ConservativeProgressionReview {
                 BigDecimal(it.stripTrailingZeros().toPlainString())
             },candidate,previousFacts,latestFacts,effort.count {it.assumed})
 
+        // The same movement on Upper and Push is NOT one progression series.
+        // The owner-verified day cell must agree in both observed workouts.
+        // Two null identities preserve historical v1 callers; a partially
+        // identified or blank day must never borrow another day's capacity.
+        if(previous.trainingDayId!=latest.trainingDayId ||
+            (previous.trainingDayId!=null && previous.trainingDayId.isBlank()))
+            return result(IncreaseReviewReason.NEEDS_SECOND_COMPARABLE_SESSION)
+
         // Latest failure has priority over earlier "success" and never triggers
         // an automatic weight reduction or promotion to the heaviest observed set.
         if(latestFacts.completedWorkingSets!=latest.expectedWorkingSets)

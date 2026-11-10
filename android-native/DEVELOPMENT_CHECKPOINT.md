@@ -2332,3 +2332,40 @@ Reviewed the full web `CHANGELOG.md` through Build 998 and `modules/release-note
 **Verification:** GitHub Actions run **42578839538**, commit `9484622ee56b8b8bfd0506ba68011c3f9576b703`, completed with **33/33 workflow steps passing** (Kotlin unit tests, matched progression, journal persistence/recovery, and Android Compose compilation). Two initial fixture/assertion mistakes were caught and corrected before the green run, as was an erroneous UI local variable; no APK/AAB was created. This source validation is not a claim of physical-device UX acceptance.
 
 **Still open, important:** live in-workout swap with zero loss of completed sets/timer and safe resume; true program-dose-gap-aware ranking (web behavior exceeds reviewed-pattern overlap); active-gym derived-equipment closure and multi-gym parity; role/stimulus-compatible prescription and no automatic old weight transfer; save/discard draft ownership, linked-visit and week-override migration, and full exercise-history/source rationale. All other advantageous web changelog features remain tracked in the ledger with explicit native equivalents where appropriate. Complete the full official Android UI before making APKs.
+
+
+## 2026-11-09 — Verified native plate visualization and truthful Composer swap overlap
+
+Completed on isolated `architecture/kotlin-engine-rebuild`. Both the
+custom and generated **Kotlin** workout plate viewers now render one
+shared Material 3 symmetric bar diagram using the exact, owner/source-approved
+`KotlinVerifiedPlateLayout`. The layout mirrors matching plates, caps the
+schematic to 12 displayed plates per side with explicit hidden-count copy,
+provides a full accessible per-side inventory list, and labels the picture
+not-to-scale. It remains entirely **read-only**: no target, journal receipt,
+stock or coaching state is modified. Smith machines are not automatically
+treated as barbells or assigned fictional plate stock.
+
+The generated Composer live-swap ranker was corrected to compute overlap from
+**distinct, positive DIRECT reviewed muscle credits** only, not duplicate
+credits, zero-value credits or indirect muscle mentions. The workout's
+search/filter explanations now explicitly identify direct-muscle overlap.
+All workout role, approved gym, equipment, new-set-authorship and undo/record
+ownership checks remain intact. New JVM and source contracts protect these
+behaviors.
+
+**Verification:** GitHub Actions run
+[42729475494](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42729475494)
+on code commit `f0a30a4c1321914a103aa07cf30c25f9e43feadf` finished
+**33/33 successful** checks, including headless Kotlin, saved-journal
+crash recovery, source contracts and Compose compilation.
+The subsequent parity-ledger update is documentation-only.
+
+The ledger now treats merged web **Build 1009** as the current comparator,
+including repeated block/Plan state, no-downward-drift loading, and
+cable/Smith station selection. Native superiority for these cases is still
+**unproven**; direct longitudinal paired scenarios remain required.
+Remaining UI priorities: full physical-device/200% text/TalkBack review,
+Smith-specific verified loading support, adaptive cycle choices with explicit
+approval, broader full-app feature parity and outcome-based coach assessment.
+Do not produce an APK or modify the web release before the full UI is ready.

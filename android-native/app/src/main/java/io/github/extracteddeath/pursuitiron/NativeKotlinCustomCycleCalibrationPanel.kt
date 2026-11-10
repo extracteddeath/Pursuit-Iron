@@ -32,6 +32,12 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                 it.original.copy(declaredNonSetSeconds=state.authoredPreview?.declaredNonSetSeconds)==state.authoredPreview)
     }
     val ordinaryPrepared=state.preparedWorkout?.takeIf {
+        val selectedMinutes=it.snapshot.shortSessionLimitMinutes
+        val original=state.consentBoundPreview?.session
+        val currentPrescription=if(selectedMinutes==null) original
+            else original?.let{source->
+                CustomShorterSessionReviewDomain.project(source,selectedMinutes)
+            }
         it.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
             it.calibrationApprovalFingerprint==null &&
             it.authoredReturnFingerprint==null &&
@@ -40,7 +46,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             it.futureWeekApprovalFingerprint==null &&
             !it.resetToAuthored &&
             state.consentBoundPreview!=null &&
-            state.consentBoundPreview.session==it.snapshot &&
+            currentPrescription==it.snapshot &&
             state.consentBoundPreview.receipt.recordRevision==it.consentRevision &&
             state.consentBoundPreview.receipt.fingerprintSha256==it.consentFingerprint &&
             state.draft?.revision==it.snapshot.stamp.cycleRevision
@@ -148,6 +154,16 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                     style=MaterialTheme.typography.bodyMedium)
             Text("Prepared · week ${workout.snapshot.absoluteWeek} · ${workout.snapshot.dayLabel}",
                 style=MaterialTheme.typography.titleMedium)
+            workout.snapshot.shortSessionLimitMinutes?.let {minutes->
+                Text(
+                    "$minutes-minute approved choice · " +
+                        "${workout.snapshot.shortSessionOmittedSetKeys.size} original optional set(s) omitted",
+                    style=MaterialTheme.typography.bodyMedium,
+                    color=MaterialTheme.colorScheme.primary
+                )
+                Text("Only displayed surviving sets will be issued. Your authored custom cycle stays unchanged.",
+                    style=MaterialTheme.typography.bodySmall)
+            }
             if(workout.authoredReturnFingerprint!=null)Text("Your confirmed choice of heavier authored weights. History will be checked again before issuance.",
                 style=MaterialTheme.typography.bodySmall)
             workout.snapshot.slots.forEach {slot->

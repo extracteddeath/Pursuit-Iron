@@ -588,6 +588,20 @@ private fun NativeKotlinSetCard(
         // Reuse the same keyboard and 48dp rep/RIR stepper controls as
         // other native set editors. No inferred load increments, no
         // transfer of target RIR into reported actual effort.
+        if(!set.isResolved) PursuitUseLastCompletedSet(
+            mode=referenceMode,
+            history=lastReferences,
+            key=WorkoutReferenceKey(target.setKey),
+            currentLoad=target.load,
+            enabled=!busy,
+            onApply={last->
+                // Last is already source verified for the exact set and load
+                // basis; these are UNSAVED draft fields, not progression.
+                weight=last.load?.stripTrailingZeros()?.toPlainString().orEmpty()
+                reps=last.reps.toString()
+                effort=last.actualRir?.toString().orEmpty()
+            }
+        )
         NativeSetValueFields(
             unit=verifiedLoad?.unit?.name?.lowercase().orEmpty(),
             load=weight,

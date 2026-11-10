@@ -47,9 +47,13 @@ def tap(pattern, timeout=12):
 
 
 out = []
+adb("logcat", "-c")
 adb("shell", "settings", "put", "global", "window_animation_scale", "0.5")
-adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
+first = adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
+out.append("first launch: " + " / ".join(l.strip() for l in first.splitlines() if l.strip()))
 time.sleep(6)
+pid = adb("shell", "pidof", PKG).strip()
+out.append(f"running after launch: {'yes (pid ' + pid + ')' if pid else 'NO'}")
 with open(LINK) as f:
     link = f.read().strip()
 adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{link}'", PKG)
@@ -84,6 +88,11 @@ for t in ["Today", "Plan", "Progress", "Exercises", "You"]:
     out.append(f"{t}: " + " | ".join(x for x in [pick(r"Total frames rendered: \d+"), pick(r"Janky frames: \d+ \([\d.]+%\)"),
                pick(r"50th percentile: \d+ms"), pick(r"90th percentile: \d+ms"), pick(r"99th percentile: \d+ms")] if x))
 
+# A release-code build that dies on launch would ship that way: keep its crash, if any, with the numbers.
+crash = [l for l in adb("logcat", "-d", "-b", "crash", "-b", "main", timeout=120).splitlines()
+         if "FATAL EXCEPTION" in l or ("AndroidRuntime" in l and " E " in l) or "CoreException" in l or "PICore" in l]
+out.append(f"crash / engine error lines: {len(crash)}")
+out.extend("  " + l[-220:] for l in crash[:25])
 with open(os.path.join(OUT, "perf-release.txt"), "w") as f:
     f.write("\n".join(out) + "\n")
 print("\n".join(out), flush=True)

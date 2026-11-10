@@ -110,6 +110,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const st = JSON.parse(C.exportStore()); const today = st.bwLog.filter((e) => new Date(e.date).toDateString() === new Date().toDateString());
   ok(today.length === 1 && today[0].w === 81.2 && typeof today[0].date === 'number', 'logBodyweight keeps one { date: ms, w } row per day');
   ok(C.body().log.some((e) => e.w === 81.2), 'body() reads the logged bodyweight back');
+  { const D = 864e5, t0 = Date.now();
+    const r = C.importBodyweights({ rows: [{ at: t0 - 1000, kg: 90 }, { at: t0 - 2 * D, kg: 80.5 }, { at: t0 - 2 * D - 3600e3, kg: 80.9 }, { at: t0 + 5 * D, kg: 70 }, { at: t0 - 3 * D, kg: 0 }] });
+    const st2 = JSON.parse(C.exportStore());
+    ok(r.added === 1, 'Health Connect weigh-ins: one per day, never over a day logged here, none from the future (added ' + r.added + ')');
+    ok(st2.bwLog.filter((e) => new Date(e.date).toDateString() === new Date().toDateString())[0].w === 81.2, 'an imported weigh-in never replaces one logged here');
+    ok(st2.bodyweight === '81.2', 'an older weigh-in does not become the current bodyweight');
+    ok(C.importBodyweights({ rows: [{ at: t0 - 2 * D, kg: 79 }] }).added === 0, 'importing again adds nothing'); }
   C.logMeasurement({ key: 'waist', value: 82 });
   ok(C.body().measurements.waist.length === 1 && typeof JSON.parse(C.exportStore()).measurements.waist[0].date === 'number', 'measurements logged with ms dates');
   const legacy = { ...st, bwLog: [{ date: '2026-10-01', v: 80, unit: 'kg' }], measurements: { arm: [{ date: '2026-10-01', v: 38, unit: 'cm' }] } };

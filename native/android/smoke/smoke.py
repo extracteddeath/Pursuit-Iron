@@ -1127,6 +1127,14 @@ if scroll_to(r"^\|Data & storage$", tries=6):
             time.sleep(3); shot("health-connect-permission"); back(); time.sleep(1.5)
             if not find(r"Data & storage", timeout=4):
                 back()
+        # Reading is its own switch with its own permissions (sleep, resting HR, HRV, weight).
+        if scroll_to(r"Read sleep, heart rate", tries=2, step=300):
+            if tap(r"^Read sleep, heart rate and weight from Health Connect\|", required=False):
+                time.sleep(3); shot("health-connect-read-permission"); back(); time.sleep(1.5)
+                if not find(r"Data & storage", timeout=4):
+                    back()
+        else:
+            FAILS.append("Data & storage has no Health Connect read option")
     else:
         FAILS.append("Data & storage has no Health Connect option")
     back()

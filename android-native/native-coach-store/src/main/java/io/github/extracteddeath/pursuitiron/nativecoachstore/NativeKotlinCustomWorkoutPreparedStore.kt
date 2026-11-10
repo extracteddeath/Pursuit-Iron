@@ -74,6 +74,36 @@ sealed interface NativeCustomPreparedRead {
 }
 
 /**
+ * A custom time cut is a SINGLE prepared workout choice, not an edited cycle.
+ * Full can be restored only before FIRST issuance, after rechecking exact
+ * current consent, unchanged source and the checksum of the visible record.
+ */
+enum class NativeCustomTimeUndoRefusal {
+    INVALID_SELECTION,NOT_AUTHORIZED,NOT_SHORTENED,ALREADY_ISSUED,
+    CONSENT_CHANGED,REVIEW_CHANGED,STALE_PREVIEW,
+    AUTHORED_LOAD_REVIEW_REQUIRED, CORRUPT_RECORD, STORAGE_UNAVAILABLE,
+    CONFIRMATION_REQUIRED
+}
+sealed interface NativeCustomTimeUndoPreview {
+    data class Ready(
+        val shortened:NativeCustomPreparedWorkout,
+        val full:CustomWorkoutDaySnapshot,
+        val preparedFingerprint:String
+    ):NativeCustomTimeUndoPreview {
+        val canIssue:Boolean get()=false
+        val canAlterHistory:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeCustomTimeUndoRefusal):
+        NativeCustomTimeUndoPreview
+}
+sealed interface NativeCustomTimeUndoWrite {
+    data class Restored(val prepared:NativeCustomPreparedWorkout):
+        NativeCustomTimeUndoWrite
+    data class Rejected(val reason:NativeCustomTimeUndoRefusal):
+        NativeCustomTimeUndoWrite
+}
+
+/**
  * Reset changes an amended preparation only after the athlete explicitly
  * reviews and authorizes the exact, original authored workout.
  * It replaces ONE unissued prepared snapshot atomically, never an issued
@@ -601,6 +631,136 @@ class NativeKotlinCustomWorkoutPreparedStore(
             replacePreparedAtomically(ownerKey,workoutId,baseline)
             NativePreparedManualResetWrite.Reset(baseline)
         }}.getOrElse{no(NativePreparedManualResetRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /** Owner-locked and source-verified Full preview; never authorization. */
+    private fun timeUndoPreviewFenced(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        issued:NativeKotlinCustomWorkoutJournalFileStore,
+        calibration:NativeKotlinBlockCalibrationConsentStore?
+    ):NativeCustomTimeUndoPreview {
+        fun no(r:NativeCustomTimeUndoRefusal)=
+            NativeCustomTimeUndoPreview.Rejected(r)
+        val athlete=current(ownerKey)
+            ?:return no(NativeCustomTimeUndoRefusal.NOT_AUTHORIZED)
+        val old=openFenced(ownerKey,workoutId,athlete)
+        if(old is NativeCustomPreparedRead.Rejected)
+            return no(if(old.reason==NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+                NativeCustomTimeUndoRefusal.NOT_AUTHORIZED
+                else NativeCustomTimeUndoRefusal.CORRUPT_RECORD)
+        val prepared=(old as? NativeCustomPreparedRead.Found)?.workout
+            ?:return no(NativeCustomTimeUndoRefusal.NOT_SHORTENED)
+        if(prepared.ownerKey!=ownerKey || prepared.athleteId!=athlete.athleteId ||
+            prepared.snapshot.stamp.cycleId!=cycleId ||
+            prepared.snapshot.absoluteWeek!=absoluteWeek ||
+            prepared.snapshot.weekday!=weekday)
+            return no(NativeCustomTimeUndoRefusal.INVALID_SELECTION)
+        if(prepared.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
+            prepared.snapshot.shortSessionLimitMinutes==null ||
+            prepared.resetToAuthored ||
+            listOf(prepared.repApprovalFingerprint,
+                prepared.loadApprovalFingerprint,prepared.futureWeekApprovalFingerprint,
+                prepared.calibrationApprovalFingerprint,
+                prepared.authoredReturnFingerprint).any{it!=null})
+            return no(NativeCustomTimeUndoRefusal.NOT_SHORTENED)
+        when(val actual=issued.open(ownerKey,workoutId)){
+            is NativeCustomJournalResult.Durable ->
+                return no(NativeCustomTimeUndoRefusal.ALREADY_ISSUED)
+            is NativeCustomJournalResult.Rejected ->
+                if(actual.reason!=NativeCustomJournalRefusal.NOT_ISSUED)
+                    return no(if(actual.reason==NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                        NativeCustomTimeUndoRefusal.NOT_AUTHORIZED
+                    else NativeCustomTimeUndoRefusal.STORAGE_UNAVAILABLE)
+        }
+        if(activationHandoff?.blocksNewIssuance(ownerKey)==true)
+            return no(NativeCustomTimeUndoRefusal.CONSENT_CHANGED)
+        val approved=preflight.inspect(ownerKey,cycleId,
+            absoluteWeek,weekday,inputs)
+            as? NativeCustomPreflightResult.ReviewedPreview
+            ?:return no(NativeCustomTimeUndoRefusal.CONSENT_CHANGED)
+        if(approved.receipt.recordRevision!=prepared.consentRevision ||
+            approved.receipt.fingerprintSha256!=prepared.consentFingerprint ||
+            approved.session.stamp.athleteId!=athlete.athleteId)
+            return no(NativeCustomTimeUndoRefusal.CONSENT_CHANGED)
+        val minutes=checkNotNull(prepared.snapshot.shortSessionLimitMinutes)
+        if(CustomShorterSessionReviewDomain.project(
+                approved.session,minutes)!=prepared.snapshot)
+            return no(NativeCustomTimeUndoRefusal.REVIEW_CHANGED)
+        if(calibration!=null &&
+            calibration.authoredPreparationGate(ownerKey,cycleId,
+                inputs,approved.session)!=NativeAuthoredLoadPreparationGate.CLEAR)
+            return no(NativeCustomTimeUndoRefusal.AUTHORED_LOAD_REVIEW_REQUIRED)
+        if(current(ownerKey)!=athlete)
+            return no(NativeCustomTimeUndoRefusal.NOT_AUTHORIZED)
+        return NativeCustomTimeUndoPreview.Ready(
+            prepared,approved.session,storedFingerprint(ownerKey,workoutId))
+    }
+
+    /** Read-only "Undo to Full" review, never changes an issued workout. */
+    fun previewTimeUndo(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        issued:NativeKotlinCustomWorkoutJournalFileStore,
+        calibration:NativeKotlinBlockCalibrationConsentStore?=null
+    ):NativeCustomTimeUndoPreview {
+        if(!listOf(ownerKey,workoutId,cycleId).all(id::matches) ||
+            absoluteWeek !in 1..104 || weekday !in 0..6)
+            return NativeCustomTimeUndoPreview.Rejected(
+                NativeCustomTimeUndoRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            timeUndoPreviewFenced(ownerKey,workoutId,cycleId,
+                absoluteWeek,weekday,inputs,issued,calibration)
+        }}.getOrElse{NativeCustomTimeUndoPreview.Rejected(
+            NativeCustomTimeUndoRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
+     * Explicit, second-step consent to restore FULL targets. A single
+     * atomic replace under the same owner lock keeps all old/new targets
+     * recoverable and preserves workout ID/consent. No journal or history
+     * bytes change. An expected checksum and full-view identity block
+     * concurrent acceptance of a different prepared prescription.
+     */
+    fun acceptTimeUndo(
+        shown:NativeCustomTimeUndoPreview.Ready,
+        inputs:CustomCoachAuditInputs,
+        issued:NativeKotlinCustomWorkoutJournalFileStore,
+        calibration:NativeKotlinBlockCalibrationConsentStore?=null,
+        athleteConfirmed:Boolean
+    ):NativeCustomTimeUndoWrite {
+        fun no(r:NativeCustomTimeUndoRefusal)=
+            NativeCustomTimeUndoWrite.Rejected(r)
+        if(!athleteConfirmed)
+            return no(NativeCustomTimeUndoRefusal.CONFIRMATION_REQUIRED)
+        val old=shown.shortened
+        if(!listOf(old.ownerKey,old.workoutId,
+                old.snapshot.stamp.cycleId).all(id::matches) ||
+            !fingerprint.matches(shown.preparedFingerprint))
+            return no(NativeCustomTimeUndoRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(old.ownerKey){
+            val fresh=timeUndoPreviewFenced(
+                old.ownerKey,old.workoutId,old.snapshot.stamp.cycleId,
+                old.snapshot.absoluteWeek,old.snapshot.weekday,
+                inputs,issued,calibration)
+            if(fresh !is NativeCustomTimeUndoPreview.Ready) {
+                val denied=fresh as NativeCustomTimeUndoPreview.Rejected
+                return@withOwnerTransaction no(denied.reason)
+            }
+            if(fresh.preparedFingerprint!=shown.preparedFingerprint ||
+                fresh.shortened!=shown.shortened || fresh.full!=shown.full)
+                return@withOwnerTransaction no(
+                    NativeCustomTimeUndoRefusal.STALE_PREVIEW)
+            val restored=old.copy(
+                snapshot=fresh.full,
+                resetToAuthored=false,
+                repApprovalFingerprint=null,loadApprovalFingerprint=null,
+                futureWeekApprovalFingerprint=null,futureWeekSlotId=null,
+                calibrationApprovalFingerprint=null,authoredReturnFingerprint=null)
+            // Full workouts retain the historical codec and approval format.
+            replacePreparedAtomically(old.ownerKey,old.workoutId,restored)
+            NativeCustomTimeUndoWrite.Restored(restored)
+        }}.getOrElse{no(NativeCustomTimeUndoRefusal.STORAGE_UNAVAILABLE)}
     }
 
     private fun openFenced(

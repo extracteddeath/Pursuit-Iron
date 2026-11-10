@@ -572,21 +572,49 @@ if PKG not in nd or not re.search(r"Next: |Tap to finish|Rest", nd):
     FAILS.append("no ongoing workout notification out of the app")
 # Log set from the shade: Skip any rest, then the workout card's Log set logs the next set and starts its rest.
 # Out of the app, so no tap(): its recovery closes the shade and brings the app back to the front.
-def shade_tap(pattern, timeout):
+def ocr_find(words):
+    """Where the words sit on screen, read off a screenshot. The shade's cards tick (the rest and session clocks),
+    so uiautomator often can't get the idle screen it needs to dump them."""
+    try:
+        png = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, timeout=60).stdout
+        path = os.path.join(OUT, "_ocr.png")
+        with open(path, "wb") as f:
+            f.write(png)
+        tsv = subprocess.run(["tesseract", path, "-", "tsv"], capture_output=True, text=True, timeout=60).stdout
+    except Exception as e:
+        print("ocr failed", e, flush=True); return None
+    rows = [r.split("\t") for r in tsv.splitlines()[1:]]
+    toks = [r for r in rows if len(r) == 12 and r[11].strip()]
+    want = [w.lower() for w in words]
+    for i in range(len(toks) - len(want) + 1):
+        seq = toks[i:i + len(want)]
+        if [t[11].strip().lower().strip(".,:") for t in seq] == want and len({tuple(t[2:5]) for t in seq}) == 1:
+            x1 = int(seq[0][6]); y1 = int(seq[0][7])
+            x2 = int(seq[-1][6]) + int(seq[-1][8]); y2 = max(int(t[7]) + int(t[9]) for t in seq)
+            return (x1 + x2) // 2, (y1 + y2) // 2
+    return None
+
+
+def shade_tap(pattern, timeout, words=None):
     p = find(pattern, timeout=timeout)
+    if not p and words:
+        dump = adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=40)
+        print("shade dump:", (dump or "(no output)").strip()[:200], flush=True)
+        p = ocr_find(words)
+        print("shade ocr", " ".join(words), "->", p, flush=True)
     if p:
         adb("shell", "input", "tap", str(p[0]), str(p[1]))
         time.sleep(1.2)
     return bool(p)
 adb("shell", "cmd", "statusbar", "expand-notifications")
 time.sleep(2)
-if shade_tap(r"(?i)(^|\|)skip(\||$)", 3):
+if shade_tap(r"(?i)(^|\|)skip(\||$)", 3, ["Skip"]):
     time.sleep(2.5)
 if not find(r"(?i)(^|\|)log set(\||$)", timeout=4):
     # A collapsed card hides its buttons: its expand chevron opens it (a tap on the body would open the app).
     if shade_tap(r"(?i)(^|\|)expand", 3):
         time.sleep(1.5)
-if not shade_tap(r"(?i)(^|\|)log set(\||$)", 5):
+if not shade_tap(r"(?i)(^|\|)log set(\||$)", 5, ["Log", "set"]):
     nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
     mine = [l.strip() for l in nd.splitlines() if re.search(r"android\.(title|text)=|Log set", l)]
     print("shade notification:", "\n".join(mine[:40]), flush=True)

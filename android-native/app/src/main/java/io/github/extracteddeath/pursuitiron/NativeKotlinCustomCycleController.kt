@@ -773,6 +773,9 @@ internal class NativeKotlinCustomCycleController(
         val draft=before.draft ?:return@run
         val inputs=auditedInputs ?:return@run
         val preflight=before.consentBoundPreview
+        // Capture cross-module nullable properties in stable local vals:
+        // Kotlin cannot smart-cast a public API property of another module.
+        val selectedShortMinutes=prepared.snapshot.shortSessionLimitMinutes
         val ordinary=prepared.authority==
                 NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
             prepared.calibrationApprovalFingerprint==null &&
@@ -782,10 +785,10 @@ internal class NativeKotlinCustomCycleController(
             prepared.futureWeekApprovalFingerprint==null &&
             !prepared.resetToAuthored &&
             preflight!=null &&
-            (if(prepared.snapshot.shortSessionLimitMinutes==null)
+            (if(selectedShortMinutes==null)
                 preflight.session
             else CustomShorterSessionReviewDomain.project(
-                preflight.session,prepared.snapshot.shortSessionLimitMinutes)
+                preflight.session,selectedShortMinutes)
                 )==prepared.snapshot &&
             preflight.receipt.recordRevision==prepared.consentRevision &&
             preflight.receipt.fingerprintSha256==prepared.consentFingerprint &&

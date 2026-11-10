@@ -252,8 +252,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 p.amplifier?.let{ amp ->
                     require(amp.followUpReps in 1..100 &&
                         amp.followUpRestSeconds in 0..3600 &&
-                        (amp.followUpActiveSeconds==null ||
-                            amp.followUpActiveSeconds in 1..3600))
+                        amp.followUpActiveSeconds?.let{
+                            it in 1..3600
+                        }!=false)
                     amp.followUpLoad?.let(::checkLoad)
                     if(amp.kind==CustomAmplifierKind.DROP_SET) {
                         val original=p.load as? DraftSetLoad.Verified

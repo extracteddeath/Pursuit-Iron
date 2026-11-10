@@ -112,6 +112,35 @@ class KotlinComposerSwapReviewDomainTest {
             .filterRanked(ranked))
     }
 
+    @Test fun rankUsesDistinctPositiveDirectCreditsRatherThanDuplicateMentions() {
+        val repeated=same.copy(
+            exerciseId="repeated-chest",
+            credits=listOf(
+                DeclaredMuscleCredit(TrainingMuscle.CHEST,
+                    MuscleCreditRole.DIRECT,BigDecimal.ONE),
+                DeclaredMuscleCredit(TrainingMuscle.CHEST,
+                    MuscleCreditRole.DIRECT,BigDecimal.ONE))
+        )
+        val zeroCredit=same.copy(
+            exerciseId="zero-credit",
+            credits=listOf(DeclaredMuscleCredit(TrainingMuscle.CHEST,
+                MuscleCreditRole.DIRECT,BigDecimal.ZERO))
+        )
+        val ranked=KotlinComposerSwapRankingDomain.rank(
+            first,listOf(zeroCredit,repeated),setOf("db-press"),
+            ComposerFocus.UPPER)
+        assertEquals(1,ranked.first {
+            it.option.exerciseId=="repeated-chest"
+        }.sharedReviewedMuscleCount)
+        assertEquals(0,ranked.first {
+            it.option.exerciseId=="zero-credit"
+        }.sharedReviewedMuscleCount)
+        assertEquals(listOf("repeated-chest"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,sharedMusclesOnly=true).map {it.option.exerciseId})
+        assertEquals("repeated-chest",ranked.first().option.exerciseId)
+    }
+
     @Test fun workingRepEnvelopeDoesNotRejectIndependentWarmupPrescription() {
         val warmup=target("db-press","old-warmup",0).copy(
             type=DraftSetType.WARMUP,reps=RepBand(3,5))

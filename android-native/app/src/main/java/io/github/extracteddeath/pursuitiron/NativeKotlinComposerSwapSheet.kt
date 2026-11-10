@@ -101,10 +101,10 @@ internal fun NativeKotlinComposerSwapSheet(
                         FilterChip(selected=sharedMusclesOnly,
                             onClick={sharedMusclesOnly=!sharedMusclesOnly},
                             enabled=!busy,
-                            label={Text("Shared muscles")})
+                            label={Text("Shared direct muscles")})
                     }
                     Text("${permitted.size} verified same-role alternatives · "+
-                        "ranked by pattern and reviewed muscle overlap",
+                        "ranked by pattern and distinct reviewed direct-muscle overlap",
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(permitted.isEmpty())
@@ -122,7 +122,7 @@ internal fun NativeKotlinComposerSwapSheet(
                                     style=MaterialTheme.typography.labelSmall)
                                 Text(candidate.option.pattern.name.replace('_',' ')
                                     .lowercase()+" · "+
-                                    "shared muscle credits: "+
+                                    "shared directly trained muscles: "+
                                     candidate.sharedReviewedMuscleCount,
                                     style=MaterialTheme.typography.labelSmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)

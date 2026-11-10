@@ -234,9 +234,9 @@ class KotlinShorterSessionReviewDomainTest {
 
     @Test fun timeAllowanceIsNeverFalselyReducedByOriginalRoundedDuration() {
         val stage=snapshot(main=4,companion=4,optional=4)
-            .copy(estimatedMinutes=75)
+            .copy(estimatedMinutes=90)
         val result=KotlinShorterSessionReviewDomain.inspectStaged(stage,program(),45)
-        assertTrue(checkNotNull(result.originalEstimatedSeconds)>=75L*60L)
+        assertTrue(checkNotNull(result.originalEstimatedSeconds)>=90L*60L)
         // Trimming cannot claim 45 minutes by discarding explicitly stated
         // setup and preparation work.
         assertEquals(KotlinShortSessionStatus.PROTECTED_WORK_EXCEEDS_LIMIT,

@@ -79,7 +79,7 @@ private data class SavedReceipts(
 
 private object NativeJournalBinary {
     private const val MAGIC = 0x50494A32 // "PIJ2" (not a legacy JS journal)
-    private const val VERSION = 3
+    private const val VERSION = 4
     private const val MAX_BYTES = 2_000_000
     private const val MAX_EVENTS = 2048
 
@@ -105,7 +105,12 @@ private object NativeJournalBinary {
             it.operation is KotlinJournalOperation.SwapExercise
         }
         require(swapped || saved.originalSnapshot==saved.snapshot)
-        val version=if(swapped) VERSION else 2
+        val notes=saved.receipts.any {
+            it.operation is KotlinJournalOperation.SessionNote
+        }
+        // Snapshot and finish digest identities for existing v2/v3 journals
+        // remain byte-identical until the FIRST note receipt is appended.
+        val version=if(notes) VERSION else if(swapped) 3 else 2
         val body=ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             with(out) {
@@ -142,6 +147,10 @@ private object NativeJournalBinary {
                         }
                         is KotlinJournalOperation.UndoSwap -> {
                             writeByte(4);writeUTF(op.swapEventId)
+                        }
+                        is KotlinJournalOperation.SessionNote -> {
+                            require(KotlinWorkoutJournalDomain.validSessionNote(op.text))
+                            writeByte(5);writeUTF(op.text)
                         }
                         is KotlinJournalOperation.RecordSet -> {
                             writeByte(2)
@@ -275,6 +284,14 @@ private object NativeJournalBinary {
                             }
                             4 -> KotlinJournalOperation.UndoSwap(
                                 eventId,expectedRevision,readUTF())
+                            5 -> {
+                                if(version<4)throw IOException("note in legacy journal")
+                                val text=readUTF()
+                                if(!KotlinWorkoutJournalDomain.validSessionNote(text))
+                                    throw IOException("invalid journal note")
+                                KotlinJournalOperation.SessionNote(
+                                    eventId,expectedRevision,text)
+                            }
                             else -> throw IOException("unknown journal operation")
                         }
                         receipts.add(KotlinJournalReceipt(applied,operation))

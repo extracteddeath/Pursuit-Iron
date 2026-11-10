@@ -45,13 +45,19 @@ const outline=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 // In no case may an unknown next-session selection invent a "current block".
 assert.ok(outline.includes('val hasNextSession=selection is NativeCustomNextCycleSlot.Next') &&
   outline.includes('var onlyNextBlock by rememberSaveable(cycle.cycleId)') &&
+  outline.includes('mutableStateOf(false)') &&
   outline.includes('if(hasNextSession && selectedBlock!=null)') &&
   outline.includes('Text("Current block")') &&
   outline.includes('Text("Entire program")') &&
   outline.includes('!onlyNextBlock || !hasNextSession ||') &&
   outline.includes('selectedBlock==null || block.blockId==selectedBlock.blockId') &&
-  outline.includes('if(isNextDay)"Next session · "'),
-  'Plan must show all blocks by default and allow optional focus only on the verified next block');
+  outline.includes('if(showBlock)') &&
+  outline.includes('if(blockExpanded)block.days.sortedBy') &&
+  outline.includes('if(isNextDay)"$selectedStatus · "') &&
+  outline.includes('is NativeCustomNextCycleSlot.ResumeIssued -> "Resume workout"') &&
+  outline.includes('is NativeCustomNextCycleSlot.Prepared -> "Prepared workout"') &&
+  outline.includes('is NativeCustomNextCycleSlot.Next -> "Next workout"'),
+  'Plan must expose all phases by default, provide optional current-block focus, and distinguish verified next/prepared/resume sessions');
 
 const sessionBrief=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNextSessionBrief.kt');
 const blockComparison=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCycleBlockComparisonPanel.kt');

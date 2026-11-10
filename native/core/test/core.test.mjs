@@ -1274,4 +1274,9 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   C.editAct({ programId: pid, type: 'moveDayTo', from: 3, to: 0 });
   const nd = C.editor({ programId: pid }).days.map((d) => d.id);
   ok(nd[0] === days[3] && nd[1] === days[0], 'a day drags from last to first'); C.discardEdits?.({ programId: pid }); }
+// Onboarding's kg / lb: a fresh install has not chosen; picking either (even the current kg) marks it chosen, and lb converts nothing yet.
+{ C.init({ store: JSON.stringify({}) }); ok(C.settings().unitChosen === false && C.settings().unit === 'kg', 'a fresh install has not chosen a unit');
+  C.updateSettings({ unit: 'kg' }); ok(C.settings().unitChosen === true && C.settings().unit === 'kg', 'choosing kg on the welcome screen marks it chosen');
+  C.init({ store: JSON.stringify({}) }); C.updateSettings({ unit: 'lb' }); C.createFromTemplate({ id: 'ul4' });
+  ok(C.settings().unit === 'lb' && C.settings().unitChosen, 'choosing lb on the welcome screen sets the unit before any program'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

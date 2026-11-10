@@ -2,6 +2,8 @@ package com.pursuitiron.app.ui.screens
 
 import com.pursuitiron.app.ui.common.has
 import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +77,11 @@ const val INTRO_VERSION = 1
 @Composable
 fun IntroScreen(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
+    // A fresh install asks kg or lb; a returning lifter (intro re-shown after an update) already has one.
+    val st = vm.settings
+    val askUnit = st != null && st.b("unitChosen") != true && st.i("sessions") == 0 && st.i("programs") == 0
+    var unit by remember { mutableStateOf(if (java.util.Locale.getDefault().country in setOf("US", "LR", "MM")) "lb" else "kg") }
+    val leave = { then: () -> Unit -> vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.leaveIntro(if (askUnit) unit else null) { vm.prefs.markIntro(INTRO_VERSION); then() } }
     Column(Modifier.fillMaxSize().background(cs.surface).statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 30.dp).widthIn(max = 560.dp)) {
             Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(cs.primary), contentAlignment = Alignment.Center) {
@@ -100,10 +107,20 @@ fun IntroScreen(vm: AppViewModel) {
                     }
                 }
             }
+            // The web wizard's first question, asked here so every way in (build, templates) starts in the lifter's unit.
+            if (askUnit) {
+                Spacer(Modifier.height(18.dp))
+                Text("Which units do you train in?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+                Text("Plates, targets and history all use it. You can change it later in Settings.",
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
+                Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("kg" to "Kilograms · kg", "lb" to "Pounds · lb").forEach { (u, l) -> WzSeg(l, unit == u, Modifier.weight(1f)) { unit = u } }
+                }
+            }
         }
         Column(Modifier.padding(horizontal = 22.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.openSetupMode("program", full = true) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Build my program") }
-            OutlinedButton(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.openSetupMode("template") }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Browse templates instead") }
+            Button(onClick = { leave { vm.openSetupMode("program", full = true) } }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Build my program") }
+            OutlinedButton(onClick = { leave { vm.openSetupMode("template") } }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Browse templates instead") }
             TextButton(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION) }, modifier = Modifier.fillMaxWidth()) { Text("I already use the web app") }
         }
     }

@@ -294,6 +294,14 @@ adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 # 1. First run
 launch()
 shot("first-run")
+# Onboarding asks kg or lb before anything is built (the web wizard's first step); the emulator's US locale preselects lb.
+if not scroll_to(r"^\|Which units do you train in\?$", tries=3):
+    FAILS.append("onboarding does not ask kg or lb")
+elif not find(r"^\|Pounds · lb$", timeout=2):
+    FAILS.append("onboarding unit options missing")
+else:
+    tap(r"^\|Kilograms · kg$")
+    shot("first-run-units")
 tap(r"^\|Build my program$", "setup")  # the welcome screen opens the builder
 wizard("Smoke Program", shots=True)
 time.sleep(4)

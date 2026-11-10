@@ -311,6 +311,8 @@ DAY[0] = "d00"
 set_date(start)
 launch()
 shot("first-launch")
+check(bool(scroll_to(r"^\|Which units do you train in\?$", tries=3)), "onboarding asks kg or lb")
+tap(r"^\|Kilograms · kg$")
 tap(r"^\|Build my program$")
 for k in range(14):
     if find(r"^\|Build this (program|cycle)$", timeout=1):

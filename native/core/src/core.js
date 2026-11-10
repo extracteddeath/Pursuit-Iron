@@ -2908,7 +2908,7 @@ export function settings() {
     return { unit: unit(), restScale: Number(st.restScale) || 1, restAutoStart: st.restAutoStart !== false, haptics: st.haptics !== false,
         theme: st.theme || null, warmupCard: st.warmupCard !== false, lastBackup: st.lastBackup || null, sessions: history().length, programs: saved().length,
         reminders: reminders(), customCount: Array.isArray(st.custom) ? st.custom.length : 0,
-        loadMode: st.loadMode === 'rpe' ? 'rpe' : 'rir', experience: st.experience || null,
+        loadMode: st.loadMode === 'rpe' ? 'rpe' : 'rir', experience: st.experience || null, unitChosen: st.unitChosen === true,
         banned: (st.banned || []).map((id) => ({ id, name: exName(id) })),
         injuries: (() => { let l = []; try { l = injuries(); } catch { l = []; } return { active: l.filter((e) => !e.resolvedAt).length, resolved: l.filter((e) => e.resolvedAt).length }; })() };
 }
@@ -2917,7 +2917,8 @@ export function updateSettings(patch = {}) {
     if ('loadMode' in patch && !['rir', 'rpe'].includes(patch.loadMode)) delete patch.loadMode;
     if ('experience' in patch && !['novice', 'beginner', 'intermediate', 'advanced', ...Object.keys(E.EXP || {})].includes(patch.experience)) delete patch.experience;
     Object.entries(patch).forEach(([k, v]) => { if (allowed.includes(k)) S.store[k] = v; });
-    if (patch.unit && patch.unit !== unit()) { const r = switchUnit({ to: patch.unit }); if (!r.ok) return r; }
+    // Picking the unit you already have still counts as choosing it (onboarding's kg / lb, the web's unitChosen).
+    if (patch.unit) { const r = switchUnit({ to: patch.unit }); if (!r.ok) return r; }
     applyGlobals(); markStore();
     return { ok: true, settings: settings() };
 }

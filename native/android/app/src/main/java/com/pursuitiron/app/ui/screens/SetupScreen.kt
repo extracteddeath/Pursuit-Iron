@@ -343,6 +343,8 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     val ck = listOf("cycletype", "units", "name", "experience", "approach", "days", "split", "session", "equipment", "constraints", "focus", "reduce", "deload")
     var keys = if (cyc) (if (template == "custom") listOf("cycletype", "goal") + ck.drop(1) else ck) else sk
     if (!full) keys = keys.filter { it != "units" && it != "experience" && it != "equipment" }
+    // Like the web wizard's skipUnits: once kg / lb was chosen (on the welcome screen or in Settings), it is not asked again.
+    if (vm.settings?.b("unitChosen") == true) keys = keys.filter { it != "units" }
     if (endless && !cyc) keys = keys.filter { it != "deload" }
     /* The prototype's flow (Main.dc.html guided setup): a few questions a screen, ending on every split built and ranked
        for you. Every option the long wizard had is still here, grouped onto the page it belongs to. */
@@ -723,7 +725,7 @@ private fun WzOption(label: String, sub: String?, icon: ImageVector, on: Boolean
 private fun WzKicker(t: String, modifier: Modifier = Modifier) = Text(t, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
 
 @Composable
-private fun WzSeg(label: String, on: Boolean, modifier: Modifier, onClick: () -> Unit) {
+internal fun WzSeg(label: String, on: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val r by animateDpAsState(if (on) 14.dp else 24.dp, Motion.spatialFast(), label = "seg")
     val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHigh, Motion.effects(), label = "segBg")

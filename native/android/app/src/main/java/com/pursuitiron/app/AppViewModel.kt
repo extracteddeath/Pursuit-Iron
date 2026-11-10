@@ -224,6 +224,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun openSetup(cycle: Boolean = false) { setupMode = if (cycle) "cycle" else "program"; setupFull = false; screen = Screen.Setup }
     fun openSetupMode(mode: String, full: Boolean = false) { setupMode = mode; setupFull = full; screen = Screen.Setup }
     fun closeSetup() { screen = Screen.Tabs }
+    /** The welcome screen: the lifter's kg / lb is stored (and marked chosen) before the builder reads it. */
+    fun leaveIntro(unit: String?, then: () -> Unit) = launchCore {
+        if (unit != null) { call("updateSettings", jsonOf("unit" to unit)); settings = obj("settings") }
+        then()
+    }
     fun minimise() { screen = Screen.Tabs; launchCore { home = obj("home") } }
     fun resume() { if (session?.b("active") == true) screen = Screen.Workout }
 

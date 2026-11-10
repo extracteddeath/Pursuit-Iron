@@ -575,8 +575,18 @@ adb("shell", "cmd", "statusbar", "expand-notifications")
 time.sleep(2)
 if tap(r"(?i)^\|?skip$", required=False, timeout=3):
     time.sleep(2.5)
+if not find(r"(?i)^\|?log set$", timeout=4):
+    # A card below another in the shade shows collapsed, its buttons hidden: pull it open as a person would.
+    p = find(r"Next: |Tap to finish", timeout=3)
+    if p:
+        adb("shell", "input", "swipe", str(p[0]), str(p[1]), str(p[0]), str(p[1] + 400), "300")
+        time.sleep(1.5)
 if not tap(r"(?i)^\|?log set$", "shade-log-set", required=False, timeout=5):
-    FAILS.append("no Log set on the workout card out of the app")
+    nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
+    mine = [l.strip() for l in nd.splitlines() if re.search(r"android\.(title|text)=|actions=|Log set|\[\d+\] \"", l)]
+    print("shade notification:", "\n".join(mine[:40]), flush=True)
+    shot("missing-shade-log-set")
+    FAILS.append("no Log set on the workout card out of the app" + (" (posted, not shown)" if "Log set" in nd else " (not posted)"))
 else:
     time.sleep(3)
     nd = adb("shell", "dumpsys", "notification", "--noredact") or ""

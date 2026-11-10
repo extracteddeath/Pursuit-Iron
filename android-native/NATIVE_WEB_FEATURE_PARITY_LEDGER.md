@@ -202,3 +202,31 @@ at `360b8c96acb318ef0f8c6af1b8d84836320cfd65`.
 The native source and Compose compile gates for these interactions are closed.
 Real-device usability, large text/TalkBack, all-screen visual completion,
 adaptive-cycle decision approval and overall engine superiority remain open.
+
+
+## Native Train minimize/resume and custom Plan hierarchy — 2026-11-09
+
+**Source-verified Train UX parity:** A generated Kotlin workout can be
+minimized without a Finish or journal write. Resuming first checks
+the current signed-in athlete's approved workout through the native
+host; the prior workout ID is only a presentation shortcut.
+In-flight journal writes disable Minimize, and the controller
+also rechecks the busy state on tap. Previous completed sets
+reopen from the exact verified journal, while unsubmitted fields
+remain local drafts associated with the exact workout. The
+unfinished custom-workout list supports bounded paging so items
+past 20 remain reachable. A current owner or grant change cannot
+authorize a stale saved workout ID.
+
+**Source-verified custom Plan hierarchy:** All authored phases remain
+reachable by default. A user may voluntarily focus on the verified
+next block. Independently collapsible block/day outlines show
+actual cumulative weeks and exact Next/Prepared/Resume states,
+without hiding working-set targets, amplifier details or direct
+edit-day/edit-exercise routes. This changes presentation only.
+
+**Evidence:** [Native CI run 42744944590 (33/33 passed)](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42744944590),
+implementation SHA `f5e7940e5546b51ada1dda8b56bba410cbe3b1b0`.
+Kotlin engine tests, native journal crash recovery and Compose compilation
+also passed; this does **not** establish physical Android device or
+large-font/TalkBack acceptance, nor superiority over Build 1009.

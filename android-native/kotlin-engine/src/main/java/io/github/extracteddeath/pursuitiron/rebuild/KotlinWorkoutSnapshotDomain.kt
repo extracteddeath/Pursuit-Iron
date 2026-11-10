@@ -62,8 +62,19 @@ data class KotlinStagedWorkout(
     val dayIndex: Int,
     val purpose: ComposerSessionPurpose,
     val estimatedMinutes: Long,
-    val targets: List<KotlinWorkoutTarget>
+    val targets: List<KotlinWorkoutTarget>,
+    /**
+     * Explicit athlete-selected time budget attached to the immutable issued
+     * workout. Null means the full approved program. This is a provenance
+     * fact, not a runtime deadline or permission to edit history.
+     */
+    val shortSessionLimitMinutes: Int? = null,
+    /** Exact keys omitted BEFORE issuance; remain in source order. Never
+     * invent completion or reindex the retained set keys. */
+    val shortSessionOmittedSetKeys: List<String> = emptyList()
 ) {
+    val prescriptionEditedForTime: Boolean
+        get() = shortSessionOmittedSetKeys.isNotEmpty()
     /** Only native owned, atomic storage may issue or acknowledge this. */
     val persisted: Boolean get() = false
     val canModifyJournal: Boolean get() = false

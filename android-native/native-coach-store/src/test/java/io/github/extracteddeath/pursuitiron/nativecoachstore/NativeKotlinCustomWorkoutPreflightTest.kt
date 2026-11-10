@@ -170,7 +170,7 @@ class NativeKotlinCustomWorkoutPreflightTest {
             NativeCustomPreflightRefusal.INVALID_SELECTION),
             preflight.reviewShorter("owner-1","cycle-1",105,0,input(),20))
         assertTrue(prepared.open("owner-1","unused-time-review")
-            is NativeCustomPreparedRead.NotFound)
+            is NativeCustomPreparedRead.Missing)
     }
 
     @Test fun neverPreparesWithoutAthleteConsentOrWithChangedPolicy() {

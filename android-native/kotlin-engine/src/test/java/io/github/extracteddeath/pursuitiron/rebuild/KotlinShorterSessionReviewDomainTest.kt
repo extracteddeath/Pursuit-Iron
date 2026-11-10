@@ -179,6 +179,43 @@ class KotlinShorterSessionReviewDomainTest {
         assertEquals(0,review.omittedWorkingSets)
     }
 
+    @Test fun publicReviewRecomputesRealKotlinProgramBeforePreview() {
+        val pinned=listOf(press,row).map {
+            it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+                maximumVisits=3,requiredVisits=3)
+        }
+        val approved=program(options=pinned).copy(
+            bounds=TrainingMuscle.entries.map { muscle ->
+                if(muscle in setOf(TrainingMuscle.CHEST,TrainingMuscle.LATS))
+                    DeclaredMuscleDoseBounds(muscle,n("0"),n("8"),n("12"),0)
+                else DeclaredMuscleDoseBounds(muscle,n("0"),n("0"),n("0"),0)
+            },
+            sessionIntents=(0..2).map {
+                ComposerSessionIntent(it,ComposerSessionPurpose.HYPERTROPHY)
+            },
+            preferredPatternsPerDay=2
+        )
+        val policies=pinned.map {
+            ExercisePrescriptionPolicy(it.exerciseId,
+                ComposerSessionPurpose.HYPERTROPHY,RepBand(8,12),
+                2,120,120,SetLoadScheme.STRAIGHT)
+        }
+        val request=KotlinWorkoutSnapshotRequest(
+            source,source,
+            KotlinWorkoutSelectionGrant("grant-1","workout-1",source,0),
+            approved,policies)
+        val exact=KotlinWorkoutSnapshotDomain.stage(request)
+        assertTrue(exact.toString(),exact is KotlinWorkoutSnapshotResult.Staged)
+        val before=(exact as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val result=KotlinShorterSessionReviewDomain.review(request,20)
+        assertEquals(KotlinShortSessionStatus.ALREADY_FITS,result.status)
+        assertEquals(before.targets.map {it.setKey},result.keptSetKeys)
+        assertFalse(result.changesPrescription)
+        assertFalse(result.canStartWorkout)
+        assertFalse(result.canSaveProgram)
+        assertFalse(before.persisted)
+    }
+
     @Test fun reviewMustStageCurrentAuthenticatedSourceRatherThanTrustingPreviewKeys() {
         val program=program()
         val stale=KotlinWorkoutSnapshotRequest(

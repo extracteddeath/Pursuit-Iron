@@ -753,9 +753,19 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             Text("Optional slots omitted: " +
                                 timeReview.omittedSlotIds.joinToString(", "),
                                 style=MaterialTheme.typography.bodySmall)
-                        Text("Preview only. The complete authored program, saved preparation, and any issued workout are unchanged. Shortened custom issuance and Undo are not yet enabled.",
+                        Text("This review cannot alter the program or any previously issued workout. To use a shorter session, explicitly approve a separate saved preparation; the native issuer will independently verify it again.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(canFit && state.preparedWorkout==null) {
+                            PursuitPrimaryAction(
+                                "Approve and save ${customShortMinutes}-minute custom workout",
+                                enabled=!busy
+                            ) {
+                                val week=weekNumber
+                                if(week!=null)controller.prepareConsentBoundShorterDay(
+                                    week,inspectedWeekday,customShortMinutes)
+                            }
+                        }
                     }
                 }
                 if(state.calibrationReceipt==null && validWeek && state.consentBoundPreview?.session?.absoluteWeek==weekNumber &&
@@ -785,8 +795,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 state.preparedWorkout?.let { prepared ->
                     Text("Prepared ID: ${prepared.workoutId}",
                         style=MaterialTheme.typography.bodySmall)
-                    Text("Cold-recoverable exact targets; still not issued. No training journal was written.",
-                        style=MaterialTheme.typography.bodySmall)
+                    val timeChoice=prepared.snapshot.shortSessionLimitMinutes
+                    Text(
+                        if(timeChoice==null)
+                            "Full authored session · saved exact targets; not yet issued."
+                        else "${timeChoice}-minute approved custom preparation · " +
+                            "${prepared.snapshot.shortSessionOmittedSetKeys.size} original set(s) omitted before issuance. Saved targets remain reviewable.",
+                        style=MaterialTheme.typography.bodySmall
+                    )
                 }
                 state.authoredPreviewRefusal?.let {
                     Text("Cannot preview · ${pretty(it)}",

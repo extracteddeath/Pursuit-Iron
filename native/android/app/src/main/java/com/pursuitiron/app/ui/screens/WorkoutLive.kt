@@ -4,7 +4,8 @@ package com.pursuitiron.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -142,10 +145,10 @@ fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
         .background(if (pressed) (fg ?: if (filled) cs.onPrimary else cs.onSurface).copy(alpha = 0.12f) else Color.Transparent)
         .alpha(if (enabled) 1f else 0.38f)
         .semantics { contentDescription = label; role = Role.Button
-            if (enabled) androidx.compose.ui.semantics.onClick(label) { step(); true } else androidx.compose.ui.semantics.disabled() }
+            if (enabled) onClick(label) { step(); true } else disabled() }
         .pointerInput(Unit) {
-            androidx.compose.foundation.gestures.awaitEachGesture {
-                val down = androidx.compose.foundation.gestures.awaitFirstDown()
+            awaitEachGesture {
+                val down = awaitFirstDown()
                 if (!on) return@awaitEachGesture
                 pressed = true
                 var repeated = false

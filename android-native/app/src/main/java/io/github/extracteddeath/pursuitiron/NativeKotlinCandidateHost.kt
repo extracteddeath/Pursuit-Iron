@@ -388,6 +388,42 @@ internal class NativeKotlinCandidateHost(context:Context) {
             inputs,shown,athleteConfirmed,blockCalibrations)
     }
 
+    /**
+     * Read-only, current-owner preview of Full before discarding a saved
+     * custom time cut. Never edits an issued set or authored training cycle.
+     */
+    fun previewUndoCustomShorterWorkout(
+        workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs
+    ):NativeCustomTimeUndoPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomTimeUndoPreview.Rejected(
+                NativeCustomTimeUndoRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.previewTimeUndo(
+            owner.ownerKey,workoutId,cycleId,
+            absoluteWeek,weekday,inputs,customIssuedStore,blockCalibrations)
+    }
+
+    /** Explicit acceptance of exactly the previously displayed full targets.
+     * The store checks owner, checksum CAS, history and signed consent again. */
+    fun acceptUndoCustomShorterWorkout(
+        shown:NativeCustomTimeUndoPreview.Ready,
+        inputs:CustomCoachAuditInputs,
+        athleteConfirmed:Boolean
+    ):NativeCustomTimeUndoWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomTimeUndoWrite.Rejected(
+                NativeCustomTimeUndoRefusal.NOT_AUTHORIZED)
+        if(owner.ownerKey!=shown.shortened.ownerKey ||
+            owner.athleteId!=shown.shortened.athleteId)
+            return NativeCustomTimeUndoWrite.Rejected(
+                NativeCustomTimeUndoRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.acceptTimeUndo(
+            shown,inputs,customIssuedStore,blockCalibrations,
+            athleteConfirmed)
+    }
+
     fun openPreparedCustomWorkout(workoutId:String):NativeCustomPreparedRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomPreparedRead.Rejected(

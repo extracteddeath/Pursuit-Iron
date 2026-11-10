@@ -464,6 +464,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
             owner.ownerKey,workoutId,eventId,expectedRevision,swapEventId)
     }
 
+    /** Authenticated custom-session note. This is an actual atomic journal
+     * receipt, not a local-only preference or a planned program note. */
+    fun saveIssuedCustomSessionNote(
+        workoutId:String,
+        operation:CustomWorkoutJournalOperation.SessionNote
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.saveSessionNote(
+            owner.ownerKey,workoutId,operation)
+    }
+
     /**
      * An exercise must be present in this athlete's cold-opened, verified
      * issued native workout before any cross-session pinned note is read.

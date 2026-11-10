@@ -37,6 +37,39 @@ class KotlinWorkoutJournalDomainTest {
         assertTrue(accepted.toString(),accepted is KotlinJournalDecision.Proposed)
         return (accepted as KotlinJournalDecision.Proposed).state
     }
+    @Test fun generatedSessionNoteReceiptsAreBoundedReplayedAndSetNeutral() {
+        val start=begin()
+        val note=KotlinJournalOperation.SessionNote("note-one",0,"Elbows felt great")
+        val saved=apply(start,note)
+        assertEquals("Elbows felt great",saved.sessionNote)
+        assertEquals(1L,saved.revision)
+        assertEquals(0,saved.resolvedSetCount)
+        assertEquals(start.snapshot,saved.snapshot)
+        assertEquals(KotlinJournalDecision.Proposed(saved,true),
+            KotlinWorkoutJournalDomain.reduce(saved,note))
+        assertEquals(KotlinJournalDecision.Rejected(
+            KotlinJournalRefusal.STALE_REVISION),
+            KotlinWorkoutJournalDomain.reduce(saved,
+                KotlinJournalOperation.SessionNote("stale",0,"not saved")))
+        assertEquals(KotlinJournalDecision.Rejected(
+            KotlinJournalRefusal.EVENT_ID_COLLISION),
+            KotlinWorkoutJournalDomain.reduce(saved,
+                note.copy(text="different payload")))
+        assertEquals(KotlinJournalDecision.Rejected(
+            KotlinJournalRefusal.INVALID_SESSION_NOTE),
+            KotlinWorkoutJournalDomain.reduce(saved,
+                KotlinJournalOperation.SessionNote("too-long",1,"x".repeat(2001))))
+        val cleared=apply(saved,
+            KotlinJournalOperation.SessionNote("note-clear",1,""))
+        assertEquals("",cleared.sessionNote)
+        val first=apply(cleared,record("after-note",2,"db-press:d0:w0",
+            KotlinJournalSetOutcome.COMPLETED,actual(10,null)))
+        assertEquals(1,first.resolvedSetCount)
+        assertEquals(3L,first.revision)
+        assertEquals("",first.sessionNote)
+        assertEquals(4,first.snapshot.targets.size)
+    }
+
     @Test fun actualsStaySeparateFromWarmupAndWorkingPrescriptions() {
         val initial=begin()
         assertEquals(4,initial.unresolvedSetCount)

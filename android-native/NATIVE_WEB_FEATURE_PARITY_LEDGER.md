@@ -226,7 +226,7 @@ without hiding working-set targets, amplifier details or direct
 edit-day/edit-exercise routes. This changes presentation only.
 
 **Evidence:** [Native CI run 42744944590 (33/33 passed)](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42744944590),
-implementation SHA `f5e7940e5546b51ada1dda8b56bba410cbe3b1b0`.
+implementation SHA `5d1ebfc8717f6021bb25290934123f09f9a04901`.
 Kotlin engine tests, native journal crash recovery and Compose compilation
 also passed; this does **not** establish physical Android device or
 large-font/TalkBack acceptance, nor superiority over Build 1009.

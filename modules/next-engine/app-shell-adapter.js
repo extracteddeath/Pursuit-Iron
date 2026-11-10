@@ -149,9 +149,23 @@ function mapBanned(banned, legacy) {
     }
     return [...out];
 }
+/* ⚠ STRENGTH PREREQUISITES ARE NOT TECHNIQUE. The catalog rates a Nordic curl, a sissy squat and a bodyweight
+   reverse Nordic at technicalComplexity 1 — they are simple to learn — and as bodyweight isolations they cost no
+   equipment, so they were the engine's answer to "hamstrings / quads isolation" whenever the kit lacked a leg-curl
+   or leg-extension machine. Measured across 352 "New to lifting" programs: Sissy Squat in 66%, Nordic Curl in 58%.
+   Each needs strength a new lifter does not have yet (a Nordic's lowering phase is supramaximal for most trained
+   lifters), so for none/beginner they are kept out of generation the same way a banned lift is. TECHNICAL_LIFTS
+   (training-domain/analytics.js) are the shell's own list of high-skill barbell variants, gated the same way. The
+   lifter can still add or swap any of them in by hand. */
+const NOVICE_GATED = ['nordic', 'sissy-squat', 'bodyweight-reverse-nordic', 'pistol-squat', 'ab-wheel', 'dragon-flag', 'hanging-raise',
+    'good-morning', 'zercher-squat', 'snatch-deadlift', 'deficit-barbell-deadlift', 'jefferson-curl', 'jefferson-squat', 'z-press',
+    'bradford-press', 'power-shrug', 'pendlay-row', 'meadows-row', 'ghr', 'copenhagen'];
+export function noviceGatedExercises(config) {
+    return config?.experience === 'none' || config?.experience === 'beginner' ? [...NOVICE_GATED] : [];
+}
 export function shellConfigToNextRequest(config, banned = [], legacyExercises = [], seed) {
     const split = splitOf(config.split);
-    const avoided = new Set(mapBanned(banned, legacyExercises));
+    const avoided = new Set(mapBanned([...banned, ...noviceGatedExercises(config)], legacyExercises));
     const canPerform = performableFor(config);
     const byId = new Map(legacyExercises.map(ex => [ex.id, ex]));
     const byName = new Map();
@@ -397,10 +411,13 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         const primaryIndex = Math.max(0, session.exercises.findIndex((x) => x.role === 'primary_strength'));
         return { id, label: session.name, type: legacyTypeForIntent(session.intent), focus: session.intent, exercises: mapped, primaryIndex };
     });
+    /* weekPlan slots are MONDAY-FIRST (buildWeekPlan's IDEAL_SLOTS, and both shells read slot i as weekday
+       [1,2,3,4,5,6,0][i]); `schedule` is keyed by JS weekday (0 = Sunday). Writing weekPlan[js] shifted every
+       suggested day one weekday early, so "Use this schedule" moved Monday's session to Sunday. */
     const weekPlan = Array(7).fill(null);
     const schedule = {};
     nextProgram.sessions.forEach((session, index) => { const js = DAY_TO_JS[session.day]; if (Number.isInteger(js)) {
-        weekPlan[js] = index;
+        weekPlan[(js + 6) % 7] = index;
         schedule[js] = days[index].id;
     } });
     return {

@@ -249,12 +249,31 @@ function percentagePlanFor(program, day, ex, slot, weekIndex, unit, history = []
         const source = gzPlanFor(program, day, ex, slot, sourceUnit, history);
         plan = source ? { ...source, sets: source.sets.map(t => ({ ...t,
             weight: loadableAtOrBelow(ex, convertHistoryLoad(t.weight, sourceUnit, unit), unit) })) } : null;
-    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, day.type, tier, program.config.assistance ?? null);
+    } else plan = pctSetsFor(program.config.percentScheme, tm, weekIndex, weeksOf(program), unit, ex, percentDayType(program, day, slot), tier, program.config.assistance ?? null);
     if (!plan?.sets?.length) return null;
     if (program.config.percentScheme === 'gzclp' && weekIndex > weeksOf(program))
         plan = { ...plan, label: 'Deload · light', sets: plan.sets.map(t => ({ ...t,
             weight: loadableAtOrBelow(ex, t.weight * .6, unit), reps: String(t.reps).replace('+',''), amrap: false })) };
     return adaptPercentageSetBudget(plan, Number(cell.sets));
+}
+
+/* ⚠ THE TEXAS DAYS WERE NEVER REACHED. The protocol loads a lift per DAY — volume 5×5 at 90% of the 5RM,
+   recovery 2×5 at 80%, intensity a top set at 100% — and pctSetsFor picks the day by `day.type`. Generated
+   days are typed by intent ("strength_full"), never tx_*, so every Volume / Recovery / Intensity session fell
+   through to the protocol's fallback: 90% on every day of every week, the undulation the method is named for
+   gone. The role belongs to the LIFT's place in the week: its first main-lift day is volume, its last is
+   intensity, anything between is recovery (a lift trained once a week keeps volume work and the weekly creep). */
+function percentDayType(program, day, slot) {
+    if (program?.config?.percentScheme !== "texas" || !day)
+        return day?.type;
+    const id = day.exercises?.[slot];
+    const days = (program.days || []).filter(d => d.exercises?.[d.primaryIndex] === id);
+    const k = days.findIndex(d => d.id === day.id), n = days.length;
+    if (!id || k < 0)
+        return day.type;
+    if (k === 0)
+        return "tx_volume";
+    return k === n - 1 ? "tx_intensity" : "tx_recovery";
 }
 
 function tierOf(day, slot) {
@@ -1275,4 +1294,4 @@ function setGymLimits(gym) {
     GYM_LIMITS = gym ? { limits: gym.limits || {}, inventory: gym.inventory || {}, unit: gym.limitUnit || gym.unit || "kg" } : null;
 }
 
-export { loadableForSuggestion, setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };
+export { loadableForSuggestion, setGymLimits, ASSUMED_RIR, BASE_SET_COST, E1RM_HOLD, EFFORT_MAX_BIAS, EFFORT_MIN_PAIRS, EFFORT_REP_CAP, GYM_LIMITS, GZ_T1_STAGES, GZ_T2_STAGES, INVENTORY_KEYS, PART_LABEL, STALL_ENGAGE, STALL_WINDOW, __recovFitMemo, __recoveryMemo, anchorPerfFor, autoStyleDetail, autoStyleFor, customExerciseHistory, customExerciseReferenceHistory, customProgramSuggestion, dayPerfFor, effortCalibration, engineWeekOneStyles, gymRackFor, gzPlanFor, gzTierOf, gzWorkWeight, lastDayPerf, linearStalled, loadableAbove, loadableAtOrBelow, nudgeWorkoutLoad, loggedExercisePerformance, loggedWorkoutPerformance, muscleRecovery, muscleRecoveryUncached, nextEngineStyleFor, parseRIRNum, pctSetsFor, percentDayType, percentagePlanFor, personalRecoveryHours, plateauSessions, prescribeSets, prescribedRIRof, progressionHistoryForProgram, representativeCustomLoad, resolveStyle, sessionSuggestion, setsOf, stallCountFor, styleFor, styleOverride, summarizeSets, tierOf, toUnit, trainingMaxForUnit, withTrainingMax };

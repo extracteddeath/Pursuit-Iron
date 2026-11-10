@@ -20,7 +20,7 @@ import java.util.Collections
  */
 internal object NativeKotlinCustomWorkoutSnapshotCodec {
     private const val MAGIC=0x50494357 // PICW
-    private const val VERSION=1
+    private const val VERSION=2
     const val MAX_BYTES=256_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val labelLimit=2000
@@ -185,6 +185,21 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         require(snapshot.slots.map{it.slotId}.distinct().size==
             snapshot.slots.size)
         require(snapshot.slots.sumOf{it.sets.size} in 1..MAX_TARGETS)
+        val limit=snapshot.shortSessionLimitMinutes
+        val omitted=snapshot.shortSessionOmittedSetKeys
+        require(limit==null && omitted.isEmpty() ||
+            limit in setOf(20,30,45) &&
+            omitted.size+snapshot.slots.sumOf{it.sets.size}<=MAX_TARGETS &&
+            omitted.distinct().size==omitted.size &&
+            omitted.all{ key ->
+                key.length in 16..256 &&
+                key.startsWith(
+                    "${snapshot.stamp.cycleId}:w${snapshot.absoluteWeek}:d${snapshot.weekday}:") &&
+                Regex("^[A-Za-z0-9_:.-]{16,256}$").matches(key)
+            } &&
+            omitted.none{key ->snapshot.slots.any{slot ->
+                slot.sets.any{it.setKey==key}
+            }})
         require(snapshot.knownSetAndRestSeconds in 1..10_000_000L)
         require(snapshot.declaredNonSetSeconds?.let { it in 0..21600 } != false)
         (snapshot.split as? CustomSplitIdentity.Freeform)?.let { split ->
@@ -243,7 +258,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         validate(snapshot)
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use{out->
-            out.writeInt(MAGIC);out.writeInt(VERSION)
+            val version=if(snapshot.shortSessionLimitMinutes!=null)VERSION else 1
+            out.writeInt(MAGIC);out.writeInt(version)
             val stamp=snapshot.stamp
             out.writeUTF(stamp.athleteId)
             out.writeUTF(stamp.athleteProfileRevision)
@@ -264,6 +280,12 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             out.optionalInt(snapshot.declaredNonSetSeconds)
             out.writeInt(snapshot.slots.size)
             snapshot.slots.forEach {out.slot(it)}
+            // Keep every historical full custom snapshot byte-identical.
+            if(version>=2) {
+                out.writeInt(checkNotNull(snapshot.shortSessionLimitMinutes))
+                out.writeInt(snapshot.shortSessionOmittedSetKeys.size)
+                snapshot.shortSessionOmittedSetKeys.forEach(out::writeUTF)
+            }
         }
         return output.toByteArray().also {
             require(it.size in 16..MAX_BYTES)
@@ -273,7 +295,10 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         require(bytes.size in 16..MAX_BYTES)
         return try {
             DataInputStream(ByteArrayInputStream(bytes)).use{input->
-                if(input.readInt()!=MAGIC || input.readInt()!=VERSION)
+                if(input.readInt()!=MAGIC)
+                    throw IOException("unsupported custom session magic")
+                val version=input.readInt()
+                if(version !in 1..VERSION)
                     throw IOException("unsupported custom session snapshot")
                 val stamp=CustomWorkoutSourceStamp(
                     input.readUTF(),input.readUTF(),input.readUTF(),
@@ -299,11 +324,19 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                             throw IOException("invalid set count")
                     }
                 }
+                val timeLimit=if(version>=2)input.readInt() else null
+                val omissions=if(version>=2){
+                    val count=input.readInt()
+                    if(count !in 0..MAX_TARGETS)
+                        throw IOException("invalid custom omission count")
+                    Collections.unmodifiableList(List(count){input.readUTF()})
+                } else emptyList()
                 if(input.available()!=0)
                     throw IOException("trailing custom snapshot data")
                 CustomWorkoutDaySnapshot(stamp,absoluteWeek,inBlock,blockId,
                     phase,purpose,split,weekday,dayLabel,sessionPurpose,
-                    Collections.unmodifiableList(slots),duration,declared
+                    Collections.unmodifiableList(slots),duration,declared,
+                    timeLimit,omissions
                 ).also(::validate)
             }
         }catch(error:Exception){

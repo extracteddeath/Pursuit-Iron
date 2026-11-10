@@ -477,8 +477,11 @@ object CustomCycleCoachAuditDomain {
         // time audit impossible; do not treat under-estimated minutes as ready.
         if (structural.verifiedDraft!=null &&
             cycle.blocks.any {block->block.days.any{day->day.slots.any{slot->
-                slot.sets.any{it.amplifier!=null &&
-                    it.amplifier.followUpActiveSeconds==null}
+                slot.sets.any{set->
+                    set.amplifier?.let{amp->
+                        amp.followUpActiveSeconds==null
+                    }==true
+                }
             }}}) {
             add(CustomCoachIssueKind.NON_SET_TIME_UNDECLARED,"amplifiers",
                 "Advanced-set follow-up active-work duration must be explicitly authored; unknown seconds cannot pass a hard time audit.")

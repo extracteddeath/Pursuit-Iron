@@ -2437,3 +2437,43 @@ No APK/AAB, production web edit, or direct device test was performed.
 and large-font/TalkBack acceptance, source-backed adaptive-cycle review,
 broader feature parity, and independent Kotlin superiority against
 web Build 1009. Green Kotlin tests do not settle those product gates.
+
+
+## 2026-11-09 — Owner-scoped pinned notes and equipment setup integrated
+
+Selectively ported the older UI draft's pinned exercise note and reviewed
+equipment-specific setup workflow into the newer
+`architecture/kotlin-engine-rebuild` branch. This is one coherent
+end-to-end native feature, not a screen-only placeholder or a merge of
+the diverged PR #448.
+
+In both issued custom and generated Kotlin workouts, an exact current
+exercise can show and edit an athlete-owned pinned note across sessions.
+The storage is an exercise-specific, owner-fenced, SHA-256 checked atomic
+file with compare-and-swap revision and event identity. Pending/corrupt
+writes do not become empty notes. Save failures retain the editable draft
+and can be reconciled against a confirmed persisted event, rather than
+lying about a successful save or overwriting a concurrent update.
+
+The editor obtains equipment-specific setup field suggestions from the
+current independently reviewed catalog, never from guessed exercise
+names or gym stock. Cable pulley/attachment, bench and machine settings,
+bar/rack and other author-entered fields are supported; earlier valid
+values absent from a newer catalog remain visible as **Saved earlier**
+until the athlete explicitly clears them. The notes never mutate a
+program, prescribed weight, journal actual, RIR or training progression.
+
+**Verification:** [GitHub Actions run
+42736863410](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42736863410)
+passed **33/33** steps on commit
+`dc169209e0afc80d83ee06cc357eb7e7216e2b64`.
+This includes the new pinned-note/setup source tests, native coach-store
+JUnit persistence/revision/corruption tests, independent engine tests,
+crash-recovery checks and Android Compose compilation. No APK/AAB,
+native PR merge, web release, or Android device acceptance.
+
+**Outstanding:** full screen-by-screen Material 3/large-font/TalkBack
+acceptance, session notes in the new Kotlin journaling owners, signed
+release testing, reviewed adaptive-cycle proposal/acceptance, complete
+web Build 1009 feature parity, and evidence-backed Kotlin coaching
+superiority. Do not treat this source-verified slice as a finished app.

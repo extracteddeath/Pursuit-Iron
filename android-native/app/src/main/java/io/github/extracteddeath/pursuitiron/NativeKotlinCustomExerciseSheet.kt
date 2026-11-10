@@ -172,8 +172,10 @@ internal fun NativeKotlinCustomExerciseSheet(
         sourceHasWorkingSets=replacing?.sets?.any {
             it.type==DraftSetType.WORKING
         }==true)
-    val matchingIds=labeled.mapTo(hashSetOf()) { it.exerciseId }
-    val searched=ranked.filter { it.choice.exerciseId in matchingIds }
+    // Compare the entire verified choice, including attachment/variant.
+    // A matching name must not make a sibling attachment appear authorized.
+    val matchedChoices=labeled.toSet()
+    val searched=ranked.filter { it.choice in matchedChoices }
     // This is a paging cap, not a catalog cap. The complete verified ranked
     // pool remains available, even when it contains more than twenty choices.
     var visibleCount by remember(search,samePatternOnly,sharedMusclesOnly,

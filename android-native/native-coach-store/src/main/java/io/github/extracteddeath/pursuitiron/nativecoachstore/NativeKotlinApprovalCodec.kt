@@ -381,8 +381,8 @@ internal object NativeKotlinApprovalCodec {
                     if(version<6 && proof!=null &&
                         proof.decisionKind.policyVersion!=AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1)
                         throw IOException("target-RIR decisions require approval encoding v6")
-                    if(available()!=0)throw IOException("trailing approval bytes")
                     val timeLimit=if(version>=8)optionalInt() else null
+                    if(available()!=0)throw IOException("trailing approval bytes")
                     NativeKotlinWorkoutApproval(owner,athlete,approved,current,
                         grant,program,policies,receipt,revision,proof,timeLimit)
                 }

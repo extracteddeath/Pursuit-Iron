@@ -115,8 +115,11 @@ object CustomShorterSessionReviewDomain {
         if(overhead !in 0..21600)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
                 requestedMinutes,"The declared preparation time is invalid.",source.stamp)
-        if(ordered.any {it.prescription.amplifier!=null &&
-                it.prescription.amplifier.followUpActiveSeconds==null})
+        if(ordered.any {set->
+                set.prescription.amplifier?.let{amp->
+                    amp.followUpActiveSeconds==null
+                }==true
+            })
             return invalid(CustomShortSessionStatus.ADVANCED_SET_TIME_UNDECLARED,
                 requestedMinutes,"Advanced-set follow-up ACTIVE seconds are missing. Enter the additional work seconds; no myo-rep, drop, cluster or rest-pause will be partly removed or assigned an invented duration.",source.stamp)
 

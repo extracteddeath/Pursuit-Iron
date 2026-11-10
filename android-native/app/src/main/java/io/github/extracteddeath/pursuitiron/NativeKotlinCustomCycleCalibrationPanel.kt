@@ -18,6 +18,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
     var confirmAccept by remember{mutableStateOf(false)}
     var confirmIssue by remember{mutableStateOf(false)}
     var confirmReset by remember{mutableStateOf(false)}
+    var confirmTimeUndo by remember{mutableStateOf(false)}
     var confirmAuthoredReturn by remember{mutableStateOf(false)}
     val authoredReturn=state.authoredReturnReview?.takeIf{
         it.authored.stamp.cycleRevision==state.draft?.revision&&
@@ -55,8 +56,15 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         it.calibrationApprovalFingerprint!=null||it.resetToAuthored||it.authoredReturnFingerprint!=null
     } ?:ordinaryPrepared
     val reset=state.calibrationReset
-    LaunchedEffect(offer?.receipt?.fingerprint,prepared,reset?.preparedFingerprint,authoredReturn?.fingerprint) {
-        confirmAccept=false;confirmIssue=false;confirmReset=false;confirmAuthoredReturn=false
+    val timeUndo=state.customTimeUndo?.takeIf {
+        prepared==it.shortened &&
+            it.full==state.consentBoundPreview?.session &&
+            it.full.stamp.cycleRevision==state.draft?.revision
+    }
+    LaunchedEffect(offer?.receipt?.fingerprint,prepared,reset?.preparedFingerprint,
+        timeUndo?.preparedFingerprint,authoredReturn?.fingerprint) {
+        confirmAccept=false;confirmIssue=false;confirmReset=false
+        confirmTimeUndo=false;confirmAuthoredReturn=false
     }
     val readyPolicy=state.reviewedCoachInputs!=null
     var showRecovery by rememberSaveable(state.draft?.cycleId){mutableStateOf(false)}
@@ -163,6 +171,12 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                 )
                 Text("Only displayed surviving sets will be issued. Your authored custom cycle stays unchanged.",
                     style=MaterialTheme.typography.bodySmall)
+                if(state.issuedCalibrationId==null)
+                    OutlinedButton(enabled=!state.busy&&readyPolicy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                        onClick=controller::reviewCustomTimeUndo) {
+                        Text("Review return to Full workout")
+                    }
             }
             if(workout.authoredReturnFingerprint!=null)Text("Your confirmed choice of heavier authored weights. History will be checked again before issuance.",
                 style=MaterialTheme.typography.bodySmall)
@@ -192,6 +206,41 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                     enabled=!state.busy&&readyPolicy,onClick=controller::reviewCalibrationReset) {
                     Text("Review original authored targets")
                 }
+            }
+        }
+        timeUndo?.let {review->
+            HorizontalDivider()
+            PursuitSectionHeading("Restore Full before starting",
+                "Original athlete-authored sets, including the optional work omitted by the saved time choice.")
+            Text("Full workout: ${review.full.slots.sumOf{it.sets.size}} sets · " +
+                "Short version: ${review.shortened.snapshot.slots.sumOf{it.sets.size}} sets",
+                style=MaterialTheme.typography.bodyMedium)
+            review.full.slots.forEach {slot->
+                Text(kotlinExerciseLabel(slot.exerciseId),
+                    style=MaterialTheme.typography.titleSmall)
+                slot.sets.forEach {set->
+                    val p=set.prescription
+                    val load=when(val target=p.load) {
+                        DraftSetLoad.ExplicitBodyweight->"Bodyweight"
+                        is DraftSetLoad.Verified->
+                            "${target.value.toPlainString()} ${target.unit.name.lowercase()}"
+                    }
+                    Text(
+                        "Set ${set.ordinalInSlot} · $load · ${p.reps.minimum}–${p.reps.maximum} reps" +
+                            (p.targetRir?.let{" · $it RIR"}?:"") +
+                            (if(set.setKey in review.shortened.snapshot.shortSessionOmittedSetKeys)
+                                " · restored optional set" else ""),
+                        style=MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            Text("This only replaces an unissued prepared workout. An issued session, its results and the authored training cycle can never be rewritten here.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(enabled=!state.busy&&readyPolicy,
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                onClick={confirmTimeUndo=true}) {
+                Text("Restore exactly this Full workout")
             }
         }
         reset?.let {
@@ -226,6 +275,17 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             else controller.issueBlockCalibration()
         }){Text("Issue workout")}},
         dismissButton={TextButton(enabled=!state.busy,onClick={confirmIssue=false}){Text("Cancel")}})
+    if(confirmTimeUndo&&timeUndo!=null)AlertDialog(
+        onDismissRequest={if(!state.busy)confirmTimeUndo=false},
+        title={Text("Restore the complete custom workout?")},
+        text={Text("Replace only this saved, unissued ${timeUndo.shortened.snapshot.shortSessionLimitMinutes}-minute preparation with the original ${timeUndo.full.slots.sumOf{it.sets.size}} authored sets. The source cycle and training history stay unchanged. After issuance this option is unavailable.")},
+        confirmButton={Button(enabled=!state.busy,onClick={
+            confirmTimeUndo=false
+            controller.acceptCustomTimeUndo()
+        }){Text("Restore Full")}},
+        dismissButton={TextButton(enabled=!state.busy,onClick={
+            confirmTimeUndo=false
+        }){Text("Keep shortened")}})
     if(confirmReset&&reset!=null)AlertDialog(
         onDismissRequest={if(!state.busy)confirmReset=false},title={Text("Restore authored targets?")},
         text={Text("Replace this unissued preparation with exactly the original targets shown above. Re-enabling coaching will not restore the old calibration automatically.")},

@@ -782,7 +782,11 @@ internal class NativeKotlinCustomCycleController(
             prepared.futureWeekApprovalFingerprint==null &&
             !prepared.resetToAuthored &&
             preflight!=null &&
-            preflight.session==prepared.snapshot &&
+            (if(prepared.snapshot.shortSessionLimitMinutes==null)
+                preflight.session
+            else CustomShorterSessionReviewDomain.project(
+                preflight.session,prepared.snapshot.shortSessionLimitMinutes)
+                )==prepared.snapshot &&
             preflight.receipt.recordRevision==prepared.consentRevision &&
             preflight.receipt.fingerprintSha256==prepared.consentFingerprint &&
             prepared.snapshot.stamp.cycleId==draft.cycleId &&
@@ -1032,6 +1036,60 @@ internal class NativeKotlinCustomCycleController(
                     customShortReview=null,
                     message="Custom time review refused: ${result.reason.name.replace('_',' ').lowercase()}. No workout was changed.")
         }
+    }
+
+    /** Prepare exactly the athlete's reviewed 20/30/45-minute custom
+     * session, only after explicitly pressing the approval action. No
+     * implicit "shortening" on Start. An independent first-issuance
+     * transaction must still reverify the currently signed cycle. */
+    fun prepareConsentBoundShorterDay(
+        absoluteWeek:Int,weekday:Int,minutes:Int
+    )=run {
+        val draft=current.value.draft ?:return@run
+        val inputs=auditedInputs
+        val consent=current.value.consentBoundPreview
+        val reviewed=current.value.customShortReview
+        if(inputs==null || consent==null || reviewed==null ||
+            consent.session.absoluteWeek!=absoluteWeek ||
+            consent.session.weekday!=weekday ||
+            reviewed.absoluteWeek!=absoluteWeek ||
+            reviewed.weekday!=weekday ||
+            reviewed.review.requestedMinutes!=minutes ||
+            reviewed.review.source!=consent.session.stamp ||
+            reviewed.review.status !in setOf(
+                CustomShortSessionStatus.ALREADY_FITS,
+                CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW) ||
+            consent.session.stamp.cycleId!=draft.cycleId ||
+            consent.session.stamp.cycleRevision!=draft.revision ||
+            reviewed.receipt!=consent.receipt) {
+            current.value=current.value.copy(
+                customShortReview=null,
+                message="Your time review is stale or blocked. Reverify the exact custom workout and try again.")
+            return@run
+        }
+        val workoutId="custom-short-"+UUID.randomUUID().toString()
+            .replace("-","")
+        val result=host.prepareReviewedCustomShorterWorkout(
+            workoutId,draft.cycleId,absoluteWeek,weekday,inputs,
+            minutes,true)
+        val opened=if(result is NativeCustomPrepareResult.Prepared)
+            host.openPreparedCustomWorkout(workoutId)
+        else null
+        current.value=current.value.copy(
+            preparedWorkout=(opened as? NativeCustomPreparedRead.Found)
+                ?.workout,
+            preparationRefusal=(result as? NativeCustomPrepareResult.Rejected)
+                ?.reason,
+            customShortReview=null,
+            message=when {
+                opened is NativeCustomPreparedRead.Found ->
+                    "Your exact shorter custom workout was saved and cold-reopened. Review its retained sets, then explicitly issue it before logging."
+                result is NativeCustomPrepareResult.Rejected ->
+                    "Shorter preparation refused: ${result.reason.name.replace('_',' ').lowercase()}. No workout was issued."
+                else ->
+                    "Shorter preparation could not be cold-verified. Nothing was issued."
+            }
+        )
     }
 
     /** Keep an immutable, cold-recoverable custom prescription distinct

@@ -525,6 +525,12 @@ private fun NativeKotlinCandidateTrainEntry(
                         id,selectedTimeBudget?:45)
                 }.getOrNull()
             }
+            // A locked issued session displays ITS saved choice, not the
+            // initial 45-minute picker default after process recreation.
+            val locked=timePreview
+            if(locked?.alreadyIssued==true &&
+                selectedTimeBudget!=locked.currentLimitMinutes)
+                selectedTimeBudget=locked.currentLimitMinutes
         } finally {timePreviewBusy=false}
     }
     LaunchedEffect(host,customWorkoutId,selectedId) {
@@ -700,7 +706,7 @@ private fun NativeKotlinCandidateTrainEntry(
                 } else {
                     val review=available.proposal
                     if(available.alreadyIssued)
-                        Text("This workout has already been issued. Its saved time choice and logged targets are locked; open the workout to resume.",
+                        Text("Saved time choice: ${available.currentLimitMinutes?.let{"$it minutes"}?:"Full"}. This workout is already issued; its targets are locked. Open it to resume.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     val total=review.originalEstimatedSeconds

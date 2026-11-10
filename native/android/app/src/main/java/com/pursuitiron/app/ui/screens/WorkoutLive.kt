@@ -124,22 +124,46 @@ fun AddRow(vm: AppViewModel, ex: JSONObject, modifier: Modifier = Modifier, onMo
     }
 }
 
-/** A −/+ button that runs on while held (the design's hold-to-repeat). */
+/** A −/+ button that runs on while held (the design's hold-to-repeat). A tap steps once when the finger lifts;
+ *  a hold steps on its own after a beat. A finger that moves is scrolling the page, so it steps nothing (stepping on
+ *  touch-down bumped values whenever a scroll started on a button). */
 @Composable
 fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, size: Dp, filled: Boolean,
              shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp), bg: androidx.compose.ui.graphics.Color? = null, fg: androidx.compose.ui.graphics.Color? = null,
-             onStep: () -> Unit) {
+             enabled: Boolean = true, onStep: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val step by rememberUpdatedState(onStep)
+    val on by rememberUpdatedState(enabled)
     val scope = rememberCoroutineScope()
-    Box(Modifier.size(size).clip(shape).background(bg ?: if (filled) cs.primary else cs.surfaceContainerHighest)
-        .semantics { contentDescription = label; role = Role.Button }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var pressed by remember { mutableStateOf(false) }
+    val base = bg ?: if (filled) cs.primary else cs.surfaceContainerHighest
+    Box(Modifier.size(size).clip(shape).background(base)
+        .background(if (pressed) (fg ?: if (filled) cs.onPrimary else cs.onSurface).copy(alpha = 0.12f) else Color.Transparent)
+        .alpha(if (enabled) 1f else 0.38f)
+        .semantics { contentDescription = label; role = Role.Button
+            if (enabled) androidx.compose.ui.semantics.onClick(label) { step(); true } else androidx.compose.ui.semantics.disabled() }
         .pointerInput(Unit) {
-            detectTapGestures(onPress = {
-                step()
-                val job = scope.launch { delay(420); while (true) { step(); delay(90) } }
-                tryAwaitRelease(); job.cancel()
-            })
+            androidx.compose.foundation.gestures.awaitEachGesture {
+                val down = androidx.compose.foundation.gestures.awaitFirstDown()
+                if (!on) return@awaitEachGesture
+                pressed = true
+                var repeated = false
+                val job = scope.launch {
+                    delay(380)
+                    repeated = true
+                    while (true) { step(); haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove); delay(110) }
+                }
+                var tapped = false
+                while (true) {
+                    val ev = awaitPointerEvent()
+                    val c = ev.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!c.pressed) { tapped = true; c.consume(); break }
+                    if (c.isConsumed || (c.position - down.position).getDistance() > viewConfiguration.touchSlop) break
+                }
+                job.cancel(); pressed = false
+                if (tapped && !repeated) step()
+            }
         }, contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = fg ?: if (filled) cs.onPrimary else cs.onSurface, modifier = Modifier.size(if (size >= 52.dp) 22.dp else 18.dp))
     }

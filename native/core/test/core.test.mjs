@@ -42,6 +42,13 @@ s.exercises.forEach((e) => e.sets.forEach((st) => { if (!st.warm && !st.sub && !
 ok(s.doneSets === s.totalSets && s.totalSets > 0, 'all ' + s.totalSets + ' working sets logged');
 const editDone = C.act({ type: 'edit', ei: 0, si: s.exercises[0].sets.find((x) => x.done).i, field: 'weight', value: '999' });
 ok(!editDone.exercises[0].sets.some((x) => x.weight === '999'), 'a logged set cannot be edited (App.js editSet rule)');
+{ const si0 = s.exercises[0].sets.find((x) => x.done && !x.warm && !x.sub).i, rest0 = C.session().rest;
+  const am = C.act({ type: 'amend', ei: 0, si: si0, weight: '62.5', reps: '6' }), x = am.exercises[0].sets.find((y) => y.i === si0);
+  ok(x.done && x.weight === '62.5' && x.reps === '6' && x.rir === 1, 'a logged set corrected from its editor keeps it logged with its rating (62.5 × 6)');
+  ok(JSON.stringify(am.rest) === JSON.stringify(rest0) && am.doneSets === s.doneSets, 'correcting a logged set leaves the rest and the count alone');
+  const up = C.act({ type: 'amend', ei: 0, si: si0, dir: 1 }).exercises[0].sets.find((y) => y.i === si0), dn = C.act({ type: 'amend', ei: 0, si: si0, delta: -1 }).exercises[0].sets.find((y) => y.i === si0);
+  ok(up.done && parseFloat(up.weight) > 62.5 && dn.done && dn.reps === '5', 'the editor\'s − and + step a logged set (' + up.weight + ' × ' + dn.reps + ')');
+  C.act({ type: 'amend', ei: 0, si: si0, weight: String(startW), reps: '8' }); s = C.session(); }
 
 // 3. Finish: history, perf, live cleared
 const fin = C.finishSession();
@@ -129,6 +136,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.profile().sex === 'female' && C.profile().age >= 32, 'profile reads sex and age back');
   const pc = C.plateCalc({ total: 100, bar: 'barbell' });
   ok(pc.result && pc.result.barWeight === 20 && JSON.stringify(pc.result.plates) === JSON.stringify([25, 15]) && pc.result.exact, 'plate calc: 100 kg = 20 bar + 25,15 per side');
+  { const p62 = C.plateCalc({ total: 62 }), p0 = C.plateCalc({});
+    ok(p62.prev === 60 && p62.next === 62.5 && C.plateCalc({ total: 100 }).next === 102.5 && C.plateCalc({ total: 100 }).prev === 97.5 && p0.next === 20 && p0.prev === null,
+      'plate − and + land on totals the plates make (62 → 60 or 62.5; empty → the bar)'); }
   const orm = C.oneRm({ weight: 100, reps: 5 });
   ok(orm.e1rm > 100 && orm.percents[0].load <= orm.e1rm && orm.reps[0].load <= orm.e1rm, '1RM estimate floors every load at or below the estimate (' + orm.e1rm + ')'); }
 
@@ -155,6 +165,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.plateSetup().max === 20 + 2 * 65 && C.plateSetup().jump === '40 kg', 'heaviest load and smallest jump follow the pairs (' + C.plateSetup().max + ')');
   ok(JSON.stringify(C.plateCalc({ total: 100 }).result.plates) === JSON.stringify([20, 20]), 'plate math loads within the pairs you own (one 25, two 20s → 40 a side)');
   ok(C.plateCalc({ total: 300 }).result.achievable === 150, 'a load beyond the pairs stops at what you can build');
+  ok(C.plateCalc({ total: 100 }).next === 110 && C.plateCalc({ total: 100 }).prev === 70, 'with few pairs, + and − skip to the next total you can build (100 → 110 or 70)');
   ok(C.setBarbellWeight({ w: 15 }).ok && C.plateSetup().bar === 15 && C.plateCalc({ total: 55 }).result.barWeight === 15, 'the bar choice is the active gym\'s bar');
   const active = C.gyms().gyms.find((x) => x.id === C.gyms().activeGymId);
   ok(active.platePairs.kg[25] === 1 && active.plateSum.max === 15 + 130, 'pairs are kept on the gym');

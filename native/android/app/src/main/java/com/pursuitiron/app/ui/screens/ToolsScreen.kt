@@ -114,8 +114,12 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
     }
     // The design's total: big, with −/+ by the smallest pair of plates you own. Tap it to type.
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo(((total ?: barW) - step).coerceAtLeast(barW)) }
-            .semantics { contentDescription = "${fmtNum(step)} $u lighter"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Minus, null) }
+        // − and + go to the next total your plates actually make (the core's prev/next), so 62 steps to 60 or 62.5,
+        // and with few pairs a step skips to what you can build; a step used to add a fixed amount and land off the plates.
+        val prev = r?.takeIf { it.has("prev") && !it.isNull("prev") }?.d("prev")
+        val next = r?.takeIf { it.has("next") && !it.isNull("next") }?.d("next")
+        HoldStep(PiIcons.Minus, "Lighter: ${prev?.let { fmtNum(it) } ?: "—"} $u", 52.dp, false, shape = CircleShape, bg = cs.surfaceContainerHigh,
+            enabled = prev != null) { prev?.let(setTo) }
         Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
             // An invisible twin of the unit on the left keeps the number itself on the centre line.
             Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp).alpha(0f).clearAndSetSemantics { })
@@ -129,8 +133,8 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
                 decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (w.isEmpty()) Text("0", style = MaterialTheme.typography.displayMedium, color = cs.onSurfaceVariant); inner() } })
             Text(" $u", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
         }
-        Box(Modifier.size(52.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { setTo((total ?: barW) + step) }
-            .semantics { contentDescription = "${fmtNum(step)} $u heavier"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Plus, null) }
+        HoldStep(PiIcons.Plus, "Heavier: ${next?.let { fmtNum(it) } ?: "—"} $u", 52.dp, false, shape = CircleShape, bg = cs.surfaceContainerHigh,
+            enabled = next != null) { next?.let(setTo) }
     }
     val out = r.o("result")
     val plates = out?.optJSONArray("plates")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()

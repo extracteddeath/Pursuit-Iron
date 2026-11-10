@@ -104,6 +104,39 @@ def find(pattern, timeout=12):
     return None
 
 
+def value_of(pattern, timeout=4):
+    """The text of the first node whose description matches (a field's typed value)."""
+    rx = re.compile(pattern)
+    end = time.time() + timeout
+    while time.time() < end:
+        for n in nodes():
+            if rx.search(n.get("content-desc") or ""):
+                return (n.get("text") or "").strip()
+        time.sleep(0.6)
+    return None
+
+
+def find_desc(pattern, timeout=4):
+    """The number in the first matching description ("Heavier: 62.5 kg" → 62.5)."""
+    rx = re.compile(pattern)
+    end = time.time() + timeout
+    while time.time() < end:
+        for n in nodes():
+            d = n.get("content-desc") or ""
+            if rx.search(d):
+                m = re.search(r"[\d.]+", d)
+                return float(m.group()) if m else None
+        time.sleep(0.6)
+    return None
+
+
+def num(v):
+    try:
+        return float((v or "").replace(",", "."))
+    except ValueError:
+        return None
+
+
 def seek(pattern, tries=8):
     """Find something on a long page from wherever it is scrolled: up first, then down."""
     return scroll_up_to(pattern, tries=tries) or scroll_to(pattern, tries=tries + 4)
@@ -369,6 +402,18 @@ if tap(r"Weight not set, edit", "set-editor"):
     shot("set-editor-typed")
     hide_keyboard()
     time.sleep(0.6)
+    # The steppers start from the typed value: + from a typed 60 goes up from 60, and − comes back to it.
+    W = r"^Weight \((kg|lb)\), tap to type"
+    if tap(r"^More weight\|", required=False):
+        time.sleep(1)
+        up = num(value_of(W))
+        tap(r"^Less weight\|", required=False); time.sleep(1)
+        back_to = num(value_of(W))
+        if not (up and up > 60 and back_to == 60):
+            FAILS.append(f"set editor steppers: typed 60, + gave {up}, − gave {back_to}")
+        shot("set-editor-stepped")
+    else:
+        FAILS.append("set editor has no weight stepper")
     if tap(r"Open the plate calculator$", "set-plates", required=False):  # only barbell lifts load plates
         back()
     tap(r"^\|Save$", "set-editor-save")
@@ -420,6 +465,16 @@ else:
 if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
     if not find(r"^\|Set 1$", timeout=3) or find(r"^\|Save & log$", timeout=1):
         FAILS.append("a logged set's editor is not titled Set 1 with Save only")
+    # A logged set's − and + correct it in place (they did nothing: the core locks logged sets to edits).
+    R = r"^Reps, tap to type"
+    r0 = num(value_of(R))
+    tap(r"^Fewer reps\|", required=False); time.sleep(1)
+    r1 = num(value_of(R))
+    tap(r"^More reps\|", required=False); time.sleep(1)
+    r2 = num(value_of(R))
+    if r0 is None or r1 != r0 - 1 or r2 != r0:
+        FAILS.append(f"a logged set's rep stepper does not correct it ({r0} → {r1} → {r2})")
+    shot("logged-set-stepped")
     back()
 # Full-screen head (as on the web): History and Skip sit beside Info; Skip has Undo
 shot("workout-head")
@@ -498,6 +553,22 @@ if tap(r"^Options for set 2", "set-options"):
 # The design's plate bar under the sets opens the plate calculator (barbell lifts with a load)
 if find(r"^Open the plate calculator", timeout=3):
     tap(r"^Open the plate calculator", "plate-bar-calc")
+    # + and − land on totals the plates make: the total becomes the step's own figure.
+    T = r"^Total weight, "
+    hv = find_desc(r"^Heavier: [\d.]+ ")
+    t0 = num(value_of(T))
+    if hv and tap(r"^Heavier: ", required=False):
+        time.sleep(1.2)
+        t1 = num(value_of(T))
+        if t1 != hv or (t0 is not None and not t1 > t0):
+            FAILS.append(f"plate calculator +: {t0} → {t1}, expected {hv}")
+        lt = find_desc(r"^Lighter: [\d.]+ ")
+        tap(r"^Lighter: ", required=False); time.sleep(1.2)
+        if num(value_of(T)) != lt:
+            FAILS.append(f"plate calculator −: expected {lt}, got {value_of(T)}")
+        shot("plate-calc-stepped")
+    else:
+        FAILS.append("plate calculator has no + step")
     close_sheet(r"Plate calculator")
 # The design's add row: + Add set adds one straight away; the ⋯ beside it opens the panel with warm-ups
 if scroll_to(r"^Add set", tries=4, step=500):

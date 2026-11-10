@@ -725,11 +725,14 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     val shownW = { v: String -> if (assisted) assistAbs(v) else v }
     var w by remember(si, ei) { mutableStateOf(shownW(set.s("weight"))) }
     var r by remember(si, ei) { mutableStateOf(set.s("reps")) }
-    LaunchedEffect(set.s("weight")) { w = shownW(set.s("weight")) }
-    LaunchedEffect(set.s("reps")) { r = set.s("reps") }
+    // Only what was typed is written back; values the steppers set come from the core already.
+    var typedW by remember(si, ei) { mutableStateOf(false) }
+    var typedR by remember(si, ei) { mutableStateOf(false) }
+    LaunchedEffect(set.s("weight")) { w = shownW(set.s("weight")); typedW = false }
+    LaunchedEffect(set.s("reps")) { r = set.s("reps"); typedR = false }
     var plates by remember { mutableStateOf(false) }
     val bar = barFor(ex.strings("equip"))
-    if (plates) { ToolsSheet(vm, "plates", w, ex.s("bar").ifBlank { bar ?: "barbell" }, onUse = { v -> w = v; vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to v) }) { plates = false }; return }
+    if (plates) { ToolsSheet(vm, "plates", w, ex.s("bar").ifBlank { bar ?: "barbell" }, onUse = { v -> w = v; if (set.b("done")) vm.act("amend", "ei" to ei, "si" to si, "weight" to v) else vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to v) }) { plates = false }; return }
     val unitU = s.s("unit").uppercase()
     val sets = ex.list("sets")
     val title = when {
@@ -737,10 +740,18 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
         set.b("sub") -> if (set.s("kind") == "myo") "Myo mini" else "Drop set"
         else -> "Set ${sets.take(si + 1).count { !it.b("warm") && !it.b("sub") }}"
     }
-    val commit = {
-        if (w != shownW(set.s("weight"))) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to if (assisted) assistStored(w) else w)
-        if (r != set.s("reps")) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r)
-    }
+    // A logged set is locked to edit and the steppers (the web makes you untick it); its editor corrects it with
+    // amend instead, which keeps it logged and re-plans the sets after it from the new numbers.
+    val logged = set.b("done")
+    val stored = { v: String -> if (assisted) assistStored(v) else v }
+    val commitW = { if (typedW && w != shownW(set.s("weight"))) { typedW = false
+        if (logged) vm.act("amend", "ei" to ei, "si" to si, "weight" to stored(w)) else vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to stored(w)) } }
+    val commitR = { if (typedR && r != set.s("reps")) { typedR = false
+        if (logged) vm.act("amend", "ei" to ei, "si" to si, "reps" to r) else vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) } }
+    val commit = { commitW(); commitR() }
+    // − and + start from what's in the box: a typed value is kept first, then stepped (it used to step the old one).
+    val bumpW = { dir: Int -> commitW(); if (logged) vm.act("amend", "ei" to ei, "si" to si, "dir" to dir) else vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to dir) }
+    val bumpR = { d: Int -> commitR(); if (logged) vm.act("amend", "ei" to ei, "si" to si, "delta" to d) else vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to d) }
     // The design's set editor: the lift and set, the set type with what it counts for, big − value + rows,
     // the plates per side, then Save or Save & log.
     // Fully open, so the keyboard can't hide Reps and Save; Next on the keyboard moves from the load to the reps (App.js workoutNumericEnter).
@@ -767,16 +778,14 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
             if (assisted) {
                 // App.js: help is a negative load. Typed and shown as the amount of help; minus adds help, plus takes it off.
                 Text("Assisted: less help is progress. The help comes off once every set tops the range.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                Stepper("Help", "Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
-                    onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to assistStored(w)) },
-                    onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
+                Stepper("Help", "Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it); typedW = true },
+                    onCommit = { commitW() }, onMinus = { bumpW(-1) }, onPlus = { bumpW(1) },
                     minusLabel = "More assistance", plusLabel = "Less assistance", next = repsFocus)
-            } else Stepper(unitU, "Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
-                onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
-                onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
+            } else Stepper(unitU, "Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it); typedW = true },
+                onCommit = { commitW() }, onMinus = { bumpW(-1) }, onPlus = { bumpW(1) },
                 minusLabel = "Less weight", plusLabel = "More weight", next = repsFocus)
-            Stepper("Reps", "Reps", r, KeyboardType.Number, onText = { r = it.filter { c -> c.isDigit() }.take(3) }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) },
-                onMinus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }, onPlus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to 1) },
+            Stepper("Reps", "Reps", r, KeyboardType.Number, onText = { r = it.filter { c -> c.isDigit() }.take(3); typedR = true }, onCommit = { commitR() },
+                onMinus = { bumpR(-1) }, onPlus = { bumpR(1) },
                 minusLabel = "Fewer reps", plusLabel = "More reps", focusRequester = repsFocus)
             if (bar != null && !assisted) EditorPlates(vm, w, ex.s("bar").ifBlank { bar }, s.s("unit")) { commit(); plates = true }
             if (set.b("added")) TextButton(onClick = { vm.act("removeSet", "ei" to ei, "si" to si); onClose() }) { Text("Remove this set") }

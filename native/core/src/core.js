@@ -1311,6 +1311,30 @@ const ACTIONS = {
             // A comma keyboard types "82,5"; the engine's sanitizer would strip the comma into 825.
             [field]: field === 'reps' ? E.sanitizeRepsInput(value) : E.sanitizeWeightInput(String(value ?? '').replace(',', '.')), auto: false, valueOwner: 'user', hint: undefined })) }));
     },
+    // A logged set's numbers, corrected from its editor (the web makes you untick it first). Undo what logging it set
+    // up for the sets after it, change the numbers, then log it again with the same rating. The rest and the lift
+    // you're on stay as they are.
+    // `dir` steps the load as bumpWeight does, `delta` the reps as bumpReps does (the editor's − and +).
+    amend({ ei, si, weight, reps, dir, delta }, ctx, d) {
+        const e = d[ei], set = e?.sets[si]; if (!set?.done) return d;
+        const ex = EX_BY_ID[e.id];
+        const W = dir ? String(E.nudgeWorkoutLoad(ex, unit(), set.weight, dir))
+            : weight == null ? set.weight : E.sanitizeWeightInput(String(weight).replace(',', '.'));
+        const R = delta ? String(E.clamp((parseInt(set.reps) || 0) + delta, 0, 100))
+            : reps == null ? set.reps : E.sanitizeRepsInput(reps);
+        if (String(W) === String(set.weight) && String(R) === String(set.reps)) return d;
+        let sets = e.sets.map((s, j) => (j === si ? { ...s, done: false } : s));
+        sets = uncarryLoggedLoad(sets, si);
+        sets = E.rollbackLiveAutoregulation(sets, si);
+        sets = sets.map((s) => {
+            if (!s || s.retuneSrc !== si || s.done || E.userOwnsRuntimeSet(s) || !s.retuneFrom) return s;
+            const { retuneFrom, retuneSrc, suggested, autoTuned, hint, over, belowRange, ceiling, ...rest } = s;
+            return { ...rest, weight: retuneFrom.weight, reps: retuneFrom.reps, target: retuneFrom.target };
+        });
+        sets = sets.map((s, j) => (j === si ? { ...s, weight: W, reps: R, done: true, actualRIR: set.actualRIR ?? null, auto: false, valueOwner: 'user', hint: undefined } : s));
+        if (isWork(set) && parseFloat(W) > 0 && parseInt(R) > 0) sets = carryLoggedLoad(nextPrefill(ctx, sets, si, ex, e.slot), si);
+        return d.map((x, i) => (i === ei ? { ...x, sets } : x));
+    },
     bumpReps({ ei, si, delta }, ctx, d) {
         return d.map((e, i) => (i !== ei ? e : { ...e, sets: e.sets.map((s, j) => (j !== si || s.done ? s : { ...s,
             reps: String(E.clamp((parseInt(s.reps) || 0) + delta, 0, 100)), auto: false, valueOwner: 'user', hint: undefined })) }));
@@ -3070,10 +3094,18 @@ export function plateCalc({ total, bar = 'barbell' } = {}) {
     const bars = Object.keys(E.BARS).filter((k) => k === bar || !kit || kit.includes(BAR_KIT[k] || k)).map((k) => ({ id: k, label: E.BAR_LABEL?.[k] || k, weight: E.barWeightFor(k, u) }));
     const P = platePairsFor(activeGym().gym, u), own = E.ALL_PLATES[u].filter((p) => P[p] > 0);
     const step = own.length ? Math.min(...own) * 2 : (u === 'lb' ? 5 : 2.5);
-    if (!(t > 0)) return { unit: u, bars, bar, step, result: null };
     const b = E.BARS[bar] ? bar : 'barbell';
-    const r = E.platesPerSide(t, b, u);
     const loaded = (x) => { const q = E.platesPerSide(x, b, u); return Math.round((q.barW + q.plates.reduce((a, p) => a + p, 0) * 2) * 100) / 100; };
+    // The − and + land on the next total the owned plates make (a typed 62 goes to 60 or 65, never 64.5).
+    const barW0 = E.platesPerSide(0, b, u).barW;
+    const makes = (q) => { const x = q / 4; return x >= barW0 - 1e-9 && Math.abs(loaded(x) - x) < 1e-6; };
+    const from = Math.round((t > 0 ? t : 0) * 4), span = Math.round((step * 4 + 1) * 4);
+    let next = null, prev = null;
+    if (!(t > 0) || t < barW0 - 1e-9) next = barW0;
+    else for (let q = from + 1; q <= from + span; q++) if (makes(q)) { next = q / 4; break; }
+    if (t > barW0 + 1e-9) { for (let q = from - 1; q >= Math.round(barW0 * 4); q--) if (makes(q)) { prev = q / 4; break; } }
+    if (!(t > 0)) return { unit: u, bars, bar, step, prev, next, result: null };
+    const r = E.platesPerSide(t, b, u);
     const achievable = r.barW + r.plates.reduce((s, p) => s + p, 0) * 2;
     const exact = Math.abs(achievable - t) < 1e-6, under = t < r.barW - 1e-6;
     // The design's "closest: X or Y" — the nearest totals the owned plates make, either side.
@@ -3082,7 +3114,7 @@ export function plateCalc({ total, bar = 'barbell' } = {}) {
         below = Math.round(achievable * 100) / 100;
         for (let x = t + 0.25; x <= t + step * 4 + 0.25; x += 0.25) { if (Math.abs(loaded(x) - x) < 1e-6) { above = Math.round(x * 100) / 100; break; } }
     }
-    return { unit: u, bars, bar: b, step, result: { barWeight: r.barW, plates: r.plates, achievable: Math.round(achievable * 100) / 100, exact, under, below, above } };
+    return { unit: u, bars, bar: b, step, prev, next, result: { barWeight: r.barW, plates: r.plates, achievable: Math.round(achievable * 100) / 100, exact, under, below, above } };
 }
 export function oneRm({ weight, reps } = {}) {
     const W = Number(weight), R = parseInt(reps), u = unit();

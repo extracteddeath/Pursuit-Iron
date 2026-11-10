@@ -889,8 +889,17 @@ internal class NativeKotlinCustomCycleController(
         val snap=stored.snapshot
         val verified=host.previewConsentBoundCustomWorkout(
             draft.cycleId,snap.absoluteWeek,snap.weekday,inputs)
+        // A saved short session is supposed to differ from the full
+        // authored source. Cold recovery must rederive its exact optional
+        // cuts, not falsely reject every valid shortened preparation.
+        val verifiedSnapshot=if(verified is NativeCustomPreflightResult.ReviewedPreview) {
+            val selectedMinutes=snap.shortSessionLimitMinutes
+            if(selectedMinutes==null)verified.session
+            else CustomShorterSessionReviewDomain.project(
+                verified.session,selectedMinutes)
+        } else null
         if(verified !is NativeCustomPreflightResult.ReviewedPreview ||
-            verified.session!=snap ||
+            verifiedSnapshot!=snap ||
             verified.receipt.recordRevision!=stored.consentRevision ||
             verified.receipt.fingerprintSha256!=stored.consentFingerprint) {
             current.value=before.copy(preparedWorkout=null,

@@ -52,7 +52,9 @@ data class NativeKotlinMixedHistoryFacts(
     val completedWorkoutIds: List<String>,
     val lastByExercise: Map<String, NativeMixedLastExercise>,
     val highestCompletedLoad: Map<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>,
-    val mostRepsAtLoad: List<NativeMixedCompletedLoadFact>
+    val mostRepsAtLoad: List<NativeMixedCompletedLoadFact>,
+    /** Separate actual single evidence; cannot be replaced by 5-rep record at same weight. */
+    val bestLoggedSingleByLoad: Map<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact> = emptyMap()
 ) {
     val canPublishPr: Boolean get() = false
     val canIssueProgression: Boolean get() = false
@@ -110,6 +112,7 @@ object NativeKotlinMixedHistoryFactsDomain {
         val highest = linkedMapOf<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>()
         val repsAtLoad = linkedMapOf<Pair<NativeMixedPhysicalLoadKey, BigDecimal>,
             NativeMixedCompletedLoadFact>()
+        val bestSingle = linkedMapOf<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact>()
         for (completion in timeline.completions) {
             val manifest = completion.manifest
             val visits = when (completion) {
@@ -169,6 +172,13 @@ object NativeKotlinMixedHistoryFactsDomain {
                 val record = NativeMixedCompletedLoadFact(key, physical, actual.reps,
                     manifest.workoutId, manifest.completionOrder, visit.setKey,
                     visit.customSlot, visit.eventId)
+                if (actual.reps==1) {
+                    val previous=bestSingle[key]
+                    if(previous==null || physical>previous.actualLoad ||
+                        (physical.compareTo(previous.actualLoad)==0 &&
+                            manifest.completionOrder>previous.completionOrder))
+                        bestSingle[key]=record
+                }
                 val old = highest[key]
                 if (old == null || physical > old.actualLoad ||
                     (physical.compareTo(old.actualLoad) == 0 && actual.reps >= old.reps))
@@ -185,7 +195,8 @@ object NativeKotlinMixedHistoryFactsDomain {
                 it.manifest.workoutId }),
             Collections.unmodifiableMap(last),
             Collections.unmodifiableMap(highest),
-            Collections.unmodifiableList(repsAtLoad.values.toList())
+            Collections.unmodifiableList(repsAtLoad.values.toList()),
+            Collections.unmodifiableMap(bestSingle)
         ))
     }
 }

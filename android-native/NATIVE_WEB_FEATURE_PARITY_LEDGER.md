@@ -134,3 +134,27 @@ as more accurate than this refreshed baseline.
 - Actual large-font phone/foldable presentation and physical equipment-use
   acceptance still require device verification. No APK or web changes are part
   of this isolated Kotlin work.
+
+
+## Native pinned exercise notes and reviewed setup — 2026-11-09
+
+**Source verified** on Kotlin branch commit
+`dc169209e0afc80d83ee06cc357eb7e7216e2b64`
+([33/33 CI checks](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42736863410)).
+Both custom and generated issued workout screens now expose a real pinned
+exercise note/setup editor. Notes persist by exact signed-in athlete and
+exercise across workouts; current approved workout authorization is
+rechecked before read/write. The store uses atomic owner-fenced CAS
+with revision/event identity, corruption detection, durable failed-ack
+recovery, and a non-destructive saveable draft.
+
+Catalog-reviewed equipment facts suggest relevant user-entered setup
+fields (attachment, pulley, seat, safety pins, angle, grip etc.).
+Unknown older valid values remain visible as **Saved earlier**; no
+machine position, load or attachment is inferred. This is **not** a
+training recommendation or a rep/load write.
+
+This closes the source-level **pinned exercise note and setup** path,
+not general session notes, exercise history annotation, multi-gym
+migration, physical Android device acceptance, or the complete native
+web-feature parity gate.

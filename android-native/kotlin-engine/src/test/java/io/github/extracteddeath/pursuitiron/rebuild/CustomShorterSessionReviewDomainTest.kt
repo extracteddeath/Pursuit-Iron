@@ -204,7 +204,7 @@ class CustomShorterSessionReviewDomainTest {
         assertTrue(review(src,20).omittedSetKeys.isEmpty())
     }
     @Test fun projectedShorterSnapshotRetainsExactPrefixAndNeverAltersAuthoredProgram() {
-        val primary=slot("press",4,ComposerRole.PRIMARY,pinned=true)
+        val primary=slot("press",5,ComposerRole.PRIMARY,pinned=true)
         val accessory=slot("curl",6)
         val full=snapshot(listOf(primary,accessory))
         val cut=CustomShorterSessionReviewDomain.project(full,20)
@@ -225,7 +225,8 @@ class CustomShorterSessionReviewDomainTest {
         assertNull(CustomShorterSessionReviewDomain.project(
             full.copy(declaredNonSetSeconds=null),20))
         assertNull(CustomShorterSessionReviewDomain.project(
-            full.copy(phase=TrainingPhase.STRENGTH),20))
+            full.copy(phase=TrainingPhase.STRENGTH,
+                slots=listOf(primary,accessory.copy(role=ComposerRole.SECONDARY))),20))
         assertNull(CustomShorterSessionReviewDomain.project(
             full.copy(slots=listOf(primary,
                 accessory.copy(sets=accessory.sets.map {

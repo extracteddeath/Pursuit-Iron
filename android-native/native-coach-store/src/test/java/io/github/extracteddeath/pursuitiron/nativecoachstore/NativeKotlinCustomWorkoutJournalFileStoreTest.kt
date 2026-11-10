@@ -434,8 +434,14 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             as CustomHistoryEvidenceResult.Candidate
         assertEquals(20,evidence.evidence.shortSessionLimitMinutes)
         assertTrue(evidence.evidence.prescriptionEditedForTime)
-        assertEquals(listOf("cycle-1:w2:d0:slot-0:s1"),
+        assertEquals(listOf(
+            CustomWorkoutVisitPart.MAIN,CustomWorkoutVisitPart.FOLLOW_UP),
+            evidence.evidence.visits.map{it.part})
+        assertEquals(listOf(
+            "cycle-1:w2:d0:slot-0:s1","cycle-1:w2:d0:slot-0:s1"),
             evidence.evidence.visits.map{it.setKey})
+        assertEquals(listOf(16,5),
+            evidence.evidence.visits.map{it.actual?.reps})
         assertEquals(audited,(drafts.read("owner-1","cycle-1")
             as NativeCustomDraftReadResult.Found).draft)
     }

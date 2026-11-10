@@ -178,6 +178,12 @@ object KotlinGlobalHistoryIndexDomain {
                 out.writeByte(4)
                 out.writeUTF(operation.swapEventId)
             }
+            is KotlinJournalOperation.SessionNote -> {
+                // A note is part of the original factual receipt stream but
+                // never a completed set, progression signal or rest trigger.
+                out.writeByte(5)
+                out.writeUTF(operation.text)
+            }
             is KotlinJournalOperation.RecordSet -> {
                 out.writeByte(2)
                 out.writeUTF(operation.setKey)

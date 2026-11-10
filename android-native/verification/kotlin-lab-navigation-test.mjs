@@ -308,7 +308,11 @@ assert.ok(
   authoringSheet.includes('replacing: CustomExerciseSlot? = null') &&
   authoringSheet.includes('CustomExerciseSwapRankingDomain.rank(') &&
   authoringSheet.includes('Search exercise, family, pattern, attachment or muscle') &&
-  authoringSheet.includes('matchesName(choice.attachmentId)') &&
+  authoringSheet.includes('choice.attachmentId,') &&
+  authoringSheet.includes('terms.all { searchable.contains(it) }') &&
+  authoringSheet.includes('val matchedChoices=labeled.toSet()') &&
+  authoringSheet.includes('val searched=ranked.filter { it.choice in matchedChoices }') &&
+  authoringSheet.includes('val filtered=searched.take(visibleCount)') &&
   authoringSheet.includes('" · attachment: "+it.replace(') &&
   authoringSheet.includes('Text("Same pattern")') &&
   authoringSheet.includes('Text("Shared muscles")') &&

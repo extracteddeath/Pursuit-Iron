@@ -42,6 +42,7 @@ on:
       - 'android-native/app/src/release/AndroidManifest.xml'
       - 'android-native/verification/kotlin-lab-navigation-test.mjs'
       - 'android-native/verification/kotlin-lab-workout-ui-test.mjs'
+      - 'android-native/verification/kotlin-coach-choice-search-test.mjs'
       - 'android-native/verification/kotlin-lab-stable-signing-test.mjs'
       - 'android-native/KOTLIN_LAB_SIGNING_SETUP.md'
       - 'android-native/tools/kotlin_lab_signing.py'

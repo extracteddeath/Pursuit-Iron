@@ -28,6 +28,8 @@ private data class CustomSetFields(
     val amplifier: CustomAmplifierKind? = null,
     val extraReps: String = "",
     val extraRest: String = "",
+    /** Explicit total follow-up work time; blank means not yet reviewed. */
+    val extraWork: String = "",
     val extraLoad: String = ""
 )
 
@@ -44,6 +46,7 @@ private fun CustomAuthoredSet.toFields(): CustomSetFields =
         amplifier = amplifier?.kind,
         extraReps = amplifier?.followUpReps?.toString().orEmpty(),
         extraRest = amplifier?.followUpRestSeconds?.toString().orEmpty(),
+        extraWork = amplifier?.followUpActiveSeconds?.toString().orEmpty(),
         extraLoad = (amplifier?.followUpLoad as? DraftSetLoad.Verified)
             ?.value?.toPlainString().orEmpty()
     )
@@ -70,7 +73,9 @@ private fun parsedSets(
                 requireNotNull(field.extraRest.toIntOrNull()),
                 if (kind == CustomAmplifierKind.DROP_SET)
                     weight(field.extraLoad)
-                else null)
+                else null,
+                if(field.extraWork.isBlank())null else
+                    requireNotNull(field.extraWork.toIntOrNull()))
             CustomAuthoredSet(
                 field.type,
                 weight(field.weight),
@@ -387,6 +392,13 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 { update(fields.copy(extraRest = it)) },
                                 Modifier.weight(1f))
                         }
+                        AuthorNumberField(fields.extraWork,
+                            "Extra working time (s)",
+                            { update(fields.copy(extraWork = it)) },
+                            Modifier.fillMaxWidth())
+                        Text("Enter total additional active seconds across every follow-up, separate from the main set and intra-set rest. Leaving this blank keeps time-limited approval blocked; no duration is inferred from rep count.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (fields.amplifier == CustomAmplifierKind.DROP_SET) {
                             AuthorNumberField(fields.extraLoad, "Lower verified drop load",
                                 { update(fields.copy(extraLoad = it)) },

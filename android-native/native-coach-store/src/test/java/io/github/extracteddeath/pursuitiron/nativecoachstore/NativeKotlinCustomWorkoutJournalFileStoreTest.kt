@@ -264,8 +264,11 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         val restored=cold.open("owner-1","short-session-1")
         assertTrue(restored.toString(),restored is NativeCustomJournalResult.Durable)
         assertEquals(finished,(restored as NativeCustomJournalResult.Durable).issued.journal)
-        assertEquals(NativeCustomJournalResult.Durable(first.issued,true),
-            issued.issue("owner-1","short-session-1","cycle-1",2,0,input()))
+        val replay=issued.issue("owner-1","short-session-1",
+            "cycle-1",2,0,input())
+        assertTrue(replay.toString(),replay is NativeCustomJournalResult.Durable)
+        assertTrue((replay as NativeCustomJournalResult.Durable).replayed)
+        assertEquals(finished,replay.issued.journal)
         assertEquals(2,approved.session.slots.size)
     }
 

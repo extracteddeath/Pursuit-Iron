@@ -115,7 +115,7 @@ object KotlinShorterSessionReviewDomain {
 
         val totalSetSeconds = rows.sumOf {
             it.activeSeconds.toLong() + it.restSeconds
-        }
+        } - rows.last().restSeconds
         // Keep at least five minutes of preparation. The source's existing
         // rounded duration may encode additional setup not carried by sets.
         // Take the larger figure, never charge a 5-minute allowance twice.

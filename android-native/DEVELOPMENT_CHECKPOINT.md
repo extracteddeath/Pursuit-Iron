@@ -2403,3 +2403,37 @@ items include source-backed pinned exercise notes and setup, workout
 session notes, Strength Club, updated Material presentation/accessibility
 and explicit adaptive-cycle review and approval. Full real-device acceptance
 and validated Kotlin-vs-web Build 1009 coaching superiority remain open.
+
+
+## 2026-11-09 — Evidence-backed 1,000 lb club and corrected historical singles
+
+Selectively brought the **Strength Club** feature from the older integrated
+Compose draft into the newer isolated Kotlin engine/UI branch, without
+replacing current screen implementations. Profile and Strength Standards
+now share a Material 3 read-only **1,000 lb club** panel.
+
+The native mixed owner-verified, correction-aware history projection now
+independently preserves its best *actually logged one-rep working set* per
+physical exercise/load basis, even if a later multi-rep set at the same weight
+wins the unrelated maximum-reps metric. The three exact movement IDs
+(`barbell_bench`, `back_squat`, `conventional_deadlift`) require completed
+`BARBELL_TOTAL` facts; Smith, machine, per-hand dumbbell, warmup, failed,
+skipped and amplifier records do not certify the milestone. kg observations
+are converted to lb. Epley estimates are separately displayed but never
+count as earned singles. Missing lift evidence leaves totals incomplete,
+not zero. The panel does not award permanent achievements, publish PRs,
+prescribe work or modify journals. Profile history is fenced to the
+currently loaded athlete to avoid cross-owner stale results.
+
+**Verification:** source contract, pure strength-evidence tests, logged-single
+history projection regression and Android Compose compilation passed as
+part of **33/33 successful** steps in
+[GitHub Actions run 42734512994](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42734512994)
+at code commit `9b6f36719c3ed8fddbd279b7fa78d3b1fddad5fa`.
+No APK/AAB, production web edit, or direct device test was performed.
+
+**Still open:** a coherent merge plan for PR #448's other UI work
+(especially pinned settings and session notes), physical phone/foldable
+and large-font/TalkBack acceptance, source-backed adaptive-cycle review,
+broader feature parity, and independent Kotlin superiority against
+web Build 1009. Green Kotlin tests do not settle those product gates.

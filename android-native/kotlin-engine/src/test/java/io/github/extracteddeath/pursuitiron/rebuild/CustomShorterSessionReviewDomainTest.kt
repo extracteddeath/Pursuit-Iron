@@ -270,13 +270,12 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(CustomShortSessionStatus.PROTECTED_WORK_EXCEEDS_LIMIT,
             pinned.status)
         assertTrue(pinned.omittedSetKeys.isEmpty())
-        val unknown=review(snapshot(listOf(primary,advanced.copy(
-            sets=advanced.sets.map{set->set.copy(
-                prescription=set.prescription.copy(
-                    amplifier=set.prescription.amplifier?.copy(
-                        followUpActiveSeconds=null)))
-            })
-        ))),20)
+        val withoutTiming=advanced.copy(sets=advanced.sets.map{set->
+            set.copy(prescription=set.prescription.copy(
+                amplifier=set.prescription.amplifier?.copy(
+                    followUpActiveSeconds=null)))
+        })
+        val unknown=review(snapshot(listOf(primary,withoutTiming)),20)
         assertEquals(CustomShortSessionStatus.ADVANCED_SET_TIME_UNDECLARED,
             unknown.status)
         assertNull(unknown.reviewedEstimatedSeconds)

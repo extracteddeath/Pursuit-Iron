@@ -97,6 +97,31 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun shorterSessionApprovalIsExplicitDurableAndDoesNotRewriteLegacyBytes() {
+        val base=approval()
+        val previous=NativeKotlinApprovalCodec.encode(base)
+        assertEquals(6,previous[7].toInt())
+        val reduced=base.copy(shortSessionLimitMinutes=45)
+        val bytes=NativeKotlinApprovalCodec.encode(reduced)
+        assertEquals(8,bytes[7].toInt())
+        assertEquals(reduced,NativeKotlinApprovalCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeKotlinApprovalCodec.encode(
+            NativeKotlinApprovalCodec.decode(bytes)))
+        assertArrayEquals(previous,NativeKotlinApprovalCodec.encode(base))
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            authority().publish("owner-1",0,reduced))
+        assertEquals(reduced,authority().currentOwnedApproval("owner-1"))
+        val reopen=NativeKotlinApprovalFileAuthority(temp.root.toPath(),
+            fence(),NativeKotlinCurrentIdentity{signedIn})
+        assertEquals(reduced,reopen.currentOwnedApproval("owner-1"))
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinApprovalCodec.encode(base.copy(shortSessionLimitMinutes=19))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinApprovalCodec.encode(base.copy(shortSessionLimitMinutes=46))
+        }
+    }
+
     @Test fun timedProgramColdReopensWithTheExactWarmupAndRestModel() {
         val original=approval()
         val timed=original.copy(program=original.program.copy(visitTimings=

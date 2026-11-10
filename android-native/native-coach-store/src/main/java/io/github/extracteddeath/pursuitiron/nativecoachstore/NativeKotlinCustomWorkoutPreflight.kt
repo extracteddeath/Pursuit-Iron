@@ -33,6 +33,8 @@ sealed interface NativeCustomPreflightResult {
 sealed interface NativeCustomShortSessionPreflight {
     data class Reviewed(
         val receipt:NativeKotlinCustomCycleSignoff,
+        val absoluteWeek:Int,
+        val weekday:Int,
         val review:CustomShortSessionReview
     ):NativeCustomShortSessionPreflight {
         val mayIssue:Boolean get()=false
@@ -73,7 +75,8 @@ class NativeKotlinCustomWorkoutPreflight(
                 NativeCustomShortSessionPreflight.Rejected(approved.reason)
             is NativeCustomPreflightResult.ReviewedPreview ->
                 NativeCustomShortSessionPreflight.Reviewed(
-                    approved.receipt,
+                    approved.receipt,approved.session.absoluteWeek,
+                    approved.session.weekday,
                     CustomShorterSessionReviewDomain.inspect(
                         approved.session,minutes)
                 )

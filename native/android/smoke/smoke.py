@@ -445,6 +445,17 @@ if scroll_to(r"Swap exercise", tries=3, step=400) and tap(r"Swap exercise", "swa
     # The web's search and badges: every ranked option is searchable, each says why it ranks there
     if not find(r"(?i)same pattern|top match|fills gap|extra setup", timeout=4):
         FAILS.append("swap options carry no ranking badge")
+    # Filter chips over the whole ranked list; Top 5 leaves at most five numbered rows.
+    if not find(r"^\|?All$", timeout=3):
+        FAILS.append("swap sheet has no filter chips")
+    elif tap(r"^\|?Top 5$", required=False):
+        time.sleep(0.8)
+        if not find(r"^Rank 1: ", timeout=2):
+            FAILS.append("swap Top 5 filter shows no ranked rows")
+        elif find(r"^Rank 6: ", timeout=1):
+            FAILS.append("swap Top 5 filter shows a sixth option")
+        shot("swap-top5")
+        tap(r"^\|?All$", required=False)
     if tap(r"Search replacements"):
         adb("shell", "input", "text", "press")
         time.sleep(1.2)
@@ -911,6 +922,9 @@ if tap(r"Edit your name and details", "me-sheet", required=False):
     if not find(r"See where I rank", timeout=4):
         FAILS.append("profile panel missing")
     tap(r"See where I rank", "standards")
+    # No age entered in setup: the sheet says so instead of comparing against a made-up 31.
+    if not find(r"^\|?Not set$", timeout=4) or not find(r"^\|?Add age$", timeout=2):
+        FAILS.append("standards invent an age the lifter never gave")
     if not scroll_to(r"^\|Strength Club$", tries=6):
         FAILS.append("Strength Club missing from the standards")
     close_sheet(r"Strength Club")

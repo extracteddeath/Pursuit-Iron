@@ -2,10 +2,10 @@
   "profile": "portable-browser-esm-canonical-engine",
   "milestone": "M234",
   "source": "Canonical engine with milestone contract verification",
-  "engine": "0.65.9; Observed-effort live rep guard and retained target RIR",
+  "engine": "0.65.10; Strength and peak lift frequency with equipment-aware incline Push",
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 74,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1009-r654a1c3d18e13781",
-  "uiMilestone": "Build 1009 · Reliable repeating blocks, accurate loads and gym station variety"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1010-r7b3a53bd5d92f890",
+  "uiMilestone": "Build 1010 · Repeated strength practice and equipment-aware incline Push"
 }

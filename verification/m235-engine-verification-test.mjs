@@ -23,9 +23,9 @@ const golden = JSON.parse(read('verification/fixtures/engine-816-golden.json'));
 
 assert.equal(manifest.milestone, 'M234', 'M235 verifies M234 rather than inventing a behaviorless release bump');
 assert.ok(Number.isSafeInteger(manifest.build) && manifest.build >= 816, 'app release identity can advance independently while the engine retains its verified baseline');
-assert.equal(manifest.engineVersion, '0.65.9');
-assert.equal(ENGINE_VERSION, '0.65.9', 'Build 901 versions the observed-effort live rep guard while retaining M235 property and golden gates');
-assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.5', '0.65.6', '0.65.7', '0.65.8', '0.65.9']);
+assert.equal(manifest.engineVersion, ENGINE_VERSION, 'Release manifest and imported engine must share the same version');
+assert.equal(ENGINE_VERSION, '0.65.10', 'Build 1010 updates phase-specific strength practice while retaining M235 property and golden gates');
+assert.deepEqual(ENGINE_COMPATIBLE_VERSIONS, ['0.65.5', '0.65.6', '0.65.7', '0.65.8', '0.65.9', ENGINE_VERSION]);
 const runtimeModuleCount = Object.keys(manifest.runtimeFiles).filter(path => path.startsWith('modules/next-engine/')).length;
 assert.equal(profile.nextRuntimeModules, runtimeModuleCount, 'One release manifest owns the current engine module count');
 assert.ok(runtimeModuleCount >= 71, 'Runtime module count must not silently drop below its certified baseline');

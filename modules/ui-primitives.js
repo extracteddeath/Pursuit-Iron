@@ -42,6 +42,13 @@ export function UiMetric({
     return _jsxs(Element, { ...props, className: `wpb-ui-metric ${className}`.trim(), children });
 }
 
+
+// Shared native-form owner: gym and workout controls keep their labels and state,
+// while one component supplies the canonical editable field anatomy.
+export function UiField({ as: Element = "input", className = "", ...props }) {
+    return _jsx(Element, { ...props, className: `wpb-ui-control ${className}`.trim() });
+}
+
 export function UiAction({ variant = "secondary", className = "", ...props }) {
     // Components own static visual properties; only runtime-measured styles are forwarded.
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });

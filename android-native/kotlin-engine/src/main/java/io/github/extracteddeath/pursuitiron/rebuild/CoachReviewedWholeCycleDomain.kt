@@ -22,12 +22,15 @@ data class ReviewedWholeCycleRequest(
     /** A deliberately confirmed performance event, not inferred from goal. */
     val performanceTestPlanned:Boolean=false,
     /** An explicitly reviewed limit, NEVER inferred from generic MEV/MRV. */
-    val continuityPolicy:CustomCoachVolumeContinuityPolicy?=null
+    val continuityPolicy:CustomCoachVolumeContinuityPolicy?=null,
+    /** Explicit named test lifts. A PEAK label alone is not a test plan. */
+    val performanceTargetExerciseIds:Set<String> = emptySet()
 )
 
 enum class ReviewedWholeCycleCandidateStatus {
     READY_FOR_ATHLETE_REVIEW, MISSING_VERIFIED_PHASE,
-    FULL_CYCLE_POLICY_REQUIRED, FULL_CYCLE_AUDIT_FAILED
+    FULL_CYCLE_POLICY_REQUIRED, FULL_CYCLE_AUDIT_FAILED,
+    PERFORMANCE_TARGET_UNRESOLVED, PEAK_PREPARATION_REVIEW_REQUIRED
 }
 
 data class ReviewedWholeCycleCandidate(
@@ -63,6 +66,37 @@ data class ReviewedWholeCycleResult(
 object CoachReviewedWholeCycleDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private const val MAX_OPTIONS=8
+
+    /**
+     * Compare exact named PRIMARY working lifts in EVERY verified strength
+     * and peak week. OHP or a related press cannot substitute for the
+     * athlete's independently calibrated test lift. No fixed 2x rule.
+     */
+    private fun unresolvedPerformanceTargets(
+        audit:CustomCoachAudit,targetIds:Set<String>
+    ):Set<String> {
+        if(targetIds.isEmpty())return emptySet()
+        val verified=audit.structuralReview?.takeIf {
+            it.verifiedDraft!=null &&
+                it.status==CustomCycleReviewStatus.READY_FOR_COACH_REVIEW
+        } ?:return targetIds
+        val weeks=(1..verified.totalWeeks).mapNotNull {
+            CustomTrainingCycleDomain.week(verified,it)
+        }.filter {it.purpose==CustomBlockPurpose.TRAINING &&
+            it.phase in setOf(TrainingPhase.STRENGTH,TrainingPhase.PEAK)}
+        if(weeks.none{it.phase==TrainingPhase.STRENGTH} ||
+            weeks.none{it.phase==TrainingPhase.PEAK})return targetIds
+        return targetIds.filter {exerciseId ->
+            weeks.any {week ->week.days.none {day ->
+                day.purpose==ComposerSessionPurpose.STRENGTH_SKILL &&
+                    day.slots.any {slot->
+                        slot.exerciseId==exerciseId &&
+                        slot.role==ComposerRole.PRIMARY &&
+                        slot.sets.any{it.type==DraftSetType.WORKING}
+                    }
+            }}
+        }.toSet()
+    }
 
     private fun allocation(
         goal:AthleteTrainingGoal,weeks:Int,event:Boolean
@@ -114,7 +148,11 @@ object CoachReviewedWholeCycleDomain {
             request.title.isBlank() || request.title.length>120 ||
             request.totalWeeks !in 1..26 ||
             request.phaseStarts.size>TrainingPhase.entries.size ||
-            request.catalog.isEmpty() || request.catalog.size>256)
+            request.catalog.isEmpty() || request.catalog.size>256 ||
+            request.performanceTestPlanned!=
+                request.performanceTargetExerciseIds.isNotEmpty() ||
+            request.performanceTargetExerciseIds.size>4 ||
+            request.performanceTargetExerciseIds.any {!id.matches(it)})
             return ReviewedWholeCycleResult(
                 ReviewedWholeCycleStatus.INVALID_INPUT,emptyList(),null,
                 "Confirm a reviewed athlete, catalog, cycle ID and 1–26 weeks.")
@@ -188,19 +226,37 @@ object CoachReviewedWholeCycleDomain {
                     continuityPolicy=request.continuityPolicy)
                 val audit=CustomCycleCoachAuditDomain.review(
                     proposed,request.setup,request.catalog,coaching)
-                val status=when(audit.status) {
-                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ->
-                        ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW
-                    CustomCoachAuditStatus.COACHING_POLICY_REQUIRED ->
+                val missingTargets=if(request.performanceTestPlanned)
+                    unresolvedPerformanceTargets(audit,
+                        request.performanceTargetExerciseIds)
+                    else emptySet()
+                val status=when {
+                    audit.structuralReview?.verifiedDraft!=null &&
+                        missingTargets.isNotEmpty() ->
+                        ReviewedWholeCycleCandidateStatus.PERFORMANCE_TARGET_UNRESOLVED
+                    audit.status==CustomCoachAuditStatus.COACHING_POLICY_REQUIRED ->
                         ReviewedWholeCycleCandidateStatus.FULL_CYCLE_POLICY_REQUIRED
-                    else->ReviewedWholeCycleCandidateStatus.FULL_CYCLE_AUDIT_FAILED
+                    audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ->
+                        ReviewedWholeCycleCandidateStatus.FULL_CYCLE_AUDIT_FAILED
+                    request.performanceTestPlanned ->
+                        // A verified PEAK starter is not an individualized
+                        // taper or event-day prescription. A separate reviewed
+                        // peak preparation protocol must be implemented.
+                        ReviewedWholeCycleCandidateStatus.PEAK_PREPARATION_REVIEW_REQUIRED
+                    else ->ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW
+                }
+                val explanation=when(status) {
+                    ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW ->
+                        "All ${audit.weeks.size} projected weeks passed dose, stock, time, frequency and transition audits. Athlete approval and later adaptation are still required."
+                    ReviewedWholeCycleCandidateStatus.PERFORMANCE_TARGET_UNRESOLVED ->
+                        "The specific test lift(s) ${missingTargets.sorted().joinToString(", ")} are not verified PRIMARY working skills in every strength and peak week. Related exercises are not replacements."
+                    ReviewedWholeCycleCandidateStatus.PEAK_PREPARATION_REVIEW_REQUIRED ->
+                        "The named test lifts and weekly constraints are verified, but these starter templates lack an individualized taper, event timing and peaking protocol. This cannot be approved as competition preparation."
+                    else ->"Every projected week was audited; unresolved policy or constraints prevent approval: "+
+                        audit.issues.take(3).joinToString("; "){it.explanation}
                 }
                 ReviewedWholeCycleCandidate(optionId,allocations,
-                    status,audit,proposed,
-                    if(status==ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW)
-                        "All ${audit.weeks.size} projected weeks passed the independent phase, equipment, muscle-dose, time, frequency and transition audit. Requires athlete approval and later adaptation."
-                    else "Every projected week was audited; unresolved policy or constraints prevent approval: "+
-                        audit.issues.take(3).joinToString("; "){it.explanation})
+                    status,audit,proposed,explanation)
             }
         }
         val initial=candidates.firstOrNull {

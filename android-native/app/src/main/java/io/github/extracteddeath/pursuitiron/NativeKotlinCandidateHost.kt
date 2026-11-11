@@ -139,6 +139,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
         customIssuedStore,coachSettings,customWorkoutPreflight,machineRosters)
+    private val ownerFutureWeekProposals=NativeKotlinReviewedFutureWeekProposal(
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
+        customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
+        customNextWorkoutCoach)
     private val blockCalibrations=NativeKotlinBlockCalibrationConsentStore(
         root,revisionFence,localAthlete,customNextWorkoutCoach,customDraftStore,
         authoringSourceStore,adaptiveCyclePermissions,mixedHistoryReader,
@@ -1467,6 +1472,27 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customNextWorkoutCoach.reviewAuthored(signed.ownerKey,cycleId,
             inputs,nextAbsoluteWeek,nextWeekday,slotId,readiness,
             movementRestricted,maximumAuthorizedIncrease,repForecastPolicy)
+    }
+
+    /**
+     * Read-only athlete-owned adaptation of ONE future custom-cycle week.
+     * Full history, gym, permissions, policy and current consent are opened
+     * from private durable sources. The UI supplies only the selection,
+     * readiness and proposed load-increase cap; it cannot issue or save.
+     */
+    fun reviewOwnerVerifiedFutureWeekProgression(
+        cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumAuthorizedIncrease:java.math.BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.TARGET_RIR_V2
+    ):NativeFutureWeekProposalResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeFutureWeekProposalResult.Rejected(
+                NativeFutureWeekProposalRefusal.NOT_AUTHORIZED)
+        return ownerFutureWeekProposals.review(
+            signed.ownerKey,cycleId,nextAbsoluteWeek,nextWeekday,slotId,
+            readiness,movementRestricted,maximumAuthorizedIncrease,
+            repForecastPolicy)
     }
 
     fun previewBlockCalibration(

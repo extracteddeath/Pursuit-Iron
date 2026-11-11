@@ -99,7 +99,11 @@ object KotlinMachineAlternativesDomain {
                     machine.minimum.stripTrailingZeros().scale()<=3 &&
                     machine.maximum.stripTrailingZeros().scale()<=3 &&
                     (machine.maximum-machine.minimum) <=
-                        machine.increment.multiply(BigDecimal("99999")))
+                        machine.increment.multiply(BigDecimal("99999")) &&
+                    // An advertised maximum must be an attainable stack value.
+                    // Otherwise "max 215, step 10 from 20" silently stops at 210.
+                    (machine.maximum-machine.minimum).remainder(
+                        machine.increment).compareTo(BigDecimal.ZERO)==0)
         } && (config.defaultMachineId==null || config.machines.any{
             it.id==config.defaultMachineId && it.active
         })

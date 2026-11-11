@@ -65,6 +65,7 @@ enum class KotlinTimelineReviewStatus {
     CHANGED_SESSION_PURPOSE,
     CHANGED_TRAINING_DAY,
     MIXED_PHYSICAL_MACHINE, DIFFERENT_PHYSICAL_MACHINE,
+    UNRESOLVED_PHYSICAL_MACHINE,
     CHANGED_INTERVENING_SOURCE,
     CHANGED_LOAD_BASIS,
     CHANGED_SET_PRESCRIPTION,
@@ -209,6 +210,27 @@ object KotlinProgressionTimelineDomain {
         val (latestStored, latestHistory, latest) = applicable.last()
         val ids = listOf(olderHistory.workoutId, latestHistory.workoutId)
         val count = latest.workingSets.size
+        // Machine B can legitimately occur between two independent A
+        // exposures. An appearance with NO observed station, however, could
+        // have been an unattempted A skip or an older legacy record. A mixed
+        // A/B workout also cannot be silently discarded. Otherwise the
+        // filter above cherry-picks older successes and may authorize a
+        // weight increase despite a recent unresolved workout.
+        //
+        // Only exposures AFTER the older comparable machine session fence
+        // this pair. Once TWO newer verified A sessions exist, an earlier
+        // unknown appearance is no longer a reason to hold A indefinitely.
+        val interveningUnknownMachine=dayApplicable.any { (stored,history,_) ->
+            if(stored.completionOrder<=olderStored.completionOrder)false
+            else physicalMachines(history).let {
+                it.isEmpty() || it.size>1 ||
+                    (machineId!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
+                        KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in it)
+            }
+        }
+        if(interveningUnknownMachine)
+            return rejected(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+                ids,count)
         if (latest.progressionGate != KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW)
             return rejected(KotlinTimelineReviewStatus.LATEST_EXERCISE_NOT_COMPARABLE, ids, count)
         if (older.progressionGate != KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW)

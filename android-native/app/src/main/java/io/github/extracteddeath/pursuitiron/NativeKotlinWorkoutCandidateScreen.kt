@@ -73,7 +73,6 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var machineRoster by remember(host,workoutId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
-    var machineSelections by rememberSaveable(workoutId){mutableStateOf("")}
     LaunchedEffect(host,workoutId) {
         machineRoster=withContext(Dispatchers.IO) {
             (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
@@ -97,6 +96,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
+    val machineChoices=rememberNativeWorkoutMachineChoices(
+        host,workoutId,custom=false,ready=journal!=null,
+        exerciseSignature=journal?.snapshot?.targets
+            ?.map { it.exerciseId }?.distinct()?.joinToString(";").orEmpty())
     // Retain only the most recent VERIFIED journal reference for an open
     // note draft. A double storage failure must not discard unsaved text.
     // The cached reference never authorizes saving or marks a note saved.
@@ -383,16 +386,19 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }
         }
         val currentMachine=selected?.target?.exerciseId?.let{
-            workoutMachineChoice(machineSelections,it,activeMachineConfig?.defaultMachineId)
+            workoutMachineChoice(machineChoices.encoded,it,null)
         }
         NativeKotlinWorkoutMachineSelector(activeMachineConfig,currentMachine,
-            enabled=!state.busy && !presentation.finished,
+            enabled=!state.busy && !presentation.finished &&
+                machineChoices.ready && !machineChoices.busy,
             onSelect={machineId->
                 val exerciseId=selected?.target?.exerciseId
-                if(exerciseId!=null)
-                    machineSelections=updateWorkoutMachineChoice(
-                        machineSelections,exerciseId,machineId)
+                if(exerciseId!=null)machineChoices.onSelect(exerciseId,machineId)
             })
+        machineChoices.error?.let{
+            Text(it,style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.error)
+        }
         activeKeys.forEach{set->
             editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
                 val perSetMachineId=issuedGymId?.let {gymId->
@@ -400,14 +406,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         machineRoster?.configurations.orEmpty(),gymId,
                         set.target.exerciseId)
                 }?.let {config->
-                    workoutMachineChoice(machineSelections,set.target.exerciseId,
-                        config.defaultMachineId)
+                    workoutMachineChoice(machineChoices.encoded,set.target.exerciseId,null)
                 }
                 // Correcting an existing set must never reassign it to the
                 // currently selected B machine. Null here means legacy.
                 val recordedMachineId=if(set.currentReceipt!=null)
                     set.actual?.machineInstanceId else perSetMachineId
-                NativeKotlinSetCard(set,presentation.finished,state.busy,
+                NativeKotlinSetCard(set,presentation.finished,
+                    state.busy || machineChoices.busy || !machineChoices.ready,
                     machineInstanceId=recordedMachineId,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
@@ -422,12 +428,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             set.target.exerciseId,load,unit)
                     },
                     onRecord={outcome,actual->
-                        controller.record(set.target.setKey,outcome,
-                            actual?.copy(machineInstanceId=recordedMachineId))
+                        if(machineChoices.ready && !machineChoices.busy)
+                            controller.record(set.target.setKey,outcome,
+                                actual?.copy(machineInstanceId=recordedMachineId))
                     },
                     onSkip={pendingSkip=set.target.setKey},
-                    onFail={attempt->pendingFail=set.target.setKey to
-                        attempt.copy(machineInstanceId=recordedMachineId)})
+                    onFail={attempt->
+                        if(machineChoices.ready && !machineChoices.busy)
+                            pendingFail=set.target.setKey to
+                                attempt.copy(machineInstanceId=recordedMachineId)
+                    })
             }
         }
         if(!showAll && selected!=null) {

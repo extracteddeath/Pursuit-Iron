@@ -26,7 +26,10 @@ enum class NativeExerciseRepWindow(val lower:Int,val upper:Int,val label:String)
 }
 data class NativeExerciseTrendKey(
     val basis:LoadBasis?,
-    val reps:NativeExerciseRepWindow
+    val reps:NativeExerciseRepWindow,
+    /** Null for portable free weights and unassisted bodyweight history. */
+    val gymId:String?=null,
+    val machineInstanceId:String?=null
 ) {
     val bodyweightOnly:Boolean get()=basis==null
 }
@@ -58,7 +61,8 @@ object NativeExercisePerformanceTrendDomain {
 
     private data class Visit(
         val issued:DraftSetLoad,
-        val actual:KotlinPerformedSet?
+        val actual:KotlinPerformedSet?,
+        val gymId:String
     )
     /**
      * Only an actual COMPLETED, non-amplifier, WORKING visit may enter the
@@ -81,14 +85,15 @@ object NativeExercisePerformanceTrendDomain {
                         it.exerciseId==exerciseId &&
                             it.type==DraftSetType.WORKING &&
                             it.outcome==KotlinJournalSetOutcome.COMPLETED
-                    }.map { Visit(it.issuedLoad,it.actual) }
+                    }.map { Visit(it.issuedLoad,it.actual,
+                        entry.evidence.source.gymId) }
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.filter {
                         it.exerciseId==exerciseId &&
                             it.part==CustomWorkoutVisitPart.MAIN &&
                             it.setType==DraftSetType.WORKING &&
                             it.outcome==KotlinJournalSetOutcome.COMPLETED
-                    }.map { Visit(it.prescribedLoad,it.actual) }
+                    }.map { Visit(it.prescribedLoad,it.actual,entry.gymId) }
             }
             for(visit in sets) {
                 val actual=visit.actual ?:continue
@@ -101,7 +106,13 @@ object NativeExercisePerformanceTrendDomain {
                         if(actual.unit!=issued.unit || performed<=zero ||
                             performed>max ||
                             performed.stripTrailingZeros().scale()>3)continue
-                        key=NativeExerciseTrendKey(issued.basis,window)
+                        val stationScoped=actual.machineInstanceId!=null ||
+                            issued.basis in setOf(LoadBasis.MACHINE_STACK,
+                                LoadBasis.CABLE_STACK,LoadBasis.SMITH_TOTAL,
+                                LoadBasis.EXERCISE_OVERRIDE)
+                        key=NativeExerciseTrendKey(issued.basis,window,
+                            if(stationScoped)visit.gymId else null,
+                            actual.machineInstanceId)
                         weight=StrengthStandardsMeasurementDomain.convert(
                             performed,issued.unit,displayUnit)
                     }
@@ -134,7 +145,9 @@ object NativeExercisePerformanceTrendDomain {
             it.points.size
         }.thenBy {it.key.bodyweightOnly}.thenBy {
             it.key.basis?.name.orEmpty()
-        }.thenBy {it.key.reps.lower})
+        }.thenBy {it.key.reps.lower}.thenBy {
+            it.key.gymId.orEmpty()
+        }.thenBy {it.key.machineInstanceId.orEmpty()})
         return NativeExercisePerformanceTrend(
             timeline.athleteId,timeline.manifestRevision,exerciseId,displayUnit,
             Collections.unmodifiableList(series))

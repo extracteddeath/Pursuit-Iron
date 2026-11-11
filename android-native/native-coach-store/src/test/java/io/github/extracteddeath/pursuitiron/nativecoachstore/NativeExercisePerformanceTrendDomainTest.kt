@@ -25,11 +25,12 @@ class NativeExercisePerformanceTrendDomainTest {
         order:Int,visit:Int=1,reps:Int=8,weight:String?="100",
         unit:LoadUnit?=LoadUnit.LB,issued:DraftSetLoad=load(),
         type:DraftSetType=DraftSetType.WORKING,
-        outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED
+        outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
+        machineId:String?=null
     )=KotlinHistoricalSetFact(
         "db_row","set-$order-$visit",type,0,issued,RepBand(6,10),2,
         outcome,if(outcome==KotlinJournalSetOutcome.SKIPPED)null
-            else KotlinPerformedSet(weight?.let(::n),unit,reps,2),
+            else KotlinPerformedSet(weight?.let(::n),unit,reps,2,machineId),
         "event-$order-$visit",null)
     private fun custom(
         order:Int,vararg visits:CustomHistoricalVisitFact
@@ -80,6 +81,53 @@ class NativeExercisePerformanceTrendDomainTest {
         assertFalse(result.canPublishPr)
         assertFalse(result.canPrescribeWorkout)
         assertFalse(result.canEditHistory)
+    }
+
+    @Test fun machineStackTrendsNeverMixAAndBAcrossGyms() {
+        fun stackFact(order:Int,machine:String?,weight:String)=fact(order,
+            weight=weight,issued=load(weight,LoadUnit.LB,LoadBasis.MACHINE_STACK),
+            machineId=machine)
+        fun atGym(order:Int,gym:String,machine:String?,weight:String):
+            NativeKotlinMixedHistoryCompletion.Composer =
+            NativeKotlinMixedHistoryCompletion.Composer(manifest(order),
+                KotlinWorkoutHistoryEvidence(source.copy(gymId=gym),
+                    "workout-$order","finish-$order",3,
+                    listOf(stackFact(order,machine,weight)),emptyList()))
+        val result=trend(timeline(
+            atGym(1,"gym-1","A","200"),
+            atGym(2,"gym-1","B","140"),
+            atGym(3,"gym-2","A","190"),
+            atGym(4,"gym-1","A","205"),
+            atGym(5,"gym-1",null,"100")
+        ))
+        assertEquals(4,result.series.size)
+        val a=result.series.single {
+            it.key.gymId=="gym-1" && it.key.machineInstanceId=="A"
+        }
+        assertEquals(listOf(1L,4L),a.points.map{it.completionOrder})
+        assertEquals(listOf(n("200"),n("205")),a.points.map{it.actualLoad})
+        assertEquals(n("140"),result.series.single {
+            it.key.gymId=="gym-1" && it.key.machineInstanceId=="B"
+        }.points.single().actualLoad)
+        assertEquals(n("190"),result.series.single {
+            it.key.gymId=="gym-2" && it.key.machineInstanceId=="A"
+        }.points.single().actualLoad)
+        assertEquals(n("100"),result.series.single {
+            it.key.gymId=="gym-1" && it.key.machineInstanceId==null
+        }.points.single().actualLoad)
+        assertFalse(result.canPublishPr)
+    }
+
+    @Test fun portableDumbbellsStillShareComparableGymIndependentTrend() {
+        val otherGym=NativeKotlinMixedHistoryCompletion.Composer(manifest(2),
+            KotlinWorkoutHistoryEvidence(source.copy(gymId="gym-2"),
+                "workout-2","finish-2",3,listOf(fact(2,weight="110")),emptyList()))
+        val result=trend(timeline(composer(1,fact(1,weight="100")),otherGym))
+        assertEquals(1,result.series.size)
+        assertNull(result.series.single().key.gymId)
+        assertNull(result.series.single().key.machineInstanceId)
+        assertEquals(listOf(1L,2L),
+            result.series.single().points.map{it.completionOrder})
     }
 
     @Test fun bestPerSessionNeverMixesRepRangesOrIssuedTargets() {

@@ -237,6 +237,23 @@ internal class NativeKotlinCandidateHost(context:Context) {
                         prior.snapshot.configurations,configurations,
                         reviewed.gym.gymId))
                     NativeMachineRosterResult.Rejected("CROSS_GYM_EDIT")
+                else if(configurations.any { config ->
+                    config.gymId==reviewed.gym.gymId &&
+                    config.machines.any { candidate ->
+                        val old=prior.snapshot.configurations.singleOrNull {
+                            it.gymId==config.gymId &&
+                            it.exerciseId==config.exerciseId
+                        }?.machines?.singleOrNull { it.id==candidate.id }
+                        val changed=old==null ||
+                            old.minimum!=candidate.minimum ||
+                            old.maximum!=candidate.maximum ||
+                            old.increment!=candidate.increment ||
+                            old.unit!=candidate.unit
+                        changed && !KotlinMachineAlternativesDomain
+                            .reachableCalibratedMaximum(candidate)
+                    }
+                })
+                    NativeMachineRosterResult.Rejected("INVALID_STACK_CALIBRATION")
                 else machineRosters.save(identity.ownerKey,expectedRevision,configurations)
             }
         }

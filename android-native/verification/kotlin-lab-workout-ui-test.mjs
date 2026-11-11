@@ -251,6 +251,24 @@ assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
   composer.includes('if(!presentation.finished) {') &&
   journal.includes('if(!finished && current.finishedByEventId==null) {'),
   'Both workout types must expose the shared editable readiness/restriction controls only while training');
+// Quick injury/discomfort entry is a real, explicit path to the SAME
+// owner-scoped note receipts in both workouts. It changes optional coaching
+// context, not a durable set result or a signed program prescription.
+assert.ok(sharedFocus.includes('onReportConcern:(()->Unit)?=null') &&
+  sharedFocus.includes('onClick=onReportConcern') &&
+  sharedFocus.includes('Text("Injury or discomfort · add a note")') &&
+  sharedFocus.includes('You still choose Skip or Swap') &&
+  sharedFocus.includes('modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)'),
+  'The shared injury entry needs a large accessible action and truthful, nonautomatic semantics');
+assert.match(journal,/onReportConcern=\{\s*(?:\/\/[^\n]*\n\s*)*movementRestricted=true\s*readiness=CoachReadiness.LOW\s*noteError=null\s*showSessionNote=true\s*\}/,
+  'Custom injury entry must restrict coaching and open its durable note editor');
+assert.match(composer,/onReportConcern=if\(journal!=null\) \(\{[\s\S]*?movementRestricted=true\s*readiness=CoachReadiness.LOW\s*showSessionNote=true\s*\}\) else null/,
+  'Generated injury entry must require a verified journal and open its own note editor');
+assert.ok(journal.includes('host.saveIssuedCustomSessionNote(workoutId,operation)') &&
+  composer.includes('onSave={controller.saveSessionNote(it)}') &&
+  journal.includes('CustomWorkoutJournalOperation.SessionNote('),
+  'Injury notes may only persist through an explicit saved journal note, never an implicit set action');
+
 // The focus header must agree with the type-specific set editor, not
 // count warm-ups as working sets or the amplifier as a new main set.
 assert.ok(journal.includes('val sameType=slot.sets.filter {') &&

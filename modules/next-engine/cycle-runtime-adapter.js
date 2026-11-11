@@ -203,14 +203,16 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     // Only propose these where the original equipment-qualified lift exists.
     // Static cycles still preserve their authored roster; no issued workout
     // or saved custom block is rewritten by this request.
-    const fiveDayHybrid = (spec?.split ?? baseConfig?.split ??
-        request.preferences?.lockedSplit ?? request.preferences?.preferredSplit);
+    const effectiveBlock = blockConfigForSpec(baseConfig, spec);
+    const fiveDayHybrid = effectiveBlock.split ??
+        request.preferences?.lockedSplit ?? request.preferences?.preferredSplit;
+    const effectiveDays = Number(effectiveBlock.days ?? request.schedule.days.length);
     const powerbuildingPhase = ['strength_accumulation', 'intensification', 'peak']
         .includes(spec.phase);
     const isBothCycle = baseConfig?.goal === 'both' ||
         (baseConfig?.goal == null && baseRequest.goal.type === 'mixed');
     if (isBothCycle && powerbuildingPhase &&
-        request.schedule.days.length === 5 &&
+        effectiveDays === 5 &&
         ['ulppl', 'pplul'].includes(fiveDayHybrid) && !spec?.priorityLift) {
         const available = request.goal.liftPriorities ?? {};
         const explicit = request.goal.liftFrequency ?? {};
@@ -237,10 +239,10 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     if (spec.priorityLift) {
         request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
         request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };
-    } else if (!request.preferences?.powerbuildingInclineVolume) {
-        // A previous block's frequency must not leak into an unrelated
-        // phase. The five-day Both strength/peak default above is a new
-        // phase-specific contract, not a leaked prior-block request.
+    } else if (!Object.keys(request.goal.liftFrequency ?? {}).length) {
+        // This request is cloned from the cycle's original athlete input, not
+        // the previous phase. Retain explicit athlete lift-frequency choices;
+        // only omit an empty inferred frequency map.
         delete request.goal.liftFrequency;
     }
     return request;

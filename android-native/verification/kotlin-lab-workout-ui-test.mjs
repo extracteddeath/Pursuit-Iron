@@ -102,6 +102,26 @@ for(const source of [journal,composer]) {
     'Workout machine identity cannot depend on screen recreation state alone');
 }
 
+// Issuance should normally freeze defaults BEFORE the athlete opens the UI.
+// Existing recorded sets remain journal-owned, and the durability bootstrap
+// does not turn a partial preference write into a fake successful set.
+assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
+  machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
+  machineChoiceHost.match(/if\(issued is NativeCustomJournalResult\.Durable\)/g)?.length>=2 &&
+  machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
+  machineChoiceHost.match(/pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/g)?.length===2,
+  'All native issuer paths must pin verified A/B defaults on successful issuance');
+assert.ok(journal.includes('val requiresNewMachineChoice=') &&
+  journal.includes('config.machines.none{it.id==selectedMachineId && it.active}') &&
+  journal.includes('outcome==KotlinJournalSetOutcome.SKIPPED ||') &&
+  journal.includes('observed!=null || !requiresNewMachineChoice'),
+  'Custom machine swaps must require an active station for new weighted observations');
+assert.ok(composer.includes('val needsMachineSelection=set.currentReceipt==null') &&
+  composer.includes('perSetMachineConfig.machines.none{') &&
+  composer.includes('!needsMachineSelection))') &&
+  composer.includes('!needsMachineSelection)'),
+  'Generated swaps must not record a legacy or inactive station by accident');
+
 for(const source of [journal,composer]) {
   assert.ok(source.includes('KotlinMachineAlternativesDomain.forGymExercise('),
     'Every native workout must resolve physical machines for the issued gym');

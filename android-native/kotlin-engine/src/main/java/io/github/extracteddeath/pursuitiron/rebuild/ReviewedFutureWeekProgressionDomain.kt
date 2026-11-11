@@ -48,6 +48,10 @@ data class ReviewedFutureWeekProgression(
 }
 
 object ReviewedFutureWeekProgressionDomain {
+    internal fun requiresPhysicalMachineIdentity(basis:LoadBasis?):Boolean =
+        basis in setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
+            LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)
+
     fun propose(request:ReviewedFutureWeekProgressionRequest):
         ReviewedFutureWeekProgression {
         fun refuse(
@@ -114,7 +118,7 @@ object ReviewedFutureWeekProgressionDomain {
         // A machine-specific weight/rep improvement belongs to its A/B
         // machine thread. Custom week slots do not yet persist a physical
         // machine-instance binding, so never launder it into all machines.
-        if(exercise.expectedLoadBasis==LoadBasis.MACHINE_STACK)
+        if(requiresPhysicalMachineIdentity(exercise.expectedLoadBasis))
             return refuse(
                 ReviewedFutureWeekProgressionStatus.PHYSICAL_MACHINE_REVIEW_REQUIRED,
                 "Machine A/B prescriptions need a persisted physical machine ID before a cycle-level override.",

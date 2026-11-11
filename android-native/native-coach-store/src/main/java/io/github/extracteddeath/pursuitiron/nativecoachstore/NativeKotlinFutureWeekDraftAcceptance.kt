@@ -75,12 +75,13 @@ class NativeKotlinFutureWeekDraftAcceptance(
     companion object {
         internal fun eligible(result:NativeFutureWeekProposalResult.Reviewed):Boolean {
             val p=result.proposal
+            // Cross-module public properties are not smart-castable.
+            val candidate=p.candidate ?:return false
             return p.status==
                     ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW &&
-                p.candidate!=null &&
                 p.changedAbsoluteWeek!=null &&
                 p.changedSlotId!=null &&
-                p.candidate.revision==result.cycleRevision+1L
+                candidate.revision==result.cycleRevision+1L
         }
 
         /** Complete content + all six mutable authority revisions. */

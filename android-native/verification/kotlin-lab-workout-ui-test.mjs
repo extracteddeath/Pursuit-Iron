@@ -268,6 +268,11 @@ assert.ok(journal.includes('host.saveIssuedCustomSessionNote(workoutId,operation
   composer.includes('onSave={controller.saveSessionNote(it)}') &&
   journal.includes('CustomWorkoutJournalOperation.SessionNote('),
   'Injury notes may only persist through an explicit saved journal note, never an implicit set action');
+assert.ok(composer.includes('val coach=state.liveCoach?.takeIf {') &&
+  composer.includes('!movementRestricted && !state.busy &&') &&
+  journal.includes('val advice=liveCoach?.takeIf {') &&
+  /val advice=liveCoach\?\.takeIf \{[\s\S]*?!movementRestricted &&\s*!busy && !finished/.test(journal),
+  'Neither workout may display a previous next-set recommendation after an injury restriction is selected');
 
 // The focus header must agree with the type-specific set editor, not
 // count warm-ups as working sets or the amplifier as a new main set.

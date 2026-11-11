@@ -188,6 +188,9 @@ def train(day_no):
     """One session start to finish, the way a lifter who follows the app would. The bot keeps its own record of
     which sets it logged (by lift and set), so it never taps a logged set a second time and un-logs it."""
     to_top()
+    # A card above the hero (Block complete, a plan-change banner) can push Start below the fold.
+    if not find(r"Start workout$|Start it early$", timeout=3):
+        scroll_to(r"Start workout$|Start it early$", tries=3, step=500)
     if not tap(r"Start workout$|Start it early$", timeout=6):
         check(False, "a training day has Start workout"); return False
     if find(r"(?i)time available", timeout=6):

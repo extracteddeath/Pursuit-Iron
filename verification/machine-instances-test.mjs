@@ -61,3 +61,22 @@ const cacheHash = hash(shell.sort().map(path=>
     String.fromCharCode(10)
 ).join('')).slice(0,16);
 console.log('MACHINE_A_B_SHELL_REVISION='+cacheHash);
+const release=JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json',import.meta.url),'utf8'));
+const profile=JSON.parse(fs.readFileSync(new URL('../BUILD_PROFILE.json',import.meta.url),'utf8'));
+assert.equal(profile.cache,release.cache,'web cache must belong to the exact shipped release');
+assert.equal(profile.cache.endsWith('-r'+cacheHash),true,
+    'new physical-machine modules must be included in exact offline shell digest');
+assert.ok(worker.includes('const CACHE="'+profile.cache+'"'),
+    'the service worker must use the certified release cache');
+for(const [file,digest] of Object.entries(release.runtimeFiles))
+    assert.equal(hash(fs.readFileSync(new URL('../'+file,import.meta.url))),digest,
+        'uncertified production runtime: '+file);
+for(const [file,digest] of Object.entries(release.uiFiles))
+    assert.equal(hash(fs.readFileSync(new URL('../'+file,import.meta.url))),digest,
+        'uncertified production UI: '+file);
+const aggregate=Object.keys(release.runtimeFiles).sort()
+    .map(file=>file+':'+release.runtimeFiles[file]+String.fromCharCode(10)).join('');
+assert.equal(hash(aggregate),release.runtimeAggregate,'runtime aggregate mismatch');
+console.log('MACHINE_A_B_RELEASE_CERTIFIED build='+release.build+
+    ' modules='+Object.keys(release.runtimeFiles).length);
+

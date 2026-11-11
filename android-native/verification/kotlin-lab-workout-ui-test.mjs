@@ -198,6 +198,14 @@ assert.ok(strengthStarter.includes('data class PhaseOffer(val lifts:List<String>
   strengthStarter.includes('val phaseOffers=repeatOffers+groups.map{PhaseOffer(it,1)}') &&
   strengthStarter.includes('namedPrimaries.associateWith{requiredPrimaryDays}'),
   'New strength and peak starter must audit feasible repeat-lift skill policies before one-day fallback');
+const starterVariantRetention=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachFirstProgramStartDomain.kt');
+assert.ok(starterVariantRetention.includes('val calibratedPrimaryFamilies=selected.filter') &&
+  starterVariantRetention.includes('it.role==ComposerRole.SECONDARY') &&
+  starterVariantRetention.includes('it.variantId.contains("incline",ignoreCase=true)') &&
+  starterVariantRetention.includes('it.familyId in calibratedPrimaryFamilies') &&
+  starterVariantRetention.includes('choices[index]=choices[index].copy(requiredVisits=1)') &&
+  starterVariantRetention.includes('input.policyVersion==POLICY_VERSION'),
+  'New v6 strength/peak policies must not drop an explicitly calibrated related incline press');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&

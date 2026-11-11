@@ -48,6 +48,13 @@ object KotlinMachineAlternativesDomain {
     const val LEGACY_MACHINE_ID="__legacy_machine__"
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
+    /** Fail closed rather than using another gym's default for the same lift. */
+    fun forGymExercise(
+        configurations:List<KotlinGymMachineAlternatives>,gymId:String,exerciseId:String
+    ):KotlinGymMachineAlternatives? = configurations.singleOrNull {
+        it.gymId==gymId && it.exerciseId==exerciseId
+    }?.takeIf { valid(it) }
+
     fun normalizeMachineId(value:String?)=value ?: LEGACY_MACHINE_ID
     fun validInstanceId(value:String?)=value!=null && id.matches(value)
     fun valid(config:KotlinGymMachineAlternatives):Boolean =

@@ -27,7 +27,7 @@ data class FirstProgramStartRequest(
     val extraFocuses:List<ComposerFocus> = emptyList(),
     /** Planning assumption. Editable, not inferred from the time bucket. */
     val nonSetSecondsPerDay:Int = 900,
-    /** Saved calibrations replay their original policy; new plans use v5. */
+    /** Saved calibrations replay their original policy; new plans use v6. */
     val policyVersion:String = CoachFirstProgramStartDomain.POLICY_VERSION
 )
 enum class FirstProgramStartStatus {
@@ -63,10 +63,11 @@ object CoachFirstProgramStartDomain {
     const val PREVIOUS_POLICY_VERSION="first-program-reference-v2"
     const val TIMED_POLICY_VERSION="first-program-reference-v3"
     const val ALLOCATION_POLICY_VERSION="first-program-reference-v4"
-    const val POLICY_VERSION="first-program-reference-v5"
+    const val PREVIOUS_PHASE_POLICY_VERSION="first-program-reference-v5"
+    const val POLICY_VERSION="first-program-reference-v6"
     fun supportsPolicy(version:String)=version in setOf(
         LEGACY_POLICY_VERSION,PREVIOUS_POLICY_VERSION,TIMED_POLICY_VERSION,
-        ALLOCATION_POLICY_VERSION,POLICY_VERSION)
+        ALLOCATION_POLICY_VERSION,PREVIOUS_PHASE_POLICY_VERSION,POLICY_VERSION)
     private const val MAX_PHASE_REVIEWS=32
     private val zero=BigDecimal.ZERO
     private fun num(v:Int)=BigDecimal(v)
@@ -135,7 +136,9 @@ object CoachFirstProgramStartDomain {
      * A checked candidate is not a global optimum or a calibrated peak/taper.
      */
     fun review(input:FirstProgramStartRequest):FirstProgramStartReview {
-        if(input.policyVersion!=POLICY_VERSION || input.phase==TrainingPhase.HYPERTROPHY)
+        if(input.policyVersion !in setOf(
+                PREVIOUS_PHASE_POLICY_VERSION,POLICY_VERSION) ||
+            input.phase==TrainingPhase.HYPERTROPHY)
             return reviewOnce(input)
         if(!input.setup.mayReviewProgramCandidate || input.catalog.size !in 1..256 ||
             input.startingLoads.size>32 || input.selectedBodyweightExerciseIds.size>32)
@@ -168,7 +171,8 @@ object CoachFirstProgramStartDomain {
         // distinct primary slots, and no policy may silently double-book
         // a day to manufacture frequency.
         data class PhaseOffer(val lifts:List<String>,val requiredDays:Int)
-        val repeatOffers=if(input.setup.reviewed?.split==ComposerSplit.FULL_BODY)
+        val repeatOffers=if(input.policyVersion!=POLICY_VERSION ||
+            input.setup.reviewed?.split==ComposerSplit.FULL_BODY)
             emptyList() else groups.filter{2*it.size<=days}
                 .take(4).map{PhaseOffer(it,2)}
         val phaseOffers=repeatOffers+groups.map{PhaseOffer(it,1)}
@@ -338,7 +342,9 @@ object CoachFirstProgramStartDomain {
             TrainingPhase.HYPERTROPHY ->
                 mapOf(ComposerSessionPurpose.HYPERTROPHY to athlete.trainingWeekdays.size)
             TrainingPhase.STRENGTH,TrainingPhase.PEAK ->
-                if(input.policyVersion==POLICY_VERSION && skillDays!=null)
+                if(input.policyVersion in setOf(
+                    PREVIOUS_PHASE_POLICY_VERSION,POLICY_VERSION) &&
+                    skillDays!=null)
                     linkedMapOf(ComposerSessionPurpose.STRENGTH_SKILL to skillDays,
                         ComposerSessionPurpose.GENERAL_PREPARATION to
                             athlete.trainingWeekdays.size-skillDays).filterValues{it>0}
@@ -356,7 +362,8 @@ object CoachFirstProgramStartDomain {
                 PREVIOUS_POLICY_VERSION->"v2"
                 TIMED_POLICY_VERSION->"v3"
                 ALLOCATION_POLICY_VERSION->"v4"
-                else->"v5"
+                PREVIOUS_PHASE_POLICY_VERSION->"v5"
+                else->"v6"
             },
             rationale="Versioned provisional volume and effort starting plan; personal responses, fatigue and recoverable dose require calibration.",
             athleteId=athlete.athleteProfileId,
@@ -368,7 +375,9 @@ object CoachFirstProgramStartDomain {
             minimumPurposeDays=purposes,
             primaryLiftMinimumDays=if(primary!=null &&
                 input.phase!=TrainingPhase.HYPERTROPHY)
-                if(input.policyVersion==POLICY_VERSION && namedPrimaries!=null)
+                if(input.policyVersion in setOf(
+                    PREVIOUS_PHASE_POLICY_VERSION,POLICY_VERSION) &&
+                    namedPrimaries!=null)
                     namedPrimaries.associateWith{requiredPrimaryDays}
                 else mapOf(primary.exerciseId to 1) else emptyMap())
         if(input.phase!=TrainingPhase.HYPERTROPHY && primary==null)
@@ -410,7 +419,8 @@ object CoachFirstProgramStartDomain {
                 scheme=SetLoadScheme.STRAIGHT,warmups=warmup,dayIndex=dayIndex)
         }
         val timed=input.policyVersion in setOf(TIMED_POLICY_VERSION,
-            ALLOCATION_POLICY_VERSION,POLICY_VERSION)
+            ALLOCATION_POLICY_VERSION,PREVIOUS_PHASE_POLICY_VERSION,
+            POLICY_VERSION)
         val sharedPolicies=if(timed)purposes.keys.flatMap {purpose->choices.mapNotNull {choice->
             prescription(choice.exerciseId,choice.selectedLoad,
                 choice.activeSecondsPerSet,choice.restSecondsPerSet,
@@ -438,7 +448,8 @@ object CoachFirstProgramStartDomain {
             return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,policy,gaps=gaps)
         }
         val initialAudit=generated.candidate?.catalogReview?.draft?.audit
-        if(input.policyVersion in setOf(ALLOCATION_POLICY_VERSION,POLICY_VERSION) &&
+        if(input.policyVersion in setOf(ALLOCATION_POLICY_VERSION,
+            PREVIOUS_PHASE_POLICY_VERSION,POLICY_VERSION) &&
             generated.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW &&
             initialAudit?.satisfiesDeclaredHardConstraints==true &&
             initialAudit.sessions.any {it.finding==TimeWindowFinding.ABOVE_PREFERENCE}) {

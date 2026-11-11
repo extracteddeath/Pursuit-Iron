@@ -70,6 +70,39 @@ object ReviewedFutureWeekProgressionDomain {
             config,machineId,basis ?:return null)
     }
 
+    /**
+     * A completed appearance on the correct weekday is NOT fresh evidence
+     * for a different physical station. Preserve old nonmachine behavior,
+     * but require one exact signed slot and every performed working set to
+     * name the chosen station when a future week is machine-bound.
+     */
+    internal fun hasFreshSameStationEvidence(
+        completed:List<CustomCoachingHistoricalSession>,
+        cycleId:String,blockId:String,weekday:Int,previousWeek:Int,
+        slotId:String,machineInstanceId:String?
+    ):Boolean {
+        val visits=completed.filter {
+            it.snapshot.stamp.cycleId==cycleId &&
+                it.snapshot.blockId==blockId &&
+                it.snapshot.weekday==weekday &&
+                it.snapshot.absoluteWeek==previousWeek
+        }
+        if(visits.size!=1)return false
+        if(machineInstanceId==null)return true
+        val previous=visits.single()
+        if(previous.snapshot.slots.singleOrNull{
+                it.slotId==slotId
+            }?.machineInstanceId!=machineInstanceId)return false
+        val working=previous.evidence.visits.filter {
+            it.slotId==slotId &&
+                it.part==CustomWorkoutVisitPart.MAIN &&
+                it.setType==DraftSetType.WORKING
+        }
+        return working.isNotEmpty() && working.all{
+            it.actual?.machineInstanceId==machineInstanceId
+        }
+    }
+
     fun propose(request:ReviewedFutureWeekProgressionRequest):
         ReviewedFutureWeekProgression {
         fun refuse(
@@ -106,15 +139,11 @@ object ReviewedFutureWeekProgressionDomain {
         // Require exactly one completed appearance of the selected same
         // day in the immediately preceding week, even across old signed
         // cycle revisions. The owner adapter supplies the full ledger.
-        val previousSameDay=request.coachingRequest.completed.count{
-            it.snapshot.stamp.cycleId==current.cycleId &&
-                it.snapshot.blockId==next.blockId &&
-                it.snapshot.weekday==next.weekday &&
-                it.snapshot.absoluteWeek==next.absoluteWeek-1
-        }
-        if(previousSameDay!=1)
+        if(!hasFreshSameStationEvidence(
+            request.coachingRequest.completed,current.cycleId,next.blockId,
+            next.weekday,next.absoluteWeek-1,slot.slotId,slot.machineInstanceId))
             return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
-                "Review the immediately preceding same-day workout before progressing this slot; a missed or duplicate visit cannot earn an increase.")
+                "The immediately preceding same-day workout must use this exact physical machine and slot; another machine, a missed day or duplicate visit cannot earn an increase.")
 
         // Signed native preflight always includes the audited per-day
         // non-set overhead. A raw preview omits it and cannot equal the

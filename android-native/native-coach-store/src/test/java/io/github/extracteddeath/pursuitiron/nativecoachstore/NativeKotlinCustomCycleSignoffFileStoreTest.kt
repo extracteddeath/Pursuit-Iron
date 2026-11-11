@@ -2969,12 +2969,24 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         return NativeKotlinFutureWeekDraftAcceptance(fence,proposal,drafts)
     }
 
+    private fun enableFutureWeekDraftCoaching() {
+        val rights=(permissionStore.read("owner-1","cycle-1")
+            as NativeAdaptivePermissionRead.Found).receipt
+        assertEquals(NativeAdaptivePermissionWrite.Committed(
+            rights.revision+1),permissionStore.confirm(
+                "owner-1","cycle-1",rights.revision,
+                rights.allowedKinds+CustomCycleChangeKind.WEEK_OVERRIDES,true))
+        assertTrue(coachSettings.save("owner-1",0,CoachAssistancePolicy.STANDARD)
+            is NativeCoachSettingsWrite.Saved)
+    }
+
     private fun futureWeekDraftSelection()=NativeFutureWeekDraftSelection(
         "owner-1","cycle-1",4,0,"slot-0",
         CoachReadiness.NORMAL,false,n("5"))
 
     @Test fun futureWeekDraftRefusesPreparedWorkoutAcrossColdRestart() {
         val f=authoredCoachFixture()
+        enableFutureWeekDraftCoaching()
         val before=(drafts.read("owner-1","cycle-1")
             as NativeCustomDraftReadResult.Found).draft
         assertTrue(f.prepared.prepare("owner-1","future-draft-pending",
@@ -2999,6 +3011,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
     @Test fun futureWeekDraftCannotCrossOwnerOrBypassSignedBaseline() {
         val f=authoredCoachFixture()
+        enableFutureWeekDraftCoaching()
         val writer=futureWeekDraftWriter(f)
         val before=(drafts.read("owner-1","cycle-1")
             as NativeCustomDraftReadResult.Found).draft

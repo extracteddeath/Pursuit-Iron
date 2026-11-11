@@ -70,6 +70,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val scope=rememberCoroutineScope()
+    var machineRoster by remember(host,workoutId) {
+        mutableStateOf<NativeMachineRosterSnapshot?>(null)
+    }
+    var machineSelections by rememberSaveable(workoutId){mutableStateOf("")}
+    LaunchedEffect(host,workoutId) {
+        machineRoster=withContext(Dispatchers.IO) {
+            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+        }
+    }
     var swapSourceId by remember(workoutId){mutableStateOf<String?>(null)}
     var swapChoices by remember(workoutId){
         mutableStateOf<List<KotlinComposerSwapChoice>>(emptyList())
@@ -366,9 +375,33 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 exerciseId=selected.target.exerciseId,custom=false,
                 enabled=!state.busy && !presentation.finished
             )
+        val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
+            machineRoster?.configurations?.firstOrNull{it.exerciseId==exerciseId}
+        }
+        val currentMachine=selected?.target?.exerciseId?.let{
+            workoutMachineChoice(machineSelections,it,activeMachineConfig?.defaultMachineId)
+        }
+        NativeKotlinWorkoutMachineSelector(activeMachineConfig,currentMachine,
+            enabled=!state.busy && !presentation.finished,
+            onSelect={machineId->
+                val exerciseId=selected?.target?.exerciseId
+                if(exerciseId!=null)
+                    machineSelections=updateWorkoutMachineChoice(
+                        machineSelections,exerciseId,machineId)
+            })
         activeKeys.forEach{set->
             editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
+                val perSetMachineId=machineRoster?.configurations
+                    ?.firstOrNull{it.exerciseId==set.target.exerciseId}?.let {config->
+                        workoutMachineChoice(machineSelections,set.target.exerciseId,
+                            config.defaultMachineId)
+                    }
+                // Correcting an existing set must never reassign it to the
+                // currently selected B machine. Null here means legacy.
+                val recordedMachineId=if(set.currentReceipt!=null)
+                    set.actual?.machineInstanceId else perSetMachineId
                 NativeKotlinSetCard(set,presentation.finished,state.busy,
+                    machineInstanceId=recordedMachineId,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type}.indexOf(set)+1,
@@ -382,10 +415,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             set.target.exerciseId,load,unit)
                     },
                     onRecord={outcome,actual->
-                        controller.record(set.target.setKey,outcome,actual)
+                        controller.record(set.target.setKey,outcome,
+                            actual?.copy(machineInstanceId=recordedMachineId))
                     },
                     onSkip={pendingSkip=set.target.setKey},
-                    onFail={attempt->pendingFail=set.target.setKey to attempt})
+                    onFail={attempt->pendingFail=set.target.setKey to
+                        attempt.copy(machineInstanceId=recordedMachineId)})
             }
         }
         if(!showAll && selected!=null) {
@@ -611,6 +646,7 @@ private fun NativeKotlinSetCard(
     set:KotlinWorkoutSetPresentation,
     finished:Boolean,
     busy:Boolean,
+    machineInstanceId:String?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
     position:Int,
@@ -627,7 +663,8 @@ private fun NativeKotlinSetCard(
     val existing=set.actual
     var weight by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.load?.toPlainString()
-            ?: (target.load as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty())
+            ?: if(machineInstanceId!=null)"" else
+                (target.load as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty())
     }
     var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.reps?.takeIf{it>0}?.toString()
@@ -635,6 +672,9 @@ private fun NativeKotlinSetCard(
     }
     var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.actualRir?.toString().orEmpty())
+    }
+    LaunchedEffect(machineInstanceId) {
+        if(existing==null && !finished && machineInstanceId!=null)weight=""
     }
     val actual=performed(target,weight,reps,effort)
     val failedActual=performed(target,weight,reps,effort,failed=true)
@@ -647,13 +687,15 @@ private fun NativeKotlinSetCard(
         Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
             style=MaterialTheme.typography.labelLarge)
         PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
-            lastReferences,WorkoutReferenceKey(target.setKey))
+            physicalMachineLastReferences(lastReferences,machineInstanceId),
+            WorkoutReferenceKey(target.setKey))
         if(set.isResolved) {
             Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
                 (existing?.let{" · ${it.reps} reps"+
                     (it.load?.let{amount->" at ${amount.stripTrailingZeros().toPlainString()}"}?:"")+
                     (it.actualRir?.let{rir->" · ${rir} actual RIR"}?: " · actual RIR unknown")
-                } ?: ""),
+                } ?: "")+
+                (existing?.machineInstanceId?.let{" · machine $it"} ?: ""),
                 color=MaterialTheme.colorScheme.primary,
                 style=MaterialTheme.typography.bodyMedium)
         }

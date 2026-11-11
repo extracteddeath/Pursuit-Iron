@@ -108,6 +108,51 @@ class CustomNextWorkoutCoachingDomainTest {
         CustomNextWorkoutCoachingRequest(next,"main",sessions,
             stock,n(step),readiness,restricted))
 
+    @Test fun differentMachineStacksNeverCreateFalseStrengthDropOrBorrowProgression() {
+        fun tagged(session:CustomCoachingHistoricalSession,id:String):
+            CustomCoachingHistoricalSession =
+            session.copy(evidence=session.evidence.copy(
+                visits=session.evidence.visits.map {
+                    it.copy(actual=it.actual?.copy(machineInstanceId=id))
+                }))
+        val b3=tagged(completed(1,3,issued=listOf(200,200),
+            actual=listOf(200,200)),"B")
+        val a4=tagged(completed(2,4,issued=listOf(200,200),
+            actual=listOf(140,140),reps=listOf(5,5)),"A")
+        val b5=tagged(completed(3,5,issued=listOf(200,200),
+            actual=listOf(200,200)),"B")
+        val full=listOf(b3,a4,b5)
+        val proposed=snapshot(6)
+        fun coach(machine:String?)=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(
+                proposed,"main",full,stock(),n(5),
+                CoachReadiness.NORMAL,false,
+                requestedMachineInstanceId=machine))
+        val b=coach("B")
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,b.status)
+        assertEquals(n(205),b.loadReviewCandidate)
+        assertEquals(listOf("workout-3-0","workout-5-0"),b.comparedWorkoutIds)
+        val a=coach("A")
+        assertNull(a.loadReviewCandidate)
+        assertEquals("workout-4-0",a.latestWorkoutId)
+        val legacy=coach(null)
+        assertEquals(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,legacy.status)
+        assertNull(legacy.loadReviewCandidate)
+
+        val mixed=b5.copy(evidence=b5.evidence.copy(visits=b5.evidence.visits
+            .mapIndexed {index,visit->
+                visit.copy(actual=visit.actual?.copy(
+                    machineInstanceId=if(index==0)"A" else "B"))
+            }))
+        val refusal=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(snapshot(6),"main",
+                listOf(b3,a4,mixed),stock(),n(5),CoachReadiness.NORMAL,false,
+                requestedMachineInstanceId="B"))
+        assertEquals(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+            refusal.status)
+        assertNull(refusal.loadReviewCandidate)
+    }
+
     @Test fun twoStraightSetCeilingSessionsEarnOnlyNextPhysicallyVerifiedIncrement() {
         val result=review()
         assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,

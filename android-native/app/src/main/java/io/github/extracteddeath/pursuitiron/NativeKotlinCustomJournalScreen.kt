@@ -40,6 +40,15 @@ internal fun NativeKotlinCustomJournalScreen(
     onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
+    var machineRoster by remember(host,workoutId){
+        mutableStateOf<NativeMachineRosterSnapshot?>(null)
+    }
+    var machineSelections by rememberSaveable(workoutId){mutableStateOf("")}
+    LaunchedEffect(host,workoutId) {
+        machineRoster=withContext(Dispatchers.IO) {
+            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+        }
+    }
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
     var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
@@ -507,6 +516,17 @@ internal fun NativeKotlinCustomJournalScreen(
                     activeFocus==null ||
                         slot.sets.any{it.setKey==activeFocus.setKey}
                 }.forEach {slot->
+                    val config=machineRoster?.configurations?.firstOrNull{
+                        it.exerciseId==slot.exerciseId
+                    }
+                    val selectedMachineId=workoutMachineChoice(
+                        machineSelections,slot.exerciseId,config?.defaultMachineId)
+                    NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
+                        enabled=!busy && !finished && current.finishedByEventId==null,
+                        onSelect={machineId->
+                            machineSelections=updateWorkoutMachineChoice(
+                                machineSelections,slot.exerciseId,machineId)
+                        })
                     PursuitCard {
                         if(activeFocus==null)PursuitExerciseHeading(slot.exerciseId,
                             onHistory={historyExerciseId=slot.exerciseId},
@@ -567,6 +587,13 @@ internal fun NativeKotlinCustomJournalScreen(
                             val mainKey=CustomWorkoutVisitKey(
                                 set.setKey,CustomWorkoutVisitPart.MAIN)
                             val observed=current.effectiveVisits[mainKey]
+                            // Once saved, the machine is a historical fact;
+                            // selecting B later must not rewrite a prior A set.
+                            val recordedMain=observed?.operation
+                                as? CustomWorkoutJournalOperation.Record
+                            val mainMachineId=if(observed!=null)
+                                recordedMain?.performed?.machineInstanceId
+                            else selectedMachineId
                             val advice=liveCoach?.takeIf {
                                 !busy && !finished && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&
@@ -587,6 +614,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished,
+                                machineInstanceId=mainMachineId,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
                                 position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                     .indexOf(set)+1,
@@ -594,7 +622,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
                                     record(set.setKey,CustomWorkoutVisitPart.MAIN,
-                                        outcome,actual)
+                                        outcome,actual?.copy(machineInstanceId=mainMachineId))
                                 },
                                 onShowPlates={load,unit,basis->
                                     plateRequest=NativeCustomPlateRequest(
@@ -615,6 +643,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     existing=follower,locked=busy||finished,
+                                    machineInstanceId=if(follower!=null)
+                                        (follower.operation as?
+                                            CustomWorkoutJournalOperation.Record)
+                                            ?.performed?.machineInstanceId
+                                    else if(main!=null)main.performed?.machineInstanceId
+                                    else selectedMachineId,
                                     referenceMode=referenceMode,lastReferences=lastReferences,
                                     position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                         .indexOf(set)+1,
@@ -624,7 +658,13 @@ internal fun NativeKotlinCustomJournalScreen(
                                     onRecord={outcome,actual->
                                         record(set.setKey,
                                             CustomWorkoutVisitPart.FOLLOW_UP,
-                                            outcome,actual)
+                                            outcome,actual?.copy(
+                                                machineInstanceId=if(follower!=null)
+                                                    (follower.operation as?
+                                                        CustomWorkoutJournalOperation.Record)
+                                                        ?.performed?.machineInstanceId
+                                                else if(main!=null)main.performed?.machineInstanceId
+                                                else selectedMachineId))
                                     },
                                     onShowPlates={load,unit,basis->
                                         plateRequest=NativeCustomPlateRequest(
@@ -836,6 +876,7 @@ private fun NativeKotlinCustomVisitEditor(
     part:CustomWorkoutVisitPart,
     existing:CustomWorkoutJournalReceipt?,
     locked:Boolean,
+    machineInstanceId:String?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
     position:Int,
@@ -881,10 +922,13 @@ private fun NativeKotlinCustomVisitEditor(
     }
     var actualLoad by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved?.performed?.load?.toPlainString() ?:
-            verified?.value?.toPlainString().orEmpty())
+            if(machineInstanceId!=null)"" else verified?.value?.toPlainString().orEmpty())
     }
     var actualRir by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved?.performed?.actualRir?.toString().orEmpty())
+    }
+    LaunchedEffect(machineInstanceId) {
+        if(saved==null && machineInstanceId!=null && !locked)actualLoad=""
     }
     val weight=if(verified==null)null else
         runCatching{BigDecimal(actualLoad.trim())}.getOrNull()
@@ -918,7 +962,7 @@ private fun NativeKotlinCustomVisitEditor(
             else prescription.reps
             PursuitWorkoutSetReference(referenceMode,target,referenceReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
-                lastReferences,WorkoutReferenceKey(set.setKey,
+                physicalMachineLastReferences(lastReferences,machineInstanceId),WorkoutReferenceKey(set.setKey,
                     part==CustomWorkoutVisitPart.FOLLOW_UP))
         }
         if(saved!=null&&!editing){

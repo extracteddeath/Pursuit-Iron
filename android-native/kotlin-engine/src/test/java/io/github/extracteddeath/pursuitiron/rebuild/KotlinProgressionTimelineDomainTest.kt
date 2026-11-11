@@ -23,7 +23,9 @@ class KotlinProgressionTimelineDomainTest {
         failedAt: Int? = null,
         correctedReps: Pair<Int, Int>? = null,
         exercise: String = "bench",
-        dayIndex: Int = 0
+        dayIndex: Int = 0,
+        machineId: String? = null,
+        machinesBySet: List<String?>? = null
     ): KotlinWorkoutJournalState {
         require(reps.size == 4 && actualRir.size == 4 && loads.size == 4)
         val id = "workout-$index"
@@ -47,7 +49,7 @@ class KotlinProgressionTimelineDomainTest {
                 else KotlinJournalSetOutcome.COMPLETED,
                 KotlinPerformedSet(n(loads[i]), LoadUnit.LB,
                     if (failed) 0 else reps[i],
-                    if (failed) null else actualRir[i])
+                    if (failed) null else actualRir[i],machinesBySet?.get(i) ?: machineId)
             )
             journal = (KotlinWorkoutJournalDomain.reduce(journal, operation)
                 as KotlinJournalDecision.Proposed).state
@@ -58,7 +60,7 @@ class KotlinProgressionTimelineDomainTest {
                 "correction-$index", journal.revision, targets[ordinal].setKey,
                 KotlinJournalSetOutcome.COMPLETED,
                 KotlinPerformedSet(n(loads[ordinal]), LoadUnit.LB,
-                    correctReps, actualRir[ordinal]),
+                    correctReps, actualRir[ordinal],machinesBySet?.get(ordinal) ?: machineId),
                 correctsEventId = "event-$index-$ordinal"
             )
             journal = (KotlinWorkoutJournalDomain.reduce(journal, correction)
@@ -80,6 +82,25 @@ class KotlinProgressionTimelineDomainTest {
             KotlinChronologicalWorkout(i.toLong() + 1, journal)
         }, equipment, n(5)
     )
+
+    @Test fun machineAAndBRemainIndependentEvenInSameExerciseAndDay() {
+        val a1=workout(101,loads=listOf(200,200,200,200),machineId="A")
+        val b1=workout(102,loads=listOf(140,140,140,140),machineId="B")
+        val a2=workout(103,loads=listOf(200,200,200,200),machineId="A")
+        val both=listOf(a1,b1,a2)
+        val reviewA=KotlinProgressionTimelineDomain.review(
+            request(both).copy(requestedMachineInstanceId="A"))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,reviewA.status)
+        assertEquals(listOf("workout-101","workout-103"),reviewA.comparedWorkoutIds)
+        val reviewB=KotlinProgressionTimelineDomain.review(
+            request(both).copy(requestedMachineInstanceId="B"))
+        assertEquals(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,reviewB.status)
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,
+            KotlinProgressionTimelineDomain.review(request(both)).status)
+        val mixed=workout(104,machinesBySet=listOf("A","B","A","B"))
+        assertEquals(KotlinTimelineReviewStatus.MIXED_PHYSICAL_MACHINE,
+            KotlinProgressionTimelineDomain.review(request(listOf(a1,mixed))).status)
+    }
 
     @Test fun successiveCompletedWorkoutsYieldReviewOnlyPhysicalStepAndFatigue() {
         val review = KotlinProgressionTimelineDomain.review(

@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=3
+    private const val VERSION=4
     const val MAX_BYTES=2_000_000
     private const val MAX_RECEIPTS=2048
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -43,7 +43,7 @@ internal object NativeCustomWorkoutJournalCodec {
     private fun DataInputStream.intOptional():Int?=
         if(readBoolean())readInt() else null
 
-    private fun DataOutputStream.performed(value:KotlinPerformedSet?) {
+    private fun DataOutputStream.performed(value:KotlinPerformedSet?,version:Int) {
         writeBoolean(value!=null)
         if(value==null)return
         writeBoolean(value.load!=null)
@@ -52,8 +52,9 @@ internal object NativeCustomWorkoutJournalCodec {
         value.unit?.let{writeUTF(it.name)}
         writeInt(value.reps)
         intOptional(value.actualRir)
+        if(version>=4)textOptional(value.machineInstanceId)
     }
-    private fun DataInputStream.performed():KotlinPerformedSet? {
+    private fun DataInputStream.performed(version:Int):KotlinPerformedSet? {
         if(!readBoolean())return null
         val weight=if(readBoolean()) BigDecimal(readUTF()) else null
         val unit=if(readBoolean()){
@@ -61,9 +62,14 @@ internal object NativeCustomWorkoutJournalCodec {
             LoadUnit.entries.singleOrNull{it.name==raw}
                 ?:throw IOException("unknown actual load unit")
         }else null
-        return KotlinPerformedSet(weight,unit,readInt(),intOptional())
+        val reps=readInt()
+        val rir=intOptional()
+        val machine=if(version>=4)textOptional() else null
+        if(machine!=null && !KotlinMachineAlternativesDomain.validInstanceId(machine))
+            throw IOException("invalid physical machine")
+        return KotlinPerformedSet(weight,unit,reps,rir,machine)
     }
-    private fun DataOutputStream.operation(event:CustomWorkoutJournalOperation) {
+    private fun DataOutputStream.operation(event:CustomWorkoutJournalOperation,version:Int) {
         when(event) {
             is CustomWorkoutJournalOperation.Record->{
                 writeByte(1)
@@ -72,7 +78,7 @@ internal object NativeCustomWorkoutJournalCodec {
                 writeUTF(event.visit.setKey)
                 writeUTF(event.visit.part.name)
                 writeUTF(event.outcome.name)
-                performed(event.performed)
+                performed(event.performed,version)
                 textOptional(event.correctsEventId)
             }
             is CustomWorkoutJournalOperation.Finish->{
@@ -119,7 +125,7 @@ internal object NativeCustomWorkoutJournalCodec {
                 val outcome=KotlinJournalSetOutcome.entries.singleOrNull{
                     it.name==outcomeName
                 }?:throw IOException("invalid workout set outcome")
-                val observed=performed()
+                val observed=performed(version)
                 val corrected=textOptional()
                 CustomWorkoutJournalOperation.Record(eventId,rev,
                     CustomWorkoutVisitKey(setKey,part),outcome,observed,corrected)
@@ -201,9 +207,14 @@ internal object NativeCustomWorkoutJournalCodec {
             it.operation is CustomWorkoutJournalOperation.SessionNote
         }
         require(swapped || state.originalSnapshot==state.snapshot)
-        // Legacy 1/2 snapshots and their history-manifest digests MUST retain
-        // byte-identical encodings. Version 3 is used only when notes exist.
-        val version=if(notes) VERSION else if(swapped) 2 else 1
+        // Older versions and their history-manifest digests must remain
+        // byte-identical. Version 4 exists only for physical-machine sets.
+        val machineTagged=state.receipts.any {
+            (it.operation as? CustomWorkoutJournalOperation.Record)
+                ?.performed?.machineInstanceId!=null
+        }
+        val version=if(machineTagged) VERSION else if(notes) 3
+            else if(swapped) 2 else 1
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
         val original=if(swapped)
             NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)
@@ -223,7 +234,7 @@ internal object NativeCustomWorkoutJournalCodec {
             data.writeInt(state.receipts.size)
             state.receipts.forEach{
                 data.writeLong(it.appliedRevision)
-                data.operation(it.operation)
+                data.operation(it.operation,version)
             }
         }
         return out.toByteArray().also{

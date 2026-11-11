@@ -622,6 +622,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                 previouslyAttempted.machineInstanceId
                             else selectedMachineId
                             val advice=liveCoach?.takeIf {
+                                // Hide prior advice immediately after an
+                                // injury restriction, before a fresh review.
+                                !movementRestricted &&
                                 !busy && !finished && machineChoices.ready &&
                                     !machineChoices.busy && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&

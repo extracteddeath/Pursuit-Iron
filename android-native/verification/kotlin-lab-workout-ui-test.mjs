@@ -97,6 +97,24 @@ assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineSelector.includes('previous.machineSets.filterKeys { it.machineId==requested }'),
   'Native A/B Last must recover each station without borrowing other stacks or bypassing unknown skips');
 
+const trendUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExercisePerformanceTrend.kt');
+const trendDomain=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeExercisePerformanceTrendDomain.kt');
+for(const phrase of [
+  'val gymId:String?=null',
+  'val machineInstanceId:String?=null',
+  'entry.evidence.source.gymId',
+  'entry.gymId',
+  'actual.machineInstanceId!=null',
+  'NativeExerciseTrendKey(issued.basis,window,'
+])assert.ok(trendDomain.includes(phrase),'Missing machine-isolated factual trend: '+phrase);
+for(const phrase of [
+  'var stationGym by rememberSaveable(exerciseId)',
+  'var stationMachine by rememberSaveable(exerciseId)',
+  'val stationSeries=basisSeries.filter{',
+  'Text("Gym · physical machine"',
+  'stationGym=item.first',
+  'stationMachine=item.second'
+])assert.ok(trendUi.includes(phrase),'Missing independent A/B trend selector: '+phrase);
 const sharedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const phrase of [
   'internal fun PursuitWorkoutFocusHeader(',

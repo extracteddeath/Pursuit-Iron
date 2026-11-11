@@ -29,6 +29,8 @@ internal fun NativeKotlinExercisePerformanceTrend(
     onOpenHistory:()->Unit
 ) {
     var basisChoice by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
+    var stationGym by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
+    var stationMachine by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
     var windowChoice by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
     var showValues by rememberSaveable(exerciseId){mutableStateOf(false)}
     val outcome=remember(timeline,exerciseId,displayUnit) {
@@ -43,9 +45,16 @@ internal fun NativeKotlinExercisePerformanceTrend(
     val basisSeries=outcome.series.filter {
         (it.key.basis?.name ?: "BODYWEIGHT")==basis
     }
-    val windows=basisSeries.map{it.key.reps.name}
+    val stations=basisSeries.map{it.key.gymId to it.key.machineInstanceId}.distinct()
+    val station=stations.firstOrNull {
+        it.first==stationGym && it.second==stationMachine
+    } ?:stations.firstOrNull()
+    val stationSeries=basisSeries.filter{
+        it.key.gymId==station?.first && it.key.machineInstanceId==station?.second
+    }
+    val windows=stationSeries.map{it.key.reps.name}
     val window=windowChoice?.takeIf{it in windows} ?:windows.firstOrNull()
-    val selected=basisSeries.firstOrNull{it.key.reps.name==window}
+    val selected=stationSeries.firstOrNull{it.key.reps.name==window}
     val bodyweight=selected?.key?.bodyweightOnly==true
     val unit=if(bodyweight)"reps" else displayUnit.name.lowercase()
     fun measure(value:BigDecimal)=performanceLabel(value,unit)
@@ -67,6 +76,8 @@ internal fun NativeKotlinExercisePerformanceTrend(
                         FilterChip(selected=basis==choice,
                             onClick={
                                 basisChoice=choice
+                                stationGym=null
+                                stationMachine=null
                                 windowChoice=null
                                 showValues=false
                             },
@@ -74,7 +85,28 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     }
                 }
             }
-            val windowOptions=basisSeries.map{it.key.reps}.distinct()
+            if(stations.size>1) {
+                Text("Gym · physical machine",style=MaterialTheme.typography.labelLarge)
+                Text("Physical machine loads are independent. Select one station to see its actual trend.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    stations.forEach {item->
+                        FilterChip(selected=station==item,
+                            onClick={
+                                stationGym=item.first
+                                stationMachine=item.second
+                                windowChoice=null
+                                showValues=false
+                            },
+                            label={Text(if(item.first==null)
+                                "Portable / unassigned"
+                                else "${item.first} · ${item.second ?: "Older unassigned machine"}")})
+                    }
+                }
+            }
+            val windowOptions=stationSeries.map{it.key.reps}.distinct()
             if(windowOptions.size>1) {
                 Text("Performed repetitions",
                     style=MaterialTheme.typography.labelLarge)
@@ -142,7 +174,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    "Only the exact exercise, physical load basis and selected rep window are compared. " +
+                    "Only the exact exercise, selected physical machine (when relevant), loading basis and rep window are compared. " +
                     "Reps, effort and fatigue may still differ. These are recorded values, " +
                     "not an adjusted strength score, a PR certificate or a coaching target.",
                     style=MaterialTheme.typography.bodySmall,

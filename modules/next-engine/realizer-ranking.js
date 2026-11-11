@@ -102,12 +102,15 @@ function strengthCandidate(a, session, request, chosen, catalog) {
     if (request.preferences?.powerbuildingInclineVolume && a.lift==='bench_press' && a.role==='secondary_strength') {
         console.log('M344 RANKING '+JSON.stringify({intent:session.intent,load:session.maxMinutes,options:staticCandidatePool(catalog,session,request).filter(e=>(e.liftSpecificity?.bench_press??0)>.45).map(e=>({id:e.id,specificity:e.liftSpecificity.bench_press})),flag:request.preferences.powerbuildingInclineVolume}));
     }
-    return selectBestCandidate(staticCandidatePool(catalog, session, request), {
+    const result=selectBestCandidate(staticCandidatePool(catalog, session, request), {
         accept: e => (e.liftSpecificity?.[a.lift] ?? 0) > .45
             && (!e.flags.barbell || barbells < maxBarbells(session, request)),
         compare,
         preCompare: compare
     }).candidate;
+    if (request.preferences?.powerbuildingInclineVolume && a.lift==='bench_press' && a.role==='secondary_strength')
+        console.log('M344 SELECT '+JSON.stringify({picked:result?.id,prefs:request.preferences.preferredExercises??[],intent:session.intent,compareIncline:compare(catalog.find(e=>e.id==='incline_db_press'),catalog.find(e=>e.id==='barbell_bench'))}));
+    return result;
 }
 /* M230:PRESERVE:top.strengthCandidate:END */
 

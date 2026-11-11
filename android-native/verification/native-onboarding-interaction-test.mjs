@@ -243,15 +243,21 @@ assert.ok(train.includes('val setDraftStates=rememberSaveableStateHolder()') &&
   train.includes('NativeWorkingSet(plan.session,set,commit'),
   'Exercise navigation must not destroy another set’s unsaved load/reps/RIR draft');
 assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy') &&
-  controls.includes('input.length<=10 && input.all {it.isDigit() || it==\'.\'}') &&
+  controls.includes("input.length<=10 && input.all{it.isDigit()||it=='.'}") &&
   controls.includes('input.length<=3 && input.all(Char::isDigit)') &&
   controls.includes('input.length<=2 && input.all(Char::isDigit)') &&
   train.includes('NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)') &&
   controls.includes('NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)') &&
   controls.includes('NativeSetEntryPolicy.stepRir(rir,1)') &&
+  controls.includes('NativeSetEntryPolicy.stepRepsBy(') &&
+  controls.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  controls.includes('combinedClickable(') &&
+  controls.includes('onLongClickLabel=') &&
   controls.includes('minWidth=48.dp,minHeight=48.dp') &&
+  controls.includes('if(!largeText && maxWidth>=420.dp)') &&
+  controls.includes('if(!largeText&&maxWidth>=200.dp)') &&
   !controls.includes('stepLoad('),
-  'All set editors share bounded keyboard-and-stepper entry, touch targets and no made-up equipment increments');
+  'All set editors share numeric bounds, policy-tested long-press, responsive 48dp touch targets and no fabricated load increments');
 const verifiedLoadUi=fs.readFileSync(root+'NativeVerifiedLoadOptions.kt','utf8');
 assert.ok(verifiedLoadUi.includes(String.raw`(\\.[0-9]{1,3})?`) &&
   !verifiedLoadUi.includes(String.raw`(\\\\.[0-9]{1,3})?`),

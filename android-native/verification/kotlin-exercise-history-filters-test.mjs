@@ -50,4 +50,21 @@ assert.match(ui,/NativeExerciseFavorites\.loggedIds\(verified\)/);
 assert.match(ui,/live\.athleteId!=verified\.athleteId/);
 assert.match(ui,/live\.manifestRevision!=verified\.manifestRevision/);
 assert.match(ui,/NativeExerciseFavorites\.write\(/);
-console.log('PASS verified exercise history session grouping, non-mutating filters, full-source ordinals and favorite authority');
+// A and B labels are local to each reviewed gym. The same machine ID may
+// exist in two gyms without making their performance histories comparable.
+const historyOwner=readFileSync(
+  'android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinMixedHistoryReadCoordinator.kt','utf8');
+assert.match(historyOwner,/val gymId: String = ""/);
+assert.match(historyOwner,/journal\.originalSnapshot\.stamp\.gymId/);
+assert.match(ui,/private data class PhysicalMachineHistoryKey\(val gymId:String,val machineId:String\)/);
+assert.match(ui,/completed\.evidence\.source\.gymId/);
+assert.match(ui,/completed\.gymId/);
+assert.match(ui,/val machineKeys=rows\.map\(::historyMachine\)\.distinct\(\)/);
+assert.match(ui,/it\.gymId==selectedGymId && it\.machineId==selectedMachineId/);
+assert.match(ui,/config\.gymId to machine\.id/);
+assert.match(ui,/val visible=if\(machineKeys\.size>1 && !showAllMachines\)/);
+assert.match(ui,/Text\("All machines · labeled"\)/);
+assert.match(ui,/showAllMachines=false/);
+assert.match(ui,/shown\.filter\{historyMachine\(it\)==activeMachine\}/);
+assert.match(ui,/row\.gymId/);
+console.log('PASS verified exercise history session grouping, gym-specific A\/B filters, and correction-aware favorites');

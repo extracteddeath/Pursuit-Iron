@@ -24,7 +24,9 @@ sealed interface NativeKotlinMixedHistoryCompletion {
 
     data class Custom(
         override val manifest: KotlinHistoryManifestEntry,
-        val evidence: CustomWorkoutHistoricalEvidence
+        val evidence: CustomWorkoutHistoricalEvidence,
+        /** Read from the independently verified immutable issued workout. */
+        val gymId: String = ""
     ) : NativeKotlinMixedHistoryCompletion
 }
 
@@ -814,7 +816,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     (CustomWorkoutHistoryEvidenceDomain.project(journal)
                         as? CustomHistoryEvidenceResult.Candidate)?.evidence
                 } ?: return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
-                values.add(NativeKotlinMixedHistoryCompletion.Custom(entry, evidence))
+                values.add(NativeKotlinMixedHistoryCompletion.Custom(
+                    entry,evidence,journal.originalSnapshot.stamp.gymId))
             } else {
                 val access: (String, KotlinTrainingSourceRevision) -> Boolean =
                     { who, source ->

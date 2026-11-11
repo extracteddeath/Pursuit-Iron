@@ -161,3 +161,23 @@ export function historyForMachineRecommendation(history, exerciseId, machineInst
                 machineInstanceId } } };
     });
 }
+
+/** Persist only validated gym-scoped machine definitions; never flatten A/B into stock. */
+export function sanitizeMachineVariants(raw) {
+    const out = {};
+    for (const [exerciseId, record] of Object.entries(object(raw)).slice(0,256)) {
+        if (!validId(exerciseId)) continue;
+        const instances = [];
+        for (const item of (Array.isArray(record?.instances) ? record.instances : []).slice(0,32)) {
+            try {
+                const clean = ensureInstance(item, true);
+                if (!instances.some(v => v.id === clean.id)) instances.push(clean);
+            } catch { /* corrupt entries cannot become a progression authority */ }
+        }
+        if (!instances.length) continue;
+        const preferred = instances.find(v => v.id === record.defaultId && v.active)
+            ?? instances.find(v => v.active);
+        out[exerciseId] = { defaultId: preferred?.id ?? null, instances };
+    }
+    return out;
+}

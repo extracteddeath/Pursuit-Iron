@@ -90,17 +90,24 @@ object ReviewedFutureWeekProgressionDomain {
         if(visits.size!=1)return false
         if(machineInstanceId==null)return true
         val previous=visits.single()
-        if(previous.snapshot.slots.singleOrNull{
-                it.slotId==slotId
-            }?.machineInstanceId!=machineInstanceId)return false
+        val issued=previous.snapshot.slots.singleOrNull{
+            it.slotId==slotId
+        }?.sets?.filter{
+            it.prescription.type==DraftSetType.WORKING
+        } ?:return false
         val working=previous.evidence.visits.filter {
             it.slotId==slotId &&
                 it.part==CustomWorkoutVisitPart.MAIN &&
                 it.setType==DraftSetType.WORKING
         }
-        return working.isNotEmpty() && working.all{
-            it.actual?.machineInstanceId==machineInstanceId
-        }
+        // A lifter may switch away from the originally selected machine
+        // during the session. Actual verified set provenance, not a stale
+        // initial station choice, determines which A/B thread owns the
+        // evidence. Every issued working set must be present and agree.
+        return issued.isNotEmpty() &&
+            working.size==issued.size &&
+            working.map{it.setKey}.toSet()==issued.map{it.setKey}.toSet() &&
+            working.all{it.actual?.machineInstanceId==machineInstanceId}
     }
 
     fun propose(request:ReviewedFutureWeekProgressionRequest):

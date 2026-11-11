@@ -154,7 +154,8 @@ class StarterProgramReleaseMatrixTest {
         for(phase in listOf(TrainingPhase.STRENGTH,TrainingPhase.PEAK))
             for(includeOHP in listOf(false,true)) {
             val baseline=StarterProgramReleaseFixture.request(
-                ComposerSplit.ULPPL,phase,includeIncline=true)
+                ComposerSplit.ULPPL,phase,includeIncline=true).copy(
+                    nonSetSecondsPerDay=600)
             val source=if(includeOHP)baseline.copy(
                 startingLoads=baseline.startingLoads+
                     ("barbell_ohp" to BigDecimal("95")))

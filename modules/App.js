@@ -11277,7 +11277,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             return false;
         try {
             if (!appStorageOwnership.writable()) throw new Error('Another window owns device storage.');
-            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, gymId:sessionGymId, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
+            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, gymId:sessionGymId, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
         }
@@ -11752,11 +11752,15 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             ? Math.max(...previousMachineSets.map(row=>
                 e1rm(toUnit(row.weight,row.unit||unit,unit),row.reps)))
             :Number.POSITIVE_INFINITY;
-        const record = !wasDone ? completedSetPR(set,
-            machineId ? previousMachineBest : prBaseline[data[ei].id], e1rm) : null;
-        if (record && !prHitRef.current.has(prKey)) {
+        // Keep the existing pure user-gesture PR gate; physical machines
+        // use their own stricter baseline before any celebration.
+        const record = !wasDone ? completedSetPR(set, prBaseline[data[ei].id], e1rm) : null;
+        const scopedRecord = machineId
+            ? (!wasDone ? completedSetPR(set, previousMachineBest, e1rm) : null)
+            : record;
+        if (scopedRecord && !prHitRef.current.has(prKey)) {
             prHitRef.current.add(prKey);
-            setPrFlash({ name: ex.name, ...record });
+            setPrFlash({ name: ex.name, ...scopedRecord });
             try { beep(); } catch {}
             buzz("success");
             if (prFlashTimer.current) clearTimeout(prFlashTimer.current);

@@ -21,7 +21,9 @@ data class ReviewedFutureWeekProgressionRequest(
     val catalogSourceRevision:Long,
     val lastCompletedAbsoluteWeek:Int,
     val coachingRequest:CustomNextWorkoutCoachingRequest,
-    val permissions:CustomCycleCoachPermissions
+    val permissions:CustomCycleCoachPermissions,
+    /** Trusted caller supplies the latest owner-verified roster, never UI input. */
+    val verifiedMachineConfigurations:List<KotlinGymMachineAlternatives>?=null
 )
 
 enum class ReviewedFutureWeekProgressionStatus {
@@ -51,6 +53,22 @@ object ReviewedFutureWeekProgressionDomain {
     internal fun requiresPhysicalMachineIdentity(basis:LoadBasis?):Boolean =
         basis in setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
             LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)
+
+    /** A bound station's attainable stack, never the generic exercise stock. */
+    internal fun confirmedBoundMachineStock(
+        gymId:String,exercise:CatalogMovement,machineInstanceId:String?,
+        configurations:List<KotlinGymMachineAlternatives>?
+    ):VerifiedLoadStock? {
+        val machineId=machineInstanceId ?:return null
+        val basis=exercise.expectedLoadBasis
+        if(!requiresPhysicalMachineIdentity(basis))return null
+        val config=configurations?.let{
+            KotlinMachineAlternativesDomain.forGymExercise(
+                it,gymId,exercise.exerciseId)
+        } ?:return null
+        return KotlinMachineAlternativesDomain.confirmedStack(
+            config,machineId,basis ?:return null)
+    }
 
     fun propose(request:ReviewedFutureWeekProgressionRequest):
         ReviewedFutureWeekProgression {
@@ -127,21 +145,29 @@ object ReviewedFutureWeekProgressionDomain {
                 audit=sourceAudit)
 
         val exercise=request.catalog.singleOrNull {it.exerciseId==slot.exerciseId}
-        val stock=exercise?.equipmentId?.let {
+            ?:return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
+                "The selected exercise is missing from the reviewed catalog.",
+                audit=sourceAudit)
+        val physical=requiresPhysicalMachineIdentity(exercise.expectedLoadBasis)
+        val stock=if(physical)confirmedBoundMachineStock(
+            next.stamp.gymId,exercise,slot.machineInstanceId,
+            request.verifiedMachineConfigurations)
+        else exercise.equipmentId?.let {
             request.setup.reviewed?.gym?.confirmedStock?.get(it)
         }
-        if(exercise==null || request.coachingRequest.verifiedStock!=stock)
-            return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
-                "The current physical stock must match the exact selected exercise.",
-                audit=sourceAudit)
-
-        // A machine-specific weight/rep improvement belongs to its A/B
-        // machine thread. Custom week slots do not yet persist a physical
-        // machine-instance binding, so never launder it into all machines.
-        if(requiresPhysicalMachineIdentity(exercise.expectedLoadBasis))
+        // A custom cycle now persists physical A/B slot bindings. Only the
+        // EXACT bound station's separately calibrated inventory and same-day,
+        // same-station history may support its next-week amendment.
+        if(physical && (slot.machineInstanceId==null ||
+            request.coachingRequest.requestedMachineInstanceId!=
+                slot.machineInstanceId || stock==null))
             return refuse(
                 ReviewedFutureWeekProgressionStatus.PHYSICAL_MACHINE_REVIEW_REQUIRED,
-                "Machine A/B prescriptions need a persisted physical machine ID before a cycle-level override.",
+                "This cycle slot must bind an available, calibrated physical station before receiving a machine-specific change.",
+                audit=sourceAudit)
+        if(request.coachingRequest.verifiedStock!=stock)
+            return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
+                "The confirmed load inventory changed or is not the selected physical station.",
                 audit=sourceAudit)
 
         if(!request.permissions.adaptWeekOverrides)

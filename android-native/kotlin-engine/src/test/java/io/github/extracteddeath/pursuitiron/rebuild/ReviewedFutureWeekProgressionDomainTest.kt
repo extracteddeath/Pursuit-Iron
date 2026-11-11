@@ -7,7 +7,7 @@ import org.junit.Test
 class ReviewedFutureWeekProgressionDomainTest {
     private fun set()=CustomAuthoredSet(
         DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
-        RepBand(5,8),2,55,75)
+        RepBand(10,15),2,55,75)
     private fun day(weekday:Int)=CustomTrainingDay(
         weekday,"Core $weekday",ComposerSessionPurpose.HYPERTROPHY,
         listOf(CustomExerciseSlot("slot-$weekday","bodyweight_crunch",
@@ -69,7 +69,7 @@ class ReviewedFutureWeekProgressionDomainTest {
                 prescribed.prescription.load,prescribed.prescription.reps,
                 prescribed.prescription.targetRir,null,
                 KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(null,null,5,actualRir),
+                KotlinPerformedSet(null,null,10,actualRir),
                 "record-$week-$index")
         }
         return CustomCoachingHistoricalSession(order,old,
@@ -122,13 +122,13 @@ class ReviewedFutureWeekProgressionDomainTest {
         assertEquals("slot-0",result.changedSlotId)
         assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
             result.candidateAudit?.status)
-        assertEquals(listOf(6,6),preview(candidate,3).slots.single()
+        assertEquals(listOf(11,11),preview(candidate,3).slots.single()
             .sets.map{it.prescription.reps.minimum})
-        assertEquals(listOf(5,5),preview(candidate,2).slots.single()
+        assertEquals(listOf(10,10),preview(candidate,2).slots.single()
             .sets.map{it.prescription.reps.minimum})
-        assertEquals(listOf(5,5),preview(candidate,4).slots.single()
+        assertEquals(listOf(10,10),preview(candidate,4).slots.single()
             .sets.map{it.prescription.reps.minimum})
-        assertEquals(listOf(5,5),preview(candidate,3,2).slots.single()
+        assertEquals(listOf(10,10),preview(candidate,3,2).slots.single()
             .sets.map{it.prescription.reps.minimum})
         assertEquals(source.blocks,candidate.blocks)
         assertTrue(source.weekOverrides.isEmpty())

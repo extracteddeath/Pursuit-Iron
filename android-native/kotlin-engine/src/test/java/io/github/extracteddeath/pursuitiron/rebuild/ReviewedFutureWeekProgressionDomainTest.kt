@@ -55,8 +55,8 @@ class ReviewedFutureWeekProgressionDomainTest {
         nonSetSecondsByWeekday=mapOf(0 to 200,2 to 200,4 to 200))
     private fun preview(source:CustomTrainingCycle,week:Int,
         weekday:Int=0):CustomWorkoutDaySnapshot =
-        (CustomWorkoutSnapshotDomain.preview(source,setup(),
-            StarterExerciseTranche.movements(),1,week,weekday)
+        (CustomWorkoutSnapshotDomain.reviewForConsent(source,setup(),
+            StarterExerciseTranche.movements(),1,inputs(),week,weekday)
             as CustomWorkoutSnapshotResult.Preview).snapshot
     private fun completed(source:CustomTrainingCycle,week:Int,
         order:Long,actualRir:Int=3,reps:Int=10,

@@ -23,10 +23,12 @@ import kotlinx.coroutines.launch
  * older workout if the latest session was skipped or unsuccessful.
  */
 private enum class ExerciseHistoryView { WORKING, ALL, SETBACKS }
+private data class PhysicalMachineHistoryKey(val gymId:String,val machineId:String)
 
 private data class ExerciseVisitDisplay(
     val key:String,
     val sessionOrder:Long,
+    val gymId:String,
     val entryNumber:Int,
     val type:DraftSetType,
     val followUp:Boolean,
@@ -47,7 +49,8 @@ private fun exerciseHistoryRows(
                 it.exerciseId==exerciseId
             }.mapIndexed { index,set ->
                 ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}",
-                    order,index+1,set.type,false,set.outcome,set.issuedLoad,
+                    order,completed.evidence.source.gymId,index+1,
+                    set.type,false,set.outcome,set.issuedLoad,
                     set.issuedReps,set.issuedRir,set.actual)
             }
         is NativeKotlinMixedHistoryCompletion.Custom ->
@@ -55,7 +58,7 @@ private fun exerciseHistoryRows(
                 it.exerciseId==exerciseId
             }.mapIndexed { index,set ->
                 ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}:${set.part.name}",
-                    order,index+1,set.setType,
+                    order,completed.gymId,index+1,set.setType,
                     set.part==CustomWorkoutVisitPart.FOLLOW_UP,
                     set.outcome,set.prescribedLoad,
                     set.prescribedReps,set.prescribedRir,set.actual)
@@ -101,6 +104,8 @@ internal fun NativeKotlinExerciseHistorySheet(
     var favoriteNotice by remember(host,exerciseId){mutableStateOf<String?>(null)}
     var historyView by rememberSaveable(exerciseId){mutableStateOf(ExerciseHistoryView.WORKING)}
     var selectedMachineId by rememberSaveable(exerciseId){mutableStateOf("")}
+    var selectedGymId by rememberSaveable(exerciseId){mutableStateOf("")}
+    var showAllMachines by rememberSaveable(exerciseId){mutableStateOf(false)}
     var machineRoster by remember(host,exerciseId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
@@ -195,20 +200,26 @@ internal fun NativeKotlinExerciseHistorySheet(
                         result.timeline.manifestRevision,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }
-                    val machineIds=rows.map{
-                        KotlinMachineAlternativesDomain.normalizeMachineId(
-                            it.actual?.machineInstanceId)
-                    }.distinct()
-                    val activeMachine=machineIds.find{it==selectedMachineId}
-                        ?:machineIds.firstOrNull()
+                    fun historyMachine(row:ExerciseVisitDisplay)=
+                        PhysicalMachineHistoryKey(row.gymId,
+                            KotlinMachineAlternativesDomain.normalizeMachineId(
+                                row.actual?.machineInstanceId))
+                    val machineKeys=rows.map(::historyMachine).distinct()
+                    val activeMachine=machineKeys.find{
+                        it.gymId==selectedGymId && it.machineId==selectedMachineId
+                    } ?:machineKeys.firstOrNull()
                     val machineLabels=machineRoster?.configurations
                         ?.filter{it.exerciseId==exerciseId}
-                        ?.flatMap{it.machines}
-                        ?.associate{it.id to it.label}.orEmpty()
-                    fun machineLabel(id:String):String =
-                        if(id==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)
+                        ?.flatMap{config->
+                            config.machines.map{machine->
+                                (config.gymId to machine.id) to machine.label
+                            }
+                        }?.toMap().orEmpty()
+                    fun machineLabel(key:PhysicalMachineHistoryKey):String =
+                        if(key.machineId==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)
                             "Unassigned (older sets)"
-                        else machineLabels[id] ?: "Machine ${id}"
+                        else machineLabels[key.gymId to key.machineId]
+                            ?: "Machine ${key.machineId}"
                     if(rows.isEmpty())
                         PursuitEmptyState("No recorded sets yet",
                             "After this exercise has a finished native workout, its actual visits will appear here.")
@@ -228,17 +239,24 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 onClick={historyView=ExerciseHistoryView.SETBACKS},
                                 label={Text("Skipped / failed")})
                         }
-                        if(machineIds.size>1) {
-                            Text("Physical machine",style=MaterialTheme.typography.titleSmall)
-                            Text("Compare loads within one machine. Different stacks cannot be ranked as a strength change.",
+                        if(machineKeys.size>1) {
+                            Text("Gym · physical machine",style=MaterialTheme.typography.titleSmall)
+                            Text("Only compare weights within the same gym and physical station. Other stacks are not strength changes.",
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                                machineIds.forEach {machineId->
-                                    FilterChip(selected=activeMachine==machineId,
-                                        onClick={selectedMachineId=machineId},
-                                        label={Text(machineLabel(machineId))})
+                                FilterChip(selected=showAllMachines,
+                                    onClick={showAllMachines=true},
+                                    label={Text("All machines · labeled")})
+                                machineKeys.forEach {key->
+                                    FilterChip(selected=!showAllMachines && activeMachine==key,
+                                        onClick={
+                                            selectedGymId=key.gymId
+                                            selectedMachineId=key.machineId
+                                            showAllMachines=false
+                                        },
+                                        label={Text("${key.gymId} · ${machineLabel(key)}")})
                                 }
                             }
                         }
@@ -251,12 +269,8 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 it.outcome!=KotlinJournalSetOutcome.COMPLETED
                             }
                         }
-                        val visible=if(machineIds.size>1 &&
-                            historyView!=ExerciseHistoryView.SETBACKS)
-                            shown.filter{
-                                KotlinMachineAlternativesDomain.normalizeMachineId(
-                                    it.actual?.machineInstanceId)==activeMachine
-                            }
+                        val visible=if(machineKeys.size>1 && !showAllMachines)
+                            shown.filter{historyMachine(it)==activeMachine}
                         else shown
                         val sessions=visible.groupBy { it.sessionOrder }
                         val allSessions=rows.groupBy { it.sessionOrder }
@@ -316,9 +330,7 @@ internal fun NativeKotlinExerciseHistorySheet(
                                         KotlinJournalSetOutcome.COMPLETED ->
                                             "Actual · ${actualLabel(row.actual)}"
                                     },style=MaterialTheme.typography.bodyMedium)
-                                    if(row.actual!=null)Text(
-                                        machineLabel(KotlinMachineAlternativesDomain.normalizeMachineId(
-                                            row.actual.machineInstanceId)),
+                                    Text("${row.gymId} · ${machineLabel(historyMachine(row))}",
                                         style=MaterialTheme.typography.bodySmall,
                                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }

@@ -72,6 +72,21 @@ assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') 
   exerciseHistory.includes('RIR not reported'),
   'Custom workout History must open complete correction-aware exercise facts, never invent RIR');
 const composer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+// Machine A/B must be scoped to the gym that issued the workout. The
+// displayed Last AND the editable one-tap "Use Last" must share the same
+// machine filter, even when no machine is selected (legacy-only).
+const machineSelector=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutMachineSelector.kt');
+for(const source of [journal,composer]) {
+  assert.ok(source.includes('KotlinMachineAlternativesDomain.forGymExercise('),
+    'Every native workout must resolve physical machines for the issued gym');
+  assert.ok(source.includes('history=physicalMachineLastReferences(lastReferences,machineInstanceId)'),
+    'One-tap Use Last may not copy actuals from another physical machine');
+}
+assert.ok(journal.includes('current.originalSnapshot.stamp.gymId') &&
+  composer.includes('journal?.originalSnapshot?.source?.gymId') &&
+  machineSelector.includes('normalizeMachineId(selectedMachineId)') &&
+  machineSelector.includes('normalizeMachineId(\n                it.actual?.machineInstanceId)'),
+  'Issued gym and legacy-only Last selection must remain explicit');
 const sharedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const phrase of [
   'internal fun PursuitWorkoutFocusHeader(',

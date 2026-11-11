@@ -45,6 +45,10 @@ export function UiMetric({
 
 // Shared native-form owner: gym and workout controls keep their labels and state,
 // while one component supplies the canonical editable field anatomy.
+export function UiSummary({ ...props }) {
+    return _jsx('summary', props);
+}
+
 export function UiField({ as: Element = "input", className = "", ...props }) {
     return _jsx(Element, { ...props, className: `wpb-ui-control ${className}`.trim() });
 }

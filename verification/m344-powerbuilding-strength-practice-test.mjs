@@ -93,6 +93,37 @@ const preferred = structuredClone(base);
 preferred.preferences.preferredExercises = ['paused_bench'];
 const preferredPhase = requestForBlock(preferred, config, { phase: 'strength_accumulation', weeks: 5, split: 'ulppl' });
 assert.deepEqual(preferredPhase.preferences.preferredExercises, ['paused_bench']);
+const preferredProgram = generateProgram(preferredPhase, { phase: 'strength_accumulation', blockWeeks: 5 }).program;
+assert.equal(preferredProgram.audit.result, 'pass');
+assert.ok(preferredProgram.sessions.find(s => s.intent === 'push')?.exercises.some(e =>
+    e.exerciseId === 'paused_bench' && e.role === 'secondary_strength'),
+    'An explicitly preferred eligible bench variation must beat the inferred incline default');
+
+
+// Matrix: goal and topology isolation. Only eligible five-day hybrid Both
+// strength phases earn the extra practice claims; no blanket rewrite of
+// hypertrophy, pure-strength, four-day or six-day programs.
+for (const variant of [
+    { goal: 'both', split: 'pplul', days: 5, eligible: true },
+    { goal: 'both', split: 'upper_lower', days: 4, eligible: false },
+    { goal: 'both', split: 'ppl', days: 6, eligible: false },
+    { goal: 'strength', split: 'ulppl', days: 5, eligible: false },
+    { goal: 'hypertrophy', split: 'ulppl', days: 5, eligible: false }
+]) {
+    const cfg = { ...config, ...variant };
+    const source = normalizeRequest(shellConfigToNextRequest(cfg, [], EXERCISES, 34420 + variant.days));
+    for (const phase of ['strength_accumulation', 'intensification', 'peak']) {
+        const req = requestForBlock(source, cfg, { phase, weeks: 5, split: variant.split });
+        assert.equal(req.preferences.powerbuildingInclineVolume === true, variant.eligible,
+            'Phase policy leaked across topology or athlete goal: ' + JSON.stringify(variant));
+        if (variant.eligible)
+            assert.equal(req.goal.liftFrequency.bench_press, 2);
+        const actual = generateProgram(req, { phase, blockWeeks: 5 }).program;
+        assert.equal(actual.audit.result, 'pass', phase + ' ' + JSON.stringify(variant));
+        assert.ok(actual.sessions.every(s => s.estimatedMinutes <= s.maxMinutes + .01),
+            'Over-budget session: ' + phase + ' ' + JSON.stringify(variant));
+    }
+}
 
 // Preserve other training structures and all muscle-building phases. A
 // 3-day Full Body is not allowed to invent five required lift exposures.

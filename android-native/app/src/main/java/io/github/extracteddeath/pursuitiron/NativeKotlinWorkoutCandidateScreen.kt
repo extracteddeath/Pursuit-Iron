@@ -10,6 +10,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -70,6 +71,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val scope=rememberCoroutineScope()
+    val machinePreferenceContext=LocalContext.current.applicationContext
     var machineRoster by remember(host,workoutId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
@@ -97,6 +99,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
+    val issuedMachineSource=journal?.originalSnapshot?.source
+    LaunchedEffect(workoutId,issuedMachineSource,machineRoster?.revision) {
+        val source=issuedMachineSource ?:return@LaunchedEffect
+        val roster=machineRoster ?:return@LaunchedEffect
+        machineSelections=NativeWorkoutMachineChoicePrefs.load(
+            machinePreferenceContext,source.athleteId,source.gymId,
+            workoutId,roster.configurations)
+    }
     // Retain only the most recent VERIFIED journal reference for an open
     // note draft. A double storage failure must not discard unsaved text.
     // The cached reference never authorizes saving or marks a note saved.
@@ -389,9 +399,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             enabled=!state.busy && !presentation.finished,
             onSelect={machineId->
                 val exerciseId=selected?.target?.exerciseId
-                if(exerciseId!=null)
-                    machineSelections=updateWorkoutMachineChoice(
+                if(exerciseId!=null && issuedMachineSource!=null) {
+                    val choice=updateWorkoutMachineChoice(
                         machineSelections,exerciseId,machineId)
+                    machineSelections=choice
+                    NativeWorkoutMachineChoicePrefs.save(
+                        machinePreferenceContext,issuedMachineSource.athleteId,
+                        issuedMachineSource.gymId,workoutId,choice,
+                        machineRoster?.configurations.orEmpty())
+                }
             })
         activeKeys.forEach{set->
             editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {

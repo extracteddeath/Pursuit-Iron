@@ -195,6 +195,35 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
         ? (baseRequest.goal.type === 'strength' ? 'strength' : 'mixed')
         : prescribedGoal;
     request.goal = { ...request.goal, type: goalType };
+    // A "Both" program's inferred NORMAL one-off S/B/D priorities are not
+    // sufficient practice for its later strength/peak blocks. An expressly
+    // selected frequency is always honored. On five-day hybrid splits, the
+    // two pressing and two squat-capable days permit a heavy + secondary
+    // exposure, with a single hinge exposure kept for fatigue management.
+    // Only propose these where the original equipment-qualified lift exists.
+    // Static cycles still preserve their authored roster; no issued workout
+    // or saved custom block is rewritten by this request.
+    const fiveDayHybrid = (spec?.split ?? baseConfig?.split ??
+        request.preferences?.lockedSplit ?? request.preferences?.preferredSplit);
+    const powerbuildingPhase = ['strength_accumulation', 'intensification', 'peak']
+        .includes(spec.phase);
+    const isBothCycle = baseConfig?.goal === 'both' ||
+        (baseConfig?.goal == null && baseRequest.goal.type === 'mixed');
+    if (isBothCycle && powerbuildingPhase &&
+        request.schedule.days.length === 5 &&
+        ['ulppl', 'pplul'].includes(fiveDayHybrid) && !spec?.priorityLift) {
+        const available = request.goal.liftPriorities ?? {};
+        const explicit = request.goal.liftFrequency ?? {};
+        const targets = { bench_press: 2, back_squat: 2, deadlift: 1 };
+        const practice = Object.fromEntries(Object.entries(targets)
+            .filter(([lift]) => available[lift] != null)
+            .map(([lift, frequency]) => [lift, explicit[lift] ?? frequency]));
+        request.goal.liftFrequency = { ...explicit, ...practice };
+        request.preferences = { ...request.preferences,
+            // Candidate ranking uses this only for an unpinned secondary
+            // bench slot on Push. Explicit athlete exercise preferences win.
+            powerbuildingInclineVolume: true };
+    }
     if (!changesWeek(spec))
         return request;
     const cfg = blockConfigForSpec(baseConfig, spec);

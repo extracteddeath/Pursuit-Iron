@@ -31,6 +31,7 @@ assert.match(facts,/val bestLoggedSingleByMachine:/);
 assert.match(facts,/completion\.evidence\.source\.gymId/);
 assert.match(facts,/completion\.gymId/);
 assert.match(facts,/KotlinMachineAlternativesDomain\.validInstanceId\(machineId\)/);
+assert.match(facts,/if\(target\.basis!=LoadBasis\.BARBELL_TOTAL \|\| machineId==null\)/);
 assert.match(facts,/Collections\.unmodifiableMap\(highestByMachine\)/);
 assert.match(physical,/title="Physical machine bests"/);
 assert.match(physical,/Each physical machine has its own weight history/);

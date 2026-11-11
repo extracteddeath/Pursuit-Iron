@@ -186,6 +186,32 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         assertEquals(n(170),index.bestLoggedSingleByMachine.getValue(b).actualLoad)
     }
 
+    @Test fun physicalMachineTaggedBarbellLoadsNeverInflateBarbellBenchmarks() {
+        // A moved/swapped physical machine can carry a stale BARBELL_TOTAL
+        // target basis, but its actual physical station identity is explicit.
+        // No such set can earn a barbell strength standard or club milestone.
+        val machine=composer(1,composerFact(1,reps=1,actualLoad=500,
+            basis=LoadBasis.BARBELL_TOTAL,machineId="A"))
+        val realBarbell=composer(2,composerFact(2,reps=1,actualLoad=200,
+            basis=LoadBasis.BARBELL_TOTAL,machineId=null))
+        val index=facts(machine,realBarbell)
+        val barbellKey=NativeMixedPhysicalLoadKey(
+            "bench",LoadUnit.LB,LoadBasis.BARBELL_TOTAL)
+        val machineKey=NativeMixedMachineLoadKey(
+            "gym-1","bench","A",LoadUnit.LB,LoadBasis.BARBELL_TOTAL)
+        assertEquals(n(200),index.bestLoggedSingleByLoad
+            .getValue(barbellKey).actualLoad)
+        assertEquals(n(200),index.highestCompletedLoad
+            .getValue(barbellKey).actualLoad)
+        assertEquals(listOf(n(200)),index.mostRepsAtLoad.map {it.actualLoad})
+        assertEquals(n(500),index.highestCompletedLoadByMachine
+            .getValue(machineKey).actualLoad)
+        assertEquals(n(500),index.bestLoggedSingleByMachine
+            .getValue(machineKey).actualLoad)
+        assertTrue(facts(machine).bestLoggedSingleByLoad.isEmpty())
+        assertFalse(index.canPublishPr)
+    }
+
     @Test fun loggedSingleIsRetainedAfterMoreRepsAtIdenticalLoad() {
         val one=composer(1,composerFact(1,reps=1,actualLoad=200,
             basis=LoadBasis.BARBELL_TOTAL))

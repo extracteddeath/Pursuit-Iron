@@ -195,26 +195,33 @@ object NativeKotlinMixedHistoryFactsDomain {
                 val record = NativeMixedCompletedLoadFact(key, physical, actual.reps,
                     manifest.workoutId, manifest.completionOrder, visit.setKey,
                     visit.customSlot, visit.eventId)
-                if (actual.reps == 1) {
-                    val previous=bestSingle[key]
-                    if(previous==null || physical>previous.actualLoad ||
-                        (physical.compareTo(previous.actualLoad)==0 &&
-                            manifest.completionOrder>previous.completionOrder))
-                        bestSingle[key]=record
+                // A tagged physical machine is NOT a barbell total even
+                // when a stale catalog/swap calls its loading basis
+                // BARBELL_TOTAL. Keep the factual station record below, but
+                // exclude it from general barbell 1RM, Strength Standards
+                // and thousand-pound logged-single calculations.
+                val machineId=actual.machineInstanceId
+                if(target.basis!=LoadBasis.BARBELL_TOTAL || machineId==null) {
+                    if (actual.reps == 1) {
+                        val previous=bestSingle[key]
+                        if(previous==null || physical>previous.actualLoad ||
+                            (physical.compareTo(previous.actualLoad)==0 &&
+                                manifest.completionOrder>previous.completionOrder))
+                            bestSingle[key]=record
+                    }
+                    val old = highest[key]
+                    if (old == null || physical > old.actualLoad ||
+                        (physical.compareTo(old.actualLoad) == 0 && actual.reps >= old.reps))
+                        highest[key] = record
+                    val loadKey = key to physical
+                    if (repsAtLoad[loadKey] == null ||
+                        actual.reps >= checkNotNull(repsAtLoad[loadKey]).reps)
+                        repsAtLoad[loadKey] = record
                 }
-                val old = highest[key]
-                if (old == null || physical > old.actualLoad ||
-                    (physical.compareTo(old.actualLoad) == 0 && actual.reps >= old.reps))
-                    highest[key] = record
-                val loadKey = key to physical
-                if (repsAtLoad[loadKey] == null ||
-                    actual.reps >= checkNotNull(repsAtLoad[loadKey]).reps)
-                    repsAtLoad[loadKey] = record
                 // Only the immutable issued gym and an actual, explicit
                 // machine ID can authenticate a station-local best. Old
                 // custom receipts without a verifiable gym remain legacy
                 // facts; they must not become an invented A/B record.
-                val machineId=actual.machineInstanceId
                 if(id.matches(issuedGymId) &&
                     KotlinMachineAlternativesDomain.validInstanceId(machineId)) {
                     val machineKey=NativeMixedMachineLoadKey(issuedGymId,

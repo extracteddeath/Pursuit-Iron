@@ -114,9 +114,11 @@ assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorko
 assert.ok(journal.includes('val requiresNewMachineChoice=') &&
   journal.includes('config.machines.none{it.id==selectedMachineId && it.active}') &&
   journal.includes('outcome==KotlinJournalSetOutcome.SKIPPED ||') &&
-  journal.includes('observed!=null || !requiresNewMachineChoice'),
+  journal.includes('?.performed!=null') &&
+  journal.includes('hadAttempt || !requiresNewMachineChoice'),
   'Custom machine swaps must require an active station for new weighted observations');
-assert.ok(composer.includes('val needsMachineSelection=set.currentReceipt==null') &&
+assert.ok(composer.includes('val needsMachineSelection=set.actual==null') &&
+  composer.includes('set.actual.machineInstanceId else perSetMachineId') &&
   composer.includes('perSetMachineConfig.machines.none{') &&
   composer.includes('!needsMachineSelection))') &&
   composer.includes('!needsMachineSelection)'),

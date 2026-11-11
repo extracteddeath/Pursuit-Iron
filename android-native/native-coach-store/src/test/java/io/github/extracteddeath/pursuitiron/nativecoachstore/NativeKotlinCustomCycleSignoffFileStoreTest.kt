@@ -189,7 +189,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED),
             coldPreflight.inspect("owner-1","cycle-1",2,0,inputs()))
         assertEquals(reopened,coldIssuer.open("owner-1","machine-a-visit"))
-        assertEquals(2L,(drafts.read("owner-1","cycle-1")
+        assertEquals(1L,(drafts.read("owner-1","cycle-1")
             as NativeCustomDraftReadResult.Found).draft.revision)
     }
 

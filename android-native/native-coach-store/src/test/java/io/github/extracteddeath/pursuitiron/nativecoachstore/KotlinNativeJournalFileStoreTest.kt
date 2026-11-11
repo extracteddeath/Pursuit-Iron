@@ -36,6 +36,32 @@ class KotlinNativeJournalFileStoreTest {
         return result as NativeJournalFileResult.Durable
     }
 
+    @Test fun machineTaggedReceiptsAreV5DurableAndColdReplayPreservesAAndB() {
+        val s=store()
+        ok(s.issue("owner-1",snapshot,identity))
+        val a=KotlinJournalOperation.RecordSet("set-a",0,"set-1",
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(
+                BigDecimal("30"),LoadUnit.LB,8,2,"A"))
+        val b=KotlinJournalOperation.RecordSet("set-b",1,"set-2",
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(
+                BigDecimal("20"),LoadUnit.LB,8,2,"B"))
+        ok(s.append("owner-1",snapshot,identity,a))
+        val committed=ok(s.append("owner-1",snapshot,identity,b)).journal
+        val reopened=ok(store().open("owner-1",snapshot,identity)).journal
+        assertEquals(committed,reopened)
+        assertEquals("A",(reopened.effectiveSets.getValue("set-1").operation
+            as KotlinJournalOperation.RecordSet).performed?.machineInstanceId)
+        assertEquals("B",(reopened.effectiveSets.getValue("set-2").operation
+            as KotlinJournalOperation.RecordSet).performed?.machineInstanceId)
+        val bytes=Files.list(temporary.root.toPath()).use { stream ->
+            val path=stream.filter {it.fileName.toString().endsWith(".bin")}
+                .findFirst().orElseThrow()
+            Files.readAllBytes(path)
+        }
+        assertEquals(5,java.nio.ByteBuffer.wrap(bytes,8,4).int)
+        assertTrue(ok(store().append("owner-1",snapshot,identity,b)).replayed)
+    }
+
     @Test fun generatedSessionNoteIsOwnerScopedV4DurableClearableAndReplayed() {
         val s=store()
         ok(s.issue("owner-1",snapshot,identity))

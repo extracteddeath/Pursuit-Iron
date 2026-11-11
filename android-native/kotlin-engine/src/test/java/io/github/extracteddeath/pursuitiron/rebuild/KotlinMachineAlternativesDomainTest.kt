@@ -26,6 +26,25 @@ class KotlinMachineAlternativesDomainTest {
         }
     }
 
+    @Test fun selectingPhysicalMachineAlwaysUsesIssuedGymNotRosterOrder() {
+        val gymX=KotlinGymMachineAlternatives("gymX","machine_press","A",
+            listOf(machine("A","Older stack")))
+        val gymY=KotlinGymMachineAlternatives("gymY","machine_press","B",
+            listOf(machine("B","Different stack","10")))
+        val roster=listOf(gymX,gymY)
+        assertEquals("B",KotlinMachineAlternativesDomain.forGymExercise(
+            roster,"gymY","machine_press")?.defaultMachineId)
+        assertEquals("A",KotlinMachineAlternativesDomain.forGymExercise(
+            roster.reversed(),"gymX","machine_press")?.defaultMachineId)
+        assertNull(KotlinMachineAlternativesDomain.forGymExercise(
+            roster,"gymMissing","machine_press"))
+        assertNull(KotlinMachineAlternativesDomain.forGymExercise(
+            roster,"gymX","other_exercise"))
+        // Duplicate matches are unsafe: there is no authoritative default.
+        assertNull(KotlinMachineAlternativesDomain.forGymExercise(
+            roster+gymX,"gymX","machine_press"))
+    }
+
     @Test fun loadsNeverCompareAcrossMachinesGymsOrIndependentTrainingDays() {
         fun fact(gym:String,machine:String?,day:Int,load:Int)=
             KotlinMachineSetFact(gym,"machine_press",machine,day,"workout",0,

@@ -516,9 +516,10 @@ internal fun NativeKotlinCustomJournalScreen(
                     activeFocus==null ||
                         slot.sets.any{it.setKey==activeFocus.setKey}
                 }.forEach {slot->
-                    val config=machineRoster?.configurations?.firstOrNull{
-                        it.exerciseId==slot.exerciseId
-                    }
+                    // The immutable issued-workout gym owns this choice.
+                    val config=KotlinMachineAlternativesDomain.forGymExercise(
+                        machineRoster?.configurations.orEmpty(),
+                        current.originalSnapshot.stamp.gymId,slot.exerciseId)
                     val selectedMachineId=workoutMachineChoice(
                         machineSelections,slot.exerciseId,config?.defaultMachineId)
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
@@ -981,7 +982,7 @@ private fun NativeKotlinCustomVisitEditor(
                 style=MaterialTheme.typography.bodySmall)
             if(saved==null) PursuitUseLastCompletedSet(
                 mode=referenceMode,
-                history=lastReferences,
+                history=physicalMachineLastReferences(lastReferences,machineInstanceId),
                 key=WorkoutReferenceKey(
                     set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP),
                 currentLoad=target,

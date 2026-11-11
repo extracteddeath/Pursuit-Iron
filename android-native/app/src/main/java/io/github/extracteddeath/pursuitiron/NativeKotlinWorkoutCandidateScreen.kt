@@ -375,8 +375,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 exerciseId=selected.target.exerciseId,custom=false,
                 enabled=!state.busy && !presentation.finished
             )
+        val issuedGymId=journal?.originalSnapshot?.source?.gymId
         val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
-            machineRoster?.configurations?.firstOrNull{it.exerciseId==exerciseId}
+            issuedGymId?.let {gymId->
+                KotlinMachineAlternativesDomain.forGymExercise(
+                    machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+            }
         }
         val currentMachine=selected?.target?.exerciseId?.let{
             workoutMachineChoice(machineSelections,it,activeMachineConfig?.defaultMachineId)
@@ -391,11 +395,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             })
         activeKeys.forEach{set->
             editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
-                val perSetMachineId=machineRoster?.configurations
-                    ?.firstOrNull{it.exerciseId==set.target.exerciseId}?.let {config->
-                        workoutMachineChoice(machineSelections,set.target.exerciseId,
-                            config.defaultMachineId)
-                    }
+                val perSetMachineId=issuedGymId?.let {gymId->
+                    KotlinMachineAlternativesDomain.forGymExercise(
+                        machineRoster?.configurations.orEmpty(),gymId,
+                        set.target.exerciseId)
+                }?.let {config->
+                    workoutMachineChoice(machineSelections,set.target.exerciseId,
+                        config.defaultMachineId)
+                }
                 // Correcting an existing set must never reassign it to the
                 // currently selected B machine. Null here means legacy.
                 val recordedMachineId=if(set.currentReceipt!=null)
@@ -708,7 +715,7 @@ private fun NativeKotlinSetCard(
         // transfer of target RIR into reported actual effort.
         if(!set.isResolved) PursuitUseLastCompletedSet(
             mode=referenceMode,
-            history=lastReferences,
+            history=physicalMachineLastReferences(lastReferences,machineInstanceId),
             key=WorkoutReferenceKey(target.setKey),
             currentLoad=target.load,
             enabled=!busy,

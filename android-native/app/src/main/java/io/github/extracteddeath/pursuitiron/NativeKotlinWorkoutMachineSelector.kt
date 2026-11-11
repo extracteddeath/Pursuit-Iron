@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
 
 /** Stable compact saveable per-exercise choice; IDs cannot contain separators. */
@@ -69,9 +70,11 @@ internal fun physicalMachineLastReferences(
     previous:WorkoutLastReferenceResult?,
     selectedMachineId:String?
 ):WorkoutLastReferenceResult? =
-    if(selectedMachineId==null)previous
-    else if(previous is WorkoutLastReferenceResult.Ready)
-        WorkoutLastReferenceResult.Ready(previous.sets.filterValues{
-            it.actual?.machineInstanceId==selectedMachineId
+    if(previous is WorkoutLastReferenceResult.Ready) {
+        // Null is historical legacy only, not permission to borrow A or B.
+        val requested=KotlinMachineAlternativesDomain.normalizeMachineId(selectedMachineId)
+        WorkoutLastReferenceResult.Ready(previous.sets.filterValues {
+            KotlinMachineAlternativesDomain.normalizeMachineId(
+                it.actual?.machineInstanceId)==requested
         })
-    else previous
+    } else previous

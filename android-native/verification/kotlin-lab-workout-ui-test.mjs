@@ -112,14 +112,14 @@ assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorko
   machineChoiceHost.match(/pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/g)?.length===2,
   'All native issuer paths must pin verified A/B defaults on successful issuance');
 assert.ok(journal.includes('val requiresNewMachineChoice=') &&
-  journal.includes('val mainMachineId=if(recordedMain?.performed!=null)') &&
+  journal.includes('val previouslyAttempted=recordedMain?.performed') &&
   journal.includes('config.machines.none{it.id==selectedMachineId && it.active}') &&
   journal.includes('outcome==KotlinJournalSetOutcome.SKIPPED ||') &&
   journal.includes('?.performed!=null') &&
   journal.includes('hadAttempt || !requiresNewMachineChoice'),
   'Custom machine swaps must require an active station for new weighted observations');
 assert.ok(composer.includes('val needsMachineSelection=set.actual==null') &&
-  composer.includes('set.actual.machineInstanceId else perSetMachineId') &&
+  composer.includes('previouslyAttempted.machineInstanceId else perSetMachineId') &&
   composer.includes('perSetMachineConfig.machines.none{') &&
   composer.includes('!needsMachineSelection))') &&
   composer.includes('!needsMachineSelection)'),

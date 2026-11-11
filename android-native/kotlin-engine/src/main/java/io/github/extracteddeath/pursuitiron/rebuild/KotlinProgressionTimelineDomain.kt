@@ -180,26 +180,25 @@ object KotlinProgressionTimelineDomain {
         // Read set-level physical IDs only AFTER validating the COMPLETE
         // stored journal. A mixed A/B workout is never one comparable load
         // exposure. Other same-machine days are retained, but never borrowed.
-        fun physicalMachines(stored:KotlinChronologicalWorkout):Set<String> {
-            val state=stored.savedCorrections?.originalFinishedJournal
-                ?:stored.journal
-            val keys=state.snapshot.targets.filter {
+        // Machine identity is a corrected historical FACT, not a frozen
+        // original-journal receipt. A post-Finish correction may move a set
+        // from an incorrectly logged physical A to its true physical B.
+        // Projected evidence has already been owner-verified and replayed.
+        fun physicalMachines(history:KotlinWorkoutHistoryEvidence):Set<String> =
+            history.sets.filter {
                 it.exerciseId==request.exerciseId && it.type==DraftSetType.WORKING
-            }.map {it.setKey}.toSet()
-            return state.effectiveSets.filterKeys {it in keys}.values.mapNotNull {
-                (it.operation as? KotlinJournalOperation.RecordSet)?.performed
-            }.map {KotlinMachineAlternativesDomain.normalizeMachineId(
-                it.machineInstanceId)}.toSet()
-        }
-        val newestMachineIds=dayApplicable.lastOrNull()?.first?.let(::physicalMachines)
+            }.mapNotNull {it.actual}.map {
+                KotlinMachineAlternativesDomain.normalizeMachineId(it.machineInstanceId)
+            }.toSet()
+        val newestMachineIds=dayApplicable.lastOrNull()?.second?.let(::physicalMachines)
             .orEmpty()
         if(newestMachineIds.size>1 && request.requestedMachineInstanceId==null)
             return rejected(KotlinTimelineReviewStatus.MIXED_PHYSICAL_MACHINE)
         val machineId=request.requestedMachineInstanceId
             ?:newestMachineIds.singleOrNull()
             ?:KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
-        val applicable=dayApplicable.filter { (stored,_,_) ->
-            physicalMachines(stored)==setOf(machineId)
+        val applicable=dayApplicable.filter { (_,history,_) ->
+            physicalMachines(history)==setOf(machineId)
         }
         if (applicable.size < 2)
             return rejected(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,

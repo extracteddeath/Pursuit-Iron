@@ -78,7 +78,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                                 if(weightedFixture)"db_curl" else "bodyweight_crunch",
                         if(phaseTransitionFixture)ComposerRole.PRIMARY else
                             ComposerRole.ACCESSORY,listOf(set()),
-                        machineInstanceId=if(machineBindingFixture)"A" else null))))
+                        machineInstanceId=if(machineBindingFixture)"A" else null)))
             }
         )))
     private fun bounds()=TrainingMuscle.entries.map{muscle ->

@@ -142,6 +142,7 @@ const physicalStockDomain=read('android-native/kotlin-engine/src/main/java/io/gi
 assert.ok(generatedCoachHost.includes('val issuedGym=journal.originalSnapshot.source.gymId') &&
   generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&
   generatedCoachHost.includes('it.gymId==issuedGym && it.exerciseId==selected.exerciseId') &&
+  generatedCoachHost.includes('it.machines.isNotEmpty()') &&
   generatedCoachHost.includes('workoutMachineChoices.read(signed.ownerKey,') &&
   generatedCoachHost.includes('as? NativeWorkoutMachineChoiceResult.Saved') &&
   generatedCoachHost.includes('KotlinMachineLiveCoachingDomain.confirmedForNext(') &&
@@ -153,6 +154,7 @@ assert.ok(customMachineCoach.includes('private val machineRosters:NativeKotlinMa
   customMachineCoach.includes('private val workoutMachineChoices:NativeKotlinWorkoutMachineChoiceFileStore') &&
   customMachineCoach.includes('machineRosters.read(ownerKey)') &&
   customMachineCoach.includes('val issuedGym=journal.originalSnapshot.stamp.gymId') &&
+  customMachineCoach.includes('it.machines.isNotEmpty()') &&
   customMachineCoach.includes('workoutMachineChoices.read(ownerKey,workoutId,') &&
   customMachineCoach.includes('planned?.basis==movement.expectedLoadBasis') &&
   customMachineCoach.includes('KotlinMachineLiveCoachingDomain.confirmedForNext(') &&

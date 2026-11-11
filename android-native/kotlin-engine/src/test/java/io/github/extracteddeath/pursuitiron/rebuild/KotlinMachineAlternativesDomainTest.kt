@@ -136,9 +136,19 @@ class KotlinMachineAlternativesDomainTest {
             increment=BigDecimal("10"),minimum=BigDecimal("20"),
             maximum=BigDecimal("215"))
         val invalid=empty.copy(defaultMachineId="B",machines=listOf(impossible))
-        assertFalse(KotlinMachineAlternativesDomain.valid(invalid))
+        // Old V2 rosters must still decode and retain A/B history.
+        assertTrue(KotlinMachineAlternativesDomain.valid(invalid))
+        assertFalse(KotlinMachineAlternativesDomain.reachableCalibratedMaximum(
+            impossible))
         assertNull(KotlinMachineAlternativesDomain.confirmedStack(
             invalid,"B",LoadBasis.MACHINE_STACK))
+        val relabeled=KotlinMachineAlternativesDomain.edit(invalid,
+            impossible.copy(label="Historical B"))
+        assertEquals("Historical B",relabeled.machines.single().label)
+        assertThrows(IllegalArgumentException::class.java) {
+            KotlinMachineAlternativesDomain.edit(invalid,
+                impossible.copy(maximum=BigDecimal("225")))
+        }
         assertThrows(IllegalArgumentException::class.java) {
             KotlinMachineAlternativesDomain.add(empty,impossible,true)
         }

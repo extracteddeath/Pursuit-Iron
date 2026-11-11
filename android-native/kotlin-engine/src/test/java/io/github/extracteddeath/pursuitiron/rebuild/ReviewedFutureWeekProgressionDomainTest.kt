@@ -95,6 +95,42 @@ class ReviewedFutureWeekProgressionDomainTest {
                 CustomRepForecastPolicy.TARGET_RIR_V2),
             permissions)
 
+    @Test fun futureWeekMachineNeedsExactPreviousWeekStationRatherThanOldSuccess() {
+        val source=cycle()
+        val b1=completed(source,1,1)
+        val a2=completed(source,2,2)
+        fun tagged(
+            original:CustomCoachingHistoricalSession,
+            station:String,recorded:String=station
+        ):CustomCoachingHistoricalSession {
+            val old=original.snapshot.slots.single()
+            return original.copy(
+                snapshot=original.snapshot.copy(slots=listOf(
+                    old.copy(machineInstanceId=station))),
+                evidence=original.evidence.copy(visits=
+                    original.evidence.visits.map {it.copy(actual=
+                        it.actual?.copy(machineInstanceId=recorded))}))
+        }
+        val proof=ReviewedFutureWeekProgressionDomain
+        fun fresh(history:List<CustomCoachingHistoricalSession>):Boolean=
+            proof.hasFreshSameStationEvidence(
+                history,"cycle-1","base",0,2,"slot-0","B")
+        // A successful Machine B in week 1 is not evidence for a B
+        // increase in week 3 when week 2 used Machine A.
+        assertFalse(fresh(listOf(tagged(b1,"B"),tagged(a2,"A"))))
+        assertTrue(fresh(listOf(tagged(b1,"A"),tagged(a2,"B"))))
+        assertFalse(fresh(listOf(tagged(b1,"B"),tagged(a2,"B","A"))))
+        assertFalse(fresh(listOf(tagged(b1,"B"),a2)))
+        assertFalse(fresh(listOf(tagged(b1,"B"))))
+        assertFalse(fresh(listOf(tagged(a2,"B"),tagged(a2.copy(
+            completionOrder=3,evidence=a2.evidence.copy(
+                workoutId="duplicate-session")), "B"))))
+        // Unbound bodyweight and other nonphysical cycles retain their
+        // existing exact-one-previous-same-day evidence rule.
+        assertTrue(proof.hasFreshSameStationEvidence(
+            listOf(a2),"cycle-1","base",0,2,"slot-0",null))
+    }
+
     @Test fun aBoundPhysicalStackMustMatchTheExactGymAndMachine() {
         val extension=StarterExerciseTranche.movements().single {
             it.exerciseId=="leg_extension"

@@ -258,8 +258,9 @@ assert.ok(
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_ALREADY_STARTED') &&
   liveJournalDomain.includes('CustomWorkoutJournalRefusal.SWAP_PROTECTED') &&
   liveJournalDomain.includes('prior.receipts.any') &&
-  liveJournalCodec.includes('private const val VERSION=3') &&
-  liveJournalCodec.includes('val version=if(notes) VERSION else if(swapped) 2 else 1') &&
+  liveJournalCodec.includes('private const val VERSION=4') &&
+  liveJournalCodec.includes('val version=if(machineTagged) VERSION else if(notes) 3') &&
+  liveJournalCodec.includes('if(version>=4)textOptional(value.machineInstanceId)') &&
   liveJournalCodec.includes('version !in 1..VERSION') &&
   liveJournalCodec.includes('is CustomWorkoutJournalOperation.UndoSwap->') &&
   liveJournalCodec.includes('writeByte(4)') &&

@@ -356,9 +356,11 @@ internal fun NativeKotlinCustomJournalScreen(
                 // correction, readiness selection or in-flight write clears
                 // the old projection; canceled callbacks cannot restore it.
                 LaunchedEffect(host,workoutId,current.revision,nextVisit,
-                    readiness,movementRestricted,busy) {
+                    readiness,movementRestricted,busy,
+                    machineChoices.encoded,machineChoices.ready,machineChoices.busy) {
                     liveCoach=null
-                    if(busy || current.finishedByEventId!=null ||
+                    if(busy || !machineChoices.ready || machineChoices.busy ||
+                        current.finishedByEventId!=null ||
                         nextVisit?.part!=CustomWorkoutVisitPart.MAIN)
                         return@LaunchedEffect
                     val result=withContext(Dispatchers.IO) {
@@ -612,7 +614,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                 previouslyAttempted.machineInstanceId
                             else selectedMachineId
                             val advice=liveCoach?.takeIf {
-                                !busy && !finished && mainKey==nextVisit &&
+                                !busy && !finished && machineChoices.ready &&
+                                    !machineChoices.busy && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&
                                     it.journalRevision==current.revision
                             }

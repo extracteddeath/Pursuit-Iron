@@ -180,15 +180,22 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val selected=allSets.firstOrNull{it.target.setKey==selectedKey}
         ?:allSets.firstOrNull()
     val activeKeys=if(showAll)allSets else listOfNotNull(selected)
+    // Physical machine selection changes the evidence and valid stack for
+    // next-set coaching even when the workout journal revision is unchanged.
+    // Trigger a fresh review on durable choice writes and hide stale advice
+    // while a selection or cold recovery is still being verified.
     LaunchedEffect(workoutId,presentation?.revision,selected?.target?.setKey,
-        readiness,movementRestricted) {
-        if(selected?.target?.type==DraftSetType.WORKING &&
+        readiness,movementRestricted,machineChoices.encoded,
+        machineChoices.ready,machineChoices.busy) {
+        if(machineChoices.ready && !machineChoices.busy &&
+            selected?.target?.type==DraftSetType.WORKING &&
             selected.isResolved.not() && presentation?.finished==false)
             controller.reviewNextSet(selected.target.setKey,readiness,
                 movementRestricted)
     }
     val coach=state.liveCoach?.takeIf {
-        it.journalRevision==presentation?.revision &&
+        machineChoices.ready && !machineChoices.busy &&
+            it.journalRevision==presentation?.revision &&
             it.setKey==selected?.target?.setKey
     }
 

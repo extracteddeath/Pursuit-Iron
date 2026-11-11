@@ -3941,10 +3941,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
         assertTrue(store().confirm("owner-1","cycle-1",2,1,0,
             futureInputs(),true) is NativeCustomSignoffWrite.Committed)
-        // Unlike a flat training history, a rising same-day trajectory
-        // can support an earned within-range repetition recommendation.
+        // The V2 goal is 2 RIR. A latest 13 reps at actual 3 RIR
+        // supports 14 at goal RIR; 13 at 2 RIR would correctly HOLD.
         persistNineHistoricalBaseWorkouts(
-            observedRepsByWeek=mapOf(1 to 11,2 to 12,3 to 13))
+            actualRir=3,observedRepsByWeek=mapOf(1 to 11,2 to 12,3 to 13))
         val old=(permissionStore.read("owner-1","cycle-1")
             as NativeAdaptivePermissionRead.Found).receipt
         assertEquals(NativeAdaptivePermissionWrite.Committed(old.revision+1),

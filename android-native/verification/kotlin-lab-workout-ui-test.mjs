@@ -137,6 +137,21 @@ assert.ok(journal.includes('current.originalSnapshot.stamp.gymId') &&
   machineSelector.includes('normalizeMachineId(selectedMachineId)') &&
   machineSelector.includes('normalizeMachineId(\n                it.actual?.machineInstanceId)'),
   'Issued gym and legacy-only Last selection must remain explicit');
+const generatedCoachHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+assert.ok(generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&
+  generatedCoachHost.includes('it.gymId==journal.originalSnapshot.source.gymId') &&
+  generatedCoachHost.includes('it.exerciseId==selected.exerciseId') &&
+  generatedCoachHost.includes('roster!=null && !hasPhysicalStations') &&
+  generatedCoachHost.includes('KotlinJournalLiveSetCoachDomain.review('),
+  'Generated machine A/B coaching cannot borrow exercise-level stock from a different physical stack');
+const customMachineCoach=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomLiveSetCoachReview.kt');
+assert.ok(customMachineCoach.includes('private val machineRosters:NativeKotlinMachineRosterFileStore') &&
+  customMachineCoach.includes('machineRosters.read(ownerKey)') &&
+  customMachineCoach.includes('it.gymId==journal.originalSnapshot.stamp.gymId') &&
+  customMachineCoach.includes('it.exerciseId==slot.exerciseId') &&
+  customMachineCoach.includes('roster!=null && !hasPhysicalStations') &&
+  generatedCoachHost.includes('coachSettings,machineRosters'),
+  'Custom A/B coaching must also reject unverified generic stock by original issued gym');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&

@@ -54,7 +54,11 @@ data class CustomExerciseSlot(
     val supersetGroup: String? = null,
     /** May be pinned independently of its exercise type. */
     val pinned: Boolean = true,
-    val coachNote: String = ""
+    val coachNote: String = "",
+    /** Optional physical station bound to THIS authored slot (Machine A/B).
+     * Null preserves legacy per-gym workout defaults. This is not a generic
+     * exercise weight conversion or an already-issued workout override. */
+    val machineInstanceId: String? = null
 )
 
 data class CustomTrainingDay(
@@ -332,9 +336,20 @@ object CustomTrainingCycleDomain {
                         !id.matches(slot.exerciseId) ||
                         slot.coachNote.length > 1000 ||
                         (slot.attachmentId != null && !id.matches(slot.attachmentId)) ||
-                        (slot.supersetGroup != null && !id.matches(slot.supersetGroup)))
+                        (slot.supersetGroup != null && !id.matches(slot.supersetGroup)) ||
+                        (slot.machineInstanceId != null &&
+                            !KotlinMachineAlternativesDomain.validInstanceId(
+                                slot.machineInstanceId)))
                         issue(CustomCycleIssueKind.INVALID_SLOT, location,
                             "Slots need valid IDs and bounded authored notes.")
+                    if (slot.machineInstanceId != null &&
+                        slot.sets.none { set ->
+                            val basis=(set.load as? DraftSetLoad.Verified)?.basis
+                            ReviewedFutureWeekProgressionDomain
+                                .requiresPhysicalMachineIdentity(basis)
+                        })
+                        issue(CustomCycleIssueKind.INVALID_SLOT, location,
+                            "A physical Machine A/B slot needs a machine/cable/Smith load basis.")
                     if (slot.attachmentId != null &&
                         slot.attachmentId !in
                             (inventory[slot.exerciseId]?.attachmentIds ?: emptySet()))

@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useState } from 'react';
 import { EXERCISES } from './next-engine/exercise-db.js';
 import { addMachineVariant, editMachineVariant, setDefaultMachineVariant } from './next-engine/machine-instances.js';
-import { UiAction } from './ui-primitives.js';
+import { UiAction, UiField } from './ui-primitives.js';
 
 // Gym-owned settings, not program edits: the exercise still has one muscle-dose identity.
 const machineExercises=EXERCISES.filter(ex=>ex.equipment?.includes('machine') ||
@@ -33,13 +33,13 @@ export function GymMachineVariantFields({gym,onChange}) {
         _jsx('summary',{children:'Physical machine alternatives (A/B)'}),
         _jsx('p',{className:'wpb-gym-guidance',children:'Two physical machines can train the same exercise with different weight stacks. Each machine keeps independent Last, Target, PR and progression. Choose a default for this gym.'}),
         _jsxs('label',{children:['Exercise',
-            _jsx('select',{className:'wpb-ui-control','aria-label':'Exercise with machine alternatives',value:exerciseId,
+            _jsx(UiField,{as:'select',className:'wpb-ui-control','aria-label':'Exercise with machine alternatives',value:exerciseId,
                 onChange:event=>{setExerciseId(event.target.value);setMessage('');},
                 children:machineExercises.map(ex=>_jsx('option',{value:ex.id,children:ex.name},ex.id))})
         ]}),
         ...instances.map(instance=>_jsxs('div',{className:'wpb-gym-field-block',children:[
             _jsxs('div',{className:'wpb-gym-inline',children:[
-                _jsx('input',{className:'wpb-ui-control','aria-label':`Name for ${instance.label}`,
+                _jsx(UiField,{as:'input',className:'wpb-ui-control','aria-label':`Name for ${instance.label}`,
                     value:instance.label,onChange:event=>edit(()=>editMachineVariant(gym,exerciseId,instance.id,{label:event.target.value}))}),
                 _jsx('span',{children:instance.id===saved.defaultId?'Default machine':'Alternative'}),
                 instance.active!==false&&instance.id!==saved.defaultId&&_jsx(UiAction,{
@@ -50,7 +50,7 @@ export function GymMachineVariantFields({gym,onChange}) {
                     children:instance.active===false?'Reactivate':'Deactivate'})
             ]}),
             _jsxs('label',{children:['Weight increment',
-                _jsx('input',{className:'wpb-ui-control',inputMode:'decimal',type:'number',min:'0.001',step:'any',
+                _jsx(UiField,{as:'input',className:'wpb-ui-control',inputMode:'decimal',type:'number',min:'0.001',step:'any',
                     'aria-label':`Weight increment for ${instance.label}`,
                     value:instance.loading?.increment??'',placeholder:'Gym default',
                     onChange:event=>{
@@ -63,7 +63,7 @@ export function GymMachineVariantFields({gym,onChange}) {
             ]})
         ]},instance.id)),
         _jsxs('div',{className:'wpb-gym-inline',children:[
-            _jsx('input',{value:label,className:'wpb-ui-control','aria-label':'Name of new physical machine',maxLength:80,
+            _jsx(UiField,{as:'input',value:label,className:'wpb-ui-control','aria-label':'Name of new physical machine',maxLength:80,
                 onChange:event=>setLabel(event.target.value),placeholder:'Machine A'}),
             _jsx(UiAction,{onClick:create,children:'Add machine'})
         ]}),

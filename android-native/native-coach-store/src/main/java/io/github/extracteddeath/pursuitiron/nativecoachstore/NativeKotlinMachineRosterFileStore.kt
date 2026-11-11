@@ -54,10 +54,11 @@ class NativeKotlinMachineRosterFileStore(private val root:Path) {
                     stream.writeUTF(machine.label)
                     stream.writeBoolean(machine.active)
                     stream.writeBoolean(machine.unit!=null)
-                    if(machine.unit!=null)stream.writeUTF(machine.unit.name)
+                    machine.unit?.let {stream.writeUTF(it.name)}
                     stream.writeBoolean(machine.increment!=null)
-                    if(machine.increment!=null)
-                        stream.writeUTF(machine.increment.stripTrailingZeros().toPlainString())
+                    machine.increment?.let {
+                        stream.writeUTF(it.stripTrailingZeros().toPlainString())
+                    }
                     stream.writeBoolean(machine.description!=null)
                     if(machine.description!=null)stream.writeUTF(machine.description)
                 }

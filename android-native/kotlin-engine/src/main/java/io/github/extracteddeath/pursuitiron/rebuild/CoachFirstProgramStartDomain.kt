@@ -157,6 +157,21 @@ object CoachFirstProgramStartDomain {
         }.sortedBy{(left,right)->if(left.familyId!=right.familyId)0 else 1}
         pairs.take(8).forEach{(left,right)->groups+=listOf(left.exerciseId,right.exerciseId)}
         primaries.take(8).forEach{groups+=listOf(it.exerciseId)}
+        // A strength/peak starter should require real repeated skill work
+        // when the chosen split has enough eligible days, not accidentally
+        // get it only because a permissive 1-day policy happened to place
+        // the same lift twice. Try up to four high-value repeated-practice
+        // offers first; fall back to the original 1-day assumptions when
+        // actual gym/focus/recovery/session audits cannot support them.
+        //
+        // Full Body with two named lifts over three days cannot make FOUR
+        // distinct primary slots, and no policy may silently double-book
+        // a day to manufacture frequency.
+        data class PhaseOffer(val lifts:List<String>,val requiredDays:Int)
+        val repeatOffers=if(athlete?.split==ComposerSplit.FULL_BODY)
+            emptyList() else groups.filter{2*it.size<=days}
+                .take(4).map{PhaseOffer(it,2)}
+        val phaseOffers=repeatOffers+groups.map{PhaseOffer(it,1)}
         var attempts=0
         var best:FirstProgramStartReview?=null
         var bestRank:List<Int>?=null
@@ -173,16 +188,18 @@ object CoachFirstProgramStartDomain {
         }
         fun better(a:List<Int>,b:List<Int>)=a.indices.firstOrNull{a[it]!=b[it]}
             ?.let{a[it]<b[it]} ?:false
-        search@ for(lifts in groups)for(skillDays in days downTo lifts.size) {
+        search@ for(offer in phaseOffers)
+            for(skillDays in days downTo offer.lifts.size*offer.requiredDays) {
             if(attempts>=MAX_PHASE_REVIEWS)break@search
             attempts++
-            val result=reviewOnce(input,lifts,skillDays)
+            val result=reviewOnce(input,offer.lifts,skillDays,
+                offer.requiredDays)
             if(result.status in setOf(FirstProgramStartStatus.SETUP_REQUIRED,
                 FirstProgramStartStatus.CALIBRATION_REQUIRED,
                 FirstProgramStartStatus.INVALID_CALIBRATION))return result
             if(result.status==FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
                 return result.copy(issues=Collections.unmodifiableList(result.issues+
-                    "Main-lift practice and supporting days match your chosen split and verified movements."),
+                    "Main-lift practice (${offer.requiredDays} distinct day(s) per named lift) and supporting days match your chosen split and verified movements."),
                     phasePoliciesChecked=attempts)
             val score=rank(result)
             if(bestRank==null || better(score,checkNotNull(bestRank))) {
@@ -193,12 +210,14 @@ object CoachFirstProgramStartDomain {
         return unresolved.copy(issues=Collections.unmodifiableList(unresolved.issues+
             "The bounded main-lift/day-role search found no complete starter. Review the chosen main lifts, available days and session time; other combinations may exist."),
             phasePoliciesChecked=attempts,
-            phaseSearchBudgetReached=attempts<groups.sumOf{days-it.size+1} ||
-                primaries.size>8 || pairs.size>8)
+            phaseSearchBudgetReached=attempts<phaseOffers.sumOf{
+                days-it.lifts.size*it.requiredDays+1
+            } || primaries.size>8 || pairs.size>8)
     }
 
     private fun reviewOnce(input:FirstProgramStartRequest,
-        namedPrimaries:List<String>?=null,skillDays:Int?=null):FirstProgramStartReview {
+        namedPrimaries:List<String>?=null,skillDays:Int?=null,
+        requiredPrimaryDays:Int=1):FirstProgramStartReview {
         val issues=ArrayList<String>()
         val eligible=ArrayList<FirstProgramMovementOption>()
         val selected=ArrayList<CatalogMovement>()
@@ -350,7 +369,7 @@ object CoachFirstProgramStartDomain {
             primaryLiftMinimumDays=if(primary!=null &&
                 input.phase!=TrainingPhase.HYPERTROPHY)
                 if(input.policyVersion==POLICY_VERSION && namedPrimaries!=null)
-                    namedPrimaries.associateWith{1}
+                    namedPrimaries.associateWith{requiredPrimaryDays}
                 else mapOf(primary.exerciseId to 1) else emptyMap())
         if(input.phase!=TrainingPhase.HYPERTROPHY && primary==null)
             return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,policy,gaps=gaps)

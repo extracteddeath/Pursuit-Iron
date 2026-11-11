@@ -18,7 +18,8 @@ class KotlinGlobalHistoryIndexDomainTest {
         exercise: String = "bench",
         basis: LoadBasis = LoadBasis.SMITH_TOTAL,
         sourceRevision: KotlinTrainingSourceRevision = source,
-        warmup: Boolean = false
+        warmup: Boolean = false,
+        machineId: String? = null
     ): KotlinWorkoutJournalState {
         val id = "workout-$index"
         val targets = buildList {
@@ -55,9 +56,9 @@ class KotlinGlobalHistoryIndexDomainTest {
                 when (outcome) {
                     KotlinJournalSetOutcome.SKIPPED -> null
                     KotlinJournalSetOutcome.FAILED_ATTEMPT ->
-                        KotlinPerformedSet(n(actualLoads[i]), LoadUnit.LB, 0, null)
+                        KotlinPerformedSet(n(actualLoads[i]), LoadUnit.LB, 0, null,machineId)
                     KotlinJournalSetOutcome.COMPLETED ->
-                        KotlinPerformedSet(n(actualLoads[i]), LoadUnit.LB, actualReps[i], 2)
+                        KotlinPerformedSet(n(actualLoads[i]), LoadUnit.LB, actualReps[i], 2,machineId)
                 })
             j = (KotlinWorkoutJournalDomain.reduce(j, record)
                 as KotlinJournalDecision.Proposed).state
@@ -124,6 +125,58 @@ class KotlinGlobalHistoryIndexDomainTest {
         assertEquals(a.highestCompletedLoad,b.highestCompletedLoad)
         assertEquals(a.mostRepsAtLoad,b.mostRepsAtLoad)
         assertEquals(a.lastByExercise,b.lastByExercise)
+    }
+
+    @Test fun sameLiftOnDifferentPhysicalMachinesHasDistinctScopedLoadRecords() {
+        val a=completed(1,actualLoads=listOf(200,200),machineId="A")
+        val b=completed(2,actualLoads=listOf(140,140),machineId="B")
+        val gymOther=source.copy(gymId="gym-2")
+        val aOtherGym=completed(3,actualLoads=listOf(190,190),
+            sourceRevision=gymOther,machineId="A")
+        val result=index(snapshot(item(a,1),item(b,2),item(aOtherGym,3)))
+        assertEquals(3,result.highestCompletedLoadByMachine.size)
+        fun key(gym:String,machine:String)=KotlinHistoryMachineLoadKey(
+            gym,"bench",machine,LoadUnit.LB,LoadBasis.SMITH_TOTAL)
+        assertEquals(n(200),result.highestCompletedLoadByMachine.getValue(
+            key("gym-1","A")).actualLoad)
+        assertEquals(n(140),result.highestCompletedLoadByMachine.getValue(
+            key("gym-1","B")).actualLoad)
+        assertEquals(n(190),result.highestCompletedLoadByMachine.getValue(
+            key("gym-2","A")).actualLoad)
+        assertEquals(3,result.mostRepsAtLoadByMachine.size)
+        assertFalse(result.canPublishPr)
+    }
+
+    @Test fun physicalMachineIdentityChangesTheHistoryFingerprintEvenWhenLoadsMatch() {
+        val a=index(snapshot(item(completed(1,machineId="A"),1)))
+        val b=index(snapshot(item(completed(1,machineId="B"),1)))
+        assertNotEquals(a.contentFingerprint,b.contentFingerprint)
+        assertEquals(a.highestCompletedLoad.keys,b.highestCompletedLoad.keys)
+        assertEquals("A",a.highestCompletedLoadByMachine.values.single()
+            .machineInstanceId)
+        assertEquals("B",b.highestCompletedLoadByMachine.values.single()
+            .machineInstanceId)
+    }
+
+    @Test fun savedMachineCorrectionReprojectsStationSpecificHistory() {
+        val original=completed(1,machineId="A")
+        val originalIndex=index(snapshot(item(original,1)))
+        var edits=KotlinSavedHistoryCorrectionDomain.begin(original)
+        val setKey=original.snapshot.targets.last().setKey
+        val record=original.effectiveSets.getValue(setKey).operation
+            as KotlinJournalOperation.RecordSet
+        val correction=KotlinSavedSetCorrection("machine-fix",0,setKey,
+            record.eventId,KotlinJournalSetOutcome.COMPLETED,
+            record.performed?.copy(machineInstanceId="B"))
+        edits=(KotlinSavedHistoryCorrectionDomain.reduce(edits,correction)
+            as KotlinSavedCorrectionDecision.Proposed).state
+        val latest=index(snapshot(KotlinChronologicalWorkout(1,original,edits)))
+        assertEquals(1,originalIndex.highestCompletedLoadByMachine.size)
+        assertEquals(2,latest.highestCompletedLoadByMachine.size)
+        assertEquals(listOf("A","B"),
+            latest.highestCompletedLoadByMachine.keys
+                .mapNotNull{it.machineInstanceId}.sorted())
+        assertNotEquals(originalIndex.contentFingerprint,latest.contentFingerprint)
     }
 
     @Test fun lastShowsActualLatestWorkoutEvenWhenEverySetSkippedOrFailed() {

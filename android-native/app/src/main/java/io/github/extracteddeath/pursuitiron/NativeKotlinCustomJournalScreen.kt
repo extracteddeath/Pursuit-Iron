@@ -525,6 +525,14 @@ internal fun NativeKotlinCustomJournalScreen(
                         current.originalSnapshot.stamp.gymId,slot.exerciseId)
                     val selectedMachineId=workoutMachineChoice(
                         machineChoices.encoded,slot.exerciseId,null)
+                    val requiresNewMachineChoice=config?.machines?.isNotEmpty()==true &&
+                        config.machines.none{it.id==selectedMachineId && it.active}
+                    if(requiresNewMachineChoice &&
+                        !finished && current.finishedByEventId==null)
+                        Text("Select an active physical machine to record new sets. "+
+                            "Already recorded sets keep their original machine.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
                         enabled=!busy && !finished && current.finishedByEventId==null &&
                             machineChoices.ready && !machineChoices.busy,
@@ -629,8 +637,10 @@ internal fun NativeKotlinCustomJournalScreen(
                                 setCount=slot.sets.count{it.prescription.type==set.prescription.type},
                                 initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
-                                    record(set.setKey,CustomWorkoutVisitPart.MAIN,
-                                        outcome,actual?.copy(machineInstanceId=mainMachineId))
+                                    if(outcome==KotlinJournalSetOutcome.SKIPPED ||
+                                        observed!=null || !requiresNewMachineChoice)
+                                        record(set.setKey,CustomWorkoutVisitPart.MAIN,
+                                            outcome,actual?.copy(machineInstanceId=mainMachineId))
                                 },
                                 onShowPlates={load,unit,basis->
                                     plateRequest=NativeCustomPlateRequest(

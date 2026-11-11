@@ -65,7 +65,8 @@ class NativeKotlinCustomNextWorkoutReview(
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val journals:NativeKotlinCustomWorkoutJournalFileStore,
     private val assistance:NativeKotlinCoachAssistanceSettingsStore?=null,
-    private val authoredPreflight:NativeKotlinCustomWorkoutPreflight?=null
+    private val authoredPreflight:NativeKotlinCustomWorkoutPreflight?=null,
+    private val machineRosters:NativeKotlinMachineRosterFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     fun review(
@@ -190,6 +191,13 @@ class NativeKotlinCustomNextWorkoutReview(
             val verifiedStock=movement.equipmentId?.let{
                 gym.confirmedStock[it]
             }?.takeIf{it.basis==movement.expectedLoadBasis && it.unit==gym.unit}
+            val savedMachines=machineRosters?.read(ownerKey)
+                as? NativeMachineRosterResult.Saved
+            val selectedMachine=savedMachines?.snapshot?.configurations
+                ?.singleOrNull {
+                    it.gymId==gym.gymId &&
+                        it.exerciseId==selected.exerciseId
+                }?.defaultMachineId
             val historyRead=history.read(ownerKey,current.athleteId)
             val full=historyRead as? NativeKotlinMixedHistoryReadResult.Review
                 ?:return@withOwnerTransaction when(historyRead) {
@@ -218,31 +226,46 @@ class NativeKotlinCustomNextWorkoutReview(
             if(identity.signedInIdentity()!=current)
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
+            // Keep ALL trusted visits for the calendar and safety review.
+            // Projection helpers that seek a prior load must instead use the
+            // exact gym's selected physical stack, not a different machine.
+            val selectedMachineKey=selectedMachine
+                ?:KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
+            val machineComparable=completions.filter{session->
+                session.snapshot.stamp.gymId==gym.gymId &&
+                    session.evidence.visits.filter{
+                        it.slotId==slotId &&
+                            it.part==CustomWorkoutVisitPart.MAIN &&
+                            it.setType==DraftSetType.WORKING
+                    }.map{KotlinMachineAlternativesDomain.normalizeMachineId(
+                        it.actual?.machineInstanceId)}.toSet()==setOf(selectedMachineKey)
+            }
             val validated=runCatching{CustomNextWorkoutCoachingDomain.review(
                 CustomNextWorkoutCoachingRequest(
                     next,slotId,completions,verifiedStock,
                     maximumAuthorizedIncrease,
                     preference.coachingReadiness(readiness),movementRestricted,
-                    repForecastPolicy)
+                    repForecastPolicy,selectedMachine)
             )}.getOrNull()
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
             // Reuse the same authenticated complete corrected ledger. A
             // changed block never earns an automatic step from old receipts.
             val starting=CustomBlockStartingLoadDomain.review(
-                CustomBlockBaselineRequest(next,slotId,completions,verifiedStock),
+                CustomBlockBaselineRequest(next,slotId,machineComparable,verifiedStock),
                 preference.coachingReadiness(readiness),movementRestricted)
             val transition=CustomBlockTransitionLoadDomain.review(
-                CustomBlockBaselineRequest(next,slotId,completions,verifiedStock),
+                CustomBlockBaselineRequest(next,slotId,machineComparable,verifiedStock),
                 preference.coachingReadiness(readiness),movementRestricted)
             val sameBlock=CustomSameBlockLoadContinuityDomain.review(
-                CustomBlockBaselineRequest(next,slotId,completions,verifiedStock),
+                CustomBlockBaselineRequest(next,slotId,machineComparable,verifiedStock),
                 preference.coachingReadiness(readiness),movementRestricted)
             val reversion=CustomAuthoredLoadReversionDomain.review(
-                CustomBlockBaselineRequest(next,slotId,completions,verifiedStock))
+                CustomBlockBaselineRequest(next,slotId,machineComparable,verifiedStock))
             val reduced=CustomReducedBaselineProgressionDomain.review(
-                CustomNextWorkoutCoachingRequest(next,slotId,completions,verifiedStock,
-                    maximumAuthorizedIncrease,preference.coachingReadiness(readiness),movementRestricted))
+                CustomNextWorkoutCoachingRequest(next,slotId,machineComparable,verifiedStock,
+                    maximumAuthorizedIncrease,preference.coachingReadiness(readiness),
+                    movementRestricted,requestedMachineInstanceId=selectedMachine))
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,

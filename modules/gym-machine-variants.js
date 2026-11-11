@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useState } from 'react';
 import { EXERCISES, isMachineLike } from './engine-api.js';
 import { addMachineVariant, editMachineVariant, setDefaultMachineVariant } from './next-engine/machine-instances.js';
-import { UiAction, UiField } from './ui-primitives.js';
+import { UiAction, UiField, UiSummary } from './ui-primitives.js';
 
 // Gym-owned settings, not program edits: the exercise still has one muscle-dose identity.
 const machineExercises=EXERCISES.filter(ex=>isMachineLike(ex.equip))
@@ -29,7 +29,7 @@ export function GymMachineVariantFields({gym,onChange}) {
         setLabel(instances.length===0?'Machine B':'Machine C');
     };
     return _jsxs('details',{className:'wpb-gym-section wpb-gym-machine-variants',children:[
-        _jsx('summary',{children:'Physical machine alternatives (A/B)'}),
+        _jsx(UiSummary,{children:'Physical machine alternatives (A/B)'}),
         _jsx('p',{className:'wpb-gym-guidance',children:'Two physical machines can train the same exercise with different weight stacks. Each machine keeps independent Last, Target, PR and progression. Choose a default for this gym.'}),
         _jsxs('label',{children:['Exercise',
             _jsx(UiField,{as:'select',className:'wpb-ui-control','aria-label':'Exercise with machine alternatives',value:exerciseId,

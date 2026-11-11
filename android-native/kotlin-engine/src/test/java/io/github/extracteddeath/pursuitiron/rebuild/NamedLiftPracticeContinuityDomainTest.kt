@@ -54,6 +54,13 @@ class NamedLiftPracticeContinuityDomainTest {
             listOf(CustomWeekSlotOverride(2,3,"slot-3",
                 listOf(working(DraftSetType.WARMUP)))))
         assertEquals(BigDecimal.ONE,lost(approved,changed))
+        val firstOnly=cycle(listOf(day(0),day(3)),
+            listOf(CustomWeekSlotOverride(1,3,"slot-3",
+                listOf(working(DraftSetType.WARMUP)))))
+        // Both cycles have the same minimum weekly frequency; only
+        // aligned per-week evidence reveals the reversed missing exposure.
+        assertEquals(BigDecimal.ONE,lost(firstOnly,changed))
+        assertEquals(BigDecimal.ONE,lost(changed,firstOnly))
         assertEquals(BigDecimal.ZERO,lost(approved,approved))
     }
 

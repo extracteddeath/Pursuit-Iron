@@ -516,12 +516,10 @@ internal fun NativeKotlinCustomJournalScreen(
                     activeFocus==null ||
                         slot.sets.any{it.setKey==activeFocus.setKey}
                 }.forEach {slot->
-                    // A machine default belongs to the gym that issued this workout,
-                    // not whichever gym happens to have this exercise first.
-                    val issuedGymId=current.originalSnapshot.stamp.gymId
-                    val config=machineRoster?.configurations?.firstOrNull{
-                        it.gymId==issuedGymId && it.exerciseId==slot.exerciseId
-                    }
+                    // The immutable issued-workout gym owns this choice.
+                    val config=KotlinMachineAlternativesDomain.forGymExercise(
+                        machineRoster?.configurations.orEmpty(),
+                        current.originalSnapshot.stamp.gymId,slot.exerciseId)
                     val selectedMachineId=workoutMachineChoice(
                         machineSelections,slot.exerciseId,config?.defaultMachineId)
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,

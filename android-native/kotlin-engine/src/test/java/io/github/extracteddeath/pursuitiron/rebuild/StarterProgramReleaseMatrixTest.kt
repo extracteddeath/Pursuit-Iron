@@ -151,12 +151,19 @@ class StarterProgramReleaseMatrixTest {
     }
 
     @Test fun calibratedInclineVariantRemainsInUlpplStrengthAndPeak() {
-        for(phase in listOf(TrainingPhase.STRENGTH,TrainingPhase.PEAK)) {
-            val source=StarterProgramReleaseFixture.request(
+        for(phase in listOf(TrainingPhase.STRENGTH,TrainingPhase.PEAK))
+            for(includeOHP in listOf(false,true)) {
+            val baseline=StarterProgramReleaseFixture.request(
                 ComposerSplit.ULPPL,phase,includeIncline=true)
+            val source=if(includeOHP)baseline.copy(
+                startingLoads=baseline.startingLoads+
+                    ("barbell_ohp" to BigDecimal("95")))
+            else baseline
             val result=CoachFirstProgramStartDomain.review(source)
             assertEquals("$phase: ${result.issues}",
                 FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
+            assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+                result.policy?.primaryLiftMinimumDays)
             val draft=checkNotNull(result.prescription)
             val inclineDays=draft.sessions.filter {session->
                 session.exercises.any{it.exerciseId=="incline_db_press"}

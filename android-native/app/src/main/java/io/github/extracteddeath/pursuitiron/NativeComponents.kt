@@ -164,7 +164,7 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
         // At compact widths, two full-width inline counters are MUCH shorter
         // and more readable than two 110dp-tall half-width columns.
         // On tablet/foldables each counter occupies an equal column.
-        if(!largeText && maxWidth>=380.dp) {
+        if(!largeText && maxWidth>=420.dp) {
             Row(Modifier.fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 Box(Modifier.weight(1f)){repsControl()}
@@ -252,7 +252,7 @@ private fun NativeSetCounterField(
     }
     val largeText=LocalDensity.current.fontScale>=1.35f
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if(!largeText&&maxWidth>=170.dp) {
+        if(!largeText&&maxWidth>=200.dp) {
             Row(Modifier.fillMaxWidth(),
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(4.dp)) {

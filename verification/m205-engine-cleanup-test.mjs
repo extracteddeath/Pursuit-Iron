@@ -96,7 +96,8 @@ assert.equal(fs.existsSync(new URL('../app.js', import.meta.url)), false, 'the u
 for (const file of ['domain.js', 'comparison.js', 'coach-review.js', 'coach-quality-oracle.js'])
     assert.equal(fs.existsSync(new URL('../modules/next-engine/' + file, import.meta.url)), false,
         'unused review helpers and verification-only code must not ship in the runtime');
-assert.equal(new Set(ENGINE_COMPATIBLE_VERSIONS).size, 5);
+assert.equal(new Set(ENGINE_COMPATIBLE_VERSIONS).size, 6,
+    'New version must retain the prior five compatible prescription engines for saved plans');
 assert.ok(ENGINE_COMPATIBLE_VERSIONS.includes(ENGINE_VERSION), 'diagnostics must inspect the current release');
 assert.ok(app.includes('new Set(ENGINE_COMPATIBLE_VERSIONS)'));
 

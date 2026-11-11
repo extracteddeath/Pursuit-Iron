@@ -2952,6 +2952,79 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.PROTECTED_WEEK),calibrationPreview(f))
     }
 
+    /**
+     * The new confirmed future-week draft flow must be safe against real
+     * durable journals, not only hand-built in-memory inventory facts.
+     */
+    private fun futureWeekDraftWriter(f:AuthoredCoachFixture):
+        NativeKotlinFutureWeekDraftAcceptance {
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        val proposal=NativeKotlinReviewedFutureWeekProposal(
+            fence,identity,drafts,sources,store(),permissionStore,
+            NativeKotlinCoachAssistanceSettingsStore(temp.root.toPath(),
+                fence,identity),
+            preflight,f.reader,f.issuer,f.coach,
+            NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer))
+        return NativeKotlinFutureWeekDraftAcceptance(fence,proposal,drafts)
+    }
+
+    private fun futureWeekDraftSelection()=NativeFutureWeekDraftSelection(
+        "owner-1","cycle-1",4,0,"slot-0",
+        CoachReadiness.NORMAL,false,n("5"))
+
+    @Test fun futureWeekDraftRefusesPreparedWorkoutAcrossColdRestart() {
+        val f=authoredCoachFixture()
+        val before=(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        assertTrue(f.prepared.prepare("owner-1","future-draft-pending",
+            "cycle-1",4,0,futureInputs()) is NativeCustomPrepareResult.Prepared)
+        val first=futureWeekDraftWriter(f).preview(futureWeekDraftSelection())
+        assertEquals(NativeFutureWeekDraftPreview.Rejected(
+            NativeFutureWeekDraftRefusal.PREPARED_OR_ISSUED_WORKOUT),first)
+        val cold=authoredCoachFixture(initializeHistory=false)
+        val after=futureWeekDraftWriter(cold)
+        assertEquals(first,after.preview(futureWeekDraftSelection()))
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.CONFIRMATION_REQUIRED),
+            after.accept(futureWeekDraftSelection(),"0".repeat(64),false))
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.PREPARED_OR_ISSUED_WORKOUT),
+            after.accept(futureWeekDraftSelection(),"0".repeat(64),true))
+        assertEquals(before,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+        assertTrue(cold.prepared.open("owner-1","future-draft-pending")
+            is NativeCustomPreparedRead.Found)
+    }
+
+    @Test fun futureWeekDraftCannotCrossOwnerOrBypassSignedBaseline() {
+        val f=authoredCoachFixture()
+        val writer=futureWeekDraftWriter(f)
+        val before=(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        active=NativeKotlinOwnerIdentity("another-owner","another-athlete")
+        assertEquals(NativeFutureWeekDraftPreview.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            writer.preview(futureWeekDraftSelection()))
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            writer.accept(futureWeekDraftSelection(),"0".repeat(64),true))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(before,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+        // A signed cycle is mandatory: a new unsigned revision cannot
+        // acquire a coaching write grant from the previous consent.
+        val newer=before.copy(revision=before.revision+1,
+            authorNote="Unsigned owner edit")
+        assertTrue(drafts.save("owner-1","cycle-1",before.revision,newer)
+            is NativeCustomDraftWriteResult.Committed)
+        assertEquals(NativeFutureWeekDraftPreview.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            writer.preview(futureWeekDraftSelection()))
+        assertEquals(newer,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+    }
+
     private fun authoredReview(f:AuthoredCoachFixture,
         readiness:CoachReadiness=CoachReadiness.NORMAL,restricted:Boolean=false)=
         f.coach.reviewAuthored("owner-1","cycle-1",futureInputs(),

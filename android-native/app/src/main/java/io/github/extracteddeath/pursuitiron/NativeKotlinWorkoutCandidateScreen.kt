@@ -401,13 +401,24 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
         activeKeys.forEach{set->
             editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
-                val perSetMachineId=issuedGymId?.let {gymId->
+                val perSetMachineConfig=issuedGymId?.let {gymId->
                     KotlinMachineAlternativesDomain.forGymExercise(
                         machineRoster?.configurations.orEmpty(),gymId,
                         set.target.exerciseId)
-                }?.let {config->
+                }
+                val perSetMachineId=perSetMachineConfig?.let {
                     workoutMachineChoice(machineChoices.encoded,set.target.exerciseId,null)
                 }
+                val needsMachineSelection=set.currentReceipt==null &&
+                    perSetMachineConfig?.machines?.isNotEmpty()==true &&
+                    perSetMachineConfig.machines.none{
+                        it.id==perSetMachineId && it.active
+                    }
+                if(needsMachineSelection)
+                    Text("Choose an active physical machine before recording this set. "+
+                        "Skipping is still allowed.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 // Correcting an existing set must never reassign it to the
                 // currently selected B machine. Null here means legacy.
                 val recordedMachineId=if(set.currentReceipt!=null)
@@ -428,13 +439,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             set.target.exerciseId,load,unit)
                     },
                     onRecord={outcome,actual->
-                        if(machineChoices.ready && !machineChoices.busy)
+                        if(machineChoices.ready && !machineChoices.busy &&
+                            (outcome==KotlinJournalSetOutcome.SKIPPED ||
+                                !needsMachineSelection))
                             controller.record(set.target.setKey,outcome,
                                 actual?.copy(machineInstanceId=recordedMachineId))
                     },
                     onSkip={pendingSkip=set.target.setKey},
                     onFail={attempt->
-                        if(machineChoices.ready && !machineChoices.busy)
+                        if(machineChoices.ready && !machineChoices.busy &&
+                            !needsMachineSelection)
                             pendingFail=set.target.setKey to
                                 attempt.copy(machineInstanceId=recordedMachineId)
                     })

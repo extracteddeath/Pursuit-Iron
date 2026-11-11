@@ -331,6 +331,33 @@ object CoachFirstProgramStartDomain {
                 recoveryGroup=movement.recoveryGroupId,
                 minimumGroupCalendarDayGap=movement.minimumRecoveryGroupDayGap)
         }
+        // The v6 starter must not silently discard a specifically calibrated
+        // secondary lift from the SAME family as a chosen primary, e.g. an
+        // incline DB press when bench pressing is the named strength skill.
+        // Preserve at most one related secondary per family to keep the
+        // bounded starter feasible; prioritize an explicitly cataloged
+        // incline variant when several were selected. V1-v5 replay unchanged.
+        // This is a *required exposure*, not an automatic load transfer or
+        // authority to replace the athlete's chosen main bench lift.
+        if(input.policyVersion==POLICY_VERSION &&
+            input.phase!=TrainingPhase.HYPERTROPHY) {
+            val calibratedPrimaryFamilies=selected.filter {
+                it.role==ComposerRole.PRIMARY &&
+                    it.exerciseId in input.startingLoads
+            }.map{it.familyId}.toSet()
+            val retainedRelatedVariants=selected.filter {
+                it.role==ComposerRole.SECONDARY &&
+                    it.familyId in calibratedPrimaryFamilies &&
+                    it.exerciseId in input.startingLoads
+            }.groupBy{it.familyId}.values.mapNotNull{variants->
+                variants.sortedWith(compareByDescending<CatalogMovement>{
+                    it.variantId.contains("incline",ignoreCase=true)
+                }.thenBy{it.exerciseId}).firstOrNull()?.exerciseId
+            }.toSet()
+            for(index in choices.indices)if(
+                choices[index].exerciseId in retainedRelatedVariants)
+                choices[index]=choices[index].copy(requiredVisits=1)
+        }
         val supported=selected.flatMap {it.credits.filter {c->
             c.role==MuscleCreditRole.DIRECT
         }.map{c->c.muscle}}.toSet()

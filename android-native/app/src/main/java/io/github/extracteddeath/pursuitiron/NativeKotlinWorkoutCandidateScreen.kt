@@ -715,7 +715,7 @@ private fun NativeKotlinSetCard(
         // transfer of target RIR into reported actual effort.
         if(!set.isResolved) PursuitUseLastCompletedSet(
             mode=referenceMode,
-            history=lastReferences,
+            history=physicalMachineLastReferences(lastReferences,machineInstanceId),
             key=WorkoutReferenceKey(target.setKey),
             currentLoad=target.load,
             enabled=!busy,

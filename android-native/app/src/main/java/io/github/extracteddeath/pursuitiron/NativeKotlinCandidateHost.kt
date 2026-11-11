@@ -214,10 +214,22 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 as? NativeAuthoringSourceRead.Found)?.source
             val reviewed=source?.setup?.reviewed
             if(source==null || source.ownerKey!=identity.ownerKey ||
-                source.athleteId!=identity.athleteId || reviewed==null ||
-                configurations.any {it.gymId!=reviewed.gym.gymId})
+                source.athleteId!=identity.athleteId || reviewed==null)
                 NativeMachineRosterResult.Rejected("UNVERIFIED_GYM")
-            else machineRosters.save(identity.ownerKey,expectedRevision,configurations)
+            else {
+                // Preserve every other gym's existing machines and defaults.
+                // Only the currently reviewed gym is editable in this source.
+                val prior=machineRosters.read(identity.ownerKey)
+                if(prior !is NativeMachineRosterResult.Saved)
+                    prior
+                else if(prior.snapshot.revision!=expectedRevision)
+                    NativeMachineRosterResult.Rejected("STALE_REVISION")
+                else if(!KotlinMachineAlternativesDomain.preservesOtherGyms(
+                        prior.snapshot.configurations,configurations,
+                        reviewed.gym.gymId))
+                    NativeMachineRosterResult.Rejected("CROSS_GYM_EDIT")
+                else machineRosters.save(identity.ownerKey,expectedRevision,configurations)
+            }
         }
     }
 

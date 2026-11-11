@@ -57,6 +57,28 @@ object KotlinMachineAlternativesDomain {
 
     fun normalizeMachineId(value:String?)=value ?: LEGACY_MACHINE_ID
     fun validInstanceId(value:String?)=value!=null && id.matches(value)
+
+    /**
+     * Existing inactive gyms must survive an edit to the currently reviewed gym.
+     * A UI-provided roster cannot rename, delete or smuggle in records for
+     * another gym, even when the revision is current.
+     */
+    fun preservesOtherGyms(
+        previous:List<KotlinGymMachineAlternatives>,
+        proposed:List<KotlinGymMachineAlternatives>,
+        editableGymId:String
+    ):Boolean {
+        if(!id.matches(editableGymId) ||
+            previous.any { !valid(it) } || proposed.any { !valid(it) } ||
+            previous.map { it.gymId to it.exerciseId }.distinct().size!=previous.size ||
+            proposed.map { it.gymId to it.exerciseId }.distinct().size!=proposed.size)
+            return false
+        fun nonEditable(configs:List<KotlinGymMachineAlternatives>) =
+            configs.filter { it.gymId!=editableGymId }
+                .associateBy { it.gymId to it.exerciseId }
+        return nonEditable(previous)==nonEditable(proposed)
+    }
+
     fun valid(config:KotlinGymMachineAlternatives):Boolean =
         id.matches(config.gymId) && id.matches(config.exerciseId) &&
         config.machines.size<=32 &&

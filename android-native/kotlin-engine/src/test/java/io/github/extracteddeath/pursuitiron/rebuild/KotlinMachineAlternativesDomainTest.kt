@@ -45,6 +45,29 @@ class KotlinMachineAlternativesDomainTest {
             roster+gymX,"gymX","machine_press"))
     }
 
+    @Test fun activeGymCanBeEditedWithoutLosingOtherGymDefaults() {
+        val gymX=KotlinGymMachineAlternatives("gymX","machine_press","A",
+            listOf(machine("A","Machine A"),machine("B","Machine B","10")))
+        val gymY=KotlinGymMachineAlternatives("gymY","machine_press","B",
+            listOf(machine("B","Gym Y stack","10")))
+        val before=listOf(gymX,gymY)
+        val changedX=gymX.copy(defaultMachineId="B")
+        assertTrue(KotlinMachineAlternativesDomain.preservesOtherGyms(
+            before,listOf(changedX,gymY),"gymX"))
+        assertTrue(KotlinMachineAlternativesDomain.preservesOtherGyms(
+            before,listOf(gymY,changedX),"gymX"))
+        assertFalse(KotlinMachineAlternativesDomain.preservesOtherGyms(
+            before,listOf(changedX),"gymX"))
+        assertFalse(KotlinMachineAlternativesDomain.preservesOtherGyms(
+            before,listOf(changedX,gymY.copy(machines=listOf(machine("B","Tampered")))),
+            "gymX"))
+        assertFalse(KotlinMachineAlternativesDomain.preservesOtherGyms(
+            before,listOf(changedX,gymY,gymY),"gymX"))
+        assertFalse(KotlinMachineAlternativesDomain.preservesOtherGyms(
+            before,listOf(changedX,gymY,KotlinGymMachineAlternatives(
+                "gymZ","machine_press",null,emptyList())),"gymX"))
+    }
+
     @Test fun loadsNeverCompareAcrossMachinesGymsOrIndependentTrainingDays() {
         fun fact(gym:String,machine:String?,day:Int,load:Int)=
             KotlinMachineSetFact(gym,"machine_press",machine,day,"workout",0,

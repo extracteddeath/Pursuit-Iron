@@ -191,6 +191,13 @@ assert.ok(machineProgression.includes('UNRESOLVED_PHYSICAL_MACHINE') &&
   machineProgression.includes('KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in it') &&
   machineProgression.includes('KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE'),
   'A/B progression cannot cherry-pick around unknown, legacy, or mixed-machine exposures');
+const strengthStarter=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachFirstProgramStartDomain.kt');
+assert.ok(strengthStarter.includes('data class PhaseOffer(val lifts:List<String>,val requiredDays:Int)') &&
+  strengthStarter.includes('groups.filter{2*it.size<=days}') &&
+  strengthStarter.includes('PhaseOffer(it,2)') &&
+  strengthStarter.includes('val phaseOffers=repeatOffers+groups.map{PhaseOffer(it,1)}') &&
+  strengthStarter.includes('namedPrimaries.associateWith{requiredPrimaryDays}'),
+  'New strength and peak starter must audit feasible repeat-lift skill policies before one-day fallback');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&

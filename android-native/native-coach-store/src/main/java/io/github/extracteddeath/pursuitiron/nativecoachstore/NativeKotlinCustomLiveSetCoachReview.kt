@@ -49,7 +49,7 @@ class NativeKotlinCustomLiveSetCoachReview(
                 as? NativeMachineRosterResult.Saved)?.snapshot
             val issuedGym=journal.originalSnapshot.stamp.gymId
             val hasPhysicalStations=roster?.configurations?.any{
-                it.gymId==issuedGym && it.exerciseId==slot.exerciseId
+                it.gymId==issuedGym && it.exerciseId==slot.exerciseId && it.machines.isNotEmpty()
             } == true
             val stock:VerifiedLoadStock?=if(roster!=null &&
                 source?.athleteId==owner.athleteId &&

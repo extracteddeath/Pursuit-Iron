@@ -79,7 +79,7 @@ private data class SavedReceipts(
 
 private object NativeJournalBinary {
     private const val MAGIC = 0x50494A32 // "PIJ2" (not a legacy JS journal)
-    private const val VERSION = 4
+    private const val VERSION = 5
     private const val MAX_BYTES = 2_000_000
     private const val MAX_EVENTS = 2048
 
@@ -110,7 +110,13 @@ private object NativeJournalBinary {
         }
         // Snapshot and finish digest identities for existing v2/v3 journals
         // remain byte-identical until the FIRST note receipt is appended.
-        val version=if(notes) VERSION else if(swapped) 3 else 2
+        // V5 only when machine receipts exist; legacy v2/v3/v4 journals remain
+        // byte-identical and can still be cold-replayed without migration.
+        val machineTagged=saved.receipts.any{
+            (it.operation as? KotlinJournalOperation.RecordSet)
+                ?.performed?.machineInstanceId!=null
+        }
+        val version=if(machineTagged) VERSION else if(notes) 4 else if(swapped) 3 else 2
         val body=ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             with(out) {
@@ -168,6 +174,7 @@ private object NativeJournalBinary {
                                 val actualRir=performed.actualRir
                                 writeBoolean(actualRir!=null)
                                 if(actualRir!=null)writeInt(actualRir)
+                                if(version>=5)optional(performed.machineInstanceId)
                             }
                         }
                     }
@@ -257,7 +264,11 @@ private object NativeJournalBinary {
                                     }
                                     val reps=readInt()
                                     val rir=if(readBoolean())readInt() else null
-                                    KotlinPerformedSet(load,unit,reps,rir)
+                                    val machine=if(version>=5)optional() else null
+                                    if(machine!=null &&
+                                        !KotlinMachineAlternativesDomain.validInstanceId(machine))
+                                        throw IOException("invalid saved machine instance")
+                                    KotlinPerformedSet(load,unit,reps,rir,machine)
                                 } else null
                                 KotlinJournalOperation.RecordSet(eventId,expectedRevision,
                                     setKey,outcome,performed,corrects)

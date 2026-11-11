@@ -39,7 +39,7 @@ class NativeKotlinMachineRosterFileStore(private val root:Path) {
         val out=ByteArrayOutputStream()
         DataOutputStream(out).use { stream ->
             stream.writeInt(0x50494D41) // PIMA
-            stream.writeInt(1)
+            stream.writeInt(2) // V1 rosters decode without calibrated stack limits
             stream.writeUTF(snapshot.ownerId)
             stream.writeLong(snapshot.revision)
             stream.writeInt(snapshot.configurations.size)
@@ -61,6 +61,10 @@ class NativeKotlinMachineRosterFileStore(private val root:Path) {
                     }
                     stream.writeBoolean(machine.description!=null)
                     if(machine.description!=null)stream.writeUTF(machine.description)
+                    stream.writeBoolean(machine.minimum!=null)
+                    machine.minimum?.let{stream.writeUTF(it.stripTrailingZeros().toPlainString())}
+                    stream.writeBoolean(machine.maximum!=null)
+                    machine.maximum?.let{stream.writeUTF(it.stripTrailingZeros().toPlainString())}
                 }
             }
         }
@@ -87,7 +91,9 @@ class NativeKotlinMachineRosterFileStore(private val root:Path) {
         require(MessageDigest.isEqual(
             MessageDigest.getInstance("SHA-256").digest(body),digest))
         val inp=DataInputStream(ByteArrayInputStream(body))
-        require(inp.readInt()==0x50494D41 && inp.readInt()==1)
+        require(inp.readInt()==0x50494D41)
+        val version=inp.readInt()
+        require(version in 1..2)
         val ownerId=inp.readUTF()
         require(id.matches(ownerId))
         val revision=inp.readLong()
@@ -103,7 +109,12 @@ class NativeKotlinMachineRosterFileStore(private val root:Path) {
                 val unit=if(inp.readBoolean())LoadUnit.valueOf(inp.readUTF()) else null
                 val increment=if(inp.readBoolean())BigDecimal(inp.readUTF()) else null
                 val description=if(inp.readBoolean())inp.readUTF() else null
-                KotlinPhysicalMachine(machineId,label,active,unit,increment,description)
+                val minimum=if(version>=2 && inp.readBoolean())
+                    BigDecimal(inp.readUTF()) else null
+                val maximum=if(version>=2 && inp.readBoolean())
+                    BigDecimal(inp.readUTF()) else null
+                KotlinPhysicalMachine(machineId,label,active,unit,increment,
+                    description,minimum,maximum)
             }
             KotlinGymMachineAlternatives(gymId,exerciseId,default,machines)
                 .also { require(KotlinMachineAlternativesDomain.valid(it)) }

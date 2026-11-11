@@ -2480,7 +2480,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     as? NativeMachineRosterResult.Saved)?.snapshot
                 val issuedGym=journal.originalSnapshot.source.gymId
                 val hasPhysicalStations=roster?.configurations?.any{
-                    it.gymId==issuedGym && it.exerciseId==selected.exerciseId
+                    it.gymId==issuedGym && it.exerciseId==selected.exerciseId && it.machines.isNotEmpty()
                 } == true
                 val stock:VerifiedLoadStock?=
                     if(current?.approvedSource!=journal.snapshot.source ||

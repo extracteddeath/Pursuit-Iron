@@ -2375,7 +2375,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED),
             after.prepared.prepare("owner-1","unaccepted-higher-after-correction",
-                "cycle-1",5,0,futureInputs(),calibrationStore(after)))
+                "cycle-1",6,0,futureInputs(),calibrationStore(after)))
         val coldConsent=calibrationStore(after)
         assertTrue(coldConsent.readCurrent("owner-1","carry-week6","cycle-1",
             6,0,futureInputs()) is NativeBlockCalibrationRead.Rejected)
@@ -3049,7 +3049,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             store().recoverReviewedInputs("owner-1","cycle-1"))
         assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
-            cold.prepared.prepare("owner-1","revised-week5","cycle-1",6,0,
+            cold.prepared.prepare("owner-1","revised-week5","cycle-1",5,0,
                 futureInputs()))
         assertEquals(NativeFutureWeekDraftPreview.Rejected(
             NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
@@ -3063,7 +3063,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             originalConsent.receipt.recordRevision,futureInputs(),true)
         assertTrue(renewed.toString(),renewed is NativeCustomSignoffWrite.Committed)
         val prepared=cold.prepared.prepare("owner-1","revised-week5",
-            "cycle-1",6,0,futureInputs())
+            "cycle-1",5,0,futureInputs())
         assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
         val workout=(prepared as NativeCustomPrepareResult.Prepared).workout
         assertEquals(11,

@@ -69,8 +69,8 @@ object KotlinMachineAlternativesDomain {
                     machine.maximum<=BigDecimal("100000") &&
                     machine.minimum.stripTrailingZeros().scale()<=3 &&
                     machine.maximum.stripTrailingZeros().scale()<=3 &&
-                    (machine.maximum-machine.minimum)
-                        .divideToIntegralValue(machine.increment).toInt() < 100000)
+                    (machine.maximum-machine.minimum) <=
+                        machine.increment.multiply(BigDecimal("99999")))
         } && (config.defaultMachineId==null || config.machines.any{
             it.id==config.defaultMachineId && it.active
         })

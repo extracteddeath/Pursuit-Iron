@@ -200,7 +200,8 @@ internal class NativeKotlinGymSourceController(
             }?:KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
             val uniqueId="machine_"+UUID.randomUUID().toString().replace("-","").take(16)
             val added=KotlinMachineAlternativesDomain.add(current,
-                KotlinPhysicalMachine(uniqueId,label.trim(),increment=increment),
+                KotlinPhysicalMachine(uniqueId,label.trim(),
+                    unit=source.setup.reviewed?.gym?.unit,increment=increment),
                 makeDefault=current.machines.isEmpty())
             roster.configurations.filterNot {
                 it.gymId==gymId && it.exerciseId==exerciseId

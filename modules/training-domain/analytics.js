@@ -1,6 +1,6 @@
 // Canonical analytics domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
-import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
+import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise, setShellSessionClock } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
@@ -1083,6 +1083,8 @@ function estimateMinutesFor(program, day, weekIndex, pace, rows = null) {
 function estimateMinutes(program, day, weekIndex, rows = null) {
     return Math.round(daySeconds(program, day, weekIndex, budgetIncludesTransitions(program), rows) / 60);
 }
+// Generation checks every finished plan against this clock: it is the number the lifter is shown.
+setShellSessionClock((program, day, weekIndex) => daySeconds(program, day, weekIndex, budgetIncludesTransitions(program)) / 60);
 
 const STRETCH_FOCUS_E2 = new Set([
     // chest — deep stretch under load

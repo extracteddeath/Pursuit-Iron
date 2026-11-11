@@ -9,10 +9,12 @@ import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
 import { generateProgram } from './generate.js';
-import { finalizeGeneratedShellVolume } from './volume-repair.js';
+import { finalizeGeneratedShellVolume, ensureFocusedRegionDose, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
 import { PCT_SCHEMES } from './percentage-protocols.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
+import { shellSessionOvershoot } from './shell-session-clock.js';
+export { setShellSessionClock } from './shell-session-clock.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_SETS = {
     1: ['monday'], 2: ['monday', 'friday'], 3: ['monday', 'wednesday', 'friday'], 4: ['monday', 'wednesday', 'friday', 'sunday'],
@@ -457,13 +459,122 @@ function rejectionRecovery(result, request) {
     }
 }
 
+/* The realizer's internal clock and the clock the app displays are two models. A plan can pass the first and
+   still show over the limit the lifter chose (transitions, loading and ramps are only on the displayed one), in
+   week 1 or once the block's set ramp arrives. The displayed clock is the one the lifter holds the plan to, so
+   it referees: any day that shows over gets its internal budget tightened by the overshoot and the plan is
+   rebuilt, same seed. The tightened budget is saved in the request, so later blocks inherit it. A tighter
+   budget the engine refuses, or one whose plan gives up protected coverage (volume-repair shellPlanQuality), is
+   dropped and the best plan found is kept: a short day that cannot lose anything more stays as it was rather
+   than failing the build. */
+const DISPLAY_FIT_ATTEMPTS = 6;
+const INTERNAL_BUDGET_FLOOR = 12;
+export function displayedBandMax(config) {
+    return (SESSION_BANDS[String(config?.session || 's60')] ?? SESSION_BANDS.s60).maxMinutes;
+}
+function overshootByWeekday(built, config) {
+    const over = shellSessionOvershoot(built.program, displayedBandMax(config));
+    if (!over) return null;
+    const sessions = built.program.nextEngine?.program?.sessions ?? [];
+    const out = {};
+    over.forEach((minutes, index) => { const day = sessions[index]?.day; if (day) out[day] = minutes; });
+    return out;
+}
+const totalOver = (over) => Object.values(over).reduce((sum, m) => sum + Math.max(0, m), 0);
 export function generateNextProgramForShell(options) {
-    const originalRequest = shellConfigToNextRequest(
+    const first = buildNextProgramForShell(options, null);
+    let best = first, bestOver = overshootByWeekday(first, options.config);
+    if (!bestOver || totalOver(bestOver) <= 0) return first;
+    let bestTrim = {};
+    // A shorter plan is only taken when it keeps what the first one had (volume-repair shellPlanQuality).
+    const firstQuality = shellPlanQuality(first.program, options.legacyExercises);
+    // Returns the candidate's overshoot (null when the engine refuses the tighter budget).
+    const attemptWith = (trim) => {
+        let candidate;
+        try { candidate = buildNextProgramForShell(options, trim); }
+        catch { return null; }
+        const over = overshootByWeekday(candidate, options.config);
+        if (over && totalOver(over) < totalOver(bestOver)
+            && shellPlanQualityKept(firstQuality, shellPlanQuality(candidate.program, options.legacyExercises))) { best = candidate; bestOver = over; bestTrim = trim; }
+        return over;
+    };
+    const tightened = (trim, over, days) => {
+        const next = { ...trim };
+        for (const day of days) next[day] = (next[day] ?? 0) + Math.max(1, Math.ceil(over[day]));
+        return next;
+    };
+    const overDaysOf = (over) => Object.keys(over).filter(day => over[day] > 0).sort((a, b) => over[b] - over[a]);
+    // Every over day at once, tightening by what each attempt still shows over. A rebuild can pick different
+    // lifts, so one attempt that is no better is not the end: keep tightening from where it landed.
+    let trim = {}, over = bestOver;
+    for (let attempt = 0; attempt < DISPLAY_FIT_ATTEMPTS && totalOver(bestOver) > 0; attempt++) {
+        trim = tightened(trim, over, overDaysOf(over));
+        over = attemptWith(trim);
+        if (!over) break;
+        if (totalOver(over) <= 0) break;
+    }
+    // Then one day at a time from the best plan found: a week often has one day with nothing left to give
+    // (the engine refuses its tighter budget) and others that can still come down.
+    for (let round = 0; round < 2 && totalOver(bestOver) > 0; round++) {
+        let moved = false;
+        for (const day of overDaysOf(bestOver)) {
+            if (!(bestOver[day] > 0)) continue;
+            const before = totalOver(bestOver);
+            attemptWith(tightened(bestTrim, bestOver, [day]));
+            if (totalOver(bestOver) < before) moved = true;
+        }
+        if (!moved) break;
+    }
+    return best;
+}
+
+/* The regions a lifter's focus names, in the engine's public-region terms. "Shoulders" is the delt complex the
+   app trains directly (side and rear; pressing already covers the front), "back" is width and thickness. */
+const FOCUS_REGIONS = { back: ['lats', 'upper_back'], shoulders: ['side_delts', 'rear_delts'], abs: ['core'] };
+export function focusedPublicRegions(config) {
+    const names = [...(config?.focusList ?? []), ...Object.entries(config?.focus ?? {}).filter(([, value]) => Math.round(Number(value) || 0) > 0).map(([key]) => key)];
+    return [...new Set(names.flatMap(name => FOCUS_REGIONS[name] ?? [name]))];
+}
+/* Build the same request without the focus and require the focused plan to beat it (volume-repair
+   ensureFocusedRegionDose). A refused or failed comparison build leaves the focused plan as generated. */
+function withFocusDose(program, options, displayTrim) {
+    const regions = focusedPublicRegions(options.config);
+    if (!regions.length) return program;
+    let unfocused;
+    try {
+        const { focus, focusList, ...config } = options.config;
+        unfocused = buildNextProgramForShell({ ...options, config, makeId: () => 'focus-baseline' }, displayTrim).program;
+    } catch { return program; }
+    // A focus set may not push a day past the limit on the displayed clock (or further past, if it already was).
+    const max = displayedBandMax(options.config), before = shellSessionOvershoot(program, max);
+    const accept = !before ? null : candidate => shellSessionOvershoot(candidate, max).every((minutes, i) => minutes <= Math.max(0, before[i]));
+    return ensureFocusedRegionDose(program, unfocused, options.legacyExercises, regions, accept);
+}
+
+/** A request with each named weekday's internal budget tightened by `displayTrim[day]` minutes. */
+export function requestWithDisplayTrim(request, displayTrim) {
+    if (!displayTrim) return request;
+    return {
+        ...request,
+        schedule: {
+            ...request.schedule,
+            days: request.schedule.days.map(day => {
+                const cut = displayTrim[day.day] ?? 0;
+                if (!(cut > 0)) return day;
+                const maxMinutes = Math.max(INTERNAL_BUDGET_FLOOR, day.maxMinutes - cut);
+                return { ...day, maxMinutes, minMinutes: Math.min(day.minMinutes ?? 0, maxMinutes) };
+            })
+        }
+    };
+}
+
+function buildNextProgramForShell(options, displayTrim) {
+    const originalRequest = requestWithDisplayTrim(shellConfigToNextRequest(
         options.config,
         options.banned ?? [],
         options.legacyExercises,
         options.seed
-    );
+    ), displayTrim);
     const attempt = firstPassingCapacityProgram(
         originalRequest,
         options.config,
@@ -508,7 +619,7 @@ export function generateNextProgramForShell(options) {
         } : {})
     };
 
-    const finalProgram = withSupplementalSlots(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises));
+    const finalProgram = withSupplementalSlots(withFocusDose(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises), options, displayTrim));
     return {
         program: finalProgram,
         nextProgram: finalProgram.nextEngine.program,

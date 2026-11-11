@@ -115,6 +115,11 @@ history, the weekly-structure audit, and the current program simulated forward),
 its last week (review it, build the next block, or run it again), and a wizard that says which setup builds when no
 split fits the answers. A new program's week starts on the day it is built.
 
+Engine (shared with the web app): a built plan is checked against the session length the app displays, in every work
+week, and a day that shows over the chosen limit is rebuilt on a tighter budget unless that would cost a large or
+focused muscle its work (`verification/b1012-displayed-time-referee-test.mjs`). A muscle focus is guaranteed to raise
+that muscle's weekly sets over the same plan without it, inside the time limit (`b1012-focus-dose-test.mjs`).
+
 Performance: engine replies are parsed off the main thread, Today paints before the other tabs load, History pages
 40 rows at a time, `androidx.profileinstaller` installs the libraries' baseline profiles outside Play, and CI measures
 the `benchmark` build type (release code, debug signing) with a year of imported history (`smoke/perf.py`).

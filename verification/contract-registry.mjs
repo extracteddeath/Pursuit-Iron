@@ -91,6 +91,8 @@ export const contractGroups = Object.freeze({
         'b881-history-import-test.mjs',
         'b880-play-foundation-test.mjs',
         'b879-experience-tier-test.mjs',
+        'b1012-displayed-time-referee-test.mjs',
+        'b1012-focus-dose-test.mjs',
         'b878-program-number-display-test.mjs',
         'b875-workout-context-test.mjs',
         'b860-selective-improvements-test.mjs',

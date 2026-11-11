@@ -11,9 +11,17 @@ data class WorkoutLastSetReference(
     val actual:KotlinPerformedSet?,
     val loadBasis:LoadBasis?
 )
+/** An exercise's set ordinal and physical station are separate references. */
+data class WorkoutMachineReferenceKey(
+    val key:WorkoutReferenceKey,
+    val machineId:String
+)
 sealed interface WorkoutLastReferenceResult {
-    data class Ready(val sets:Map<WorkoutReferenceKey,WorkoutLastSetReference>):
-        WorkoutLastReferenceResult
+    data class Ready(
+        val sets:Map<WorkoutReferenceKey,WorkoutLastSetReference>,
+        /** Latest authentic observation for each physical machine and set slot. */
+        val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference> = emptyMap()
+    ):WorkoutLastReferenceResult
     data object Unavailable:WorkoutLastReferenceResult
 }
 data class ComposerReferenceSession(
@@ -31,8 +39,12 @@ data class ComposerReferenceSession(
  * distinct. Missing actual RIR remains unknown; no goal is copied into Last.
  */
 object WorkoutLastReferenceDomain {
-    private fun ready(sets:Map<WorkoutReferenceKey,WorkoutLastSetReference>)=
-        WorkoutLastReferenceResult.Ready(Collections.unmodifiableMap(LinkedHashMap(sets)))
+    private fun ready(
+        sets:Map<WorkoutReferenceKey,WorkoutLastSetReference>,
+        machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference> = emptyMap()
+    )=WorkoutLastReferenceResult.Ready(
+        Collections.unmodifiableMap(LinkedHashMap(sets)),
+        Collections.unmodifiableMap(LinkedHashMap(machineSets)))
 
     private fun ordered(orders:List<Long>,ids:List<String>)=
         orders.all{it>0} && orders.zipWithNext().all{it.first<it.second} &&
@@ -45,7 +57,7 @@ object WorkoutLastReferenceDomain {
         else -> false
     }
 
-    fun custom(
+    private fun customBase(
         workoutId:String,next:CustomWorkoutDaySnapshot,
         completed:List<CustomCoachingHistoricalSession>
     ):WorkoutLastReferenceResult {
@@ -109,7 +121,7 @@ object WorkoutLastReferenceDomain {
         return ready(result)
     }
 
-    fun composer(
+    private fun composerBase(
         next:KotlinStagedWorkout,completed:List<ComposerReferenceSession>
     ):WorkoutLastReferenceResult {
         if(!ordered(completed.map{it.completionOrder},completed.map{it.evidence.workoutId}))
@@ -140,5 +152,78 @@ object WorkoutLastReferenceDomain {
                 (fact.issuedLoad as? DraftSetLoad.Verified)?.basis)
         }
         return ready(result)
+    }
+
+    /**
+     * Preserve the existing latest-day safety gate for generic references,
+     * then project a separate latest observed set for EACH physical machine.
+     * A B session does not replace A's history; an A skip/failure remains
+     * the latest A fact and never revives an older successful A attempt.
+     */
+    private fun appendMachineFacts(
+        destination:MutableMap<WorkoutMachineReferenceKey,WorkoutLastSetReference>,
+        source:Map<WorkoutReferenceKey,WorkoutLastSetReference>
+    ) {
+        source.forEach { (key,fact) ->
+            if(fact.outcome==KotlinJournalSetOutcome.SKIPPED && fact.actual==null) {
+                // The station used for an unattempted set is unknowable.
+                // Fail closed for this slot rather than promoting an older PR.
+                destination.keys.removeAll { it.key==key }
+            } else {
+                val machine=KotlinMachineAlternativesDomain.normalizeMachineId(
+                    fact.actual?.machineInstanceId)
+                destination[WorkoutMachineReferenceKey(key,machine)]=fact
+            }
+        }
+    }
+
+    fun custom(
+        workoutId:String,next:CustomWorkoutDaySnapshot,
+        completed:List<CustomCoachingHistoricalSession>
+    ):WorkoutLastReferenceResult {
+        val baseline=customBase(workoutId,next,completed)
+        if(baseline !is WorkoutLastReferenceResult.Ready || baseline.sets.isEmpty())
+            return baseline
+        val before=completed.singleOrNull { it.evidence.workoutId==workoutId }
+            ?.completionOrder ?:Long.MAX_VALUE
+        val machines=linkedMapOf<WorkoutMachineReferenceKey,WorkoutLastSetReference>()
+        for(session in completed) {
+            if(session.completionOrder>=before ||
+                session.evidence.workoutId==workoutId ||
+                session.snapshot.stamp.athleteId!=next.stamp.athleteId ||
+                session.snapshot.stamp.cycleId!=next.stamp.cycleId ||
+                session.snapshot.weekday!=next.weekday ||
+                session.snapshot.absoluteWeek>=next.absoluteWeek)
+                continue
+            val observation=customBase(workoutId,next,listOf(session))
+            if(observation !is WorkoutLastReferenceResult.Ready)
+                return WorkoutLastReferenceResult.Unavailable
+            appendMachineFacts(machines,observation.sets)
+        }
+        return ready(baseline.sets,machines)
+    }
+
+    fun composer(
+        next:KotlinStagedWorkout,completed:List<ComposerReferenceSession>
+    ):WorkoutLastReferenceResult {
+        val baseline=composerBase(next,completed)
+        if(baseline !is WorkoutLastReferenceResult.Ready || baseline.sets.isEmpty())
+            return baseline
+        val before=completed.singleOrNull { it.evidence.workoutId==next.workoutId }
+            ?.completionOrder ?:Long.MAX_VALUE
+        val machines=linkedMapOf<WorkoutMachineReferenceKey,WorkoutLastSetReference>()
+        for(session in completed) {
+            if(session.completionOrder>=before ||
+                session.evidence.workoutId==next.workoutId ||
+                session.evidence.source.athleteId!=next.source.athleteId ||
+                session.evidence.source.programId!=next.source.programId ||
+                session.dayIndex!=next.dayIndex || session.dayIndex<0)
+                continue
+            val observation=composerBase(next,listOf(session))
+            if(observation !is WorkoutLastReferenceResult.Ready)
+                return WorkoutLastReferenceResult.Unavailable
+            appendMachineFacts(machines,observation.sets)
+        }
+        return ready(baseline.sets,machines)
     }
 }

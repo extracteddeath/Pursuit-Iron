@@ -87,6 +87,16 @@ assert.ok(journal.includes('current.originalSnapshot.stamp.gymId') &&
   machineSelector.includes('normalizeMachineId(selectedMachineId)') &&
   machineSelector.includes('normalizeMachineId(\n                it.actual?.machineInstanceId)'),
   'Issued gym and legacy-only Last selection must remain explicit');
+const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
+assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
+  machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&
+  machineLast.includes('fun customBase(') &&
+  machineLast.includes('fun composerBase(') &&
+  machineLast.includes('fun appendMachineFacts(') &&
+  machineLast.includes('destination.keys.removeAll { it.key==key }') &&
+  machineSelector.includes('previous.machineSets.filterKeys { it.machineId==requested }'),
+  'Native A/B Last must recover each station without borrowing other stacks or bypassing unknown skips');
+
 const sharedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const phrase of [
   'internal fun PursuitWorkoutFocusHeader(',

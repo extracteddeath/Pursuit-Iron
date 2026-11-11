@@ -208,6 +208,82 @@ class WorkoutLastReferenceDomainTest {
         assertNull(last.actual)
     }
 
+    @Test fun returningToMachineAAfterBRecoversAWithoutBorrowingB() {
+        fun tagged(
+            week:Int,order:Long,machine:String,weight:String,
+            outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED
+        ):CustomCoachingHistoricalSession {
+            val original=session(custom(week),order,outcome=outcome)
+            return original.copy(evidence=original.evidence.copy(visits=
+                original.evidence.visits.map { visit ->
+                    visit.copy(actual=visit.actual?.copy(
+                        machineInstanceId=machine,load=BigDecimal(weight)))
+                }))
+        }
+        val a=tagged(1,1,"A","200")
+        val b=tagged(2,2,"B","140")
+        val next=custom(3)
+        val ref=WorkoutLastReferenceDomain.custom("current",next,listOf(a,b))
+            as WorkoutLastReferenceResult.Ready
+        val key=WorkoutReferenceKey(next.slots.single().sets[1].setKey)
+        assertEquals("prior-2",ref.sets.getValue(key).workoutId)
+        assertEquals("prior-1",ref.machineSets.getValue(
+            WorkoutMachineReferenceKey(key,"A")).workoutId)
+        assertEquals(BigDecimal("200"),ref.machineSets.getValue(
+            WorkoutMachineReferenceKey(key,"A")).actual?.load)
+        assertEquals(BigDecimal("140"),ref.machineSets.getValue(
+            WorkoutMachineReferenceKey(key,"B")).actual?.load)
+        assertFalse(ref.machineSets.containsKey(
+            WorkoutMachineReferenceKey(key,KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)))
+
+        // A's own latest failure blocks an older A success, even if B succeeded.
+        val aFailed=tagged(3,3,"A","200",KotlinJournalSetOutcome.FAILED_ATTEMPT)
+        val nextAfterFailure=custom(4)
+        val failed=WorkoutLastReferenceDomain.custom("current",nextAfterFailure,
+            listOf(a,b,aFailed)) as WorkoutLastReferenceResult.Ready
+        val laterKey=WorkoutReferenceKey(nextAfterFailure.slots.single().sets[1].setKey)
+        assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            failed.machineSets.getValue(WorkoutMachineReferenceKey(laterKey,"A")).outcome)
+    }
+
+    @Test fun anUnknownSkippedMachineBlocksStaleLastInsteadOfPromotingAnOldPr() {
+        val first=session(custom(1),1)
+        val tagged=first.copy(evidence=first.evidence.copy(visits=
+            first.evidence.visits.map {
+                it.copy(actual=it.actual?.copy(machineInstanceId="A"))
+            }))
+        // A skip has no actual machine ID, so the physical station is unknown.
+        val skipped=session(custom(2),2,outcome=KotlinJournalSetOutcome.SKIPPED)
+        val reference=WorkoutLastReferenceDomain.custom("current",custom(3),
+            listOf(tagged,skipped)) as WorkoutLastReferenceResult.Ready
+        assertTrue(reference.machineSets.isEmpty())
+        assertTrue(reference.sets.values.all { it.outcome==KotlinJournalSetOutcome.SKIPPED })
+    }
+
+    @Test fun composerRestoresTheLastAExposureAfterANewerBSession() {
+        fun tagged(order:Long,machine:String,weight:String)=
+            composerSession(order).let { session ->
+                session.copy(evidence=session.evidence.copy(sets=
+                    session.evidence.sets.map { fact ->
+                        fact.copy(actual=fact.actual?.copy(
+                            load=BigDecimal(weight),machineInstanceId=machine))
+                    }))
+            }
+        val a=tagged(1,"A","200")
+        val b=tagged(2,"B","140")
+        val reference=WorkoutLastReferenceDomain.composer(composerSnapshot(),
+            listOf(a,b)) as WorkoutLastReferenceResult.Ready
+        val key=WorkoutReferenceKey("bench:work:0")
+        assertEquals("old-2",reference.sets.getValue(key).workoutId)
+        assertEquals("old-1",reference.machineSets.getValue(
+            WorkoutMachineReferenceKey(key,"A")).workoutId)
+        assertEquals(BigDecimal("140"),reference.machineSets.getValue(
+            WorkoutMachineReferenceKey(key,"B")).actual?.load)
+        assertTrue(runCatching {
+            (reference.machineSets as MutableMap<*,*>).clear()
+        }.isFailure)
+    }
+
     @Test fun unknownGeneratedDayCannotSupplyAReference() {
         assertTrue(sets(WorkoutLastReferenceDomain.composer(composerSnapshot(),
             listOf(composerSession(1,day=-1)))).isEmpty())

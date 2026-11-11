@@ -63,6 +63,27 @@ class NativeKotlinMachineRosterFileStoreTest {
                 reopened,"B",LoadBasis.MACHINE_STACK)?.maximum)
     }
 
+    @Test fun olderOffGridStackDoesNotDestroyRosterOrBecomeVerifiedStock() {
+        // Simulates a previously accepted v2 calibration. Its written file
+        // remains parseable even after stricter *new* calibration rules.
+        val old=KotlinGymMachineAlternatives("gymA","machine_press","B",
+            listOf(KotlinPhysicalMachine("B","Historical press",
+                unit=LoadUnit.LB,increment=BigDecimal("10"),
+                minimum=BigDecimal("20"),maximum=BigDecimal("215"))))
+        saved(store().save("athlete1",0,listOf(old)))
+        val restored=saved(store().read("athlete1"))
+        val machine=restored.configurations.single()
+        assertEquals("B",machine.defaultMachineId)
+        assertEquals("Historical press",machine.machines.single().label)
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(
+            machine,"B",LoadBasis.MACHINE_STACK))
+        val renamed=KotlinMachineAlternativesDomain.edit(machine,
+            machine.machines.single().copy(label="Former upstairs press"))
+        saved(store().save("athlete1",restored.revision,listOf(renamed)))
+        assertEquals("Former upstairs press",saved(store().read("athlete1"))
+            .configurations.single().machines.single().label)
+    }
+
     @Test fun deactivatedMachineRemainsReadableAndDuplicateGymExerciseRejected() {
         val a=KotlinGymMachineAlternatives("gymA","machine_press","B",listOf(
             KotlinPhysicalMachine("A","Machine A",active=false),

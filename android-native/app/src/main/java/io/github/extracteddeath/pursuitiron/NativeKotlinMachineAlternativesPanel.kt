@@ -27,7 +27,9 @@ private fun validMachineStack(
         minimum.stripTrailingZeros().scale()<=3 &&
         increment.stripTrailingZeros().scale()<=3 &&
         maximum.stripTrailingZeros().scale()<=3 &&
-        maximum-minimum<=increment.multiply(BigDecimal("99999"))
+        maximum-minimum<=increment.multiply(BigDecimal("99999")) &&
+        // Reject a maximum the defined uniform stack can never reach.
+        (maximum-minimum).remainder(increment).compareTo(BigDecimal.ZERO)==0
 }
 
 /**

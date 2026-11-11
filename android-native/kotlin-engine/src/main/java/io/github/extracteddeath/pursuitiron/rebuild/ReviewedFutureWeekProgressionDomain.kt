@@ -98,9 +98,14 @@ object ReviewedFutureWeekProgressionDomain {
             return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
                 "Review the immediately preceding same-day workout before progressing this slot; a missed or duplicate visit cannot earn an increase.")
 
-        val original=(CustomWorkoutSnapshotDomain.preview(
+        // Signed native preflight always includes the audited per-day
+        // non-set overhead. A raw preview omits it and cannot equal the
+        // authenticated next session even when the training is identical.
+        // Re-derive the *consent-reviewed* workout, never relax equality.
+        val original=(CustomWorkoutSnapshotDomain.reviewForConsent(
             current,request.setup,request.catalog,
-            request.catalogSourceRevision,next.absoluteWeek,next.weekday)
+            request.catalogSourceRevision,request.coachPolicy,
+            next.absoluteWeek,next.weekday)
             as? CustomWorkoutSnapshotResult.Preview)?.snapshot
         if(original==null || original!=next)
             return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
@@ -202,9 +207,10 @@ object ReviewedFutureWeekProgressionDomain {
                     candidateAudit.issues.take(3).joinToString("; "){it.explanation},
                 coaching,candidateAudit)
 
-        val repreview=(CustomWorkoutSnapshotDomain.preview(
+        val repreview=(CustomWorkoutSnapshotDomain.reviewForConsent(
             candidate,request.setup,request.catalog,
-            request.catalogSourceRevision,next.absoluteWeek,next.weekday)
+            request.catalogSourceRevision,request.coachPolicy,
+            next.absoluteWeek,next.weekday)
             as? CustomWorkoutSnapshotResult.Preview)?.snapshot
         if(repreview==null ||
             repreview!=modified.copy(stamp=modified.stamp.copy(

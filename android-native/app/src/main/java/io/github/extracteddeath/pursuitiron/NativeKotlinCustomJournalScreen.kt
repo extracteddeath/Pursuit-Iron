@@ -587,6 +587,13 @@ internal fun NativeKotlinCustomJournalScreen(
                             val mainKey=CustomWorkoutVisitKey(
                                 set.setKey,CustomWorkoutVisitPart.MAIN)
                             val observed=current.effectiveVisits[mainKey]
+                            // Once saved, the machine is a historical fact;
+                            // selecting B later must not rewrite a prior A set.
+                            val recordedMain=observed?.operation
+                                as? CustomWorkoutJournalOperation.Record
+                            val mainMachineId=if(observed!=null)
+                                recordedMain?.performed?.machineInstanceId
+                            else selectedMachineId
                             val advice=liveCoach?.takeIf {
                                 !busy && !finished && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&
@@ -607,7 +614,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished,
-                                machineInstanceId=selectedMachineId,
+                                machineInstanceId=mainMachineId,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
                                 position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                     .indexOf(set)+1,
@@ -615,7 +622,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
                                     record(set.setKey,CustomWorkoutVisitPart.MAIN,
-                                        outcome,actual?.copy(machineInstanceId=selectedMachineId))
+                                        outcome,actual?.copy(machineInstanceId=mainMachineId))
                                 },
                                 onShowPlates={load,unit,basis->
                                     plateRequest=NativeCustomPlateRequest(
@@ -636,8 +643,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     existing=follower,locked=busy||finished,
-                                    machineInstanceId=main?.performed?.machineInstanceId
-                                        ?:selectedMachineId,
+                                    machineInstanceId=if(follower!=null)
+                                        (follower.operation as?
+                                            CustomWorkoutJournalOperation.Record)
+                                            ?.performed?.machineInstanceId
+                                    else if(main!=null)main.performed?.machineInstanceId
+                                    else selectedMachineId,
                                     referenceMode=referenceMode,lastReferences=lastReferences,
                                     position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                         .indexOf(set)+1,
@@ -648,8 +659,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                         record(set.setKey,
                                             CustomWorkoutVisitPart.FOLLOW_UP,
                                             outcome,actual?.copy(
-                                                machineInstanceId=main?.performed?.machineInstanceId
-                                                    ?:selectedMachineId))
+                                                machineInstanceId=if(follower!=null)
+                                                    (follower.operation as?
+                                                        CustomWorkoutJournalOperation.Record)
+                                                        ?.performed?.machineInstanceId
+                                                else if(main!=null)main.performed?.machineInstanceId
+                                                else selectedMachineId))
                                     },
                                     onShowPlates={load,unit,basis->
                                         plateRequest=NativeCustomPlateRequest(

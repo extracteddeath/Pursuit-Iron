@@ -4,12 +4,80 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import io.github.extracteddeath.pursuitiron.nativecoachstore.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
+
+/**
+ * A screen-local projection of an owner-fenced, cold-replayable private file.
+ * The snapshot is never itself permission to log: journal writes are still
+ * verified by the independent workout authority.
+ */
+internal data class NativeWorkoutMachineChoicesUi(
+    val encoded:String,
+    val ready:Boolean,
+    val busy:Boolean,
+    val error:String?,
+    val onSelect:(String,String)->Unit
+)
+
+@Composable
+internal fun rememberNativeWorkoutMachineChoices(
+    host:NativeKotlinCandidateHost,
+    workoutId:String,
+    custom:Boolean,
+    ready:Boolean,
+    exerciseSignature:String
+):NativeWorkoutMachineChoicesUi {
+    val scope=rememberCoroutineScope()
+    var saved by remember(host,workoutId,custom) {
+        mutableStateOf<NativeWorkoutMachineChoiceSnapshot?>(null)
+    }
+    var busy by remember(host,workoutId,custom){mutableStateOf(false)}
+    var error by remember(host,workoutId,custom){mutableStateOf<String?>(null)}
+    LaunchedEffect(host,workoutId,custom,ready,exerciseSignature) {
+        saved=null
+        error=null
+        if(!ready)return@LaunchedEffect
+        busy=true
+        val recovered=withContext(Dispatchers.IO) {
+            host.recoverWorkoutMachineChoices(workoutId,custom)
+        }
+        if(recovered is NativeWorkoutMachineChoiceResult.Saved)
+            saved=recovered.snapshot
+        else error="Machine selection could not be verified. Recorded sets are unchanged."
+        busy=false
+    }
+    val encoded=saved?.machines?.entries?.joinToString(";"){
+        "${it.key}=${it.value}"
+    }.orEmpty()
+    return NativeWorkoutMachineChoicesUi(
+        encoded,ready && saved!=null,!ready || busy,error,
+        onSelect={exerciseId,machineId->
+            val current=saved
+            if(current!=null && ready && !busy) {
+                busy=true
+                error=null
+                scope.launch {
+                    val result=withContext(Dispatchers.IO){
+                        host.selectWorkoutPhysicalMachine(workoutId,custom,
+                            exerciseId,machineId,current.revision)
+                    }
+                    if(result is NativeWorkoutMachineChoiceResult.Saved)
+                        saved=result.snapshot
+                    else error="Machine selection was not saved. Reopen this workout to verify the current choice."
+                    busy=false
+                }
+            }
+        })
+}
 
 /** Stable compact saveable per-exercise choice; IDs cannot contain separators. */
 internal fun workoutMachineChoice(encoded:String,exerciseId:String,defaultId:String?):String? =

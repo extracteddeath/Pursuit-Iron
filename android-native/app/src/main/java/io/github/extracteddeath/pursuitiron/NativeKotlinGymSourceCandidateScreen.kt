@@ -157,6 +157,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        NativeKotlinMachineAlternativesPanel(
+            controller,gym.gymId,source.catalog,state.machineRoster,state.busy
+        )
         gym.confirmedStock.toSortedMap().forEach { (id, stock) ->
             key(id) {
                 PursuitCard {

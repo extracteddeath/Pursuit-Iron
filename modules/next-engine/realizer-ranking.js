@@ -99,6 +99,9 @@ function strengthCandidate(a, session, request, chosen, catalog) {
         const confidence = (x.source === 'legacy_v661' ? 1 : 0) - (y.source === 'legacy_v661' ? 1 : 0);
         return confidence || y.loadability - x.loadability || x.id.localeCompare(y.id);
     };
+    if (request.preferences?.powerbuildingInclineVolume && a.lift==='bench_press' && a.role==='secondary_strength') {
+        console.log('M344 RANKING '+JSON.stringify({intent:session.intent,load:session.maxMinutes,options:staticCandidatePool(catalog,session,request).filter(e=>(e.liftSpecificity?.bench_press??0)>.45).map(e=>({id:e.id,specificity:e.liftSpecificity.bench_press})),flag:request.preferences.powerbuildingInclineVolume}));
+    }
     return selectBestCandidate(staticCandidatePool(catalog, session, request), {
         accept: e => (e.liftSpecificity?.[a.lift] ?? 0) > .45
             && (!e.flags.barbell || barbells < maxBarbells(session, request)),

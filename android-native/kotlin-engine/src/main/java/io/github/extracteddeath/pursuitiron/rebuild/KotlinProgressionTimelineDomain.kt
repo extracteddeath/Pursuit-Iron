@@ -43,7 +43,9 @@ data class KotlinProgressionTimelineRequest(
      * source's exact approved program revision. Null preserves the older
      * purpose-only diagnostic until the trusted owner supplies day identity.
      */
-    val requestedDayIndex: Int? = null
+    val requestedDayIndex: Int? = null,
+    /** Optional physical machine scope; never infer equal resistance from a shared lift. */
+    val requestedMachineInstanceId: String? = null
 )
 
 enum class KotlinTimelineReviewStatus {
@@ -62,6 +64,7 @@ enum class KotlinTimelineReviewStatus {
     CHANGED_GYM_OR_COACH_RULES,
     CHANGED_SESSION_PURPOSE,
     CHANGED_TRAINING_DAY,
+    MIXED_PHYSICAL_MACHINE, DIFFERENT_PHYSICAL_MACHINE,
     CHANGED_INTERVENING_SOURCE,
     CHANGED_LOAD_BASIS,
     CHANGED_SET_PRESCRIPTION,
@@ -102,6 +105,9 @@ object KotlinProgressionTimelineDomain {
             request.historyRevision < 1 || request.currentHistoryRevision < 1 ||
             request.completedWorkouts.size !in 1..MAX_COMPLETIONS ||
             request.requestedPurpose==ComposerSessionPurpose.UNSPECIFIED ||
+            (request.requestedMachineInstanceId!=null &&
+                request.requestedMachineInstanceId!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
+                !KotlinMachineAlternativesDomain.validInstanceId(request.requestedMachineInstanceId)) ||
             (request.requestedDayIndex!=null &&
                 request.requestedDayIndex !in 0..6) ||
             request.maximumAuthorizedIncrease <= zero ||
@@ -165,11 +171,35 @@ object KotlinProgressionTimelineDomain {
         // match. Intervening sessions remain authenticated in full.
         // Importantly, an intervening BAD workout of the requested purpose
         // stays in the comparison: never cherry-pick two earlier successes.
-        val applicable=appearances.filter { (stored,_,_) ->
+        val dayApplicable=appearances.filter { (stored,_,_) ->
             (request.requestedPurpose==null ||
                 stored.journal.snapshot.purpose==request.requestedPurpose) &&
             (request.requestedDayIndex==null ||
                 stored.journal.snapshot.dayIndex==request.requestedDayIndex)
+        }
+        // Read set-level physical IDs only AFTER validating the COMPLETE
+        // stored journal. A mixed A/B workout is never one comparable load
+        // exposure. Other same-machine days are retained, but never borrowed.
+        fun physicalMachines(stored:KotlinChronologicalWorkout):Set<String> {
+            val state=stored.savedCorrections?.originalFinishedJournal
+                ?:stored.journal
+            val keys=state.snapshot.targets.filter {
+                it.exerciseId==request.exerciseId && it.type==DraftSetType.WORKING
+            }.map {it.setKey}.toSet()
+            return state.effectiveSets.filterKeys {it in keys}.values.mapNotNull {
+                (it.operation as? KotlinJournalOperation.RecordSet)?.performed
+            }.map {KotlinMachineAlternativesDomain.normalizeMachineId(
+                it.machineInstanceId)}.toSet()
+        }
+        val newestMachineIds=dayApplicable.lastOrNull()?.first?.let(::physicalMachines)
+            .orEmpty()
+        if(newestMachineIds.size>1 && request.requestedMachineInstanceId==null)
+            return rejected(KotlinTimelineReviewStatus.MIXED_PHYSICAL_MACHINE)
+        val machineId=request.requestedMachineInstanceId
+            ?:newestMachineIds.singleOrNull()
+            ?:KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
+        val applicable=dayApplicable.filter { (stored,_,_) ->
+            physicalMachines(stored)==setOf(machineId)
         }
         if (applicable.size < 2)
             return rejected(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,

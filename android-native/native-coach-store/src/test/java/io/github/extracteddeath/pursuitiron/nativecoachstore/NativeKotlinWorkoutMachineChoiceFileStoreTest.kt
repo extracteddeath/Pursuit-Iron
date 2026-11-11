@@ -60,6 +60,28 @@ class NativeKotlinWorkoutMachineChoiceFileStoreTest {
             store().read("owner","workout-1",false,"gymX"))
     }
 
+    @Test fun swappedExerciseChoiceColdReopensWithoutChangingEarlierMachine() {
+        for(custom in listOf(true,false)) {
+            val workout=if(custom)"custom-swap" else "generated-swap"
+            val original=saved(store().save("owner",workout,custom,"gymX",0,
+                mapOf("machine_press" to "A")))
+            assertEquals(1L,original.revision)
+            // The journal swap introduces a new exercise. The owner-host
+            // explicitly verifies its gym, roster and exercise before save.
+            val switched=saved(store().save("owner",workout,custom,"gymX",
+                original.revision,original.machines+("machine_row" to "B")))
+            assertEquals(2L,switched.revision)
+            val reopened=saved(store().read("owner",workout,custom,"gymX"))
+            assertEquals(mapOf("machine_press" to "A","machine_row" to "B"),
+                reopened.machines)
+            assertEquals(NativeWorkoutMachineChoiceResult.Rejected("STALE_REVISION"),
+                store().save("owner",workout,custom,"gymX",original.revision,
+                    mapOf("machine_press" to "B")))
+            assertEquals(reopened,
+                saved(store().read("owner",workout,custom,"gymX")))
+        }
+    }
+
     @Test fun emptySelectionIsDurableAndDoesNotInventMachineForLegacyWorkout() {
         assertEquals(1L,saved(store().save("owner","legacy",true,"gymX",0,
             emptyMap())).revision)

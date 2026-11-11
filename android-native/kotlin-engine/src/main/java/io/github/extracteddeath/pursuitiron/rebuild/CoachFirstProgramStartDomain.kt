@@ -203,7 +203,10 @@ object CoachFirstProgramStartDomain {
                 FirstProgramStartStatus.INVALID_CALIBRATION))return result
             if(result.status==FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
                 return result.copy(issues=Collections.unmodifiableList(result.issues+
-                    "Main-lift practice (${offer.requiredDays} distinct day(s) per named lift) and supporting days match your chosen split and verified movements."),
+                    if(input.policyVersion==PREVIOUS_PHASE_POLICY_VERSION)
+                        "Main-lift practice and supporting days match your chosen split and verified movements."
+                    else
+                        "Main-lift practice (${offer.requiredDays} distinct day(s) per named lift) and supporting days match your chosen split and verified movements."),
                     phasePoliciesChecked=attempts)
             val score=rank(result)
             if(bestRank==null || better(score,checkNotNull(bestRank))) {

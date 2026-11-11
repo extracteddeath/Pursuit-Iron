@@ -128,6 +128,35 @@ class KotlinMachineAlternativesDomainTest {
         assertEquals(BigDecimal("30"),proofB.nextAbove)
     }
 
+    @Test fun calibratedMaximumMustBeReachableOnTheActualMachineStack() {
+        val empty=KotlinGymMachineAlternatives(
+            "gymX","machine_press",null,emptyList())
+        val impossible=KotlinPhysicalMachine(
+            "B","Impossible end plate",unit=LoadUnit.LB,
+            increment=BigDecimal("10"),minimum=BigDecimal("20"),
+            maximum=BigDecimal("215"))
+        val invalid=empty.copy(defaultMachineId="B",machines=listOf(impossible))
+        assertFalse(KotlinMachineAlternativesDomain.valid(invalid))
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(
+            invalid,"B",LoadBasis.MACHINE_STACK))
+        assertThrows(IllegalArgumentException::class.java) {
+            KotlinMachineAlternativesDomain.add(empty,impossible,true)
+        }
+
+        // A real fractional stack is valid when the terminal load is exact.
+        val fractional=impossible.copy(
+            id="C",label="Fractional stack",
+            increment=BigDecimal("2.5"),minimum=BigDecimal("1.5"),
+            maximum=BigDecimal("11.5"))
+        val valid=KotlinMachineAlternativesDomain.add(empty,fractional,true)
+        assertTrue(KotlinMachineAlternativesDomain.valid(valid))
+        val stock=KotlinMachineAlternativesDomain.confirmedStack(
+            valid,"C",LoadBasis.MACHINE_STACK)
+        val observed=EquipmentLoadDomain.inspect(
+            stock,BigDecimal("11.5"),LoadUnit.LB)
+        assertTrue(observed is LoadInspection.Confirmed && observed.exact)
+    }
+
     @Test fun untrustedOrIncompatibleLoadStepsAreRejected() {
         val empty=KotlinGymMachineAlternatives("gymX","machine_press",null,emptyList())
         assertThrows(IllegalArgumentException::class.java){

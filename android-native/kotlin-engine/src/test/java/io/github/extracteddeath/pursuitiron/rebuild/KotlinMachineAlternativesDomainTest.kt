@@ -50,6 +50,42 @@ class KotlinMachineAlternativesDomainTest {
                 KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID,0))
     }
 
+    @Test fun twoVerifiedMachineStacksNeverBorrowIncrementOrRange() {
+        val a=KotlinPhysicalMachine("A","Hammer Strength",unit=LoadUnit.LB,
+            increment=BigDecimal("5"),minimum=BigDecimal("10"),
+            maximum=BigDecimal("200"))
+        val b=KotlinPhysicalMachine("B","Selectorized Press",unit=LoadUnit.LB,
+            increment=BigDecimal("10"),minimum=BigDecimal("20"),
+            maximum=BigDecimal("220"))
+        val configured=KotlinGymMachineAlternatives("gymX","machine_press",
+            "A",listOf(a,b))
+        assertTrue(KotlinMachineAlternativesDomain.valid(configured))
+        val stockA=KotlinMachineAlternativesDomain.confirmedStack(configured,"A",
+            LoadBasis.MACHINE_STACK)
+        val stockB=KotlinMachineAlternativesDomain.confirmedStack(configured,"B",
+            LoadBasis.MACHINE_STACK)
+        assertEquals(BigDecimal("5"),stockA?.increment)
+        assertEquals(BigDecimal("10"),stockB?.increment)
+        assertEquals(BigDecimal("200"),stockA?.maximum)
+        assertEquals(BigDecimal("220"),stockB?.maximum)
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(configured,
+            "A",LoadBasis.BARBELL_TOTAL))
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(configured,
+            "missing",LoadBasis.MACHINE_STACK))
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(
+            configured.copy(machines=listOf(a.copy(minimum=null))),"A",
+            LoadBasis.MACHINE_STACK))
+        assertFalse(KotlinMachineAlternativesDomain.valid(
+            configured.copy(machines=listOf(a.copy(maximum=BigDecimal("9"))))))
+        val proofA=EquipmentLoadDomain.inspect(stockA,BigDecimal("25"),LoadUnit.LB)
+            as LoadInspection.Confirmed
+        val proofB=EquipmentLoadDomain.inspect(stockB,BigDecimal("25"),LoadUnit.LB)
+            as LoadInspection.Confirmed
+        assertTrue(proofA.exact)
+        assertFalse(proofB.exact)
+        assertEquals(BigDecimal("30"),proofB.nextAbove)
+    }
+
     @Test fun untrustedOrIncompatibleLoadStepsAreRejected() {
         val empty=KotlinGymMachineAlternatives("gymX","machine_press",null,emptyList())
         assertThrows(IllegalArgumentException::class.java){

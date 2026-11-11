@@ -12,6 +12,24 @@ import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMachineRosterSnapshot
 import io.github.extracteddeath.pursuitiron.rebuild.CatalogMovement
 
+private fun parseMachineLoad(value:String):BigDecimal? =
+    value.trim().takeIf{it.isNotEmpty()}?.let{
+        runCatching{BigDecimal(it)}.getOrNull()
+    }
+
+private fun validMachineStack(
+    minimum:BigDecimal?,increment:BigDecimal?,maximum:BigDecimal?
+):Boolean {
+    if(minimum==null && maximum==null)return true
+    return minimum!=null && increment!=null && maximum!=null &&
+        minimum>=BigDecimal.ZERO && maximum>=minimum &&
+        increment>BigDecimal.ZERO && maximum<=BigDecimal("100000") &&
+        minimum.stripTrailingZeros().scale()<=3 &&
+        increment.stripTrailingZeros().scale()<=3 &&
+        maximum.stripTrailingZeros().scale()<=3 &&
+        maximum-minimum<=increment.multiply(BigDecimal("99999"))
+}
+
 /**
  * Owner-scoped native gym A/B editor. Labels and defaults apply to a physical
  * machine; the logical exercise remains one training/volume identity.
@@ -28,8 +46,14 @@ internal fun NativeKotlinMachineAlternativesPanel(
     var exerciseId by rememberSaveable{mutableStateOf("")}
     var label by rememberSaveable{mutableStateOf("Machine A")}
     var incrementText by rememberSaveable{mutableStateOf("")}
-    val increment=incrementText.trim().takeIf{it.isNotEmpty()}
-        ?.let{runCatching{BigDecimal(it)}.getOrNull()}
+    var minimumText by rememberSaveable{mutableStateOf("")}
+    var maximumText by rememberSaveable{mutableStateOf("")}
+    val increment=parseMachineLoad(incrementText)
+    val minimum=parseMachineLoad(minimumText)
+    val maximum=parseMachineLoad(maximumText)
+    val stackValid=validMachineStack(minimum,increment,maximum) &&
+        (minimumText.isBlank()||minimum!=null) &&
+        (maximumText.isBlank()||maximum!=null)
     val incrementValid=incrementText.isBlank()||
         (increment!=null && increment>BigDecimal.ZERO &&
             increment<=BigDecimal("100000") &&
@@ -95,10 +119,52 @@ internal fun NativeKotlinMachineAlternativesPanel(
                             ) {
                                 Text(if(machine.active)"Deactivate" else "Reactivate")
                             }
-                        machine.increment?.let {
-                            Text("Verified increment: ${it.toPlainString()} ${machine.unit?.name ?: ""}",
+                        if(machine.minimum!=null && machine.maximum!=null &&
+                            machine.increment!=null)
+                            Text("Verified stack: ${machine.minimum}–${machine.maximum} ${machine.unit?.name ?: ""} · steps of ${machine.increment}",
                                 style=MaterialTheme.typography.bodySmall)
+                        else Text("Stack not verified · load increases require a confirmed machine-specific range.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        var minEdit by rememberSaveable(machine.id,roster?.revision){
+                            mutableStateOf(machine.minimum?.toPlainString().orEmpty())
                         }
+                        var stepEdit by rememberSaveable(machine.id,roster?.revision){
+                            mutableStateOf(machine.increment?.toPlainString().orEmpty())
+                        }
+                        var maxEdit by rememberSaveable(machine.id,roster?.revision){
+                            mutableStateOf(machine.maximum?.toPlainString().orEmpty())
+                        }
+                        val minValue=parseMachineLoad(minEdit)
+                        val stepValue=parseMachineLoad(stepEdit)
+                        val maxValue=parseMachineLoad(maxEdit)
+                        val editValid=validMachineStack(minValue,stepValue,maxValue) &&
+                            (minEdit.isBlank()||minValue!=null) &&
+                            (maxEdit.isBlank()||maxValue!=null) &&
+                            (stepEdit.isBlank()||
+                                (stepValue!=null && stepValue>BigDecimal.ZERO &&
+                                    stepValue.stripTrailingZeros().scale()<=3))
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
+                            modifier=Modifier.fillMaxWidth()) {
+                            OutlinedTextField(value=minEdit,onValueChange={minEdit=it.take(16)},
+                                label={Text("Min")},singleLine=true,
+                                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                                modifier=Modifier.weight(1f))
+                            OutlinedTextField(value=stepEdit,onValueChange={stepEdit=it.take(16)},
+                                label={Text("Step")},singleLine=true,
+                                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                                modifier=Modifier.weight(1f))
+                            OutlinedTextField(value=maxEdit,onValueChange={maxEdit=it.take(16)},
+                                label={Text("Max")},singleLine=true,
+                                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                                modifier=Modifier.weight(1f))
+                        }
+                        OutlinedButton(
+                            enabled=!busy && editValid,
+                            onClick={controller.calibratePhysicalMachine(
+                                exerciseId,machine.id,minValue,stepValue,maxValue)}
+                        ) {Text("Save this machine's confirmed stack")}
+
                     }
                 }
             }
@@ -115,13 +181,27 @@ internal fun NativeKotlinMachineAlternativesPanel(
                 isError=!incrementValid,
                 singleLine=true,modifier=Modifier.fillMaxWidth()
             )
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
+                modifier=Modifier.fillMaxWidth()){
+                OutlinedTextField(value=minimumText,onValueChange={minimumText=it.take(16)},
+                    label={Text("Min")},singleLine=true,
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                    modifier=Modifier.weight(1f))
+                OutlinedTextField(value=maximumText,onValueChange={maximumText=it.take(16)},
+                    label={Text("Max")},singleLine=true,
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                    modifier=Modifier.weight(1f))
+            }
+            Text("Specify minimum, increment and maximum only if you have checked this physical machine's stack. Otherwise its first working weight remains manual.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             Button(
                 onClick={
-                    controller.addPhysicalMachine(exerciseId,label,increment)
+                    controller.addPhysicalMachine(exerciseId,label,increment,minimum,maximum)
                     label="Machine ${(('B'.code+(config?.machines?.size?:0)).coerceAtMost('Z'.code)).toChar()}"
                 },
-                enabled=!busy && roster!=null && label.isNotBlank() && incrementValid &&
-                    (config?.machines?.size?:0)<32,
+                enabled=!busy && roster!=null && label.isNotBlank() &&
+                    incrementValid && stackValid && (config?.machines?.size?:0)<32,
                 modifier=Modifier.fillMaxWidth()
             ) {Text("Add machine")}
             Text("Each machine keeps its own weight history and progression. A different machine is not a strength loss.",

@@ -3988,16 +3988,57 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         "owner-1","cycle-1",4,0,"slot-0",CoachReadiness.NORMAL,
         false,n("5"),CustomRepForecastPolicy.TARGET_RIR_V2)
 
+    /**
+     * Pin a rejected integration fixture to the exact owner/domain guard
+     * rather than changing scientific progression rules to satisfy a
+     * synthetic expectation. Each branch has its own source line so CI
+     * identifies the failing boundary even with terse Gradle test output.
+     */
+    private fun requireActualReady(
+        f:OwnerFutureDraftFixture,
+        s:NativeFutureWeekDraftSelection
+    ):NativeFutureWeekDraftPreview.Ready {
+        val native=f.reviewer.review(s.ownerKey,s.cycleId,
+            s.absoluteWeek,s.weekday,s.slotId,s.readiness,
+            s.movementRestricted,s.maximumAuthorizedIncrease,s.forecast)
+        when(native) {
+            is NativeFutureWeekProposalResult.Rejected ->when(native.reason) {
+                NativeFutureWeekProposalRefusal.INVALID_SELECTION ->fail("bad selection")
+                NativeFutureWeekProposalRefusal.NOT_AUTHORIZED ->fail("not authorized")
+                NativeFutureWeekProposalRefusal.CYCLE_OR_CONSENT_UNAVAILABLE ->fail("cycle or consent unavailable")
+                NativeFutureWeekProposalRefusal.GYM_OR_POLICY_UNAVAILABLE ->fail("gym or policy unavailable")
+                NativeFutureWeekProposalRefusal.PERMISSIONS_UNAVAILABLE ->fail("permissions unavailable")
+                NativeFutureWeekProposalRefusal.HISTORY_UNVERIFIED ->fail("history unverified")
+                NativeFutureWeekProposalRefusal.FUTURE_WORKOUT_ALREADY_PREPARED ->fail("future workout prepared")
+                NativeFutureWeekProposalRefusal.COACH_NOT_VERIFIED ->fail("owner coach unavailable")
+                NativeFutureWeekProposalRefusal.REVIEW_DIVERGED ->fail("coaching review diverged")
+                NativeFutureWeekProposalRefusal.STORAGE_UNAVAILABLE ->fail("owner storage unavailable")
+            }
+            is NativeFutureWeekProposalResult.Reviewed ->when(native.proposal.status) {
+                ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE ->fail("source unverified")
+                ReviewedFutureWeekProgressionStatus.NOT_NEXT_UNISSUED_WEEK ->fail("not next week")
+                ReviewedFutureWeekProgressionStatus.ALREADY_CUSTOMIZED ->fail("already customized")
+                ReviewedFutureWeekProgressionStatus.PERMISSION_REQUIRED ->fail("permission required")
+                ReviewedFutureWeekProgressionStatus.PHYSICAL_MACHINE_REVIEW_REQUIRED ->fail("machine binding required")
+                ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT ->fail("no earned amendment")
+                ReviewedFutureWeekProgressionStatus.AMENDMENT_UNAVAILABLE ->fail("amendment unavailable")
+                ReviewedFutureWeekProgressionStatus.FULL_CYCLE_AUDIT_FAILED ->fail("full cycle audit failed")
+                ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW -> {}
+            }
+        }
+        val review=f.acceptance.preview(s)
+        assertTrue("Owner-reviewed future-week proposal: $review",
+            review is NativeFutureWeekDraftPreview.Ready)
+        return review as NativeFutureWeekDraftPreview.Ready
+    }
+
     @Test fun confirmedFutureWeekDraftPersistsAcrossRestartAndRequiresNewProgramSignoff() {
         val f=ownerFutureDraftFixture()
         val s=ownerFutureSelection()
         val before=(drafts.read("owner-1","cycle-1")
             as NativeCustomDraftReadResult.Found).draft
         val priorHistory=f.reader.read("owner-1","athlete-1")
-        val review=f.acceptance.preview(s)
-        assertTrue("Owner-reviewed future-week proposal: $review",
-            review is NativeFutureWeekDraftPreview.Ready)
-        val ready=review as NativeFutureWeekDraftPreview.Ready
+        val ready=requireActualReady(f,s)
         assertEquals(ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW,
             ready.proposal.status)
         assertEquals(4,ready.proposal.changedAbsoluteWeek)
@@ -4049,9 +4090,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     @Test fun alreadyPreparedFutureWorkoutRefusesAnEarlierConfirmedReview() {
         val f=ownerFutureDraftFixture()
         val s=ownerFutureSelection()
-        val ready=f.acceptance.preview(s)
-        assertTrue(ready.toString(),ready is NativeFutureWeekDraftPreview.Ready)
-        val fingerprint=(ready as NativeFutureWeekDraftPreview.Ready).fingerprint
+        val fingerprint=requireActualReady(f,s).fingerprint
         val prepared=f.prepared.prepare("owner-1","pending-w4",
             "cycle-1",4,0,futureInputs())
         assertTrue(prepared.toString(),
@@ -4068,9 +4107,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     @Test fun revokedAdaptiveRightsAndForeignIdentityInvalidateDisplayedApproval() {
         val f=ownerFutureDraftFixture()
         val s=ownerFutureSelection()
-        val ready=f.acceptance.preview(s)
-        assertTrue(ready.toString(),ready is NativeFutureWeekDraftPreview.Ready)
-        val fingerprint=(ready as NativeFutureWeekDraftPreview.Ready).fingerprint
+        val fingerprint=requireActualReady(f,s).fingerprint
         val rights=(permissionStore.read("owner-1","cycle-1")
             as NativeAdaptivePermissionRead.Found).receipt
         assertEquals(NativeAdaptivePermissionWrite.Committed(rights.revision+1),

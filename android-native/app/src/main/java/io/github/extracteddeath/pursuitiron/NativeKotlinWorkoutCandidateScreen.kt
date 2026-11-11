@@ -396,8 +396,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         workoutMachineChoice(machineSelections,set.target.exerciseId,
                             config.defaultMachineId)
                     }
+                // Correcting an existing set must never reassign it to the
+                // currently selected B machine. Null here means legacy.
+                val recordedMachineId=if(set.currentReceipt!=null)
+                    set.actual?.machineInstanceId else perSetMachineId
                 NativeKotlinSetCard(set,presentation.finished,state.busy,
-                    machineInstanceId=perSetMachineId,
+                    machineInstanceId=recordedMachineId,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type}.indexOf(set)+1,
@@ -412,11 +416,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     },
                     onRecord={outcome,actual->
                         controller.record(set.target.setKey,outcome,
-                            actual?.copy(machineInstanceId=perSetMachineId))
+                            actual?.copy(machineInstanceId=recordedMachineId))
                     },
                     onSkip={pendingSkip=set.target.setKey},
                     onFail={attempt->pendingFail=set.target.setKey to
-                        attempt.copy(machineInstanceId=perSetMachineId)})
+                        attempt.copy(machineInstanceId=recordedMachineId)})
             }
         }
         if(!showAll && selected!=null) {

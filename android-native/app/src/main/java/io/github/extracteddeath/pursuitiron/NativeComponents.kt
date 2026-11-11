@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -39,6 +41,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,9 +52,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeSetEntryPolicy
@@ -80,91 +84,191 @@ internal fun NativeSetEditSheet(busy: Boolean,onDismiss: ()->Unit,content: @Comp
 }
 
 /**
- * All set-entry surfaces share these bounded, keyboard-editable controls.
- * Intentionally no load +/-: bar, machine and dumbbell increments differ by
- * exercise and must come from the canonical engine before offering steps.
+ * Shared, bounded numeric actual-entry controls. The target/actuals and
+ * physical equipment policies are supplied by the calling workout owner.
+ * Deliberately no unverified load stepper: available plate, machine and
+ * dumbbell increments differ.
+ *
+ * Compact phones show TWO accessible 56dp rows (Reps then RIR); wide layouts
+ * show matching equal-width controls. Both text entry and +/- modify only
+ * unsaved draft fields. A long press performs a single, bounded multi-step
+ * edit, not repeated asynchronous writes or any automatic logged set.
  */
 @Composable
-internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: String,enabled: Boolean,
-    onLoad: (String)->Unit,onReps: (String)->Unit,onRir: (String)->Unit,
-    allowFailedAttempt: Boolean=false,showLoad:Boolean=true,
-    loadError:Boolean=false,repsError:Boolean=false,rirError:Boolean=false) {
-    // A source-verified bodyweight prescription has NO external load.
-    // Do not show a fake zero-pound entry; retain real rep/RIR controls.
-    if(showLoad) OutlinedTextField(value=load,onValueChange={input->
-        if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
-    },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
-        isError=loadError,
-        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
-    // Reps and RIR share a compact row on normal phones. Their +/- buttons
-    // sit below each input so touch targets remain 48dp without stealing
-    // space from the editable number. Very narrow devices stack safely.
-    // The same component is reused in active sets, warm-ups and corrections;
-    // presentation never computes or changes a training target.
-    val repsControl: @Composable () -> Unit = {
-        NativeSetCounterField("Reps",reps,enabled,
+internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String,
+    enabled:Boolean,onLoad:(String)->Unit,onReps:(String)->Unit,onRir:(String)->Unit,
+    allowFailedAttempt:Boolean=false,showLoad:Boolean=true,
+    loadError:Boolean=false,repsError:Boolean=false,rirError:Boolean=false,
+    showFieldHelp:Boolean=true
+) {
+    if(showLoad)OutlinedTextField(
+        value=load,
+        onValueChange={input->
+            if(input.length<=10 && input.all{it.isDigit()||it=='.'})onLoad(input)
+        },
+        label={Text("Load ($unit)")},
+        modifier=Modifier.fillMaxWidth(),
+        singleLine=true,enabled=enabled,isError=loadError,
+        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal)
+    )
+    // Advance from the CURRENT draft once, applying the same existing domain
+    // bounds at each intermediate step. No guessed coach recommendations and
+    // no calls to the journal from a long-press.
+    fun stepReps(direction:Int,count:Int) {
+        var next=reps
+        repeat(count) {
+            next=NativeSetEntryPolicy.stepReps(next,direction,allowFailedAttempt)
+                ?:return@repeat
+        }
+        if(next!=reps)onReps(next)
+    }
+    fun stepRir(direction:Int,count:Int) {
+        var next=rir
+        repeat(count) {
+            next=NativeSetEntryPolicy.stepRir(next,direction)?:return@repeat
+        }
+        if(next!=rir)onRir(next)
+    }
+    val repsControl:@Composable ()->Unit={
+        NativeSetCounterField(
+            label="Reps",value=reps,enabled=enabled,
             onValueChange={input->
                 if(input.length<=3 && input.all(Char::isDigit))onReps(input)
             },
-            decrement={NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)?.let(onReps)},
-            increment={NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)?.let(onReps)},
-            canDecrement=NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)!=null,
-            canIncrement=NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)!=null,
-            isError=repsError)
+            decrement={stepReps(-1,1)},increment={stepReps(1,1)},
+            longDecrement={stepReps(-1,3)},longIncrement={stepReps(1,3)},
+            longStepCount=3,
+            canDecrement=NativeSetEntryPolicy.stepReps(
+                reps,-1,allowFailedAttempt)!=null,
+            canIncrement=NativeSetEntryPolicy.stepReps(
+                reps,1,allowFailedAttempt)!=null,
+            isError=repsError
+        )
     }
-    val rirControl: @Composable () -> Unit = {
-        NativeSetCounterField("RIR",rir,enabled,
+    val rirControl:@Composable ()->Unit={
+        NativeSetCounterField(
+            label="RIR",value=rir,enabled=enabled,
             onValueChange={input->
                 if(input.length<=2 && input.all(Char::isDigit))onRir(input)
             },
-            decrement={NativeSetEntryPolicy.stepRir(rir,-1)?.let(onRir)},
-            increment={NativeSetEntryPolicy.stepRir(rir,1)?.let(onRir)},
+            decrement={stepRir(-1,1)},increment={stepRir(1,1)},
+            longDecrement={stepRir(-1,2)},longIncrement={stepRir(1,2)},
+            longStepCount=2,
             canDecrement=NativeSetEntryPolicy.stepRir(rir,-1)!=null,
             canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null,
-            isError=rirError)
+            isError=rirError
+        )
     }
+    val largeText=LocalDensity.current.fontScale>=1.35f
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // Each column owns its field plus a 48dp-high two-button row.
-        // No squeezed 3-column rows or offscreen steppers on typical phones.
-        if(maxWidth>=340.dp) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f)) { repsControl() }
-                Box(Modifier.weight(1f)) { rirControl() }
+        // At compact widths, two full-width inline counters are MUCH shorter
+        // and more readable than two 110dp-tall half-width columns.
+        // On tablet/foldables each counter occupies an equal column.
+        if(!largeText && maxWidth>=380.dp) {
+            Row(Modifier.fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                Box(Modifier.weight(1f)){repsControl()}
+                Box(Modifier.weight(1f)){rirControl()}
             }
         } else {
-            Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 repsControl()
                 rirControl()
             }
         }
     }
-    Text(if(!showLoad)"Bodyweight movement · no external weight. RIR is optional; leave blank if unknown."
-        else if(load=="0")"0 load is not automatically bodyweight · check this exercise’s loading. RIR is optional."
-        else "RIR is optional · leave blank if unknown.",
+    if(showFieldHelp || !showLoad)Text(
+        when {
+            !showLoad -> "Bodyweight movement · no external load. RIR can remain blank."
+            load=="0" -> "Zero external load does not necessarily mean bodyweight. RIR is optional."
+            else -> "RIR is optional; leave it blank if unreported."
+        },
         style=MaterialTheme.typography.bodySmall,
-        color=MaterialTheme.colorScheme.onSurfaceVariant)
+        color=MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
-/** Matching accessible touch targets, while keeping a full keyboard field. */
+/** One equal-width, bounded Material 3 control with 48dp tap targets.
+ * The long-press action is a discrete draft-only edit and has an accessible
+ * action label. Disabled controls cannot receive either gesture. */
+@Composable
+private fun NativeSetStepButton(
+    label:String,increase:Boolean,enabled:Boolean,longStepCount:Int,
+    onTap:()->Unit,onHold:()->Unit,
+    modifier:Modifier=Modifier
+) {
+    val action=if(increase)"Increase" else "Decrease"
+    Box(
+        modifier=modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)
+            .clip(CircleShape)
+            .background(if(enabled)MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.surfaceContainerLow)
+            .combinedClickable(
+                enabled=enabled,
+                role=Role.Button,
+                onClickLabel="$action $label by one",
+                onLongClickLabel="$action $label by up to $longStepCount",
+                onClick=onTap,
+                onLongClick=onHold
+            ),
+        contentAlignment=Alignment.Center
+    ) {
+        Icon(
+            if(increase)Icons.Outlined.Add else Icons.Outlined.Remove,
+            contentDescription=null,
+            tint=if(enabled)MaterialTheme.colorScheme.onSecondaryContainer
+                else MaterialTheme.colorScheme.onSurface.copy(alpha=0.38f)
+        )
+    }
+}
+
+/** Inline counter when there is room; stacked field and buttons otherwise.
+ * At large Android font scales, labels and values never compete with icons. */
 @Composable
 private fun NativeSetCounterField(
     label:String,value:String,enabled:Boolean,onValueChange:(String)->Unit,
-    decrement:()->Unit,increment:()->Unit,canDecrement:Boolean,canIncrement:Boolean,
-    isError:Boolean=false
+    decrement:()->Unit,increment:()->Unit,
+    longDecrement:()->Unit,longIncrement:()->Unit,longStepCount:Int,
+    canDecrement:Boolean,canIncrement:Boolean,isError:Boolean=false
 ) {
-    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        OutlinedTextField(value=value,onValueChange=onValueChange,
-            label={Text(label)},modifier=Modifier.fillMaxWidth(),singleLine=true,
-            enabled=enabled,isError=isError,
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            FilledTonalIconButton(onClick=decrement,enabled=enabled && canDecrement,
-                modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)) {
-                Icon(Icons.Outlined.Remove,contentDescription="Decrease $label")
+    val field:@Composable (Modifier)->Unit={modifier->
+        OutlinedTextField(
+            value=value,onValueChange=onValueChange,
+            label={Text(label)},modifier=modifier,
+            singleLine=true,enabled=enabled,isError=isError,
+            textStyle=MaterialTheme.typography.titleMedium.copy(
+                textAlign=TextAlign.Center),
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number)
+        )
+    }
+    val minus:@Composable (Modifier)->Unit={modifier->
+        NativeSetStepButton(label,false,enabled&&canDecrement,
+            longStepCount,decrement,longDecrement,modifier)
+    }
+    val plus:@Composable (Modifier)->Unit={modifier->
+        NativeSetStepButton(label,true,enabled&&canIncrement,
+            longStepCount,increment,longIncrement,modifier)
+    }
+    val largeText=LocalDensity.current.fontScale>=1.35f
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if(!largeText&&maxWidth>=170.dp) {
+            Row(Modifier.fillMaxWidth(),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                minus(Modifier)
+                field(Modifier.weight(1f).widthIn(min=0.dp))
+                plus(Modifier)
             }
-            FilledTonalIconButton(onClick=increment,enabled=enabled && canIncrement,
-                modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)) {
-                Icon(Icons.Outlined.Add,contentDescription="Increase $label")
+        } else {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                field(Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    minus(Modifier.weight(1f))
+                    plus(Modifier.weight(1f))
+                }
             }
         }
     }

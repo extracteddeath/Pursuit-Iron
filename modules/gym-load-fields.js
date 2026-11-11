@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { UiAction } from './ui-primitives.js';
+import { GymMachineVariantFields } from './gym-machine-variants.js';
 import { BARS, ALL_PLATES, INVENTORY_KEYS, GYM_LIMIT_KEYS, RACK_PRESETS, platePairsFor, prepareGymLoadDraft, gymBarDraftUpdate, gymPlatePairDraftUpdate, withGymBarUnit, withGymLoadingUnit } from './engine-api.js';
 
 const display = value => typeof value === 'number' ? String(Math.round(value * 1000) / 1000) : value ?? '';
@@ -43,6 +44,7 @@ export function GymLoadFields({ gym, plates, onChange, onInvalid, selectNumericI
                 ]}),feedback(suffix)]},plate);
             })]},unit))
         ]}),
+        (eq.includes('machine')||Object.keys(gym.machineVariants||{}).length>0) && _jsx(GymMachineVariantFields,{gym,onChange}),
         (eq.length>0||Object.keys(gym.inventoryText||{}).length>0) && _jsxs('div',{className:'wpb-gym-section',children:[
             _jsx('div',{className:'wpb-gym-limit-label',children:'Available loads and limits'}),
             _jsx(UiAction,{className:'wpb-gym-loading-unit','aria-label':'Change gym load units',onClick:()=>apply(withGymLoadingUnit(gym,measure==='kg'?'lb':'kg')),children:`Loads in ${measure} · use ${measure==='kg'?'lb':'kg'}`}),

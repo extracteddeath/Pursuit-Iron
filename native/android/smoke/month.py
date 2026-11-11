@@ -357,6 +357,16 @@ for d in range(int(os.environ.get("MONTH_DAYS", "29"))):
     if not rest:
         ring = find(rf"^{sessions % 4} of 4 sessions done in week {exp}\|", timeout=2)
         check(ring is not None, f"the week ring reads {sessions % 4} of 4 done in week {exp}")
+    # The block's four weeks are logged: Today says so and opens the block review, before week 1 starts again.
+    if sessions == 16 and not rest:
+        card = find(r"^\|?Block complete", timeout=3) or scroll_to(r"^\|?Block complete", tries=3)
+        check(bool(card), "after the block's last week Today shows Block complete")
+        if card:
+            shot("block-complete")
+            if tap(r"^\|?Review block$", timeout=4):
+                check(find(r"Block 1 review|Block review", timeout=8) is not None, "Block complete opens the block review")
+                shot("block-complete-review"); back(); time.sleep(1)
+        to_top()
     first_week = d < 7
     if first_week or now.weekday() == 0:
         shot("today")

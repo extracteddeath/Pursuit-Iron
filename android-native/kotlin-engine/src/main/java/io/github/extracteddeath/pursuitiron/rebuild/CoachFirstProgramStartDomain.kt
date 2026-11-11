@@ -358,14 +358,28 @@ object CoachFirstProgramStartDomain {
                 choices[index].exerciseId in retainedRelatedVariants)
                 choices[index]=choices[index].copy(requiredVisits=1)
         }
-        val supported=selected.flatMap {it.credits.filter {c->
+        // V6 phase-specific dose uses the selected MAIN lift policy.
+        // A merely calibrated alternative primary (e.g. OHP alongside a
+        // bench-focused Upper/Push block) remains an available exercise but
+        // cannot introduce compulsory direct-muscle volume that hijacks
+        // the declared bench priority. Unnamed secondary/accessory work is
+        // still eligible and contributes its honest direct/indirect credits.
+        // Archived v1-v5 dose assumptions are replayed unchanged.
+        val phaseDoseSources=if(input.policyVersion==POLICY_VERSION &&
+            input.phase!=TrainingPhase.HYPERTROPHY &&
+            namedPrimaries!=null)selected.filter {
+                it.role!=ComposerRole.PRIMARY ||
+                    it.exerciseId in namedPrimaries
+            } else selected
+        val supported=phaseDoseSources.flatMap {it.credits.filter {c->
             c.role==MuscleCreditRole.DIRECT
         }.map{c->c.muscle}}.toSet()
         val gaps=TrainingMuscle.entries.filter {it !in supported}.toSet()
         if(gaps.isNotEmpty())issues+=
             "The starter selection lacks direct exercise coverage for ${gaps.size} tracked muscles. These are not secretly counted as fully trained."
 
-        val (baseline,bounds)=startingBounds(athlete,selected,input.policyVersion)
+        val (baseline,bounds)=startingBounds(athlete,phaseDoseSources,
+            input.policyVersion)
         // The day roles are transparent defaults to be revised after actual
         // training. Strength skill days require a real verified primary lift.
         val purposes=when(input.phase) {

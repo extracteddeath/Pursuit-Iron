@@ -2956,8 +2956,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
      * The new confirmed future-week draft flow must be safe against real
      * durable journals, not only hand-built in-memory inventory facts.
      */
-    private fun futureWeekDraftWriter(f:AuthoredCoachFixture):
-        NativeKotlinFutureWeekDraftAcceptance {
+    private fun futureWeekProposalReader(f:AuthoredCoachFixture):
+        NativeKotlinReviewedFutureWeekProposal {
         val preflight=NativeKotlinCustomWorkoutPreflight(
             fence,identity,drafts,sources,store())
         val proposal=NativeKotlinReviewedFutureWeekProposal(
@@ -2966,8 +2966,11 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 fence,identity),
             preflight,f.reader,f.issuer,f.coach,
             NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer))
-        return NativeKotlinFutureWeekDraftAcceptance(fence,proposal,drafts)
+        return proposal
     }
+    private fun futureWeekDraftWriter(f:AuthoredCoachFixture)=
+        NativeKotlinFutureWeekDraftAcceptance(
+            fence,futureWeekProposalReader(f),drafts)
 
     private fun enableFutureWeekDraftCoaching() {
         val rights=(permissionStore.read("owner-1","cycle-1")
@@ -3017,8 +3020,13 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             as NativeCustomSignoffRead.Found)
         assertTrue(originalConsent.isCurrent)
         val originalHistory=f.reader.read("owner-1","athlete-1")
+        val underlying=futureWeekProposalReader(f).review(
+            selected.ownerKey,selected.cycleId,selected.absoluteWeek,
+            selected.weekday,selected.slotId,selected.readiness,
+            selected.movementRestricted,selected.maximumAuthorizedIncrease,
+            selected.forecast)
         val offer=futureWeekDraftWriter(f).preview(selected)
-        assertTrue("Expected an evidence-backed option: $offer",
+        assertTrue("Owner proposal=$underlying; draft preview=$offer",
             offer is NativeFutureWeekDraftPreview.Ready)
         val shown=offer as NativeFutureWeekDraftPreview.Ready
         assertEquals(NativeFutureWeekDraftDecision.Rejected(

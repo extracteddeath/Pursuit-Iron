@@ -1062,7 +1062,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                                                         futureWeekSaveDecision=outcome
                                                                         futureWeekBusy=false
                                                                         if(outcome is NativeFutureWeekDraftDecision.Saved)
-                                                                            controller.open(draft.cycleId)
+                                                                            controller.reopenAfterConfirmedFutureWeekSave(
+                                                                                draft.cycleId)
                                                                     }
                                                                 }
                                                             }) {Text("Save unsigned draft")}

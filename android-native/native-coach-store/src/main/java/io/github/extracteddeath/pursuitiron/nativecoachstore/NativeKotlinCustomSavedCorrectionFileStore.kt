@@ -32,7 +32,7 @@ internal data class NativeCustomSavedCorrectionEnvelope(
 
 internal object NativeCustomSavedCorrectionCodec {
     private const val MAGIC = 0x50494353 // PICS
-    private const val VERSION = 1
+    private const val VERSION = 2
     const val MAX_BYTES = 256_000
     private const val MAX_RECEIPTS = 512
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -48,7 +48,7 @@ internal object NativeCustomSavedCorrectionCodec {
     private fun DataInputStream.optional(): String? =
         if (readBoolean()) readUTF() else null
 
-    private fun DataOutputStream.performed(value: KotlinPerformedSet?) {
+    private fun DataOutputStream.performed(value: KotlinPerformedSet?,version:Int) {
         writeBoolean(value != null)
         if (value == null) return
         optional(value.load?.toPlainString())
@@ -56,8 +56,14 @@ internal object NativeCustomSavedCorrectionCodec {
         writeInt(value.reps)
         writeBoolean(value.actualRir != null)
         value.actualRir?.let { writeInt(it) }
+        if(version>=2) {
+            require(value.machineInstanceId?.let {
+                KotlinMachineAlternativesDomain.validInstanceId(it)
+            } != false)
+            optional(value.machineInstanceId)
+        }
     }
-    private fun DataInputStream.performed(): KotlinPerformedSet? {
+    private fun DataInputStream.performed(version:Int): KotlinPerformedSet? {
         if (!readBoolean()) return null
         val load = optional()?.let { BigDecimal(it) }
         val unit = optional()?.let { raw ->
@@ -66,7 +72,11 @@ internal object NativeCustomSavedCorrectionCodec {
         }
         val reps = readInt()
         val rir = if (readBoolean()) readInt() else null
-        return KotlinPerformedSet(load, unit, reps, rir)
+        val machine=if(version>=2)optional() else null
+        if(machine!=null &&
+            !KotlinMachineAlternativesDomain.validInstanceId(machine))
+            throw IOException("unsupported saved physical machine")
+        return KotlinPerformedSet(load, unit, reps, rir, machine)
     }
 
     fun encode(value: NativeCustomSavedCorrectionEnvelope): ByteArray {
@@ -74,9 +84,16 @@ internal object NativeCustomSavedCorrectionCodec {
         require(receiptId.matches(value.originalReceiptId))
         require(value.receipts.size <= MAX_RECEIPTS &&
             value.revision == value.receipts.size.toLong())
+        // Keep the complete historical V1 bytes unchanged when no
+        // machine-tagged correction exists. Only physical A/B corrections
+        // require the new V2 payload; otherwise manifest digests could
+        // turn an old, authentic saved correction into a false mismatch.
+        val version=if(value.receipts.any {
+            it.correction.performed?.machineInstanceId!=null
+        }) VERSION else 1
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
-            out.writeInt(MAGIC); out.writeInt(VERSION)
+            out.writeInt(MAGIC); out.writeInt(version)
             out.writeUTF(value.ownerKey); out.writeUTF(value.workoutId)
             out.writeUTF(value.originalReceiptId)
             out.writeLong(value.revision)
@@ -90,7 +107,7 @@ internal object NativeCustomSavedCorrectionCodec {
                 out.writeUTF(op.visit.part.name)
                 out.writeUTF(op.correctsEventId)
                 out.writeUTF(op.outcome.name)
-                out.performed(op.performed)
+                out.performed(op.performed,version)
             }
         }
         val payload = body.toByteArray()
@@ -119,8 +136,11 @@ internal object NativeCustomSavedCorrectionCodec {
                 if (!MessageDigest.isEqual(digest, sha(payload)))
                     throw IOException("custom correction checksum mismatch")
                 DataInputStream(ByteArrayInputStream(payload)).use { data ->
-                    if (data.readInt() != MAGIC || data.readInt() != VERSION)
+                    if (data.readInt() != MAGIC)
                         throw IOException("unsupported custom correction format")
+                    val version=data.readInt()
+                    if(version !in 1..VERSION)
+                        throw IOException("unsupported custom correction version")
                     val owner = data.readUTF()
                     val workout = data.readUTF()
                     val original = data.readUTF()
@@ -149,7 +169,7 @@ internal object NativeCustomSavedCorrectionCodec {
                         CustomSavedVisitCorrectionReceipt(applied,
                             CustomSavedVisitCorrection(eventId, expected,
                                 CustomWorkoutVisitKey(setKey, part),
-                                predecessor, outcome, data.performed()))
+                                predecessor, outcome, data.performed(version)))
                     }
                     if (data.available() != 0)
                         throw IOException("trailing custom correction bytes")

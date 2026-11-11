@@ -19,4 +19,30 @@ assert.match(profile,/it\.athleteId==current\?\.athleteProfileId/);
 assert.match(profile,/NativeKotlinStrengthClubPanel\(strengthClub/);
 assert.match(standards,/NativeKotlinStrengthClubPanel\(strengthClub/);
 assert.doesNotMatch(panel,/approve\(|record\(|issue\(|saveWorkout\(/);
-console.log('PASS strength club evidence is owner-scoped, barbell-only, singles-aware, display-only');
+
+// Machine-specific logged bests must remain separate from the barbell-only
+// community standards and from uncertified app-wide PR badges.
+const physical=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMachineRecordsPanel.kt');
+assert.match(facts,/data class NativeMixedMachineLoadKey/);
+assert.match(facts,/val gymId:String/);
+assert.match(facts,/val machineInstanceId:String/);
+assert.match(facts,/val highestCompletedLoadByMachine:/);
+assert.match(facts,/val bestLoggedSingleByMachine:/);
+assert.match(facts,/completion\.evidence\.source\.gymId/);
+assert.match(facts,/completion\.gymId/);
+assert.match(facts,/KotlinMachineAlternativesDomain\.validInstanceId\(machineId\)/);
+assert.match(facts,/Collections\.unmodifiableMap\(highestByMachine\)/);
+assert.match(physical,/title="Physical machine bests"/);
+assert.match(physical,/Each physical machine has its own weight history/);
+assert.match(physical,/not certified PR badges/);
+assert.match(physical,/key\.gymId==key\.gymId|it\.gymId==key\.gymId/);
+assert.match(physical,/it\.id==key\.machineInstanceId/);
+assert.match(physical,/singlesByMachine\[key\]/);
+assert.match(physical,/onOpenHistory\(key\.exerciseId\)/);
+assert.doesNotMatch(physical,/approve\(|recordWorkoutOperation\(|saveMachineRoster\(/);
+assert.match(standards,/NativeKotlinMachineRecordsPanel\(/);
+assert.match(standards,/verifiedFacts\.highestCompletedLoadByMachine/);
+assert.match(standards,/verifiedFacts\.bestLoggedSingleByMachine/);
+assert.match(standards,/host\.readMachineRoster\(\)/);
+assert.match(standards,/timeline\?\.manifestRevision==stamp/);
+console.log('PASS strength club and physical machine bests keep verified gym-scoped records separate from barbell references');

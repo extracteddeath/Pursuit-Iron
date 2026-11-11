@@ -136,10 +136,29 @@ internal fun NativeKotlinStrengthStandardsScreen(
     var comparisonExpanded by rememberSaveable{mutableStateOf(false)}
     var standardsExpanded by rememberSaveable{mutableStateOf(false)}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
+    var machineRoster by remember(host) {
+        mutableStateOf<NativeMachineRosterSnapshot?>(null)
+    }
     val uri=LocalUriHandler.current
     val verifiedTimeline=timeline?.takeIf {it.athleteId==profileId}
     val availableMovements=remember(verifiedTimeline) {
         verifiedTimeline?.let(NativeExerciseFavorites::loggedIds).orEmpty()
+    }
+    LaunchedEffect(host,profileId,verifiedTimeline?.manifestRevision,revision) {
+        machineRoster=null
+        val owner=profileId
+        val stamp=verifiedTimeline?.manifestRevision
+        if(owner!=null && stamp!=null) {
+            val loaded=withContext(Dispatchers.IO) {
+                (host.readMachineRoster() as? NativeMachineRosterResult.Saved)
+                    ?.snapshot
+            }
+            // A gym roster is only a display label dictionary; the separate
+            // authentic completed set and issued gym remain the record scope.
+            if(profileId==owner && timeline?.athleteId==owner &&
+                timeline?.manifestRevision==stamp)
+                machineRoster=loaded
+        }
     }
     LaunchedEffect(profileId,verifiedTimeline?.manifestRevision) {
         exerciseFavoriteIds=emptyList()
@@ -571,6 +590,13 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         }
                     }
                 }
+                }
+                facts?.let { verifiedFacts ->
+                    NativeKotlinMachineRecordsPanel(
+                        verifiedFacts.highestCompletedLoadByMachine,
+                        verifiedFacts.bestLoggedSingleByMachine,
+                        machineRoster,
+                        onOpenHistory={historyExerciseId=it})
                 }
                 PursuitSectionHeading("Your exercise favorites",
                     "Pin and arrange any movement in your verified training history. Open its complete actual sets, including corrections.")

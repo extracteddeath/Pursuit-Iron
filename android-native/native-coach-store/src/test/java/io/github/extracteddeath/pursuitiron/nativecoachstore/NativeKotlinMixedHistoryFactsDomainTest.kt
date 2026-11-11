@@ -17,9 +17,10 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         KotlinHistoryManifestEntry(i.toLong(), "workout-$i", "stored-$i",
             "finish-$i", revision, 0)
 
-    private fun composer(i: Int, fact: KotlinHistoricalSetFact) =
+    private fun composer(i: Int, fact: KotlinHistoricalSetFact,gym:String="gym-1") =
         NativeKotlinMixedHistoryCompletion.Composer(manifest(i),
-            KotlinWorkoutHistoryEvidence(source, "workout-$i", "finish-$i", 3,
+            KotlinWorkoutHistoryEvidence(source.copy(gymId=gym),
+                "workout-$i", "finish-$i", 3,
                 listOf(fact), emptyList()))
 
     private fun composerFact(
@@ -27,19 +28,20 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         outcome: KotlinJournalSetOutcome = KotlinJournalSetOutcome.COMPLETED,
         basis: LoadBasis = LoadBasis.SMITH_TOTAL,
         type: DraftSetType = DraftSetType.WORKING,
-        event: String = "event-$i"
+        event: String = "event-$i",
+        machineId:String?=null
     ) = KotlinHistoricalSetFact("bench", "set-$i", type, 0,
         load(basis), RepBand(5, 8), 2, outcome,
         if (outcome == KotlinJournalSetOutcome.SKIPPED) null
-        else KotlinPerformedSet(n(actualLoad), LoadUnit.LB, reps ?: 0, 2),
+        else KotlinPerformedSet(n(actualLoad), LoadUnit.LB, reps ?: 0, 2,machineId),
         event, null)
 
     private fun custom(
         i: Int, vararg visits: CustomHistoricalVisitFact,
-        athlete: String = "athlete-1"
+        athlete: String = "athlete-1",gym:String=""
     ) = NativeKotlinMixedHistoryCompletion.Custom(manifest(i),
         CustomWorkoutHistoricalEvidence(athlete, "workout-$i", "cycle-1", 2,
-            "finish-$i", 3, visits.toList()))
+            "finish-$i", 3, visits.toList()),gym)
 
     private fun customVisit(
         i: Int, slot: String, part: CustomWorkoutVisitPart,
@@ -48,7 +50,8 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         reps: Int = 8,
         event: String = "custom-event-$i-$slot-$part",
         basis: LoadBasis = LoadBasis.SMITH_TOTAL,
-        type: DraftSetType = DraftSetType.WORKING
+        type: DraftSetType = DraftSetType.WORKING,
+        machineId:String?=null
     ) = CustomHistoricalVisitFact(slot, "bench", "set-$i-$slot", part,
         type, load(basis), RepBand(5, 8), 2,
         if (part == CustomWorkoutVisitPart.FOLLOW_UP)
@@ -56,7 +59,7 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         outcome, if (outcome == KotlinJournalSetOutcome.SKIPPED) null
             else KotlinPerformedSet(actualLoad?.let(::n),
                 if (actualLoad == null) null else LoadUnit.LB,
-                reps, 2), event)
+                reps, 2,machineId), event)
 
     private fun timeline(vararg sessions: NativeKotlinMixedHistoryCompletion,
                          revision: Long = 7) = NativeKotlinMixedHistoryTimeline(
@@ -123,6 +126,64 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         assertEquals(n(30), index.highestCompletedLoad.getValue(
             NativeMixedPhysicalLoadKey("bench", LoadUnit.LB,
                 LoadBasis.DUMBBELL_PER_HAND)).actualLoad)
+    }
+
+    @Test fun verifiedPhysicalMachineBestsAreSeparatedAcrossGymsAndCorrections() {
+        val a=composer(1,composerFact(1,actualLoad=200,machineId="A"))
+        val b=composer(2,composerFact(2,actualLoad=140,machineId="B"))
+        val otherGym=composer(3,composerFact(3,actualLoad=190,machineId="A"),
+            gym="gym-2")
+        // A saved correction belongs to the original issued gym and must
+        // compete only with A from that gym, not with B or gym-2 A.
+        val corrected=custom(4,customVisit(4,"revised",
+            CustomWorkoutVisitPart.MAIN,KotlinJournalSetOutcome.COMPLETED,
+            actualLoad=205,reps=4,event="saved-correction",
+            machineId="A"),gym="gym-1")
+        val index=facts(a,b,otherGym,corrected)
+        fun key(gym:String,machine:String)=NativeMixedMachineLoadKey(
+            gym,"bench",machine,LoadUnit.LB,LoadBasis.SMITH_TOTAL)
+        assertEquals(3,index.highestCompletedLoadByMachine.size)
+        assertEquals(n(205),index.highestCompletedLoadByMachine
+            .getValue(key("gym-1","A")).actualLoad)
+        assertEquals("saved-correction",index.highestCompletedLoadByMachine
+            .getValue(key("gym-1","A")).effectiveEventId)
+        assertEquals(n(140),index.highestCompletedLoadByMachine
+            .getValue(key("gym-1","B")).actualLoad)
+        assertEquals(n(190),index.highestCompletedLoadByMachine
+            .getValue(key("gym-2","A")).actualLoad)
+        assertFalse(index.canPublishPr)
+    }
+
+    @Test fun unknownCustomGymOrMachineAndFollowUpsCannotEarnStationRecords() {
+        val synthetic=custom(1,customVisit(1,"slot",
+            CustomWorkoutVisitPart.MAIN,KotlinJournalSetOutcome.COMPLETED,
+            machineId="A"))
+        val unknownMachine=composer(2,composerFact(2,machineId=null))
+        val follow=custom(3,customVisit(3,"slot",
+            CustomWorkoutVisitPart.FOLLOW_UP,KotlinJournalSetOutcome.COMPLETED,
+            machineId="A",actualLoad=500),gym="gym-1")
+        val legitimate=composer(4,composerFact(4,machineId="A",reps=1,
+            actualLoad=180))
+        val index=facts(synthetic,unknownMachine,follow,legitimate)
+        assertEquals(1,index.highestCompletedLoadByMachine.size)
+        assertEquals(180,index.highestCompletedLoadByMachine.values
+            .single().actualLoad.toInt())
+        assertEquals(1,index.bestLoggedSingleByMachine.size)
+        assertEquals("workout-4",index.bestLoggedSingleByMachine.values
+            .single().workoutId)
+    }
+
+    @Test fun physicalMachineSingleRemainsSeparateFromRepetitionBests() {
+        val single=composer(1,composerFact(1,reps=1,actualLoad=185,machineId="A"))
+        val eight=composer(2,composerFact(2,reps=8,actualLoad=200,machineId="A"))
+        val other=composer(3,composerFact(3,reps=1,actualLoad=170,machineId="B"))
+        val index=facts(single,eight,other)
+        val a=NativeMixedMachineLoadKey("gym-1","bench","A",
+            LoadUnit.LB,LoadBasis.SMITH_TOTAL)
+        val b=a.copy(machineInstanceId="B")
+        assertEquals(n(200),index.highestCompletedLoadByMachine.getValue(a).actualLoad)
+        assertEquals(n(185),index.bestLoggedSingleByMachine.getValue(a).actualLoad)
+        assertEquals(n(170),index.bestLoggedSingleByMachine.getValue(b).actualLoad)
     }
 
     @Test fun loggedSingleIsRetainedAfterMoreRepsAtIdenticalLoad() {

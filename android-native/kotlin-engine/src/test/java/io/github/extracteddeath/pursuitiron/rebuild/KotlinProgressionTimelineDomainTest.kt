@@ -102,6 +102,37 @@ class KotlinProgressionTimelineDomainTest {
             KotlinProgressionTimelineDomain.review(request(listOf(a1,mixed))).status)
     }
 
+    @Test fun postFinishMachineCorrectionChangesComparableProgressionScope() {
+        val prior=workout(201,machineId="A")
+        val wronglyTagged=workout(202,machineId="A")
+        var corrected=KotlinSavedHistoryCorrectionDomain.begin(wronglyTagged)
+        wronglyTagged.snapshot.targets.forEachIndexed {index,target->
+            val original=wronglyTagged.effectiveSets.getValue(target.setKey).operation
+                as KotlinJournalOperation.RecordSet
+            val fix=KotlinSavedSetCorrection("fix-machine-$index",
+                corrected.correctionRevision,target.setKey,original.eventId,
+                KotlinJournalSetOutcome.COMPLETED,
+                original.performed?.copy(machineInstanceId="B"))
+            corrected=(KotlinSavedHistoryCorrectionDomain.reduce(corrected,fix)
+                as KotlinSavedCorrectionDecision.Proposed).state
+        }
+        val correctedEvidence=KotlinWorkoutHistoryEvidenceDomain.projectSaved(corrected)
+            as KotlinHistoryProjectionResult.Candidate
+        assertEquals(setOf("B"),correctedEvidence.evidence.sets.mapNotNull{
+            it.actual?.machineInstanceId}.toSet())
+        val timeline=request(listOf(prior,wronglyTagged)).copy(completedWorkouts=listOf(
+            KotlinChronologicalWorkout(1,prior),
+            KotlinChronologicalWorkout(2,wronglyTagged,corrected)))
+        val forA=KotlinProgressionTimelineDomain.review(
+            timeline.copy(requestedMachineInstanceId="A"))
+        val forB=KotlinProgressionTimelineDomain.review(
+            timeline.copy(requestedMachineInstanceId="B"))
+        assertEquals(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,forA.status)
+        assertEquals(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,forB.status)
+        assertEquals(listOf("workout-201"),forA.comparedWorkoutIds)
+        assertEquals(listOf("workout-202"),forB.comparedWorkoutIds)
+    }
+
     @Test fun successiveCompletedWorkoutsYieldReviewOnlyPhysicalStepAndFatigue() {
         val review = KotlinProgressionTimelineDomain.review(
             request(listOf(workout(1), workout(2))))

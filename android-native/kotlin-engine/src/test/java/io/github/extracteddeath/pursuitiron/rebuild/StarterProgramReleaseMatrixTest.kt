@@ -82,6 +82,13 @@ class StarterProgramReleaseMatrixTest {
                     it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
                 }
                 assertEquals(setOf("barbell_bench","back_squat"),policy.primaryLiftMinimumDays.keys)
+                // Provisional strength/peak starters must not claim two
+                // exposures by coincidence while the authored minimum
+                // remains one. On splits with two upper and two lower
+                // slots, enforce two distinct primary days for each lift.
+                if(split!=ComposerSplit.FULL_BODY)
+                    assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+                        policy.primaryLiftMinimumDays)
                 assertEquals(if(split==ComposerSplit.FULL_BODY)3 else 4,skill.size)
                 for(intent in skill) {
                     val lift=input.catalog.single{it.exerciseId==intent.requiredPrimaryExerciseId}
@@ -108,6 +115,59 @@ class StarterProgramReleaseMatrixTest {
                 TrainingMuscle.BRACHIALIS,TrainingMuscle.WRIST_FLEXORS,
                 TrainingMuscle.WRIST_EXTENSORS)))
             assertFalse(result.mayIssueWorkout)
+        }
+    }
+
+    @Test fun fiveDayUlpplStrengthAndPeakGuaranteeTwoBenchAndTwoSquatSkills() {
+        for(phase in listOf(TrainingPhase.STRENGTH,TrainingPhase.PEAK)) {
+            val result=CoachFirstProgramStartDomain.review(
+                StarterProgramReleaseFixture.request(ComposerSplit.ULPPL,phase))
+            assertEquals("$phase: ${result.issues}",
+                FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
+            assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+                result.policy?.primaryLiftMinimumDays)
+            val generation=checkNotNull(result.generation)
+            val benchDays=generation.intents.filter {
+                it.requiredPrimaryExerciseId=="barbell_bench"
+            }.map{it.weekday}.toSet()
+            val squatDays=generation.intents.filter {
+                it.requiredPrimaryExerciseId=="back_squat"
+            }.map{it.weekday}.toSet()
+            assertEquals(2,benchDays.size)
+            assertEquals(2,squatDays.size)
+            assertTrue(benchDays.intersect(squatDays).isEmpty())
+            assertEquals(setOf(ComposerFocus.UPPER,ComposerFocus.PUSH),
+                benchDays.map{generation.focusByWeekday.getValue(it)}.toSet())
+            assertEquals(setOf(ComposerFocus.LOWER,ComposerFocus.LEGS),
+                squatDays.map{generation.focusByWeekday.getValue(it)}.toSet())
+            assertTrue(checkNotNull(result.prescription?.finalAudit)
+                .satisfiesDeclaredHardConstraints)
+        }
+    }
+
+    @Test fun archivedV5PreservesSingleDayMinimumsAndOriginalPhaseSearch() {
+        assertTrue(CoachFirstProgramStartDomain.supportsPolicy(
+            CoachFirstProgramStartDomain.PREVIOUS_PHASE_POLICY_VERSION))
+        assertEquals("first-program-reference-v6",
+            CoachFirstProgramStartDomain.POLICY_VERSION)
+        for(split in ComposerSplit.entries)
+            for(phase in TrainingPhase.entries) {
+            val archived=CoachFirstProgramStartDomain.review(
+                StarterProgramReleaseFixture.request(split,phase).copy(
+                    policyVersion=CoachFirstProgramStartDomain
+                        .PREVIOUS_PHASE_POLICY_VERSION))
+            assertEquals("$split/$phase: ${archived.issues}",
+                FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
+                archived.status)
+            assertEquals("v5",archived.policy?.revision)
+            if(phase!=TrainingPhase.HYPERTROPHY) {
+                assertTrue(checkNotNull(archived.policy)
+                    .primaryLiftMinimumDays.values.all{it==1})
+                assertTrue(archived.phasePoliciesChecked in 1..32)
+                assertTrue(archived.issues.any{
+                    it=="Main-lift practice and supporting days match your chosen split and verified movements."
+                })
+            }
         }
     }
 

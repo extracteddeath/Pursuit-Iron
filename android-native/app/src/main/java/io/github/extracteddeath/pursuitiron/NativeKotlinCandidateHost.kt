@@ -89,6 +89,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete,customWorkoutPreflight,
         futureActivationHandoff)
     private val machineRosters=NativeKotlinMachineRosterFileStore(root)
+    private val workoutMachineChoices=NativeKotlinWorkoutMachineChoiceFileStore(root)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -230,6 +231,148 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     NativeMachineRosterResult.Rejected("CROSS_GYM_EDIT")
                 else machineRosters.save(identity.ownerKey,expectedRevision,configurations)
             }
+        }
+    }
+
+    private data class IssuedMachineWorkoutScope(
+        val gymId:String,
+        val exerciseIds:Set<String>,
+        val observedMachines:Map<String,String>,
+        val finished:Boolean
+    )
+
+    /** Must be called inside the owner fence, never with a UI-supplied gym. */
+    private fun issuedMachineWorkoutScope(
+        owner:NativeKotlinOwnerIdentity,workoutId:String,custom:Boolean
+    ):IssuedMachineWorkoutScope? {
+        if(custom) {
+            val opened=(customIssuedStore.open(owner.ownerKey,workoutId)
+                as? NativeCustomJournalResult.Durable)?.issued?.journal
+                ?:return null
+            if(opened.originalSnapshot.stamp.athleteId!=owner.athleteId ||
+                opened.snapshot.stamp.gymId!=opened.originalSnapshot.stamp.gymId)
+                return null
+            val observations=linkedMapOf<String,String>()
+            opened.snapshot.slots.forEach {slot->
+                slot.sets.forEach {set->
+                    val key=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
+                    val record=opened.effectiveVisits[key]?.operation
+                        as? CustomWorkoutJournalOperation.Record
+                    record?.performed?.machineInstanceId?.let{
+                        observations[slot.exerciseId]=it
+                    }
+                }
+            }
+            return IssuedMachineWorkoutScope(opened.originalSnapshot.stamp.gymId,
+                opened.snapshot.slots.map{it.exerciseId}.toSet(),observations,
+                opened.finishedByEventId!=null)
+        }
+        val opened=(trackedWorkout.open(owner.ownerKey,owner.athleteId,workoutId)
+            as? NativeJournalFileResult.Durable)?.journal
+            ?:return null
+        if(opened.originalSnapshot.source.athleteId!=owner.athleteId ||
+            opened.snapshot.source.gymId!=opened.originalSnapshot.source.gymId)
+            return null
+        val observations=linkedMapOf<String,String>()
+        opened.snapshot.targets.forEach {target->
+            val record=opened.effectiveSets[target.setKey]?.operation
+                as? KotlinJournalOperation.RecordSet
+            record?.performed?.machineInstanceId?.let{
+                observations[target.exerciseId]=it
+            }
+        }
+        return IssuedMachineWorkoutScope(opened.originalSnapshot.source.gymId,
+            opened.snapshot.targets.map{it.exerciseId}.toSet(),observations,
+            opened.finishedByEventId!=null)
+    }
+
+    /**
+     * The FIRST independently verified opening pins gym-specific starting
+     * machines to this issued workout. Subsequent cold opens recover the
+     * saved A/B choices instead of importing a newly changed gym default.
+     * Historical logged machine IDs win for workouts issued before this
+     * dedicated persistence file existed.
+     */
+    fun recoverWorkoutMachineChoices(
+        workoutId:String,custom:Boolean
+    ):NativeWorkoutMachineChoiceResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeWorkoutMachineChoiceResult.Rejected("NOT_AUTHORIZED")
+        return runCatching{revisionFence.withOwnerTransaction(signed.ownerKey) {
+            val scope=issuedMachineWorkoutScope(signed,workoutId,custom)
+                ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "ISSUED_WORKOUT_UNAVAILABLE")
+            val prior=workoutMachineChoices.read(
+                signed.ownerKey,workoutId,custom,scope.gymId)
+            if(prior !is NativeWorkoutMachineChoiceResult.Saved)
+                return@withOwnerTransaction prior
+            if(prior.snapshot.revision>0L || scope.finished)
+                return@withOwnerTransaction prior
+            val rosters=machineRosters.read(signed.ownerKey)
+                as? NativeMachineRosterResult.Saved
+                ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "MACHINE_ROSTER_UNAVAILABLE")
+            val defaults=linkedMapOf<String,String>()
+            scope.exerciseIds.sorted().forEach{exercise->
+                val config=KotlinMachineAlternativesDomain.forGymExercise(
+                    rosters.snapshot.configurations,scope.gymId,exercise)
+                val machine=config?.defaultMachineId
+                    ?:config?.machines?.firstOrNull{it.active}?.id
+                if(machine!=null)defaults[exercise]=machine
+            }
+            scope.observedMachines.forEach { (exercise,machine)->
+                if(exercise in scope.exerciseIds &&
+                    KotlinMachineAlternativesDomain.validInstanceId(machine))
+                    defaults[exercise]=machine
+            }
+            workoutMachineChoices.save(signed.ownerKey,workoutId,custom,
+                scope.gymId,0,defaults)
+        }}.getOrElse{
+            NativeWorkoutMachineChoiceResult.Rejected("STORAGE_UNAVAILABLE")
+        }
+    }
+
+    /**
+     * User-initiated selection. Revision, issued gym, active station and real
+     * workout exercise are all reverified under the same owner transaction.
+     * This never edits completed sets, issued targets or gym defaults.
+     */
+    fun selectWorkoutPhysicalMachine(
+        workoutId:String,custom:Boolean,exerciseId:String,machineId:String,
+        expectedRevision:Long
+    ):NativeWorkoutMachineChoiceResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeWorkoutMachineChoiceResult.Rejected("NOT_AUTHORIZED")
+        return runCatching{revisionFence.withOwnerTransaction(signed.ownerKey) {
+            val scope=issuedMachineWorkoutScope(signed,workoutId,custom)
+                ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "ISSUED_WORKOUT_UNAVAILABLE")
+            if(scope.finished || exerciseId !in scope.exerciseIds)
+                return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "WORKOUT_NOT_EDITABLE")
+            val rosters=machineRosters.read(signed.ownerKey)
+                as? NativeMachineRosterResult.Saved
+                ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "MACHINE_ROSTER_UNAVAILABLE")
+            val config=KotlinMachineAlternativesDomain.forGymExercise(
+                rosters.snapshot.configurations,scope.gymId,exerciseId)
+            if(config?.machines?.none{it.id==machineId && it.active}!=false)
+                return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "MACHINE_NOT_IN_ISSUED_GYM")
+            val prior=workoutMachineChoices.read(
+                signed.ownerKey,workoutId,custom,scope.gymId)
+            if(prior !is NativeWorkoutMachineChoiceResult.Saved)
+                return@withOwnerTransaction prior
+            if(prior.snapshot.revision!=expectedRevision)
+                return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "STALE_REVISION")
+            if(prior.snapshot.machines[exerciseId]==machineId)
+                return@withOwnerTransaction prior
+            workoutMachineChoices.save(signed.ownerKey,workoutId,custom,
+                scope.gymId,expectedRevision,
+                prior.snapshot.machines+(exerciseId to machineId))
+        }}.getOrElse{
+            NativeWorkoutMachineChoiceResult.Rejected("STORAGE_UNAVAILABLE")
         }
     }
 

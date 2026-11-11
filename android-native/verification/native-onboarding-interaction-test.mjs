@@ -874,21 +874,25 @@ assert.ok(toolbarStart>=0 && toolbarEnd>toolbarStart &&
   train.slice(toolbarStart,toolbarEnd).includes('FilterChip(selected=showLast,onClick={showLast=true}'),
   'The live note, setup, Focus and Last/Target controls must be visible without horizontal scroll on phones');
 
-assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
-  controls.includes('val rirControl: @Composable () -> Unit') &&
+assert.ok(controls.includes('val repsControl:@Composable ()->Unit') &&
+  controls.includes('val rirControl:@Composable ()->Unit') &&
   controls.includes('BoxWithConstraints(Modifier.fillMaxWidth())') &&
-  controls.includes('if(maxWidth>=340.dp) {') &&
-  controls.includes('Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp))') &&
-  controls.includes('modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)') &&
-  !controls.includes('if(maxWidth>=560.dp) {') &&
-  controls.includes('Box(Modifier.weight(1f)) { repsControl() }') &&
-  controls.includes('Box(Modifier.weight(1f)) { rirControl() }') &&
-  controls.includes('Column(verticalArrangement=Arrangement.spacedBy(8.dp))') &&
-  controls.includes('NativeSetCounterField("RIR",rir,enabled') &&
-  controls.includes('minWidth=48.dp,minHeight=48.dp') &&
-  controls.includes('if(load=="0")"0 load is not automatically bodyweight') &&
-  controls.includes('RIR is optional'),
-  'Shared Reps/RIR controls must fit normal phones side-by-side, retain equal 48dp touch targets and stack safely on very narrow screens');
+  controls.includes('if(!largeText && maxWidth>=420.dp)') &&
+  controls.includes('if(!largeText&&maxWidth>=200.dp)') &&
+  controls.includes('Box(Modifier.weight(1f)){repsControl()}') &&
+  controls.includes('Box(Modifier.weight(1f)){rirControl()}') &&
+  controls.includes('repsControl()') && controls.includes('rirControl()') &&
+  controls.includes('NativeSetStepButton(') &&
+  controls.includes('NativeSetCounterField(') &&
+  controls.includes('modifier=modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)') &&
+  controls.includes('combinedClickable(') &&
+  controls.includes('onLongClickLabel=') &&
+  controls.includes('NativeSetEntryPolicy.stepRepsBy(') &&
+  controls.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  controls.includes('if(showFieldHelp || !showLoad)') &&
+  controls.includes('RIR is optional') &&
+  !controls.includes('stepLoad('),
+  'Shared Reps/RIR controls must retain 48dp taps, verified steps, equal-width broad layout and readable compact/large-font fallbacks');
 
 const finishReadyAt=train.indexOf('    if(journal.unresolvedCount==0) {\n        PursuitCard(highlighted=true)');
 const progressAt=train.indexOf('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}');

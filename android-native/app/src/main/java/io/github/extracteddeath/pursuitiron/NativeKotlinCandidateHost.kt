@@ -98,7 +98,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         customWorkoutPreflight,historyStore,journalStore,
         futureActivationHandoff,authoringSourceStore)
     private val customLiveSetCoach=NativeKotlinCustomLiveSetCoachReview(
-        revisionFence,localAthlete,customIssuedStore,authoringSourceStore,coachSettings)
+        revisionFence,localAthlete,customIssuedStore,authoringSourceStore,
+        coachSettings,machineRosters)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
         historyStore,customIssuedStore,revisionFence,localAthlete)
     private val customSavedCorrections=NativeKotlinCustomSavedCorrectionFileStore(
@@ -2470,7 +2471,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 }?:return@withOwnerTransaction null
                 val current=gymCoherentAuthority.currentApprovedWorkout(
                     signed.ownerKey,workoutId)
-                val stock=if(current?.approvedSource==journal.snapshot.source)
+                // An exercise-level stack is not proof of the resistance
+                // on physical Machine A or B. Until this generated-workout
+                // coach consumes a verified selected station and THAT
+                // station's confirmed min/step/max, keep rep/fatigue advice
+                // but withhold automatic weight-step candidates.
+                val roster=(machineRosters.read(signed.ownerKey)
+                    as? NativeMachineRosterResult.Saved)?.snapshot
+                val hasPhysicalStations=roster?.configurations?.any{
+                    it.gymId==journal.originalSnapshot.source.gymId &&
+                        it.exerciseId==selected.exerciseId
+                } == true
+                val stock=if(current?.approvedSource==journal.snapshot.source &&
+                    roster!=null && !hasPhysicalStations)
                     (current.program.exercises.singleOrNull{
                         it.exerciseId==selected.exerciseId
                     }?.equipment as? ComposerEquipment.Verified)?.inventory

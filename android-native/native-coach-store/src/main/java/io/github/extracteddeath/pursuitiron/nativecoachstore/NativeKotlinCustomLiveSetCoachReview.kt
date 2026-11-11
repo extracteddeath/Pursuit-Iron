@@ -9,7 +9,8 @@ class NativeKotlinCustomLiveSetCoachReview(
     private val identity:NativeKotlinCurrentIdentity,
     private val journals:NativeKotlinCustomWorkoutJournalFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
-    private val settings:NativeKotlinCoachAssistanceSettingsStore
+    private val settings:NativeKotlinCoachAssistanceSettingsStore,
+    private val machineRosters:NativeKotlinMachineRosterFileStore
 ) {
     fun review(
         ownerKey:String,workoutId:String,setKey:String,
@@ -39,7 +40,18 @@ class NativeKotlinCustomLiveSetCoachReview(
                 it.exerciseId==slot.exerciseId && it.familyId==slot.familyId &&
                     it.variantId==slot.variantId && it.attachmentId==slot.attachmentId
             }
-            val stock=if(source?.athleteId==owner.athleteId &&
+            // A gym-level machine stock is not automatically the load range
+            // of physical station A or B. Unless this session explicitly
+            // verifies the chosen station's unique inventory, allow rep and
+            // fatigue reviews but no machine-specific load change suggestion.
+            val roster=(machineRosters.read(ownerKey)
+                as? NativeMachineRosterResult.Saved)?.snapshot
+            val hasPhysicalStations=roster?.configurations?.any{
+                it.gymId==journal.originalSnapshot.stamp.gymId &&
+                    it.exerciseId==slot.exerciseId
+            } == true
+            val stock=if(roster!=null && !hasPhysicalStations &&
+                source?.athleteId==owner.athleteId &&
                 setup?.athleteProfileId==stamp.athleteId &&
                 setup.profileRevision==stamp.athleteProfileRevision &&
                 setup.gym.gymId==stamp.gymId &&

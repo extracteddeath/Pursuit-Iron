@@ -13,17 +13,16 @@ import java.math.BigDecimal
  * athlete-approved changes can still be selected explicitly.
  */
 internal object NamedLiftPracticeContinuityDomain {
-    private fun minimumDays(
+    private fun daysByWeek(
         review:CustomCycleReview?,blockId:String,exerciseId:String
-    ):Int? {
-        if(review?.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW ||
-            review.verifiedDraft==null)return null
-        val weeks=(1..review.totalWeeks).mapNotNull {
+    ):List<Int> {
+        if(review==null ||
+            review.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW ||
+            review.verifiedDraft==null)return emptyList()
+        return (1..review.totalWeeks).mapNotNull {
             CustomTrainingCycleDomain.week(review,it)
         }.filter {it.blockId==blockId &&
-            it.purpose==CustomBlockPurpose.TRAINING}
-        if(weeks.isEmpty())return null
-        return weeks.minOf {week->
+            it.purpose==CustomBlockPurpose.TRAINING}.map {week->
             week.days.count {day->
                 day.slots.any {slot ->
                     slot.exerciseId==exerciseId &&
@@ -44,9 +43,15 @@ internal object NamedLiftPracticeContinuityDomain {
         require(approved?.verifiedDraft!=null &&
             proposed?.verifiedDraft!=null)
         val losses=namedExerciseIds.sumOf {exerciseId->
-            val before=minimumDays(approved,blockId,exerciseId) ?:0
-            val after=minimumDays(proposed,blockId,exerciseId) ?:0
-            maxOf(0,before-after)
+            val before=daysByWeek(approved,blockId,exerciseId)
+            val after=daysByWeek(proposed,blockId,exerciseId)
+            // Compare aligned weeks of the selected block. A single bad
+            // override cannot be hidden by another week's higher count.
+            // Block-duration changes are governed by the full-cycle audit;
+            // this preference never counts removed weeks as lost sessions.
+            (0 until minOf(before.size,after.size)).maxOfOrNull {index->
+                maxOf(0,before[index]-after[index])
+            } ?:0
         }
         return BigDecimal(losses)
     }

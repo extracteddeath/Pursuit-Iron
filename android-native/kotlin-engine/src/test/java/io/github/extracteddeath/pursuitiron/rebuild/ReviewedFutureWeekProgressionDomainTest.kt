@@ -55,8 +55,8 @@ class ReviewedFutureWeekProgressionDomainTest {
         nonSetSecondsByWeekday=mapOf(0 to 200,2 to 200,4 to 200))
     private fun preview(source:CustomTrainingCycle,week:Int,
         weekday:Int=0):CustomWorkoutDaySnapshot =
-        (CustomWorkoutSnapshotDomain.preview(source,setup(),
-            StarterExerciseTranche.movements(),1,week,weekday)
+        (CustomWorkoutSnapshotDomain.reviewForConsent(source,setup(),
+            StarterExerciseTranche.movements(),1,inputs(),week,weekday)
             as CustomWorkoutSnapshotResult.Preview).snapshot
     private fun completed(source:CustomTrainingCycle,week:Int,
         order:Long,actualRir:Int=3,reps:Int=10,
@@ -94,6 +94,27 @@ class ReviewedFutureWeekProgressionDomainTest {
                 BigDecimal.ONE,readiness,false,
                 CustomRepForecastPolicy.TARGET_RIR_V2),
             permissions)
+
+    @Test fun onlyTheFullOverheadBoundConsentSnapshotCanEarnFutureWeekProgression() {
+        val approved=request()
+        val actual=approved.coachingRequest.next
+        val raw=(CustomWorkoutSnapshotDomain.preview(
+            approved.approvedCycle,setup(),StarterExerciseTranche.movements(),
+            approved.catalogSourceRevision,3,0)
+            as CustomWorkoutSnapshotResult.Preview).snapshot
+        assertNotEquals(raw.declaredNonSetSeconds,
+            actual.declaredNonSetSeconds)
+        assertEquals(200,actual.declaredNonSetSeconds)
+        val rejected=ReviewedFutureWeekProgressionDomain.propose(
+            approved.copy(coachingRequest=approved.coachingRequest.copy(
+                next=raw)))
+        assertEquals(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
+            rejected.status)
+        assertNull(rejected.candidate)
+        // The identical source plus signed overhead is eligible.
+        assertEquals(ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW,
+            ReviewedFutureWeekProgressionDomain.propose(approved).status)
+    }
 
     @Test fun machineABAndCableOrSmithCannotBorrowACycleLevelLoad() {
         val machineBases=setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,

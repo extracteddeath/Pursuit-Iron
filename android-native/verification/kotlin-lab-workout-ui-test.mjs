@@ -152,6 +152,20 @@ assert.ok(customMachineCoach.includes('private val machineRosters:NativeKotlinMa
   customMachineCoach.includes('roster!=null && !hasPhysicalStations') &&
   generatedCoachHost.includes('coachSettings,machineRosters'),
   'Custom A/B coaching must also reject unverified generic stock by original issued gym');
+// Journal revisions do not change on a durable A/B selector write.
+// Any in-flight coach reading the previous station is stale; the UI must
+// suppress it until the new owner-verified choice produces fresh advice.
+assert.ok(composer.includes('readiness,movementRestricted,machineChoices.encoded,') &&
+  composer.includes('machineChoices.ready,machineChoices.busy)') &&
+  composer.includes('if(machineChoices.ready && !machineChoices.busy &&') &&
+  composer.includes('val coach=state.liveCoach?.takeIf {') &&
+  composer.includes('machineChoices.ready && !machineChoices.busy &&'),
+  'Generated next-set coaching must refresh and hide stale A/B advice on switch');
+assert.ok(journal.includes('machineChoices.encoded,machineChoices.ready,machineChoices.busy)') &&
+  journal.includes('if(busy || !machineChoices.ready || machineChoices.busy ||') &&
+  journal.includes('val advice=liveCoach?.takeIf {') &&
+  journal.includes('!busy && !finished && machineChoices.ready &&'),
+  'Custom next-set coaching must refresh and hide stale A/B advice on switch');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&

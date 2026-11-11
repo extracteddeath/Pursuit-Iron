@@ -50,6 +50,39 @@ internal object StarterProgramReleaseFixture {
 }
 
 class StarterProgramReleaseMatrixTest {
+    @Test fun wristFlexionAndExtensionRemainSeparateAndSourceLinked() {
+        val entries=StarterExerciseTranche.entries()
+        assertEquals(22,entries.size)
+        val flex=entries.single{it.legacyCuratedId=="wrist-curl"}
+        val ext=entries.single{it.legacyCuratedId=="reverse-wrist-curl"}
+        assertEquals("wrist-curl",flex.movement.exerciseId)
+        assertEquals("reverse-wrist-curl",ext.movement.exerciseId)
+        assertEquals("wrist_flexion",flex.movement.familyId)
+        assertEquals("wrist_extension",ext.movement.familyId)
+        assertEquals(RepBand(12,20),flex.practicalRepBand)
+        assertEquals(RepBand(12,20),ext.practicalRepBand)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,flex.movement.expectedLoadBasis)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,ext.movement.expectedLoadBasis)
+        assertEquals("dumbbell-rack",flex.movement.equipmentId)
+        assertEquals("dumbbell-rack",ext.movement.equipmentId)
+        assertEquals(listOf(DeclaredMuscleCredit(
+            TrainingMuscle.WRIST_FLEXORS,MuscleCreditRole.DIRECT,BigDecimal.ONE)),
+            flex.movement.credits)
+        assertEquals(listOf(DeclaredMuscleCredit(
+            TrainingMuscle.WRIST_EXTENSORS,MuscleCreditRole.DIRECT,BigDecimal.ONE)),
+            ext.movement.credits)
+        assertFalse(flex.mayTransferPreviousLoad)
+        assertFalse(ext.mayTransferPreviousLoad)
+        assertTrue(entries.none{it.movement.credits.any{credit->
+            credit.muscle==TrainingMuscle.BRACHIALIS}})
+        // No new weight is invented: these require athlete-specific
+        // verified dumbbell stock and explicit starting-load calibration.
+        assertEquals(CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,
+            flex.movement.creditStatus)
+        assertEquals(CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,
+            ext.movement.creditStatus)
+    }
+
     @Test fun twelveRealStarterCasesPreserveDoseStockRecoveryAndWholeSessionTime() {
         for(split in ComposerSplit.entries)for(phase in TrainingPhase.entries) {
             val input=StarterProgramReleaseFixture.request(split,phase)

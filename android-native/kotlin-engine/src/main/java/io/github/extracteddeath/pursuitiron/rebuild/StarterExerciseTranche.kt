@@ -7,7 +7,7 @@ import java.util.Collections
  * First source-linked, ENGINEERING-REVIEWED-PROVISIONAL starter tranche.
  * It is not a medically or independently science-validated exercise library.
  *
- * Each ID below is an exact curated legacy ID, not a newly minted alias.
+ * Each ID below is an exact canonical legacy curated/extended source ID, not a newly minted alias.
  * Facilities and weight conventions are explicit, and no user load is set
  * here. Numeric loads must be provided and verified against a real gym.
  *
@@ -192,11 +192,28 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
             SEATED_LEG_CURL,LoadBasis.EXERCISE_OVERRIDE,emptySet(),6..25,
             "The seated leg curl uses its own independent verified machine loads. Machine labels or adjacent gym inventory never imply equivalent resistance.",
-            direct(TrainingMuscle.HAMSTRINGS))
+            direct(TrainingMuscle.HAMSTRINGS)),
+        // Source: canonical legacy extended IDs wrist-curl/reverse-wrist-curl.
+        // Their generic 'forearms' metadata is intentionally NOT imported:
+        // wrist flexion and extension have independently named anatomy and
+        // distinct working-set credits. ACE Exercise Library independently
+        // documents Wrist Curl — Flexion and Wrist Curl — Extension
+        // (acefitness.org/resources/everyone/exercise-library/body-part/arms/).
+        // These are still engineering-provisional, NOT outcome-calibrated MEV.
+        entry("wrist-curl","wrist_flexion","dumbbell",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),12..20,
+            "Source extended wrist-curl, not generic forearms. Direct wrist flexors only; no wrist-extensor or brachialis credit. Per-hand dumbbell load.",
+            direct(TrainingMuscle.WRIST_FLEXORS)),
+        entry("reverse-wrist-curl","wrist_extension","dumbbell",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),12..20,
+            "Source extended reverse-wrist-curl, not generic forearms. Direct wrist extensors only; no wrist-flexor or brachialis credit. Per-hand dumbbell load.",
+            direct(TrainingMuscle.WRIST_EXTENSORS))
     )
 
     init {
-        require(definitions.size==20)
+        require(definitions.size==22)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

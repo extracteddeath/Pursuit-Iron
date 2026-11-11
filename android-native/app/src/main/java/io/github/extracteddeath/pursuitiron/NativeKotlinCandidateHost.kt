@@ -82,13 +82,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
         coachSettings)
     private val futureActivationHandoff=NativeKotlinFutureActivationHandoffFileStore(
         root,revisionFence,localAthlete,authoringSourceStore)
+    private val machineRosters=NativeKotlinMachineRosterFileStore(root)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
-        customCycleSignoffs)
+        customCycleSignoffs,machineRosters)
     private val customPreparedStore=NativeKotlinCustomWorkoutPreparedStore(
         root,revisionFence,localAthlete,customWorkoutPreflight,
         futureActivationHandoff)
-    private val machineRosters=NativeKotlinMachineRosterFileStore(root)
     private val workoutMachineChoices=NativeKotlinWorkoutMachineChoiceFileStore(root)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
@@ -333,11 +333,29 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 as? NativeMachineRosterResult.Saved
                 ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
                     "MACHINE_ROSTER_UNAVAILABLE")
+            // The signed, immutable issued custom snapshot is authority
+            // for a slot-bound station. A new gym default cannot overwrite
+            // a prior A/B choice after app restart or a program edit.
+            val bound=linkedMapOf<String,String>()
+            if(custom) {
+                val issued=(customIssuedStore.open(signed.ownerKey,workoutId)
+                    as? NativeCustomJournalResult.Durable)?.issued?.journal
+                    ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                        "ISSUED_WORKOUT_UNAVAILABLE")
+                for(group in issued.originalSnapshot.slots.groupBy{it.exerciseId}.values) {
+                    val selected=group.map{it.machineInstanceId}.distinct()
+                    if(selected.size>1)
+                        return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                            "CONFLICTING_BOUND_MACHINE")
+                    val machine=selected.singleOrNull()
+                    if(machine!=null)bound[group.first().exerciseId]=machine
+                }
+            }
             val defaults=linkedMapOf<String,String>()
             scope.exerciseIds.sorted().forEach{exercise->
                 val config=KotlinMachineAlternativesDomain.forGymExercise(
                     rosters.snapshot.configurations,scope.gymId,exercise)
-                val machine=config?.defaultMachineId
+                val machine=bound[exercise] ?:config?.defaultMachineId
                     ?:config?.machines?.firstOrNull{it.active}?.id
                 if(machine!=null)defaults[exercise]=machine
             }

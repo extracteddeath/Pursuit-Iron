@@ -75,8 +75,21 @@ function strengthCandidate(a, session, request, chosen, catalog) {
             // competition lift. This makes paused bench / RDL-style secondary work viable when specificity
             // remains meaningful, while exact competition lifts still dominate primary-strength slots.
             const fatigue = (e) => e.fatigue.systemic + e.fatigue.axial * .8 + e.fatigue.lowerBack;
-            const xScore = xs * 5 + x.loadability * .12 + x.suitability.strength * .1 - fatigue(x) * .13;
-            const yScore = ys * 5 + y.loadability * .12 + y.suitability.strength * .1 - fatigue(y) * .13;
+            // A five-day Both/ULPPL strength block should have a real
+            // incline-biased second chest day, not have OHP or a second flat
+            // barbell bench silently replace it. Athlete-chosen exercises
+            // override this default, and all options still pass equipment
+            // and strength-specificity eligibility before comparison.
+            const preferred = request.preferences?.preferredExercises ?? [];
+            const athleteChoseBench = preferred.some(id =>
+                catalog.some(e => e.id === id && (e.liftSpecificity?.bench_press ?? 0) > .45));
+            const inclineBonus = e => request.preferences?.powerbuildingInclineVolume
+                && a.lift === 'bench_press' && session.intent === 'push'
+                && !athleteChoseBench
+                ? (e.id === 'incline_db_press' ? 3.7
+                    : e.id === 'incline_smith' ? 3.0 : 0) : 0;
+            const xScore = xs * 5 + x.loadability * .12 + x.suitability.strength * .1 - fatigue(x) * .13 + inclineBonus(x);
+            const yScore = ys * 5 + y.loadability * .12 + y.suitability.strength * .1 - fatigue(y) * .13 + inclineBonus(y);
             if (Math.abs(yScore - xScore) > .02)
                 return yScore - xScore;
         }

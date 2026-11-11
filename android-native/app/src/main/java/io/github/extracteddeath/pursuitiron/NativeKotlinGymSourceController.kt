@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
+import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -22,7 +24,8 @@ internal data class NativeKotlinGymSourceState(
     val busy: Boolean = false,
     val message: String? = null,
     val refusal: NativeAuthoringSourceRefusal? = null,
-    val savedAthleteId: String? = null
+    val savedAthleteId: String? = null,
+    val machineRoster: NativeMachineRosterSnapshot? = null
 )
 
 internal class NativeKotlinGymSourceController(
@@ -76,6 +79,16 @@ internal class NativeKotlinGymSourceController(
                 else NativeKotlinGymSourceState(refusal=result.reason,
                     savedAthleteId=previousAthlete,
                     message="Native equipment could not be verified; nothing was replaced.")
+        }
+        if(current.value.source!=null) {
+            when(val roster=host.readMachineRoster()) {
+                is NativeMachineRosterResult.Saved ->
+                    current.value=current.value.copy(machineRoster=roster.snapshot)
+                is NativeMachineRosterResult.Rejected ->
+                    current.value=current.value.copy(
+                        message="Machine alternatives could not be restored: ${roster.reason}.",
+                        machineRoster=null)
+            }
         }
     }
     fun open()=run {load()}
@@ -154,6 +167,77 @@ internal class NativeKotlinGymSourceController(
     /** Catalog is curated elsewhere with explicit provisional review facts. */
     fun publishReviewedCatalog(catalog:List<CatalogMovement>)=
         change {host.publishNativeCuratedCatalog(it,catalog)}
+
+
+    private fun mutateMachineRoster(
+        operation:(NativeMachineRosterSnapshot,NativeCustomAuthoringSnapshot)->
+            List<KotlinGymMachineAlternatives>
+    )=run {
+        val source=current.value.source?:return@run
+        val roster=current.value.machineRoster?:return@run
+        val configs=runCatching{operation(roster,source)}.getOrElse {
+            current.value=current.value.copy(
+                message="Machine change invalid: ${it.message?: "Check machine settings."}")
+            return@run
+        }
+        when(val result=host.saveMachineRoster(roster.revision,configs)) {
+            is NativeMachineRosterResult.Saved ->
+                load("Saved physical-machine alternatives. Existing workout history was not modified.")
+            is NativeMachineRosterResult.Rejected -> {
+                load()
+                current.value=current.value.copy(
+                    message="Machine change rejected: ${result.reason}. Reloaded saved defaults.")
+            }
+        }
+    }
+
+    fun addPhysicalMachine(exerciseId:String,label:String,increment:BigDecimal?=null)=
+        mutateMachineRoster {roster,source->
+            require(source.catalog.any{it.exerciseId==exerciseId})
+            val gymId=checkNotNull(source.setup.reviewed).gym.gymId
+            val current=roster.configurations.firstOrNull{
+                it.gymId==gymId && it.exerciseId==exerciseId
+            }?:KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+            val uniqueId="machine_"+UUID.randomUUID().toString().replace("-","").take(16)
+            val added=KotlinMachineAlternativesDomain.add(current,
+                KotlinPhysicalMachine(uniqueId,label.trim(),increment=increment),
+                makeDefault=current.machines.isEmpty())
+            roster.configurations.filterNot {
+                it.gymId==gymId && it.exerciseId==exerciseId
+            }+added
+        }
+
+    fun defaultPhysicalMachine(exerciseId:String,machineId:String)=
+        mutateMachineRoster {roster,source->
+            val gymId=checkNotNull(source.setup.reviewed).gym.gymId
+            roster.configurations.map { config ->
+                if(config.gymId==gymId && config.exerciseId==exerciseId)
+                    KotlinMachineAlternativesDomain.setDefault(config,machineId)
+                else config
+            }
+        }
+
+    fun setPhysicalMachineActive(exerciseId:String,machineId:String,active:Boolean)=
+        mutateMachineRoster {roster,source->
+            val gymId=checkNotNull(source.setup.reviewed).gym.gymId
+            roster.configurations.map { config ->
+                if(config.gymId==gymId && config.exerciseId==exerciseId) {
+                    val previous=checkNotNull(config.machines.firstOrNull{it.id==machineId})
+                    KotlinMachineAlternativesDomain.edit(config,previous.copy(active=active))
+                } else config
+            }
+        }
+
+    fun renamePhysicalMachine(exerciseId:String,machineId:String,label:String)=
+        mutateMachineRoster {roster,source->
+            val gymId=checkNotNull(source.setup.reviewed).gym.gymId
+            roster.configurations.map { config ->
+                if(config.gymId==gymId && config.exerciseId==exerciseId) {
+                    val previous=checkNotNull(config.machines.firstOrNull{it.id==machineId})
+                    KotlinMachineAlternativesDomain.edit(config,previous.copy(label=label.trim()))
+                } else config
+            }
+        }
 
     override fun close() {scope.cancel()}
 }

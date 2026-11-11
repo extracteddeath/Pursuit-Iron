@@ -21,6 +21,9 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeBlockLoadCons
 import java.math.BigDecimal
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekProposalResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekProposalRefusal
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekDraftPreview
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekDraftDecision
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekDraftRefusal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -161,6 +164,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var futureWeekOption by remember {
         mutableStateOf<NativeFutureWeekProposalResult?>(null)
     }
+    var futureWeekSavePreview by remember {
+        mutableStateOf<NativeFutureWeekDraftPreview?>(null)
+    }
+    var futureWeekSaveDecision by remember {
+        mutableStateOf<NativeFutureWeekDraftDecision?>(null)
+    }
+    var confirmFutureWeekSave by remember {mutableStateOf(false)}
     LaunchedEffect(draft?.revision,state.sourceRevision,state.authoredPreview,
         state.reviewedCoachInputs,coachMaxStep,coachReadiness,coachRestricted,
         inspectedWeek,inspectedWeekday) {
@@ -168,6 +178,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         futureWeekVersion++
         futureWeekSlotId=null
         futureWeekOption=null
+        futureWeekBusy=false
+        futureWeekSavePreview=null
+        futureWeekSaveDecision=null
+        confirmFutureWeekSave=false
         controller.clearCalibrationOffer()
     }
     // Slot identity is stable and separate from the exercise catalog ID.
@@ -933,6 +947,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 futureWeekBusy=true
                                 futureWeekSlotId=chosen
                                 futureWeekOption=null
+                                futureWeekSavePreview=null
+                                futureWeekSaveDecision=null
+                                confirmFutureWeekSave=false
                                 futureWeekScope.launch {
                                     val result=withContext(Dispatchers.IO) {
                                         runCatching {
@@ -972,8 +989,110 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                                     it.reps.minimum.toString()
                                                 },style=MaterialTheme.typography.bodyMedium)
                                         }
-                                        Text("Review only. No program or workout was saved.",
+                                        Text("This is a review. Nothing changes until you separately confirm a saved draft.",
                                             style=MaterialTheme.typography.bodySmall)
+                                        if(option.proposal.status==
+                                                ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW) {
+                                            OutlinedButton(
+                                                enabled=!busy&&!futureWeekBusy,
+                                                onClick={
+                                                    val host=permissionHost
+                                                    val chosen=checkNotNull(reviewed.selectedSlotId)
+                                                    val version=++futureWeekVersion
+                                                    futureWeekBusy=true
+                                                    futureWeekSavePreview=null
+                                                    futureWeekSaveDecision=null
+                                                    futureWeekScope.launch {
+                                                        val fresh=withContext(Dispatchers.IO) {
+                                                            runCatching{
+                                                                host.previewOwnerVerifiedFutureWeekDraft(
+                                                                    draft.cycleId,session.absoluteWeek,
+                                                                    session.weekday,chosen,coachReadiness,
+                                                                    coachRestricted,checkNotNull(maxStep),
+                                                                    reviewed.review.repForecastPolicy)
+                                                            }.getOrElse{
+                                                                NativeFutureWeekDraftPreview.Rejected(
+                                                                    NativeFutureWeekDraftRefusal.STORAGE_UNAVAILABLE)
+                                                            }
+                                                        }
+                                                        if(version==futureWeekVersion) {
+                                                            futureWeekSavePreview=fresh
+                                                            futureWeekBusy=false
+                                                        }
+                                                    }
+                                                }){Text("Review saving this change")}
+                                        }
+                                        when(val pending=futureWeekSavePreview) {
+                                            is NativeFutureWeekDraftPreview.Ready -> {
+                                                Text("Save only the reviewed future-week targets as a new program draft. Your previous program signoff becomes outdated; review and sign the revised cycle before training from it.",
+                                                    style=MaterialTheme.typography.bodySmall)
+                                                Button(enabled=!busy&&!futureWeekBusy,
+                                                    onClick={confirmFutureWeekSave=true}) {
+                                                    Text("Confirm draft change")
+                                                }
+                                                if(confirmFutureWeekSave) {
+                                                    AlertDialog(
+                                                        onDismissRequest={
+                                                            confirmFutureWeekSave=false
+                                                        },
+                                                        title={Text("Save this future-week change?")},
+                                                        text={Text("Only your next unissued week's reviewed targets will be changed. Completed workouts stay unchanged. The program must be signed again before a new workout can be issued.")},
+                                                        confirmButton={
+                                                            TextButton(onClick={
+                                                                confirmFutureWeekSave=false
+                                                                val chosen=checkNotNull(reviewed.selectedSlotId)
+                                                                val version=++futureWeekVersion
+                                                                futureWeekBusy=true
+                                                                futureWeekSaveDecision=null
+                                                                futureWeekScope.launch {
+                                                                    val outcome=withContext(Dispatchers.IO) {
+                                                                        runCatching {
+                                                                            permissionHost.acceptOwnerVerifiedFutureWeekDraft(
+                                                                                draft.cycleId,session.absoluteWeek,
+                                                                                session.weekday,chosen,coachReadiness,
+                                                                                coachRestricted,checkNotNull(maxStep),
+                                                                                reviewed.review.repForecastPolicy,
+                                                                                pending.fingerprint,true)
+                                                                        }.getOrElse{
+                                                                            NativeFutureWeekDraftDecision.Rejected(
+                                                                                NativeFutureWeekDraftRefusal.STORAGE_UNAVAILABLE)
+                                                                        }
+                                                                    }
+                                                                    if(version==futureWeekVersion) {
+                                                                        futureWeekSaveDecision=outcome
+                                                                        futureWeekBusy=false
+                                                                        if(outcome is NativeFutureWeekDraftDecision.Saved)
+                                                                            controller.open(draft.cycleId)
+                                                                    }
+                                                                }
+                                                            }) {Text("Save unsigned draft")}
+                                                        },
+                                                        dismissButton={
+                                                            TextButton(onClick={
+                                                                confirmFutureWeekSave=false
+                                                            }){Text("Cancel")}
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                            is NativeFutureWeekDraftPreview.Rejected ->
+                                                Text("Cannot save this proposal: "+
+                                                    pretty(pending.reason),
+                                                    style=MaterialTheme.typography.bodySmall,
+                                                    color=MaterialTheme.colorScheme.error)
+                                            null -> {}
+                                        }
+                                        when(val decision=futureWeekSaveDecision) {
+                                            is NativeFutureWeekDraftDecision.Saved ->
+                                                Text("Updated draft saved. Review and sign the revised cycle before training.",
+                                                    style=MaterialTheme.typography.bodySmall)
+                                            is NativeFutureWeekDraftDecision.Rejected ->
+                                                Text("Draft was not changed: "+
+                                                    pretty(decision.reason),
+                                                    color=MaterialTheme.colorScheme.error,
+                                                    style=MaterialTheme.typography.bodySmall)
+                                            null -> {}
+                                        }
                                     }
                                     is NativeFutureWeekProposalResult.Rejected ->
                                         Text("Full-cycle review unavailable: "+

@@ -512,7 +512,15 @@ internal fun NativeKotlinCustomJournalScreen(
                         onReadinessChange={readiness=it},
                         movementRestricted=movementRestricted,
                         onMovementRestrictedChange={movementRestricted=it},
-                        enabled=!busy
+                        enabled=!busy,
+                        onReportConcern={
+                            // Real notes remain a separate, explicit journal
+                            // save; changing coach context never edits sets.
+                            movementRestricted=true
+                            readiness=CoachReadiness.LOW
+                            noteError=null
+                            showSessionNote=true
+                        }
                     )
                 }
                 if(!verifiedFinishedInHistory || showFinishedSets) {
@@ -614,6 +622,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                 previouslyAttempted.machineInstanceId
                             else selectedMachineId
                             val advice=liveCoach?.takeIf {
+                                // Hide prior advice immediately after an
+                                // injury restriction, before a fresh review.
+                                !movementRestricted &&
                                 !busy && !finished && machineChoices.ready &&
                                     !machineChoices.busy && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&

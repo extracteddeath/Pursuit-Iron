@@ -194,6 +194,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 movementRestricted)
     }
     val coach=state.liveCoach?.takeIf {
+        // A pre-restriction recommendation is unsafe to keep showing while
+        // a fresh owner-scoped review is in flight.
+        !movementRestricted && !state.busy &&
         machineChoices.ready && !machineChoices.busy &&
             it.journalRevision==presentation?.revision &&
             it.setKey==selected?.target?.setKey
@@ -357,7 +360,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 onReadinessChange={readiness=it},
                 movementRestricted=movementRestricted,
                 onMovementRestrictedChange={movementRestricted=it},
-                enabled=!state.busy
+                enabled=!state.busy,
+                onReportConcern=if(journal!=null) ({
+                    // Restrict optional advice immediately; never auto-record
+                    // a set, alter a prescription or claim an injury note
+                    // was saved before athlete confirmation.
+                    movementRestricted=true
+                    readiness=CoachReadiness.LOW
+                    showSessionNote=true
+                }) else null
             )
         }
         if(coach!=null && !presentation.finished)PursuitCard(

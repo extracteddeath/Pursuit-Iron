@@ -56,6 +56,21 @@ class NativeKotlinReviewedFutureWeekProposal(
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
+    companion object {
+        /** Rights are intentionally narrower than other adaptive edits. */
+        internal fun weekPermissions(rights:Set<CustomCycleChangeKind>)=
+            CustomCycleCoachPermissions(
+                adaptWeekOverrides=CustomCycleChangeKind.WEEK_OVERRIDES in rights,
+                adaptReps=CustomCycleChangeKind.REPS in rights,
+                adaptLoads=CustomCycleChangeKind.LOADS in rights)
+
+        /** Includes older completed revisions; never trusts an input week. */
+        internal fun lastObservedWeek(
+            cycleId:String,completed:List<Pair<String,Int>>
+        ):Int=completed.filter{it.first==cycleId}
+            .maxOfOrNull{it.second} ?:0
+    }
+
     fun review(
         ownerKey:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         slotId:String,readiness:CoachReadiness,movementRestricted:Boolean,
@@ -158,10 +173,9 @@ class NativeKotlinReviewedFutureWeekProposal(
                 // A UI-supplied "last completed week" is never authority.
                 // The highest observed week in this exact cycle is used,
                 // including completed sessions from older cycle revisions.
-                val lastWeek=completions.filter{
-                    it.snapshot.stamp.cycleId==cycleId
-                }.maxOfOrNull{it.snapshot.absoluteWeek} ?:0
-                val rights=grant.allowedKinds
+                val lastWeek=lastObservedWeek(cycleId,completions.map{
+                    it.snapshot.stamp.cycleId to it.snapshot.absoluteWeek
+                })
                 val option=ReviewedFutureWeekProgressionDomain.propose(
                     ReviewedFutureWeekProgressionRequest(
                         cycle,gym.setup,gym.catalog,approved.inputs,
@@ -171,10 +185,7 @@ class NativeKotlinReviewedFutureWeekProposal(
                             verified.verifiedStock,maximumAuthorizedIncrease,
                             settings.policy.coachingReadiness(readiness),
                             movementRestricted,forecast),
-                        CustomCycleCoachPermissions(
-                            adaptWeekOverrides=CustomCycleChangeKind.WEEK_OVERRIDES in rights,
-                            adaptReps=CustomCycleChangeKind.REPS in rights,
-                            adaptLoads=CustomCycleChangeKind.LOADS in rights)
+                        weekPermissions(grant.allowedKinds)
                     ))
                 // A second independent result must agree with the trusted
                 // owner review; otherwise neither result can be displayed

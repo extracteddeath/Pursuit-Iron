@@ -687,7 +687,8 @@ private fun NativeKotlinSetCard(
             onLoad={weight=it},
             onReps={reps=it},
             onRir={effort=it},
-            showLoad=verifiedLoad!=null
+            showLoad=verifiedLoad!=null,
+            showFieldHelp=false
         )
         if(verifiedLoad?.basis==LoadBasis.BARBELL_TOTAL) {
             val amount=weight.toBigDecimalOrNull()

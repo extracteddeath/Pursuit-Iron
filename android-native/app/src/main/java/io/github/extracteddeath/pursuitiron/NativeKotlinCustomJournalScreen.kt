@@ -952,7 +952,8 @@ private fun NativeKotlinCustomVisitEditor(
                 showLoad=verified!=null,
                 loadError=actualLoad.isNotBlank()&&weight==null,
                 repsError=actualReps.isNotBlank()&&reps==null,
-                rirError=!effortValid
+                rirError=!effortValid,
+                showFieldHelp=false
             )
             if(verified?.basis==LoadBasis.BARBELL_TOTAL) {
                 OutlinedButton(

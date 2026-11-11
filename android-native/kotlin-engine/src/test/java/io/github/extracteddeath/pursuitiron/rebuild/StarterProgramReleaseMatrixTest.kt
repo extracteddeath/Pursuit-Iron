@@ -145,6 +145,32 @@ class StarterProgramReleaseMatrixTest {
         }
     }
 
+    @Test fun archivedV5PreservesSingleDayMinimumsAndOriginalPhaseSearch() {
+        assertTrue(CoachFirstProgramStartDomain.supportsPolicy(
+            CoachFirstProgramStartDomain.PREVIOUS_PHASE_POLICY_VERSION))
+        assertEquals("first-program-reference-v6",
+            CoachFirstProgramStartDomain.POLICY_VERSION)
+        for(split in ComposerSplit.entries)
+            for(phase in TrainingPhase.entries) {
+            val archived=CoachFirstProgramStartDomain.review(
+                StarterProgramReleaseFixture.request(split,phase).copy(
+                    policyVersion=CoachFirstProgramStartDomain
+                        .PREVIOUS_PHASE_POLICY_VERSION))
+            assertEquals("$split/$phase: ${archived.issues}",
+                FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
+                archived.status)
+            assertEquals("v5",archived.policy?.revision)
+            if(phase!=TrainingPhase.HYPERTROPHY) {
+                assertTrue(checkNotNull(archived.policy)
+                    .primaryLiftMinimumDays.values.all{it==1})
+                assertTrue(archived.phasePoliciesChecked in 1..32)
+                assertTrue(archived.issues.any{
+                    it=="Main-lift practice and supporting days match your chosen split and verified movements."
+                })
+            }
+        }
+    }
+
     @Test fun archivedV4RetainsItsEightUnresolvedPhasesWithoutChangingSavedRules() {
         var oldReady=0
         for(split in ComposerSplit.entries)for(phase in TrainingPhase.entries) {

@@ -14,7 +14,8 @@ import java.math.BigDecimal
 enum class NativeFutureWeekProposalRefusal {
     INVALID_SELECTION, NOT_AUTHORIZED, CYCLE_OR_CONSENT_UNAVAILABLE,
     GYM_OR_POLICY_UNAVAILABLE, PERMISSIONS_UNAVAILABLE,
-    HISTORY_UNVERIFIED, COACH_NOT_VERIFIED, REVIEW_DIVERGED,
+    HISTORY_UNVERIFIED, FUTURE_WORKOUT_ALREADY_PREPARED,
+    COACH_NOT_VERIFIED, REVIEW_DIVERGED,
     STORAGE_UNAVAILABLE
 }
 
@@ -41,6 +42,24 @@ sealed interface NativeFutureWeekProposalResult {
  * separately CAS the owner, source, cycle, consent, permissions and history,
  * reject issued targets, and rederive this option inside that transaction.
  */
+/**
+ * Any prepared or issued workout for the selected future week is protected,
+ * including a different weekday or older cycle revision. Also refuse any
+ * unfinished workout from this same cycle, rather than orphaning a currently
+ * actionable plan when its signed draft revision changes.
+ *
+ * Historical FINISHED sessions from prior weeks remain untouched.
+ */
+internal object NativeFutureWeekProposalInventoryPolicy {
+    fun blocks(
+        sessions:List<NativeCustomInventoryFact>,
+        cycleId:String,absoluteWeek:Int
+    ):Boolean=sessions.any{
+        it.cycleId==cycleId &&
+            (it.absoluteWeek==absoluteWeek || !it.completed)
+    }
+}
+
 class NativeKotlinReviewedFutureWeekProposal(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
@@ -52,7 +71,8 @@ class NativeKotlinReviewedFutureWeekProposal(
     private val preflight:NativeKotlinCustomWorkoutPreflight,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val journals:NativeKotlinCustomWorkoutJournalFileStore,
-    private val reviewer:NativeKotlinCustomNextWorkoutReview
+    private val reviewer:NativeKotlinCustomNextWorkoutReview,
+    private val outstanding:NativeKotlinCustomOutstandingWorkoutInventory
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -145,6 +165,22 @@ class NativeKotlinReviewedFutureWeekProposal(
                     as? NativeKotlinMixedHistoryReadResult.Review)
                     ?:return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.HISTORY_UNVERIFIED)
+                // A finished visit is immutable history; a prepared or
+                // issued but unfinished session is a separate contract.
+                // Do not write a future-week option across either boundary.
+                // This inventory is authoritative only after complete
+                // mixed-history validation, under the SAME owner OS lock.
+                val completedCustomIds=read.timeline.completions
+                    .filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                    .map{it.manifest.workoutId}.toSet()
+                val inventory=(outstanding.inspect(ownerKey,owner.athleteId,
+                    completedCustomIds) as? NativeCustomInventoryReview.Reviewed)
+                    ?:return@withOwnerTransaction reject(
+                        NativeFutureWeekProposalRefusal.HISTORY_UNVERIFIED)
+                if(NativeFutureWeekProposalInventoryPolicy.blocks(
+                        inventory.sessions,cycleId,absoluteWeek))
+                    return@withOwnerTransaction reject(
+                        NativeFutureWeekProposalRefusal.FUTURE_WORKOUT_ALREADY_PREPARED)
                 val completions=ArrayList<CustomCoachingHistoricalSession>()
                 for(entry in read.timeline.completions) {
                     if(entry !is NativeKotlinMixedHistoryCompletion.Custom)continue

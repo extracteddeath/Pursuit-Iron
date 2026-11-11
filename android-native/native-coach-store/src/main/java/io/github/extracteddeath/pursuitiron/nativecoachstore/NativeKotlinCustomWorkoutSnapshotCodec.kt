@@ -20,7 +20,7 @@ import java.util.Collections
  */
 internal object NativeKotlinCustomWorkoutSnapshotCodec {
     private const val MAGIC=0x50494357 // PICW
-    private const val VERSION=3
+    private const val VERSION=4
     private const val SLOT_V3_MAGIC=0x50495333 // PIS3
     const val MAX_BYTES=256_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -120,6 +120,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             writeInt(set.ordinalInSlot)
             authored(set.prescription,version)
         }
+        if(version>=4)optional(slot.machineInstanceId)
     }
     private fun DataInputStream.slot(version:Int):CustomWorkoutSlotSnapshot {
         val slotId=readUTF()
@@ -136,9 +137,10 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         val sets=List(count) {
             CustomWorkoutSetSnapshot(readUTF(),readUTF(),readInt(),authored(version))
         }
+        val machine=if(version>=4)optional() else null
         return CustomWorkoutSlotSnapshot(slotId,exerciseId,familyId,
             variantId,role,attachment,group,pinned,note,
-            Collections.unmodifiableList(sets))
+            Collections.unmodifiableList(sets),machine)
     }
     /** Legacy journal Swap payloads remain unframed. Timed amplifiers use
      * an explicit v3 frame for exact ACTIVE follow-up seconds on cold replay. */
@@ -148,8 +150,10 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 val timed=value.sets.any {
                     it.prescription.amplifier?.followUpActiveSeconds!=null
                 }
-                if(timed){out.writeInt(SLOT_V3_MAGIC);out.writeInt(VERSION)}
-                out.slot(value,if(timed)VERSION else 1)
+                val version=if(value.machineInstanceId!=null)VERSION
+                    else if(timed)3 else 1
+                if(version>1){out.writeInt(SLOT_V3_MAGIC);out.writeInt(version)}
+                out.slot(value,version)
             }
         }.toByteArray().also { require(it.size in 24..MAX_BYTES) }
     internal fun decodeSlot(bytes:ByteArray):CustomWorkoutSlotSnapshot {
@@ -160,7 +164,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             val version=if(framed)input.readInt() else {
                 input.reset();1
             }
-            if(version !in listOf(1,VERSION))
+            if(version !in listOf(1,3,VERSION))
                 throw IOException("unsupported swap slot version")
             val slot=input.slot(version)
             if(input.available()!=0)throw IOException("trailing swap slot bytes")
@@ -229,6 +233,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 slot.variantId).all(id::matches))
             require(slot.attachmentId?.let { id.matches(it) } != false)
             require(slot.supersetGroup?.let { id.matches(it) } != false)
+            require(slot.machineInstanceId?.let {
+                KotlinMachineAlternativesDomain.validInstanceId(it)
+            } != false)
             require(slot.coachNote.length<=1000)
             require(slot.sets.isNotEmpty() && slot.sets.size<=20)
             for((index,set) in slot.sets.withIndex()) {
@@ -279,9 +286,11 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         validate(snapshot)
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use{out->
-            val version=if(snapshot.slots.any{slot->slot.sets.any{
+            val version=if(snapshot.slots.any{
+                    it.machineInstanceId!=null
+                })VERSION else if(snapshot.slots.any{slot->slot.sets.any{
                     it.prescription.amplifier?.followUpActiveSeconds!=null
-                }})VERSION else if(snapshot.shortSessionLimitMinutes!=null)2 else 1
+                }})3 else if(snapshot.shortSessionLimitMinutes!=null)2 else 1
             out.writeInt(MAGIC);out.writeInt(version)
             val stamp=snapshot.stamp
             out.writeUTF(stamp.athleteId)
@@ -349,7 +358,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                     }
                 }
                 val timeLimit=when(version){
-                    3->input.optionalInt()
+                    3,4->input.optionalInt()
                     2->input.readInt()
                     else->null
                 }

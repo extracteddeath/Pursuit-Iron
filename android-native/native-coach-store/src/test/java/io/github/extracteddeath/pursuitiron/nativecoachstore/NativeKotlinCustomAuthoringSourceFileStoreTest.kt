@@ -157,7 +157,10 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
 
     @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
-        assertEquals(20,starter.catalog.size)
+        assertEquals(22,starter.catalog.size)
+        assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
+            starter.catalog.takeLast(2).map{it.exerciseId})
+        assertEquals(20,starter.catalog.dropLast(2).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)
         assertEquals(starter,restored)
@@ -167,6 +170,12 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             as NativeAuthoringSourceRead.Found).source
         val eligible=CustomExerciseAuthoringDomain.picker(
             saved.setup,saved.catalog)
+        assertEquals(starter.catalog.map{it.exerciseId},
+            saved.catalog.map{it.exerciseId})
+        // Full catalog survives, but cable-only gym inventory must not
+        // pretend dumbbells exist for either new wrist movement.
+        assertFalse(eligible.any{it.exerciseId=="wrist-curl" ||
+            it.exerciseId=="reverse-wrist-curl"})
         assertTrue(eligible.any{
             it.exerciseId=="bodyweight_crunch" && it.bodyweight
         })

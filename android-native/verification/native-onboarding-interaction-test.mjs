@@ -247,7 +247,7 @@ assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'
   controls.includes('input.length<=3 && input.all(Char::isDigit)') &&
   controls.includes('input.length<=2 && input.all(Char::isDigit)') &&
   train.includes('NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)') &&
-  controls.includes('NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)') &&
+  /NativeSetEntryPolicy\.stepReps\(\s*reps\s*,\s*-1\s*,\s*allowFailedAttempt\s*\)/.test(controls) &&
   controls.includes('NativeSetEntryPolicy.stepRir(rir,1)') &&
   controls.includes('NativeSetEntryPolicy.stepRepsBy(') &&
   controls.includes('NativeSetEntryPolicy.stepRirBy(') &&

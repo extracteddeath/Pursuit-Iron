@@ -637,8 +637,15 @@ internal fun NativeKotlinCustomJournalScreen(
                                 setCount=slot.sets.count{it.prescription.type==set.prescription.type},
                                 initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
+                                    // An edited SKIP had no physical station.
+                                    // A completed/failed correction must use an
+                                    // explicitly chosen current machine, whereas
+                                    // an attempted prior set retains its own ID.
+                                    val hadAttempt=(observed?.operation as?
+                                        CustomWorkoutJournalOperation.Record)
+                                        ?.performed!=null
                                     if(outcome==KotlinJournalSetOutcome.SKIPPED ||
-                                        observed!=null || !requiresNewMachineChoice)
+                                        hadAttempt || !requiresNewMachineChoice)
                                         record(set.setKey,CustomWorkoutVisitPart.MAIN,
                                             outcome,actual?.copy(machineInstanceId=mainMachineId))
                                 },

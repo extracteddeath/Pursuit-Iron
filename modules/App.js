@@ -6,7 +6,7 @@ import { appStorageOwnership } from './app-storage-ownership.js';
 import { InfoCard, MotionReveal } from './ui-disclosure.js';
 import { SetupCard, ProgressionCard, ProgramReferenceSheet, ProgressionChoiceSheet } from './program-reference-surfaces.js';
 import { CHANGELOG } from './release-notes.js';
-import { UiHeader, UiRootHeader, UiCard, UiMetric, UiAction, UiChoice, UiSegmented, UiStatus, UiSection, UiField } from './ui-primitives.js';
+import { UiHeader, UiRootHeader, UiCard, UiMetric, UiAction, UiChoice, UiSegmented, UiStatus, UiSection } from './ui-primitives.js';
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
 import { ProgramManualTargets } from './program-manual-targets.js';
 import { LoadWaveCard } from './program-load-wave.js';
@@ -22,7 +22,8 @@ import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutli
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
-import { latestMachineSet, machineHistory, resolveMachineVariant, machineIdOfSet, historyForMachineRecommendation, LEGACY_MACHINE_ID, UNKNOWN_GYM_ID } from './next-engine/machine-instances.js';
+import { latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
 import { canonicalExerciseIncrement } from './next-engine/loading.js';
@@ -14809,31 +14810,7 @@ function MetricChart({ series, height = 210 }) {
 function ExerciseCharts({ history, id, defaultMetric = "e1rm" }) {
     const [metric, setMetric] = useState(defaultMetric);
     const [win, setWin] = useState("all");
-    // Physical stacks have different resistance scales. Preserve a logical
-    // exercise chart, but never plot A→B as a personal strength decline.
-    const physicalScopes = useMemo(() => {
-        const found = new Map();
-        for (const session of history || []) {
-            const perf = session?.perf?.[id];
-            if (!Array.isArray(perf?.sets)) continue;
-            for (const set of perf.sets) {
-                if (!set || set.warm || set.sub || !(Number(set.w) > 0)) continue;
-                const gymId = session.gymId ?? UNKNOWN_GYM_ID;
-                const machineInstanceId = machineIdOfSet(set, perf);
-                const key = gymId + "|" + machineInstanceId;
-                const prior = found.get(key);
-                if (!prior || Number(session.date || 0) > prior.latest)
-                    found.set(key, {key, gymId, machineInstanceId, latest:Number(session.date || 0)});
-            }
-        }
-        return [...found.values()].sort((a,b)=>b.latest-a.latest);
-    }, [history, id]);
-    const [selectedPhysicalScope, setSelectedPhysicalScope] = useState("");
-    const activeScope = physicalScopes.find(s=>s.key===selectedPhysicalScope) ?? physicalScopes[0];
-    const comparableHistory = useMemo(() =>
-        physicalScopes.length > 1 && activeScope
-            ? historyForMachineRecommendation(history,id,activeScope.machineInstanceId,activeScope.gymId)
-            : history, [history,id,activeScope?.key,physicalScopes.length]);
+    const {scopes,active,comparableHistory,setSelectedScope} = useMachineChartScope(history,id);
     const series = useMemo(() => exerciseSeries(comparableHistory, id, metric, win),
         [comparableHistory, id, metric, win]);
     const m = EX_METRIC_BY_ID[metric] || EX_METRICS[0];
@@ -14841,21 +14818,7 @@ function ExerciseCharts({ history, id, defaultMetric = "e1rm" }) {
     const fmt = v => v == null ? "—" : (v >= 10000 ? Math.round(v).toLocaleString() : String(Math.round(v * 10) / 10));
     const dF = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     return (_jsxs("div", { "data-exercisecharts": metric, children: [
-        physicalScopes.length > 1 && _jsxs("label", { className:"wpb-exercise-machine-scope", children:[
-            "Compare weights on",
-            _jsx(UiField, {as:"select",
-                "aria-label":"Physical machine for strength trend",
-                value:activeScope?.key || "",
-                onChange:event=>setSelectedPhysicalScope(event.target.value),
-                children:physicalScopes.map(scope=>_jsx("option",{
-                    value:scope.key,
-                    children:scope.machineInstanceId===LEGACY_MACHINE_ID
-                        ? "Older unassigned history"
-                        : `Machine ${scope.machineInstanceId} · gym ${scope.gymId}`
-                },scope.key))
-            }),
-            _jsx("small",{children:"Machines may use different resistance scales. Only comparable loads are plotted."})
-        ]}),
+        _jsx(MachineChartScopePicker,{scopes,active,onSelect:setSelectedScope}),
         _jsx("div", { className: "wpb-xscroll wpb-exercise-metric-tabs wpb-b964-layout-18", role: "tablist", "aria-label": "Exercise chart metric", children: EX_METRICS.map(x => (_jsx("button", { role: "tab", "data-metric-tab": x.id, "aria-selected": metric === x.id, "aria-pressed": metric === x.id, onClick: () => setMetric(x.id), className: "pressable wpb-exercise-metric-tab", style: { flexShrink: 0, padding: "8px 13px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
                         border: `1px solid ${metric === x.id ? C.accent : C.border}`, background: metric === x.id ? C.accent : C.card, color: metric === x.id ? C.accentText : C.muted }, children: x.label }, x.id))) }), series.ok ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s957-gap-16 wpb-s956-alignitems-flex-end wpb-s960-margin-10px-2px-4px", children: [_jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Avg ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.avg), " ", _jsx("span", { style: { fontSize: 13, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Best ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.best), " ", _jsx("span", { style: { fontSize: 13, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { className: "wpb-s960-marginleft-auto wpb-s956-textalign-right", children: [_jsx("div", { className: "wpb-type-micro-faint", children: "Change" }), _jsxs("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: series.delta > 0 ? C.accentInk : series.delta < 0 ? C.warn : C.muted }, children: [series.delta > 0 ? "+" : "", fmt(series.delta)] })] })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, margin: "0 2px 10px" }, "data-range-label": true, children: [dF(series.from), " \u2013 ", dF(series.to), " \u00B7 ", series.sessions, " session", series.sessions === 1 ? "" : "s"] }), _jsx("div", { className: "wpb-exercise-chart-surface", style: { background: C.card, borderRadius: 16, padding: "12px 6px 4px" }, children: _jsx(MetricChart, { series: series }) }), _jsx("div", { style: { fontSize: 13, color: C.faint, lineHeight: 1.5, margin: "10px 2px 0" }, children: m.blurb })] })) : (_jsxs("div", { "data-empty-window": true, style: { textAlign: "center", padding: "34px 16px", color: C.faint, background: C.card, borderRadius: 16 }, children: [_jsx(TrendingUp, { size: 24, className: "wpb-b977-muted-empty-icon" }), _jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.muted, marginTop: 8 }, children: "Nothing logged in this range" }), _jsx("div", { className: "wpb-s956-fontsize-13 wpb-s957-margintop-4 wpb-s957-lineheight-1-5", children: "Widen the range below, or log a session with this lift." })] })), _jsx("div", { className: "wpb-exercise-window-tabs", role: "tablist", "aria-label": "Exercise chart range", style: { display: "flex", gap: 4, background: C.card, borderRadius: 12, padding: 4, marginTop: 12 }, children: EX_WINDOWS.map(w => (_jsx("button", { role: "tab", "data-window-tab": w.id, "aria-selected": win === w.id, "aria-pressed": win === w.id, onClick: () => setWin(w.id), className: "pressable", style: { flex: 1, padding: "8px 2px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
                         background: win === w.id ? C.accent : "none", color: win === w.id ? C.accentText : C.muted }, children: w.label }, w.id))) })] }));

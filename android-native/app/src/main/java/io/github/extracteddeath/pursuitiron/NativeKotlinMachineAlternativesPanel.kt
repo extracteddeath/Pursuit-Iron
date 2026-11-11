@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMachineRosterSnapshot
 import io.github.extracteddeath.pursuitiron.rebuild.CatalogMovement
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
 
 private fun parseMachineLoad(value:String):BigDecimal? =
     value.trim().takeIf{it.isNotEmpty()}?.let{
@@ -121,10 +122,17 @@ internal fun NativeKotlinMachineAlternativesPanel(
                             ) {
                                 Text(if(machine.active)"Deactivate" else "Reactivate")
                             }
-                        if(machine.minimum!=null && machine.maximum!=null &&
-                            machine.increment!=null)
+                        val calibrated=machine.minimum!=null &&
+                            machine.maximum!=null && machine.increment!=null &&
+                            machine.unit!=null
+                        if(calibrated &&
+                            KotlinMachineAlternativesDomain.reachableCalibratedMaximum(machine))
                             Text("Verified stack: ${machine.minimum}–${machine.maximum} ${machine.unit?.name ?: ""} · steps of ${machine.increment}",
                                 style=MaterialTheme.typography.bodySmall)
+                        else if(calibrated)
+                            Text("Calibration needs correction: this maximum cannot be reached using the confirmed step. History is preserved, but this machine is not verified for load increases.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.error)
                         else Text("Stack not verified · load increases require a confirmed machine-specific range.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)

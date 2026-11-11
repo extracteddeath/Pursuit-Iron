@@ -43,7 +43,6 @@ internal fun NativeKotlinCustomJournalScreen(
     var machineRoster by remember(host,workoutId){
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
-    var machineSelections by rememberSaveable(workoutId){mutableStateOf("")}
     LaunchedEffect(host,workoutId) {
         machineRoster=withContext(Dispatchers.IO) {
             (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
@@ -68,6 +67,10 @@ internal fun NativeKotlinCustomJournalScreen(
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
     }
+    val machineChoices=rememberNativeWorkoutMachineChoices(
+        host,workoutId,custom=true,ready=journal!=null,
+        exerciseSignature=journal?.snapshot?.slots
+            ?.map{it.exerciseId}?.distinct()?.joinToString(";").orEmpty())
     var busy by remember(host,workoutId){mutableStateOf(false)}
     var loading by remember(host,workoutId){mutableStateOf(true)}
     var error by remember(host,workoutId){mutableStateOf<String?>(null)}
@@ -130,7 +133,7 @@ internal fun NativeKotlinCustomJournalScreen(
         setKey:String,part:CustomWorkoutVisitPart,
         outcome:KotlinJournalSetOutcome,performed:KotlinPerformedSet?
     ) {
-        if(busy)return
+        if(busy || !machineChoices.ready || machineChoices.busy)return
         val current=journal ?:return
         val visit=CustomWorkoutVisitKey(setKey,part)
         val prior=current.effectiveVisits[visit]
@@ -521,13 +524,25 @@ internal fun NativeKotlinCustomJournalScreen(
                         machineRoster?.configurations.orEmpty(),
                         current.originalSnapshot.stamp.gymId,slot.exerciseId)
                     val selectedMachineId=workoutMachineChoice(
-                        machineSelections,slot.exerciseId,config?.defaultMachineId)
+                        machineChoices.encoded,slot.exerciseId,null)
+                    val requiresNewMachineChoice=config?.machines?.isNotEmpty()==true &&
+                        config.machines.none{it.id==selectedMachineId && it.active}
+                    if(requiresNewMachineChoice &&
+                        !finished && current.finishedByEventId==null)
+                        Text("Select an active physical machine to record new sets. "+
+                            "Already recorded sets keep their original machine.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
-                        enabled=!busy && !finished && current.finishedByEventId==null,
+                        enabled=!busy && !finished && current.finishedByEventId==null &&
+                            machineChoices.ready && !machineChoices.busy,
                         onSelect={machineId->
-                            machineSelections=updateWorkoutMachineChoice(
-                                machineSelections,slot.exerciseId,machineId)
+                            machineChoices.onSelect(slot.exerciseId,machineId)
                         })
+                    machineChoices.error?.let{
+                        Text(it,style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.error)
+                    }
                     PursuitCard {
                         if(activeFocus==null)PursuitExerciseHeading(slot.exerciseId,
                             onHistory={historyExerciseId=slot.exerciseId},
@@ -592,8 +607,9 @@ internal fun NativeKotlinCustomJournalScreen(
                             // selecting B later must not rewrite a prior A set.
                             val recordedMain=observed?.operation
                                 as? CustomWorkoutJournalOperation.Record
-                            val mainMachineId=if(observed!=null)
-                                recordedMain?.performed?.machineInstanceId
+                            val previouslyAttempted=recordedMain?.performed
+                            val mainMachineId=if(previouslyAttempted!=null)
+                                previouslyAttempted.machineInstanceId
                             else selectedMachineId
                             val advice=liveCoach?.takeIf {
                                 !busy && !finished && mainKey==nextVisit &&
@@ -614,7 +630,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 editorStates.SaveableStateProvider("main:${set.setKey}") {
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
-                                existing=observed,locked=busy||finished,
+                                existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 machineInstanceId=mainMachineId,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
                                 position=slot.sets.filter{it.prescription.type==set.prescription.type}
@@ -622,8 +638,17 @@ internal fun NativeKotlinCustomJournalScreen(
                                 setCount=slot.sets.count{it.prescription.type==set.prescription.type},
                                 initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
-                                    record(set.setKey,CustomWorkoutVisitPart.MAIN,
-                                        outcome,actual?.copy(machineInstanceId=mainMachineId))
+                                    // An edited SKIP had no physical station.
+                                    // A completed/failed correction must use an
+                                    // explicitly chosen current machine, whereas
+                                    // an attempted prior set retains its own ID.
+                                    val hadAttempt=(observed?.operation as?
+                                        CustomWorkoutJournalOperation.Record)
+                                        ?.performed!=null
+                                    if(outcome==KotlinJournalSetOutcome.SKIPPED ||
+                                        hadAttempt || !requiresNewMachineChoice)
+                                        record(set.setKey,CustomWorkoutVisitPart.MAIN,
+                                            outcome,actual?.copy(machineInstanceId=mainMachineId))
                                 },
                                 onShowPlates={load,unit,basis->
                                     plateRequest=NativeCustomPlateRequest(
@@ -643,7 +668,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 editorStates.SaveableStateProvider("follow:${set.setKey}") {
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
-                                    existing=follower,locked=busy||finished,
+                                    existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                     machineInstanceId=if(follower!=null)
                                         (follower.operation as?
                                             CustomWorkoutJournalOperation.Record)

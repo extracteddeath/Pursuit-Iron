@@ -76,6 +76,56 @@ const composer=read('android-native/app/src/main/java/io/github/extracteddeath/p
 // displayed Last AND the editable one-tap "Use Last" must share the same
 // machine filter, even when no machine is selected (legacy-only).
 const machineSelector=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutMachineSelector.kt');
+const machineChoiceHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const machineChoiceStore=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinWorkoutMachineChoiceFileStore.kt');
+assert.ok(machineChoiceHost.includes('fun recoverWorkoutMachineChoices(') &&
+  machineChoiceHost.includes('fun selectWorkoutPhysicalMachine(') &&
+  machineChoiceHost.includes('issuedMachineWorkoutScope(signed,workoutId,custom)') &&
+  machineChoiceHost.includes('scope.observedMachines.forEach') &&
+  machineChoiceHost.includes('scope.gymId,0,defaults') &&
+  machineChoiceStore.includes('fun read(') &&
+  machineChoiceStore.includes('@Synchronized fun save(') &&
+  machineChoiceStore.includes('StandardCopyOption.ATOMIC_MOVE') &&
+  machineChoiceStore.includes('MessageDigest.isEqual('),
+  'Workout machine A/B choice must be a durable, source-verified, owner-scoped CAS file');
+assert.ok(machineSelector.includes('internal fun rememberNativeWorkoutMachineChoices(') &&
+  machineSelector.includes('host.recoverWorkoutMachineChoices(workoutId,custom)') &&
+  machineSelector.includes('host.selectWorkoutPhysicalMachine(workoutId,custom,') &&
+  machineSelector.includes('saved=result.snapshot'),
+  'Both native workout screens must share the durable station selection controller');
+for(const source of [journal,composer]) {
+  assert.ok(source.includes('rememberNativeWorkoutMachineChoices(') &&
+    source.includes('machineChoices.onSelect(') &&
+    source.includes('machineChoices.ready') &&
+    source.includes('machineChoices.busy') &&
+    !source.includes('var machineSelections by rememberSaveable('),
+    'Workout machine identity cannot depend on screen recreation state alone');
+}
+
+// Issuance should normally freeze defaults BEFORE the athlete opens the UI.
+// Existing recorded sets remain journal-owned, and the durability bootstrap
+// does not turn a partial preference write into a fake successful set.
+assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorkout(') &&
+  machineChoiceHost.includes('if(issued is NativeKotlinIssueResult.Committed)') &&
+  machineChoiceHost.match(/if\(issued is NativeCustomJournalResult\.Durable\)/g)?.length>=2 &&
+  machineChoiceHost.includes('pinMachineChoiceForIssuedWorkout(workoutId,custom=false)') &&
+  machineChoiceHost.match(/pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/g)?.length===2,
+  'All native issuer paths must pin verified A/B defaults on successful issuance');
+assert.ok(journal.includes('val requiresNewMachineChoice=') &&
+  journal.includes('val previouslyAttempted=recordedMain?.performed') &&
+  journal.includes('config.machines.none{it.id==selectedMachineId && it.active}') &&
+  journal.includes('outcome==KotlinJournalSetOutcome.SKIPPED ||') &&
+  journal.includes('?.performed!=null') &&
+  journal.includes('hadAttempt || !requiresNewMachineChoice'),
+  'Custom machine swaps must require an active station for new weighted observations');
+assert.ok(composer.includes('val needsMachineSelection=set.actual==null') &&
+  composer.includes('previouslyAttempted.machineInstanceId else perSetMachineId') &&
+  composer.includes('perSetMachineConfig.machines.none{') &&
+  composer.includes('!needsMachineSelection))') &&
+  composer.includes('!needsMachineSelection)'),
+  'Generated swaps must not record a legacy or inactive station by accident');
+
+
 for(const source of [journal,composer]) {
   assert.ok(source.includes('KotlinMachineAlternativesDomain.forGymExercise('),
     'Every native workout must resolve physical machines for the issued gym');

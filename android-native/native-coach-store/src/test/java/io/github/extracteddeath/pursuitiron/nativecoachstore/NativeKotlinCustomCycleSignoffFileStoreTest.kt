@@ -2975,7 +2975,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeAdaptivePermissionWrite.Committed(
             rights.revision+1),permissionStore.confirm(
                 "owner-1","cycle-1",rights.revision,
-                rights.allowedKinds+CustomCycleChangeKind.WEEK_OVERRIDES,true))
+                rights.allowedKinds+setOf(CustomCycleChangeKind.WEEK_OVERRIDES,CustomCycleChangeKind.LOADS),true))
         assertTrue(coachSettings.save("owner-1",0,CoachAssistancePolicy.STANDARD)
             is NativeCoachSettingsWrite.Saved)
     }
@@ -2983,6 +2983,94 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     private fun futureWeekDraftSelection()=NativeFutureWeekDraftSelection(
         "owner-1","cycle-1",4,0,"slot-0",
         CoachReadiness.NORMAL,false,n("5"))
+
+    /** Real signed cycle, real weekly issued visits, real completion ledger. */
+    private fun completeEarnedWeek(f:AuthoredCoachFixture,week:Int) {
+        val id="earned-build-week$week"
+        assertTrue(f.prepared.prepare("owner-1",id,"cycle-1",week,0,
+            futureInputs()) is NativeCustomPrepareResult.Prepared)
+        assertTrue(f.issuer.issue("owner-1",id,"cycle-1",week,0,
+            futureInputs()) is NativeCustomJournalResult.Durable)
+        val result=f.issuer.record("owner-1",id,
+            CustomWorkoutJournalOperation.Record("earned-record-$week",0,
+                CustomWorkoutVisitKey("cycle-1:w$week:d0:slot-0:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("20"),LoadUnit.LB,15,2)))
+        assertTrue(result.toString(),result is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity).complete("owner-1","athlete-1",
+                id,CustomWorkoutJournalOperation.Finish("earned-finish-$week",1))
+            is NativeCustomFinishResult.Committed)
+    }
+
+    @Test fun realFinishedWeeksCanSaveExactlyOneDraftThenRequireFreshCycleSignoff() {
+        weightedFixture=true
+        val f=authoredCoachFixture()
+        completeEarnedWeek(f,4)
+        completeEarnedWeek(f,5)
+        enableFutureWeekDraftCoaching()
+        val selected=futureWeekDraftSelection().copy(absoluteWeek=6)
+        val initialCycle=(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        val originalConsent=(store().read("owner-1","cycle-1",futureInputs())
+            as NativeCustomSignoffRead.Found)
+        assertTrue(originalConsent.isCurrent)
+        val originalHistory=f.reader.read("owner-1","athlete-1")
+        val offer=futureWeekDraftWriter(f).preview(selected)
+        assertTrue("Expected an evidence-backed option: $offer",
+            offer is NativeFutureWeekDraftPreview.Ready)
+        val shown=offer as NativeFutureWeekDraftPreview.Ready
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.CONFIRMATION_REQUIRED),
+            futureWeekDraftWriter(f).accept(selected,shown.fingerprint,false))
+        assertEquals(initialCycle,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+        // Restart from the same durable directory, with no in-memory
+        // candidate or cached history injected into the writer.
+        val cold=authoredCoachFixture(initializeHistory=false)
+        assertEquals(offer,futureWeekDraftWriter(cold).preview(selected))
+        assertEquals(NativeFutureWeekDraftDecision.Saved(3,6),
+            futureWeekDraftWriter(cold).accept(selected,shown.fingerprint,true))
+        val saved=(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        assertEquals(3L,saved.revision)
+        assertEquals(initialCycle.blocks,saved.blocks)
+        val week=saved.weekOverrides["build"].orEmpty()
+        assertEquals(1,week.size)
+        assertEquals(3,week.single().weekInBlock)
+        assertEquals(0,week.single().weekday)
+        assertEquals("slot-0",week.single().slotId)
+        assertEquals(n("25"),
+            (week.single().sets.single().load as DraftSetLoad.Verified).value)
+        assertEquals(originalHistory,cold.reader.read("owner-1","athlete-1"))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.STALE_PROGRAM),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            cold.prepared.prepare("owner-1","revised-week6","cycle-1",6,0,
+                futureInputs()))
+        assertEquals(NativeFutureWeekDraftPreview.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            futureWeekDraftWriter(cold).preview(selected))
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            futureWeekDraftWriter(cold).accept(selected,shown.fingerprint,true))
+        // The old consent never approves the changed cycle. Explicitly
+        // re-review, then create a separate prepared (not issued) session.
+        val renewed=store().confirm("owner-1","cycle-1",3,1,
+            originalConsent.receipt.recordRevision,futureInputs(),true)
+        assertTrue(renewed.toString(),renewed is NativeCustomSignoffWrite.Committed)
+        val prepared=cold.prepared.prepare("owner-1","revised-week6",
+            "cycle-1",6,0,futureInputs())
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val workout=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(n("25"),
+            (workout.snapshot.slots.single().sets.single().prescription.load
+                as DraftSetLoad.Verified).value)
+        assertEquals(originalHistory,cold.reader.read("owner-1","athlete-1"))
+    }
 
     @Test fun futureWeekDraftRefusesPreparedWorkoutAcrossColdRestart() {
         val f=authoredCoachFixture()

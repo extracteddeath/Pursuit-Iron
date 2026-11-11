@@ -62,6 +62,7 @@ class NativeKotlinFutureWeekDraftAcceptanceTest {
         different(v=result(consent=4))
         different(v=result(permissions=6))
         different(v=result(assistance=7))
+        different(v=v.copy(machineRosterRevision=7))
         different(v=v.copy(gymSourceRevision=3))
         different(v=v.copy(cycleRevision=2,
             proposal=v.proposal.copy(candidate=cycle().copy(revision=3))))

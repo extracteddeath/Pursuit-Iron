@@ -25,7 +25,9 @@ data class KotlinPerformedSet(
     val unit: LoadUnit?,
     val reps: Int,
     /** Actual reported effort. Null is UNKNOWN, never target RIR. */
-    val actualRir: Int?
+    val actualRir: Int?,
+    /** Physical machine for this SET, not the logical exercise. Null is legacy. */
+    val machineInstanceId: String? = null
 )
 
 enum class KotlinJournalSetOutcome { COMPLETED, SKIPPED, FAILED_ATTEMPT }
@@ -134,6 +136,8 @@ object KotlinWorkoutJournalDomain {
         if(outcome==KotlinJournalSetOutcome.SKIPPED)return performed==null
         val actual=performed ?:return false
         if(actual.actualRir!=null && actual.actualRir !in 0..10)return false
+        if(actual.machineInstanceId!=null &&
+            !KotlinMachineAlternativesDomain.validInstanceId(actual.machineInstanceId))return false
         if(outcome==KotlinJournalSetOutcome.COMPLETED &&
             actual.reps !in 1..100)return false
         if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT &&

@@ -460,13 +460,21 @@ internal fun NativeKotlinCustomJournalScreen(
                         }?.let{slot->slot to slot.sets.first{it.setKey==visit.setKey}}
                     }
                     val focusDetail=upcoming?.let { (slot,set) ->
-                        val number=slot.sets.indexOfFirst {
+                        // Warm-ups, main working sets and amplifier visits
+                        // share one slot, but the display ordinal must follow
+                        // the same set-type group as the actual set editor.
+                        val sameType=slot.sets.filter {
+                            it.prescription.type==set.prescription.type
+                        }
+                        val number=sameType.indexOfFirst {
                             it.setKey==set.setKey
                         }+1
+                        val label=if(set.prescription.type==DraftSetType.WARMUP)
+                            "Warm-up" else "Set"
                         if(nextVisit?.part==CustomWorkoutVisitPart.FOLLOW_UP)
-                            "Amplifier follow-up · entry $number of ${slot.sets.size}"
+                            "Amplifier follow-up · $label $number of ${sameType.size}"
                         else
-                            "${if(set.prescription.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · entry $number of ${slot.sets.size}"
+                            "$label $number of ${sameType.size}"
                     }
                     PursuitWorkoutFocusHeader(
                         exerciseLabel=upcoming?.let {

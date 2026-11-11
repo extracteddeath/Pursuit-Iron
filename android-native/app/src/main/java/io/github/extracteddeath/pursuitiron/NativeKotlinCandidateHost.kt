@@ -287,6 +287,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Best-effort immediate bootstrap after the journal issuer has durably
+     * committed. This closes the normal issue -> gym-default-change -> first
+     * UI-open gap. It is NOT a joint atomic transaction with the issuer:
+     * sudden process death between the two writes is still recoverable at
+     * cold open, and set entry remains blocked until that recovery succeeds.
+     * The issued workout is never erased or silently retried on a preference
+     * storage failure.
+     */
+    private fun pinMachineChoiceForIssuedWorkout(workoutId:String,custom:Boolean) {
+        recoverWorkoutMachineChoices(workoutId,custom)
+    }
+
+    /**
      * The FIRST independently verified opening pins gym-specific starting
      * machines to this issued workout. Subsequent cold opens recover the
      * saved A/B choices instead of importing a newly changed gym default.
@@ -668,8 +681,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
-        return customIssuedStore.issue(owner.ownerKey,workoutId,cycleId,
+        val issued=customIssuedStore.issue(owner.ownerKey,workoutId,cycleId,
             absoluteWeek,weekday,inputs,blockCalibrations)
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
+        return issued
     }
 
     /**
@@ -1750,10 +1766,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
-        return customIssuedStore.issueActivated(owner.ownerKey,workoutId,
+        val issued=customIssuedStore.issueActivated(owner.ownerKey,workoutId,
             cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
             futureActivationCommit,acceptedFutureRepTargets,acceptedFutureLoads,
             futureWeekLoadHandoff)
+        if(issued is NativeCustomJournalResult.Durable)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=true)
+        return issued
     }
 
     fun abortFutureBlockActivationBeforeSourceChange(
@@ -2413,7 +2432,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinIssueResult.Rejected(
                 NativeKotlinIssueRefusal.NOT_AUTHORIZED)
-        return trackedWorkout.issue(owner.ownerKey,owner.athleteId,workoutId)
+        val issued=trackedWorkout.issue(owner.ownerKey,owner.athleteId,workoutId)
+        if(issued is NativeKotlinIssueResult.Committed)
+            pinMachineChoiceForIssuedWorkout(workoutId,custom=false)
+        return issued
     }
 
 

@@ -3,6 +3,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useLayoutEffect } from 'react';
 import { Check } from 'lucide-react';
+import { UiCard, UiField } from './ui-primitives.js';
+import { latestMachineSet, LEGACY_MACHINE_ID, resolveMachineVariant } from './next-engine/machine-instances.js';
 import { EX_BY_ID, isWorkSet } from './engine-api.js';
 import { workoutNavLabel } from './workout-nav-labels.js';
 import { navigateChoiceRow } from './ui-choice-navigation.js';
@@ -79,4 +81,38 @@ export function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) 
             placeholder: "What should you remember? Setup, how it felt, or what to try next time…", onChange: ev => onChange(ev.target.value) })] }),
         _jsxs("label", { children: ["Show this note", _jsx("select", { value: repeat, "aria-label": label + " note repetition", onChange: ev => onRepeat(ev.target.value),
             children: [['none','This session only'],['once','Repeat once'],['always','Keep repeating']].map(([value, text]) => _jsx("option", { value, children: text }, value)) })] })] });
+}
+
+/**
+ * A/B machine switch within the workout. The owning WorkoutSession performs
+ * data mutation; this presentation never changes completed sets or histories.
+ */
+export function WorkoutMachineVariantControl({
+    gym, exerciseId, selectedId, dayId, history = [], unit, onSelect
+}) {
+    const config=gym?.machineVariants?.[exerciseId];
+    if (!Array.isArray(config?.instances) || !config.instances.length) return null;
+    const current=resolveMachineVariant(gym,exerciseId,selectedId ?? null,{forNewWorkout:false});
+    const last=latestMachineSet(history,{
+        gymId:gym.id,exerciseId,machineInstanceId:current.id,dayId
+    });
+    const options=config.instances.filter(instance=>instance.active!==false ||
+        instance.id===current.id);
+    const unknown=current.missing ? [{id:current.id,label:current.label}] : [];
+    if (current.legacy) unknown.push({id:LEGACY_MACHINE_ID,label:'Legacy (unassigned)'});
+    return _jsxs(UiCard,{className:'wpb-session-note-editor wpb-machine-choice',children:[
+        _jsxs('label',{children:[
+            _jsx('strong',{children:'Physical machine'}),
+            _jsx(UiField,{as:'select',value:current.id,
+                'aria-label':'Physical machine used for this exercise',
+                onChange:event=>onSelect(event.target.value),
+                children:[...unknown,...options].map(instance=>
+                    _jsx('option',{value:instance.id,children:instance.label},instance.id))
+            })
+        ]}),
+        _jsx('p',{children:last
+            ? `Last on this machine: ${last.weight} ${last.unit??unit} × ${last.reps} reps`
+            : 'No comparable history for this machine. Enter an initial load.'}),
+        _jsx('small',{children:'Changing machines keeps completed sets with their original machine. Only future sets change.'})
+    ]});
 }

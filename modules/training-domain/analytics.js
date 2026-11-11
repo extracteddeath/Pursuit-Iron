@@ -1,3 +1,4 @@
+import { sanitizeMachineVariants } from '../next-engine/machine-instances.js';
 // Canonical analytics domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { canonicalRepRange, generateNextProgramForShell, getNextShellCell, markUserPrescriptionOverride, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
@@ -81,6 +82,7 @@ function normalizeGyms(list, activeId) {
         limits: sanitizeLimits(g.limits),
         inventory: sanitizeInventory(g.inventory),
         barWeights: sanitizeGymBarWeights(g.barWeights),
+        machineVariants: sanitizeMachineVariants(g.machineVariants),
         ...(sanitizePlatePairs(g.platePairs) ? { platePairs: sanitizePlatePairs(g.platePairs) } : {}),
         limitUnit: g.limitUnit === "kg" || g.limitUnit === "lb" ? g.limitUnit : "kg"
     }));

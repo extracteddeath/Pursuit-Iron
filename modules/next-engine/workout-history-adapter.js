@@ -1,4 +1,5 @@
 import { canonicalRepRange } from './shell-projection.js';
+import { machineIdOfSet, historyForMachineRecommendation, LEGACY_MACHINE_ID } from './machine-instances.js';
 import { historyNumber as numberOf, convertHistoryLoad as convertLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from './history-contract.js';
 import { advanceCycleState, createInitialCycleState, startPhase } from './cycles.js';
 import { evaluateWorkoutProgression } from './performance.js';
@@ -186,6 +187,14 @@ function workoutFromEntry(program, entry, legacyExercises, unit, context) {
         if (!ex || !perf?.sets?.length)
             return;
         let legacyIndex = 0;
+        const physicalMachineIds = new Set(completedHistorySets(perf)
+            .map(set => machineIdOfSet(set, perf)));
+        // A machine swap is not a strength collapse. An unscoped legacy
+        // analysis must never compute a load progression from tagged A/B
+        // sets; only a caller explicitly scoped to one gym+machine may.
+        const machineEvidenceUnscoped = !context?.machineScoped &&
+            [...physicalMachineIds].some(id => id !== LEGACY_MACHINE_ID);
+        const mixedPhysicalMachines = physicalMachineIds.size > 1;
         for (const raw of completedHistorySets(perf)) {
             // Historical logs without ordinals remain sequential; current logs
             // preserve skipped middle sets and must never be compacted here.
@@ -196,9 +205,9 @@ function workoutFromEntry(program, entry, legacyExercises, unit, context) {
             const observedRir = observedHistoryRIR(raw);
             const exposure = progressionExposureContext([perf, raw]);
             performed.push({
-                ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: index, load: convertLoad(load0, entry.unit, targetUnit), reps,
+                ...historyExposureContext(raw), exerciseId: ex.exerciseId, machineInstanceId: machineIdOfSet(raw, perf), setIndex: index, load: convertLoad(load0, entry.unit, targetUnit), reps,
                 badDay: exposure.badDay, interrupted: exposure.interrupted,
-                prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId),
+                prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId) || machineEvidenceUnscoped || mixedPhysicalMachines,
                 rir: observedRir, painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality,
                 advancedTechnique: ex.advancedTechnique?.type
             });
@@ -277,10 +286,16 @@ export function deriveLongitudinalExerciseEvidence(diagnoses, latestDecisions = 
 }
 
 /** Runtime bridge only: asks Pursuit Engine's own performance evaluator what the next exposure should do. */
-export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex, unit) {
+export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex, unit, machineSelection = null) {
     if (program?.engineSource !== 'pursuit-next')
         return null;
-    const normalizedHistory = normalizeHistoryEntries(history, program.id);
+    const machineScoped = machineSelection?.gymId && machineSelection?.machineInstanceId;
+    const comparableHistory = machineScoped
+        ? historyForMachineRecommendation(history,
+            String(day?.exercises?.[slot] ?? ''), machineSelection.machineInstanceId,
+            machineSelection.gymId)
+        : history;
+    const normalizedHistory = normalizeHistoryEntries(comparableHistory, program.id);
     const evaluationUnit = programUnit(program, unit, normalizedHistory.entries.at(-1)?.unit);
     const snap = sourceSnapshot(program, evaluationUnit);
     if (!snap)
@@ -308,7 +323,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, evaluationUnit);
     let analysis;
     try {
-        analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises, { normalizedHistory, unit: evaluationUnit });
+        analysis = analyzeShellHistoryForNextEngine(program, comparableHistory, legacyExercises, { normalizedHistory, unit: evaluationUnit, machineScoped:!!machineScoped });
     }
     catch {
         if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
@@ -330,6 +345,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         if (reference && referenceLoad !== null) return { unit: evaluationUnit, weight: referenceLoad, dir: 'hold',
             reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.',
             reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true };
+        // Never guess a new machine's baseline from a different press stack.
+        if (machineScoped) return null;
         return semanticStartingReferenceForShell(program, history, day, nextId, cell, { normalizedHistory, unit: evaluationUnit });
     }
     const current = decision.currentLoad ?? lastLoad;
@@ -583,7 +600,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     // One synchronous analysis owns one current catalog lookup and unit-adjusted
     // snapshot. Rebuild them on the next call so in-place/custom/history edits
     // remain fresh; no cross-call cache or second history authority is needed.
-    const context = { snap, planSnap: sourceSnapshot(program), legacyMap: legacyExerciseById(legacyExercises) };
+    const context = { snap, planSnap: sourceSnapshot(program), legacyMap: legacyExerciseById(legacyExercises), machineScoped:options.machineScoped === true };
     const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises, evaluationUnit, context) }))
         .filter(({ entry, workout }) => {
             if (workout && workout.performedSets.length) return true;
@@ -618,7 +635,10 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         for (const ex of workout.session.exercises) {
             const sets = workout.performedSets.filter(s => s.exerciseId === ex.exerciseId);
             const progression = workout.progression.find(d => d.exerciseId === ex.exerciseId);
-            if (!sets.length)
+            // Cross-machine load trends are not an athlete-level plateau.
+            // Scoped suggestions still receive matching A/B evidence.
+            if (!sets.length || (!options.machineScoped &&
+                sets.some(s => s.machineInstanceId !== LEGACY_MACHINE_ID)))
                 continue;
             const list = exposures.get(ex.exerciseId) ?? [];
             list.push({ completedAt: workout.completedAt, sets, progression,

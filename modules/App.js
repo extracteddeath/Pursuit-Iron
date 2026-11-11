@@ -21,7 +21,9 @@ import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from '
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
-import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, selectNumericInput } from './workout-session-controls.js';
+import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
+import { latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
 import { canonicalExerciseIncrement } from './next-engine/loading.js';
@@ -10826,7 +10828,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
                 resolved.length>0 && _jsxs('details',{className:'wpb-injury-resolved',children:[_jsx('summary',{children:'Resolved · '+resolved.length}),resolved.map(card)]})]})]})});
 }
 
-function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourceProgram, injuryLog = [], gymEquipment = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
+function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourceProgram, injuryLog = [], gymEquipment = null, gymProfile = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
     const [sessionProgressionState, setSessionProgressionState] = useState(() => {
         try { const snap = JSON.parse(localStorage.getItem(LIVE_KEY) || 'null');
             if (snap?.programId === sourceProgram.id && snap.dayId === rawDay.id && snap.weekIndex === weekIndex
@@ -10923,6 +10925,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         })();
     }
     const liveMatch = liveMatchRef.current ? liveMatchRef.current.snap : null;
+    const sessionGymId = liveMatch?.gymId || gymProfile?.id || null;
     const liveStatus = liveMatchRef.current ? liveMatchRef.current.status : "none";
     /* A "partial" resume rebuilds the day from the PROGRAM and carries the logged sets across per
        exercise — the lifts that did not change keep everything logged against them. See
@@ -10934,7 +10937,25 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         const fresh = day.exercises.map((_id, slot) => {
             const id = ids[slot];
             if (!EX_BY_ID[id] || !(computeCell(program, day, id, slot, weekIndex).sets > 0)) return null;
-            return ({ id, slot, sets: buildSets(EX_BY_ID[id], slot, suggestions[slot], true), ...(() => { const last = history.find(h => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
+            const configured=gymProfile?.id===sessionGymId &&
+                gymProfile?.machineVariants?.[id]?.instances?.length>0;
+            const machineId=configured ? resolveMachineVariant(gymProfile,id).id : null;
+            const lastMachine=machineId ? latestMachineSet(history,{
+                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id}) : null;
+            const comparableWeight=lastMachine ?
+                toUnit(lastMachine.weight,lastMachine.unit||unit,unit) : null;
+            const machineSets=buildSets(EX_BY_ID[id],slot,suggestions[slot],true);
+            // A new physical stack cannot inherit another machine's target.
+            // Existing pending weights become explicitly reviewable baselines.
+            const safeSets=machineId ? machineSets.map(set=>{
+                const weight=set.warm||set.sub ? '' :
+                    comparableWeight!=null ? String(Math.round(comparableWeight*1000)/1000) : '';
+                return {...set,machineInstanceId:machineId,weight,auto:false,
+                    valueOwner:'user',suggested:undefined,hint:undefined,
+                    target:{...set.target,w:weight}};
+            }) : machineSets;
+            return ({ id, slot, ...(machineId ? {machineInstanceId:machineId} : {}),
+                sets:safeSets, ...(() => { const last = history.find(h => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
                 const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat); return { note: n.text, noteRepeat: n.repeat }; })(), superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
                 restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 });
         }).filter(Boolean);
@@ -10986,6 +11007,26 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         });
         return changed ? out : next;
     });
+    const switchPhysicalMachine=(ei,nextId)=>{
+        const row=dataRef.current[ei];
+        if(!row||!gymProfile||gymProfile.id!==sessionGymId)return;
+        const chosen=resolveMachineVariant(gymProfile,row.id,nextId);
+        if(chosen.active===false||chosen.missing)return;
+        const last=latestMachineSet(history,{
+            gymId:sessionGymId,exerciseId:row.id,machineInstanceId:nextId,dayId:day.id});
+        const reference=last?toUnit(last.weight,last.unit||unit,unit):null;
+        setData(rows=>rows.map((item,i)=>{
+            if(i!==ei)return item;
+            return {...item,machineInstanceId:nextId,sets:item.sets.map(set=>{
+                if(set.done)return set; // completed set retains original machine forever
+                const weight=set.warm||set.sub?'':reference==null?''
+                    :String(Math.round(reference*1000)/1000);
+                return {...set,machineInstanceId:nextId,weight,auto:false,
+                    valueOwner:'user',suggested:undefined,hint:undefined,
+                    target:{...set.target,w:weight}};
+            })};
+        }));
+    };
     const [exIdx, setExIdx] = useState(() => Math.max(0, Math.min(data.length - 1, Number.isInteger(liveMatch?.exIdx) ? liveMatch.exIdx : 0)));
     const workoutRoot = useRef(null);
     const [viewportHeight, setViewportHeight] = useState(null);
@@ -11237,7 +11278,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             return false;
         try {
             if (!appStorageOwnership.writable()) throw new Error('Another window owns device storage.');
-            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
+            localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, gymId:sessionGymId, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
         }
@@ -11408,8 +11449,10 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     // Never re-celebrate a record already present when the workout resumes.
     const prHitRef = useRef(null);
     if (prHitRef.current === null) prHitRef.current = new Set(
-        data.filter(e => e?.sets?.some(s => s.done &&
-            completedSetPR({ ...s, done: false }, prBaseline[e.id], e1rm))).map(e => e.id));
+        data.flatMap(e => (e?.sets || []).filter(s => s.done).map(s => {
+            const machineId=s.machineInstanceId ?? e.machineInstanceId;
+            return machineId ? `${e.id}:${sessionGymId}:${machineId}` : e.id;
+        })));
     // Wall-clock rest timer: anchored to an absolute end timestamp instead of tick-decrementing.
     // Browsers throttle background intervals to ≥1/min, so the old `r - 1` countdown silently froze
     // whenever the screen locked or the PWA was backgrounded mid-rest (i.e. every time you put the
@@ -11699,10 +11742,26 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         const wasDone = set.done;
         // React may replay state updaters; PR effects belong to one real
         // not-done → done gesture, with an actual previous record to beat.
+        const machineId=set.machineInstanceId ?? data[ei].machineInstanceId;
+        const prKey=machineId ? `${data[ei].id}:${sessionGymId}:${machineId}`
+            :data[ei].id;
+        const previousMachineSets=machineId && sessionGymId ?
+            machineHistory(history,{gymId:sessionGymId,exerciseId:data[ei].id,
+                machineInstanceId:machineId,dayId:day.id}) : null;
+        // A machine switch is not an overall PR. Each stack must earn its own.
+        const previousMachineBest=previousMachineSets?.length
+            ? Math.max(...previousMachineSets.map(row=>
+                e1rm(toUnit(row.weight,row.unit||unit,unit),row.reps)))
+            :Number.POSITIVE_INFINITY;
+        // Keep the existing pure user-gesture PR gate; physical machines
+        // use their own stricter baseline before any celebration.
         const record = !wasDone ? completedSetPR(set, prBaseline[data[ei].id], e1rm) : null;
-        if (record && !prHitRef.current.has(data[ei].id)) {
-            prHitRef.current.add(data[ei].id);
-            setPrFlash({ name: ex.name, ...record });
+        const scopedRecord = machineId
+            ? (!wasDone ? completedSetPR(set, previousMachineBest, e1rm) : null)
+            : record;
+        if (scopedRecord && !prHitRef.current.has(prKey)) {
+            prHitRef.current.add(prKey);
+            setPrFlash({ name: ex.name, ...scopedRecord });
             try { beep(); } catch {}
             buzz("success");
             if (prFlashTimer.current) clearTimeout(prFlashTimer.current);
@@ -12294,6 +12353,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             const committed = await onFinish({
                 id: sessionIdRef.current,
                 programId: program.id, programName: program.name, dayLabel: day.label, dayId: day.id,
+                gymId:sessionGymId,
                 engineV: program.engineV || 1, // which engine issued this session's prescriptions
                 weekIndex, // the block week this session belongs to — lets the program view mark a day done
                 sessionLengthPlan: day.sessionLengthPlan,
@@ -12414,7 +12474,11 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             if (!moves)
                                 return null;
                             return (_jsxs("div", { "data-noswipe": true, className: "wpb-workout-card wpb-warmup-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Flame, { size: 15, color: C.accentInk }), _jsx("span", { className: "wpb-layout-strong-15", children: "Warm-up & mobility" }), _jsx("button", { onClick: () => { setShowWarmup(false); onSetWarmupCard?.(false); setSnack({ msg: "Warm-up card hidden — Settings can bring it back", undo: () => { onSetWarmupCard?.(true); setSnack(null); } }); }, "aria-label": "Hide the warm-up card from now on", className: "pressable hit wpb-warmup-hide", children: "Hide" })] }), moves.map((m, i) => (_jsxs("div", { className: "wpb-warmup-step", children: [_jsx("span", { className: "wpb-warmup-number", children: i + 1 }), _jsx("span", { className: "wpb-warmup-instruction", children: m })] }, i))), _jsx("button", { onClick: () => setShowWarmup(false), className: "pressable wpb-warmup-finish", children: "Warmed up \u2014 let\u2019s train" })] }));
-                        })(), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
+                        })(), _jsx(WorkoutMachineVariantControl, {
+                            gym:gymProfile?.id===sessionGymId ? gymProfile : null,
+                            exerciseId:e.id,selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
+                            dayId:day.id,history,unit,onSelect:id=>switchPhysicalMachine(ei,id)
+                        }), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
     children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [e.added && !focus && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: wTotal }), children: `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
                                             // name the progression style for EVERY exercise (not just dynamic double), so it's
                                             // always clear how this lift advances week to week.
@@ -14746,12 +14810,16 @@ function MetricChart({ series, height = 210 }) {
 function ExerciseCharts({ history, id, defaultMetric = "e1rm" }) {
     const [metric, setMetric] = useState(defaultMetric);
     const [win, setWin] = useState("all");
-    const series = useMemo(() => exerciseSeries(history, id, metric, win), [history, id, metric, win]);
+    const {scopes,active,comparableHistory,setSelectedScope} = useMachineChartScope(history,id);
+    const series = useMemo(() => exerciseSeries(comparableHistory, id, metric, win),
+        [comparableHistory, id, metric, win]);
     const m = EX_METRIC_BY_ID[metric] || EX_METRICS[0];
     const unitLabel = m.kind === "vol" ? series.unit : series.unit;
     const fmt = v => v == null ? "—" : (v >= 10000 ? Math.round(v).toLocaleString() : String(Math.round(v * 10) / 10));
     const dF = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-    return (_jsxs("div", { "data-exercisecharts": metric, children: [_jsx("div", { className: "wpb-xscroll wpb-exercise-metric-tabs wpb-b964-layout-18", role: "tablist", "aria-label": "Exercise chart metric", children: EX_METRICS.map(x => (_jsx("button", { role: "tab", "data-metric-tab": x.id, "aria-selected": metric === x.id, "aria-pressed": metric === x.id, onClick: () => setMetric(x.id), className: "pressable wpb-exercise-metric-tab", style: { flexShrink: 0, padding: "8px 13px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+    return (_jsxs("div", { "data-exercisecharts": metric, children: [
+        _jsx(MachineChartScopePicker,{scopes,active,onSelect:setSelectedScope}),
+        _jsx("div", { className: "wpb-xscroll wpb-exercise-metric-tabs wpb-b964-layout-18", role: "tablist", "aria-label": "Exercise chart metric", children: EX_METRICS.map(x => (_jsx("button", { role: "tab", "data-metric-tab": x.id, "aria-selected": metric === x.id, "aria-pressed": metric === x.id, onClick: () => setMetric(x.id), className: "pressable wpb-exercise-metric-tab", style: { flexShrink: 0, padding: "8px 13px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
                         border: `1px solid ${metric === x.id ? C.accent : C.border}`, background: metric === x.id ? C.accent : C.card, color: metric === x.id ? C.accentText : C.muted }, children: x.label }, x.id))) }), series.ok ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s957-gap-16 wpb-s956-alignitems-flex-end wpb-s960-margin-10px-2px-4px", children: [_jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Avg ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.avg), " ", _jsx("span", { style: { fontSize: 13, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { children: [_jsxs("div", { className: "wpb-type-micro-faint", children: ["Best ", m.label] }), _jsxs("div", { className: "mono wpb-s960-fontsize-22px wpb-s956-fontweight-700 wpb-s960-letterspacing-neg-0-5px", children: [fmt(series.best), " ", _jsx("span", { style: { fontSize: 13, color: C.faint, fontWeight: 600 }, children: unitLabel })] })] }), _jsxs("div", { className: "wpb-s960-marginleft-auto wpb-s956-textalign-right", children: [_jsx("div", { className: "wpb-type-micro-faint", children: "Change" }), _jsxs("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: series.delta > 0 ? C.accentInk : series.delta < 0 ? C.warn : C.muted }, children: [series.delta > 0 ? "+" : "", fmt(series.delta)] })] })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, margin: "0 2px 10px" }, "data-range-label": true, children: [dF(series.from), " \u2013 ", dF(series.to), " \u00B7 ", series.sessions, " session", series.sessions === 1 ? "" : "s"] }), _jsx("div", { className: "wpb-exercise-chart-surface", style: { background: C.card, borderRadius: 16, padding: "12px 6px 4px" }, children: _jsx(MetricChart, { series: series }) }), _jsx("div", { style: { fontSize: 13, color: C.faint, lineHeight: 1.5, margin: "10px 2px 0" }, children: m.blurb })] })) : (_jsxs("div", { "data-empty-window": true, style: { textAlign: "center", padding: "34px 16px", color: C.faint, background: C.card, borderRadius: 16 }, children: [_jsx(TrendingUp, { size: 24, className: "wpb-b977-muted-empty-icon" }), _jsx("div", { style: { fontSize: 15, fontWeight: 600, color: C.muted, marginTop: 8 }, children: "Nothing logged in this range" }), _jsx("div", { className: "wpb-s956-fontsize-13 wpb-s957-margintop-4 wpb-s957-lineheight-1-5", children: "Widen the range below, or log a session with this lift." })] })), _jsx("div", { className: "wpb-exercise-window-tabs", role: "tablist", "aria-label": "Exercise chart range", style: { display: "flex", gap: 4, background: C.card, borderRadius: 12, padding: 4, marginTop: 12 }, children: EX_WINDOWS.map(w => (_jsx("button", { role: "tab", "data-window-tab": w.id, "aria-selected": win === w.id, "aria-pressed": win === w.id, onClick: () => setWin(w.id), className: "pressable", style: { flex: 1, padding: "8px 2px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
                         background: win === w.id ? C.accent : "none", color: win === w.id ? C.accentText : C.muted }, children: w.label }, w.id))) })] }));
 }
@@ -21669,6 +21737,7 @@ function App() {
                                             /* Same reasoning as ProgramView: mid-workout, the alternatives offered must be the
                                                ones the room actually has. */
                                             gymEquipment: gymEquipment,
+                                            gymProfile:activeGym,
                                             /* ⚠ THE DAY IS LOOKED UP FROM THE PROGRAM, NOT HELD AS A SECOND COPY. `sessionDay` is
                                                captured when the workout starts and is NOT updated by the things that legitimately
                                                change the day mid-workout — `updateProgramExercise` (the "Update my program" scope

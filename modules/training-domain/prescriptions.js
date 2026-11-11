@@ -1378,6 +1378,7 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             // filters matched nothing and extensions counted as full sets all over again — the exact
             // bug v493 fixed in the live session, surviving in the log.
             return { ...historyExposureContext(x),
+                ...(x.machineInstanceId || e.machineInstanceId ? { machineInstanceId: x.machineInstanceId || e.machineInstanceId } : {}),
                 ...(!x.sub && workPosition.has(x) ? { workingSetIndex: workPosition.get(x) } : {}),
                 w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}),
                 ...(x.target?.decisionTrace?.schemaVersion === 1

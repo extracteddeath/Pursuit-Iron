@@ -198,6 +198,97 @@ class KotlinJournalLiveSetCoachDomainTest {
             review(later,"first:s1").coaching.direction)
     }
 
+    private fun physicalMachines()=KotlinGymMachineAlternatives(
+        "gym-1","bench","A",listOf(
+            KotlinPhysicalMachine("A","Press A",unit=LoadUnit.LB,
+                increment=n("5"),minimum=n("10"),maximum=n("300")),
+            KotlinPhysicalMachine("B","Press B",unit=LoadUnit.LB,
+                increment=n("10"),minimum=n("10"),maximum=n("300"))))
+
+    @Test fun verifiedComposerStackRequiresSameMachinePriorSetAndCorrectedFacts() {
+        fun targetForMachine(index:Int)=target(index,"100").copy(
+            load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.MACHINE_STACK,n("100")))
+        val base=started((0..2).map(::targetForMachine))
+        val aOperation=KotlinJournalOperation.RecordSet(
+            "machine-a",base.revision,"bench:s0",KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n("100"),LoadUnit.LB,5,0,"A"))
+        val withA=(KotlinWorkoutJournalDomain.reduce(base,aOperation)
+            as KotlinJournalDecision.Proposed).state
+        fun stockFor(j:KotlinWorkoutJournalState,machine:String?,
+            config:KotlinGymMachineAlternatives?=physicalMachines())=
+            KotlinMachineLiveCoachingDomain.confirmedForNext(
+                j,"bench:s1",machine,config)
+        assertEquals(n("5"),stockFor(withA,"A")?.increment)
+        assertNull(stockFor(withA,"B"))
+        assertNull(stockFor(withA,null))
+        assertNull(stockFor(withA,"A",physicalMachines().copy(gymId="gym-2")))
+        assertNull(stockFor(withA,"A",physicalMachines().copy(machines=listOf(
+            physicalMachines().machines.first().copy(minimum=null),
+            physicalMachines().machines.last()))))
+        assertNull(stockFor(withA,"A",physicalMachines().copy(machines=listOf(
+            physicalMachines().machines.first().copy(minimum=n("0")),
+            physicalMachines().machines.last()))))
+        // The issued 100 lb and the recorded 100 lb must be physically
+        // attainable on A. An otherwise well-formed 7 lb stack cannot
+        // silently borrow an exercise-wide 5 lb increment.
+        assertNull(stockFor(withA,"A",physicalMachines().copy(machines=listOf(
+            physicalMachines().machines.first().copy(increment=n("7")),
+            physicalMachines().machines.last()))))
+        assertNull(stockFor(withA,"A",physicalMachines().copy(machines=listOf(
+            physicalMachines().machines.first().copy(unit=LoadUnit.KG),
+            physicalMachines().machines.last()))))
+        assertNull(stockFor(base,"A"))
+        val corrected=(KotlinWorkoutJournalDomain.reduce(withA,
+            KotlinJournalOperation.RecordSet("machine-b-correction",withA.revision,
+                "bench:s0",KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("100"),LoadUnit.LB,5,0,"B"),
+                correctsEventId="machine-a"))
+            as KotlinJournalDecision.Proposed).state
+        assertNull(stockFor(corrected,"A"))
+        assertEquals(n("10"),stockFor(corrected,"B")?.increment)
+        val newReviewed=KotlinJournalLiveSetCoachDomain.review(
+            corrected,"bench:s1",stockFor(corrected,"B"),
+            CoachReadiness.NORMAL,false,n("10"))
+        assertTrue(newReviewed is LiveSetCoachResult.Reviewed)
+        assertFalse((newReviewed as LiveSetCoachResult.Reviewed).canModifyWorkout)
+    }
+
+    @Test fun verifiedCustomStackUsesOnlyItsSlotAndCorrectedMachine() {
+        val old=custom()
+        val day=old.originalSnapshot.copy(
+            slots=old.originalSnapshot.slots.map {slot->
+                slot.copy(sets=slot.sets.map {set->
+                    set.copy(prescription=set.prescription.copy(
+                        load=DraftSetLoad.Verified(LoadUnit.LB,
+                            LoadBasis.MACHINE_STACK,n("100"))))
+                })
+            })
+        val base=CustomWorkoutJournalDomain.begin("custom-physical",day,
+            "a".repeat(64))
+        val key=CustomWorkoutVisitKey("first:s0",CustomWorkoutVisitPart.MAIN)
+        val first=CustomWorkoutJournalOperation.Record(
+            "custom-machine-a",base.revision,key,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n("100"),LoadUnit.LB,5,0,"A"))
+        val withA=(CustomWorkoutJournalDomain.reduce(base,first)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        fun stockFor(j:CustomWorkoutJournalDraft,key:String,machine:String?)=
+            KotlinMachineLiveCoachingDomain.confirmedForNext(
+                j,key,machine,physicalMachines())
+        assertEquals(n("5"),stockFor(withA,"first:s1","A")?.increment)
+        assertNull(stockFor(withA,"first:s1","B"))
+        assertNull(stockFor(withA,"second:s1","A"))
+        val fixed=(CustomWorkoutJournalDomain.reduce(withA,
+            CustomWorkoutJournalOperation.Record(
+                "custom-machine-b",withA.revision,key,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("100"),LoadUnit.LB,5,0,"B"),
+                correctsEventId="custom-machine-a"))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertNull(stockFor(fixed,"first:s1","A"))
+        assertEquals(n("10"),stockFor(fixed,"first:s1","B")?.increment)
+    }
+
     @Test fun bothJournalKindsRespectFatigueOptOutAndKeepRestrictionBoundary() {
         val regular=record(started(),"bench:s0")
         val authored=customRecord(custom(),"first:s0",2,"215")

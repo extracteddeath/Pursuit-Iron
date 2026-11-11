@@ -73,8 +73,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
             root,fence,identity,prepared,preflight,history,composer)
         val settings=NativeKotlinCoachAssistanceSettingsStore(root,fence,identity)
         val machines=NativeKotlinMachineRosterFileStore(root)
+        val choices=NativeKotlinWorkoutMachineChoiceFileStore(root)
         val liveCoach=NativeKotlinCustomLiveSetCoachReview(
-            fence,identity,journals,sources,settings,machines)
+            fence,identity,journals,sources,settings,machines,choices)
         val corrections=NativeKotlinCustomSavedCorrectionFileStore(
             root,fence,identity,journals,history)
         val authority=object:NativeKotlinWorkoutAuthority {

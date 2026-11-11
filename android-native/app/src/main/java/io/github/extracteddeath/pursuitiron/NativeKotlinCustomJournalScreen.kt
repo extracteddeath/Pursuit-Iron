@@ -512,7 +512,15 @@ internal fun NativeKotlinCustomJournalScreen(
                         onReadinessChange={readiness=it},
                         movementRestricted=movementRestricted,
                         onMovementRestrictedChange={movementRestricted=it},
-                        enabled=!busy
+                        enabled=!busy,
+                        onReportConcern={
+                            // Real notes remain a separate, explicit journal
+                            // save; changing coach context never edits sets.
+                            movementRestricted=true
+                            readiness=CoachReadiness.LOW
+                            noteError=null
+                            showSessionNote=true
+                        }
                     )
                 }
                 if(!verifiedFinishedInHistory || showFinishedSets) {

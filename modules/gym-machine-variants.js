@@ -1,16 +1,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useState } from 'react';
-import { EXERCISES } from './next-engine/exercise-db.js';
+import { EXERCISES, isMachineLike } from './engine-api.js';
 import { addMachineVariant, editMachineVariant, setDefaultMachineVariant } from './next-engine/machine-instances.js';
 import { UiAction, UiField } from './ui-primitives.js';
 
 // Gym-owned settings, not program edits: the exercise still has one muscle-dose identity.
-const machineExercises=EXERCISES.filter(ex=>ex.equipment?.includes('machine') ||
-    ex.equipmentAlternatives?.some(items=>items.includes('machine')))
+const machineExercises=EXERCISES.filter(ex=>isMachineLike(ex.equip))
     .sort((a,b)=>a.name.localeCompare(b.name));
 const short = value => String(value ?? '').trim();
 export function GymMachineVariantFields({gym,onChange}) {
-    const [exerciseId,setExerciseId]=useState('machine_press');
+    const [exerciseId,setExerciseId]=useState('machine-press');
     const [label,setLabel]=useState('Machine A');
     const [message,setMessage]=useState('');
     const saved=gym.machineVariants?.[exerciseId] ?? {defaultId:null,instances:[]};

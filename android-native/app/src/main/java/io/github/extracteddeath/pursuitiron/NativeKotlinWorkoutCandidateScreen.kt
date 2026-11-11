@@ -359,6 +359,48 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+        if(selected!=null && journal!=null)
+            NativeKotlinPinnedExerciseControl(
+                host=host,workoutId=workoutId,
+                exerciseId=selected.target.exerciseId,custom=false,
+                enabled=!state.busy && !presentation.finished
+            )
+        activeKeys.forEach{set->
+            editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
+                NativeKotlinSetCard(set,presentation.finished,state.busy,
+                    referenceMode=referenceMode,lastReferences=lastReferences,
+                    position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
+                        it.target.type==set.target.type}.indexOf(set)+1,
+                    setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
+                        it.target.type==set.target.type},
+                    showExerciseHeading=showAll || presentation.finished,
+                    onHistory={historyExerciseId=set.target.exerciseId},
+                    onInfo={infoExerciseId=set.target.exerciseId},
+                    onShowPlates={load,unit->
+                        plateRequest=NativeComposerPlateRequest(
+                            set.target.exerciseId,load,unit)
+                    },
+                    onRecord={outcome,actual->
+                        controller.record(set.target.setKey,outcome,actual)
+                    },
+                    onSkip={pendingSkip=set.target.setKey},
+                    onFail={attempt->pendingFail=set.target.setKey to attempt})
+            }
+        }
+        if(!showAll && selected!=null) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
+                OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
+                    enabled=index>0) {Text("Previous set")}
+                OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
+                    enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
+            }
+        }
+
+        // Prioritize the actual set and one-tap reference first. A live
+        // exercise swap remains available below it, never hidden or applied
+        // automatically while the current set is being logged.
         val chosenExerciseId=selected?.target?.exerciseId
         if(chosenExerciseId!=null && journal!=null && !presentation.finished){
             val touched=journal.snapshot.targets.filter{
@@ -407,45 +449,6 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 }
             }
         }
-        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
-        if(selected!=null && journal!=null)
-            NativeKotlinPinnedExerciseControl(
-                host=host,workoutId=workoutId,
-                exerciseId=selected.target.exerciseId,custom=false,
-                enabled=!state.busy && !presentation.finished
-            )
-        activeKeys.forEach{set->
-            editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
-                NativeKotlinSetCard(set,presentation.finished,state.busy,
-                    referenceMode=referenceMode,lastReferences=lastReferences,
-                    position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type}.indexOf(set)+1,
-                    setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
-                        it.target.type==set.target.type},
-                    showExerciseHeading=showAll || presentation.finished,
-                    onHistory={historyExerciseId=set.target.exerciseId},
-                    onInfo={infoExerciseId=set.target.exerciseId},
-                    onShowPlates={load,unit->
-                        plateRequest=NativeComposerPlateRequest(
-                            set.target.exerciseId,load,unit)
-                    },
-                    onRecord={outcome,actual->
-                        controller.record(set.target.setKey,outcome,actual)
-                    },
-                    onSkip={pendingSkip=set.target.setKey},
-                    onFail={attempt->pendingFail=set.target.setKey to attempt})
-            }
-        }
-        if(!showAll && selected!=null) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
-                OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
-                    enabled=index>0) {Text("Previous set")}
-                OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
-                    enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
-            }
-        }
-
         if(presentation.canFinish)PursuitCard(highlighted=true) {
             Text("All sets have a saved outcome",
                 style=MaterialTheme.typography.titleMedium)

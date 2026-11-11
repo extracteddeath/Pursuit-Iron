@@ -59,7 +59,7 @@ class ReviewedFutureWeekProgressionDomainTest {
             StarterExerciseTranche.movements(),1,week,weekday)
             as CustomWorkoutSnapshotResult.Preview).snapshot
     private fun completed(source:CustomTrainingCycle,week:Int,
-        order:Long,actualRir:Int=3):CustomCoachingHistoricalSession {
+        order:Long,actualRir:Int=3,reps:Int=10):CustomCoachingHistoricalSession {
         val old=preview(source,week)
         val slot=old.slots.single()
         val facts=slot.sets.mapIndexed {index,prescribed->
@@ -69,7 +69,7 @@ class ReviewedFutureWeekProgressionDomainTest {
                 prescribed.prescription.load,prescribed.prescription.reps,
                 prescribed.prescription.targetRir,null,
                 KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(null,null,10,actualRir),
+                KotlinPerformedSet(null,null,reps,actualRir),
                 "record-$week-$index")
         }
         return CustomCoachingHistoricalSession(order,old,
@@ -153,6 +153,25 @@ class ReviewedFutureWeekProgressionDomainTest {
             CustomNextWorkoutCoachingStatus.RESTRICTED_OR_LOW_READINESS,
             low.coaching?.status)
         assertNull(low.candidate)
+    }
+
+    @Test fun repeatedReportedCapacityDeclineHoldsInsteadOfAssumingChronicFatigue() {
+        val source=cycle()
+        val evidence=listOf(
+            completed(source,1,1,actualRir=3,reps=14),
+            completed(source,2,2,actualRir=2,reps=10))
+        val input=request(source=source,history=evidence).let {
+            it.copy(coachingRequest=it.coachingRequest.copy(
+                repForecastPolicy=CustomRepForecastPolicy.TARGET_RIR_TREND_V3))
+        }
+        val review=ReviewedFutureWeekProgressionDomain.propose(input)
+        assertEquals(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
+            review.status)
+        assertEquals(
+            CustomNextWorkoutCoachingStatus.HOLD_MARKED_SAME_DAY_CAPACITY_DROP,
+            review.coaching?.status)
+        assertNull(review.candidate)
+        assertFalse(review.mayIssueWorkout)
     }
 
     @Test fun cannotRewritePastFutureOrAthleteCustomizedWeek() {

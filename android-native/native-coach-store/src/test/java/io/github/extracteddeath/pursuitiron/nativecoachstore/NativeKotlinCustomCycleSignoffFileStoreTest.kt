@@ -3050,7 +3050,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(0,week.single().weekday)
         assertEquals("slot-0",week.single().slotId)
         assertEquals(11,week.single().sets.single().reps.minimum)
-        assertEquals(DraftSetLoad.ExplicitBodyweight,week.single().sets.single().load)
+        val originalLoad=initialCycle.blocks.last().days.single {
+            it.weekday==0
+        }.slots.single().sets.single().load
+        assertEquals(originalLoad,week.single().sets.single().load)
         assertEquals(originalHistory,cold.reader.read("owner-1","athlete-1"))
         assertEquals(NativeCustomSavedCoachReview.Rejected(
             NativeCustomSignoffRefusal.STALE_PROGRAM),

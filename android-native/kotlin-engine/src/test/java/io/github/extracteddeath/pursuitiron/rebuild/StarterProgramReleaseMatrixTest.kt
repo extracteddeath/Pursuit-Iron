@@ -50,6 +50,42 @@ internal object StarterProgramReleaseFixture {
 }
 
 class StarterProgramReleaseMatrixTest {
+    @Test fun calibratedWristMovementsCanBecomeRealDistinctProgramWork() {
+        val source=StarterProgramReleaseFixture.request(
+            ComposerSplit.ULPPL,TrainingPhase.HYPERTROPHY).copy(
+            nonSetSecondsPerDay=600)
+        val chosen=source.copy(startingLoads=source.startingLoads+
+            mapOf("wrist-curl" to BigDecimal("15"),
+                "reverse-wrist-curl" to BigDecimal("10")))
+        val review=CoachFirstProgramStartDomain.review(chosen)
+        assertEquals("A calibrated forearm choice should become a reviewable week: ${review.issues}",
+            FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,review.status)
+        assertTrue(review.chosenExerciseIds.containsAll(
+            listOf("wrist-curl","reverse-wrist-curl")))
+        assertFalse(TrainingMuscle.WRIST_FLEXORS in review.unsupportedMuscles)
+        assertFalse(TrainingMuscle.WRIST_EXTENSORS in review.unsupportedMuscles)
+        val week=checkNotNull(review.prescription)
+        assertTrue(checkNotNull(week.finalAudit).satisfiesDeclaredHardConstraints)
+        val visits=week.sessions.flatMap{it.exercises}
+        for(id in listOf("wrist-curl","reverse-wrist-curl")) {
+            val actual=visits.filter{it.exerciseId==id}
+            assertTrue("$id was selected and calibrated but never programmed",actual.isNotEmpty())
+            assertTrue(actual.any {exercise ->
+                exercise.sets.any{it.type==DraftSetType.WORKING}
+            })
+        }
+        assertEquals(BigDecimal("15"),chosen.startingLoads.getValue("wrist-curl"))
+        assertEquals(BigDecimal("10"),chosen.startingLoads.getValue("reverse-wrist-curl"))
+        // One machine/exercise cannot silently borrow the other's
+        // baseline or absorb the other's explicit direct-muscle credit.
+        val invalid=CoachFirstProgramStartDomain.review(chosen.copy(
+            startingLoads=chosen.startingLoads+
+                ("reverse-wrist-curl" to BigDecimal("12.5"))))
+        assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,invalid.status)
+        assertNull(invalid.prescription)
+        assertFalse(review.mayIssueWorkout)
+    }
+
     @Test fun wristFlexionAndExtensionRemainSeparateAndSourceLinked() {
         val entries=StarterExerciseTranche.entries()
         assertEquals(22,entries.size)

@@ -34,7 +34,9 @@ data class CustomNextWorkoutCoachingRequest(
     val maximumAuthorizedIncrease:BigDecimal,
     val readiness:CoachReadiness,
     val movementRestricted:Boolean,
-    val repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
+    val repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1,
+    /** Physical machine selected in the verified gym; null means historical legacy only. */
+    val requestedMachineInstanceId:String?=null
 )
 
 enum class CustomNextWorkoutCoachingStatus {
@@ -258,6 +260,9 @@ object CustomNextWorkoutCoachingDomain {
         if(request.maximumAuthorizedIncrease<=zero ||
             request.maximumAuthorizedIncrease>maximum ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale()>3 ||
+            (request.requestedMachineInstanceId!=null &&
+                !KotlinMachineAlternativesDomain.validInstanceId(
+                    request.requestedMachineInstanceId)) ||
             request.completed.zipWithNext().any{
                 it.first.completionOrder>=it.second.completionOrder
             } ||
@@ -285,26 +290,47 @@ object CustomNextWorkoutCoachingDomain {
         // The most recent two appearances of THIS DAY are selected from the
         // entire ledger, including missed or changed exercises. Never skip an
         // unfavorable occurrence or borrow strength from another weekday.
-        val appearances=request.completed.filter {
+        val dayAppearances=request.completed.filter {
             it.snapshot.stamp.cycleId==request.next.stamp.cycleId &&
                 it.snapshot.blockId==request.next.blockId &&
                 it.snapshot.weekday==request.next.weekday
+        }
+        // A physical station is a separate load-progression thread, not a
+        // different exercise or dose. Never compare A to B (nor unlabelled
+        // legacy to A) or silently borrow older evidence across a bad set.
+        val targetMachine=request.requestedMachineInstanceId
+            ?:KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
+        fun machines(session:CustomCoachingHistoricalSession):Set<String> =
+            session.evidence.visits.filter {
+                it.slotId==target.slotId &&
+                    it.part==CustomWorkoutVisitPart.MAIN &&
+                    it.setType==DraftSetType.WORKING
+            }.map {KotlinMachineAlternativesDomain.normalizeMachineId(
+                it.actual?.machineInstanceId)}.toSet()
+        val appearances=dayAppearances.filter {
+            machines(it)==setOf(targetMachine)
         }
         // An older workout is not a "next" workout if this training day
         // has already been finished in that absolute week or a later one.
         // Do not cherry-pick earlier successful sessions and prescribe
         // progression into a historically completed calendar slot.
         // Different weekdays remain independent (Upper versus Push).
-        if(appearances.any{
+        if(dayAppearances.any{
                 it.snapshot.absoluteWeek>=request.next.absoluteWeek
             })
             return result(CustomNextWorkoutCoachingStatus.TARGET_ALREADY_TRAINED,
-                appearances.takeLast(2).map{it.evidence.workoutId},
-                appearances.last().evidence.workoutId,
+                dayAppearances.takeLast(2).map{it.evidence.workoutId},
+                dayAppearances.last().evidence.workoutId,
                 explanation="This training day has a completed workout in the requested week or a later week. Review the next untrained day.")
+        val latestDay=dayAppearances.lastOrNull()
+        if(latestDay!=null && machines(latestDay).size!=1)
+            return result(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                dayAppearances.takeLast(2).map{it.evidence.workoutId},
+                latestDay.evidence.workoutId,
+                explanation="Mixed or unassigned physical-machine sets on the last training day cannot earn a new load. Review its factual history.")
         if(appearances.isEmpty())
             return result(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,
-                explanation="Build evidence on this training day before progressing its targets.")
+                explanation="No comparable performance on this physical machine and training day. Establish a separate A/B baseline.")
         val latest=appearances.last()
         val ids=appearances.takeLast(2).map{it.evidence.workoutId}
         val oldSlot=latest.snapshot.slots.singleOrNull{it.slotId==target.slotId}

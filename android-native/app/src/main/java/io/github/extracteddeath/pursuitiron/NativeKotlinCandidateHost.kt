@@ -143,7 +143,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
         customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
-        customNextWorkoutCoach)
+        customNextWorkoutCoach,outstandingCustomInventory)
     private val blockCalibrations=NativeKotlinBlockCalibrationConsentStore(
         root,revisionFence,localAthlete,customNextWorkoutCoach,customDraftStore,
         authoringSourceStore,adaptiveCyclePermissions,mixedHistoryReader,

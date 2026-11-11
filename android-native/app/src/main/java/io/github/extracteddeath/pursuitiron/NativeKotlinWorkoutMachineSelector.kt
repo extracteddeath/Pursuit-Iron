@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import android.content.Context
+import java.security.MessageDigest
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +25,68 @@ internal fun updateWorkoutMachineChoice(
         it.contains("=")&&it.substringBefore("=")!=exerciseId
     }
     return (old+"$exerciseId=$machineId").joinToString(";")
+}
+
+/**
+ * This is a display preference, never an authenticated workout set or
+ * progression source. Scope it to the issued athlete, gym and workout.
+ * Reload only choices still present and active in that exact gym; no
+ * unverified cross-gym machine default may be borrowed after cold restart.
+ */
+internal object NativeWorkoutMachineChoicePrefs {
+    private const val NAME="native-workout-machine-selections"
+    private val segment=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
+
+    private fun key(athleteId:String,gymId:String,workoutId:String):String? {
+        if(listOf(athleteId,gymId,workoutId).any { !segment.matches(it) })
+            return null
+        val bytes=MessageDigest.getInstance("SHA-256").digest(
+            "v1:$athleteId:$gymId:$workoutId".toByteArray(Charsets.UTF_8))
+        return bytes.joinToString(""){"%02x".format(it)}
+    }
+
+    fun sanitize(
+        encoded:String,gymId:String,configurations:List<KotlinGymMachineAlternatives>
+    ):String {
+        val choices=encoded.split(";")
+        if(choices.size>256 || encoded.length>8192)return ""
+        val seen=HashSet<String>()
+        val kept=ArrayList<String>()
+        for(choice in choices) {
+            val separator=choice.indexOf('=')
+            if(separator<=0 || separator==choice.lastIndex ||
+                choice.indexOf('=',separator+1)!=-1)continue
+            val exercise=choice.substring(0,separator)
+            val machine=choice.substring(separator+1)
+            if(!segment.matches(exercise) || !segment.matches(machine) ||
+                !seen.add(exercise))continue
+            val config=KotlinMachineAlternativesDomain.forGymExercise(
+                configurations,gymId,exercise) ?:continue
+            if(config.machines.none {it.id==machine && it.active})continue
+            kept.add("$exercise=$machine")
+        }
+        return kept.joinToString(";")
+    }
+
+    fun load(
+        context:Context,athleteId:String,gymId:String,workoutId:String,
+        configurations:List<KotlinGymMachineAlternatives>
+    ):String {
+        val key=key(athleteId,gymId,workoutId)?:return ""
+        val encoded=context.applicationContext.getSharedPreferences(NAME,Context.MODE_PRIVATE)
+            .getString(key,"").orEmpty()
+        return sanitize(encoded,gymId,configurations)
+    }
+
+    fun save(
+        context:Context,athleteId:String,gymId:String,workoutId:String,
+        encoded:String,configurations:List<KotlinGymMachineAlternatives>
+    ):Boolean {
+        val key=key(athleteId,gymId,workoutId)?:return false
+        val safe=sanitize(encoded,gymId,configurations)
+        return context.applicationContext.getSharedPreferences(NAME,Context.MODE_PRIVATE)
+            .edit().putString(key,safe).commit()
+    }
 }
 
 /** One shared Material 3 selector for both generated and custom workout journals. */

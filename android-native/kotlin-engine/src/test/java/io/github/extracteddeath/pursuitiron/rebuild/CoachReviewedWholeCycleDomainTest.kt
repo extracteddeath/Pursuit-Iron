@@ -5,6 +5,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CoachReviewedWholeCycleDomainTest {
+    // Review the real curated starters once per source-goal fixture instead
+    // of running the bounded 32-candidate composer for every assertion.
+    private val powerSeed by lazy {StarterProgramReleaseFixture.request(
+        ComposerSplit.ULPPL,TrainingPhase.STRENGTH)}
+    private val hyperSeed by lazy {StarterProgramReleaseFixture.request(
+        ComposerSplit.ULPPL,TrainingPhase.HYPERTROPHY)}
+    private val hyperStarters by lazy {
+        TrainingPhase.entries.associateWith {phase->
+            CoachFirstProgramStartDomain.review(
+                hyperSeed.copy(phase=phase))
+        }
+    }
+    private val powerStarters by lazy {
+        TrainingPhase.entries.associateWith {phase->
+            CoachFirstProgramStartDomain.review(
+                (if(phase==TrainingPhase.HYPERTROPHY)hyperSeed
+                    else powerSeed).copy(setup=powerSeed.setup,phase=phase))
+        }
+    }
     private fun request(
         goal:AthleteTrainingGoal=AthleteTrainingGoal.HYPERTROPHY,
         totalWeeks:Int=6,
@@ -14,27 +33,19 @@ class CoachReviewedWholeCycleDomainTest {
         withPeak:Boolean=true,
         continuity:CustomCoachVolumeContinuityPolicy?=null
     ):ReviewedWholeCycleRequest {
-        // The test uses the real curated exercise catalog, real confirmed
-        // gym stock and the complete first-program composer. All phase
-        // policies must match the exact same athlete/goal/gym.
-        val source=StarterProgramReleaseFixture.request(
-            ComposerSplit.ULPPL,TrainingPhase.STRENGTH)
-        val hyperSetup=StarterProgramReleaseFixture.request(
-            ComposerSplit.ULPPL,TrainingPhase.HYPERTROPHY)
+        // All phases use the SAME reviewed athlete and gym. The existing
+        // release fixture supplies a POWERBUILDING setup for strength.
         val setup=if(goal==AthleteTrainingGoal.HYPERTROPHY)
-            hyperSetup.setup else {
-            // The existing release fixture is POWERBUILDING for strength.
-            // Strength-only is tested by the separately validated goal gate.
-            source.setup
-        }
+            hyperSeed.setup else powerSeed.setup
+        val verified=if(goal==AthleteTrainingGoal.HYPERTROPHY)
+            hyperStarters else powerStarters
         val starters=linkedMapOf<TrainingPhase,FirstProgramStartReview>()
         if(withHypertrophy)starters[TrainingPhase.HYPERTROPHY]=
-            CoachFirstProgramStartDomain.review(hyperSetup.copy(setup=setup))
+            checkNotNull(verified[TrainingPhase.HYPERTROPHY])
         if(withStrength)starters[TrainingPhase.STRENGTH]=
-            CoachFirstProgramStartDomain.review(source.copy(setup=setup))
+            checkNotNull(verified[TrainingPhase.STRENGTH])
         if(withPeak)starters[TrainingPhase.PEAK]=
-            CoachFirstProgramStartDomain.review(source.copy(
-                setup=setup,phase=TrainingPhase.PEAK))
+            checkNotNull(verified[TrainingPhase.PEAK])
         return ReviewedWholeCycleRequest(
             "cycle-verified","Verified cycle",setup,
             StarterExerciseTranche.movements(),starters,totalWeeks,event,

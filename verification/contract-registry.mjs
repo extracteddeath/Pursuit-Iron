@@ -21,6 +21,7 @@ export const contractGroups = Object.freeze({
         'm317-weekly-projection-performance-test.mjs',
         'm319-catalog-performance-test.mjs',
         'm321-all-week-strength-quality-test.mjs',
+        'm344-powerbuilding-strength-practice-test.mjs',
         'm323-cycle-replay-test.mjs',
         'm324-session-summary-test.mjs'
     ]),

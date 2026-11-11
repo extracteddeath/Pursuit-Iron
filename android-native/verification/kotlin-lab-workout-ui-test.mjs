@@ -96,6 +96,26 @@ assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('destination.keys.removeAll { it.key==key }') &&
   machineSelector.includes('previous.machineSets.filterKeys { it.machineId==requested }'),
   'Native A/B Last must recover each station without borrowing other stacks or bypassing unknown skips');
+assert.ok(machineSelector.includes('internal object NativeWorkoutMachineChoicePrefs') &&
+  machineSelector.includes('MessageDigest.getInstance("SHA-256")') &&
+  machineSelector.includes('getSharedPreferences(NAME,Context.MODE_PRIVATE)') &&
+  machineSelector.includes('fun sanitize(') &&
+  machineSelector.includes('KotlinMachineAlternativesDomain.forGymExercise(') &&
+  machineSelector.includes('config.machines.none {it.id==machine && it.active}'),
+  'A/B choice storage must be scoped to issued identity and validate active machines');
+for(const screen of [journal,composer]) {
+  assert.ok(screen.includes('NativeWorkoutMachineChoicePrefs.load(') &&
+    screen.includes('NativeWorkoutMachineChoicePrefs.save(') &&
+    screen.includes('workoutId,roster.configurations') ||
+    screen.includes('NativeWorkoutMachineChoicePrefs.load(') &&
+    screen.includes('NativeWorkoutMachineChoicePrefs.save(') &&
+    screen.includes('roster.configurations)'),
+    'Both workout kinds must restore and persist deliberate machine choices');
+}
+assert.ok(journal.includes('journal?.originalSnapshot?.stamp') &&
+  composer.includes('journal?.originalSnapshot?.source'),
+  'Preferences cannot be scoped to a mutable current gym instead of the original issued gym');
+
 
 const sharedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const phrase of [

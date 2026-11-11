@@ -36,10 +36,24 @@ class StarterExerciseTrancheTest {
         choice("one_arm_db_row",n("30")),choice("back_squat",n("135")))
 
     @Test fun exactSourceIdsAreStableAndNoVariantsShareIdentity() {
-        assertEquals(20,data.size)
-        assertEquals(20,data.map {it.legacyCuratedId}.distinct().size)
+        val originalIds=listOf(
+            "barbell_bench","paused_bench","back_squat","barbell_ohp",
+            "incline_db_press","one_arm_db_row","db_lateral_raise",
+            "db_curl","db_overhead_triceps","db_split_squat","db_rdl",
+            "db_calf_raise","bodyweight_crunch","barbell_row","rdl",
+            "conventional_deadlift","db_rear_delt_raise","pullup",
+            "leg_extension","seated_leg_curl"
+        )
+        // The first 20 curated movements are unchanged and stable.
+        // New source-linked variants must append rather than renumber
+        // old identities used by serialized gym/workout/history data.
+        assertEquals(originalIds,data.take(20).map{it.legacyCuratedId})
+        assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
+            data.drop(20).map{it.legacyCuratedId})
+        assertEquals(22,data.size)
+        assertEquals(22,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(20,data.map {
+        assertEquals(22,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {

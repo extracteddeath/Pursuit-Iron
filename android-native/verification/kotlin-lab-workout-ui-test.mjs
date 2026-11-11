@@ -112,6 +112,7 @@ assert.ok(machineChoiceHost.includes('private fun pinMachineChoiceForIssuedWorko
   machineChoiceHost.match(/pinMachineChoiceForIssuedWorkout\(workoutId,custom=true\)/g)?.length===2,
   'All native issuer paths must pin verified A/B defaults on successful issuance');
 assert.ok(journal.includes('val requiresNewMachineChoice=') &&
+  journal.includes('val mainMachineId=if(recordedMain?.performed!=null)') &&
   journal.includes('config.machines.none{it.id==selectedMachineId && it.active}') &&
   journal.includes('outcome==KotlinJournalSetOutcome.SKIPPED ||') &&
   journal.includes('?.performed!=null') &&

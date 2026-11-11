@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ internal fun NativeKotlinCustomJournalScreen(
     onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
+    val machinePreferenceContext=LocalContext.current.applicationContext
     var machineRoster by remember(host,workoutId){
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
@@ -67,6 +69,14 @@ internal fun NativeKotlinCustomJournalScreen(
     }
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
+    }
+    val issuedMachineStamp=journal?.originalSnapshot?.stamp
+    LaunchedEffect(workoutId,issuedMachineStamp,machineRoster?.revision) {
+        val stamp=issuedMachineStamp ?:return@LaunchedEffect
+        val roster=machineRoster ?:return@LaunchedEffect
+        machineSelections=NativeWorkoutMachineChoicePrefs.load(
+            machinePreferenceContext,stamp.athleteId,stamp.gymId,workoutId,
+            roster.configurations)
     }
     var busy by remember(host,workoutId){mutableStateOf(false)}
     var loading by remember(host,workoutId){mutableStateOf(true)}
@@ -525,8 +535,14 @@ internal fun NativeKotlinCustomJournalScreen(
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
                         enabled=!busy && !finished && current.finishedByEventId==null,
                         onSelect={machineId->
-                            machineSelections=updateWorkoutMachineChoice(
+                            val choice=updateWorkoutMachineChoice(
                                 machineSelections,slot.exerciseId,machineId)
+                            machineSelections=choice
+                            NativeWorkoutMachineChoicePrefs.save(
+                                machinePreferenceContext,
+                                current.originalSnapshot.stamp.athleteId,
+                                current.originalSnapshot.stamp.gymId,workoutId,
+                                choice,machineRoster?.configurations.orEmpty())
                         })
                     PursuitCard {
                         if(activeFocus==null)PursuitExerciseHeading(slot.exerciseId,

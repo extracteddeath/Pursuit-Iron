@@ -237,8 +237,10 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     if (spec.priorityLift) {
         request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
         request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };
-    } else {
-        // A previous block's frequency must not leak into an unrelated phase.
+    } else if (!request.preferences?.powerbuildingInclineVolume) {
+        // A previous block's frequency must not leak into an unrelated
+        // phase. The five-day Both strength/peak default above is a new
+        // phase-specific contract, not a leaked prior-block request.
         delete request.goal.liftFrequency;
     }
     return request;

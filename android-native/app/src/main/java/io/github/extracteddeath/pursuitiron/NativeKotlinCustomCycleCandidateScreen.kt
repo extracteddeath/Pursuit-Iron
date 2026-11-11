@@ -935,11 +935,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 futureWeekOption=null
                                 futureWeekScope.launch {
                                     val result=withContext(Dispatchers.IO) {
-                                        host.reviewOwnerVerifiedFutureWeekProgression(
-                                            draft.cycleId,session.absoluteWeek,
-                                            session.weekday,chosen,coachReadiness,
-                                            coachRestricted,checkNotNull(maxStep),
-                                            reviewed.review.repForecastPolicy)
+                                        runCatching {
+                                            host.reviewOwnerVerifiedFutureWeekProgression(
+                                                draft.cycleId,session.absoluteWeek,
+                                                session.weekday,chosen,coachReadiness,
+                                                coachRestricted,checkNotNull(maxStep),
+                                                reviewed.review.repForecastPolicy)
+                                        }.getOrElse {
+                                            NativeFutureWeekProposalResult.Rejected(
+                                                NativeFutureWeekProposalRefusal.STORAGE_UNAVAILABLE)
+                                        }
                                     }
                                     if(version==futureWeekVersion) {
                                         futureWeekOption=result

@@ -45,6 +45,8 @@ object NativeKotlinCustomMachineBindingPolicy {
             val config=KotlinMachineAlternativesDomain.forGymExercise(
                 roster.configurations,snapshot.stamp.gymId,slot.exerciseId)
                 ?:return reject("MACHINE_NOT_IN_GYM")
+            if(config.machines.none{it.id==machineId})
+                return reject("MACHINE_NOT_IN_GYM")
             val stock=KotlinMachineAlternativesDomain.confirmedStack(
                 config,machineId,basis)
                 ?:return reject("MACHINE_STOCK_NOT_CONFIRMED")

@@ -69,7 +69,7 @@ object KotlinMachineLiveCoachingDomain {
                 as? KotlinJournalOperation.RecordSet
             val actual=recorded?.performed
             recorded?.outcome==KotlinJournalSetOutcome.COMPLETED &&
-                issued?.unit==machineStock.unit && issued.basis==machineStock.basis &&
+                issued?.unit==machineStock.unit && issued?.basis==machineStock.basis &&
                 actual?.machineInstanceId==selectedMachineId &&
                 exactPhysicalLoad(machineStock,actual?.load,actual?.unit)
         }
@@ -112,7 +112,7 @@ object KotlinMachineLiveCoachingDomain {
                 as? CustomWorkoutJournalOperation.Record
             val actual=recorded?.performed
             recorded?.outcome==KotlinJournalSetOutcome.COMPLETED &&
-                issued?.unit==machineStock.unit && issued.basis==machineStock.basis &&
+                issued?.unit==machineStock.unit && issued?.basis==machineStock.basis &&
                 actual?.machineInstanceId==selectedMachineId &&
                 exactPhysicalLoad(machineStock,actual?.load,actual?.unit)
         }

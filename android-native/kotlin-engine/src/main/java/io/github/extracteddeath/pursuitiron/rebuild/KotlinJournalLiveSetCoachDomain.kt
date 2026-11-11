@@ -26,7 +26,84 @@ sealed interface LiveSetCoachResult {
     }
 }
 
+/**
+ * ONE straight-set coaching policy. Both native journal types supply only
+ * their immutable issued set facts and effective recorded observations.
+ * Neither adapter may decide eligibility, RIR, load steps or fatigue alone.
+ */
 object KotlinJournalLiveSetCoachDomain {
+    private data class StraightSetEvidence(
+        val setKey:String,
+        val ordinal:Int,
+        val reps:RepBand,
+        val issuedLoad:DraftSetLoad,
+        val issuedRir:Int?,
+        val outcome:KotlinJournalSetOutcome?,
+        val performed:KotlinPerformedSet?
+    )
+
+    private fun unavailable(reason:LiveSetCoachUnavailable):LiveSetCoachResult =
+        LiveSetCoachResult.Unavailable(reason)
+
+    /** The only shared policy entry after lossless journal-specific extraction. */
+    private fun reviewStraightSets(
+        workoutId:String,
+        revision:Long,
+        nextSetKey:String,
+        working:List<StraightSetEvidence>,
+        straightSchemeAllowed:Boolean,
+        currentGymStock:VerifiedLoadStock?,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean,
+        maximumReviewStep:BigDecimal,
+        assistance:CoachAssistancePolicy
+    ):LiveSetCoachResult {
+        val ordered=working.sortedBy{it.ordinal}
+        val index=ordered.indexOfFirst{it.setKey==nextSetKey}
+        if(index<1 || ordered.size !in 2..32)
+            return unavailable(LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET)
+        val next=ordered[index]
+        val nextLoad=next.issuedLoad as? DraftSetLoad.Verified
+            ?:return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
+        // Previously these checks lived in separate generated/custom
+        // branches. A malformed custom ordinal could pass when a generated
+        // ordinal would fail. Both must reject exactly the same scheme.
+        if(!straightSchemeAllowed ||
+            ordered.map{it.ordinal}.distinct().size!=ordered.size ||
+            ordered.map{it.setKey}.distinct().size!=ordered.size ||
+            ordered.any{
+                it.reps!=next.reps ||
+                    (it.issuedLoad as? DraftSetLoad.Verified)?.let{load->
+                        load.unit==nextLoad.unit && load.basis==nextLoad.basis
+                    }!=true
+            })
+            return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
+
+        // Include later logged sets. Their presence must prevent a stale
+        // out-of-order recommendation, for BOTH workout formats.
+        val observed=ordered.mapIndexedNotNull{ordinal,target->
+            val result=target.outcome ?:return@mapIndexedNotNull null
+            val outcome=when(result){
+                KotlinJournalSetOutcome.COMPLETED->SetOutcome.COMPLETED
+                KotlinJournalSetOutcome.SKIPPED->SetOutcome.SKIPPED
+                KotlinJournalSetOutcome.FAILED_ATTEMPT->SetOutcome.FAILED_ATTEMPT
+            }
+            WorkingSetFact(ordinal,outcome,target.performed?.load,
+                target.performed?.reps,target.performed?.actualRir,
+                (target.issuedLoad as DraftSetLoad.Verified).value,
+                target.issuedRir)
+        }
+        val coaching=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
+            next.reps,ordered.size,observed,index,nextLoad.value,
+            nextLoad.unit,currentGymStock,maximumReviewStep,
+            nextTargetUserEdited=false,
+            readiness=assistance.coachingReadiness(readiness),
+            movementRestricted=movementRestricted))
+        return LiveSetCoachResult.Reviewed(workoutId,revision,nextSetKey,
+            ordered[index-1].setKey,coaching)
+    }
+
+    /** Generated-program journal: translate durable set receipts, no policy. */
     fun review(
         journal:KotlinWorkoutJournalState,
         nextSetKey:String,
@@ -36,74 +113,30 @@ object KotlinJournalLiveSetCoachDomain {
         maximumReviewStep:BigDecimal,
         assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD
     ):LiveSetCoachResult {
-        fun unavailable(reason:LiveSetCoachUnavailable)=
-            LiveSetCoachResult.Unavailable(reason)
         if(journal.finishedByEventId!=null)
             return unavailable(LiveSetCoachUnavailable.FINISHED)
         if(!assistance.offersFatigueAdvice && !movementRestricted)
             return unavailable(LiveSetCoachUnavailable.ASSISTANCE_DISABLED)
-        if(nextSetKey !in journal.snapshot.targets.map{it.setKey} ||
-            nextSetKey in journal.effectiveSets)
-            return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
         val next=journal.snapshot.targets.singleOrNull{it.setKey==nextSetKey}
-            ?:return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
+        if(next==null || nextSetKey in journal.effectiveSets)
+            return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
         if(next.type!=DraftSetType.WORKING)
             return unavailable(LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET)
         val working=journal.snapshot.targets.filter{
             it.exerciseId==next.exerciseId && it.type==DraftSetType.WORKING
-        }.sortedBy{it.ordinal}
-        val index=working.indexOfFirst{it.setKey==nextSetKey}
-        if(index<1 || working.size !in 2..32)
-            return unavailable(LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET)
-        // Never treat heterogeneous backoff rep targets, bodyweight or
-        // different equipment bases as interchangeable progression evidence.
-        val nextLoad=next.load as? DraftSetLoad.Verified
-            ?:return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
-        if(working.map{it.ordinal}.distinct().size!=working.size ||
-            working.any{
-                it.reps!=next.reps ||
-                    (it.load as? DraftSetLoad.Verified)?.let{load->
-                        load.unit==nextLoad.unit && load.basis==nextLoad.basis
-                    }!=true
-            })
-            return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
-        // Include recorded LATER sets as well as earlier evidence. Otherwise an
-        // out-of-order or corrected journal could suggest lowering a still-open
-        // middle set even though a later set has already been recorded.
-        // InWorkoutCoachDomain returns NEXT_SET_ALREADY_LOGGED for this case.
-        val observed=working.mapIndexed{ordinal,target->
-            val record=journal.effectiveSets[target.setKey]?.operation
+        }.map{target->
+            val recorded=journal.effectiveSets[target.setKey]?.operation
                 as? KotlinJournalOperation.RecordSet
-            val outcome=when(record?.outcome) {
-                KotlinJournalSetOutcome.COMPLETED ->SetOutcome.COMPLETED
-                KotlinJournalSetOutcome.SKIPPED ->SetOutcome.SKIPPED
-                KotlinJournalSetOutcome.FAILED_ATTEMPT ->SetOutcome.FAILED_ATTEMPT
-                null ->null
-            }
-            if(outcome==null)null else {
-                val actual=record?.performed
-                WorkingSetFact(ordinal,outcome,actual?.load,actual?.reps,
-                    actual?.actualRir,
-                    (target.load as DraftSetLoad.Verified).value,target.targetRir)
-            }
-        }.filterNotNull()
-        val review=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
-            next.reps,working.size,observed,index,nextLoad.value,
-            nextLoad.unit,currentGymStock,maximumReviewStep,
-            nextTargetUserEdited=false,readiness=assistance.coachingReadiness(readiness),
-            movementRestricted=movementRestricted))
-        return LiveSetCoachResult.Reviewed(
-            journal.snapshot.workoutId,journal.revision,nextSetKey,
-            working[index-1].setKey,review)
+            StraightSetEvidence(target.setKey,target.ordinal,
+                target.reps,target.load,target.targetRir,
+                recorded?.outcome,recorded?.performed)
+        }
+        return reviewStraightSets(journal.snapshot.workoutId,journal.revision,
+            nextSetKey,working,true,currentGymStock,readiness,
+            movementRestricted,maximumReviewStep,assistance)
     }
 
-    /**
-     * The generated-program journey uses the lossless CUSTOM journal too.
-     * Read its own effective receipts, isolated by stable slot ID; never
-     * convert it into a composer workout or combine repeated exercises.
-     * Amplifiers/supersets need a separate recovery model and are not
-     * interpreted as ordinary straight sets here.
-     */
+    /** Custom-cycle journal: only translate actual same-slot MAIN visits. */
     fun review(
         journal:CustomWorkoutJournalDraft,
         nextSetKey:String,
@@ -113,55 +146,37 @@ object KotlinJournalLiveSetCoachDomain {
         maximumReviewStep:BigDecimal,
         assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD
     ):LiveSetCoachResult {
-        fun unavailable(reason:LiveSetCoachUnavailable)=
-            LiveSetCoachResult.Unavailable(reason)
         if(journal.finishedByEventId!=null)
             return unavailable(LiveSetCoachUnavailable.FINISHED)
         if(!assistance.offersFatigueAdvice && !movementRestricted)
             return unavailable(LiveSetCoachUnavailable.ASSISTANCE_DISABLED)
-        val slot=journal.snapshot.slots.singleOrNull {slot->
-            slot.sets.any {it.setKey==nextSetKey}
+        val slot=journal.snapshot.slots.singleOrNull{slot->
+            slot.sets.any{it.setKey==nextSetKey}
         } ?:return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
-        val next=slot.sets.singleOrNull {it.setKey==nextSetKey}
+        val next=slot.sets.singleOrNull{it.setKey==nextSetKey}
             ?:return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
-        val visit=CustomWorkoutVisitKey(nextSetKey,CustomWorkoutVisitPart.MAIN)
-        if(visit in journal.effectiveVisits)
+        if(CustomWorkoutVisitKey(nextSetKey,CustomWorkoutVisitPart.MAIN)
+            in journal.effectiveVisits)
             return unavailable(LiveSetCoachUnavailable.UNKNOWN_OR_COMPLETED_SET)
         if(next.prescription.type!=DraftSetType.WORKING)
             return unavailable(LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET)
-        val working=slot.sets.filter {it.prescription.type==DraftSetType.WORKING}
-        val index=working.indexOfFirst {it.setKey==nextSetKey}
-        if(index<1 || working.size !in 2..32)
-            return unavailable(LiveSetCoachUnavailable.WARMUP_OR_FIRST_WORKING_SET)
-        val nextLoad=next.prescription.load as? DraftSetLoad.Verified
-            ?:return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
-        if(slot.supersetGroup!=null || slot.sets.any {it.prescription.amplifier!=null} ||
-            working.any {set->
-                set.prescription.reps!=next.prescription.reps ||
-                    (set.prescription.load as? DraftSetLoad.Verified)?.let {
-                        it.unit==nextLoad.unit && it.basis==nextLoad.basis
-                    }!=true
-            })return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
-        val observed=working.mapIndexedNotNull {ordinal,target->
-            val record=journal.effectiveVisits[CustomWorkoutVisitKey(
+        val working=slot.sets.filter{
+            it.prescription.type==DraftSetType.WORKING
+        }.map{target->
+            val recorded=journal.effectiveVisits[CustomWorkoutVisitKey(
                 target.setKey,CustomWorkoutVisitPart.MAIN)]?.operation
-                as? CustomWorkoutJournalOperation.Record ?:return@mapIndexedNotNull null
-            val outcome=when(record.outcome) {
-                KotlinJournalSetOutcome.COMPLETED->SetOutcome.COMPLETED
-                KotlinJournalSetOutcome.SKIPPED->SetOutcome.SKIPPED
-                KotlinJournalSetOutcome.FAILED_ATTEMPT->SetOutcome.FAILED_ATTEMPT
-            }
-            WorkingSetFact(ordinal,outcome,record.performed?.load,
-                record.performed?.reps,record.performed?.actualRir,
-                (target.prescription.load as DraftSetLoad.Verified).value,
-                target.prescription.targetRir)
+                as? CustomWorkoutJournalOperation.Record
+            StraightSetEvidence(target.setKey,target.ordinalInSlot,
+                target.prescription.reps,target.prescription.load,
+                target.prescription.targetRir,recorded?.outcome,
+                recorded?.performed)
         }
-        val review=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
-            next.prescription.reps,working.size,observed,index,nextLoad.value,
-            nextLoad.unit,currentGymStock,maximumReviewStep,
-            nextTargetUserEdited=false,readiness=assistance.coachingReadiness(readiness),
-            movementRestricted=movementRestricted))
-        return LiveSetCoachResult.Reviewed(journal.workoutId,journal.revision,
-            nextSetKey,working[index-1].setKey,review)
+        // A superset or amplifier is not ordinary straight-set evidence.
+        // This structural fact is provided to the SAME eligibility policy.
+        val straight=slot.supersetGroup==null &&
+            slot.sets.none{it.prescription.amplifier!=null}
+        return reviewStraightSets(journal.workoutId,journal.revision,
+            nextSetKey,working,straight,currentGymStock,readiness,
+            movementRestricted,maximumReviewStep,assistance)
     }
 }

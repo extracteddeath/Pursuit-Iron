@@ -27,7 +27,8 @@ sealed interface NativeFutureWeekProposalResult {
         val historyManifestRevision: Long,
         val permissionRevision: Long,
         val consentRevision: Long,
-        val assistanceRevision: Long
+        val assistanceRevision: Long,
+        val machineRosterRevision: Long=0
     ) : NativeFutureWeekProposalResult {
         val maySaveProgram:Boolean get()=false
         val mayIssueWorkout:Boolean get()=false
@@ -72,7 +73,8 @@ class NativeKotlinReviewedFutureWeekProposal(
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val journals:NativeKotlinCustomWorkoutJournalFileStore,
     private val reviewer:NativeKotlinCustomNextWorkoutReview,
-    private val outstanding:NativeKotlinCustomOutstandingWorkoutInventory
+    private val outstanding:NativeKotlinCustomOutstandingWorkoutInventory,
+    private val machineRosters:NativeKotlinMachineRosterFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -125,6 +127,15 @@ class NativeKotlinReviewedFutureWeekProposal(
                 val gym=(sources.read(ownerKey)
                     as? NativeAuthoringSourceRead.Found)?.source
                     ?:return@withOwnerTransaction reject(
+                        NativeFutureWeekProposalRefusal.GYM_OR_POLICY_UNAVAILABLE)
+                val selectedSlot=current.session.slots.singleOrNull{
+                    it.slotId==slotId
+                } ?:return@withOwnerTransaction reject(
+                    NativeFutureWeekProposalRefusal.INVALID_SELECTION)
+                val currentRoster=(machineRosters?.read(ownerKey)
+                    as? NativeMachineRosterResult.Saved)?.snapshot
+                if(currentRoster!=null && currentRoster.ownerId!=ownerKey)
+                    return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.GYM_OR_POLICY_UNAVAILABLE)
                 if(cycle.athleteId!=owner.athleteId ||
                     gym.athleteId!=owner.athleteId ||
@@ -220,8 +231,10 @@ class NativeKotlinReviewedFutureWeekProposal(
                             current.session,slotId,completions,
                             verified.verifiedStock,maximumAuthorizedIncrease,
                             settings.policy.coachingReadiness(readiness),
-                            movementRestricted,forecast),
-                        weekPermissions(grant.allowedKinds)
+                            movementRestricted,forecast,
+                            selectedSlot.machineInstanceId),
+                        weekPermissions(grant.allowedKinds),
+                        currentRoster?.configurations
                     ))
                 // A second independent result must agree with the trusted
                 // owner review; otherwise neither result can be displayed
@@ -229,13 +242,31 @@ class NativeKotlinReviewedFutureWeekProposal(
                 if(option.coaching!=null && option.coaching!=verified.review)
                     return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.REVIEW_DIVERGED)
+                // A newly proposed load must still fit the actual A/B stack
+                // for every authored set, warmup and amplifier. The pure
+                // cycle audit does not own the physical-machine roster.
+                option.candidate?.let {candidate->
+                    val changed=(CustomWorkoutSnapshotDomain.reviewForConsent(
+                        candidate,gym.setup,gym.catalog,gym.revision,
+                        approved.inputs,absoluteWeek,weekday)
+                        as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                        ?:return@withOwnerTransaction reject(
+                            NativeFutureWeekProposalRefusal.COACH_NOT_VERIFIED)
+                    if(NativeKotlinCustomMachineBindingPolicy.review(
+                            ownerKey,changed,gym.catalog,currentRoster)
+                        is NativeCustomMachineBindingReview.Rejected)
+                        return@withOwnerTransaction reject(
+                            NativeFutureWeekProposalRefusal.COACH_NOT_VERIFIED)
+                }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction reject(
                         NativeFutureWeekProposalRefusal.NOT_AUTHORIZED)
                 NativeFutureWeekProposalResult.Reviewed(
                     option,cycle.revision,gym.revision,
                     read.timeline.manifestRevision,grant.revision,
-                    current.receipt.recordRevision,settings.revision)
+                    current.receipt.recordRevision,settings.revision,
+                    if(selectedSlot.machineInstanceId!=null)
+                        currentRoster?.revision ?:0 else 0)
             }
         }.getOrElse {
             reject(NativeFutureWeekProposalRefusal.STORAGE_UNAVAILABLE)

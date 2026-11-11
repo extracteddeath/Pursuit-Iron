@@ -25,7 +25,8 @@ class KotlinProgressionTimelineDomainTest {
         exercise: String = "bench",
         dayIndex: Int = 0,
         machineId: String? = null,
-        machinesBySet: List<String?>? = null
+        machinesBySet: List<String?>? = null,
+        skipAll:Boolean=false
     ): KotlinWorkoutJournalState {
         require(reps.size == 4 && actualRir.size == 4 && loads.size == 4)
         val id = "workout-$index"
@@ -45,9 +46,10 @@ class KotlinProgressionTimelineDomainTest {
             val failed = i == failedAt
             val operation = KotlinJournalOperation.RecordSet(
                 "event-$index-$i", journal.revision, targets[i].setKey,
-                if (failed) KotlinJournalSetOutcome.FAILED_ATTEMPT
+                if(skipAll) KotlinJournalSetOutcome.SKIPPED
+                else if (failed) KotlinJournalSetOutcome.FAILED_ATTEMPT
                 else KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(n(loads[i]), LoadUnit.LB,
+                if(skipAll) null else KotlinPerformedSet(n(loads[i]), LoadUnit.LB,
                     if (failed) 0 else reps[i],
                     if (failed) null else actualRir[i],machinesBySet?.get(i) ?: machineId)
             )
@@ -100,6 +102,74 @@ class KotlinProgressionTimelineDomainTest {
         val mixed=workout(104,machinesBySet=listOf("A","B","A","B"))
         assertEquals(KotlinTimelineReviewStatus.MIXED_PHYSICAL_MACHINE,
             KotlinProgressionTimelineDomain.review(request(listOf(a1,mixed))).status)
+    }
+
+    @Test fun unknownAndLegacyMachineSessionsFenceOutCherryPickedAProgression() {
+        val a1=workout(301,machineId="A")
+        val a2=workout(302,machineId="A")
+        val skipped=workout(303,skipAll=true)
+        val a3=workout(304,machineId="A")
+        val a4=workout(305,machineId="A")
+        fun review(sessions:List<KotlinWorkoutJournalState>)=
+            KotlinProgressionTimelineDomain.review(
+                request(sessions).copy(requestedMachineInstanceId="A"))
+        val before=review(listOf(a1,a2))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,before.status)
+        val afterUnknown=review(listOf(a1,a2,skipped,a3))
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            afterUnknown.status)
+        assertEquals(listOf("workout-302","workout-304"),
+            afterUnknown.comparedWorkoutIds)
+        assertNull(afterUnknown.progression)
+        assertFalse(afterUnknown.canIssueTargets)
+        // Two fresh, explicitly verified A sessions supersede an earlier
+        // unknown workout without permanently banning A's progression.
+        val recovered=review(listOf(a1,a2,skipped,a3,a4))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,recovered.status)
+        assertEquals(listOf("workout-304","workout-305"),recovered.comparedWorkoutIds)
+        val unresolvedLatest=review(listOf(a1,a2,skipped))
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            unresolvedLatest.status)
+
+        val legacy=workout(306,machineId=null)
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            review(listOf(a1,a2,legacy,a3)).status)
+        // An identifiable B session is unrelated, so it must not block A.
+        val knownB=workout(307,machineId="B")
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,
+            review(listOf(a1,a2,knownB,a3)).status)
+        val mixed=workout(308,machinesBySet=listOf("A","B","A","B"))
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            review(listOf(a1,a2,mixed,a3)).status)
+    }
+
+    @Test fun savedPostFinishSkipRemainsAProgressionContinuityBarrier() {
+        val a1=workout(311,machineId="A")
+        val a2=workout(312,machineId="A")
+        val originallyA=workout(313,machineId="A")
+        val a3=workout(314,machineId="A")
+        var corrections=KotlinSavedHistoryCorrectionDomain.begin(originallyA)
+        originallyA.snapshot.targets.forEachIndexed { index,target->
+            val original=originallyA.effectiveSets.getValue(target.setKey)
+                .operation as KotlinJournalOperation.RecordSet
+            val skip=KotlinSavedSetCorrection("skip-machine-$index",
+                corrections.correctionRevision,target.setKey,original.eventId,
+                KotlinJournalSetOutcome.SKIPPED,null)
+            corrections=(KotlinSavedHistoryCorrectionDomain.reduce(
+                corrections,skip) as KotlinSavedCorrectionDecision.Proposed).state
+        }
+        val reviewed=KotlinProgressionTimelineDomain.review(
+            request(listOf(a1,a2,originallyA,a3)).copy(
+                requestedMachineInstanceId="A",
+                completedWorkouts=listOf(
+                    KotlinChronologicalWorkout(1,a1),
+                    KotlinChronologicalWorkout(2,a2),
+                    KotlinChronologicalWorkout(3,originallyA,corrections),
+                    KotlinChronologicalWorkout(4,a3))))
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            reviewed.status)
+        assertNull(reviewed.progression)
+        assertFalse(reviewed.canIssueTargets)
     }
 
     @Test fun postFinishMachineCorrectionChangesComparableProgressionScope() {

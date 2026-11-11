@@ -183,6 +183,14 @@ assert.ok(journal.includes('machineChoices.encoded,machineChoices.ready,machineC
   journal.includes('val advice=liveCoach?.takeIf {') &&
   journal.includes('!busy && !finished && machineChoices.ready &&'),
   'Custom next-set coaching must refresh and hide stale A/B advice on switch');
+const machineProgression=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinProgressionTimelineDomain.kt');
+assert.ok(machineProgression.includes('UNRESOLVED_PHYSICAL_MACHINE') &&
+  machineProgression.includes('val interveningUnknownMachine=dayApplicable.any') &&
+  machineProgression.includes('stored.completionOrder<=olderStored.completionOrder') &&
+  machineProgression.includes('it.isEmpty() || it.size>1') &&
+  machineProgression.includes('KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in it') &&
+  machineProgression.includes('KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE'),
+  'A/B progression cannot cherry-pick around unknown, legacy, or mixed-machine exposures');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&

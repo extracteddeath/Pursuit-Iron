@@ -5,9 +5,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CoachReviewedWholeCycleDomainTest {
-    // Review the real curated starters once per source-goal fixture instead
-    // of running the bounded 32-candidate composer for every assertion.
-    private val powerSeed by lazy {StarterProgramReleaseFixture.request(
+    // Shared immutable fixture across JUnit test class instances: the
+    // bounded 32-candidate composer runs only once per phase and profile.
+    private companion object {
+    val powerSeed by lazy {StarterProgramReleaseFixture.request(
         ComposerSplit.ULPPL,TrainingPhase.STRENGTH)}
     private val hyperSeed by lazy {StarterProgramReleaseFixture.request(
         ComposerSplit.ULPPL,TrainingPhase.HYPERTROPHY)}
@@ -23,6 +24,7 @@ class CoachReviewedWholeCycleDomainTest {
                 (if(phase==TrainingPhase.HYPERTROPHY)hyperSeed
                     else powerSeed).copy(setup=powerSeed.setup,phase=phase))
         }
+    }
     }
     private fun request(
         goal:AthleteTrainingGoal=AthleteTrainingGoal.HYPERTROPHY,

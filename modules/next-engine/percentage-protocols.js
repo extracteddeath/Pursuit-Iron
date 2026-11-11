@@ -59,7 +59,9 @@ export const PCT_SCHEMES = {
         days: {
             tx_volume: { label: "Volume 5×5", sets: [[0.90, "5"], [0.90, "5"], [0.90, "5"], [0.90, "5"], [0.90, "5"]] },
             tx_recovery: { label: "Recovery 2×5", sets: [[0.80, "5"], [0.80, "5"]] },
-            tx_intensity: { label: "Intensity 1×5", sets: [[1.00, "5+"]] }
+            // A back-off set after the top set: when the session budget gives the lift a second set it is this
+            // lighter one, not a second all-out set at the 5RM (the generic padding copies the first set).
+            tx_intensity: { label: "Intensity · top 5", sets: [[1.00, "5+"], [0.90, "5"]] }
         },
         weeks: [{ label: "Texas", sets: [[0.90, "5"]] }], // fallback if day unknown
     },
@@ -286,8 +288,13 @@ export function adaptPercentageSetBudget(plan, count) {
         const indexes = [...new Set(priorities)].slice(0, count).sort((a, b) => a - b);
         sets = indexes.map(i => ({ ...src[i] }));
     }
-    else sets = [...Array.from({ length: count - src.length }, () => ({ ...src[0], amrap: false,
-        reps: String(src[0].reps).replace('+', '') })), ...src.map(t => ({ ...t }))];
+    else {
+        // Extra sets copy the LIGHTEST protocol set, not the first: for an ascending ramp that is the same set, and for
+        // a top-set-first day (Texas intensity) copying the first made a second all-out set at the 5RM.
+        const light = src.reduce((m, t) => (t.weight < m.weight ? t : m), src[0]);
+        sets = [...Array.from({ length: count - src.length }, () => ({ ...light, amrap: false,
+            reps: String(light.reps).replace('+', '') })), ...src.map(t => ({ ...t }))];
+    }
     return { ...plan, sets, protocolSets: src.length, adapted: count !== src.length,
         label: plan.label + (count !== src.length ? ` · adapted to ${count} sets` : '') };
 }

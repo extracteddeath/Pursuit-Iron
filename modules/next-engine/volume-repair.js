@@ -2,7 +2,7 @@ import { createExerciseMap } from './exercise-db.js';
 import { getNextShellCell, nextExerciseIdForShellExercise, resolveNextShellExerciseId, resolveLegacyExercise, shellPrescriptionFieldOwner, NextShellAdapterError } from './shell-projection.js';
 import { advancedTechniqueFromCell } from './workout-runtime.js';
 import { normalizeRequest, createMusclePrescriptions } from './prescription.js';
-import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevContractApplies, publicMevForExperience, publicMevRequired, publicMevInternalSafetyCeiling, publicRegionContribution, publicMevLedger } from './public-mev.js';
+import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, directlyTargetsPublicRegion, publicMevContractApplies, publicMevForExperience, publicMevRequired, publicMevInternalSafetyCeiling, publicRegionContribution, publicMevLedger } from './public-mev.js';
 import { createTrainingSetEvents } from './events.js';
 import { deriveMuscleLedger } from './ledgers.js';
 import { deriveArmCoverage } from './arm-coverage.js';
@@ -152,6 +152,33 @@ export function auditShellVolume(program, legacyExercises = []) {
     issues.sort((a, b) => (a.status === 'under' ? 0 : 1) - (b.status === 'under' ? 0 : 1) || b.need - a.need);
     return { issues, volBias: Object.fromEntries(issues.map(i => [i.part, i.status === 'under' ? Math.ceil(i.need) : -Math.ceil(i.need)])),
         targets, weeks, missing: weeks.some(w => w.missing) };
+}
+
+/* What a tighter rebuild is not allowed to give up. Refitting a plan to the displayed clock rebuilds it, and the
+   rebuild can pass the engine audit while quietly dropping something the first plan had. Protected: the large
+   regions and anything the lifter focused. For those, a region that met its minimum may not fall under it and a
+   region with direct work may not lose all of it; a new lifter's quads and hamstrings also keep their second
+   weekly day (the Build 879 frequency rule). The small regions are the ones the prescription already treats as
+   optional in a compact week (createMusclePrescriptions compactSmallNormal): against a limit the lifter chose,
+   an unfocused calf or core lift is the right thing to lose. */
+const REFIT_OPTIONAL_REGIONS = new Set(['side_delts', 'rear_delts', 'biceps', 'triceps', 'calves', 'core']);
+export function shellPlanQuality(program, legacyExercises = []) {
+    const audit = auditShellVolume(program, legacyExercises);
+    if (audit.missing) return null;
+    const context = snapshotContext(program, legacyExercises);
+    const sessions = audit.weeks[0]?.sessions ?? [];
+    const directDays = Object.fromEntries(PUBLIC_MEV_REGIONS.map(region => [region, sessions.filter(session =>
+        session.exercises.some(ex => { const def = context.exerciseMap.get(ex.exerciseId); return def && ex.sets > 0 && directlyTargetsPublicRegion(def, region); })).length]));
+    const focused = region => ['high', 'specialization', 'primary'].includes(context.request.goal.musclePriorities[PUBLIC_REGION_MUSCLE[region]]);
+    return { under: audit.issues.filter(issue => issue.status === 'under').map(issue => issue.region), directDays,
+        protectedRegions: PUBLIC_MEV_REGIONS.filter(region => !REFIT_OPTIONAL_REGIONS.has(region) || focused(region)),
+        novice: context.request.athlete.experience === 'novice' };
+}
+export function shellPlanQualityKept(before, after) {
+    if (!before || !after) return false;
+    return before.protectedRegions.every(region =>
+        (before.under.includes(region) || !after.under.includes(region))
+        && after.directDays[region] >= Math.min(before.novice && (region === 'quads' || region === 'hamstrings') ? 2 : 1, before.directDays[region]));
 }
 
 function baseSessions(program, legacyExercises, snapshot = null) {
@@ -504,6 +531,108 @@ export function enforceShellWeekCapacity(program, legacyExercises = []) {
     return { program: current, changes };
 }
 
+/* The focused-region set transaction shared by the strength-entry rebalance and the focus-dose guarantee.
+   One set at a time goes to the engine-owned, non-strength lift that best trains an outstanding focus region
+   (optionally paid for by a same-day lift that trains no focus region). A move is kept only when every work
+   week stays inside its session time, no region leaves its public bounds and the engine audit does not regress. */
+function allocateFocusedRegionSets(program, legacyExercises, context, targets, focus, desired, maxSteps = 3, rampCapped = false, accept = null) {
+    let current = program;
+    const changes = [];
+    const weekCount = workWeeks(program);
+    const permitted = (before, after, baselineAudits) => {
+        if (after.missing || after.weeks.length !== weekCount) return false;
+        for (let wi = 0; wi < weekCount; wi++) {
+            const bw = before.weeks[wi], aw = after.weeks[wi];
+            if (!aw || aw.missing) return false;
+            for (const target of targets) {
+                const region = target.region;
+                const lower = focus.includes(region)
+                    ? bw.regions[region] - EPS
+                    : Math.min(target.mev, bw.regions[region]) - EPS;
+                if (aw.regions[region] < lower
+                    || aw.regions[region] > Math.max(target.mrv, bw.regions[region]) + EPS)
+                    return false;
+            }
+            for (const s of aw.sessions)
+                if (s.estimatedMinutes > s.maxMinutes + EPS) return false;
+            const nextAudit = auditProgram({ ...program.nextEngine.program,
+                sessions: aw.sessions, events: aw.events, muscleLedger: aw.muscleLedger }, context.request);
+            const oldCounts = baselineAudits[wi];
+            if (Object.entries(auditCounts(nextAudit)).some(([key, n]) => n > (oldCounts[key] || 0)))
+                return false;
+        }
+        return true;
+    };
+    for (let step = 0; step < maxSteps; step++) {
+        const before = auditShellVolume(current, legacyExercises);
+        if (before.missing) break;
+        const first = before.weeks[0];
+        const outstanding = focus
+            .filter(region => desired[region] > first.regions[region] + .05)
+            .sort((a, b) => (desired[b] - first.regions[b]) - (desired[a] - first.regions[a]));
+        if (!outstanding.length) break;
+        const baselineAudits = before.weeks.map(week => auditCounts(auditProgram({
+            ...current.nextEngine.program, sessions: week.sessions, events: week.events,
+            muscleLedger: week.muscleLedger }, context.request)));
+        let best = null;
+        for (const region of outstanding) {
+            const slots = first.sessions.flatMap(session => session.exercises.map(ex => ({
+                session, ex, def: context.exerciseMap.get(ex.exerciseId)
+            })));
+            const editable = slot => !STRENGTH.has(slot.ex.role)
+                && shellPrescriptionFieldOwner(current,
+                    current.overrides?.[slot.ex.shellKey] ?? {}, 'sets') !== 'user';
+            const recipients = slots.filter(slot => slot.def && editable(slot)
+                && publicRegionContribution(slot.def, region) >= .4
+                && Array.from({ length: weekCount }, (_, i) =>
+                    current.nextWeekPrescriptions?.[slot.ex.shellKey]?.[i + 1]?.sets)
+                    // rampCapped: a lift whose set ramp ends at the five-set cap can still take a set in the
+                    // weeks below it (3/4/4/5 -> 4/5/5/5); the cap itself is never exceeded.
+                    .every((sets, i) => Number.isFinite(sets) && (sets < 5 || (rampCapped && i > 0))))
+                .sort((a, b) => publicRegionContribution(b.def, region)
+                    - publicRegionContribution(a.def, region)
+                    || a.ex.shellKey.localeCompare(b.ex.shellKey)).slice(0, 6);
+            for (const recipient of recipients) {
+                // A zero-donor candidate is preferred when genuine session
+                // capacity remains. Otherwise search only same-day trades,
+                // never strip prioritized work or strength-specific practice.
+                const donors = slots.filter(slot => slot.session.shellDayId === recipient.session.shellDayId
+                    && slot.ex.shellKey !== recipient.ex.shellKey && slot.def && editable(slot)
+                    && focus.every(f => publicRegionContribution(slot.def, f) <= EPS)
+                    && Array.from({ length: weekCount }, (_, i) =>
+                        current.nextWeekPrescriptions?.[slot.ex.shellKey]?.[i + 1]?.sets)
+                        .every(sets => Number.isFinite(sets) && sets > 1))
+                    .sort((a, b) => a.ex.shellKey.localeCompare(b.ex.shellKey)).slice(0, 6);
+                for (const donor of [null, ...donors]) {
+                    const ops = [{ key: recipient.ex.shellKey, delta: 1 },
+                        ...(donor ? [{ key: donor.ex.shellKey, delta: -1 }] : [])];
+                    const cells = { ...current.nextWeekPrescriptions };
+                    for (const op of ops) {
+                        const existing = cells[op.key];
+                        cells[op.key] = { ...existing };
+                        for (let w = 1; w <= weekCount; w++)
+                            cells[op.key][w] = { ...existing[w], sets: rampCapped && op.delta > 0
+                                ? Math.min(5, existing[w].sets + op.delta) : existing[w].sets + op.delta };
+                    }
+                    const candidate = { ...current, nextWeekPrescriptions: cells };
+                    const after = auditShellVolume(candidate, legacyExercises);
+                    const gain = Math.min(desired[region], after.weeks[0]?.regions[region] ?? 0)
+                        - Math.min(desired[region], first.regions[region]);
+                    if (gain <= .05 || !permitted(before, after, baselineAudits) || (accept && !accept(candidate))) continue;
+                    const score = gain - (donor ? .025 : 0);
+                    if (!best || score > best.score + EPS)
+                        best = { candidate, region, ops, gain, score };
+                }
+            }
+        }
+        if (!best) break;
+        current = best.candidate;
+        changes.push({ region: best.region, creditedSetsGained: Math.round(best.gain * 10) / 10,
+            operations: best.ops, weeks: weekCount });
+    }
+    return { current, changes };
+}
+
 /**
  * M309: Retain feasible focused regional work at a hypertrophy -> strength
  * boundary. This is a set *reallocation* over the generated executable cells:
@@ -538,103 +667,43 @@ export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises
         const upper = targets.find(t => t.region === region)?.mrv ?? 0;
         return [region, Math.min(prior.regions[region] * .5, phaseAllowance, upper)];
     }));
-    let current = program;
-    const changes = [];
-    const weekCount = workWeeks(program);
-    const permitted = (before, after, baselineAudits) => {
-        if (after.missing || after.weeks.length !== weekCount) return false;
-        for (let wi = 0; wi < weekCount; wi++) {
-            const bw = before.weeks[wi], aw = after.weeks[wi];
-            if (!aw || aw.missing) return false;
-            for (const target of targets) {
-                const region = target.region;
-                const lower = focus.includes(region)
-                    ? bw.regions[region] - EPS
-                    : Math.min(target.mev, bw.regions[region]) - EPS;
-                if (aw.regions[region] < lower
-                    || aw.regions[region] > Math.max(target.mrv, bw.regions[region]) + EPS)
-                    return false;
-            }
-            for (const s of aw.sessions)
-                if (s.estimatedMinutes > s.maxMinutes + EPS) return false;
-            const nextAudit = auditProgram({ ...program.nextEngine.program,
-                sessions: aw.sessions, events: aw.events, muscleLedger: aw.muscleLedger }, context.request);
-            const oldCounts = baselineAudits[wi];
-            if (Object.entries(auditCounts(nextAudit)).some(([key, n]) => n > (oldCounts[key] || 0)))
-                return false;
-        }
-        return true;
-    };
-    for (let step = 0; step < 3; step++) {
-        const before = auditShellVolume(current, legacyExercises);
-        if (before.missing) break;
-        const first = before.weeks[0];
-        const outstanding = focus
-            .filter(region => desired[region] > first.regions[region] + .05)
-            .sort((a, b) => (desired[b] - first.regions[b]) - (desired[a] - first.regions[a]));
-        if (!outstanding.length) break;
-        const baselineAudits = before.weeks.map(week => auditCounts(auditProgram({
-            ...current.nextEngine.program, sessions: week.sessions, events: week.events,
-            muscleLedger: week.muscleLedger }, context.request)));
-        let best = null;
-        for (const region of outstanding) {
-            const slots = first.sessions.flatMap(session => session.exercises.map(ex => ({
-                session, ex, def: context.exerciseMap.get(ex.exerciseId)
-            })));
-            const editable = slot => !STRENGTH.has(slot.ex.role)
-                && shellPrescriptionFieldOwner(current,
-                    current.overrides?.[slot.ex.shellKey] ?? {}, 'sets') !== 'user';
-            const recipients = slots.filter(slot => slot.def && editable(slot)
-                && publicRegionContribution(slot.def, region) >= .4
-                && Array.from({ length: weekCount }, (_, i) =>
-                    current.nextWeekPrescriptions?.[slot.ex.shellKey]?.[i + 1]?.sets)
-                    .every(sets => Number.isFinite(sets) && sets < 5))
-                .sort((a, b) => publicRegionContribution(b.def, region)
-                    - publicRegionContribution(a.def, region)
-                    || a.ex.shellKey.localeCompare(b.ex.shellKey)).slice(0, 6);
-            for (const recipient of recipients) {
-                // A zero-donor candidate is preferred when genuine session
-                // capacity remains. Otherwise search only same-day trades,
-                // never strip prioritized work or strength-specific practice.
-                const donors = slots.filter(slot => slot.session.shellDayId === recipient.session.shellDayId
-                    && slot.ex.shellKey !== recipient.ex.shellKey && slot.def && editable(slot)
-                    && focus.every(f => publicRegionContribution(slot.def, f) <= EPS)
-                    && Array.from({ length: weekCount }, (_, i) =>
-                        current.nextWeekPrescriptions?.[slot.ex.shellKey]?.[i + 1]?.sets)
-                        .every(sets => Number.isFinite(sets) && sets > 1))
-                    .sort((a, b) => a.ex.shellKey.localeCompare(b.ex.shellKey)).slice(0, 6);
-                for (const donor of [null, ...donors]) {
-                    const ops = [{ key: recipient.ex.shellKey, delta: 1 },
-                        ...(donor ? [{ key: donor.ex.shellKey, delta: -1 }] : [])];
-                    const cells = { ...current.nextWeekPrescriptions };
-                    for (const op of ops) {
-                        const existing = cells[op.key];
-                        cells[op.key] = { ...existing };
-                        for (let w = 1; w <= weekCount; w++)
-                            cells[op.key][w] = { ...existing[w], sets: existing[w].sets + op.delta };
-                    }
-                    const candidate = { ...current, nextWeekPrescriptions: cells };
-                    const after = auditShellVolume(candidate, legacyExercises);
-                    const gain = Math.min(desired[region], after.weeks[0]?.regions[region] ?? 0)
-                        - Math.min(desired[region], first.regions[region]);
-                    if (gain <= .05 || !permitted(before, after, baselineAudits)) continue;
-                    const score = gain - (donor ? .025 : 0);
-                    if (!best || score > best.score + EPS)
-                        best = { candidate, region, ops, gain, score };
-                }
-            }
-        }
-        if (!best) break;
-        current = best.candidate;
-        changes.push({ region: best.region, creditedSetsGained: Math.round(best.gain * 10) / 10,
-            operations: best.ops, weeks: weekCount });
-    }
+    const { current, changes } = allocateFocusedRegionSets(program, legacyExercises, context, targets, focus, desired);
     const after = captureShellVolumeSnapshot(current, 1, legacyExercises);
     const unresolved = focus.filter(region => after && after.regions[region] + .05 < desired[region]);
     return { ...current, nextEngine: { ...current.nextEngine,
         focusedStrengthDose: { status: unresolved.length ? 'limited' : changes.length ? 'improved' : 'unchanged',
             changes, unresolved, target: desired, sourceWeek: workWeeks(previous),
             comparison: 'last_hypertrophy_week_to_first_strength_week' } } };
+}
+
+/* A focus the lifter asked for has to show up as more work for that region. Priority only scales the engine's
+   dose prior (x1.18 for "high"), so where the unfocused plan already sat above the focused target the focus
+   bought nothing, and a different roll of the roster could even leave the region with less. Measured over 360
+   focused builds: 129 unchanged, 15 lower. `unfocused` is the same request built without the focus; each
+   focused region is raised toward that plan's week-1 dose plus FOCUS_MIN_GAIN effective sets, inside the
+   region's ceiling, the session time and the engine audit (`accept` adds the caller's own check: the adapter
+   passes the displayed clock). What cannot be reached is reported, never forced. */
+const FOCUS_MIN_GAIN = 2;
+export function ensureFocusedRegionDose(program, unfocused, legacyExercises = [], regions = [], accept = null) {
+    if (!program?.nextEngine?.program || !unfocused?.nextEngine?.program) return program;
+    const focus = [...new Set(regions)].filter(region => PUBLIC_MEV_REGIONS.includes(region));
+    if (!focus.length) return program;
+    const context = snapshotContext(program, legacyExercises);
+    const base = captureShellVolumeSnapshot(unfocused, 1, legacyExercises);
+    const now = captureShellVolumeSnapshot(program, 1, legacyExercises, null, context);
+    if (!base || base.missing || !now || now.missing) return program;
+    const targets = shellVolumeTargets(program, context.request);
+    const gain = context.request.preferences.volumeApproach === 'minimalist' ? 1 : FOCUS_MIN_GAIN;
+    const desired = Object.fromEntries(focus.map(region => {
+        const upper = targets.find(t => t.region === region)?.mrv ?? 0;
+        return [region, Math.max(now.regions[region] || 0, Math.min(upper, (base.regions[region] || 0) + gain))];
+    }));
+    const { current, changes } = allocateFocusedRegionSets(program, legacyExercises, context, targets, focus, desired, 3 * focus.length + 3, true, accept);
+    const after = changes.length ? captureShellVolumeSnapshot(current, 1, legacyExercises) : now;
+    const unresolved = focus.filter(region => after && after.regions[region] + .05 < desired[region]);
+    return { ...current, nextEngine: { ...current.nextEngine,
+        focusDose: { status: unresolved.length ? 'limited' : changes.length ? 'improved' : 'unchanged', changes, unresolved,
+            target: desired, unfocused: Object.fromEntries(focus.map(region => [region, base.regions[region] || 0])) } } };
 }
 
 // Preserve executable strength-week continuity using spare accessory capacity.

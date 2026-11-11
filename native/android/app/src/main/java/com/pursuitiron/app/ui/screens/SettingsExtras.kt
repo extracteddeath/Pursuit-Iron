@@ -281,6 +281,8 @@ fun HelpCard(vm: AppViewModel) {
     var refsOpen by remember { mutableStateOf(false) }
     var refs by remember { mutableStateOf<List<JSONObject>?>(null) }
     LaunchedEffect(refsOpen) { if (refsOpen && refs == null) refs = vm.references() }
+    var testOpen by remember { mutableStateOf(false) }
+    if (testOpen) SelfTestSheet(vm) { testOpen = false }
     val open = { url: String -> runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.onFailure { vm.toast("No app can open that link") } }
     // The design's Help & about: four rows, the research inline, then the version and what the app is.
     PiCard(radius = 28.dp) {
@@ -295,6 +297,7 @@ fun HelpCard(vm: AppViewModel) {
             MenuRow(HELP_HEART, "Support the app", "Everything stays free", cs.primaryContainer, cs.onPrimaryContainer) { open(SUPPORT_URL) }
             MenuRow(HELP_BOOK, "References & methodology", "The research the defaults draw on", cs.tertiaryContainer, cs.onTertiaryContainer,
                 trailing = if (refsOpen) PiIcons.ChevronUp else PiIcons.ChevronDown) { refsOpen = !refsOpen }
+            MenuRow(PiIcons.Check, "Check every set", "Audits each prescribed set of your programs against your history", cs.secondaryContainer, cs.onSecondaryContainer) { testOpen = true }
             MenuRow(PiIcons.Sparkle, "Show the welcome screen", "The introduction from first launch", cs.secondaryContainer, cs.onSecondaryContainer) { vm.prefs.markIntro(0); vm.goTab(com.pursuitiron.app.Tab.Today) }
         }
         androidx.compose.animation.AnimatedVisibility(refsOpen && refs != null, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
@@ -378,6 +381,47 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { scope.launch { sc = vm.clearSchedule(programId) } }, modifier = Modifier.weight(1f)) { Text("Clear schedule") }
                 Button(onClick = onClose, modifier = Modifier.weight(1f)) { Text("Done") }
+            }
+        }
+    }
+}
+
+
+/* App.js Settings self-test, on the lifter's own data: the engine's set audit for every set of every saved program,
+   the weekly-structure audit, and the program in use simulated forward (hit, miss, stall). Failures are things a person
+   would call wrong (an unloadable weight, reps outside the printed range); advisories are judgement calls. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SelfTestSheet(vm: AppViewModel, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    var r by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(Unit) { r = vm.selfTest() }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Check every set", style = MaterialTheme.typography.headlineSmall)
+            val x = r ?: run {
+                Text("Checking every prescribed set of your programs…", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column
+            }
+            val fails = x.i("failureCount"); val adv = x.i("advisoryCount")
+            Surface(color = if (fails == 0) cs.primaryContainer else cs.errorContainer, contentColor = if (fails == 0) cs.onPrimaryContainer else cs.onErrorContainer, shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(if (fails == 0) "Every set checks out" else "$fails problem${if (fails == 1) "" else "s"} found", style = MaterialTheme.typography.titleMedium)
+                    Text("${x.i("setsChecked")} prescribed lifts across ${x.i("programs")} program${if (x.i("programs") == 1) "" else "s"}, checked against ${x.i("historyChecked")} logged workout${if (x.i("historyChecked") == 1) "" else "s"}; " +
+                        "the program you're on simulated ${x.i("simulations")} ways. $adv advisor${if (adv == 1) "y" else "ies"}.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            listOf("Problems" to x.list("failures"), "Advisories · judgement calls, not errors" to x.list("advisories")).forEach { (title, rows) ->
+                if (rows.isNotEmpty()) {
+                    Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
+                    rows.forEach { f ->
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(12.dp)) {
+                            Text(listOf(f.s("program"), f.optInt("week").takeIf { it > 0 }?.let { "week $it" }, f.s("day").ifBlank { null }, f.s("lift").ifBlank { null }).filterNotNull().joinToString(" · "),
+                                style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                            Text(f.s("detail"), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             }
         }
     }

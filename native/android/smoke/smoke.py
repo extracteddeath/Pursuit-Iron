@@ -128,9 +128,21 @@ def ocr_number(b):
         path = os.path.join(OUT, "_field.png")
         with open(path, "wb") as f:
             f.write(png)
-        Image.open(path).crop(tuple(b)).convert("L").save(path)
-        out = subprocess.run(["tesseract", path, "-", "--psm", "7", "-c", "tessedit_char_whitelist=0123456789.,"],
-                             capture_output=True, text=True, timeout=60).stdout.strip()
+        # Enlarged with a margin: tesseract's line mode returned '' for a lone "8" in the reps field (it read "7" fine),
+        # which failed the logged-set stepper check on an app that had corrected 8 → 7 → 8 correctly. If the line
+        # read comes back empty, try word and single-character modes before giving up.
+        # The plain crop is read first (enlarging it turned "45" into "4"); only an empty read retries enlarged.
+        from PIL import ImageOps
+        im = Image.open(path).crop(tuple(b)).convert("L")
+        im.save(path)
+        big = path.replace(".png", "-big.png")
+        ImageOps.expand(im.resize((im.width * 3, im.height * 3)), border=40, fill=255 if im.getpixel((0, 0)) > 127 else 0).save(big)
+        out = ""
+        for src, psm in ((path, "7"), (big, "7"), (big, "8"), (big, "10")):
+            out = subprocess.run(["tesseract", src, "-", "--psm", psm, "-c", "tessedit_char_whitelist=0123456789.,"],
+                                 capture_output=True, text=True, timeout=60).stdout.strip()
+            if out:
+                break
         print("field ocr", b, "->", repr(out), flush=True)
         return out or None
     except Exception as e:
@@ -1298,6 +1310,19 @@ if scroll_to(r"^\|Help & about$", tries=6):
             FAILS.append("references do not open inline in Help & about")
     else:
         FAILS.append("references missing from Help & about")
+    # Check every set: the engine's set audit over the lifter's own programs and history, plus three simulations.
+    if seek(r"^\|?Check every set") and tap(r"^\|?Check every set", required=False):
+        t0 = time.time()
+        while not find(r"Every set checks out|problems? found", timeout=2) and time.time() - t0 < 90:
+            time.sleep(2)
+        shot("self-test")
+        if find(r"problems? found", timeout=1):
+            FAILS.append("Check every set reports problems on the smoke store")
+        elif not find(r"Every set checks out", timeout=1):
+            FAILS.append("Check every set never finished")
+        close_sheet(r"prescribed lifts across|Checking every prescribed set")
+    else:
+        FAILS.append("no Check every set row in Help & about")
     back()
 else:
     FAILS.append("no Help & about row")
@@ -1345,6 +1370,50 @@ if tap(r"^\|New( program)?$", "own-setup", required=False):
     if find(r"^\|Continue$", timeout=2):
         back()
     scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
+    row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+# No split fits: Strength in 20 minutes builds nothing; the wizard says so and offers the setup that does (it used to spin).
+row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+if tap(r"^\|New( program)?$", required=False):
+    tap(r"^\|Single program$|Single program\|", required=False)
+    tap(r"^\|Continue$", required=False)
+    tap(r"Get strong, lower reps|^\|Strength$", required=False)
+    # New from Plan skips the questions the active gym already answers, so the session page's position varies.
+    for _ in range(5):
+        if find(r"^Up to 20 minutes|≤20 min", timeout=2):
+            break
+        tap(r"^\|Next$", required=False)
+    reached = tap(r"^Up to 20 minutes|≤20 min", required=False)
+    for _ in range(5 if reached else 0):
+        if find(r"^\|Build this program$|Nothing fits|BEST FIT OF", timeout=2):
+            break
+        if not tap(r"Skip to your ranked splits", required=False):
+            tap(r"^\|Next$", required=False)
+    if reached and find(r"^\|Build this program$|Nothing fits|BEST FIT OF|Finding the splits|Building and scoring", timeout=10):
+        t0 = time.time()
+        while not find(r"Nothing fits|BEST FIT OF", timeout=2) and time.time() - t0 < 120:
+            time.sleep(2)
+        shot("no-split-fits")
+        if not find(r"Nothing fits", timeout=1):
+            FAILS.append("Strength at ≤20 min did not say that nothing fits")
+        else:
+            t0 = time.time()
+            while not find(r"Use .+ min sessions", timeout=2) and time.time() - t0 < 120:
+                time.sleep(2)
+            if not tap(r"Use .+ min sessions", "no-split-alternative", required=False):
+                FAILS.append("no-split state offers no setup that builds")
+            elif not find(r"BEST FIT OF \d+", timeout=120):
+                FAILS.append("the offered session length did not rank a split")
+            else:
+                shot("no-split-ranked")
+    else:
+        FAILS.append("could not reach the ranked splits at ≤20 min")
+    for _ in range(8):
+        if find(r"^\|Edit program$|Review block", timeout=1):
+            break
+        if find(r"^\|Cancel$", timeout=1):
+            tap(r"^\|Cancel$", required=False)
+        else:
+            back()
     row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New( program)?$", "cycle-setup"):
     wizard("Smoke Cycle", cycle=True)

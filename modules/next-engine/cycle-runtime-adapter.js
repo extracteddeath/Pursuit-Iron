@@ -14,8 +14,9 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
-import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity } from './volume-repair.js';
+import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError, requestWithDisplayTrim, displayedBandMax } from './app-shell-adapter.js';
+import { shellSessionOvershoot } from './shell-session-clock.js';
+import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -783,7 +784,46 @@ export function repeatCycleOptions(cycle) {
         adaptTrainingSplit: !!(snapshot.adaptTrainingSplit ?? cycle.adaptTrainingSplit)
     };
 }
+/* Same referee as a single program (app-shell-adapter generateNextProgramForShell): the clock the app displays
+   decides whether a block's day fits the lifter's limit. A weekday that shows over in any block gets its internal
+   budget tightened in the cycle's base request and the cycle is rebuilt with the same seed and id. Two rebuilds at
+   most (a cycle build scores many candidates per block); a tighter budget the engine refuses is dropped. */
+function cycleOvershootByWeekday(built, config) {
+    const max = displayedBandMax(config), out = {};
+    for (const block of built.blocks) {
+        if (block.config?.session && block.config.session !== (config?.session || 's60')) continue;
+        const over = shellSessionOvershoot(block, max);
+        if (!over) return null;
+        const sessions = block.nextEngine?.program?.sessions ?? [];
+        over.forEach((minutes, index) => { const day = sessions[index]?.day; if (day) out[day] = Math.max(out[day] ?? -Infinity, minutes); });
+    }
+    return out;
+}
 export function generateNextCycleForShell(options) {
+    const seed = (options.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
+    const cid = (options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`))();
+    const pinned = { ...options, seed, cycleId: cid };
+    const sum = over => Object.values(over).reduce((n, m) => n + Math.max(0, m), 0);
+    const first = buildNextCycleForShell(pinned, null);
+    let best = first, bestOver = cycleOvershootByWeekday(best, options.config);
+    if (!bestOver || sum(bestOver) <= 0) return best;
+    const firstQuality = first.blocks.map(block => shellPlanQuality(block, options.legacyExercises));
+    let trim = {}, over = bestOver;
+    for (let attempt = 0; attempt < 2 && sum(bestOver) > 0; attempt++) {
+        trim = { ...trim };
+        for (const [day, minutes] of Object.entries(over)) if (minutes > 0) trim[day] = (trim[day] ?? 0) + Math.ceil(minutes);
+        let candidate;
+        try { candidate = buildNextCycleForShell(pinned, trim); }
+        catch { break; }
+        over = cycleOvershootByWeekday(candidate, options.config);
+        if (!over) break;
+        const kept = candidate.blocks.length === first.blocks.length && candidate.blocks.every((block, i) =>
+            shellPlanQualityKept(firstQuality[i], shellPlanQuality(block, options.legacyExercises)));
+        if (sum(over) < sum(bestOver) && kept) { best = candidate; bestOver = over; }
+    }
+    return best;
+}
+function buildNextCycleForShell(options, displayTrim) {
     const templateId = options.templateId;
     const isCustom = templateId === 'custom';
     const template = isCustom ? { id: 'custom', name: 'Custom cycle' } : cycleTemplates().find(t => t.id === templateId);
@@ -797,9 +837,8 @@ export function generateNextCycleForShell(options) {
     const goal = isCustom
         ? (options.config?.goal === 'strength' ? 'strength' : options.config?.goal === 'hypertrophy' ? 'hypertrophy' : 'mixed')
         : goalForCycleTemplate(templateId);
-    const seed = (options.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
-    const cid = (options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`))();
-    let baseRequest = shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed);
+    const seed = options.seed, cid = options.cycleId;
+    let baseRequest = requestWithDisplayTrim(shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed), displayTrim);
     baseRequest.goal = { ...baseRequest.goal, type: goal };
 
     // Program creation and cycle creation must share the same feasibility contract. The wizard

@@ -1,7 +1,7 @@
 name: Native Android
 on:
   push:
-    branches: [native-app]
+    branches: [native-app, 'native-audit-*']
     paths: ['native/**', 'modules/**', '.github/workflows/native-android.yml']
   workflow_dispatch:
 
@@ -65,7 +65,7 @@ jobs:
           set -o pipefail
           VC=$(( PI_VERSION_CODE_BASE + GITHUB_RUN_NUMBER ))
           echo "::notice title=Version::appId=$PI_APP_ID versionCode=$VC"
-          gradle --no-daemon --console=plain assembleDebug bundleRelease \
+          gradle --no-daemon --console=plain assembleDebug assembleBenchmark bundleRelease \
             -PappId="$PI_APP_ID" -PversionCode="$VC" 2>&1 | tee "$RUNNER_TEMP/build.log"
 
       # Compiler output is reported as annotations so it can be read without log access.
@@ -100,6 +100,7 @@ jobs:
           name: pursuit-iron-native-${{ github.run_number }}
           path: |
             native/android/app/build/outputs/apk/debug/*.apk
+            native/android/app/build/outputs/apk/benchmark/*.apk
             native/android/app/build/outputs/bundle/release/*.aab
             native/android/app/build/outputs/mapping/release/mapping.txt
           retention-days: 30
@@ -124,9 +125,12 @@ jobs:
         run: |
           node native/android/smoke/handoff-link.mjs "$RUNNER_TEMP/link.txt"
           echo "APK=$(find out -name '*-debug.apk' | head -1)" >> "$GITHUB_ENV"
+          echo "BENCH_APK=$(find out -name '*-benchmark.apk' | head -1)" >> "$GITHUB_ENV"
+          node native/android/smoke/perf-link.mjs "$RUNNER_TEMP/perflink.txt" 120 || echo "::warning title=Release perf::no history link"
       - name: OCR for the shade
         # The workout card's ticking clock keeps uiautomator from dumping the open shade; the smoke finds its buttons by OCR instead.
-        run: sudo apt-get install -y -qq tesseract-ocr python3-pil >/dev/null
+        # apt-get install alone exited 100 once the runner image's package lists went stale, so the emulator never started.
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq tesseract-ocr python3-pil >/dev/null
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -141,11 +145,13 @@ jobs:
           profile: pixel_7
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: adb install -r "$APK" && python3 native/android/smoke/smoke.py "${{ vars.PI_APP_ID || 'io.github.extracteddeath.pursuitiron' }}.dev" smoke-out "$RUNNER_TEMP/link.txt"
+          # The smoke run decides the result; the release-build perf pass after it is a measurement and never fails the job.
+          script: adb install -r "$APK" && python3 native/android/smoke/smoke.py "${{ vars.PI_APP_ID || 'io.github.extracteddeath.pursuitiron' }}.dev" smoke-out "$RUNNER_TEMP/link.txt"; rc=$?; ( [ -n "$BENCH_APK" ] && adb install -r "$BENCH_APK" && python3 native/android/smoke/perf.py "${{ vars.PI_APP_ID || 'io.github.extracteddeath.pursuitiron' }}.bench" smoke-out "$RUNNER_TEMP/perflink.txt" ) || echo "release perf pass did not run"; exit $rc
       - name: Result
         if: always()
         run: |
           [ -f smoke-out/result.txt ] && while IFS= read -r l; do echo "::notice title=Smoke::$l"; done < smoke-out/result.txt || echo "::warning title=Smoke::no result file"
+          [ -f smoke-out/perf-release.txt ] && while IFS= read -r l; do echo "::notice title=Release perf::$l"; done < smoke-out/perf-release.txt || true
           [ -s smoke-out/logcat-errors.txt ] && head -8 smoke-out/logcat-errors.txt | while IFS= read -r l; do echo "::error title=logcat::$l"; done || true
       - name: Screens to the native-smoke branch
         if: always()

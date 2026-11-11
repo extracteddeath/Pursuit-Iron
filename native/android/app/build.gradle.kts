@@ -44,6 +44,16 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
         }
+        // Release code (R8, not debuggable) signed with the debug key, so CI can install it on an emulator and
+        // measure what users actually run. The debug build's frame times are an interpreted, unoptimised Compose.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            applicationIdSuffix = ".bench"
+            versionNameSuffix = "-bench"
+            isDebuggable = false
+        }
     }
 
     buildFeatures {
@@ -80,6 +90,9 @@ dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("androidx.glance:glance-material3:1.1.1")
     implementation("androidx.concurrent:concurrent-futures-ktx:1.3.0")
+    // Installs the baseline profiles Compose and the other AndroidX libraries ship, so their code is compiled ahead
+    // of time on first launch even outside Play (sideloads, internal testing, the CI emulator).
+    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")

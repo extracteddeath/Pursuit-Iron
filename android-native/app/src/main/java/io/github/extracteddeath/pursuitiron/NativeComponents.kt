@@ -115,19 +115,11 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
     // bounds at each intermediate step. No guessed coach recommendations and
     // no calls to the journal from a long-press.
     fun stepReps(direction:Int,count:Int) {
-        var next=reps
-        repeat(count) {
-            next=NativeSetEntryPolicy.stepReps(next,direction,allowFailedAttempt)
-                ?:return@repeat
-        }
-        if(next!=reps)onReps(next)
+        NativeSetEntryPolicy.stepRepsBy(
+            reps,direction,count,allowFailedAttempt)?.let(onReps)
     }
     fun stepRir(direction:Int,count:Int) {
-        var next=rir
-        repeat(count) {
-            next=NativeSetEntryPolicy.stepRir(next,direction)?:return@repeat
-        }
-        if(next!=rir)onRir(next)
+        NativeSetEntryPolicy.stepRirBy(rir,direction,count)?.let(onRir)
     }
     val repsControl:@Composable ()->Unit={
         NativeSetCounterField(

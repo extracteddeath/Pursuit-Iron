@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
+import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
 
 /** Stable compact saveable per-exercise choice; IDs cannot contain separators. */
 internal fun workoutMachineChoice(encoded:String,exerciseId:String,defaultId:String?):String? =
@@ -58,3 +59,19 @@ internal fun NativeKotlinWorkoutMachineSelector(
         )
     }
 }
+
+/**
+ * A selected physical machine cannot display another stack as "Last".
+ * The authoritative reference domain has already authenticated same-gym,
+ * same-day workout history. This enforces the additional machine boundary.
+ */
+internal fun physicalMachineLastReferences(
+    previous:WorkoutLastReferenceResult?,
+    selectedMachineId:String?
+):WorkoutLastReferenceResult? =
+    if(selectedMachineId==null)previous
+    else if(previous is WorkoutLastReferenceResult.Ready)
+        WorkoutLastReferenceResult.Ready(previous.sets.filterValues{
+            it.actual?.machineInstanceId==selectedMachineId
+        })
+    else previous

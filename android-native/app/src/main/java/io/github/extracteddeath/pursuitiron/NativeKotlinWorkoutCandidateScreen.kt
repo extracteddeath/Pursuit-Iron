@@ -194,6 +194,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 movementRestricted)
     }
     val coach=state.liveCoach?.takeIf {
+        // A pre-restriction recommendation is unsafe to keep showing while
+        // a fresh owner-scoped review is in flight.
+        !movementRestricted && !state.busy &&
         machineChoices.ready && !machineChoices.busy &&
             it.journalRevision==presentation?.revision &&
             it.setKey==selected?.target?.setKey

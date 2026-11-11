@@ -46,6 +46,10 @@ for (const phase of phases) {
         phase + ' exceeded an actual session time limit');
     const push = program.sessions.find(s => s.intent === 'push');
     assert.ok(push, phase + ' must retain its Push day');
+    console.log('M344 AUDIT '+JSON.stringify({phase,flag:request.preferences.powerbuildingInclineVolume,
+        sessions:program.sessions.map(s => ({intent:s.intent,day:s.day,presses:s.exercises
+            .filter(e=>e.role==='primary_strength'||e.role==='secondary_strength')
+            .map(e=>({id:e.exerciseId,role:e.role}))}))}));
     const incline = push.exercises.find(e => ['incline_db_press','incline_smith'].includes(e.exerciseId));
     assert.ok(incline && incline.role === 'secondary_strength',
         phase + ': an eligible incline press must be the secondary bench anchor on Push');

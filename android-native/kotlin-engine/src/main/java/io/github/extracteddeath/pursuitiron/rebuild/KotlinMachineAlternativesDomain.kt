@@ -14,7 +14,10 @@ data class KotlinPhysicalMachine(
     val active:Boolean=true,
     val unit:LoadUnit?=null,
     val increment:BigDecimal?=null,
-    val description:String?=null
+    val description:String?=null,
+    /** Explicitly confirmed physical stack limits, NOT inferred from gym stock. */
+    val minimum:BigDecimal?=null,
+    val maximum:BigDecimal?=null
 )
 data class KotlinGymMachineAlternatives(
     val gymId:String,
@@ -57,10 +60,42 @@ object KotlinMachineAlternativesDomain {
                 (machine.increment==null ||
                     (machine.increment>BigDecimal.ZERO &&
                         machine.increment.stripTrailingZeros().scale()<=3 &&
-                        machine.increment<=BigDecimal("100000")))
+                        machine.increment<=BigDecimal("100000"))) &&
+                (if(machine.minimum==null && machine.maximum==null)true
+                 else machine.minimum!=null && machine.maximum!=null &&
+                    machine.increment!=null && machine.unit!=null &&
+                    machine.minimum>=BigDecimal.ZERO &&
+                    machine.maximum>=machine.minimum &&
+                    machine.maximum<=BigDecimal("100000") &&
+                    machine.minimum.stripTrailingZeros().scale()<=3 &&
+                    machine.maximum.stripTrailingZeros().scale()<=3 &&
+                    (machine.maximum-machine.minimum)
+                        .divideToIntegralValue(machine.increment).toInt() < 100000)
         } && (config.defaultMachineId==null || config.machines.any{
             it.id==config.defaultMachineId && it.active
         })
+
+    /**
+     * Never borrow the exercise-level stock for a physical A/B machine.
+     * Full minimum/increment/maximum must be provided and explicitly
+     * confirmed for THIS machine. Otherwise rep advice may continue but an
+     * automatic weight step is unavailable.
+     */
+    fun confirmedStack(
+        config:KotlinGymMachineAlternatives,machineId:String,
+        basis:LoadBasis
+    ):VerifiedLoadStock.Stack? {
+        if(!valid(config) || basis !in setOf(
+            LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,LoadBasis.EXERCISE_OVERRIDE))
+            return null
+        val machine=config.machines.firstOrNull{it.id==machineId && it.active}
+            ?:return null
+        return if(machine.unit!=null && machine.minimum!=null &&
+            machine.increment!=null && machine.maximum!=null)
+                VerifiedLoadStock.Stack(machine.unit,basis,machine.minimum,
+                    machine.increment,machine.maximum)
+            else null
+    }
 
     fun add(
         config:KotlinGymMachineAlternatives, machine:KotlinPhysicalMachine,

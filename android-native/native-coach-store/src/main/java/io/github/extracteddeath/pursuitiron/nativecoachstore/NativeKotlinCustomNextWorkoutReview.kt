@@ -195,11 +195,14 @@ class NativeKotlinCustomNextWorkoutReview(
                     it.gymId==gym.gymId &&
                         it.exerciseId==selected.exerciseId
                 }
-            val selectedMachine=machineConfig?.defaultMachineId
+            val selectedMachine=selected.machineInstanceId
+                ?:machineConfig?.defaultMachineId
             // A logical exercise's verified stock DOES NOT certify both
             // physical A/B stacks. Machine variants may earn a load step
             // only from their OWN athlete-confirmed limits and increment.
-            val verifiedStock=if(machineConfig==null)
+            val verifiedStock=if(machineConfig==null &&
+                selected.machineInstanceId!=null) null
+            else if(machineConfig==null)
                 movement.equipmentId?.let{gym.confirmedStock[it]}
                     ?.takeIf{
                         it.basis==movement.expectedLoadBasis && it.unit==gym.unit

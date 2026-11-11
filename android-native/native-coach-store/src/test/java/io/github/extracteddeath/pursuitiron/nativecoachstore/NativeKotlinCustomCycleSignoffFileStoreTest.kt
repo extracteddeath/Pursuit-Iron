@@ -15,6 +15,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     /** Isolated weighted variant for the real progression integration test. */
     private var weightedFixture=false
     private var phaseTransitionFixture=false
+    private var machineBindingFixture=false
     private var phaseAuthoredWeight=25
     private val identity=NativeKotlinCurrentIdentity{active}
     private val fence by lazy{NativeKotlinApprovalRevisionFence(temp.root.toPath())}
@@ -38,7 +39,11 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
         gym=GymProfileDraft("gym-1",LoadUnit.LB,
-            if(phaseTransitionFixture)mapOf("straight-bar" to VerifiedLoadStock.Barbell(
+            if(machineBindingFixture)mapOf(
+                "leg-extension-machine" to VerifiedLoadStock.Stack(
+                    LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+                    n("20"),n("5"),n("160")))
+            else if(phaseTransitionFixture)mapOf("straight-bar" to VerifiedLoadStock.Barbell(
                 LoadUnit.LB,n("10"),mapOf(n("5") to (if(phaseAuthoredWeight>=30)4 else 2),n("2.5") to 2)))
             else if(weightedFixture)mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
                 LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
@@ -54,7 +59,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     private fun source(rev:Long=1)=NativeCustomAuthoringSnapshot(
         "owner-1","athlete-1",rev,setup(),StarterExerciseTranche.movements())
     private fun set()=CustomAuthoredSet(DraftSetType.WORKING,
-        if(weightedFixture)DraftSetLoad.Verified(LoadUnit.LB,
+        if(machineBindingFixture)DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,n("55"))
+        else if(weightedFixture)DraftSetLoad.Verified(LoadUnit.LB,
             if(phaseTransitionFixture)LoadBasis.BARBELL_TOTAL else LoadBasis.DUMBBELL_PER_HAND,n("20"))
         else DraftSetLoad.ExplicitBodyweight,RepBand(10,15),2,55,75)
     private fun cycle(rev:Long=1)=CustomTrainingCycle(
@@ -66,14 +73,17 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 day->CustomTrainingDay(day,"Day $day",
                     ComposerSessionPurpose.HYPERTROPHY,
                     listOf(CustomExerciseSlot("slot-$day",
-                        if(phaseTransitionFixture)"barbell_bench" else
-                            if(weightedFixture)"db_curl" else "bodyweight_crunch",
+                        if(machineBindingFixture)"leg_extension" else
+                            if(phaseTransitionFixture)"barbell_bench" else
+                                if(weightedFixture)"db_curl" else "bodyweight_crunch",
                         if(phaseTransitionFixture)ComposerRole.PRIMARY else
-                            ComposerRole.ACCESSORY,listOf(set()))))
+                            ComposerRole.ACCESSORY,listOf(set()),
+                        machineInstanceId=if(machineBindingFixture)"A" else null)))
             }
         )))
     private fun bounds()=TrainingMuscle.entries.map{muscle ->
-        val focus=if(phaseTransitionFixture)TrainingMuscle.CHEST else
+        val focus=if(machineBindingFixture)TrainingMuscle.QUADS else
+            if(phaseTransitionFixture)TrainingMuscle.CHEST else
             if(weightedFixture)TrainingMuscle.BICEPS else TrainingMuscle.ABS
         DeclaredMuscleDoseBounds(muscle,
             if(muscle==focus)n("3") else BigDecimal.ZERO,
@@ -115,6 +125,72 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val result=store().confirm("owner-1","cycle-1",1,1,0,inputs(),true)
         assertTrue(result.toString(),result is NativeCustomSignoffWrite.Committed)
         return (result as NativeCustomSignoffWrite.Committed).receipt
+    }
+
+    @Test fun signedMachineASlotPreparesAndColdOpensDespiteGymBDefault() {
+        machineBindingFixture=true
+        initialize()
+        approved()
+        val root=temp.root.toPath()
+        val roster=NativeKotlinMachineRosterFileStore(root)
+        val a=KotlinPhysicalMachine("A","Leg extension A",
+            unit=LoadUnit.LB,increment=n("5"),
+            minimum=n("20"),maximum=n("160"))
+        val b=KotlinPhysicalMachine("B","Leg extension B",
+            unit=LoadUnit.LB,increment=n("10"),
+            minimum=n("20"),maximum=n("180"))
+        val config=KotlinGymMachineAlternatives(
+            "gym-1","leg_extension","B",listOf(a,b))
+        assertTrue(roster.save("owner-1",0,listOf(config))
+            is NativeMachineRosterResult.Saved)
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store(),roster)
+        val reviewed=preflight.inspect("owner-1","cycle-1",1,0,inputs())
+        assertTrue(reviewed.toString(),
+            reviewed is NativeCustomPreflightResult.ReviewedPreview)
+        val session=(reviewed as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals("A",session.slots.single().machineInstanceId)
+        assertEquals(n("55"),
+            (session.slots.single().sets.single().prescription.load
+                as DraftSetLoad.Verified).value)
+        val ledger=NativeKotlinHistoryManifestFileStore(root)
+        assertTrue(ledger.enroll("owner-1","athlete-1"){owner,athlete->
+            active==NativeKotlinOwnerIdentity(owner,athlete)
+        } is NativeHistoryLedgerResult.Durable)
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(
+            root,fence,identity,preflight)
+        val stored=prepared.prepare("owner-1","machine-a-visit",
+            "cycle-1",1,0,inputs())
+        assertTrue(stored.toString(),stored is NativeCustomPrepareResult.Prepared)
+        val issued=NativeKotlinCustomWorkoutJournalFileStore(
+            root,fence,identity,prepared,preflight,ledger,
+            KotlinNativeJournalFileStore(root))
+        val first=issued.issue("owner-1","machine-a-visit",
+            "cycle-1",1,0,inputs())
+        assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)
+        val coldRoster=NativeKotlinMachineRosterFileStore(root)
+        val coldPreflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store(),coldRoster)
+        val coldPrepared=NativeKotlinCustomWorkoutPreparedStore(
+            root,fence,identity,coldPreflight)
+        val coldIssuer=NativeKotlinCustomWorkoutJournalFileStore(
+            root,fence,identity,coldPrepared,coldPreflight,ledger,
+            KotlinNativeJournalFileStore(root))
+        val reopened=coldIssuer.open("owner-1","machine-a-visit")
+        assertTrue(reopened.toString(),reopened is NativeCustomJournalResult.Durable)
+        assertEquals("A",(reopened as NativeCustomJournalResult.Durable)
+            .issued.journal.originalSnapshot.slots.single().machineInstanceId)
+        // A subsequently deactivated physical station cannot be silently
+        // replaced by the gym's B default in the original issued session.
+        assertTrue(roster.save("owner-1",1,listOf(config.copy(
+            machines=listOf(a.copy(active=false),b))))
+            is NativeMachineRosterResult.Saved)
+        assertEquals(NativeCustomPreflightResult.Rejected(
+            NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED),
+            coldPreflight.inspect("owner-1","cycle-1",2,0,inputs()))
+        assertEquals(reopened,coldIssuer.open("owner-1","machine-a-visit"))
+        assertEquals(1L,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft.revision)
     }
 
     @Test fun exactReviewedProgramConsentSurvivesColdRestorationNotWorkoutIssuance() {

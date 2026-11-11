@@ -18,7 +18,7 @@ import java.util.Collections
  */
 internal object NativeCustomCycleDraftCodec {
     private const val MAGIC = 0x50494344 // PICD
-    private const val VERSION = 2
+    private const val VERSION = 3
     const val MAX_BYTES = 2_500_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -111,11 +111,13 @@ internal object NativeCustomCycleDraftCodec {
         optionalString(value.supersetGroup)
         writeBoolean(value.pinned)
         writeUTF(value.coachNote)
+        if(version>=3)optionalString(value.machineInstanceId)
     }
     private fun DataInputStream.slot(version:Int): CustomExerciseSlot =
         CustomExerciseSlot(readUTF(), readUTF(), enum<ComposerRole>(),
             items(20) { set(version) }, optionalString(), optionalString(),
-            readBoolean(), readUTF())
+            readBoolean(), readUTF(),
+            if(version>=3)optionalString() else null)
 
     private fun DataOutputStream.day(value: CustomTrainingDay,version:Int) {
         writeInt(value.weekday)
@@ -194,6 +196,7 @@ internal object NativeCustomCycleDraftCodec {
                                 (slot.attachmentId?.let { id.matches(it) } ?: true) &&
                                 (slot.supersetGroup?.let { id.matches(it) } ?: true) &&
                                 slot.coachNote.length <= 1000 &&
+                                (slot.machineInstanceId?.let { id.matches(it) } ?: true) &&
                                 slot.sets.size <= 20
                         }
                 }
@@ -232,7 +235,14 @@ internal object NativeCustomCycleDraftCodec {
                 }} || value.weekOverrides.values.any{entries->entries.any{row->
                     row.sets.any{it.amplifier?.followUpActiveSeconds!=null}
                 }}
-                val version=if(hasNewTime)VERSION else 1
+                val hasMachineBinding=value.blocks.any { block ->
+                    block.days.any { day ->
+                        day.slots.any { it.machineInstanceId!=null }
+                    }
+                }
+                // Historical draft bytes (including signoff fingerprints)
+                // must not change until an authored machine choice exists.
+                val version=if(hasMachineBinding)VERSION else if(hasNewTime)2 else 1
                 writeInt(MAGIC); writeInt(version)
                 writeUTF(value.cycleId); writeLong(value.revision)
                 writeUTF(value.athleteId); enum(value.goal)

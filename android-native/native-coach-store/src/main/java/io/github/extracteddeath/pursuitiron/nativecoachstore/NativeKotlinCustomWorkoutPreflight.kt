@@ -5,7 +5,7 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 enum class NativeCustomPreflightRefusal {
     NOT_AUTHORIZED, INVALID_SELECTION, NO_DURABLE_CYCLE,
     NO_REVIEWED_GYM, CONSENT_NOT_CURRENT, COACH_AUDIT_FAILED,
-    SESSION_UNAVAILABLE, STORAGE_UNAVAILABLE
+    SESSION_UNAVAILABLE, MACHINE_BINDING_NOT_VERIFIED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeCustomPreflightResult {
     /**
@@ -55,7 +55,8 @@ class NativeKotlinCustomWorkoutPreflight(
     private val identity:NativeKotlinCurrentIdentity,
     private val drafts:NativeCustomCycleDraftFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
-    private val consents:NativeKotlinCustomCycleSignoffFileStore
+    private val consents:NativeKotlinCustomCycleSignoffFileStore,
+    private val machineRosters:NativeKotlinMachineRosterFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     /**
@@ -126,9 +127,22 @@ class NativeKotlinCustomWorkoutPreflight(
                     return@withOwnerTransaction NativeCustomPreflightResult.Rejected(
                         NativeCustomPreflightRefusal.NOT_AUTHORIZED)
                 when(result) {
-                    is CustomWorkoutSnapshotResult.Preview ->
-                        NativeCustomPreflightResult.ReviewedPreview(
-                            current,result.snapshot)
+                    is CustomWorkoutSnapshotResult.Preview -> {
+                        val roster=if(result.snapshot.slots.any {
+                            it.machineInstanceId!=null
+                        }) (machineRosters?.read(ownerKey)
+                            as? NativeMachineRosterResult.Saved)?.snapshot
+                        else null
+                        when(NativeKotlinCustomMachineBindingPolicy.review(
+                            ownerKey,result.snapshot,source.catalog,roster)) {
+                            is NativeCustomMachineBindingReview.Rejected ->
+                                NativeCustomPreflightResult.Rejected(
+                                    NativeCustomPreflightRefusal.MACHINE_BINDING_NOT_VERIFIED)
+                            is NativeCustomMachineBindingReview.Verified ->
+                                NativeCustomPreflightResult.ReviewedPreview(
+                                    current,result.snapshot)
+                        }
+                    }
                     is CustomWorkoutSnapshotResult.Rejected ->
                         NativeCustomPreflightResult.Rejected(
                             if(result.reason==CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)

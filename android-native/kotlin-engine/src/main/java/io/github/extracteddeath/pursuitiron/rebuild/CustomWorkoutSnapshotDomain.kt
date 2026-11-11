@@ -31,7 +31,10 @@ data class CustomWorkoutSlotSnapshot(
     val supersetGroup: String?,
     val pinned: Boolean,
     val coachNote: String,
-    val sets: List<CustomWorkoutSetSnapshot>
+    val sets: List<CustomWorkoutSetSnapshot>,
+    /** Bound physical machine from the signed custom cycle, not a live
+     * gym default. Performed sets still record the actual A/B machine. */
+    val machineInstanceId: String? = null
 )
 data class CustomWorkoutSourceStamp(
     val athleteId: String,
@@ -180,7 +183,8 @@ object CustomWorkoutSnapshotDomain {
             slots+=CustomWorkoutSlotSnapshot(
                 slot.slotId,slot.exerciseId,m.familyId,m.variantId,
                 slot.role,slot.attachmentId,slot.supersetGroup,slot.pinned,
-                slot.coachNote,Collections.unmodifiableList(sets))
+                slot.coachNote,Collections.unmodifiableList(sets),
+                slot.machineInstanceId)
         }
         if(slots.sumOf{it.sets.size}>MAX_TARGETS)
             return CustomWorkoutSnapshotResult.Rejected(

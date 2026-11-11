@@ -324,6 +324,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 selected?.target?.setKey==presentation.firstUnresolvedSetKey ->
                     "UP NEXT"
                 else -> "SELECTED SET"
+            },
+            onHistory=selected?.target?.exerciseId?.let{exerciseId->
+                {historyExerciseId=exerciseId}
+            },
+            onInfo=selected?.target?.exerciseId?.let{exerciseId->
+                {infoExerciseId=exerciseId}
             }
         )
         if(!presentation.finished) {
@@ -416,6 +422,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         it.target.type==set.target.type}.indexOf(set)+1,
                     setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type},
+                    showExerciseHeading=showAll || presentation.finished,
                     onHistory={historyExerciseId=set.target.exerciseId},
                     onInfo={infoExerciseId=set.target.exerciseId},
                     onShowPlates={load,unit->
@@ -605,6 +612,7 @@ private fun NativeKotlinSetCard(
     lastReferences:WorkoutLastReferenceResult?,
     position:Int,
     setCount:Int,
+    showExerciseHeading:Boolean,
     onHistory:()->Unit,
     onInfo:()->Unit,
     onShowPlates:(String,LoadUnit)->Unit,
@@ -631,7 +639,7 @@ private fun NativeKotlinSetCard(
     val entry=KotlinWorkoutEntryDomain.parse(target,weight,reps,effort)
     val working=target.type==DraftSetType.WORKING
     PursuitCard(highlighted=!set.isResolved && !finished) {
-        PursuitExerciseHeading(target.exerciseId,
+        if(showExerciseHeading)PursuitExerciseHeading(target.exerciseId,
             onHistory=onHistory,onInfo=onInfo)
         Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
             style=MaterialTheme.typography.labelLarge)

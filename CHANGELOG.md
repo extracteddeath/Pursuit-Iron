@@ -1,3 +1,11 @@
+## Build 1011 — Physical machine A/B progressions and gym defaults
+
+- A single logical machine exercise can now use distinct physical stations in each saved gym (Machine A/B), with its own default, label, active status and load increment.
+- Workout sets retain their actual machine identity even when switching stations mid-session; finished sets, historical performance, and prior unassigned records are preserved.
+- Machine-aware Last references, progression evidence, personal records and strength charts no longer treat two weight stacks as one comparable load scale.
+- Added web regression coverage for per-gym independence, mixed A/B sessions, historical deactivation and legacy records; refreshed offline/runtime certification.
+- The native Kotlin implementation remains separately gated by its own verified build, journal replay, end-to-end parity and UI acceptance.
+
 ## Build 1010 — Verified Both/ULPPL strength and peak practice (candidate)
 
 - In eligible five-day ULPPL/PPLUL mixed-goal cycles, strength, intensification and peak stages now request two bench, two squat and one deadlift practice exposures per week; authored lift frequencies and preferences take precedence.

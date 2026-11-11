@@ -139,18 +139,25 @@ object AdaptiveCycleOptionReviewDomain {
     }
 
     /**
-     * Lexicographic soft score, only for independently audited candidates:
-     * (1) closeness to the current athlete/phase's authored MAV,
-     * (2) avoidable circular same-lift clustering, (3) slot churn,
-     * (4) uneven session duration, (5) change count.
-     * Never interprets this as a scientific global optimum.
+     * Lexicographic soft score, only for independently audited candidates.
+     * In strength/peak blocks, preserve the existing athlete-specific named
+     * lift practice (measured across EVERY resolved week, including overrides)
+     * before comparing proximity to explicitly authored muscle-dose targets.
+     * No universal 2x frequency is imposed and no extra practice is invented.
+     * Then compare goal-policy dose deviation, circular same-lift clustering,
+     * slot churn, duration imbalance and change count. These are explainable
+     * coaching preferences, not a scientific claim of global optimality.
      */
     private fun score(
         source:CustomTrainingCycle,proposed:CustomTrainingCycle,
-        blockId:String,audit:CustomCoachAudit,
-        policy:AuthoredGoalProgramPolicy,
+        blockId:String,sourceAudit:CustomCoachAudit,
+        audit:CustomCoachAudit,policy:AuthoredGoalProgramPolicy,
         changes:List<CustomCycleChange>
     ):List<BigDecimal> {
+        val continuityLoss=if(policy.phase==TrainingPhase.HYPERTROPHY)
+            zero else NamedLiftPracticeContinuityDomain.lostDays(
+                sourceAudit.structuralReview,audit.structuralReview,
+                blockId,policy.primaryLiftMinimumDays.keys)
         val weeks=audit.weeks.filter {
             it.blockId==blockId && it.blockPurpose==CustomBlockPurpose.TRAINING
         }
@@ -191,7 +198,7 @@ object AdaptiveCycleOptionReviewDomain {
             if(seconds.isEmpty())0L
             else (seconds.maxOrNull() ?: 0L)-(seconds.minOrNull() ?: 0L)
         }
-        return Collections.unmodifiableList(listOf(deviation,
+        return Collections.unmodifiableList(listOf(continuityLoss,deviation,
             BigDecimal(recovery),BigDecimal(churn),BigDecimal(imbalance),
             BigDecimal(changes.size)))
     }
@@ -267,7 +274,7 @@ object AdaptiveCycleOptionReviewDomain {
                 block?.let {request.coaching.policiesByPhase[it.phase]}
             val quality=if(eligible && policy!=null)
                 score(source,option.proposedCycle,request.targetBlockId,
-                    audit,policy,change.differences) else null
+                    sourceAudit,audit,policy,change.differences) else null
             val explanation=when(status) {
                 AdaptiveCycleOptionStatus.READY_FOR_REVIEW ->
                     "Audited option: requires explicit athlete approval."

@@ -138,20 +138,37 @@ assert.ok(journal.includes('current.originalSnapshot.stamp.gymId') &&
   machineSelector.includes('normalizeMachineId(\n                it.actual?.machineInstanceId)'),
   'Issued gym and legacy-only Last selection must remain explicit');
 const generatedCoachHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
-assert.ok(generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&
-  generatedCoachHost.includes('it.gymId==journal.originalSnapshot.source.gymId') &&
-  generatedCoachHost.includes('it.exerciseId==selected.exerciseId') &&
-  generatedCoachHost.includes('roster!=null && !hasPhysicalStations') &&
+const physicalStockDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinMachineLiveCoachingDomain.kt');
+assert.ok(generatedCoachHost.includes('val issuedGym=journal.originalSnapshot.source.gymId') &&
+  generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&
+  generatedCoachHost.includes('it.gymId==issuedGym && it.exerciseId==selected.exerciseId') &&
+  generatedCoachHost.includes('it.machines.isNotEmpty()') &&
+  generatedCoachHost.includes('workoutMachineChoices.read(signed.ownerKey,') &&
+  generatedCoachHost.includes('as? NativeWorkoutMachineChoiceResult.Saved') &&
+  generatedCoachHost.includes('KotlinMachineLiveCoachingDomain.confirmedForNext(') &&
+  generatedCoachHost.includes('roster==null) null') &&
   generatedCoachHost.includes('KotlinJournalLiveSetCoachDomain.review('),
-  'Generated machine A/B coaching cannot borrow exercise-level stock from a different physical stack');
+  'Generated coaching must verify durable physical station and exact confirmed machine stack');
 const customMachineCoach=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomLiveSetCoachReview.kt');
 assert.ok(customMachineCoach.includes('private val machineRosters:NativeKotlinMachineRosterFileStore') &&
+  customMachineCoach.includes('private val workoutMachineChoices:NativeKotlinWorkoutMachineChoiceFileStore') &&
   customMachineCoach.includes('machineRosters.read(ownerKey)') &&
-  customMachineCoach.includes('it.gymId==journal.originalSnapshot.stamp.gymId') &&
-  customMachineCoach.includes('it.exerciseId==slot.exerciseId') &&
-  customMachineCoach.includes('roster!=null && !hasPhysicalStations') &&
-  generatedCoachHost.includes('coachSettings,machineRosters'),
-  'Custom A/B coaching must also reject unverified generic stock by original issued gym');
+  customMachineCoach.includes('val issuedGym=journal.originalSnapshot.stamp.gymId') &&
+  customMachineCoach.includes('it.machines.isNotEmpty()') &&
+  customMachineCoach.includes('workoutMachineChoices.read(ownerKey,workoutId,') &&
+  customMachineCoach.includes('planned?.basis==movement.expectedLoadBasis') &&
+  customMachineCoach.includes('KotlinMachineLiveCoachingDomain.confirmedForNext(') &&
+  generatedCoachHost.includes('coachSettings,machineRosters,workoutMachineChoices'),
+  'Custom A/B coaching must verify source, physical station, and exact confirmed stack');
+assert.ok(physicalStockDomain.includes('journal.effectiveSets[target.setKey]?.operation') &&
+  physicalStockDomain.includes('journal.effectiveVisits[CustomWorkoutVisitKey(') &&
+  physicalStockDomain.includes('actual?.machineInstanceId==selectedMachineId') &&
+  physicalStockDomain.includes('exactPhysicalLoad(machineStock,actual?.load,actual?.unit)') &&
+  physicalStockDomain.includes('exactPhysicalLoad(it,load.value,load.unit)') &&
+  physicalStockDomain.includes('confirmedStack(it,') &&
+  physicalStockDomain.includes('journal.originalSnapshot.source.gymId!=config.gymId') &&
+  physicalStockDomain.includes('journal.originalSnapshot.stamp.gymId!=config.gymId'),
+  'A/B stock cannot use earlier working sets on another machine or in another issued gym');
 // Journal revisions do not change on a durable A/B selector write.
 // Any in-flight coach reading the previous station is stale; the UI must
 // suppress it until the new owner-verified choice produces fresh advice.

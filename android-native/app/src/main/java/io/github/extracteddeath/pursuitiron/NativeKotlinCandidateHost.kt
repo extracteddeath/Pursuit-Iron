@@ -99,7 +99,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         futureActivationHandoff,authoringSourceStore)
     private val customLiveSetCoach=NativeKotlinCustomLiveSetCoachReview(
         revisionFence,localAthlete,customIssuedStore,authoringSourceStore,
-        coachSettings,machineRosters)
+        coachSettings,machineRosters,workoutMachineChoices)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
         historyStore,customIssuedStore,revisionFence,localAthlete)
     private val customSavedCorrections=NativeKotlinCustomSavedCorrectionFileStore(
@@ -2478,16 +2478,27 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 // but withhold automatic weight-step candidates.
                 val roster=(machineRosters.read(signed.ownerKey)
                     as? NativeMachineRosterResult.Saved)?.snapshot
+                val issuedGym=journal.originalSnapshot.source.gymId
                 val hasPhysicalStations=roster?.configurations?.any{
-                    it.gymId==journal.originalSnapshot.source.gymId &&
-                        it.exerciseId==selected.exerciseId
+                    it.gymId==issuedGym && it.exerciseId==selected.exerciseId && it.machines.isNotEmpty()
                 } == true
-                val stock=if(current?.approvedSource==journal.snapshot.source &&
-                    roster!=null && !hasPhysicalStations)
-                    (current.program.exercises.singleOrNull{
+                val stock:VerifiedLoadStock?=
+                    if(current?.approvedSource!=journal.snapshot.source ||
+                        roster==null) null
+                    else if(hasPhysicalStations) {
+                        val config=KotlinMachineAlternativesDomain.forGymExercise(
+                            roster.configurations,issuedGym,selected.exerciseId)
+                        val choices=(workoutMachineChoices.read(signed.ownerKey,
+                            workoutId,false,issuedGym)
+                            as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                        val machine=choices?.takeIf{it.revision>0 &&
+                            it.ownerId==signed.ownerKey && it.gymId==issuedGym}
+                            ?.machines?.get(selected.exerciseId)
+                        KotlinMachineLiveCoachingDomain.confirmedForNext(
+                            journal,setKey,machine,config)
+                    } else (current.program.exercises.singleOrNull{
                         it.exerciseId==selected.exerciseId
                     }?.equipment as? ComposerEquipment.Verified)?.inventory
-                else null
                 KotlinJournalLiveSetCoachDomain.review(
                     journal,setKey,stock,readiness,movementRestricted,
                     maximumReviewStep,assistance)

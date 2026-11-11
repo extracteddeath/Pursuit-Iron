@@ -188,16 +188,28 @@ class NativeKotlinCustomNextWorkoutReview(
                     it.variantId==selected.variantId
             }?:return@withOwnerTransaction reject(
                 NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
-            val verifiedStock=movement.equipmentId?.let{
-                gym.confirmedStock[it]
-            }?.takeIf{it.basis==movement.expectedLoadBasis && it.unit==gym.unit}
             val savedMachines=machineRosters?.read(ownerKey)
                 as? NativeMachineRosterResult.Saved
-            val selectedMachine=savedMachines?.snapshot?.configurations
+            val machineConfig=savedMachines?.snapshot?.configurations
                 ?.singleOrNull {
                     it.gymId==gym.gymId &&
                         it.exerciseId==selected.exerciseId
-                }?.defaultMachineId
+                }
+            val selectedMachine=machineConfig?.defaultMachineId
+            // A logical exercise's verified stock DOES NOT certify both
+            // physical A/B stacks. Machine variants may earn a load step
+            // only from their OWN athlete-confirmed limits and increment.
+            val verifiedStock=if(machineConfig==null)
+                movement.equipmentId?.let{gym.confirmedStock[it]}
+                    ?.takeIf{
+                        it.basis==movement.expectedLoadBasis && it.unit==gym.unit
+                    }
+            else selectedMachine?.let {id->
+                movement.expectedLoadBasis?.let{basis->
+                    KotlinMachineAlternativesDomain.confirmedStack(
+                        machineConfig,id,basis)?.takeIf{it.unit==gym.unit}
+                }
+            }
             val historyRead=history.read(ownerKey,current.athleteId)
             val full=historyRead as? NativeKotlinMixedHistoryReadResult.Review
                 ?:return@withOwnerTransaction when(historyRead) {

@@ -94,6 +94,19 @@ class ReviewedFutureWeekProgressionDomainTest {
                 CustomRepForecastPolicy.TARGET_RIR_V2),
             permissions)
 
+    @Test fun machineABAndCableOrSmithCannotBorrowACycleLevelLoad() {
+        val machineBases=setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
+            LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)
+        assertTrue(machineBases.all {
+            ReviewedFutureWeekProgressionDomain.requiresPhysicalMachineIdentity(it)
+        })
+        assertFalse(ReviewedFutureWeekProgressionDomain.requiresPhysicalMachineIdentity(
+            LoadBasis.BARBELL_TOTAL))
+        assertFalse(ReviewedFutureWeekProgressionDomain.requiresPhysicalMachineIdentity(
+            LoadBasis.DUMBBELL_PER_HAND))
+        assertFalse(ReviewedFutureWeekProgressionDomain.requiresPhysicalMachineIdentity(null))
+    }
+
     @Test fun genuineCompletedRepsChangeOnlyOneUpcomingSlotAndWeek() {
         val source=cycle()
         val result=ReviewedFutureWeekProgressionDomain.propose(

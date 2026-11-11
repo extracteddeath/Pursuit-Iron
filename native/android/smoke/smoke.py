@@ -1377,9 +1377,18 @@ if tap(r"^\|New( program)?$", required=False):
     tap(r"^\|Single program$|Single program\|", required=False)
     tap(r"^\|Continue$", required=False)
     tap(r"Get strong, lower reps|^\|Strength$", required=False)
-    tap(r"^\|Next$", required=False)
-    tap(r"^\|Next$", required=False)
-    if tap(r"≤20 min", required=False) and tap(r"Skip to your ranked splits", required=False):
+    # New from Plan skips the questions the active gym already answers, so the session page's position varies.
+    for _ in range(5):
+        if find(r"^Up to 20 minutes|≤20 min", timeout=2):
+            break
+        tap(r"^\|Next$", required=False)
+    reached = tap(r"^Up to 20 minutes|≤20 min", required=False)
+    for _ in range(5 if reached else 0):
+        if find(r"^\|Build this program$|Nothing fits|BEST FIT OF", timeout=2):
+            break
+        if not tap(r"Skip to your ranked splits", required=False):
+            tap(r"^\|Next$", required=False)
+    if reached and find(r"^\|Build this program$|Nothing fits|BEST FIT OF|Finding the splits|Building and scoring", timeout=10):
         t0 = time.time()
         while not find(r"Nothing fits|BEST FIT OF", timeout=2) and time.time() - t0 < 120:
             time.sleep(2)

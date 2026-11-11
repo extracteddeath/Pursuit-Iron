@@ -982,7 +982,7 @@ private fun NativeKotlinCustomVisitEditor(
                 style=MaterialTheme.typography.bodySmall)
             if(saved==null) PursuitUseLastCompletedSet(
                 mode=referenceMode,
-                history=lastReferences,
+                history=physicalMachineLastReferences(lastReferences,machineInstanceId),
                 key=WorkoutReferenceKey(
                     set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP),
                 currentLoad=target,

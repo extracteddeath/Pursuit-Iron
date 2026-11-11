@@ -3911,4 +3911,179 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
 
+
+    /**
+     * Real signed, four-week custom program with nine issued/finished
+     * first-three-week workouts. The acceptance boundary sees a fresh
+     * owner-verified source and complete native manifest, not fabricated
+     * UI history or test-only preview decisions.
+     */
+    private data class OwnerFutureDraftFixture(
+        val reviewer:NativeKotlinReviewedFutureWeekProposal,
+        val acceptance:NativeKotlinFutureWeekDraftAcceptance,
+        val prepared:NativeKotlinCustomWorkoutPreparedStore,
+        val issuer:NativeKotlinCustomWorkoutJournalFileStore,
+        val reader:NativeKotlinMixedHistoryReadCoordinator,
+        val preflight:NativeKotlinCustomWorkoutPreflight
+    )
+    private fun ownerFutureDraftFixture():OwnerFutureDraftFixture {
+        initialize()
+        val fourWeeks=cycle(2).copy(blocks=cycle(2).blocks.map{
+            it.copy(weeks=4)
+        })
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            drafts.save("owner-1","cycle-1",1,fourWeeks))
+        val audit=CustomCycleCoachAuditDomain.review(fourWeeks,
+            source().setup,source().catalog,futureInputs())
+        assertEquals(audit.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        assertTrue(store().confirm("owner-1","cycle-1",2,1,0,
+            futureInputs(),true) is NativeCustomSignoffWrite.Committed)
+        persistNineHistoricalBaseWorkouts()
+        val old=(permissionStore.read("owner-1","cycle-1")
+            as NativeAdaptivePermissionRead.Found).receipt
+        assertEquals(NativeAdaptivePermissionWrite.Committed(old.revision+1),
+            permissionStore.confirm("owner-1","cycle-1",old.revision,
+                old.allowedKinds+setOf(CustomCycleChangeKind.WEEK_OVERRIDES),
+                true))
+        val root=temp.root.toPath()
+        val ledger=NativeKotlinHistoryManifestFileStore(root)
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(
+            root,fence,identity,preflight)
+        val issuer=NativeKotlinCustomWorkoutJournalFileStore(
+            root,fence,identity,prepared,preflight,ledger,
+            KotlinNativeJournalFileStore(root))
+        val composer=KotlinNativeJournalFileStore(root)
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(ownerKey:String,workoutId:String):
+                NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(
+                ownerKey:String,source:KotlinTrainingSourceRevision
+            )=ownerKey=="owner-1" && source.athleteId=="athlete-1"
+        }
+        val reader=NativeKotlinMixedHistoryReadCoordinator(
+            ledger,composer,KotlinNativeSavedCorrectionFileStore(root,composer),
+            issuer,authority,identity,fence)
+        val assistance=NativeKotlinCoachAssistanceSettingsStore(
+            root,fence,identity)
+        val coach=NativeKotlinCustomNextWorkoutReview(
+            fence,identity,null,null,sources,reader,issuer,
+            assistance,preflight)
+        val owner=NativeKotlinReviewedFutureWeekProposal(
+            fence,identity,drafts,sources,store(),permissionStore,
+            assistance,preflight,reader,issuer,coach,
+            NativeKotlinCustomOutstandingWorkoutInventory(prepared,issuer))
+        return OwnerFutureDraftFixture(owner,
+            NativeKotlinFutureWeekDraftAcceptance(fence,owner,drafts),
+            prepared,issuer,reader,preflight)
+    }
+    private fun ownerFutureSelection()=NativeFutureWeekDraftSelection(
+        "owner-1","cycle-1",4,0,"slot-0",CoachReadiness.NORMAL,
+        false,n("5"),CustomRepForecastPolicy.TARGET_RIR_V2)
+
+    @Test fun confirmedFutureWeekDraftPersistsAcrossRestartAndRequiresNewProgramSignoff() {
+        val f=ownerFutureDraftFixture()
+        val s=ownerFutureSelection()
+        val before=(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        val priorHistory=f.reader.read("owner-1","athlete-1")
+        val review=f.acceptance.preview(s)
+        assertTrue("Owner-reviewed future-week proposal: $review",
+            review is NativeFutureWeekDraftPreview.Ready)
+        val ready=review as NativeFutureWeekDraftPreview.Ready
+        assertEquals(ReviewedFutureWeekProgressionStatus.CANDIDATE_FOR_ATHLETE_REVIEW,
+            ready.proposal.status)
+        assertEquals(4,ready.proposal.changedAbsoluteWeek)
+        assertEquals("slot-0",ready.proposal.changedSlotId)
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.CONFIRMATION_REQUIRED),
+            f.acceptance.accept(s,ready.fingerprint,false))
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            f.acceptance.accept(s,"0".repeat(64),true))
+        assertEquals(before,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+        val written=f.acceptance.accept(s,ready.fingerprint,true)
+        assertEquals(NativeFutureWeekDraftDecision.Saved(3,4),written)
+        val reopened=(NativeCustomCycleDraftFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(
+                temp.root.toPath()),identity).read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        assertEquals(3L,reopened.revision)
+        assertEquals(before.blocks,reopened.blocks)
+        assertEquals(setOf("base"),reopened.weekOverrides.keys)
+        val override=reopened.weekOverrides.getValue("base").single()
+        assertEquals(4,override.weekInBlock)
+        assertEquals(0,override.weekday)
+        assertEquals("slot-0",override.slotId)
+        assertTrue(override.sets.single().reps.minimum>10)
+        assertEquals(priorHistory,f.reader.read("owner-1","athlete-1"))
+        assertTrue((store().read("owner-1","cycle-1",futureInputs())
+            as NativeCustomSignoffRead.Found).isCurrent.not())
+        assertTrue(f.preflight.inspect("owner-1","cycle-1",
+            4,0,futureInputs()) is NativeCustomPreflightResult.Rejected)
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            f.acceptance.accept(s,ready.fingerprint,true))
+        val newSignoff=store().confirm("owner-1","cycle-1",
+            3,1,1,futureInputs(),true)
+        assertTrue(newSignoff.toString(),
+            newSignoff is NativeCustomSignoffWrite.Committed)
+        val after=f.preflight.inspect("owner-1","cycle-1",
+            4,0,futureInputs())
+        assertTrue(after.toString(),
+            after is NativeCustomPreflightResult.ReviewedPreview)
+        val updated=(after as NativeCustomPreflightResult.ReviewedPreview).session
+        assertEquals(override.sets.single().reps,
+            updated.slots.single().sets.single().prescription.reps)
+        assertEquals(priorHistory,f.reader.read("owner-1","athlete-1"))
+    }
+
+    @Test fun alreadyPreparedFutureWorkoutRefusesAnEarlierConfirmedReview() {
+        val f=ownerFutureDraftFixture()
+        val s=ownerFutureSelection()
+        val ready=f.acceptance.preview(s)
+        assertTrue(ready.toString(),ready is NativeFutureWeekDraftPreview.Ready)
+        val fingerprint=(ready as NativeFutureWeekDraftPreview.Ready).fingerprint
+        val prepared=f.prepared.prepare("owner-1","pending-w4",
+            "cycle-1",4,0,futureInputs())
+        assertTrue(prepared.toString(),
+            prepared is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.PREPARED_OR_ISSUED_WORKOUT),
+            f.acceptance.accept(s,fingerprint,true))
+        assertEquals(2L,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft.revision)
+        assertTrue(f.prepared.open("owner-1","pending-w4")
+            is NativeCustomPreparedRead.Found)
+    }
+
+    @Test fun revokedAdaptiveRightsAndForeignIdentityInvalidateDisplayedApproval() {
+        val f=ownerFutureDraftFixture()
+        val s=ownerFutureSelection()
+        val ready=f.acceptance.preview(s)
+        assertTrue(ready.toString(),ready is NativeFutureWeekDraftPreview.Ready)
+        val fingerprint=(ready as NativeFutureWeekDraftPreview.Ready).fingerprint
+        val rights=(permissionStore.read("owner-1","cycle-1")
+            as NativeAdaptivePermissionRead.Found).receipt
+        assertEquals(NativeAdaptivePermissionWrite.Committed(rights.revision+1),
+            permissionStore.confirm("owner-1","cycle-1",
+                rights.revision,rights.allowedKinds-
+                    CustomCycleChangeKind.WEEK_OVERRIDES,true))
+        assertEquals(NativeFutureWeekDraftDecision.Rejected(
+            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
+            f.acceptance.accept(s,fingerprint,true))
+        assertEquals(2L,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft.revision)
+        active=NativeKotlinOwnerIdentity("other-owner","athlete-1")
+        assertTrue(f.acceptance.preview(s) is NativeFutureWeekDraftPreview.Rejected)
+        assertTrue(f.acceptance.accept(s,fingerprint,true)
+            is NativeFutureWeekDraftDecision.Rejected)
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(2L,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft.revision)
+    }
+
 }

@@ -1,6 +1,9 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import java.math.BigDecimal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,6 +27,13 @@ internal fun NativeKotlinMachineAlternativesPanel(
     var query by rememberSaveable{mutableStateOf("")}
     var exerciseId by rememberSaveable{mutableStateOf("")}
     var label by rememberSaveable{mutableStateOf("Machine A")}
+    var incrementText by rememberSaveable{mutableStateOf("")}
+    val increment=incrementText.trim().takeIf{it.isNotEmpty()}
+        ?.let{runCatching{BigDecimal(it)}.getOrNull()}
+    val incrementValid=incrementText.isBlank()||
+        (increment!=null && increment>BigDecimal.ZERO &&
+            increment<=BigDecimal("100000") &&
+            increment.stripTrailingZeros().scale()<=3)
     val matches=catalog.asSequence().filter {ex->
         query.isNotBlank() && (ex.exerciseId.contains(query.trim(),ignoreCase=true) ||
             kotlinExerciseLabel(ex.exerciseId).contains(query.trim(),ignoreCase=true))
@@ -96,12 +106,21 @@ internal fun NativeKotlinMachineAlternativesPanel(
                 label={Text("New machine name")},
                 supportingText={Text("For example: Machine A, Hammer Strength, or Upstairs press.")},
                 singleLine=true,modifier=Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value=incrementText,
+                onValueChange={incrementText=it.take(16)},
+                label={Text("Machine weight increment (optional)")},
+                supportingText={Text("For example: 5 or 10. Leave blank if the stack is not calibrated.")},
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                isError=!incrementValid,
+                singleLine=true,modifier=Modifier.fillMaxWidth()
+            )
             Button(
                 onClick={
-                    controller.addPhysicalMachine(exerciseId,label)
+                    controller.addPhysicalMachine(exerciseId,label,increment)
                     label="Machine ${(('B'.code+(config?.machines?.size?:0)).coerceAtMost('Z'.code)).toChar()}"
                 },
-                enabled=!busy && roster!=null && label.isNotBlank() &&
+                enabled=!busy && roster!=null && label.isNotBlank() && incrementValid &&
                     (config?.machines?.size?:0)<32,
                 modifier=Modifier.fillMaxWidth()
             ) {Text("Add machine")}

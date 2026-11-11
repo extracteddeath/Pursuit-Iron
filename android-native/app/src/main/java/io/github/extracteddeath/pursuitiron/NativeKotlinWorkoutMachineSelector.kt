@@ -41,7 +41,9 @@ internal object NativeWorkoutMachineChoicePrefs {
         if(listOf(athleteId,gymId,workoutId).any { !segment.matches(it) })
             return null
         val bytes=MessageDigest.getInstance("SHA-256").digest(
-            "v1:$athleteId:$gymId:$workoutId".toByteArray(Charsets.UTF_8))
+            listOf(athleteId,gymId,workoutId).joinToString("|") {
+                "${it.length}:$it"
+            }.toByteArray(Charsets.UTF_8))
         return bytes.joinToString(""){"%02x".format(it)}
     }
 

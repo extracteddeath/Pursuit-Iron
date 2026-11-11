@@ -99,14 +99,25 @@ object KotlinMachineAlternativesDomain {
                     machine.minimum.stripTrailingZeros().scale()<=3 &&
                     machine.maximum.stripTrailingZeros().scale()<=3 &&
                     (machine.maximum-machine.minimum) <=
-                        machine.increment.multiply(BigDecimal("99999")) &&
-                    // An advertised maximum must be an attainable stack value.
-                    // Otherwise "max 215, step 10 from 20" silently stops at 210.
-                    (machine.maximum-machine.minimum).remainder(
-                        machine.increment).compareTo(BigDecimal.ZERO)==0)
+                        machine.increment.multiply(BigDecimal("99999")))
         } && (config.defaultMachineId==null || config.machines.any{
             it.id==config.defaultMachineId && it.active
         })
+
+    /**
+     * Legacy V2 rosters must remain readable even if a formerly accepted
+     * uniform stack maximum was not an attainable plate. Do not treat such
+     * a limit as verified load stock, and refuse newly authored calibrations.
+     */
+    fun reachableCalibratedMaximum(machine:KotlinPhysicalMachine):Boolean {
+        if(machine.minimum==null && machine.maximum==null)return true
+        val minimum=machine.minimum ?:return false
+        val maximum=machine.maximum ?:return false
+        val increment=machine.increment ?:return false
+        if(increment<=BigDecimal.ZERO || maximum<minimum)return false
+        return (maximum-minimum).remainder(increment)
+            .compareTo(BigDecimal.ZERO)==0
+    }
 
     /**
      * Never borrow the exercise-level stock for a physical A/B machine.
@@ -123,6 +134,7 @@ object KotlinMachineAlternativesDomain {
             return null
         val machine=config.machines.firstOrNull{it.id==machineId && it.active}
             ?:return null
+        if(!reachableCalibratedMaximum(machine))return null
         return if(machine.unit!=null && machine.minimum!=null &&
             machine.increment!=null && machine.maximum!=null)
                 VerifiedLoadStock.Stack(machine.unit,basis,machine.minimum,
@@ -139,7 +151,7 @@ object KotlinMachineAlternativesDomain {
             defaultMachineId=if(makeDefault || config.defaultMachineId==null)machine.id
                 else config.defaultMachineId,
             machines=Collections.unmodifiableList(config.machines+machine))
-        require(valid(next))
+        require(valid(next) && reachableCalibratedMaximum(machine))
         return next
     }
 
@@ -154,9 +166,16 @@ object KotlinMachineAlternativesDomain {
         config:KotlinGymMachineAlternatives, machine:KotlinPhysicalMachine
     ):KotlinGymMachineAlternatives {
         require(valid(config) && config.machines.any {it.id==machine.id})
+        val previous=config.machines.single {it.id==machine.id}
+        // Preserve editable historical labels/defaults without blessing an
+        // older off-grid calibration as a new verified machine stack.
+        val sameCalibration=previous.minimum==machine.minimum &&
+            previous.maximum==machine.maximum &&
+            previous.increment==machine.increment && previous.unit==machine.unit
         val next=config.copy(machines=Collections.unmodifiableList(
             config.machines.map {if(it.id==machine.id)machine else it}))
-        require(valid(next))
+        require(valid(next) && (sameCalibration ||
+            reachableCalibratedMaximum(machine)))
         return next
     }
 

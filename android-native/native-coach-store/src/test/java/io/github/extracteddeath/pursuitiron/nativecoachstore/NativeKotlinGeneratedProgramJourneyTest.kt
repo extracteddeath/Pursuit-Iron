@@ -246,7 +246,14 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(InWorkoutDirection.VERIFY_PLANNED_EQUIPMENT,
             physical.direction)
         assertNull(physical.weightForHumanReview)
-        assertTrue(Disk().machines.save(owner,1,emptyList())
+        assertTrue(Disk().machines.save(owner,1,listOf(
+            KotlinGymMachineAlternatives("gym-1",slot.exerciseId,null,emptyList())))
+            is NativeMachineRosterResult.Saved)
+        // An empty alternatives draft must not take generic equipment
+        // inventory away from a lift that has no physical A/B station.
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            (look() as LiveSetCoachResult.Reviewed).coaching.direction)
+        assertTrue(Disk().machines.save(owner,2,emptyList())
             is NativeMachineRosterResult.Saved)
         assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
             (look() as LiveSetCoachResult.Reviewed).coaching.direction)

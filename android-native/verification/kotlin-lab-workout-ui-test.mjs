@@ -89,6 +89,23 @@ assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
   composer.includes('if(!presentation.finished) {') &&
   journal.includes('if(!finished && current.finishedByEventId==null) {'),
   'Both workout types must expose the shared editable readiness/restriction controls only while training');
+// The focus header must agree with the type-specific set editor, not
+// count warm-ups as working sets or the amplifier as a new main set.
+assert.ok(journal.includes('val sameType=slot.sets.filter {') &&
+  journal.includes('it.prescription.type==set.prescription.type') &&
+  journal.includes('val number=sameType.indexOfFirst {') &&
+  journal.includes('"Amplifier follow-up · $label $number of ${sameType.size}"') &&
+  journal.includes('"$label $number of ${sameType.size}"') &&
+  !journal.includes('entry $number of ${slot.sets.size}') &&
+  composer.includes('"Set"} $number of ${typeSets.size}"'),
+  'Focus headings must use the verified warm-up/working ordinal in both journals');
+assert.ok(sharedFocus.includes('import androidx.compose.foundation.selection.toggleable') &&
+  sharedFocus.includes('role=Role.Checkbox') &&
+  sharedFocus.includes('value=movementRestricted,enabled=enabled') &&
+  sharedFocus.includes('onValueChange=onMovementRestrictedChange') &&
+  sharedFocus.includes('onCheckedChange=null'),
+  'Movement restriction must be one labeled accessible 48dp toggle, not a small isolated checkbox or double tap handler');
+
 assert.ok(journal.indexOf('PursuitWorkoutFocusHeader(') <
     journal.indexOf('PursuitWorkoutReadinessPanel(') &&
   composer.indexOf('PursuitWorkoutFocusHeader(') <

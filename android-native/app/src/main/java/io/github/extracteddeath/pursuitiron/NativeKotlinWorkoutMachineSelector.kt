@@ -73,8 +73,12 @@ internal fun physicalMachineLastReferences(
     if(previous is WorkoutLastReferenceResult.Ready) {
         // Null is historical legacy only, not permission to borrow A or B.
         val requested=KotlinMachineAlternativesDomain.normalizeMachineId(selectedMachineId)
-        WorkoutLastReferenceResult.Ready(previous.sets.filterValues {
+        val matching=if(previous.machineSets.isNotEmpty())
+            previous.machineSets.filterKeys { it.machineId==requested }
+                .mapKeys { it.key.key }
+        else previous.sets.filterValues {
             KotlinMachineAlternativesDomain.normalizeMachineId(
                 it.actual?.machineInstanceId)==requested
-        })
+        }
+        WorkoutLastReferenceResult.Ready(matching)
     } else previous

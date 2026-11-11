@@ -423,9 +423,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 // Correcting an existing set must never reassign it to the
                 // currently selected B machine. Null here means legacy.
+                val previouslyAttempted=set.actual
                 val recordedMachineId=if(set.currentReceipt!=null &&
-                    set.actual!=null)
-                    set.actual.machineInstanceId else perSetMachineId
+                    previouslyAttempted!=null)
+                    previouslyAttempted.machineInstanceId else perSetMachineId
                 NativeKotlinSetCard(set,presentation.finished,
                     state.busy || machineChoices.busy || !machineChoices.ready,
                     machineInstanceId=recordedMachineId,

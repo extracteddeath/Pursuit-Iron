@@ -143,7 +143,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
         customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
-        customNextWorkoutCoach,outstandingCustomInventory)
+        customNextWorkoutCoach,outstandingCustomInventory,machineRosters)
     private val futureWeekDraftAcceptance=NativeKotlinFutureWeekDraftAcceptance(
         revisionFence,ownerFutureWeekProposals,customDraftStore)
     private val blockCalibrations=NativeKotlinBlockCalibrationConsentStore(

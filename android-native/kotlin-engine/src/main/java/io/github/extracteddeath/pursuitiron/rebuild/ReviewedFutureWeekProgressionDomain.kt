@@ -21,7 +21,9 @@ data class ReviewedFutureWeekProgressionRequest(
     val catalogSourceRevision:Long,
     val lastCompletedAbsoluteWeek:Int,
     val coachingRequest:CustomNextWorkoutCoachingRequest,
-    val permissions:CustomCycleCoachPermissions
+    val permissions:CustomCycleCoachPermissions,
+    /** Trusted caller supplies the latest owner-verified roster, never UI input. */
+    val verifiedMachineConfigurations:List<KotlinGymMachineAlternatives>?=null
 )
 
 enum class ReviewedFutureWeekProgressionStatus {
@@ -51,6 +53,62 @@ object ReviewedFutureWeekProgressionDomain {
     internal fun requiresPhysicalMachineIdentity(basis:LoadBasis?):Boolean =
         basis in setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
             LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)
+
+    /** A bound station's attainable stack, never the generic exercise stock. */
+    internal fun confirmedBoundMachineStock(
+        gymId:String,exercise:CatalogMovement,machineInstanceId:String?,
+        configurations:List<KotlinGymMachineAlternatives>?
+    ):VerifiedLoadStock? {
+        val machineId=machineInstanceId ?:return null
+        val basis=exercise.expectedLoadBasis
+        if(!requiresPhysicalMachineIdentity(basis))return null
+        val config=configurations?.let{
+            KotlinMachineAlternativesDomain.forGymExercise(
+                it,gymId,exercise.exerciseId)
+        } ?:return null
+        return KotlinMachineAlternativesDomain.confirmedStack(
+            config,machineId,basis ?:return null)
+    }
+
+    /**
+     * A completed appearance on the correct weekday is NOT fresh evidence
+     * for a different physical station. Preserve old nonmachine behavior,
+     * but require one exact signed slot and every performed working set to
+     * name the chosen station when a future week is machine-bound.
+     */
+    internal fun hasFreshSameStationEvidence(
+        completed:List<CustomCoachingHistoricalSession>,
+        cycleId:String,blockId:String,weekday:Int,previousWeek:Int,
+        slotId:String,machineInstanceId:String?
+    ):Boolean {
+        val visits=completed.filter {
+            it.snapshot.stamp.cycleId==cycleId &&
+                it.snapshot.blockId==blockId &&
+                it.snapshot.weekday==weekday &&
+                it.snapshot.absoluteWeek==previousWeek
+        }
+        if(visits.size!=1)return false
+        if(machineInstanceId==null)return true
+        val previous=visits.single()
+        val issued=previous.snapshot.slots.singleOrNull{
+            it.slotId==slotId
+        }?.sets?.filter{
+            it.prescription.type==DraftSetType.WORKING
+        } ?:return false
+        val working=previous.evidence.visits.filter {
+            it.slotId==slotId &&
+                it.part==CustomWorkoutVisitPart.MAIN &&
+                it.setType==DraftSetType.WORKING
+        }
+        // A lifter may switch away from the originally selected machine
+        // during the session. Actual verified set provenance, not a stale
+        // initial station choice, determines which A/B thread owns the
+        // evidence. Every issued working set must be present and agree.
+        return issued.isNotEmpty() &&
+            working.size==issued.size &&
+            working.map{it.setKey}.toSet()==issued.map{it.setKey}.toSet() &&
+            working.all{it.actual?.machineInstanceId==machineInstanceId}
+    }
 
     fun propose(request:ReviewedFutureWeekProgressionRequest):
         ReviewedFutureWeekProgression {
@@ -88,15 +146,11 @@ object ReviewedFutureWeekProgressionDomain {
         // Require exactly one completed appearance of the selected same
         // day in the immediately preceding week, even across old signed
         // cycle revisions. The owner adapter supplies the full ledger.
-        val previousSameDay=request.coachingRequest.completed.count{
-            it.snapshot.stamp.cycleId==current.cycleId &&
-                it.snapshot.blockId==next.blockId &&
-                it.snapshot.weekday==next.weekday &&
-                it.snapshot.absoluteWeek==next.absoluteWeek-1
-        }
-        if(previousSameDay!=1)
+        if(!hasFreshSameStationEvidence(
+            request.coachingRequest.completed,current.cycleId,next.blockId,
+            next.weekday,next.absoluteWeek-1,slot.slotId,slot.machineInstanceId))
             return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
-                "Review the immediately preceding same-day workout before progressing this slot; a missed or duplicate visit cannot earn an increase.")
+                "The immediately preceding same-day workout must use this exact physical machine and slot; another machine, a missed day or duplicate visit cannot earn an increase.")
 
         // Signed native preflight always includes the audited per-day
         // non-set overhead. A raw preview omits it and cannot equal the
@@ -127,21 +181,29 @@ object ReviewedFutureWeekProgressionDomain {
                 audit=sourceAudit)
 
         val exercise=request.catalog.singleOrNull {it.exerciseId==slot.exerciseId}
-        val stock=exercise?.equipmentId?.let {
+            ?:return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
+                "The selected exercise is missing from the reviewed catalog.",
+                audit=sourceAudit)
+        val physical=requiresPhysicalMachineIdentity(exercise.expectedLoadBasis)
+        val stock=if(physical)confirmedBoundMachineStock(
+            next.stamp.gymId,exercise,slot.machineInstanceId,
+            request.verifiedMachineConfigurations)
+        else exercise.equipmentId?.let {
             request.setup.reviewed?.gym?.confirmedStock?.get(it)
         }
-        if(exercise==null || request.coachingRequest.verifiedStock!=stock)
-            return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
-                "The current physical stock must match the exact selected exercise.",
-                audit=sourceAudit)
-
-        // A machine-specific weight/rep improvement belongs to its A/B
-        // machine thread. Custom week slots do not yet persist a physical
-        // machine-instance binding, so never launder it into all machines.
-        if(requiresPhysicalMachineIdentity(exercise.expectedLoadBasis))
+        // A custom cycle now persists physical A/B slot bindings. Only the
+        // EXACT bound station's separately calibrated inventory and same-day,
+        // same-station history may support its next-week amendment.
+        if(physical && (slot.machineInstanceId==null ||
+            request.coachingRequest.requestedMachineInstanceId!=
+                slot.machineInstanceId || stock==null))
             return refuse(
                 ReviewedFutureWeekProgressionStatus.PHYSICAL_MACHINE_REVIEW_REQUIRED,
-                "Machine A/B prescriptions need a persisted physical machine ID before a cycle-level override.",
+                "This cycle slot must bind an available, calibrated physical station before receiving a machine-specific change.",
+                audit=sourceAudit)
+        if(request.coachingRequest.verifiedStock!=stock)
+            return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
+                "The confirmed load inventory changed or is not the selected physical station.",
                 audit=sourceAudit)
 
         if(!request.permissions.adaptWeekOverrides)

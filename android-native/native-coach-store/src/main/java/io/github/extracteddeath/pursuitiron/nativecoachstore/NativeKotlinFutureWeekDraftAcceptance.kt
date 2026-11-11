@@ -94,7 +94,7 @@ class NativeKotlinFutureWeekDraftAcceptance(
             val content=NativeCustomCycleDraftCodec.encode(candidate)
             val envelope=ByteArrayOutputStream()
             DataOutputStream(envelope).use{out->
-                out.writeUTF("pursuit-native-future-week-draft-cas-v1")
+                out.writeUTF("pursuit-native-future-week-draft-cas-v2")
                 out.writeUTF(selection.ownerKey)
                 out.writeUTF(selection.cycleId)
                 out.writeInt(selection.absoluteWeek)
@@ -111,6 +111,9 @@ class NativeKotlinFutureWeekDraftAcceptance(
                 out.writeLong(verified.permissionRevision)
                 out.writeLong(verified.consentRevision)
                 out.writeLong(verified.assistanceRevision)
+                // A changed physical machine roster invalidates a previously
+                // displayed A/B progression option, even if its label matches.
+                out.writeLong(verified.machineRosterRevision)
                 out.writeInt(checkNotNull(verified.proposal.changedAbsoluteWeek))
                 out.writeUTF(checkNotNull(verified.proposal.changedSlotId))
                 out.writeInt(content.size)

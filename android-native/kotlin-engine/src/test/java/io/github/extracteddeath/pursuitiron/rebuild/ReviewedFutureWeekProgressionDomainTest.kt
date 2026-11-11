@@ -95,6 +95,86 @@ class ReviewedFutureWeekProgressionDomainTest {
                 CustomRepForecastPolicy.TARGET_RIR_V2),
             permissions)
 
+    @Test fun futureWeekMachineNeedsExactPreviousWeekStationRatherThanOldSuccess() {
+        val source=cycle()
+        val b1=completed(source,1,1)
+        val a2=completed(source,2,2)
+        fun tagged(
+            original:CustomCoachingHistoricalSession,
+            station:String,recorded:String=station
+        ):CustomCoachingHistoricalSession {
+            val old=original.snapshot.slots.single()
+            return original.copy(
+                snapshot=original.snapshot.copy(slots=listOf(
+                    old.copy(machineInstanceId=station))),
+                evidence=original.evidence.copy(visits=
+                    original.evidence.visits.map {it.copy(actual=
+                        it.actual?.copy(machineInstanceId=recorded))}))
+        }
+        val proof=ReviewedFutureWeekProgressionDomain
+        fun fresh(history:List<CustomCoachingHistoricalSession>):Boolean=
+            proof.hasFreshSameStationEvidence(
+                history,"cycle-1","base",0,2,"slot-0","B")
+        // A successful Machine B in week 1 is not evidence for a B
+        // increase in week 3 when week 2 used Machine A.
+        assertFalse(fresh(listOf(tagged(b1,"B"),tagged(a2,"A"))))
+        assertTrue(fresh(listOf(tagged(b1,"A"),tagged(a2,"B"))))
+        // An actual mid-workout switch A -> B is valid B history even
+        // though the workout's originally issued station was A.
+        assertTrue(fresh(listOf(tagged(b1,"B"),tagged(a2,"A","B"))))
+        val mixed=tagged(a2,"A","B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.mapIndexed {index,fact->
+                    if(index==0)fact.copy(actual=
+                        fact.actual?.copy(machineInstanceId="A")) else fact
+                }))
+        }
+        assertFalse(fresh(listOf(tagged(b1,"B"),mixed)))
+        assertFalse(fresh(listOf(tagged(b1,"B"),tagged(a2,"B","A"))))
+        assertFalse(fresh(listOf(tagged(b1,"B"),a2)))
+        assertFalse(fresh(listOf(tagged(b1,"B"))))
+        assertFalse(fresh(listOf(tagged(a2,"B"),tagged(a2.copy(
+            completionOrder=3,evidence=a2.evidence.copy(
+                workoutId="duplicate-session")), "B"))))
+        // Unbound bodyweight and other nonphysical cycles retain their
+        // existing exact-one-previous-same-day evidence rule.
+        assertTrue(proof.hasFreshSameStationEvidence(
+            listOf(a2),"cycle-1","base",0,2,"slot-0",null))
+    }
+
+    @Test fun aBoundPhysicalStackMustMatchTheExactGymAndMachine() {
+        val extension=StarterExerciseTranche.movements().single {
+            it.exerciseId=="leg_extension"
+        }
+        val a=KotlinPhysicalMachine("A","Extension A",
+            unit=LoadUnit.LB,minimum=BigDecimal("20"),
+            maximum=BigDecimal("160"),increment=BigDecimal("5"))
+        val b=KotlinPhysicalMachine("B","Extension B",
+            unit=LoadUnit.LB,minimum=BigDecimal("20"),
+            maximum=BigDecimal("180"),increment=BigDecimal("10"))
+        val rosters=listOf(KotlinGymMachineAlternatives(
+            "gym-1","leg_extension","A",listOf(a,b)))
+        fun stock(id:String?,all:List<KotlinGymMachineAlternatives>?=rosters)=
+            ReviewedFutureWeekProgressionDomain.confirmedBoundMachineStock(
+                "gym-1",extension,id,all)
+        val forA=stock("A") as? VerifiedLoadStock.Stack
+        val forB=stock("B") as? VerifiedLoadStock.Stack
+        assertNotNull(forA)
+        assertNotNull(forB)
+        assertEquals(BigDecimal("5"),forA?.increment)
+        assertEquals(BigDecimal("10"),forB?.increment)
+        assertNotEquals(forA,forB)
+        assertNull(stock(null))
+        assertNull(stock("C"))
+        assertNull(stock("A",emptyList()))
+        assertNull(ReviewedFutureWeekProgressionDomain.confirmedBoundMachineStock(
+            "gym-2",extension,"A",rosters))
+        val offGrid=rosters.single().copy(machines=listOf(a.copy(
+            maximum=BigDecimal("157"))))
+        assertNull(stock("A",listOf(offGrid)))
+        assertNull(stock("A",null))
+    }
+
     @Test fun machineABAndCableOrSmithCannotBorrowACycleLevelLoad() {
         val machineBases=setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
             LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)

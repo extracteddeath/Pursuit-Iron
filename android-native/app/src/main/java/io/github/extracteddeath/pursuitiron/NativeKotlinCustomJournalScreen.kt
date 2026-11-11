@@ -475,7 +475,13 @@ internal fun NativeKotlinCustomJournalScreen(
                         setDetail=focusDetail,
                         focusOnNext=focusOnNext,
                         onFocusChange={focusOnNext=it},
-                        enabled=!busy
+                        enabled=!busy,
+                        onHistory=upcoming?.first?.exerciseId?.let{exerciseId->
+                            {historyExerciseId=exerciseId}
+                        },
+                        onInfo=upcoming?.first?.slotId?.let{slotId->
+                            {infoSlotId=slotId}
+                        }
                     )
                 }
                 if(!finished && current.finishedByEventId==null) {
@@ -494,7 +500,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         slot.sets.any{it.setKey==activeFocus.setKey}
                 }.forEach {slot->
                     PursuitCard {
-                        PursuitExerciseHeading(slot.exerciseId,
+                        if(activeFocus==null)PursuitExerciseHeading(slot.exerciseId,
                             onHistory={historyExerciseId=slot.exerciseId},
                             subtitle="Working sets and saved exercise history",
                             onInfo={infoSlotId=slot.slotId})

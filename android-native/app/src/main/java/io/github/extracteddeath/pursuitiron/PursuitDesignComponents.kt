@@ -165,12 +165,13 @@ internal fun PursuitWorkoutReadinessPanel(
 }
 
 /**
- * Shared workout focus header for custom and Composer journals. It only
- * changes which editor is visible. The saved journal and any draft fields
- * remain owned by the corresponding workout screen.
+ * One shared Material 3 Expressive focus header for generated and custom
+ * journals. History and Info remain one touch from the active set, even
+ * while its editor is in compact focus mode. This component owns only
+ * presentation: neither action changes prescribed targets or recorded sets.
  *
- * The content is single-column and chips scroll horizontally rather than
- * competing for width at large Android font scales.
+ * At large font scales and narrow widths, exercise name and actions stack
+ * without squeezing titles or reducing the 48dp tap targets.
  */
 @Composable
 internal fun PursuitWorkoutFocusHeader(
@@ -179,16 +180,73 @@ internal fun PursuitWorkoutFocusHeader(
     focusOnNext:Boolean,
     onFocusChange:(Boolean)->Unit,
     enabled:Boolean=true,
-    heading:String="UP NEXT"
+    heading:String="UP NEXT",
+    onHistory:(()->Unit)?=null,
+    onInfo:(()->Unit)?=null
 ) {
     PursuitCard(highlighted=focusOnNext) {
         Text(heading,style=MaterialTheme.typography.labelSmall,
             color=MaterialTheme.colorScheme.primary)
-        Text(exerciseLabel ?: "All entries recorded · review Finish",
-            style=MaterialTheme.typography.titleLarge)
-        if(!setDetail.isNullOrBlank())
-            Text(setDetail,style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        val titleContent:@Composable (Modifier)->Unit={modifier->
+            Column(modifier,
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                Text(exerciseLabel ?: "All entries recorded · review Finish",
+                    style=MaterialTheme.typography.titleLarge)
+                if(!setDetail.isNullOrBlank())
+                    Text(setDetail,style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        val historyAction:@Composable (Modifier)->Unit={modifier->
+            if(exerciseLabel!=null && onHistory!=null) {
+                OutlinedButton(
+                    onClick=onHistory,enabled=enabled,
+                    contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),
+                    modifier=modifier.heightIn(min=48.dp)
+                ) {
+                    Icon(Icons.Outlined.History,contentDescription=null,
+                        modifier=Modifier.size(18.dp))
+                    Spacer(Modifier.width(PursuitSpace.xxs))
+                    Text("History")
+                }
+            }
+        }
+        val infoAction:@Composable ()->Unit={
+            if(exerciseLabel!=null && onInfo!=null) {
+                OutlinedIconButton(
+                    onClick=onInfo,enabled=enabled,
+                    modifier=Modifier.size(48.dp)
+                ) {
+                    Icon(Icons.Outlined.Info,
+                        contentDescription="Exercise details")
+                }
+            }
+        }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stacked=maxWidth<380.dp ||
+                LocalDensity.current.fontScale>=1.35f
+            val hasActions=exerciseLabel!=null &&
+                (onHistory!=null || onInfo!=null)
+            if(stacked && hasActions) {
+                Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    titleContent(Modifier.fillMaxWidth())
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                        verticalAlignment=Alignment.CenterVertically) {
+                        infoAction()
+                        historyAction(Modifier.weight(1f))
+                    }
+                }
+            } else if(hasActions) {
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    titleContent(Modifier.weight(1f))
+                    infoAction()
+                    historyAction(Modifier)
+                }
+            } else titleContent(Modifier.fillMaxWidth())
+        }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
             FilterChip(

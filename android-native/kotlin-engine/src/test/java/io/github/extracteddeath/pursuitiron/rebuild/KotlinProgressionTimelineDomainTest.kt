@@ -143,6 +143,35 @@ class KotlinProgressionTimelineDomainTest {
             review(listOf(a1,a2,mixed,a3)).status)
     }
 
+    @Test fun savedPostFinishSkipRemainsAProgressionContinuityBarrier() {
+        val a1=workout(311,machineId="A")
+        val a2=workout(312,machineId="A")
+        val originallyA=workout(313,machineId="A")
+        val a3=workout(314,machineId="A")
+        var corrections=KotlinSavedHistoryCorrectionDomain.begin(originallyA)
+        originallyA.snapshot.targets.forEachIndexed { index,target->
+            val original=originallyA.effectiveSets.getValue(target.setKey)
+                .operation as KotlinJournalOperation.RecordSet
+            val skip=KotlinSavedSetCorrection("skip-machine-$index",
+                corrections.correctionRevision,target.setKey,original.eventId,
+                KotlinJournalSetOutcome.SKIPPED,null)
+            corrections=(KotlinSavedHistoryCorrectionDomain.reduce(
+                corrections,skip) as KotlinSavedCorrectionDecision.Proposed).state
+        }
+        val reviewed=KotlinProgressionTimelineDomain.review(
+            request(listOf(a1,a2,originallyA,a3)).copy(
+                requestedMachineInstanceId="A",
+                completedWorkouts=listOf(
+                    KotlinChronologicalWorkout(1,a1),
+                    KotlinChronologicalWorkout(2,a2),
+                    KotlinChronologicalWorkout(3,originallyA,corrections),
+                    KotlinChronologicalWorkout(4,a3))))
+        assertEquals(KotlinTimelineReviewStatus.UNRESOLVED_PHYSICAL_MACHINE,
+            reviewed.status)
+        assertNull(reviewed.progression)
+        assertFalse(reviewed.canIssueTargets)
+    }
+
     @Test fun postFinishMachineCorrectionChangesComparableProgressionScope() {
         val prior=workout(201,machineId="A")
         val wronglyTagged=workout(202,machineId="A")

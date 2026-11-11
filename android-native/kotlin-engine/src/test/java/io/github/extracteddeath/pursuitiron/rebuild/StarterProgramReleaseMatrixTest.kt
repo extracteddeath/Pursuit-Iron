@@ -9,7 +9,8 @@ import org.junit.Test
 /** Shipped catalog plus declared fictional calibration; no toy movement credits. */
 internal object StarterProgramReleaseFixture {
     private fun n(value:String)=BigDecimal(value)
-    fun request(split:ComposerSplit,phase:TrainingPhase):FirstProgramStartRequest {
+    fun request(split:ComposerSplit,phase:TrainingPhase,
+        includeIncline:Boolean=false):FirstProgramStartRequest {
         val days=when(split) {
             ComposerSplit.FULL_BODY->setOf(0,2,4)
             ComposerSplit.UPPER_LOWER->setOf(0,1,3,4)
@@ -29,7 +30,9 @@ internal object StarterProgramReleaseFixture {
                     mapOf(n("45") to 2,n("25") to 2,n("10") to 2,n("5") to 2)),
                 "dumbbell-rack" to VerifiedLoadStock.Totals(LoadUnit.LB,
                     LoadBasis.DUMBBELL_PER_HAND,(5..50 step 5).map{BigDecimal(it)})
-            ),setOf("flat-bench","rack"),emptySet()),
+            ),setOf("flat-bench","rack")+
+                (if(includeIncline)setOf("incline-bench") else emptySet()),
+                emptySet()),
             allowBodyweight=true,allowSupersets=false,allowTricepsOnLower=false,
             maxBarbellExercisesPerDay=1,focusedMuscles=emptySet(),
             reducedMuscles=emptySet(),excludedExerciseIds=emptySet(),
@@ -39,7 +42,9 @@ internal object StarterProgramReleaseFixture {
             mapOf("barbell_bench" to n("135"),"back_squat" to n("135"),
                 "one_arm_db_row" to n("30"),"db_rdl" to n("30"),
                 "db_lateral_raise" to n("15"),"db_curl" to n("25"),
-                "db_overhead_triceps" to n("25"),"db_calf_raise" to n("30")),
+                "db_overhead_triceps" to n("25"),"db_calf_raise" to n("30"))+
+                (if(includeIncline)mapOf("incline_db_press" to n("30"))
+                    else emptyMap()),
             setOf("bodyweight_crunch"),phase,nonSetSecondsPerDay=900)
     }
 }
@@ -142,6 +147,39 @@ class StarterProgramReleaseMatrixTest {
                 squatDays.map{generation.focusByWeekday.getValue(it)}.toSet())
             assertTrue(checkNotNull(result.prescription?.finalAudit)
                 .satisfiesDeclaredHardConstraints)
+        }
+    }
+
+    @Test fun calibratedInclineVariantRemainsInUlpplStrengthAndPeak() {
+        for(phase in listOf(TrainingPhase.STRENGTH,TrainingPhase.PEAK))
+            for(includeOHP in listOf(false,true)) {
+            val baseline=StarterProgramReleaseFixture.request(
+                ComposerSplit.ULPPL,phase,includeIncline=true).copy(
+                    nonSetSecondsPerDay=600)
+            val source=if(includeOHP)baseline.copy(
+                startingLoads=baseline.startingLoads+
+                    ("barbell_ohp" to BigDecimal("95")))
+            else baseline
+            val result=CoachFirstProgramStartDomain.review(source)
+            assertEquals("$phase: ${result.issues}",
+                FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,result.status)
+            assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+                result.policy?.primaryLiftMinimumDays)
+            val draft=checkNotNull(result.prescription)
+            val inclineDays=draft.sessions.filter {session->
+                session.exercises.any{it.exerciseId=="incline_db_press"}
+            }
+            assertTrue("Calibrated incline cannot silently be displaced: ${result.issues}",
+                inclineDays.isNotEmpty())
+            assertTrue(inclineDays.any{session->
+                session.exercises.single{it.exerciseId=="incline_db_press"}
+                    .sets.any{it.type==DraftSetType.WORKING}
+            })
+            assertTrue(checkNotNull(draft.finalAudit).satisfiesDeclaredHardConstraints)
+            // Neither overhead pressing nor a different load convention may
+            // replace the athlete's verified incline-dumbbell selection.
+            val incline=source.catalog.single{it.exerciseId=="incline_db_press"}
+            assertEquals(LoadBasis.DUMBBELL_PER_HAND,incline.expectedLoadBasis)
         }
     }
 

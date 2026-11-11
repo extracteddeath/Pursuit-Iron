@@ -38,3 +38,11 @@ tasks.register<JavaExec>("runStarterProgramReleaseProbe") {
     mainClass.set("io.github.extracteddeath.pursuitiron.rebuild.StarterProgramReleaseProbe")
     args(layout.buildDirectory.file("reports/starter-program-release-audit.json").get().asFile.absolutePath)
 }
+
+
+/** Keep failed coaching/program assertions actionable in headless CI logs. */
+tasks.withType<Test>().configureEach {
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}

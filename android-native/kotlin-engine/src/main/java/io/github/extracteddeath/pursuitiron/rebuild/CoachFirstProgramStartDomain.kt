@@ -168,7 +168,7 @@ object CoachFirstProgramStartDomain {
         // distinct primary slots, and no policy may silently double-book
         // a day to manufacture frequency.
         data class PhaseOffer(val lifts:List<String>,val requiredDays:Int)
-        val repeatOffers=if(athlete?.split==ComposerSplit.FULL_BODY)
+        val repeatOffers=if(input.setup.reviewed?.split==ComposerSplit.FULL_BODY)
             emptyList() else groups.filter{2*it.size<=days}
                 .take(4).map{PhaseOffer(it,2)}
         val phaseOffers=repeatOffers+groups.map{PhaseOffer(it,1)}

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -184,6 +185,7 @@ internal fun NativeSetValueFields(unit:String,load:String,reps:String,rir:String
 /** One equal-width, bounded Material 3 control with 48dp tap targets.
  * The long-press action is a discrete draft-only edit and has an accessible
  * action label. Disabled controls cannot receive either gesture. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NativeSetStepButton(
     label:String,increase:Boolean,enabled:Boolean,longStepCount:Int,

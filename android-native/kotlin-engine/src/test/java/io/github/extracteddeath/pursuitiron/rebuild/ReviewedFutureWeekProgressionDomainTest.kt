@@ -95,6 +95,39 @@ class ReviewedFutureWeekProgressionDomainTest {
                 CustomRepForecastPolicy.TARGET_RIR_V2),
             permissions)
 
+    @Test fun aBoundPhysicalStackMustMatchTheExactGymAndMachine() {
+        val extension=StarterExerciseTranche.movements().single {
+            it.exerciseId=="leg_extension"
+        }
+        val a=KotlinPhysicalMachine("A","Extension A",
+            unit=LoadUnit.LB,minimum=BigDecimal("20"),
+            maximum=BigDecimal("160"),increment=BigDecimal("5"))
+        val b=KotlinPhysicalMachine("B","Extension B",
+            unit=LoadUnit.LB,minimum=BigDecimal("20"),
+            maximum=BigDecimal("180"),increment=BigDecimal("10"))
+        val rosters=listOf(KotlinGymMachineAlternatives(
+            "gym-1","leg_extension","A",listOf(a,b)))
+        fun stock(id:String?,all:List<KotlinGymMachineAlternatives>?=rosters)=
+            ReviewedFutureWeekProgressionDomain.confirmedBoundMachineStock(
+                "gym-1",extension,id,all)
+        val forA=stock("A") as? VerifiedLoadStock.Stack
+        val forB=stock("B") as? VerifiedLoadStock.Stack
+        assertNotNull(forA)
+        assertNotNull(forB)
+        assertEquals(BigDecimal("5"),forA?.increment)
+        assertEquals(BigDecimal("10"),forB?.increment)
+        assertNotEquals(forA,forB)
+        assertNull(stock(null))
+        assertNull(stock("C"))
+        assertNull(stock("A",emptyList()))
+        assertNull(ReviewedFutureWeekProgressionDomain.confirmedBoundMachineStock(
+            "gym-2",extension,"A",rosters))
+        val offGrid=rosters.single().copy(machines=listOf(a.copy(
+            maximum=BigDecimal("157"))))
+        assertNull(stock("A",listOf(offGrid)))
+        assertNull(stock("A",null))
+    }
+
     @Test fun machineABAndCableOrSmithCannotBorrowACycleLevelLoad() {
         val machineBases=setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
             LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)

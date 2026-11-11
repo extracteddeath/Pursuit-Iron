@@ -88,6 +88,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val customPreparedStore=NativeKotlinCustomWorkoutPreparedStore(
         root,revisionFence,localAthlete,customWorkoutPreflight,
         futureActivationHandoff)
+    private val machineRosters=NativeKotlinMachineRosterFileStore(root)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -184,6 +185,41 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val trackedWorkout=NativeKotlinTrackedWorkoutGateway(
         coordinator,historyTransactions,historyStore,correctionStore,
         gymCoherentAuthority,revisionFence)
+
+    /**
+     * Physical machine alternatives use an independent owner-fenced source.
+     * Changing a default never rewrites a reviewed program or past set receipt.
+     */
+    fun readMachineRoster():NativeMachineRosterResult {
+        val identity=localAthlete.signedInIdentity()
+            ?:return NativeMachineRosterResult.Rejected("NOT_AUTHORIZED")
+        return revisionFence.withOwnerTransaction(identity.ownerKey) {
+            val source=(authoringSourceStore.read(identity.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            if(source==null || source.ownerKey!=identity.ownerKey ||
+                source.athleteId!=identity.athleteId ||
+                source.setup.reviewed==null)
+                NativeMachineRosterResult.Rejected("UNVERIFIED_GYM")
+            else machineRosters.read(identity.ownerKey)
+        }
+    }
+
+    fun saveMachineRoster(
+        expectedRevision:Long,configurations:List<KotlinGymMachineAlternatives>
+    ):NativeMachineRosterResult {
+        val identity=localAthlete.signedInIdentity()
+            ?:return NativeMachineRosterResult.Rejected("NOT_AUTHORIZED")
+        return revisionFence.withOwnerTransaction(identity.ownerKey) {
+            val source=(authoringSourceStore.read(identity.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            val reviewed=source?.setup?.reviewed
+            if(source==null || source.ownerKey!=identity.ownerKey ||
+                source.athleteId!=identity.athleteId || reviewed==null ||
+                configurations.any {it.gymId!=reviewed.gym.gymId})
+                NativeMachineRosterResult.Rejected("UNVERIFIED_GYM")
+            else machineRosters.save(identity.ownerKey,expectedRevision,configurations)
+        }
+    }
 
     /**
      * Read-only profile/settings summary for the CURRENT confirmed athlete.

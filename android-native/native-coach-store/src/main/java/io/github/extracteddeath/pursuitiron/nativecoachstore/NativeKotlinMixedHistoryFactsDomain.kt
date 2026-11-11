@@ -30,6 +30,15 @@ data class NativeMixedPhysicalLoadKey(
     val basis: LoadBasis
 )
 
+/** A physical station is comparable only inside its authenticated issued gym. */
+data class NativeMixedMachineLoadKey(
+    val gymId:String,
+    val exerciseId:String,
+    val machineInstanceId:String,
+    val unit:LoadUnit,
+    val basis:LoadBasis
+)
+
 data class NativeMixedCompletedLoadFact(
     val key: NativeMixedPhysicalLoadKey,
     val actualLoad: BigDecimal,
@@ -54,7 +63,12 @@ data class NativeKotlinMixedHistoryFacts(
     val highestCompletedLoad: Map<NativeMixedPhysicalLoadKey, NativeMixedCompletedLoadFact>,
     val mostRepsAtLoad: List<NativeMixedCompletedLoadFact>,
     /** Separate actual single evidence; cannot be replaced by 5-rep record at same weight. */
-    val bestLoggedSingleByLoad: Map<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact> = emptyMap()
+    val bestLoggedSingleByLoad: Map<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact> = emptyMap(),
+    /** Factual best completed weights, not certified PRs or interchangeable stacks. */
+    val highestCompletedLoadByMachine:
+        Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact> = emptyMap(),
+    val bestLoggedSingleByMachine:
+        Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact> = emptyMap()
 ) {
     val canPublishPr: Boolean get() = false
     val canIssueProgression: Boolean get() = false
@@ -113,6 +127,10 @@ object NativeKotlinMixedHistoryFactsDomain {
         val repsAtLoad = linkedMapOf<Pair<NativeMixedPhysicalLoadKey, BigDecimal>,
             NativeMixedCompletedLoadFact>()
         val bestSingle = linkedMapOf<NativeMixedPhysicalLoadKey,NativeMixedCompletedLoadFact>()
+        val highestByMachine=linkedMapOf<NativeMixedMachineLoadKey,
+            NativeMixedCompletedLoadFact>()
+        val singlesByMachine=linkedMapOf<NativeMixedMachineLoadKey,
+            NativeMixedCompletedLoadFact>()
         for (completion in timeline.completions) {
             val manifest = completion.manifest
             val visits = when (completion) {
@@ -144,6 +162,11 @@ object NativeKotlinMixedHistoryFactsDomain {
                             it.effectiveEventId)
                     }
                 }
+            }
+            val issuedGymId=when(completion) {
+                is NativeKotlinMixedHistoryCompletion.Composer ->
+                    completion.evidence.source.gymId
+                is NativeKotlinMixedHistoryCompletion.Custom -> completion.gymId
             }
             val isCustom = completion is NativeKotlinMixedHistoryCompletion.Custom
             for (exercise in visits.map { it.exercise }.distinct()) {
@@ -187,6 +210,31 @@ object NativeKotlinMixedHistoryFactsDomain {
                 if (repsAtLoad[loadKey] == null ||
                     actual.reps >= checkNotNull(repsAtLoad[loadKey]).reps)
                     repsAtLoad[loadKey] = record
+                // Only the immutable issued gym and an actual, explicit
+                // machine ID can authenticate a station-local best. Old
+                // custom receipts without a verifiable gym remain legacy
+                // facts; they must not become an invented A/B record.
+                val machineId=actual.machineInstanceId
+                if(id.matches(issuedGymId) &&
+                    KotlinMachineAlternativesDomain.validInstanceId(machineId)) {
+                    val machineKey=NativeMixedMachineLoadKey(issuedGymId,
+                        visit.exercise,checkNotNull(machineId),
+                        target.unit,target.basis)
+                    val oldMachine=highestByMachine[machineKey]
+                    if(oldMachine==null || physical>oldMachine.actualLoad ||
+                        (physical.compareTo(oldMachine.actualLoad)==0 &&
+                            (actual.reps>oldMachine.reps ||
+                            (actual.reps==oldMachine.reps &&
+                                manifest.completionOrder>oldMachine.completionOrder))))
+                        highestByMachine[machineKey]=record
+                    if(actual.reps==1) {
+                        val oldSingle=singlesByMachine[machineKey]
+                        if(oldSingle==null || physical>oldSingle.actualLoad ||
+                            (physical.compareTo(oldSingle.actualLoad)==0 &&
+                                manifest.completionOrder>oldSingle.completionOrder))
+                            singlesByMachine[machineKey]=record
+                    }
+                }
             }
         }
         return NativeMixedFactsResult.Review(NativeKotlinMixedHistoryFacts(
@@ -196,7 +244,9 @@ object NativeKotlinMixedHistoryFactsDomain {
             Collections.unmodifiableMap(last),
             Collections.unmodifiableMap(highest),
             Collections.unmodifiableList(repsAtLoad.values.toList()),
-            Collections.unmodifiableMap(bestSingle)
+            Collections.unmodifiableMap(bestSingle),
+            Collections.unmodifiableMap(highestByMachine),
+            Collections.unmodifiableMap(singlesByMachine)
         ))
     }
 }

@@ -22,6 +22,7 @@ enum class NativeCurrentLoadReviewRefusal {
     NOT_ENOUGH_EXERCISE_HISTORY,
     CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT,
     INCOMPARABLE_WORKOUT,
+    PHYSICAL_MACHINE_STOCK_UNVERIFIED,
     HISTORICAL_SOURCE_CHANGED,
     PURPOSE_CHANGED
 }
@@ -155,6 +156,21 @@ object NativeKotlinCurrentLoadCoachReview {
         }
         if (older == null || newer == null)
             return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        // A physical A/B stack is NOT the old exercise-level equipment.
+        // Until the approved generated-workout stock owner can certify each
+        // selected instance and stage its load as a separately approved plan,
+        // do not borrow generic stock and falsely earn a heavier set.
+        // The separately verified CUSTOM machine coach continues to work.
+        fun machines(evidence:KotlinExerciseHistoryEvidence):Set<String> =
+            evidence.workingSets.map {
+                KotlinMachineAlternativesDomain.normalizeMachineId(
+                    it.actual?.machineInstanceId)
+            }.toSet()
+        val priorMachineIds=machines(older)
+        val latestMachineIds=machines(newer)
+        if (priorMachineIds!=setOf(KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID) ||
+            latestMachineIds!=setOf(KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID))
+            return refuse(NativeCurrentLoadReviewRefusal.PHYSICAL_MACHINE_STOCK_UNVERIFIED)
         val matchingEquipment = approval.program.exercises.singleOrNull {
             it.exerciseId == exerciseId
         }?.equipment as? ComposerEquipment.Verified

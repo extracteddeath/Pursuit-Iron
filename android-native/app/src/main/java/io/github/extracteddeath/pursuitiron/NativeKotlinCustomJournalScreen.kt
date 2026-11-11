@@ -607,8 +607,8 @@ internal fun NativeKotlinCustomJournalScreen(
                             // selecting B later must not rewrite a prior A set.
                             val recordedMain=observed?.operation
                                 as? CustomWorkoutJournalOperation.Record
-                            val mainMachineId=if(observed!=null)
-                                recordedMain?.performed?.machineInstanceId
+                            val mainMachineId=if(recordedMain?.performed!=null)
+                                recordedMain.performed.machineInstanceId
                             else selectedMachineId
                             val advice=liveCoach?.takeIf {
                                 !busy && !finished && mainKey==nextVisit &&

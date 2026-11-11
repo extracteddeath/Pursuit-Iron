@@ -44,6 +44,35 @@ class NativeCustomWorkoutJournalCodecTest {
     private fun record(state:CustomWorkoutJournalDraft)=
         NativeCustomWorkoutJournalRecord("owner-1",state)
 
+    @Test fun machineVariantsPersistIndependentlyInMainAndAmplifierV4Receipts() {
+        val base=initial()
+        val main=accept(base,CustomWorkoutJournalOperation.Record(
+            "machine-main",0,CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(null,null,12,2,"machine_A")))
+        val follower=accept(main,CustomWorkoutJournalOperation.Record(
+            "machine-amp",1,CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(null,null,4,2,"machine_A")))
+        val encoded=NativeCustomWorkoutJournalCodec.encode(record(follower))
+        assertEquals(4,java.nio.ByteBuffer.wrap(encoded,4,4).int)
+        val cold=NativeCustomWorkoutJournalCodec.decode(encoded)
+        assertEquals(record(follower),cold)
+        for(part in CustomWorkoutVisitPart.entries) {
+            val stored=cold.journal.effectiveVisits.getValue(
+                CustomWorkoutVisitKey(key,part)).operation
+                    as CustomWorkoutJournalOperation.Record
+            assertEquals("machine_A",stored.performed?.machineInstanceId)
+        }
+        val changed=accept(cold.journal,CustomWorkoutJournalOperation.Finish(
+            "finish-machine-A",2))
+        val closed=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(changed)))
+        assertEquals(record(changed),closed)
+        assertEquals(1,java.nio.ByteBuffer.wrap(
+            NativeCustomWorkoutJournalCodec.encode(record(base)),4,4).int)
+    }
+
     @Test fun versionThreeSessionNotesSurviveColdReplayAndLegacyFormatIsUnchanged() {
         val original=initial()
         val legacy=NativeCustomWorkoutJournalCodec.encode(record(original))

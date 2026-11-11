@@ -206,6 +206,27 @@ internal class NativeKotlinCustomCycleController(
         selectNextSessionIfReviewed()
     }
 
+    /**
+     * After a human-confirmed future-week draft CAS, keep the already
+     * athlete-reviewed coaching recipe only as input to a NEW full-cycle
+     * audit. A changed source revision discards it. A successful audit does
+     * NOT sign the new draft: explicit new athlete consent remains required.
+     */
+    fun reopenAfterConfirmedFutureWeekSave(cycleId:String)=run {
+        val previous=current.value.takeIf{it.draft?.cycleId==cycleId}
+        val previousInputs=previous?.reviewedCoachInputs
+        val previousSourceRevision=previous?.auditSourceRevision
+        applyRead(cycleId,host.readCustomCycleDraft(cycleId))
+        if(previousInputs!=null && previousSourceRevision!=null &&
+            previousSourceRevision==current.value.sourceRevision) {
+            auditReviewedSavedCycle(previousInputs)
+            current.value=current.value.copy(
+                message="Your future-week draft was saved and the full cycle re-audited. Review and sign this new revision before preparing another workout.")
+        } else {
+            recoverSavedCoachPolicy(cycleId)
+        }
+    }
+
     /** Re-enter training from setup or Finish using the owned program census.
      * A single saved program is unambiguous; multiple programs require a choice.
      * Listing/reopening is read-only and never grants consent or starts training. */

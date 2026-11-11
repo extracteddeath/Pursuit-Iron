@@ -33,7 +33,8 @@ class CoachReviewedWholeCycleDomainTest {
         withHypertrophy:Boolean=true,
         withStrength:Boolean=true,
         withPeak:Boolean=true,
-        continuity:CustomCoachVolumeContinuityPolicy?=null
+        continuity:CustomCoachVolumeContinuityPolicy?=null,
+        targets:Set<String> = if(event)setOf("barbell_bench") else emptySet()
     ):ReviewedWholeCycleRequest {
         // All phases use the SAME reviewed athlete and gym. The existing
         // release fixture supplies a POWERBUILDING setup for strength.
@@ -51,7 +52,7 @@ class CoachReviewedWholeCycleDomainTest {
         return ReviewedWholeCycleRequest(
             "cycle-verified","Verified cycle",setup,
             StarterExerciseTranche.movements(),starters,totalWeeks,event,
-            continuity)
+            continuity,targets)
     }
 
     @Test fun hypertrophyWithoutTestKeepsOneVerifiedPhaseAndAuditsEveryWeek() {
@@ -112,6 +113,37 @@ class CoachReviewedWholeCycleDomainTest {
             ReviewedWholeCycleCandidateStatus.FULL_CYCLE_POLICY_REQUIRED})
         assertTrue(noContinuity.candidates.all {
             it.status!=ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW})
+    }
+
+    @Test fun testPreparationRequiresNamedPrimaryLiftAndDistinctPeakReview() {
+        val bounds=CustomCoachVolumeContinuityPolicy(
+            BigDecimal("1"),BigDecimal("1"),
+            BigDecimal("1"),BigDecimal("1"))
+        val source=request(goal=AthleteTrainingGoal.POWERBUILDING,
+            totalWeeks=9,event=true,continuity=bounds)
+        val missing=CoachReviewedWholeCycleDomain.propose(
+            source.copy(performanceTargetExerciseIds=emptySet()))
+        assertEquals(ReviewedWholeCycleStatus.INVALID_INPUT,missing.status)
+        assertTrue(missing.candidates.isEmpty())
+        val unrelated=CoachReviewedWholeCycleDomain.propose(
+            source.copy(performanceTargetExerciseIds=setOf("barbell_ohp")))
+        assertEquals(ReviewedWholeCycleStatus.NO_REVIEWABLE_CYCLE,
+            unrelated.status)
+        assertTrue(unrelated.candidates.all {candidate ->
+            candidate.status==
+                ReviewedWholeCycleCandidateStatus.PERFORMANCE_TARGET_UNRESOLVED &&
+                candidate.explanation.contains("barbell_ohp")})
+        val matched=CoachReviewedWholeCycleDomain.propose(source)
+        assertEquals(ReviewedWholeCycleStatus.NO_REVIEWABLE_CYCLE,matched.status)
+        assertTrue(matched.candidates.all {it.proposedCycle!=null &&
+            it.audit?.weeks?.size==9})
+        assertTrue(matched.candidates.none {
+            it.status==ReviewedWholeCycleCandidateStatus.PERFORMANCE_TARGET_UNRESOLVED ||
+                it.status==ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW})
+        assertTrue(matched.candidates.any {it.status==
+            ReviewedWholeCycleCandidateStatus.PEAK_PREPARATION_REVIEW_REQUIRED})
+        assertNull(matched.initialReviewOptionId)
+        assertFalse(matched.mayIssueWorkout)
     }
 
     @Test fun eventAndFeasibilityAreExplicitNotInvented() {

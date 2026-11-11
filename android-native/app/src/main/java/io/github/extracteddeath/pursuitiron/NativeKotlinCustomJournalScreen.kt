@@ -962,7 +962,7 @@ private fun NativeKotlinCustomVisitEditor(
             else prescription.reps
             PursuitWorkoutSetReference(referenceMode,target,referenceReps,
                 if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
-                lastReferences,WorkoutReferenceKey(set.setKey,
+                physicalMachineLastReferences(lastReferences,machineInstanceId),WorkoutReferenceKey(set.setKey,
                     part==CustomWorkoutVisitPart.FOLLOW_UP))
         }
         if(saved!=null&&!editing){

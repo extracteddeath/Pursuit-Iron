@@ -687,7 +687,8 @@ private fun NativeKotlinSetCard(
         Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
             style=MaterialTheme.typography.labelLarge)
         PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
-            lastReferences,WorkoutReferenceKey(target.setKey))
+            physicalMachineLastReferences(lastReferences,machineInstanceId),
+            WorkoutReferenceKey(target.setKey))
         if(set.isResolved) {
             Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
                 (existing?.let{" · ${it.reps} reps"+

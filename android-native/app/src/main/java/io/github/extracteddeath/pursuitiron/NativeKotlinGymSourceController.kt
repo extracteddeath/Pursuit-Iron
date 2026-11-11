@@ -191,7 +191,8 @@ internal class NativeKotlinGymSourceController(
         }
     }
 
-    fun addPhysicalMachine(exerciseId:String,label:String,increment:BigDecimal?=null)=
+    fun addPhysicalMachine(exerciseId:String,label:String,increment:BigDecimal?=null,
+        minimum:BigDecimal?=null,maximum:BigDecimal?=null)=
         mutateMachineRoster {roster,source->
             require(source.catalog.any{it.exerciseId==exerciseId})
             val gymId=checkNotNull(source.setup.reviewed).gym.gymId
@@ -201,12 +202,28 @@ internal class NativeKotlinGymSourceController(
             val uniqueId="machine_"+UUID.randomUUID().toString().replace("-","").take(16)
             val added=KotlinMachineAlternativesDomain.add(current,
                 KotlinPhysicalMachine(uniqueId,label.trim(),
-                    unit=source.setup.reviewed?.gym?.unit,increment=increment),
+                    unit=source.setup.reviewed?.gym?.unit,increment=increment,
+                    minimum=minimum,maximum=maximum),
                 makeDefault=current.machines.isEmpty())
             roster.configurations.filterNot {
                 it.gymId==gymId && it.exerciseId==exerciseId
             }+added
         }
+
+    /** Edits gym stock only; completed sets and accepted workout targets stay immutable. */
+    fun calibratePhysicalMachine(
+        exerciseId:String,machineId:String,
+        minimum:BigDecimal?,increment:BigDecimal?,maximum:BigDecimal?
+    )=mutateMachineRoster {roster,source->
+        val gymId=checkNotNull(source.setup.reviewed).gym.gymId
+        roster.configurations.map {config->
+            if(config.gymId==gymId && config.exerciseId==exerciseId) {
+                val previous=checkNotNull(config.machines.firstOrNull{it.id==machineId})
+                KotlinMachineAlternativesDomain.edit(config,previous.copy(
+                    minimum=minimum,increment=increment,maximum=maximum))
+            } else config
+        }
+    }
 
     fun defaultPhysicalMachine(exerciseId:String,machineId:String)=
         mutateMachineRoster {roster,source->

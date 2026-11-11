@@ -1,3 +1,11 @@
+## Build 1010 — Verified Both/ULPPL strength and peak practice (candidate)
+
+- In eligible five-day ULPPL/PPLUL mixed-goal cycles, strength, intensification and peak stages now request two bench, two squat and one deadlift practice exposures per week; authored lift frequencies and preferences take precedence.
+- An equipment-qualified incline dumbbell/Smith secondary bench variant is preferred on Push when an adjustable bench is available; flat-only gyms do not invent incline equipment.
+- Effective block split/day counts control phase defaults, including changes from five to four training days. Previously issued workouts and static custom rosters are unchanged.
+- Added generation/regression contracts for real exercise outputs, gym restrictions, explicitly picked bench variants, other splits/goals and time budgets. Release remains a candidate until independent, release and browser checks complete.
+- Separately unresolved: long-session underfill in strength and peak, broader cycle quality and native Kotlin parity.
+
 ## Build 998 — Design specification passes 50–110 (release candidate)
 
 - Consolidated Program and planning sheet chrome, semantic text roles, shared week controls and recoverable search across saved programs without modifying training prescriptions.

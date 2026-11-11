@@ -129,11 +129,17 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   composer.includes('onReps={reps=it}') &&
   composer.includes('onRir={effort=it}') &&
   sharedSetFields.includes('showLoad:Boolean=true') &&
-  sharedSetFields.includes('if(showLoad) OutlinedTextField(') &&
-  sharedSetFields.includes('NativeSetCounterField("Reps"') &&
-  sharedSetFields.includes('NativeSetCounterField("RIR"') &&
-  sharedSetFields.includes('Bodyweight movement · no external weight') &&
-  sharedSetFields.includes('RIR is optional · leave blank if unknown.'),
+  sharedSetFields.includes('if(showLoad)OutlinedTextField(') &&
+  sharedSetFields.includes('NativeSetCounterField(') &&
+  sharedSetFields.includes('label="Reps"') &&
+  sharedSetFields.includes('label="RIR"') &&
+  sharedSetFields.includes('showFieldHelp:Boolean=true') &&
+  sharedSetFields.includes('Bodyweight movement · no external load.') &&
+  sharedSetFields.includes('RIR is optional; leave it blank if unreported.') &&
+  sharedSetFields.includes('NativeSetEntryPolicy.stepRepsBy(') &&
+  sharedSetFields.includes('NativeSetEntryPolicy.stepRirBy(') &&
+  composer.includes('showFieldHelp=false') &&
+  journal.includes('showFieldHelp=false'),
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt');
 assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&

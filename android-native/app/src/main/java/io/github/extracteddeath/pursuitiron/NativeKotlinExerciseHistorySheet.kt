@@ -100,12 +100,19 @@ internal fun NativeKotlinExerciseHistorySheet(
     var favoriteSaving by remember(host,exerciseId){mutableStateOf(false)}
     var favoriteNotice by remember(host,exerciseId){mutableStateOf<String?>(null)}
     var historyView by rememberSaveable(exerciseId){mutableStateOf(ExerciseHistoryView.WORKING)}
+    var selectedMachineId by rememberSaveable(exerciseId){mutableStateOf("")}
+    var machineRoster by remember(host,exerciseId) {
+        mutableStateOf<NativeMachineRosterSnapshot?>(null)
+    }
     LaunchedEffect(host,exerciseId) {
         val verified=withContext(Dispatchers.IO) {
             runCatching {host.reviewVerifiedKotlinHistory()}.getOrElse {
                 NativeKotlinMixedHistoryReadResult.Rejected(
                     NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
             }
+        }
+        machineRoster=withContext(Dispatchers.IO) {
+            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
         }
         val loadedFavorites=if(verified is NativeKotlinMixedHistoryReadResult.Review) {
             withContext(Dispatchers.IO) {
@@ -188,6 +195,20 @@ internal fun NativeKotlinExerciseHistorySheet(
                         result.timeline.manifestRevision,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }
+                    val machineIds=rows.map{
+                        KotlinMachineAlternativesDomain.normalizeMachineId(
+                            it.actual?.machineInstanceId)
+                    }.distinct()
+                    val activeMachine=machineIds.find{it==selectedMachineId}
+                        ?:machineIds.firstOrNull()
+                    val machineLabels=machineRoster?.configurations
+                        ?.filter{it.exerciseId==exerciseId}
+                        ?.flatMap{it.machines}
+                        ?.associate{it.id to it.label}.orEmpty()
+                    fun machineLabel(id:String):String =
+                        if(id==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)
+                            "Unassigned (older sets)"
+                        else machineLabels[id] ?: "Machine ${id}"
                     if(rows.isEmpty())
                         PursuitEmptyState("No recorded sets yet",
                             "After this exercise has a finished native workout, its actual visits will appear here.")
@@ -207,7 +228,21 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 onClick={historyView=ExerciseHistoryView.SETBACKS},
                                 label={Text("Skipped / failed")})
                         }
-                        val visible=when(historyView) {
+                        if(machineIds.size>1) {
+                            Text("Physical machine",style=MaterialTheme.typography.titleSmall)
+                            Text("Compare loads within one machine. Different stacks cannot be ranked as a strength change.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                machineIds.forEach {machineId->
+                                    FilterChip(selected=activeMachine==machineId,
+                                        onClick={selectedMachineId=machineId},
+                                        label={Text(machineLabel(machineId))})
+                                }
+                            }
+                        }
+                        val shown=when(historyView) {
                             ExerciseHistoryView.WORKING -> rows.filter {
                                 it.type==DraftSetType.WORKING && !it.followUp
                             }
@@ -216,6 +251,13 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 it.outcome!=KotlinJournalSetOutcome.COMPLETED
                             }
                         }
+                        val visible=if(machineIds.size>1 &&
+                            historyView!=ExerciseHistoryView.SETBACKS)
+                            shown.filter{
+                                KotlinMachineAlternativesDomain.normalizeMachineId(
+                                    it.actual?.machineInstanceId)==activeMachine
+                            }
+                        else shown
                         val sessions=visible.groupBy { it.sessionOrder }
                         val allSessions=rows.groupBy { it.sessionOrder }
                         LazyColumn(Modifier.fillMaxWidth().heightIn(max=520.dp),
@@ -274,6 +316,11 @@ internal fun NativeKotlinExerciseHistorySheet(
                                         KotlinJournalSetOutcome.COMPLETED ->
                                             "Actual · ${actualLabel(row.actual)}"
                                     },style=MaterialTheme.typography.bodyMedium)
+                                    if(row.actual!=null)Text(
+                                        machineLabel(KotlinMachineAlternativesDomain.normalizeMachineId(
+                                            row.actual.machineInstanceId)),
+                                        style=MaterialTheme.typography.bodySmall,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }

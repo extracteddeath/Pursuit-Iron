@@ -951,7 +951,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
      * the real fully verified custom + Composer + history preflight.
      */
     /** Full, disk-verified historical boundary: nine real custom Finish commits. */
-    private fun persistNineHistoricalBaseWorkouts(actualRir:Int?=2) {
+    private fun persistNineHistoricalBaseWorkouts(actualRir:Int?=2,
+        observedRepsByWeek:Map<Int,Int> = emptyMap()) {
         val root=temp.root.toPath()
         val ledger=NativeKotlinHistoryManifestFileStore(root)
         assertTrue(ledger.enroll("owner-1","athlete-1"){o,a->
@@ -980,7 +981,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                     KotlinJournalSetOutcome.COMPLETED,
                     KotlinPerformedSet(
                         if(weightedFixture)n("20") else null,
-                        if(weightedFixture)LoadUnit.LB else null,12,actualRir)))
+                        if(weightedFixture)LoadUnit.LB else null,
+                        observedRepsByWeek[week] ?: 12,actualRir)))
             assertTrue(recorded.toString(),
                 recorded is NativeCustomJournalResult.Durable)
             val finish=transaction.complete("owner-1","athlete-1",
@@ -3939,7 +3941,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
         assertTrue(store().confirm("owner-1","cycle-1",2,1,0,
             futureInputs(),true) is NativeCustomSignoffWrite.Committed)
-        persistNineHistoricalBaseWorkouts()
+        // Unlike a flat training history, a rising same-day trajectory
+        // can support an earned within-range repetition recommendation.
+        persistNineHistoricalBaseWorkouts(
+            observedRepsByWeek=mapOf(1 to 11,2 to 12,3 to 13))
         val old=(permissionStore.read("owner-1","cycle-1")
             as NativeAdaptivePermissionRead.Found).receipt
         assertEquals(NativeAdaptivePermissionWrite.Committed(old.revision+1),

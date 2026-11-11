@@ -59,8 +59,9 @@ class ReviewedFutureWeekProgressionDomainTest {
             StarterExerciseTranche.movements(),1,week,weekday)
             as CustomWorkoutSnapshotResult.Preview).snapshot
     private fun completed(source:CustomTrainingCycle,week:Int,
-        order:Long,actualRir:Int=3,reps:Int=10):CustomCoachingHistoricalSession {
-        val old=preview(source,week)
+        order:Long,actualRir:Int=3,reps:Int=10,
+        weekday:Int=0):CustomCoachingHistoricalSession {
+        val old=preview(source,week,weekday)
         val slot=old.slots.single()
         val facts=slot.sets.mapIndexed {index,prescribed->
             CustomHistoricalVisitFact(
@@ -136,6 +137,19 @@ class ReviewedFutureWeekProgressionDomainTest {
         assertFalse(result.mayIssueWorkout)
         assertFalse(result.maySaveProgram)
         assertFalse(result.mayChangeWorkoutHistory)
+    }
+
+    @Test fun anotherWeekdayCannotPromoteOldSameDayPerformance() {
+        val source=cycle()
+        val history=listOf(
+            completed(source,1,1,weekday=0),
+            completed(source,2,2,weekday=2))
+        val review=ReviewedFutureWeekProgressionDomain.propose(
+            request(source=source,history=history))
+        assertEquals(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
+            review.status)
+        assertNull(review.candidate)
+        assertFalse(review.maySaveProgram)
     }
 
     @Test fun missingPermissionAndLowReadinessDoNotChangeTargets() {

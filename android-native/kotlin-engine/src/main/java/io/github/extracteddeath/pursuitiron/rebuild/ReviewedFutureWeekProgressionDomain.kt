@@ -83,6 +83,21 @@ object ReviewedFutureWeekProgressionDomain {
             return refuse(ReviewedFutureWeekProgressionStatus.NOT_NEXT_UNISSUED_WEEK,
                 "Only the immediately following unissued cycle week may be adjusted.")
 
+        // A completed workout on another training day must not make an
+        // older successful session look like fresh evidence for this day.
+        // Require exactly one completed appearance of the selected same
+        // day in the immediately preceding week, even across old signed
+        // cycle revisions. The owner adapter supplies the full ledger.
+        val previousSameDay=request.coachingRequest.completed.count{
+            it.snapshot.stamp.cycleId==current.cycleId &&
+                it.snapshot.blockId==next.blockId &&
+                it.snapshot.weekday==next.weekday &&
+                it.snapshot.absoluteWeek==next.absoluteWeek-1
+        }
+        if(previousSameDay!=1)
+            return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
+                "Review the immediately preceding same-day workout before progressing this slot; a missed or duplicate visit cannot earn an increase.")
+
         val original=(CustomWorkoutSnapshotDomain.preview(
             current,request.setup,request.catalog,
             request.catalogSourceRevision,next.absoluteWeek,next.weekday)

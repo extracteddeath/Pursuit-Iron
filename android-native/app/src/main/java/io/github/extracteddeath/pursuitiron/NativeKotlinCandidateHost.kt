@@ -143,7 +143,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
         customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
-        customNextWorkoutCoach)
+        customNextWorkoutCoach,outstandingCustomInventory)
+    private val futureWeekDraftAcceptance=NativeKotlinFutureWeekDraftAcceptance(
+        revisionFence,ownerFutureWeekProposals,customDraftStore)
     private val blockCalibrations=NativeKotlinBlockCalibrationConsentStore(
         root,revisionFence,localAthlete,customNextWorkoutCoach,customDraftStore,
         authoringSourceStore,adaptiveCyclePermissions,mixedHistoryReader,
@@ -1493,6 +1495,42 @@ internal class NativeKotlinCandidateHost(context:Context) {
             signed.ownerKey,cycleId,nextAbsoluteWeek,nextWeekday,slotId,
             readiness,movementRestricted,maximumAuthorizedIncrease,
             repForecastPolicy)
+    }
+
+    /** Review a next-week draft write using only durable owner evidence.
+     * Preview is not acceptance and cannot edit an issued workout. */
+    fun previewOwnerVerifiedFutureWeekDraft(
+        cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumAuthorizedIncrease:java.math.BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.TARGET_RIR_V2
+    ):NativeFutureWeekDraftPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureWeekDraftPreview.Rejected(
+                NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED)
+        return futureWeekDraftAcceptance.preview(NativeFutureWeekDraftSelection(
+            owner.ownerKey,cycleId,nextAbsoluteWeek,nextWeekday,slotId,
+            readiness,movementRestricted,maximumAuthorizedIncrease,
+            repForecastPolicy))
+    }
+
+    /** Explicit confirmation persists only a new UNSIGNED custom-cycle draft.
+     * Owner lock + fresh history/inventory + current rights + revision CAS
+     * are authoritative; caller cannot submit a custom program or candidate. */
+    fun acceptOwnerVerifiedFutureWeekDraft(
+        cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumAuthorizedIncrease:java.math.BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy,
+        shownFingerprint:String,athleteConfirmed:Boolean
+    ):NativeFutureWeekDraftDecision {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureWeekDraftDecision.Rejected(
+                NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED)
+        return futureWeekDraftAcceptance.accept(NativeFutureWeekDraftSelection(
+            owner.ownerKey,cycleId,nextAbsoluteWeek,nextWeekday,slotId,
+            readiness,movementRestricted,maximumAuthorizedIncrease,
+            repForecastPolicy),shownFingerprint,athleteConfirmed)
     }
 
     fun previewBlockCalibration(

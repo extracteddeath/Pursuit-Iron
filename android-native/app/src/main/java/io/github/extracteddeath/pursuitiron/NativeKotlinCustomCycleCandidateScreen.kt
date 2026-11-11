@@ -19,6 +19,11 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomPrepare
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomNextCycleSlot
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeBlockLoadConsentKind
 import java.math.BigDecimal
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekProposalResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeFutureWeekProposalRefusal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val customWeekdays = listOf(
     "Monday", "Tuesday", "Wednesday", "Thursday",
@@ -149,10 +154,20 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var coachReadiness by remember {mutableStateOf(CoachReadiness.NORMAL)}
     var coachRestricted by rememberSaveable {mutableStateOf(false)}
     var dayCoachingVisible by remember {mutableStateOf(false)}
+    val futureWeekScope=rememberCoroutineScope()
+    var futureWeekBusy by remember {mutableStateOf(false)}
+    var futureWeekVersion by remember {mutableLongStateOf(0)}
+    var futureWeekSlotId by remember {mutableStateOf<String?>(null)}
+    var futureWeekOption by remember {
+        mutableStateOf<NativeFutureWeekProposalResult?>(null)
+    }
     LaunchedEffect(draft?.revision,state.sourceRevision,state.authoredPreview,
         state.reviewedCoachInputs,coachMaxStep,coachReadiness,coachRestricted,
         inspectedWeek,inspectedWeekday) {
         dayCoachingVisible=false
+        futureWeekVersion++
+        futureWeekSlotId=null
+        futureWeekOption=null
         controller.clearCalibrationOffer()
     }
     // Slot identity is stable and separate from the exercise catalog ID.
@@ -906,6 +921,69 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             session.stamp.gymCatalogSourceRevision==state.sourceRevision
                     }?.let {reviewed->
                         NativeKotlinCustomDayCoachingSummary(reviewed,session.absoluteWeek)
+                        if(permissionHost!=null && maxStep!=null &&
+                            reviewed.selectedSlotId!=null && policyReady && signed &&
+                            state.preparedWorkout==null && !calibrationLocked) {
+                            Text("Check whether this change also works across the complete cycle.",
+                                style=MaterialTheme.typography.bodySmall)
+                            OutlinedButton(enabled=!busy&&!futureWeekBusy,onClick={
+                                val host=permissionHost
+                                val chosen=checkNotNull(reviewed.selectedSlotId)
+                                val version=++futureWeekVersion
+                                futureWeekBusy=true
+                                futureWeekSlotId=chosen
+                                futureWeekOption=null
+                                futureWeekScope.launch {
+                                    val result=withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            host.reviewOwnerVerifiedFutureWeekProgression(
+                                                draft.cycleId,session.absoluteWeek,
+                                                session.weekday,chosen,coachReadiness,
+                                                coachRestricted,checkNotNull(maxStep),
+                                                reviewed.review.repForecastPolicy)
+                                        }.getOrElse {
+                                            NativeFutureWeekProposalResult.Rejected(
+                                                NativeFutureWeekProposalRefusal.STORAGE_UNAVAILABLE)
+                                        }
+                                    }
+                                    if(version==futureWeekVersion) {
+                                        futureWeekOption=result
+                                        futureWeekBusy=false
+                                    }
+                                }
+                            }) { Text(if(futureWeekBusy)"Checking full cycle…"
+                                else "Check full-cycle progression") }
+                            if(futureWeekSlotId==reviewed.selectedSlotId) {
+                                when(val option=futureWeekOption) {
+                                    is NativeFutureWeekProposalResult.Reviewed -> {
+                                        Text(option.proposal.explanation,
+                                            style=MaterialTheme.typography.bodySmall)
+                                        val changed=option.proposal.candidate?.weekOverrides
+                                            ?.get(session.blockId).orEmpty().singleOrNull{
+                                                it.weekInBlock==session.weekInBlock &&
+                                                it.weekday==session.weekday &&
+                                                it.slotId==reviewed.selectedSlotId
+                                            }
+                                        changed?.let {edit->
+                                            Text("Proposed minimum reps: "+
+                                                edit.sets.filter{
+                                                    it.type==DraftSetType.WORKING
+                                                }.joinToString(" / "){
+                                                    it.reps.minimum.toString()
+                                                },style=MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Text("Review only. No program or workout was saved.",
+                                            style=MaterialTheme.typography.bodySmall)
+                                    }
+                                    is NativeFutureWeekProposalResult.Rejected ->
+                                        Text("Full-cycle review unavailable: "+
+                                            pretty(option.reason),
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.error)
+                                    null -> {}
+                                }
+                            }
+                        }
                         val readyRepEdit=reviewed.selectedSlotId?.let {chosen->
                             (CustomNextRepAmendmentDomain.propose(
                                 session,chosen,reviewed.review)

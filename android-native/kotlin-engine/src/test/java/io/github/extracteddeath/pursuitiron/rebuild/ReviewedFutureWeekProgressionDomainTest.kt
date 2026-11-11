@@ -119,6 +119,17 @@ class ReviewedFutureWeekProgressionDomainTest {
         // increase in week 3 when week 2 used Machine A.
         assertFalse(fresh(listOf(tagged(b1,"B"),tagged(a2,"A"))))
         assertTrue(fresh(listOf(tagged(b1,"A"),tagged(a2,"B"))))
+        // An actual mid-workout switch A -> B is valid B history even
+        // though the workout's originally issued station was A.
+        assertTrue(fresh(listOf(tagged(b1,"B"),tagged(a2,"A","B"))))
+        val mixed=tagged(a2,"A","B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.mapIndexed {index,fact->
+                    if(index==0)fact.copy(actual=
+                        fact.actual?.copy(machineInstanceId="A")) else fact
+                }))
+        }
+        assertFalse(fresh(listOf(tagged(b1,"B"),mixed)))
         assertFalse(fresh(listOf(tagged(b1,"B"),tagged(a2,"B","A"))))
         assertFalse(fresh(listOf(tagged(b1,"B"),a2)))
         assertFalse(fresh(listOf(tagged(b1,"B"))))

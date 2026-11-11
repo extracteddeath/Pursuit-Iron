@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
 
@@ -142,13 +144,18 @@ internal fun PursuitWorkoutReadinessPanel(
         }
         }
         Row(
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(
+                value=movementRestricted,enabled=enabled,role=Role.Checkbox,
+                onValueChange=onMovementRestrictedChange
+            ),
             verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
         ) {
+            // One large labeled touch/keyboard target. The nested indicator
+            // is display-only so a tap cannot toggle the value twice.
             Checkbox(
                 checked=movementRestricted,
-                onCheckedChange=onMovementRestrictedChange,
+                onCheckedChange=null,
                 enabled=enabled
             )
             Column(Modifier.weight(1f)) {

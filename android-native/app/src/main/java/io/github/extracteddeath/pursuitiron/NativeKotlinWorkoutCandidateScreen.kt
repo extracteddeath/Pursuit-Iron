@@ -311,7 +311,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             val number=typeSets.indexOfFirst {
                 it.target.setKey==target.setKey
             }+1
-            "${if(target.type==DraftSetType.WARMUP)"Warm-up" else "Working set"} · set $number of ${typeSets.size}"
+            "${if(target.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $number of ${typeSets.size}"
         }
         PursuitWorkoutFocusHeader(
             exerciseLabel=selected?.target?.exerciseId?.let(::kotlinExerciseLabel),

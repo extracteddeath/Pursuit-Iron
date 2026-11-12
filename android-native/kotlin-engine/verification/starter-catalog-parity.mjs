@@ -35,7 +35,9 @@ const indexed=new Map(CURATED_EXERCISES.map(x=>[x.id,x]));
 assert.deepEqual(declared.slice(0,baseline.length),baseline.map(x=>x[0]),
   'The first 20 source identities must remain stable for existing records');
 const appended=['wrist-curl','reverse-wrist-curl',
-  'inc-bb-bench','incline_smith','machine_press','leg_press'];
+  'inc-bb-bench','incline_smith','machine_press','leg_press',
+  'hack_squat','hip_thrust','cable_lateral_raise',
+  'lat-pulldown','rope-pushdown'];
 assert.deepEqual(declared.slice(baseline.length),appended,
   'Appended reviewed identities must not be lost or silently reordered');
 assert.equal(new Set(declared).size,declared.length);
@@ -55,7 +57,12 @@ for(const [id,family,reps,equipment] of [
   ['inc-bb-bench','horizontal_press',[6,10],['barbell','inclinebench','rack']],
   ['incline_smith','horizontal_press',[5,20],['smith','bench']],
   ['machine_press','horizontal_press',[5,25],['machine']],
-  ['leg_press','leg_press',[6,25],['leg_press']]
+  ['leg_press','leg_press',[6,25],['leg_press']],
+  ['hack_squat','squat',[5,20],['machine']],
+  ['hip_thrust','hip_extension',[5,20],['barbell','bench']],
+  ['cable_lateral_raise','lateral_raise',[8,35],['cable']],
+  ['lat-pulldown','vertical_pull',[8,12],['cable']],
+  ['rope-pushdown','elbow_extension',[10,15],['cable']]
 ]) {
   const definition=EXERCISE_MAP.get(id);
   assert.ok(definition,'Missing active web definition '+id);
@@ -71,7 +78,17 @@ for(const fragment of [
   'entry("machine_press","machine_chest_press","chest-press"',
   '"chest-press-machine",LoadBasis.EXERCISE_OVERRIDE',
   'entry("leg_press","leg_press","machine"',
-  '"leg-press-machine",LoadBasis.EXERCISE_OVERRIDE'
+  '"leg-press-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("hack_squat","squat","hack-machine"',
+  '"hack-squat-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("hip_thrust","hip_extension","barbell"',
+  'BAR,LoadBasis.BARBELL_TOTAL,setOf("flat-bench"),5..20',
+  'entry("cable_lateral_raise","lateral_raise","cable-handle"',
+  'direct(TrainingMuscle.SIDE_DELTS),attachmentId="single-handle"',
+  'entry("lat-pulldown","vertical_pull","machine-lat"',
+  '"lat-pulldown-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("rope-pushdown","elbow_extension","cable-rope"',
+  'direct(TrainingMuscle.TRICEPS),attachmentId="rope"'
 ])assert.ok(source.includes(fragment),'Missing independently authored stock rule '+fragment);
 
 for(const id of ['one_arm_db_row','db_rdl','barbell_row','rdl','conventional_deadlift','db_rear_delt_raise','pullup']) {

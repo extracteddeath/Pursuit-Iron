@@ -534,7 +534,9 @@ assert.ok(betaSettings.includes('Share beta feedback') &&
 assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
   betaGradle.includes('releaseRuntimeClasspath') &&
   betaGradle.includes('component?.projectPath == ":engine-runtime"') &&
-  betaGradle.includes('preReleaseBuild') &&
+  betaGradle.includes('"packageRelease", "assembleRelease"') &&
+  betaGradle.includes('"bundleRelease", "packageReleaseBundle"') &&
+  !betaGradle.includes('it.name == "preReleaseBuild"') &&
   betaScope.includes('one Kotlin engine'),
   'Early beta release must refuse the legacy JS engine and document single-policy ownership');
 

@@ -51,6 +51,20 @@ class NativeKotlinCustomLiveSetCoachReview(
             val hasPhysicalStations=roster?.configurations?.any{
                 it.gymId==issuedGym && it.exerciseId==slot.exerciseId && it.machines.isNotEmpty()
             } == true
+            // Even when source/stock is unavailable, a physical Machine B
+            // may not inherit Machine A's recorded fatigue. Pass the selected
+            // ID separately from stock proof to the ONE shared Kotlin policy.
+            val selectedPhysicalMachine=if(hasPhysicalStations) {
+                val choices=(workoutMachineChoices.read(ownerKey,workoutId,
+                    true,issuedGym)
+                    as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                choices?.takeIf{it.revision>0 &&
+                    it.ownerId==ownerKey && it.gymId==issuedGym}
+                    ?.machines?.get(slot.exerciseId)
+            } else null
+            val machineScope=if(hasPhysicalStations)
+                LiveMachineCoachScope.Physical(selectedPhysicalMachine)
+            else LiveMachineCoachScope.ExerciseOnly
             val stock:VerifiedLoadStock?=if(roster!=null &&
                 source?.athleteId==owner.athleteId &&
                 setup?.athleteProfileId==stamp.athleteId &&
@@ -62,21 +76,16 @@ class NativeKotlinCustomLiveSetCoachReview(
                         ?.prescription?.load as? DraftSetLoad.Verified)
                     val config=KotlinMachineAlternativesDomain.forGymExercise(
                         roster.configurations,issuedGym,slot.exerciseId)
-                    val choices=(workoutMachineChoices.read(ownerKey,workoutId,
-                        true,issuedGym)
-                        as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
-                    val selected=choices?.takeIf{it.revision>0 &&
-                        it.ownerId==ownerKey && it.gymId==issuedGym}
-                        ?.machines?.get(slot.exerciseId)
                     if(planned?.basis==movement.expectedLoadBasis)
                         KotlinMachineLiveCoachingDomain.confirmedForNext(
-                            journal,setKey,selected,config)
+                            journal,setKey,selectedPhysicalMachine,config)
                     else null
                 } else setup.gym.confirmedStock[movement.equipmentId]
                     ?.takeIf{it.basis==movement.expectedLoadBasis}
             } else null
             val result=KotlinJournalLiveSetCoachDomain.review(journal,setKey,
-                stock,readiness,movementRestricted,maximumReviewStep,assistance)
+                stock,readiness,movementRestricted,maximumReviewStep,assistance,
+                machineScope)
             if(identity.signedInIdentity()!=owner)return@withOwnerTransaction null
             result
         }

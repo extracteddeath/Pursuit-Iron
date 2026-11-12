@@ -136,6 +136,9 @@ class CustomNextWorkoutCoachingDomainTest {
             assertTrue(reviewed.nextSetSuggestions.isEmpty())
             assertNull(reviewed.loadReviewCandidate)
             assertTrue(reviewed.explanation.contains("below its minimum"))
+            assertEquals(CustomNextRepAmendmentResult.Rejected(
+                CustomNextRepAmendmentRefusal.NOT_AN_ELIGIBLE_REP_REVIEW),
+                CustomNextRepAmendmentDomain.propose(next,"main",reviewed))
         }
         // Historical frozen V1 receipts still replay their old rule.
         val legacy=check(CustomRepForecastPolicy.LEGACY_STEP_V1)

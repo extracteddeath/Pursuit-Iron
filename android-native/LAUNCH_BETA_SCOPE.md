@@ -67,11 +67,19 @@ a production-store AAB milestone, or permission to ship incomplete code.
    and original gym; a saved coaching opt-out cannot silently reset to on.
    These checks are read-only and execute under the same Kotlin owner fence.
 
+   The same staged owner-fenced audit now also reopens every pinned
+   exercise note through the normal checksummed v1/v2 note decoder and
+   enumerates every physical note file, including those for retired
+   exercises. Damaged, foreign, renamed, unrecognized, or pending notes
+   reject the restore instead of silently dropping seat/grip/attachment
+   and older saved setup fields. Native CI cold-restores current and
+   retired-exercise notes alongside Machine A and coaching opt-outs.
+
    **No user-facing backup or restore exists yet.** This core audit is
    not the final production verifier: orphan/foreign files outside the
-   covered inventories, advanced block approvals and signoffs, pinned
-   exercise notes, additional private settings and all supported storage
-   versions still need full coverage. A future production restore must
+   covered inventories, advanced block approvals and signoffs, remaining
+   independent private records and all supported storage versions still
+   need full coverage. A future production restore must
    run before constructing an active app host, require explicit user
    consent, and pass rollback/power-interruption tests on real Android
    devices plus uninstall/reinstall acceptance before the beta gate opens.

@@ -34,9 +34,6 @@ const baseline=[
 const indexed=new Map(CURATED_EXERCISES.map(x=>[x.id,x]));
 assert.deepEqual(declared.slice(0,baseline.length),baseline.map(x=>x[0]),
   'The first 20 source identities must remain stable for existing records');
-const verifiedAppend=[
-  ['wrist-curl','elbow_flexion',[12,20],null],
-];
 const appended=['wrist-curl','reverse-wrist-curl',
   'inc-bb-bench','incline_smith','machine_press','leg_press'];
 assert.deepEqual(declared.slice(baseline.length),appended,

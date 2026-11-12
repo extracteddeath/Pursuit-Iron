@@ -84,7 +84,27 @@ data class FatigueRepTargetReview(
     val mayIssueWorkout: Boolean get()=false
 }
 
+/**
+ * Exact unweighted training evidence. There is NO numeric load or load unit,
+ * and the host must authenticate the originally issued bodyweight exercise.
+ */
+data class BodyweightRepTargetEvidence(
+    val workoutId:String,
+    val exerciseId:String,
+    val targetReps:RepBand,
+    val expectedWorkingSets:Int,
+    val observations:List<WorkingSetFact>
+)
+
 object FatigueAwareRepTargetReviewDomain {
+    private data class RepFacts(
+        val targetReps:RepBand,
+        val expectedWorkingSets:Int,
+        val observations:List<WorkingSetFact>,
+        /** Null only for authenticated, explicitly unloaded bodyweight. */
+        val physicalUnit:LoadUnit?
+    )
+
     private val zero=BigDecimal.ZERO
 
     /**
@@ -114,23 +134,52 @@ object FatigueAwareRepTargetReviewDomain {
         approvedLoadBasis: LoadBasis,
         readiness: CoachReadiness,
         movementRestricted: Boolean,
-        /** Only an authenticated native per-set prescription can enable
-         * mixed-load coaching. Never infer this from a user-selected toggle. */
         verifiedPerSetLoading: Boolean = false,
-        /** v1 exists solely to replay immutable, already accepted receipts. */
         policyVersion: AdaptiveRepPolicyVersion = AdaptiveRepPolicyVersion.TARGET_RIR_V2,
-        /** Future approved goals may differ; missing actuals still assume ORIGINAL goals. */
         targetRirByOrdinal: List<Int?>? = null
-    ): FatigueRepTargetReview {
+    ): FatigueRepTargetReview = assessCore(
+        RepFacts(session.targetReps,session.expectedWorkingSets,
+            session.observations,session.unit),
+        verifiedStock,approvedLoadBasis,readiness,movementRestricted,
+        verifiedPerSetLoading,policyVersion,targetRirByOrdinal)
+
+    /**
+     * The SAME policy and effort estimator for exact unloaded bodyweight.
+     * Never infer this from missing loads; only a caller holding the issued
+     * ExplicitBodyweight prescription can construct this adapter input.
+     */
+    fun assessBodyweight(
+        session:BodyweightRepTargetEvidence,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean,
+        targetRirByOrdinal:List<Int?>?=null
+    ):FatigueRepTargetReview = assessCore(
+        RepFacts(session.targetReps,session.expectedWorkingSets,
+            session.observations,null),
+        null,null,readiness,movementRestricted,
+        false,AdaptiveRepPolicyVersion.TARGET_RIR_V2,targetRirByOrdinal)
+
+    private fun assessCore(
+        facts:RepFacts,
+        verifiedStock:VerifiedLoadStock?,
+        approvedLoadBasis:LoadBasis?,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean,
+        verifiedPerSetLoading:Boolean,
+        policyVersion:AdaptiveRepPolicyVersion,
+        targetRirByOrdinal:List<Int?>?
+    ):FatigueRepTargetReview {
+        val explicitlyUnloaded=facts.physicalUnit==null
         val evidence=DoubleProgressionEvidenceDomain.assess(
-            session.targetReps,session.expectedWorkingSets,session.observations)
-        val ordered=session.observations.sortedBy {it.workingOrdinal}
+            facts.targetReps,facts.expectedWorkingSets,facts.observations,
+            explicitlyUnloaded=explicitlyUnloaded)
+        val ordered=facts.observations.sortedBy {it.workingOrdinal}
         val effort=ordered.associate {it.workingOrdinal to ProgressionEffortDomain.resolve(it)}
-        val complete=evidence.completedWorkingSets==session.expectedWorkingSets &&
-            ordered.size==session.expectedWorkingSets
+        val complete=evidence.completedWorkingSets==facts.expectedWorkingSets &&
+            ordered.size==facts.expectedWorkingSets
         val reps=if(complete) Collections.unmodifiableList(
             ordered.map {checkNotNull(it.actualReps)}) else null
-        val setLoads=if(complete)ordered.map {
+        val setLoads=if(complete && !explicitlyUnloaded)ordered.map {
             BigDecimal(checkNotNull(it.actualLoad)
                 .stripTrailingZeros().toPlainString())
         } else null
@@ -158,22 +207,30 @@ object FatigueAwareRepTargetReviewDomain {
         // cannot claim a new uniform weight. Every ordinal must match the
         // actual immutable issued target and physically verified gym stock.
         // The legacy uniform-only path remains unchanged by default.
-        if((evidence.mixedActualLoads && !verifiedPerSetLoading) ||
-            setLoads==null || setLoads.size!=ordered.size ||
-            ordered.any {it.issuedLoad==null ||
-                it.issuedLoad.compareTo(it.actualLoad)!=0})
-            return result(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS)
-        if(setLoads.any{it.compareTo(zero)==0})
-            return result(FatigueRepReviewReason.ZERO_LOAD_NEEDS_SPECIFIC_POLICY)
-        if(verifiedStock?.basis!=approvedLoadBasis)
-            return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
-        if(setLoads.any{actual ->
-                val inspected=EquipmentLoadDomain.inspect(
-                    verifiedStock,actual,session.unit)
-                inspected !is LoadInspection.Confirmed || !inspected.exact ||
-                    inspected.basis!=approvedLoadBasis
-            })
-            return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
+        if(explicitlyUnloaded) {
+            // An absent recorded weight is valid ONLY under the authenticated
+            // bodyweight source mode. A stray physical load must never be
+            // silently discarded or interpreted as a zero-pound set.
+            if(ordered.any{it.actualLoad!=null || it.issuedLoad!=null})
+                return result(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS)
+        } else {
+            if((evidence.mixedActualLoads && !verifiedPerSetLoading) ||
+                setLoads==null || setLoads.size!=ordered.size ||
+                ordered.any {it.issuedLoad==null ||
+                    it.issuedLoad.compareTo(it.actualLoad)!=0})
+                return result(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS)
+            if(setLoads.any{it.compareTo(zero)==0})
+                return result(FatigueRepReviewReason.ZERO_LOAD_NEEDS_SPECIFIC_POLICY)
+            if(verifiedStock?.basis!=approvedLoadBasis)
+                return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
+            if(setLoads.any{actual ->
+                    val inspected=EquipmentLoadDomain.inspect(
+                        verifiedStock,actual,checkNotNull(facts.physicalUnit))
+                    inspected !is LoadInspection.Confirmed || !inspected.exact ||
+                        inspected.basis!=approvedLoadBasis
+                })
+                return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
+        }
         if(movementRestricted || readiness==CoachReadiness.LOW ||
             (policyVersion==AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1 &&
                 effort.values.any {it.rir!=null && it.rir<=1}))
@@ -182,7 +239,7 @@ object FatigueAwareRepTargetReviewDomain {
         // ceiling must not masquerade as earned progression. Over-ceiling
         // work needs a load/range review. Preserve frozen v1 receipts.
         if(policyVersion==AdaptiveRepPolicyVersion.TARGET_RIR_V2 &&
-            ordered.any {checkNotNull(it.actualReps)>session.targetReps.maximum})
+            ordered.any {checkNotNull(it.actualReps)>facts.targetReps.maximum})
             return result(FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW)
         if(effort.values.any {it.rir==null})
             return result(FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED)
@@ -200,14 +257,14 @@ object FatigueAwareRepTargetReviewDomain {
             val estimates=ordered.mapIndexed {i,it ->
                 estimateTargetRirReps(checkNotNull(it.actualReps),
                     checkNotNull(effort.getValue(it.workingOrdinal).rir),
-                    checkNotNull(goals[i]),session.targetReps)
+                    checkNotNull(goals[i]),facts.targetReps)
             }
             if(estimates.any {it==null})
                 return result(FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
             val candidate=estimates.map {checkNotNull(it)}
             val changed=candidate.indices.filter {candidate[it]!=checkNotNull(reps)[it]}
             if(changed.isEmpty()) return result(
-                if(ordered.all {it.actualReps==session.targetReps.maximum})
+                if(ordered.all {it.actualReps==facts.targetReps.maximum})
                     FatigueRepReviewReason.ALREADY_AT_REP_CEILING
                 else FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM)
             val limitations=baselineLimitations.toMutableSet()
@@ -217,12 +274,12 @@ object FatigueAwareRepTargetReviewDomain {
                 candidate,changed.first(),limitations)
         }
 
-        if(ordered.all {it.actualReps==session.targetReps.maximum})
+        if(ordered.all {it.actualReps==facts.targetReps.maximum})
             return result(FatigueRepReviewReason.ALREADY_AT_REP_CEILING)
 
         // Frozen v1 receipt replay, NOT the policy for new recommendations.
         val eligible=ordered.filter {
-            checkNotNull(it.actualReps)<session.targetReps.maximum &&
+            checkNotNull(it.actualReps)<facts.targetReps.maximum &&
                 checkNotNull(effort.getValue(it.workingOrdinal).rir)>=3
         }
         val chosen=eligible.minWithOrNull(

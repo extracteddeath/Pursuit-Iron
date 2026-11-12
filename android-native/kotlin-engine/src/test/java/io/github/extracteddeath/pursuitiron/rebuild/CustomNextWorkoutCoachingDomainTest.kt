@@ -1244,7 +1244,7 @@ class CustomNextWorkoutCoachingDomainTest {
             b2.copy(snapshot=b2.snapshot.copy(
                 split=CustomSplitIdentity.Freeform("PPL"))),
             b2.copy(snapshot=b2.snapshot.copy(
-                blockPurpose=CustomBlockPurpose.DELOAD))
+                blockPurpose=CustomBlockPurpose.RECOVERY))
         )
         fun reviewMachine(
             sessions:List<CustomCoachingHistoricalSession>,

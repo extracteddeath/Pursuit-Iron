@@ -51,11 +51,14 @@ class StarterExerciseTrancheTest {
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             data.drop(20).take(2).map{it.legacyCuratedId})
         assertEquals(listOf("inc-bb-bench","incline_smith","machine_press","leg_press"),
-            data.drop(22).map{it.legacyCuratedId})
-        assertEquals(26,data.size)
-        assertEquals(26,data.map {it.legacyCuratedId}.distinct().size)
+            data.drop(22).take(4).map{it.legacyCuratedId})
+        assertEquals(listOf("hack_squat","hip_thrust",
+            "cable_lateral_raise","lat-pulldown","rope-pushdown"),
+            data.drop(26).map{it.legacyCuratedId})
+        assertEquals(31,data.size)
+        assertEquals(31,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(26,data.map {
+        assertEquals(31,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {
@@ -118,6 +121,102 @@ class StarterExerciseTrancheTest {
         assertEquals("heavy-bench",added.single{
             it.legacyCuratedId=="inc-bb-bench"
         }.movement.recoveryGroupId)
+    }
+
+    @Test fun sourceLinkedMachineAndCableVariantsRequirePhysicalGymTruth() {
+        val ids=listOf("hack_squat","hip_thrust","cable_lateral_raise",
+            "lat-pulldown","rope-pushdown")
+        val newEntries=data.filter{it.legacyCuratedId in ids}
+        assertEquals(ids,newEntries.map{it.legacyCuratedId})
+        assertTrue(newEntries.none{it.mayTransferPreviousLoad})
+        val byId=newEntries.associateBy{it.legacyCuratedId}
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,
+            byId.getValue("hack_squat").movement.expectedLoadBasis)
+        assertEquals(LoadBasis.BARBELL_TOTAL,
+            byId.getValue("hip_thrust").movement.expectedLoadBasis)
+        assertEquals(setOf("flat-bench"),
+            byId.getValue("hip_thrust").movement.requiredFacilityIds)
+        assertEquals(listOf(TrainingMuscle.GLUTES),
+            byId.getValue("hip_thrust").movement.credits.map{it.muscle})
+        assertEquals("single-handle",
+            byId.getValue("cable_lateral_raise").movement.attachmentId)
+        assertEquals("rope",byId.getValue("rope-pushdown").movement.attachmentId)
+        assertEquals(RepBand(8,12),byId.getValue("lat-pulldown").practicalRepBand)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,
+            byId.getValue("lat-pulldown").movement.expectedLoadBasis)
+        assertEquals(LoadBasis.CABLE_STACK,
+            byId.getValue("rope-pushdown").movement.expectedLoadBasis)
+        assertEquals(listOf(TrainingMuscle.TRICEPS),
+            byId.getValue("rope-pushdown").movement.credits.map{it.muscle})
+        assertFalse(byId.getValue("lat-pulldown").movement.credits.any{
+            it.muscle==TrainingMuscle.UPPER_BACK
+        })
+        val machine=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,
+            listOf(n("40"),n("50"),n("60"),n("100")))
+        val cable=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.CABLE_STACK,
+            listOf(n("20"),n("25"),n("30")))
+        val stocked=mapOf("hack-squat-machine" to machine,
+            "lat-pulldown-machine" to machine,
+            "cable-station" to cable,"straight-bar" to availableBar)
+        fun check(id:String,load:String,
+            actualStock:Map<String,VerifiedLoadStock> =stocked,
+            attachments:Set<String> =emptySet(),
+            facilities:Set<String> =setOf("flat-bench"))=
+            CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice(id,n(load))),
+                CatalogGym(actualStock,attachments,facilities)))
+        fun has(review:CatalogWeekReview,kind:CatalogIssueType)=
+            review.issues.any{it.kind==kind}
+        assertTrue(has(check("hack_squat","100",
+            actualStock=stocked-"hack-squat-machine"),
+            CatalogIssueType.EQUIPMENT_UNAVAILABLE))
+        assertTrue(has(check("hack_squat","55"),CatalogIssueType.LOAD_UNVERIFIED))
+        assertTrue(has(check("hip_thrust","135",facilities=emptySet()),
+            CatalogIssueType.FACILITY_UNAVAILABLE))
+        assertTrue(has(check("cable_lateral_raise","25",
+            attachments=setOf("rope")),
+            CatalogIssueType.ATTACHMENT_UNAVAILABLE))
+        assertFalse(has(check("cable_lateral_raise","25",
+            attachments=setOf("single-handle")),
+            CatalogIssueType.ATTACHMENT_UNAVAILABLE))
+        assertTrue(has(check("rope-pushdown","25"),
+            CatalogIssueType.ATTACHMENT_UNAVAILABLE))
+        val validRope=check("rope-pushdown","25",attachments=setOf("rope"))
+        assertFalse(has(validRope,CatalogIssueType.ATTACHMENT_UNAVAILABLE))
+        assertFalse(has(validRope,CatalogIssueType.LOAD_UNVERIFIED))
+        assertTrue(has(check("lat-pulldown","55"),
+            CatalogIssueType.LOAD_UNVERIFIED))
+        assertTrue(has(check("lat-pulldown","50",
+            actualStock=stocked-"lat-pulldown-machine"),
+            CatalogIssueType.EQUIPMENT_UNAVAILABLE))
+        assertTrue(has(check("lat-pulldown","50",actualStock=
+            stocked+("lat-pulldown-machine" to cable)),
+            CatalogIssueType.EQUIPMENT_BASIS_MISMATCH))
+        assertFalse(validRope.mayIssueWorkout)
+        assertFalse(validRope.mayOverwriteAuthoredProgram)
+    }
+
+    @Test fun reviewedHackSquatCanReplaceSquatWithinRealThreeDayCompoundWeek() {
+        val machine=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("90"),n("100"),n("110")))
+        val stock=mapOf("straight-bar" to availableBar,
+            "dumbbell-rack" to db,"hack-squat-machine" to machine)
+        val chosen=listOf(choice("barbell_bench",n("135")),
+            choice("one_arm_db_row",n("30")),
+            choice("hack_squat",n("100")))
+        val verified=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),chosen,gym(
+                facilities=setOf("flat-bench","rack"),stock=stock)))
+        assertEquals(CatalogWeekStatus.VERIFIED_CATALOG_DRAFT_FOR_REVIEW,
+            verified.status)
+        val draft=checkNotNull(verified.draft)
+        assertTrue(draft.audit.satisfiesDeclaredHardConstraints)
+        assertTrue(draft.visits.any{it.exerciseId=="hack_squat"})
+        assertTrue(draft.visits.none{it.exerciseId=="back_squat"})
+        assertEquals(n("100"),chosen.last().selectedLoad)
+        assertFalse(verified.mayIssueWorkout)
     }
 
     @Test fun newVariantDoesNotAcceptUnavailableBenchOrBorrowOtherMachineStock() {

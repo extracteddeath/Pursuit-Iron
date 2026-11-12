@@ -57,13 +57,14 @@ object StarterExerciseTranche {
         legacyId:String,family:String,variant:String,pattern:ComposerPattern,
         role:ComposerRole,focus:Set<ComposerFocus>,implement:String?,
         basis:LoadBasis?,facilities:Set<String>,reps:IntRange,
-        note:String,vararg credits:DeclaredMuscleCredit
+        note:String,vararg credits:DeclaredMuscleCredit,
+        attachmentId:String?=null
     ):StarterCatalogEntry {
         require(note.isNotBlank())
         val recovery=reviewedRecoveryGroups[legacyId]
         val movement=CatalogMovement(
             exerciseId=legacyId,familyId=family,variantId=variant,
-            attachmentId=null,pattern=pattern,role=role,
+            attachmentId=attachmentId,pattern=pattern,role=role,
             permittedFocus=focus,equipmentId=implement,
             expectedLoadBasis=basis,credits=credits.toList(),
             creditStatus=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,
@@ -244,11 +245,42 @@ object StarterExerciseTranche {
             emptySet(),6..25,
             "Leg press uses a distinct physical machine and its confirmed exercise-specific load scale, not the squat barbell or a generic machine increment. Loaded sled mechanics and cross-machine comparison are not presumed.",
             direct(TrainingMuscle.QUADS),
-            indirect(TrainingMuscle.GLUTES,"0.5"))
+            indirect(TrainingMuscle.GLUTES,"0.5")),
+        // Five independently stock-qualified source identities; source fatigue
+        // scores are NOT transplanted as individualized prescription rules.
+        entry("hack_squat","squat","hack-machine",
+            ComposerPattern.SQUAT,ComposerRole.SECONDARY,lower,
+            "hack-squat-machine",LoadBasis.EXERCISE_OVERRIDE,
+            emptySet(),5..20,
+            "Hack squat uses its confirmed physical machine load scale; never transfer back-squat or leg-press numbers.",
+            direct(TrainingMuscle.QUADS),
+            indirect(TrainingMuscle.GLUTES,"0.5")),
+        entry("hip_thrust","hip_extension","barbell",
+            ComposerPattern.HINGE,ComposerRole.SECONDARY,lower,
+            BAR,LoadBasis.BARBELL_TOTAL,setOf("flat-bench"),5..20,
+            "Source barbell hip thrust requires a real bench and bar; direct glutes only. Minor hamstring source credit is deliberately quarantined.",
+            direct(TrainingMuscle.GLUTES)),
+        entry("cable_lateral_raise","lateral_raise","cable-handle",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),8..35,
+            "Cable side-deltoid isolation requires a verified cable stack and single-handle attachment, not dumbbell loading.",
+            direct(TrainingMuscle.SIDE_DELTS),attachmentId="single-handle"),
+        entry("lat-pulldown","vertical_pull","machine-lat",
+            ComposerPattern.VERTICAL_PULL,ComposerRole.SECONDARY,pull,
+            "lat-pulldown-machine",LoadBasis.EXERCISE_OVERRIDE,
+            emptySet(),8..12,
+            "A dedicated lat-pulldown station must have its own verified physical loads. Legacy broad back maps conservatively to lats; traps minor credit is quarantined.",
+            direct(TrainingMuscle.LATS),
+            indirect(TrainingMuscle.BICEPS,"0.5")),
+        entry("rope-pushdown","elbow_extension","cable-rope",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),10..15,
+            "Rope pushdown requires the actual rope attachment and the confirmed cable-stack increment. No weight carryover from different pulleys.",
+            direct(TrainingMuscle.TRICEPS),attachmentId="rope")
     )
 
     init {
-        require(definitions.size==26)
+        require(definitions.size==31)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

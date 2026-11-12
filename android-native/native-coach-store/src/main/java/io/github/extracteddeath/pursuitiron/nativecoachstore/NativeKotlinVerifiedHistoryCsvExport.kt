@@ -66,8 +66,7 @@ object NativeKotlinVerifiedHistoryCsvExport {
             reps:RepBand,rir:Int?,actual:KotlinPerformedSet?,
             amplifier:String=""
         ):Boolean {
-            if(rows>=MAX_ROWS || (outcome==KotlinJournalSetOutcome.SKIPPED &&
-                actual!=null))return false
+            if(rows>=MAX_ROWS)return false
             val (targetLoad,targetUnit,targetBasis)=load(prescription)
             val fields=listOf(
                 VERSION,order.toString(),kind,workoutId,exerciseId,slotId,
@@ -95,6 +94,9 @@ object NativeKotlinVerifiedHistoryCsvExport {
                     if(fact.workoutId!=manifest.workoutId ||
                         fact.finishEventId!=manifest.finishEventId)
                         return NativeKotlinHistoryCsvResult.InvalidHistory
+                    if(fact.sets.any {
+                        it.outcome==KotlinJournalSetOutcome.SKIPPED && it.actual!=null
+                    })return NativeKotlinHistoryCsvResult.InvalidHistory
                     for(set in fact.sets)if(!add(
                         manifest.completionOrder,"GENERATED",manifest.workoutId,
                         set.exerciseId,"",set.setKey,"MAIN",set.type,set.outcome,
@@ -107,6 +109,9 @@ object NativeKotlinVerifiedHistoryCsvExport {
                         fact.workoutId!=manifest.workoutId ||
                         fact.finishedEventId!=manifest.finishEventId)
                         return NativeKotlinHistoryCsvResult.InvalidHistory
+                    if(fact.visits.any {
+                        it.outcome==KotlinJournalSetOutcome.SKIPPED && it.actual!=null
+                    })return NativeKotlinHistoryCsvResult.InvalidHistory
                     for(visit in fact.visits)if(!add(
                         manifest.completionOrder,"CUSTOM",manifest.workoutId,
                         visit.exerciseId,visit.slotId,visit.setKey,

@@ -2,6 +2,7 @@ package io.github.extracteddeath.pursuitiron
 
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -193,9 +194,20 @@ internal class NativeKotlinSessionController(
         val requestId=latestCoachRequest.incrementAndGet()
         mutable.value=before.copy(liveCoach=null)
         scope.launch {
-            val reviewed=host.reviewLiveIssuedNextSet(
-                workoutId,setKey,readiness,movementRestricted,
-                BigDecimal("5"))
+            // Live coaching is OPTIONAL and read-only. A broken preference,
+            // gym file or unavailable projection must never throw out of
+            // the workout coroutine, crash the beta, or affect issued sets.
+            // Cancellation still propagates so disposed scopes cannot
+            // resurrect advice for an old athlete or session.
+            val reviewed=try {
+                host.reviewLiveIssuedNextSet(
+                    workoutId,setKey,readiness,movementRestricted,
+                    BigDecimal("5"))
+            } catch(cancelled:CancellationException) {
+                throw cancelled
+            } catch(_:Exception) {
+                null
+            }
             val state=mutable.value
             if(latestCoachRequest.get()==requestId &&
                 state.workoutId==workoutId &&

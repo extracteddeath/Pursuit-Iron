@@ -60,10 +60,17 @@ a production-store AAB milestone, or permission to ship incomplete code.
    clean-store atomic restore and cold reopen, and validates the completed
    program weeks after saved corrections.
 
+   The staged audit now also inventories every physical per-workout
+   machine-choice record and saved coaching-assistance policy, refusing
+   foreign, orphan, renamed, pending, checksum-broken or mismatched-gym
+   records. A restored Machine A choice remains tied to its issued workout
+   and original gym; a saved coaching opt-out cannot silently reset to on.
+   These checks are read-only and execute under the same Kotlin owner fence.
+
    **No user-facing backup or restore exists yet.** This core audit is
    not the final production verifier: orphan/foreign files outside the
-   covered inventories, advanced block approvals and signoffs, machine
-   choice records, private settings/notes and all supported storage
+   covered inventories, advanced block approvals and signoffs, pinned
+   exercise notes, additional private settings and all supported storage
    versions still need full coverage. A future production restore must
    run before constructing an active app host, require explicit user
    consent, and pass rollback/power-interruption tests on real Android

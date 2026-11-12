@@ -49,14 +49,25 @@ a production-store AAB milestone, or permission to ship incomplete code.
    reopen a real finished/corrected workout and verify interrupted staging,
    tampered input, foreign owners, and no-overwrite behavior.
 
-   **No user-facing backup or restore exists yet.** The staging primitive
-   deliberately requires a caller-provided verifier; the production
-   full-store validator must still check every generated/custom journal,
-   program approval, machine/gym source, owner and pending receipt under
-   the same native authority. Import must run before construction of the
-   active app host, require explicit user consent, survive rollback/power
-   interruption on physical Android devices, and prove safe
-   uninstall/reinstall recovery before the external beta release gate opens.
+   A third development-only, read-only staged core audit now shares the
+   same checksummed local identity validation and native owner fence,
+   reopens the current authoring source and machine roster, enumerates
+   saved custom drafts, replays the complete mixed History/corrections,
+   and inventories ALL generated and prepared/issued custom journals.
+   Finished receipt IDs must agree with History; **unfinished journals
+   are retained rather than treated as missing or completed**. CI verifies
+   a real unfinished first-program workout survives encrypted export,
+   clean-store atomic restore and cold reopen, and validates the completed
+   program weeks after saved corrections.
+
+   **No user-facing backup or restore exists yet.** This core audit is
+   not the final production verifier: orphan/foreign files outside the
+   covered inventories, advanced block approvals and signoffs, machine
+   choice records, private settings/notes and all supported storage
+   versions still need full coverage. A future production restore must
+   run before constructing an active app host, require explicit user
+   consent, and pass rollback/power-interruption tests on real Android
+   devices plus uninstall/reinstall acceptance before the beta gate opens.
 
 ## Not beta blockers / do not ship as misleading unfinished UI
 

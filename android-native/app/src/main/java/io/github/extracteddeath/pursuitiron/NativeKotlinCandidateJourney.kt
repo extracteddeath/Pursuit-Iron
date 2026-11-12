@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeApprovalWriteResult
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinShortSessionStatus
@@ -38,6 +39,23 @@ import kotlinx.coroutines.withContext
 private enum class KotlinCandidateDestination(val label:String) {
     ONBOARD("My setup"),GYM("My gym"),STARTER("Build first"),PROGRAM("My program"),
     COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),PROFILE("Profile"),SETTINGS("Settings"),TRAIN("Train")
+}
+
+/**
+ * UI-only durable resume locator, NEVER a workout issuer. Current approval,
+ * owner-fenced journal recovery, and the unfinished event are checked on
+ * every cold start and again before a user-requested resume.
+ */
+private fun currentUnfinishedGeneratedWorkoutId(
+    host:NativeKotlinCandidateHost
+):String? {
+    val id=host.currentlyApprovedKotlinWorkoutId() ?:return null
+    val opened=host.recoverWorkout(id) as? NativeJournalFileResult.Durable
+        ?:return null
+    return id.takeIf {
+        opened.journal.snapshot.workoutId==id &&
+            opened.journal.finishedByEventId==null
+    }
 }
 
 private val primaryDestinations=listOf(
@@ -131,7 +149,9 @@ internal fun NativeKotlinCandidateJourney(
     // returning lifter through onboarding again. No silent workout issuance
     // or journal opening: TRAIN independently revalidates saved receipts.
     var landingChecked by remember(host) { mutableStateOf(false) }
-    var navigationTouched by remember { mutableStateOf(false) }
+    // A restored explicit navigation choice (including Setup) must not be
+    // stolen by the asynchronous cold-start destination check on rotation.
+    var navigationTouched by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(host) {
         if(!landingChecked) {
             val initial=withContext(Dispatchers.IO) {
@@ -141,12 +161,24 @@ internal fun NativeKotlinCandidateJourney(
                 if(unfinished?.workouts?.isNotEmpty()==true)
                     KotlinCandidateDestination.TRAIN
                 else {
-                    val programs=runCatching {
-                        host.listOwnedCustomCycleDrafts()
-                    }.getOrNull() as? NativeCustomDraftListResult.Ready
-                    if(programs?.drafts?.isNotEmpty()==true)
-                        KotlinCandidateDestination.PROGRAM
-                    else KotlinCandidateDestination.ONBOARD
+                    // A cold launch must recognize an unfinished GENERATED
+                    // Kotlin journal too. Its current owner/approval is
+                    // independently rechecked; an approved but unissued or
+                    // already Finished workout is not a resume candidate.
+                    // Navigation alone never issues/records any set.
+                    val generatedId=runCatching {
+                        currentUnfinishedGeneratedWorkoutId(host)
+                    }.getOrNull()
+                    if(generatedId!=null)
+                        KotlinCandidateDestination.TRAIN
+                    else {
+                        val programs=runCatching {
+                            host.listOwnedCustomCycleDrafts()
+                        }.getOrNull() as? NativeCustomDraftListResult.Ready
+                        if(programs?.drafts?.isNotEmpty()==true)
+                            KotlinCandidateDestination.PROGRAM
+                        else KotlinCandidateDestination.ONBOARD
+                    }
                 }
             }
             // Do not steal focus after a deliberate tab choice, or from a
@@ -465,6 +497,9 @@ private fun NativeKotlinCandidateTrainEntry(
         mutableStateOf<NativeCustomResumeReview?>(null)
     }
     var reviewingResume by remember {mutableStateOf(false)}
+    // Independently recovers generated work. The time-budget preview can be
+    // unavailable while an already-issued journal is still safely resumable.
+    var resumableGeneratedId by remember(host) { mutableStateOf<String?>(null) }
     var selectedId by rememberSaveable(host) { mutableStateOf<String?>(null) }
     // An old workout ID is only a local navigation shortcut, not an access
     // grant. The host rechecks the current owner/program approval before resume.
@@ -535,8 +570,15 @@ private fun NativeKotlinCandidateTrainEntry(
         // A past review is never an access grant after Finish or an athlete
         // switch. Reopen verified storage for the next explicit selection.
         resumable=null
-        if(customWorkoutId==null && selectedId==null)
+        resumableGeneratedId=null
+        if(customWorkoutId==null && selectedId==null) {
+            resumableGeneratedId=withContext(Dispatchers.IO) {
+                runCatching {
+                    currentUnfinishedGeneratedWorkoutId(host)
+                }.getOrNull()
+            }
             refreshUnfinishedWorkouts()
+        }
     }
     if(customWorkoutId!=null) {
         workoutScreens.SaveableStateProvider("custom:$customWorkoutId") {
@@ -592,12 +634,56 @@ private fun NativeKotlinCandidateTrainEntry(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            // This is the COLD-RESTART case: a disk-issued generated
+            // session exists, but there is no in-memory minimized shortcut.
+            // Keep resume visible before the custom-workout inventory and
+            // time-choice controls. Reverify the current athlete and journal
+            // on click; showing the card never creates a workout.
+            resumableGeneratedId?.takeIf {
+                minimizedGeneratedId==null
+            }?.let { issuedId ->
+                PursuitCard(highlighted=true) {
+                    PursuitSectionHeading("Resume your saved workout",
+                        "Your previously recorded sets and prescribed weights are kept.")
+                    PursuitPrimaryAction("Resume saved workout",
+                        enabled=!resumeChecking && !searching && !reviewingResume &&
+                            !timePreviewBusy,
+                        onClick={
+                            if(!resumeChecking && !searching && !reviewingResume) {
+                                resumeChecking=true
+                                selectionMessage=null
+                                scope.launch {
+                                    try {
+                                        val isCurrentAndUnfinished=withContext(
+                                            Dispatchers.IO
+                                        ) {
+                                            runCatching {
+                                                currentUnfinishedGeneratedWorkoutId(host)==
+                                                    issuedId
+                                            }.getOrDefault(false)
+                                        }
+                                        if(selectedId==null && customWorkoutId==null &&
+                                            resumableGeneratedId==issuedId) {
+                                            if(isCurrentAndUnfinished)
+                                                selectedId=issuedId
+                                            else {
+                                                timePreview=null
+                                                selectionMessage="The saved workout could not be verified. Review your current program or refresh Train."
+                                            }
+                                        }
+                                    } finally {resumeChecking=false}
+                                }
+                            }
+                        })
+                }
+            }
             selectionMessage?.takeIf{minimizedGeneratedId==null}?.let {
                 Text(it,style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
             }
-            PursuitCard(highlighted=true) {
-                Text("Your unfinished workouts",
+            PursuitCard(highlighted=resumableGeneratedId==null) {
+                Text(if(resumableGeneratedId!=null)"Other unfinished workouts"
+                    else "Your unfinished workouts",
                     style=MaterialTheme.typography.titleMedium)
                 Text("Your saved sets and exercise targets are checked before you resume.",
                     style=MaterialTheme.typography.bodySmall)
@@ -610,7 +696,9 @@ private fun NativeKotlinCandidateTrainEntry(
                 when(val result=resumable) {
                     is NativeCustomResumeReview.Ready -> {
                         if(result.workouts.isEmpty()) {
-                            Text("You have no unfinished workouts. Open your program to continue.",
+                            Text(if(resumableGeneratedId!=null)
+                                "No unfinished custom workouts. Resume your saved generated workout above."
+                                else "No unfinished custom workouts. Open your program to continue.",
                                 style=MaterialTheme.typography.bodySmall)
                         } else {
                             Text("${result.workouts.size} unfinished workouts",
@@ -650,11 +738,11 @@ private fun NativeKotlinCandidateTrainEntry(
                         }
                     }
                     is NativeCustomResumeReview.Rejected ->
-                        Text("Saved workouts could not be verified (${result.reason.name.replace('_',' ').lowercase()}). No workout opened. If Finish was interrupted, recover it from the native custom workout before retrying.",
+                        Text("Custom workout inventory could not be verified (${result.reason.name.replace('_',' ').lowercase()}). No custom workout opened. A separately verified generated workout can still be resumed above.",
                             color=MaterialTheme.colorScheme.error,
                             style=MaterialTheme.typography.bodySmall)
                     null -> if(!reviewingResume) Text(
-                        "Saved workouts could not be read. Refresh to try again.",
+                        "Custom workout inventory could not be read. Refresh to try again.",
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
                 }

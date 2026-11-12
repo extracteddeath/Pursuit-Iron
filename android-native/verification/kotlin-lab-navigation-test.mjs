@@ -550,10 +550,33 @@ for(const required of [
   'KotlinCandidateDestination.FUTURE',
   'KotlinCandidateDestination.SETTINGS'
 ])assert.ok(journey.includes(required),'Missing navigation destination '+required);
-assert.ok(journey.includes('if(!navigationTouched &&') &&
+assert.ok(journey.includes('var navigationTouched by rememberSaveable { mutableStateOf(false) }') &&
+  journey.includes('if(!navigationTouched &&') &&
   journey.includes('host.reviewResumableCustomWorkouts()') &&
-  journey.includes('host.listOwnedCustomCycleDrafts()'),
-  'Cold-start routing must be based on verified native state without stealing a manual navigation');
+  journey.includes('host.listOwnedCustomCycleDrafts()') &&
+  journey.includes('currentUnfinishedGeneratedWorkoutId(host)') &&
+  journey.includes('generatedId!=null'),
+  'Cold start must route both custom and issued unfinished generated workouts to Train');
+assert.ok(journey.includes('private fun currentUnfinishedGeneratedWorkoutId(') &&
+  journey.includes('host.currentlyApprovedKotlinWorkoutId() ?:return null') &&
+  journey.includes('val opened=host.recoverWorkout(id) as? NativeJournalFileResult.Durable') &&
+  journey.includes('opened.journal.snapshot.workoutId==id') &&
+  journey.includes('opened.journal.finishedByEventId==null'),
+  'Generated resume is an owner-verified durable read only, not issuance or a saved UI shortcut');
+assert.ok(journey.includes('Resume your saved workout') &&
+  journey.includes('resumableGeneratedId?.takeIf {') &&
+  journey.includes('minimizedGeneratedId==null') &&
+  journey.includes('currentUnfinishedGeneratedWorkoutId(host)==') &&
+  journey.includes('resumableGeneratedId==issuedId') &&
+  journey.includes('selectedId=issuedId') &&
+  journey.includes('The saved workout could not be verified.') &&
+  !journey.includes('host.issueWorkout(issuedId)'),
+  'A cold generated workout must resume independently of time-budget previews, with fresh consent and disk verification');
+assert.ok(journey.includes('Other unfinished workouts') &&
+  journey.includes('No unfinished custom workouts. Resume your saved generated workout above.') &&
+  journey.includes('Custom workout inventory could not be verified') &&
+  journey.includes('PursuitCard(highlighted=resumableGeneratedId==null)'),
+  'Do not misleadingly claim there are no unfinished workouts when generated resume is available');
 for(const required of [
   'KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)',
   'KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)',

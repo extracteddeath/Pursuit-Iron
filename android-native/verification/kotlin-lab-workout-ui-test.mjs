@@ -170,6 +170,14 @@ assert.ok(liveCoachDomain.includes('sealed interface LiveMachineCoachScope') &&
   customLiveSetBridge.includes('LiveMachineCoachScope.Physical(selectedPhysicalMachine)') &&
   customLiveSetBridge.includes('machineScope)'),
   'Both native live-coaching bridges must enforce A/B history identity, even when stock is unverified');
+assert.ok(liveCoachDomain.includes('val machineScope:LiveMachineCoachScope=') &&
+  liveCoachDomain.includes('ordered[index-1].setKey,coaching,machineScope') &&
+  composer.includes('it.machineScope==expectedCoachMachineScope') &&
+  journal.includes('it.machineScope==expectedCoachMachineScope') &&
+  composer.includes('LiveMachineCoachScope.Physical(currentMachine)') &&
+  journal.includes('LiveMachineCoachScope.Physical(selectedMachineId)'),
+  'A saved A/B selector change must hide old asynchronous coaching in BOTH screens before the next review');
+
 const physicalStockDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinMachineLiveCoachingDomain.kt');
 assert.ok(generatedCoachHost.includes('val issuedGym=journal.originalSnapshot.source.gymId') &&
   generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&

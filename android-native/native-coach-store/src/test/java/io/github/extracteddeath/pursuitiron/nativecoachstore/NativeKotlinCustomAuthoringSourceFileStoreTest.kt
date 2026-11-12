@@ -192,7 +192,9 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
 
     @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
-        assertEquals(42,starter.catalog.size)
+        // Saved identities are append-only: the first 42 retain their
+        // exact ordinal/source IDs while the seven new variants follow.
+        assertEquals(49,starter.catalog.size)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",
@@ -205,7 +207,10 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             "neutral_pulldown","rear_delt_fly","machine_ohp",
             "preacher_curl","cable_curl","cable_triceps",
             "overhead_cable_triceps","standing_calf","cable_crunch"),
-            starter.catalog.drop(31).map{it.exerciseId})
+            starter.catalog.drop(31).take(11).map{it.exerciseId})
+        assertEquals(listOf("db-bench","db-fly","db-shoulder",
+            "inc-curl","hammer","face-pull","pec-deck"),
+            starter.catalog.drop(42).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)
@@ -222,6 +227,13 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         // pretend dumbbells exist for either new wrist movement.
         assertFalse(eligible.any{it.exerciseId=="wrist-curl" ||
             it.exerciseId=="reverse-wrist-curl"})
+        // Persisting a source ID never grants it phantom gym equipment.
+        // This fixture has a real but differently identified cable station:
+        // do not infer that its stack belongs to another station, a pec
+        // deck, or an absent dumbbell rack.
+        assertFalse(eligible.any{it.exerciseId in setOf(
+            "db-bench","db-fly","db-shoulder","inc-curl","hammer",
+            "face-pull","pec-deck")})
         assertTrue(eligible.any{
             it.exerciseId=="bodyweight_crunch" && it.bodyweight
         })

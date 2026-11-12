@@ -44,34 +44,39 @@ policy remain history, not up-to-date acceptance. This is a factual
 discovery from reviewed repository source, not a claim that latest web behavior
 has been independently device-tested in this audit.
 
-## Current in-progress source coverage — updated November 12, 2026
+## Current source coverage — verified merges on November 12, 2026
 
-The historical 22-of-376 checkpoint below predates the reviewed source imports.
+The historical 22-of-376 checkpoint below predates subsequent imports.
 [#535](https://github.com/extracteddeath/Pursuit-Iron/pull/535) added four
-press/leg movements; [#537](https://github.com/extracteddeath/Pursuit-Iron/pull/537)
-added five cable/pull/lower movements. Those changes and the source-capacity
+press/leg movements, [#537](https://github.com/extracteddeath/Pursuit-Iron/pull/537)
+added five cable/pull/lower movements, and the 1,024-entry bounded capacity
 fix in [#536](https://github.com/extracteddeath/Pursuit-Iron/pull/536)
-are **merged** into the isolated Kotlin rebuild, bringing the approved
-engineering-provisional starter tranche to **31 exact active web IDs**.
+was separately merged. [#542](https://github.com/extracteddeath/Pursuit-Iron/pull/542)
+then added **11 additional current-web curated exercise identities** and
+passed the [Kotlin/native tests](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/43228031828)
+and [Android Compose checks](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/43228031875)
+before merging at `c92bf623045351dc7e662004dfc7909bf23b1f9a`.
 
-The new reviewed curated-accessory branch adds **11 additional exact
-current-web curated IDs**, including a chest-supported dumbbell row, neutral
-cable pulldown, cable fly, machine shoulder press, preacher machine curl,
-reverse pec deck, cable triceps variations, standing calf machine and rope
-cable crunch. It has **42 of 376 source identities** (11 under review),
-leaving **334 active web IDs outside the reviewed Kotlin tranche**.
-Do **not** call this 100% parity until those 11 pass the actual source, engine,
-codec and native CI tests and are merged. Exact physical station inventory,
-verified rep/loading basis, attachments and cable/machine variants remain
-mandatory; no legacy progression, PR or weight is transferred.
+The current Kotlin source-linked, engineering-provisional starter tranche
+therefore contains **42 of 376 exact active web exercise IDs**. **334 active
+web IDs remain outside the reviewed Kotlin tranche.** The current tranche
+covers **37 of 39 curated web definitions**; the two remaining curated
+movements (`band_lateral_raise` and `dumbbell_crunch`) are deliberately
+held pending independently verified resistance/load-basis semantics. The
+current count is grounded in the executable source-parity checks, not this
+manually written milestone.
 
-Even when source counts match, exercise-ID presence cannot prove programming
-quality, day/phase/volume behavior, history isolation, machine A/B load
-progression, or web-to-Kotlin functional parity. The 1,024-entry catalog
-capacity supports the 376-ID inventory size but is not an import of 376
-coaching-qualified exercises. Issue #518, objective superiority and device
-acceptance remain **OPEN**; no release, parity or superiority claim is
-authorized by this checkpoint.
+All 42 exercises still require gym-specific implement/attachment and actual
+achievable-load verification before use. An exact exercise ID is *not* proof
+of full exercise-programming parity, calibrated stimulus, independent PRs,
+approved machine A/B progression, day/phase volume or real-device behavior.
+The 1,024-entry capacity fix accommodates a web-sized library but does not
+import 376 validated exercise definitions.
+
+**Full web-engine functional parity remains unverified; comparative coaching
+superiority has not been demonstrated.** Issue #518 and actual Android device
+acceptance remain **OPEN**. The beta release gate is not cleared by the
+catalog count or by green source/CI tests.
 
 ## Measured source coverage checkpoint — November 12, 2026
 

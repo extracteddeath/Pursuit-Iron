@@ -56,10 +56,12 @@ time or set-dose constraints fail.
   current `:engine-runtime` JS bridge and any alternative active policy are
   **development migration tools only**, not release dependencies. Android
   `MainActivity` now launches the Kotlin-owned journey, and the debug Lab
-  reuses that same Activity. The dormant old JS sources and `:engine-runtime`
-  dependency still compile in `:app`, so `app/build.gradle.kts` correctly
-  blocks release packaging until they are excluded and the old athlete data
-  has a separately approved migration/recovery path.
+  reuses that same Activity. The release compiler uses a Kotlin-only source
+  allowlist, and `:engine-runtime` is a **debug-only** dependency; its
+  classes are excluded from beta release. CI verifies the actual release
+  compiled classes and dependency graph **without packaging an app**.
+  Release packaging remains blocked by a separate explicit beta-acceptance
+  gate until testing, data recovery and stable-signed updates are approved.
 - Keep separate Kotlin modules only where they express a real responsibility
   (engine, signed storage, Compose), not a new generator/coaching policy per
   screen, exercise, phase or edge case. One verified physical-stock rule.
@@ -95,8 +97,9 @@ A beta build is allowed only after:
   opt-in tester feedback. Improvements over the web engine must be measured
   against actual lifter outcomes; otherwise report accuracy as unproven.
 
-**Current blockers:** the launcher now runs Kotlin, but old JS classes still
-remain on the release runtime classpath, full-cycle issuance needs more
-acceptance, physical-device testing is pending, and feedback/export and
-explicit old-data migration have not passed the beta acceptance gates. The old comprehensive parity ledger is a **post-beta backlog**,
+**Current blockers:** Kotlin beta source/classpath separation is in place,
+but full-cycle issuance and supported-plan science still need acceptance,
+physical-device testing and signing are pending, and feedback/export plus
+explicit recovery of any prior athlete data have not passed beta gates.
+Release artifacts remain deliberately disabled. The old comprehensive parity ledger is a **post-beta backlog**,
 not a commitment to ship everything at beta launch.

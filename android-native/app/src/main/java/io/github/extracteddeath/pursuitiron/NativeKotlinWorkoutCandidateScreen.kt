@@ -180,6 +180,20 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val selected=allSets.firstOrNull{it.target.setKey==selectedKey}
         ?:allSets.firstOrNull()
     val activeKeys=if(showAll)allSets else listOfNotNull(selected)
+    val issuedGymId=journal?.originalSnapshot?.source?.gymId
+    val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
+        issuedGymId?.let {gymId->
+            KotlinMachineAlternativesDomain.forGymExercise(
+                machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+        }
+    }
+    val currentMachine=selected?.target?.exerciseId?.let{
+        workoutMachineChoice(machineChoices.encoded,it,null)
+    }
+    val expectedCoachMachineScope=if(activeMachineConfig?.machines?.isNotEmpty()==true)
+        LiveMachineCoachScope.Physical(currentMachine)
+    else LiveMachineCoachScope.ExerciseOnly
+
     // Physical machine selection changes the evidence and valid stack for
     // next-set coaching even when the workout journal revision is unchanged.
     // Trigger a fresh review on durable choice writes and hide stale advice
@@ -199,7 +213,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         !movementRestricted && !state.busy &&
         machineChoices.ready && !machineChoices.busy &&
             it.journalRevision==presentation?.revision &&
-            it.setKey==selected?.target?.setKey
+            it.setKey==selected?.target?.setKey &&
+            // A result for station A may linger for one Compose frame
+            // while the new B review starts. Hide it synchronously.
+            it.machineScope==expectedCoachMachineScope
     }
 
     if(showFinishConfirm && presentation?.canFinish==true) {
@@ -396,16 +413,6 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 exerciseId=selected.target.exerciseId,custom=false,
                 enabled=!state.busy && !presentation.finished
             )
-        val issuedGymId=journal?.originalSnapshot?.source?.gymId
-        val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
-            issuedGymId?.let {gymId->
-                KotlinMachineAlternativesDomain.forGymExercise(
-                    machineRoster?.configurations.orEmpty(),gymId,exerciseId)
-            }
-        }
-        val currentMachine=selected?.target?.exerciseId?.let{
-            workoutMachineChoice(machineChoices.encoded,it,null)
-        }
         NativeKotlinWorkoutMachineSelector(activeMachineConfig,currentMachine,
             enabled=!state.busy && !presentation.finished &&
                 machineChoices.ready && !machineChoices.busy,

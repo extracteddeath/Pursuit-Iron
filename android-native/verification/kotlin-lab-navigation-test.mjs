@@ -550,7 +550,8 @@ for(const required of [
   'KotlinCandidateDestination.FUTURE',
   'KotlinCandidateDestination.SETTINGS'
 ])assert.ok(journey.includes(required),'Missing navigation destination '+required);
-assert.ok(journey.includes('if(!navigationTouched &&') &&
+assert.ok(journey.includes('var navigationTouched by rememberSaveable { mutableStateOf(false) }') &&
+  journey.includes('if(!navigationTouched &&') &&
   journey.includes('host.reviewResumableCustomWorkouts()') &&
   journey.includes('host.listOwnedCustomCycleDrafts()') &&
   journey.includes('currentUnfinishedGeneratedWorkoutId(host)') &&

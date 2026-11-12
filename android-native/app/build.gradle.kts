@@ -68,7 +68,8 @@ android {
     // preview screen or the JavaScript worker through a new source file.
     sourceSets {
         getByName("main") {
-            java.include(
+            // AGP 9 built-in Kotlin reads AndroidSourceSet.kotlin, not .java.
+            kotlin.include(
                 "**/MainActivity.kt",
                 "**/PursuitIronApplication.kt",
                 "**/AppPrivateKotlinLocalAthlete.kt",

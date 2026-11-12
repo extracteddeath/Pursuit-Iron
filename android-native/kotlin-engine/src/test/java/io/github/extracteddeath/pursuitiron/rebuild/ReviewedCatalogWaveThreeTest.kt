@@ -12,19 +12,19 @@ import org.junit.Test
 class ReviewedCatalogWaveThreeTest {
     private val all=StarterExerciseTranche.entries()
     private val addedIds=listOf(
-        "inc-db-press","low-incline-db","decline-db-press","db-neutral-press","seated-db-press",
+        "spider-curl","low-incline-db","decline-db-press","db-neutral-press","seated-db-press",
         "squeeze-press","db-incline-fly","rear-fly","seated-rear-fly","prone-db-rear-fly",
-        "side-lying-raise","seated-db-lat-raise","lat-raise","db-curl","concentration-curl",
-        "incline-hammer","cross-hammer","db-rdl","db-row","inc-db-row",
-        "cs-db-row","lying-db-ext","bb-bench","ohp","seated-ohp",
-        "back-squat","high-bar-squat","low-bar-squat","paused-squat","tempo-squat",
-        "good-morning","bb-row","pendlay-row","floor-press","decline-bench",
-        "machine-press","incline-machine-press","machine-shoulder","reverse-pec","machine-lat-raise",
+        "side-lying-raise","seated-db-lat-raise","chest-supported-lat-raise","helms-row","concentration-curl",
+        "incline-hammer","cross-hammer","db-rdl","kroc-row","inc-db-row",
+        "cs-db-row","lying-db-ext","pin-squat","ohp","seated-ohp",
+        "underhand-row","high-bar-squat","low-bar-squat","paused-squat","tempo-squat",
+        "good-morning","yates-row","pendlay-row","floor-press","decline-bench",
+        "seated-incline-curl","incline-machine-press","seated-cable-lat-raise","chest-supported-rear-fly","machine-lat-raise",
         "machine-curl","machine-ext","belt-squat","machine-hip-thrust","machine-crunch",
-        "seated-curl","leg-ext","single-leg-press","smith-incline","bw-lunge",
+        "nordic","slrdl","single-leg-press","smith-incline","bw-lunge",
         "bw-bulgarian","glute-bridge","sl-hip-thrust","bw-calf","crunch",
-        "bicycle","oblique-crunch","leg-raise","bench-dip","cable-fly",
-        "inc-cable-fly","high-cable-fly","cable-lat-raise","cable-press","cable-crunch",
+        "bicycle","oblique-crunch","leg-raise","bench-dip","standing-curl",
+        "inc-cable-fly","high-cable-fly","pendulum-squat","cable-press","v-squat",
         "wide-pulldown","close-pulldown","one-arm-pulldown","straight-pulldown","cable-woodchop"
     )
     private val wave=all.drop(76)
@@ -48,17 +48,17 @@ class ReviewedCatalogWaveThreeTest {
             it.movement.credits.any{credit->credit.role==MuscleCreditRole.DIRECT}
         })
         assertEquals(LoadBasis.DUMBBELL_PER_HAND,
-            byId.getValue("inc-db-press").movement.expectedLoadBasis)
+            byId.getValue("spider-curl").movement.expectedLoadBasis)
         assertEquals(LoadBasis.BARBELL_TOTAL,
-            byId.getValue("bb-bench").movement.expectedLoadBasis)
-        assertNotEquals(byId.getValue("machine-press").movement.equipmentId,
-            byId.getValue("incline-machine-press").movement.equipmentId)
+            byId.getValue("pin-squat").movement.expectedLoadBasis)
+        assertNotEquals(byId.getValue("pendulum-squat").movement.equipmentId,
+            byId.getValue("v-squat").movement.equipmentId)
         assertEquals("wide-bar",
             byId.getValue("wide-pulldown").movement.attachmentId)
         assertNotEquals(byId.getValue("db_curl").movement.variantId,
-            byId.getValue("db-curl").movement.variantId)
+            byId.getValue("spider-curl").movement.variantId)
         assertNotEquals(byId.getValue("incline_db_press").movement.variantId,
-            byId.getValue("inc-db-press").movement.variantId)
+            byId.getValue("low-incline-db").movement.variantId)
     }
 
     @Test fun gymWithoutPhysicalEquipmentCannotIssueLoadedWaveOrInventMachineWeights() {
@@ -100,18 +100,17 @@ class ReviewedCatalogWaveThreeTest {
     }
 
     @Test fun machineAndShoulderVariantsHaveNoInventedGenericWeightBasis() {
-        val machines=setOf("machine-press","incline-machine-press",
-            "machine-shoulder","reverse-pec","machine-lat-raise",
+        val machines=setOf("incline-machine-press","machine-lat-raise",
             "machine-curl","machine-ext","belt-squat",
-            "machine-hip-thrust","machine-crunch","seated-curl",
-            "leg-ext","single-leg-press")
+            "machine-hip-thrust","machine-crunch","single-leg-press",
+            "pendulum-squat","v-squat","standing-curl")
         assertEquals(machines.size,machines.map{
             byId.getValue(it).movement.equipmentId
         }.distinct().size)
         assertTrue(machines.all{
             byId.getValue(it).movement.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE
         })
-        assertTrue(listOf("inc-db-press","low-incline-db","db-curl",
+        assertTrue(listOf("spider-curl","low-incline-db","helms-row",
             "concentration-curl","incline-hammer","cross-hammer").all{
             byId.getValue(it).movement.expectedLoadBasis==
                 LoadBasis.DUMBBELL_PER_HAND

@@ -222,19 +222,19 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         // The third expansion is append-only; exactly the old 76 IDs keep
         // their saved order and unrelated machine/angle histories.
         assertEquals(listOf(
-            "inc-db-press","low-incline-db","decline-db-press","db-neutral-press","seated-db-press",
+            "spider-curl","low-incline-db","decline-db-press","db-neutral-press","seated-db-press",
             "squeeze-press","db-incline-fly","rear-fly","seated-rear-fly","prone-db-rear-fly",
-            "side-lying-raise","seated-db-lat-raise","lat-raise","db-curl","concentration-curl",
-            "incline-hammer","cross-hammer","db-rdl","db-row","inc-db-row",
-            "cs-db-row","lying-db-ext","bb-bench","ohp","seated-ohp",
-            "back-squat","high-bar-squat","low-bar-squat","paused-squat","tempo-squat",
-            "good-morning","bb-row","pendlay-row","floor-press","decline-bench",
-            "machine-press","incline-machine-press","machine-shoulder","reverse-pec","machine-lat-raise",
+            "side-lying-raise","seated-db-lat-raise","chest-supported-lat-raise","helms-row","concentration-curl",
+            "incline-hammer","cross-hammer","db-rdl","kroc-row","inc-db-row",
+            "cs-db-row","lying-db-ext","pin-squat","ohp","seated-ohp",
+            "underhand-row","high-bar-squat","low-bar-squat","paused-squat","tempo-squat",
+            "good-morning","yates-row","pendlay-row","floor-press","decline-bench",
+            "seated-incline-curl","incline-machine-press","seated-cable-lat-raise","chest-supported-rear-fly","machine-lat-raise",
             "machine-curl","machine-ext","belt-squat","machine-hip-thrust","machine-crunch",
-            "seated-curl","leg-ext","single-leg-press","smith-incline","bw-lunge",
+            "nordic","slrdl","single-leg-press","smith-incline","bw-lunge",
             "bw-bulgarian","glute-bridge","sl-hip-thrust","bw-calf","crunch",
-            "bicycle","oblique-crunch","leg-raise","bench-dip","cable-fly",
-            "inc-cable-fly","high-cable-fly","cable-lat-raise","cable-press","cable-crunch",
+            "bicycle","oblique-crunch","leg-raise","bench-dip","standing-curl",
+            "inc-cable-fly","high-cable-fly","pendulum-squat","cable-press","v-squat",
             "wide-pulldown","close-pulldown","one-arm-pulldown","straight-pulldown","cable-woodchop"
         ),starter.catalog.drop(76).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)

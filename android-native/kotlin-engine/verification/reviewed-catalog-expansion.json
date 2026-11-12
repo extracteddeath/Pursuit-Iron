@@ -835,37 +835,34 @@
       }
     },
     {
-      "id": "inc-db-press",
+      "id": "spider-curl",
       "source": {
-        "movementFamily": "horizontal_press",
+        "movementFamily": "elbow_flexion",
         "equipment": [
           "dumbbell",
           "inclinebench"
         ],
         "practicalReps": [
-          8,
-          12
+          10,
+          15
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "bench_press",
-        "variant": "incline-dumbbell-extended-id",
-        "pattern": "HORIZONTAL_PRESS",
-        "role": "SECONDARY",
-        "focus": "press",
+        "family": "elbow_flexion",
+        "variant": "spider-dumbbell-incline",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
         "implement": "dumbbell-rack",
         "basis": "DUMBBELL_PER_HAND",
         "fixtures": [
           "incline-bench"
         ],
-        "direct": "CHEST",
-        "indirect": [
-          "TRICEPS:0.5",
-          "FRONT_DELTS:0.5"
-        ],
+        "direct": "BICEPS",
+        "indirect": [],
         "attachment": null,
-        "note": "Incline dumbbell press requires two calibrated per-hand dumbbells and a confirmed incline bench. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Spider curl requires a secure incline bench and per-hand dumbbell loading independent of supinated curls. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -1221,39 +1218,43 @@
       }
     },
     {
-      "id": "lat-raise",
+      "id": "chest-supported-lat-raise",
       "source": {
         "movementFamily": "lateral_raise",
         "equipment": [
-          "dumbbell"
+          "dumbbell",
+          "inclinebench"
         ],
         "practicalReps": [
           12,
           20
         ],
-        "source": "legacy_v661"
+        "source": "pursuit_m201"
       },
       "review": {
         "family": "lateral_raise",
-        "variant": "standing-dumbbell",
+        "variant": "incline-supported-dumbbell",
         "pattern": "ISOLATION",
         "role": "ACCESSORY",
         "focus": "press",
         "implement": "dumbbell-rack",
         "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [],
+        "fixtures": [
+          "incline-bench"
+        ],
         "direct": "SIDE_DELTS",
         "indirect": [],
         "attachment": null,
-        "note": "Standing dumbbell lateral raise uses a real per-hand rack, not cable stack loading. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Chest-supported dumbbell lateral raise requires a real incline bench and independently tracked per-hand load. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
-      "id": "db-curl",
+      "id": "helms-row",
       "source": {
-        "movementFamily": "elbow_flexion",
+        "movementFamily": "horizontal_pull",
         "equipment": [
-          "dumbbell"
+          "dumbbell",
+          "bench"
         ],
         "practicalReps": [
           8,
@@ -1262,18 +1263,24 @@
         "source": "legacy_v661"
       },
       "review": {
-        "family": "elbow_flexion",
-        "variant": "supinated-dumbbell-extended-id",
-        "pattern": "ISOLATION",
-        "role": "ACCESSORY",
+        "family": "row",
+        "variant": "helms-dumbbell",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
         "focus": "pull",
         "implement": "dumbbell-rack",
         "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [],
-        "direct": "BICEPS",
-        "indirect": [],
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
         "attachment": null,
-        "note": "Supinated dumbbell curl tracks direct biceps without assigning generic wrist or brachialis credits. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Helms row requires real support and per-hand weights; broad web back credit is split conservatively. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -1398,38 +1405,34 @@
       }
     },
     {
-      "id": "db-row",
+      "id": "kroc-row",
       "source": {
         "movementFamily": "horizontal_pull",
         "equipment": [
-          "dumbbell",
-          "bench"
+          "dumbbell"
         ],
         "practicalReps": [
-          8,
-          12
+          10,
+          20
         ],
         "source": "legacy_v661"
       },
       "review": {
         "family": "row",
-        "variant": "single-arm-dumbbell",
+        "variant": "kroc-unilateral-dumbbell",
         "pattern": "HORIZONTAL_PULL",
         "role": "SECONDARY",
         "focus": "pull",
         "implement": "dumbbell-rack",
         "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [
-          "flat-bench"
-        ],
+        "fixtures": [],
         "direct": "LATS",
         "indirect": [
           "UPPER_BACK:0.5",
-          "BICEPS:0.25",
-          "REAR_DELTS:0.25"
+          "BICEPS:0.25"
         ],
         "attachment": null,
-        "note": "One-arm supported dumbbell row retains unilateral rep meaning and maps broad back credit conservatively. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Kroc row uses a single real dumbbell with unilateral reps and separately calibrated performance history. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -1534,39 +1537,37 @@
       }
     },
     {
-      "id": "bb-bench",
+      "id": "pin-squat",
       "source": {
-        "movementFamily": "horizontal_press",
+        "movementFamily": "squat",
         "equipment": [
           "barbell",
-          "bench",
           "rack"
         ],
         "practicalReps": [
-          5,
-          10
+          3,
+          6
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "bench_press",
-        "variant": "barbell-flat-web",
-        "pattern": "HORIZONTAL_PRESS",
+        "family": "squat",
+        "variant": "pin-barbell",
+        "pattern": "SQUAT",
         "role": "PRIMARY",
-        "focus": "press",
+        "focus": "lower",
         "implement": "straight-bar",
         "basis": "BARBELL_TOTAL",
         "fixtures": [
-          "flat-bench",
-          "rack"
+          "rack",
+          "safety-pins"
         ],
-        "direct": "CHEST",
+        "direct": "QUADS",
         "indirect": [
-          "TRICEPS:0.5",
-          "FRONT_DELTS:0.25"
+          "GLUTES:0.5"
         ],
         "attachment": null,
-        "note": "Web stable barbell flat bench ID is distinct from earlier curated ID; both still require real bar and plates. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Pin squat requires the actual squat rack and safety pins; paused and free squat weights remain independent. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -1638,36 +1639,35 @@
       }
     },
     {
-      "id": "back-squat",
+      "id": "underhand-row",
       "source": {
-        "movementFamily": "squat",
+        "movementFamily": "horizontal_pull",
         "equipment": [
-          "barbell",
-          "rack"
+          "barbell"
         ],
         "practicalReps": [
-          5,
-          8
+          8,
+          12
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "squat",
-        "variant": "barbell-back-web",
-        "pattern": "SQUAT",
-        "role": "PRIMARY",
-        "focus": "lower",
+        "family": "row",
+        "variant": "supinated-barbell-row",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
         "implement": "straight-bar",
         "basis": "BARBELL_TOTAL",
-        "fixtures": [
-          "rack"
-        ],
-        "direct": "QUADS",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
         "indirect": [
-          "GLUTES:0.5"
+          "LATS:0.5",
+          "BICEPS:0.5",
+          "REAR_DELTS:0.25"
         ],
         "attachment": null,
-        "note": "Web back squat keeps its historical exercise ID distinct and requires full verified rack and plate loading. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Supinated barbell row uses physical plates and explicit upper-back/lat accounting without invented traps. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -1836,21 +1836,21 @@
       }
     },
     {
-      "id": "bb-row",
+      "id": "yates-row",
       "source": {
         "movementFamily": "horizontal_pull",
         "equipment": [
           "barbell"
         ],
         "practicalReps": [
-          6,
-          10
+          8,
+          12
         ],
         "source": "legacy_v661"
       },
       "review": {
         "family": "row",
-        "variant": "barbell-bent-over-web",
+        "variant": "yates-barbell",
         "pattern": "HORIZONTAL_PULL",
         "role": "SECONDARY",
         "focus": "pull",
@@ -1864,7 +1864,7 @@
           "REAR_DELTS:0.25"
         ],
         "attachment": null,
-        "note": "Bent-over barbell row separates upper back and lats provisionally and never invents generic traps credit. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Yates barbell row receives a separate torso-angle baseline; no weight transfer from conventional row. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -1967,34 +1967,34 @@
       }
     },
     {
-      "id": "machine-press",
+      "id": "seated-incline-curl",
       "source": {
-        "movementFamily": "horizontal_press",
+        "movementFamily": "elbow_flexion",
         "equipment": [
-          "machinepress"
+          "cable",
+          "inclinebench"
         ],
         "practicalReps": [
-          8,
-          12
+          10,
+          15
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "bench_press",
-        "variant": "machine-chest-web",
-        "pattern": "HORIZONTAL_PRESS",
-        "role": "SECONDARY",
-        "focus": "press",
-        "implement": "machine-chest-press-station",
-        "basis": "EXERCISE_OVERRIDE",
-        "fixtures": [],
-        "direct": "CHEST",
-        "indirect": [
-          "TRICEPS:0.25",
-          "FRONT_DELTS:0.25"
+        "family": "elbow_flexion",
+        "variant": "incline-seated-single-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [
+          "incline-bench"
         ],
-        "attachment": null,
-        "note": "Chest press machine uses its own physically verified scale; gym machine A and B remain independent. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Seated incline cable curl requires a real incline bench, exact single handle and verified stack. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -2029,61 +2029,65 @@
       }
     },
     {
-      "id": "machine-shoulder",
+      "id": "seated-cable-lat-raise",
       "source": {
-        "movementFamily": "vertical_press",
+        "movementFamily": "lateral_raise",
         "equipment": [
-          "machineshoulder"
-        ],
-        "practicalReps": [
-          8,
-          12
-        ],
-        "source": "legacy_v661"
-      },
-      "review": {
-        "family": "overhead_press",
-        "variant": "machine-shoulder-web",
-        "pattern": "VERTICAL_PRESS",
-        "role": "SECONDARY",
-        "focus": "press",
-        "implement": "shoulder-press-machine",
-        "basis": "EXERCISE_OVERRIDE",
-        "fixtures": [],
-        "direct": "FRONT_DELTS",
-        "indirect": [
-          "TRICEPS:0.25"
-        ],
-        "attachment": null,
-        "note": "Machine shoulder press cannot infer exact loads from chest press or free-weight shoulder press. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
-      }
-    },
-    {
-      "id": "reverse-pec",
-      "source": {
-        "movementFamily": "rear_delt",
-        "equipment": [
-          "pecdeck"
+          "cable",
+          "bench"
         ],
         "practicalReps": [
           12,
           20
         ],
-        "source": "legacy_v661"
+        "source": "pursuit_m201"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "seated-single-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Seated cable lateral raise needs an actual bench and single handle with local stack weights. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
+      }
+    },
+    {
+      "id": "chest-supported-rear-fly",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "dumbbell",
+          "inclinebench"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "pursuit_m201"
       },
       "review": {
         "family": "rear_delt_fly",
-        "variant": "reverse-pec-machine",
+        "variant": "incline-supported-rear-delt",
         "pattern": "ISOLATION",
         "role": "ACCESSORY",
         "focus": "pull",
-        "implement": "reverse-pec-deck-machine",
-        "basis": "EXERCISE_OVERRIDE",
-        "fixtures": [],
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "incline-bench"
+        ],
         "direct": "REAR_DELTS",
         "indirect": [],
         "attachment": null,
-        "note": "Reverse pec deck is a rear-delt physical machine configuration with its own resistance stack. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Incline-supported rear delt fly requires actual bench support and independent dumbbell loads. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -2259,11 +2263,41 @@
       }
     },
     {
-      "id": "seated-curl",
+      "id": "nordic",
       "source": {
         "movementFamily": "knee_flexion",
         "equipment": [
-          "legcurl"
+          "bodyweight"
+        ],
+        "practicalReps": [
+          5,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_flexion",
+        "variant": "nordic-bodyweight",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "nordic-anchor"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Nordic curl requires a secure supported ankle anchor; no external machine loading is implied. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
+      }
+    },
+    {
+      "id": "slrdl",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "bodyweight"
         ],
         "practicalReps": [
           10,
@@ -2272,46 +2306,20 @@
         "source": "legacy_v661"
       },
       "review": {
-        "family": "knee_flexion",
-        "variant": "seated-machine-web",
-        "pattern": "ISOLATION",
-        "role": "ACCESSORY",
+        "family": "hip_hinge",
+        "variant": "bodyweight-unilateral-rdl",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
         "focus": "lower",
-        "implement": "seated-leg-curl-machine",
-        "basis": "EXERCISE_OVERRIDE",
+        "implement": null,
+        "basis": null,
         "fixtures": [],
         "direct": "HAMSTRINGS",
-        "indirect": [],
-        "attachment": null,
-        "note": "Seated leg curl source ID retains distinct exercise history and uses exact seated machine stock. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
-      }
-    },
-    {
-      "id": "leg-ext",
-      "source": {
-        "movementFamily": "knee_extension",
-        "equipment": [
-          "legext"
+        "indirect": [
+          "GLUTES:0.5"
         ],
-        "practicalReps": [
-          12,
-          20
-        ],
-        "source": "legacy_v661"
-      },
-      "review": {
-        "family": "knee_extension",
-        "variant": "extension-machine-web",
-        "pattern": "ISOLATION",
-        "role": "ACCESSORY",
-        "focus": "lower",
-        "implement": "leg-extension-machine",
-        "basis": "EXERCISE_OVERRIDE",
-        "fixtures": [],
-        "direct": "QUADS",
-        "indirect": [],
         "attachment": null,
-        "note": "Web leg extension ID uses the same real machine class but preserves its own session identity. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "note": "Single-leg unloaded RDL preserves unilateral rep convention without inventing external dumbbell weight. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -2675,31 +2683,31 @@
       }
     },
     {
-      "id": "cable-fly",
+      "id": "standing-curl",
       "source": {
-        "movementFamily": "chest_adduction",
+        "movementFamily": "knee_flexion",
         "equipment": [
-          "cable"
+          "legcurl"
         ],
         "practicalReps": [
-          12,
-          20
+          10,
+          15
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "chest_adduction",
-        "variant": "standard-cable-fly",
+        "family": "knee_flexion",
+        "variant": "standing-leg-curl-machine",
         "pattern": "ISOLATION",
         "role": "ACCESSORY",
-        "focus": "press",
-        "implement": "cable-station",
-        "basis": "CABLE_STACK",
+        "focus": "lower",
+        "implement": "standing-leg-curl-machine",
+        "basis": "EXERCISE_OVERRIDE",
         "fixtures": [],
-        "direct": "CHEST",
+        "direct": "HAMSTRINGS",
         "indirect": [],
-        "attachment": "dual-handles",
-        "note": "Cable fly requires two real free-moving cable handles and calibrated stack weights. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "attachment": null,
+        "note": "Standing leg curl requires its own independently verified physical machine resistance scale. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -2759,31 +2767,33 @@
       }
     },
     {
-      "id": "cable-lat-raise",
+      "id": "pendulum-squat",
       "source": {
-        "movementFamily": "lateral_raise",
+        "movementFamily": "squat",
         "equipment": [
-          "cable"
+          "hacksquat"
         ],
         "practicalReps": [
-          12,
-          20
+          8,
+          12
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "lateral_raise",
-        "variant": "standing-single-arm-cable",
-        "pattern": "ISOLATION",
-        "role": "ACCESSORY",
-        "focus": "press",
-        "implement": "cable-station",
-        "basis": "CABLE_STACK",
+        "family": "squat",
+        "variant": "pendulum-squat-machine",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "pendulum-squat-machine",
+        "basis": "EXERCISE_OVERRIDE",
         "fixtures": [],
-        "direct": "SIDE_DELTS",
-        "indirect": [],
-        "attachment": "single-handle",
-        "note": "Single-arm cable lateral raise requires its exact attachment and per-side history. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Pendulum squat uses a real physical machine, not generic hack squat or leg press loading. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {
@@ -2818,31 +2828,33 @@
       }
     },
     {
-      "id": "cable-crunch",
+      "id": "v-squat",
       "source": {
-        "movementFamily": "core",
+        "movementFamily": "squat",
         "equipment": [
-          "cable"
+          "hacksquat"
         ],
         "practicalReps": [
-          10,
-          20
+          8,
+          12
         ],
         "source": "legacy_v661"
       },
       "review": {
-        "family": "trunk_flexion",
-        "variant": "rope-cable-web",
-        "pattern": "CORE",
-        "role": "ACCESSORY",
-        "focus": "all",
-        "implement": "cable-station",
-        "basis": "CABLE_STACK",
+        "family": "squat",
+        "variant": "v-squat-machine",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "v-squat-machine",
+        "basis": "EXERCISE_OVERRIDE",
         "fixtures": [],
-        "direct": "ABS",
-        "indirect": [],
-        "attachment": "rope",
-        "note": "Cable crunch explicitly requires a rope attachment, real stack and abdominal-only credit. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "V squat requires a dedicated station scale; pendulum and hack squat histories remain separate. Athlete-selected verified stock and separate exercise-history baselines are mandatory; never silently transfer the other exercise's load."
       }
     },
     {

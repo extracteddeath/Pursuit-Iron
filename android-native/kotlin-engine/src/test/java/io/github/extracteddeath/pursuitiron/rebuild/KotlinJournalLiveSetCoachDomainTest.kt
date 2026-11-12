@@ -147,6 +147,13 @@ class KotlinJournalLiveSetCoachDomainTest {
         assertNull(suggestion.coaching.weightForHumanReview)
     }
 
+    @Test fun ordinaryExerciseOnlyReviewDoesNotPretendToKnowMachineIdentity() {
+        val first=record(started(),"bench:s0")
+        val reviewed=look(first,"bench:s1") as LiveSetCoachResult.Reviewed
+        assertEquals(LiveMachineCoachScope.ExerciseOnly,reviewed.machineScope)
+        assertFalse(reviewed.canModifyWorkout)
+    }
+
     @Test fun generatedAndCustomJournalsShareOneStraightSetDecision() {
         // Identical issued straight-set intent and observed effort must not
         // produce two coaching policies based on which journal owns storage.
@@ -386,6 +393,7 @@ class KotlinJournalLiveSetCoachDomainTest {
         assertEquals(mismatched,review(first,"B",null))
         assertEquals(mismatched,review(first,null))
         val onA=review(first,"A") as LiveSetCoachResult.Reviewed
+        assertEquals(LiveMachineCoachScope.Physical("A"),onA.machineScope)
         assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
             onA.coaching.direction)
         assertEquals(n("215"),onA.coaching.issuedTargetUnchanged)
@@ -399,6 +407,7 @@ class KotlinJournalLiveSetCoachDomainTest {
                 correctsEventId="a-observation"))
             as KotlinJournalDecision.Proposed).state
         val onB=review(corrected,"B") as LiveSetCoachResult.Reviewed
+        assertEquals(LiveMachineCoachScope.Physical("B"),onB.machineScope)
         assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,
             onB.coaching.direction)
         assertEquals(mismatched,review(corrected,"A"))
@@ -424,6 +433,7 @@ class KotlinJournalLiveSetCoachDomainTest {
         assertEquals(blocked,review(first,"B",null))
         assertEquals(blocked,review(first,null))
         val onA=review(first,"A") as LiveSetCoachResult.Reviewed
+        assertEquals(LiveMachineCoachScope.Physical("A"),onA.machineScope)
         assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
             onA.coaching.direction)
         assertFalse(onA.canModifyWorkout)
@@ -436,6 +446,7 @@ class KotlinJournalLiveSetCoachDomainTest {
                 correctsEventId="a-observation"))
             as CustomWorkoutJournalDecision.Proposed).draft
         val onB=review(corrected,"B") as LiveSetCoachResult.Reviewed
+        assertEquals(LiveMachineCoachScope.Physical("B"),onB.machineScope)
         assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,
             onB.coaching.direction)
         assertEquals(blocked,review(corrected,"A"))

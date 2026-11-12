@@ -34,7 +34,7 @@ for(const phrase of [
   'val focusDetail=upcoming?.let',
   'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
-  'editorStates.SaveableStateProvider("main:${set.setKey}")',
+  '"main:${set.setKey}:station:"',
   'editorStates.SaveableStateProvider("follow:${set.setKey}")',
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
@@ -90,6 +90,13 @@ assert.ok(machineSelector.includes('internal fun initialMachineScopedLoad(') &&
   !composer.includes('LaunchedEffect(machineInstanceId)') &&
   !journal.includes('LaunchedEffect(machineInstanceId)'),
   'Machine identity changes must not silently overwrite pending native set weight edits');
+assert.ok(composer.includes('editorStates.SaveableStateProvider(') &&
+  composer.includes('(recordedMachineId?.let{"id:$it"} ?: "none")') &&
+  journal.includes('(mainMachineId?.let{"id:$it"} ?: "none")') &&
+  journal.includes('editorStates.SaveableStateProvider(') &&
+  !composer.includes('editorStates.SaveableStateProvider("composer-set:${set.target.setKey}")') &&
+  !journal.includes('editorStates.SaveableStateProvider("main:${set.setKey}")'),
+  'A -> B -> A must recover separate unsaved drafts, including after Focus/All or rotation');
 const machineChoiceHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 const machineChoiceStore=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinWorkoutMachineChoiceFileStore.kt');
 assert.ok(machineChoiceHost.includes('fun recoverWorkoutMachineChoices(') &&
@@ -314,9 +321,9 @@ assert.ok(composer.includes('PursuitWorkoutFocusHeader(') &&
   journal.includes('PursuitWorkoutFocusHeader('),
   'Custom and generated workouts must share the same accessible focus panel');
 assert.ok(composer.includes('val editorStates=rememberSaveableStateHolder()') &&
-  composer.includes('editorStates.SaveableStateProvider("composer-set:${set.target.setKey}")') &&
+  composer.includes('"composer-set:${set.target.setKey}:station:"') &&
   journal.includes('val editorStates=rememberSaveableStateHolder()') &&
-  journal.includes('editorStates.SaveableStateProvider("main:${set.setKey}")'),
+  journal.includes('"main:${set.setKey}:station:"'),
   'Switching Focus/All or visiting another set must preserve unsubmitted fields in both workout types');
 
 assert.ok(composer.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') &&

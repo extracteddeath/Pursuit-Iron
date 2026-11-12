@@ -424,8 +424,11 @@ object CoachFirstProgramStartDomain {
             } else selected
         for(index in choices.indices)
             if(choices[index].exerciseId in companionPrimaryIds)
-                choices[index]=choices[index].copy(requiredVisits=
-                    maxOf(1,choices[index].requiredVisits))
+                // This is ONE conventional deadlift skill appearance, not a
+                // suggestion to add more weekly heavy hinges. The normal
+                // composer still chooses its actual day, sets and load.
+                choices[index]=choices[index].copy(
+                    requiredVisits=1,maximumVisits=1)
         val supported=phaseDoseSources.flatMap {it.credits.filter {c->
             c.role==MuscleCreditRole.DIRECT
         }.map{c->c.muscle}}.toSet()

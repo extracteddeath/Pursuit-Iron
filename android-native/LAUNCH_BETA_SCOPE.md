@@ -75,10 +75,19 @@ a production-store AAB milestone, or permission to ship incomplete code.
    and older saved setup fields. Native CI cold-restores current and
    retired-exercise notes alongside Machine A and coaching opt-outs.
 
+   A further owner-fenced audit now also inventories every physical
+   adaptive-cycle permission, preserving both explicit granted change
+   categories and revoked records from retired cycles. Corrupt, foreign,
+   renamed or unresolved permission files refuse restored-store validation;
+   the app never interprets a lost consent file as permission to
+   automatically change a program. CI cold-restores both grants and
+   revocations with the issued workout, notes, Machine A and coaching
+   opt-outs unchanged.
+
    **No user-facing backup or restore exists yet.** This core audit is
    not the final production verifier: orphan/foreign files outside the
-   covered inventories, advanced block approvals and signoffs, remaining
-   independent private records and all supported storage versions still
+   covered inventories, future block activation approvals and signoffs,
+   remaining private records and all supported storage versions still
    need full coverage. A future production restore must
    run before constructing an active app host, require explicit user
    consent, and pass rollback/power-interruption tests on real Android

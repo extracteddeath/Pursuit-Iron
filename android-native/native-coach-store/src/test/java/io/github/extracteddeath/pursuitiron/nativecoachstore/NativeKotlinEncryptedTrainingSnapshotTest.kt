@@ -143,6 +143,30 @@ class NativeKotlinEncryptedTrainingSnapshotTest {
         assertTrue(Files.exists(external))
     }
 
+    @Test fun corruptedOrForeignLocalIdentityCannotBecomeValidatedBackup() {
+        localIdentity()
+        write("journal/past.bin","several months of progress")
+        val good=Files.readAllBytes(root.resolve("local-athlete.bin"))
+        val broken=good.copyOf()
+        broken[broken.lastIndex]=(broken.last().toInt() xor 1).toByte()
+        Files.write(root.resolve("local-athlete.bin"),broken)
+        assertEquals(NativeKotlinTrainingSnapshotResult.Rejected(
+            NativeKotlinTrainingSnapshotRefusal.INVALID_STORAGE),
+            capture())
+        Files.write(root.resolve("local-athlete.bin"),good)
+        // A surviving Android AtomicFile fallback is a valid owner record:
+        // do not discard a recoverable backup after a crash.
+        Files.move(root.resolve("local-athlete.bin"),
+            root.resolve("local-athlete.bin.bak"))
+        val captured=capture() as NativeKotlinTrainingSnapshotResult.Ready
+        val opened=NativeKotlinEncryptedTrainingSnapshot.inspect(
+            captured.encrypted,password,owner)
+        assertTrue(opened.toString(),
+            opened is NativeKotlinTrainingSnapshotRead.Verified)
+        assertTrue((opened as NativeKotlinTrainingSnapshotRead.Verified)
+            .files.any{it.relativePath=="local-athlete.bin.bak"})
+    }
+
     @Test fun oversizeStoreIsRejectedRatherThanTruncatedIntoApparentlyValidBackup() {
         localIdentity()
         val big=ByteArray(16*1024*1024+1){2}

@@ -68,6 +68,41 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         }
     }
 
+    @Test fun webSizedCatalogSurvivesExactCodecAndColdStoreRestart() {
+        // One live stock option plus 375 explicitly unavailable source IDs.
+        // This proves capacity, not exercise-science or workout eligibility.
+        val template=source()
+        val all=template.catalog+(1..375).map{ i ->
+            movement.copy(exerciseId="unavailable-$i",
+                familyId="unavailable-family-$i",variantId="provisional",
+                equipmentId="not-stocked",attachmentId=null,
+                requiredFacilityIds=emptySet())
+        }
+        assertEquals(376,all.size)
+        val expanded=template.copy(catalog=all)
+        val encoded=NativeKotlinCustomAuthoringSourceCodec.encode(expanded)
+        assertEquals(expanded,
+            NativeKotlinCustomAuthoringSourceCodec.decode(encoded))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            store().publish("owner-1",0,expanded))
+        val restored=(store().read("owner-1")
+            as NativeAuthoringSourceRead.Found).source
+        assertEquals(expanded,restored)
+        assertEquals(376,restored.catalog.size)
+        assertEquals(listOf("rope-pushdown"),
+            CustomExerciseAuthoringDomain.picker(
+                restored.setup,restored.catalog).map{it.exerciseId})
+        assertFalse(restored.mayIssueWorkout)
+        val excess=template.copy(catalog=template.catalog+
+            (1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES).map {i->
+                movement.copy(exerciseId="overflow-$i",
+                    familyId="overflow-family-$i",variantId="unavailable")
+            })
+        assertThrows(IllegalArgumentException::class.java){
+            NativeKotlinCustomAuthoringSourceCodec.encode(excess)
+        }
+    }
+
     @Test fun saveAndReopenIsOwnerScopedAndRevisionChecked() {
         assertEquals(NativeAuthoringSourceRead.Missing,store().read("owner-1"))
         assertEquals(NativeAuthoringSourceWrite.Committed(1),

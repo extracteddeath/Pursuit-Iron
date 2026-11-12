@@ -196,6 +196,34 @@ class CoachReviewedWholeCycleDomainTest {
         assertFalse(withWebInventory.mayApplyAutomatically)
         assertFalse(withWebInventory.maySaveProgram)
 
+        // Verify full MULTI-BLOCK phase transitions, not only a one-phase
+        // hypertrophy template. The original two-block baseline already
+        // passes the independent all-week continuity audit.
+        val multiSource=request(goal=AthleteTrainingGoal.POWERBUILDING,
+            totalWeeks=9,continuity=CustomCoachVolumeContinuityPolicy(
+                BigDecimal("1"),BigDecimal("1"),
+                BigDecimal("1"),BigDecimal("1")))
+        val multiBaseline=CoachReviewedWholeCycleDomain.propose(multiSource)
+        val multiWide=CoachReviewedWholeCycleDomain.propose(
+            multiSource.copy(catalog=webSize))
+        assertEquals(multiBaseline.status,multiWide.status)
+        assertEquals(multiBaseline.initialReviewOptionId,
+            multiWide.initialReviewOptionId)
+        assertEquals(multiBaseline.candidates.map{it.status},
+            multiWide.candidates.map{it.status})
+        assertEquals(multiBaseline.candidates.map{it.allocations},
+            multiWide.candidates.map{it.allocations})
+        assertTrue(multiWide.candidates.any{
+            it.audit?.weeks?.size==9 && it.proposedCycle?.blocks?.size==2
+        })
+        assertTrue(multiWide.candidates.flatMap{candidate->
+            candidate.proposedCycle?.blocks.orEmpty()
+        }.flatMap{block->block.days}.flatMap{day->day.slots}
+            .none{it.exerciseId in unavailable})
+        assertFalse(multiWide.mayIssueWorkout)
+        assertFalse(multiWide.maySaveProgram)
+        assertFalse(multiWide.mayApplyAutomatically)
+
         // Same exact 1,024-entry shared capacity boundary, no bypass from
         // the whole-cycle constructor or a silent truncation to 256.
         assertEquals(ReviewedWholeCycleStatus.INVALID_INPUT,

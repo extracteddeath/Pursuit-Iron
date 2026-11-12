@@ -1,9 +1,9 @@
 {
   "verdict": "NOT_PROVEN_BETTER",
-  "caseCount": 33,
-  "requiredPairs": 49,
+  "caseCount": 36,
+  "requiredPairs": 55,
   "completedPairs": 5,
-  "missingPairs": 44,
+  "missingPairs": 50,
   "measuredImprovements": [],
   "improvedDomains": [],
   "withdrawnPairs": [
@@ -60,6 +60,12 @@
     "full-journey/device: bilateral measured evidence missing",
     "accessibility/device: bilateral measured evidence missing",
     "blind-coach/human: bilateral measured evidence missing",
+    "issued-straight-set-load-stability/headless: bilateral measured evidence missing",
+    "issued-straight-set-load-stability/device: bilateral measured evidence missing",
+    "physical-machine-a-b-isolation/headless: bilateral measured evidence missing",
+    "physical-machine-a-b-isolation/device: bilateral measured evidence missing",
+    "same-exercise-separate-day-progression/headless: bilateral measured evidence missing",
+    "same-exercise-separate-day-progression/device: bilateral measured evidence missing",
     "insufficient measured superiority: require improvements in >=3 domains",
     "explicit user acceptance evidence absent"
   ],

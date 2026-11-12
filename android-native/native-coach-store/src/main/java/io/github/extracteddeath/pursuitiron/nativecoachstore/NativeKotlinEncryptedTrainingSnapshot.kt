@@ -194,6 +194,33 @@ object NativeKotlinEncryptedTrainingSnapshot {
         }.getOrDefault(false)
     }
 
+    /**
+     * Share the one local-identity codec with staged native-store review.
+     * Both the archive reader and the restored-store audit must prove the
+     * exact checksummed PIO1 owner, never infer one from directory names.
+     * This does not activate an Android athlete or authorize imports.
+     */
+    internal fun stagedLocalIdentityMatches(
+        stage:Path,owner:NativeKotlinOwnerIdentity
+    ):Boolean =runCatching {
+        if(Files.isSymbolicLink(stage) ||
+            !Files.isDirectory(stage,noFollow))return@runCatching false
+        val records=listOf("local-athlete.bin","local-athlete.bin.bak")
+            .mapNotNull {name->
+                val path=stage.resolve(name)
+                if(!Files.exists(path,noFollow))null
+                else {
+                    if(Files.isSymbolicLink(path) ||
+                        !Files.isRegularFile(path,noFollow) ||
+                        Files.size(path)>256)
+                        return@runCatching false
+                    NativeKotlinTrainingSnapshotFile(
+                        name,Files.readAllBytes(path))
+                }
+            }
+        hasMatchingLocalIdentity(owner,records)
+    }.getOrDefault(false)
+
     private fun unchanged(
         before:List<NativeKotlinTrainingSnapshotFile>,
         after:List<NativeKotlinTrainingSnapshotFile>

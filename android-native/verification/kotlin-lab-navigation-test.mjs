@@ -30,8 +30,12 @@ assert.ok(csvExport.includes('fun prepare(history:NativeKotlinMixedHistoryTimeli
 assert.ok(history.includes('rememberLauncherForActivityResult(') &&
   history.includes('ActivityResultContracts.CreateDocument("text/csv")') &&
   history.includes('host.reviewVerifiedKotlinHistory()') &&
-  history.includes('trusted.athleteId!=expected.first') &&
-  history.includes('trusted.manifestRevision!=expected.second') &&
+  history.includes('host.currentHistoryExportOwner()') &&
+  history.includes('ownerBefore!=ownerAfter') &&
+  history.includes('ownerBefore.ownerKey!=expected.first') &&
+  history.includes('ownerBefore.athleteId!=expected.second') &&
+  history.includes('trusted.athleteId!=expected.second') &&
+  history.includes('trusted.manifestRevision!=expected.third') &&
   history.includes('NativeKotlinVerifiedHistoryCsvExport.prepare(trusted)') &&
   history.includes('context.contentResolver.openOutputStream(uri,"wt")') &&
   history.includes('CSV is not a restorable app backup') &&

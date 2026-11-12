@@ -10,6 +10,18 @@ import org.junit.Test
  * capacity to later sets and inventing observed effort are not.
  */
 class FatigueAwareRepTargetReviewDomainTest {
+    @Test fun singleCanonicalTargetRirProjectionNeverInventsMinimumReps() {
+        val band=RepBand(5,8)
+        assertNull(FatigueAwareRepTargetReviewDomain.estimateTargetRirReps(
+            actualReps=5,effectiveRir=2,goalRir=4,band=band))
+        assertEquals(5,FatigueAwareRepTargetReviewDomain.estimateTargetRirReps(
+            actualReps=5,effectiveRir=4,goalRir=4,band=band))
+        assertEquals(8,FatigueAwareRepTargetReviewDomain.estimateTargetRirReps(
+            actualReps=8,effectiveRir=4,goalRir=2,band=band))
+        assertEquals(7,FatigueAwareRepTargetReviewDomain.estimateTargetRirReps(
+            actualReps=5,effectiveRir=4,goalRir=2,band=band))
+    }
+
     private fun n(value:String)=BigDecimal(value)
     private val load=n("30")
     private val gym=VerifiedLoadStock.Totals(

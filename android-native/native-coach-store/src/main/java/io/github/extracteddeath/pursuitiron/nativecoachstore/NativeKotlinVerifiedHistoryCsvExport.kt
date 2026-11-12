@@ -24,7 +24,7 @@ object NativeKotlinVerifiedHistoryCsvExport {
     private const val MAX_ROWS=100_000
     private const val MAX_CHARS=16*1024*1024
     private val columns=listOf(
-        "format","session_order","workout_kind","workout_id",
+        "format","session_order","workout_kind","workout_id","gym_id",
         "exercise_id","slot_id","set_key","set_part","set_type","outcome",
         "target_load","target_unit","target_basis","target_reps_min",
         "target_reps_max","target_rir","actual_load","actual_unit",
@@ -60,8 +60,8 @@ object NativeKotlinVerifiedHistoryCsvExport {
         val csv=StringBuilder(columns.joinToString(","){cell(it)}).append('\n')
 
         fun add(
-            order:Long,kind:String,workoutId:String,exerciseId:String,
-            slotId:String,setKey:String,part:String,type:DraftSetType,
+            order:Long,kind:String,workoutId:String,gymId:String,
+            exerciseId:String,slotId:String,setKey:String,part:String,type:DraftSetType,
             outcome:KotlinJournalSetOutcome,prescription:DraftSetLoad,
             reps:RepBand,rir:Int?,actual:KotlinPerformedSet?,
             amplifier:String=""
@@ -69,7 +69,8 @@ object NativeKotlinVerifiedHistoryCsvExport {
             if(rows>=MAX_ROWS)return false
             val (targetLoad,targetUnit,targetBasis)=load(prescription)
             val fields=listOf(
-                VERSION,order.toString(),kind,workoutId,exerciseId,slotId,
+                VERSION,order.toString(),kind,workoutId,gymId,
+                exerciseId,slotId,
                 setKey,part,type.name,outcome.name,
                 targetLoad,targetUnit,targetBasis,reps.minimum.toString(),
                 reps.maximum.toString(),rir?.toString().orEmpty(),
@@ -99,7 +100,7 @@ object NativeKotlinVerifiedHistoryCsvExport {
                     })return NativeKotlinHistoryCsvResult.InvalidHistory
                     for(set in fact.sets)if(!add(
                         manifest.completionOrder,"GENERATED",manifest.workoutId,
-                        set.exerciseId,"",set.setKey,"MAIN",set.type,set.outcome,
+                        fact.source.gymId,set.exerciseId,"",set.setKey,"MAIN",set.type,set.outcome,
                         set.issuedLoad,set.issuedReps,set.issuedRir,set.actual))
                         return NativeKotlinHistoryCsvResult.TooLarge
                 }
@@ -114,7 +115,7 @@ object NativeKotlinVerifiedHistoryCsvExport {
                     })return NativeKotlinHistoryCsvResult.InvalidHistory
                     for(visit in fact.visits)if(!add(
                         manifest.completionOrder,"CUSTOM",manifest.workoutId,
-                        visit.exerciseId,visit.slotId,visit.setKey,
+                        completion.gymId,visit.exerciseId,visit.slotId,visit.setKey,
                         visit.part.name,visit.setType,visit.outcome,
                         visit.prescribedLoad,visit.prescribedReps,
                         visit.prescribedRir,visit.actual,

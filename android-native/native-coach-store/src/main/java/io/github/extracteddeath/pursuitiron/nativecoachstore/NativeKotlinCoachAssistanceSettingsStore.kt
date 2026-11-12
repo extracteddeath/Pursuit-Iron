@@ -140,6 +140,48 @@ class NativeKotlinCoachAssistanceSettingsStore(
         }}.getOrElse{NativeCoachSettingsRead.Rejected(
             NativeCoachSettingsRefusal.STORAGE_UNAVAILABLE)}
 
+    /**
+     * The default read is correct for routine workout UI but can ignore a
+     * foreign/renamed extra settings file. A recovery audit must instead
+     * prove that EVERY physical coach-assistance record belongs to the
+     * current athlete, including pending transactions.
+     */
+    internal fun inventoryOnlyCurrentOwner(key:String):NativeCoachSettingsRead =
+        runCatching {
+            fence.withOwnerTransaction(key) {
+                val current=owner(key)
+                    ?:return@withOwnerTransaction NativeCoachSettingsRead.Rejected(
+                        NativeCoachSettingsRefusal.NOT_AUTHORIZED)
+                if(Files.exists(root,java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                    if(Files.isSymbolicLink(root) ||
+                        !Files.isDirectory(root,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                        return@withOwnerTransaction NativeCoachSettingsRead.Rejected(
+                            NativeCoachSettingsRefusal.CORRUPT_OR_PENDING)
+                    val files=Files.list(root).use {stream->
+                        stream.filter {it.fileName.toString().startsWith(
+                            "coach-assistance-")}.toList()
+                    }
+                    if(files.size>2 || files.any {
+                        it!=path(key) || Files.isSymbolicLink(it) ||
+                            !Files.isRegularFile(it,
+                                java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                    })
+                        return@withOwnerTransaction NativeCoachSettingsRead.Rejected(
+                            NativeCoachSettingsRefusal.CORRUPT_OR_PENDING)
+                }
+                try {
+                    NativeCoachSettingsRead.Current(readDisk(
+                        key,current.athleteId))
+                } catch(_:Exception) {
+                    NativeCoachSettingsRead.Rejected(
+                        NativeCoachSettingsRefusal.CORRUPT_OR_PENDING)
+                }
+            }
+        }.getOrElse {
+            NativeCoachSettingsRead.Rejected(
+                NativeCoachSettingsRefusal.STORAGE_UNAVAILABLE)
+        }
+
     /** CAS write; no duplicate setting fields in workout or gym stores. */
     fun save(
         key:String,expectedRevision:Long,policy:CoachAssistancePolicy

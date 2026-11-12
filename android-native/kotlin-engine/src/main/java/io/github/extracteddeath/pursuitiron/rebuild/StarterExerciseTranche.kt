@@ -45,7 +45,22 @@ object StarterExerciseTranche {
         "paused_bench" to ("heavy-bench" to 2),
         "inc-bb-bench" to ("heavy-bench" to 2),
         "rdl" to ("heavy-barbell-hinge" to 2),
-        "conventional_deadlift" to ("heavy-barbell-hinge" to 2)
+        "conventional_deadlift" to ("heavy-barbell-hinge" to 2),
+        // Additional source-backed heavy lift variants share a conservative
+        // calendar recovery budget. They NEVER share exercise load history.
+        "bb-bench" to ("heavy-bench" to 2),
+        "low-inc-bb-bench" to ("heavy-bench" to 2),
+        "high-inc-bb-bench" to ("heavy-bench" to 2),
+        "decline-bench" to ("heavy-bench" to 2),
+        "back-squat" to ("heavy-squat" to 2),
+        "front-squat" to ("heavy-squat" to 2),
+        "high-bar-squat" to ("heavy-squat" to 2),
+        "low-bar-squat" to ("heavy-squat" to 2),
+        "paused-squat" to ("heavy-squat" to 2),
+        "tempo-squat" to ("heavy-squat" to 2),
+        "ohp" to ("heavy-vertical-press" to 2),
+        "seated-ohp" to ("heavy-vertical-press" to 2),
+        "good-morning" to ("heavy-barbell-hinge" to 2)
     )
 
     private fun direct(m:TrainingMuscle)=DeclaredMuscleCredit(

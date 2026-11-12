@@ -20,6 +20,9 @@ assert.ok(csvExport.includes('fun prepare(history:NativeKotlinMixedHistoryTimeli
   csvExport.includes('number(actual?.load)') &&
   csvExport.includes('actual?.actualRir?.toString().orEmpty()') &&
   csvExport.includes('actual?.machineInstanceId.orEmpty()') &&
+  csvExport.includes('"gym_id"') &&
+  csvExport.includes('fact.source.gymId') &&
+  csvExport.includes('completion.gymId') &&
   csvExport.includes('visit.amplifierKind?.name.orEmpty()') &&
   csvExport.includes("if(dangerous)\"'$text\"") &&
   !csvExport.includes('ProgressionEvidenceDomain'),

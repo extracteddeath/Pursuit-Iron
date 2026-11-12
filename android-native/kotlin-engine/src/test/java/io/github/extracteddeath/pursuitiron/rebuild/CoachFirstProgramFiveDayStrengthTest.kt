@@ -174,6 +174,26 @@ class CoachFirstProgramFiveDayStrengthTest {
         assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
             peak.policy?.primaryLiftMinimumDays)
         assertEquals(1,peak.phasePoliciesChecked)
+        // A v7 "peak" label or minimum-days policy is not proof the real
+        // composed peak week contains the requested exercise exposures.
+        assertEquals("Peak week is not fully reviewable: ${peak.issues}",
+            FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,peak.status)
+        val peakWeek=checkNotNull(peak.generation?.candidate?.catalogReview?.draft)
+        val peakVisits=peakWeek.visits
+        val benchDays=peakVisits.filter{it.exerciseId=="barbell_bench"}
+            .map{it.dayIndex}.toSet()
+        val squatDays=peakVisits.filter{it.exerciseId=="back_squat"}
+            .map{it.dayIndex}.toSet()
+        val deadliftDays=peakVisits.filter{it.exerciseId=="conventional_deadlift"}
+            .map{it.dayIndex}.toSet()
+        assertEquals(2,benchDays.size)
+        assertEquals(2,squatDays.size)
+        assertEquals(1,deadliftDays.size)
+        assertTrue(deadliftDays.single() in squatDays)
+        assertTrue(benchDays.intersect(squatDays).isEmpty())
+        assertTrue(peakWeek.audit.satisfiesDeclaredHardConstraints)
+        assertTrue(checkNotNull(peak.prescription?.finalAudit)
+            .daysOutsidePreferredWindow.isEmpty())
         assertFalse(peak.mayIssueWorkout)
         // This is not proof of an individualized taper or meet-day peak.
         val previous=CoachFirstProgramStartDomain.review(input(

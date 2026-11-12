@@ -539,12 +539,18 @@ assert.ok(betaMain.includes('pursuit_native_appearance') &&
   betaMain.includes('safeDrawingPadding()'),
   'Kotlin launcher must preserve existing theme choice and system-bar insets');
 
-// The legacy runtime is still present as a dependency during migration.
-// Do not equate Kotlin launcher cutover with a releasable one-engine artifact.
+// Development retains the legacy worker; release must be Kotlin-only by
+// source selection AND runtime graph, and still be unshippable until device
+// data/history/UX milestones pass.
 const migrationGradle=read('android-native/app/build.gradle.kts');
-assert.ok(migrationGradle.includes('implementation(project(":engine-runtime"))') &&
-  migrationGradle.includes('verifyEarlyBetaRuntime'),
-  'Keep the distributable beta blocked until the JS dependency is removed');
+assert.ok(migrationGradle.includes('debugImplementation(project(":engine-runtime"))') &&
+  !migrationGradle.includes('    implementation(project(":engine-runtime"))') &&
+  migrationGradle.includes('earlyBetaKotlinSources') &&
+  migrationGradle.includes('compileReleaseKotlin') &&
+  migrationGradle.includes('verifyEarlyBetaRuntime') &&
+  migrationGradle.includes('verifyEarlyBetaSourceClasses') &&
+  migrationGradle.includes('verifyEarlyBetaAcceptance'),
+  'A releasable beta cannot embed JS sources/deps or bypass the on-device acceptance freeze');
 
 // Early beta uses one Kotlin runtime and a voluntary feedback route. These
 // are source-only guards: final release still needs signed artifact inspection

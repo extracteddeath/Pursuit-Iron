@@ -678,9 +678,9 @@ class StarterExerciseTrancheTest {
             byId.getValue("preacher_curl").movement.credits.map{it.muscle})
         assertEquals(listOf(TrainingMuscle.REAR_DELTS),
             byId.getValue("rear_delt_fly").movement.credits.map{it.muscle})
-        assertFalse(byId.getValue("chest_supported_row").movement.credits.any{
-            it.muscle==TrainingMuscle.LOWER_BACK
-        })
+        assertEquals(TrainingMuscle.UPPER_BACK,
+            byId.getValue("chest_supported_row").movement.credits
+                .single{it.role==MuscleCreditRole.DIRECT}.muscle)
         val machine=VerifiedLoadStock.Totals(LoadUnit.LB,
             LoadBasis.EXERCISE_OVERRIDE,listOf(n("40"),n("50"),n("60")))
         val cable=VerifiedLoadStock.Totals(LoadUnit.LB,

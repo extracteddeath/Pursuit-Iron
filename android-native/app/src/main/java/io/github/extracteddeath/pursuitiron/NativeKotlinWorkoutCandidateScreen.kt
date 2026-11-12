@@ -714,10 +714,13 @@ private fun NativeKotlinSetCard(
 ) {
     val target=set.target
     val existing=set.actual
-    var weight by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
-        mutableStateOf(existing?.load?.toPlainString()
-            ?: if(machineInstanceId!=null)"" else
-                (target.load as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty())
+    // Key the unsaved editor to its PHYSICAL station. Selecting B must never
+    // carry an A load into a new attempt, while a redraw of A cannot blank
+    // a value the athlete has already typed.
+    var weight by rememberSaveable(
+        target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId
+    ) {
+        mutableStateOf(initialMachineScopedLoad(target.load,existing,machineInstanceId))
     }
     var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.reps?.takeIf{it>0}?.toString()
@@ -725,9 +728,6 @@ private fun NativeKotlinSetCard(
     }
     var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.actualRir?.toString().orEmpty())
-    }
-    LaunchedEffect(machineInstanceId) {
-        if(existing==null && !finished && machineInstanceId!=null)weight=""
     }
     val actual=performed(target,weight,reps,effort)
     val failedActual=performed(target,weight,reps,effort,failed=true)

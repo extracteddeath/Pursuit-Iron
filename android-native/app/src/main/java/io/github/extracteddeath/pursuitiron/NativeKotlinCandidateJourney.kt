@@ -41,6 +41,23 @@ private enum class KotlinCandidateDestination(val label:String) {
     COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),PROFILE("Profile"),SETTINGS("Settings"),TRAIN("Train")
 }
 
+/**
+ * UI-only durable resume locator, NEVER a workout issuer. Current approval,
+ * owner-fenced journal recovery, and the unfinished event are checked on
+ * every cold start and again before a user-requested resume.
+ */
+private fun currentUnfinishedGeneratedWorkoutId(
+    host:NativeKotlinCandidateHost
+):String? {
+    val id=host.currentlyApprovedKotlinWorkoutId() ?:return null
+    val opened=host.recoverWorkout(id) as? NativeJournalFileResult.Durable
+        ?:return null
+    return id.takeIf {
+        opened.journal.snapshot.workoutId==id &&
+            opened.journal.finishedByEventId==null
+    }
+}
+
 private val primaryDestinations=listOf(
     KotlinCandidateDestination.PROGRAM,KotlinCandidateDestination.TRAIN,
     KotlinCandidateDestination.HISTORY,KotlinCandidateDestination.PROGRESS,
@@ -147,13 +164,10 @@ internal fun NativeKotlinCandidateJourney(
                     // independently rechecked; an approved but unissued or
                     // already Finished workout is not a resume candidate.
                     // Navigation alone never issues/records any set.
-                    val generated=runCatching {
-                        host.currentlyApprovedKotlinWorkoutId()?.let { id ->
-                            host.recoverWorkout(id)
-                        }
-                    }.getOrNull() as? NativeJournalFileResult.Durable
-                    if(generated!=null &&
-                        generated.journal.finishedByEventId==null)
+                    val generatedId=runCatching {
+                        currentUnfinishedGeneratedWorkoutId(host)
+                    }.getOrNull()
+                    if(generatedId!=null)
                         KotlinCandidateDestination.TRAIN
                     else {
                         val programs=runCatching {
@@ -481,6 +495,9 @@ private fun NativeKotlinCandidateTrainEntry(
         mutableStateOf<NativeCustomResumeReview?>(null)
     }
     var reviewingResume by remember {mutableStateOf(false)}
+    // Independently recovers generated work. The time-budget preview can be
+    // unavailable while an already-issued journal is still safely resumable.
+    var resumableGeneratedId by remember(host) { mutableStateOf<String?>(null) }
     var selectedId by rememberSaveable(host) { mutableStateOf<String?>(null) }
     // An old workout ID is only a local navigation shortcut, not an access
     // grant. The host rechecks the current owner/program approval before resume.
@@ -551,8 +568,15 @@ private fun NativeKotlinCandidateTrainEntry(
         // A past review is never an access grant after Finish or an athlete
         // switch. Reopen verified storage for the next explicit selection.
         resumable=null
-        if(customWorkoutId==null && selectedId==null)
+        resumableGeneratedId=null
+        if(customWorkoutId==null && selectedId==null) {
+            resumableGeneratedId=withContext(Dispatchers.IO) {
+                runCatching {
+                    currentUnfinishedGeneratedWorkoutId(host)
+                }.getOrNull()
+            }
             refreshUnfinishedWorkouts()
+        }
     }
     if(customWorkoutId!=null) {
         workoutScreens.SaveableStateProvider("custom:$customWorkoutId") {
@@ -613,9 +637,9 @@ private fun NativeKotlinCandidateTrainEntry(
             // Keep resume visible before the custom-workout inventory and
             // time-choice controls. Reverify the current athlete and journal
             // on click; showing the card never creates a workout.
-            timePreview?.takeIf {
-                it.alreadyIssued && minimizedGeneratedId==null
-            }?.let { issued ->
+            resumableGeneratedId?.takeIf {
+                minimizedGeneratedId==null
+            }?.let { issuedId ->
                 PursuitCard(highlighted=true) {
                     PursuitSectionHeading("Resume your saved workout",
                         "Your previously recorded sets and prescribed weights are kept.")
@@ -632,20 +656,14 @@ private fun NativeKotlinCandidateTrainEntry(
                                             Dispatchers.IO
                                         ) {
                                             runCatching {
-                                                val approved=host.currentlyApprovedKotlinWorkoutId()
-                                                if(approved!=issued.workoutId)false
-                                                else {
-                                                    val opened=host.recoverWorkout(
-                                                        issued.workoutId)
-                                                    opened is NativeJournalFileResult.Durable &&
-                                                        opened.journal.finishedByEventId==null
-                                                }
+                                                currentUnfinishedGeneratedWorkoutId(host)==
+                                                    issuedId
                                             }.getOrDefault(false)
                                         }
                                         if(selectedId==null && customWorkoutId==null &&
-                                            timePreview?.workoutId==issued.workoutId) {
+                                            resumableGeneratedId==issuedId) {
                                             if(isCurrentAndUnfinished)
-                                                selectedId=issued.workoutId
+                                                selectedId=issuedId
                                             else {
                                                 timePreview=null
                                                 selectionMessage="The saved workout could not be verified. Review your current program or refresh Train."

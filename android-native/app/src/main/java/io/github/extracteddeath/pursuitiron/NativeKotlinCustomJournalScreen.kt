@@ -20,6 +20,7 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -363,10 +364,20 @@ internal fun NativeKotlinCustomJournalScreen(
                         current.finishedByEventId!=null ||
                         nextVisit?.part!=CustomWorkoutVisitPart.MAIN)
                         return@LaunchedEffect
-                    val result=withContext(Dispatchers.IO) {
-                        host.reviewLiveCustomNextSet(workoutId,nextVisit.setKey,
-                            readiness,movementRestricted,BigDecimal("5"))
-                    } as? LiveSetCoachResult.Reviewed
+                    // Advisory storage failure is not a failed set or
+                    // workout. The owner-verified journal remains editable,
+                    // and no stale advice is reused. A cancelled screen must
+                    // not publish a delayed coaching result after navigation.
+                    val result=try {
+                        withContext(Dispatchers.IO) {
+                            host.reviewLiveCustomNextSet(workoutId,nextVisit.setKey,
+                                readiness,movementRestricted,BigDecimal("5"))
+                        } as? LiveSetCoachResult.Reviewed
+                    } catch(cancelled:CancellationException) {
+                        throw cancelled
+                    } catch(_:Exception) {
+                        null
+                    }
                     if(journal?.revision==current.revision && !busy &&
                         result?.journalRevision==current.revision &&
                         result.setKey==nextVisit.setKey)

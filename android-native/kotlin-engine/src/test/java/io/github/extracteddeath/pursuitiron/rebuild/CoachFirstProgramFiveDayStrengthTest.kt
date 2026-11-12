@@ -20,7 +20,7 @@ class CoachFirstProgramFiveDayStrengthTest {
     private fun setup(gym:GymProfileDraft=GymProfileDraft(
         "five-day-gym",LoadUnit.LB,
         mapOf("straight-bar" to bar,"dumbbell-rack" to dumbbells),
-        emptySet(),setOf("flat-bench","incline-bench","rack")
+        setOf("flat-bench","incline-bench","rack"),emptySet()
     ))=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="revision-5day",athleteProfileId="athlete-5day",
         goal=AthleteTrainingGoal.POWERBUILDING,
@@ -121,7 +121,7 @@ class CoachFirstProgramFiveDayStrengthTest {
     @Test fun impossibleGymAndTimeNeverQuietlyReduceTheNamedSkillFrequency() {
         val absentBar=setup(GymProfileDraft("no-barbell",LoadUnit.LB,
             mapOf("dumbbell-rack" to dumbbells),
-            emptySet(),setOf("flat-bench","incline-bench","rack")))
+            setOf("flat-bench","incline-bench","rack"),emptySet()))
         val absent=CoachFirstProgramStartDomain.review(
             input(reviewed=absentBar))
         assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,absent.status)

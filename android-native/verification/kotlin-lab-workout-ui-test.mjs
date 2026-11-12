@@ -12,7 +12,7 @@ for(const phrase of [
   'initiallyExpanded=nextVisit==mainKey',
   'initiallyExpanded=nextVisit==CustomWorkoutVisitKey(',
   'mutableStateOf(saved==null && initiallyExpanded)',
-  'verified?.value?.toPlainString().orEmpty()',
+  'initialMachineScopedLoad(target,saved?.performed,machineInstanceId)',
   'prescription.reps.minimum',
   'follower?.followUpReps',
   'Blank RIR stays unreported.',
@@ -44,9 +44,10 @@ assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
 
 assert.match(journal,/var actualRir by rememberSaveable\(set.setKey,part.name,existing\?\.appliedRevision\) \{\s*mutableStateOf\(saved\?\.performed\?\.actualRir\?\.toString\(\)\.orEmpty\(\)\)/,
   'Unknown actual RIR must remain unreported, never copied from the target');
-assert.ok(journal.includes('var actualLoad by rememberSaveable(set.setKey,part.name,existing?.appliedRevision)') &&
+assert.ok(journal.includes('var actualLoad by rememberSaveable(') &&
+  journal.includes('set.setKey,part.name,existing?.appliedRevision,machineInstanceId') &&
   journal.includes('var actualReps by rememberSaveable(set.setKey,part.name,existing?.appliedRevision)'),
-  'Uncommitted edit fields must survive an Android configuration change');
+  'Uncommitted edit fields must survive configuration changes and remain machine-scoped');
 assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*KotlinPerformedSet\(weight,verified\?\.unit/,
   'Actual set writing must require an explicit Complete action');
 assert.ok(journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED') &&
@@ -76,6 +77,19 @@ const composer=read('android-native/app/src/main/java/io/github/extracteddeath/p
 // displayed Last AND the editable one-tap "Use Last" must share the same
 // machine filter, even when no machine is selected (legacy-only).
 const machineSelector=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutMachineSelector.kt');
+// A station choice is a data boundary, not a late effect allowed to erase
+// athlete-entered weight. Both editors use the same physical-station-aware
+// initializer and stable machine-keyed state; no values migrate from A to B.
+assert.ok(machineSelector.includes('internal fun initialMachineScopedLoad(') &&
+  machineSelector.includes('saved.machineInstanceId==selectedMachineId') &&
+  machineSelector.includes('if(selectedMachineId!=null) ""') &&
+  composer.includes('initialMachineScopedLoad(target.load,existing,machineInstanceId)') &&
+  journal.includes('initialMachineScopedLoad(target,saved?.performed,machineInstanceId)') &&
+  composer.includes('target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId') &&
+  journal.includes('set.setKey,part.name,existing?.appliedRevision,machineInstanceId') &&
+  !composer.includes('LaunchedEffect(machineInstanceId)') &&
+  !journal.includes('LaunchedEffect(machineInstanceId)'),
+  'Machine identity changes must not silently overwrite pending native set weight edits');
 const machineChoiceHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 const machineChoiceStore=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinWorkoutMachineChoiceFileStore.kt');
 assert.ok(machineChoiceHost.includes('fun recoverWorkoutMachineChoices(') &&

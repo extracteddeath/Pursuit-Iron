@@ -68,13 +68,20 @@ object KotlinJournalLiveSetCoachDomain {
         // Previously these checks lived in separate generated/custom
         // branches. A malformed custom ordinal could pass when a generated
         // ordinal would fail. Both must reject exactly the same scheme.
+        // Without an owner-verified authored scheme, DIFFERENT working
+        // weights are not ordinary straight sets. A tempting drop must not
+        // be retrospectively called a "planned backoff" just because the
+        // next ordinal is lighter. Preserve every issued set unchanged,
+        // but do not offer ordinary live fatigue advice for mixed loading.
         if(!straightSchemeAllowed ||
             ordered.map{it.ordinal}.distinct().size!=ordered.size ||
             ordered.map{it.setKey}.distinct().size!=ordered.size ||
             ordered.any{
                 it.reps!=next.reps ||
                     (it.issuedLoad as? DraftSetLoad.Verified)?.let{load->
-                        load.unit==nextLoad.unit && load.basis==nextLoad.basis
+                        load.unit==nextLoad.unit &&
+                            load.basis==nextLoad.basis &&
+                            load.value.compareTo(nextLoad.value)==0
                     }!=true
             })
             return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)

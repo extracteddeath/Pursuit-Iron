@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
+import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinPerformedSet
 
 /**
  * A screen-local projection of an owner-fenced, cold-replayable private file.
@@ -91,6 +93,26 @@ internal fun updateWorkoutMachineChoice(
         it.contains("=")&&it.substringBefore("=")!=exerciseId
     }
     return (old+"$exerciseId=$machineId").joinToString(";")
+}
+
+
+/**
+ * The single machine-aware *initial* editor value for both Kotlin journals.
+ * A saved actual belongs to the machine on which it was performed, not
+ * necessarily the machine currently selected for a new/corrected set.
+ * Never transfer A's load to B or turn a coaching recommendation into an
+ * editable target. This does not modify the issued prescription.
+ */
+internal fun initialMachineScopedLoad(
+    issued:DraftSetLoad,
+    saved:KotlinPerformedSet?,
+    selectedMachineId:String?
+):String {
+    if(saved!=null)
+        return if(saved.machineInstanceId==selectedMachineId)
+            saved.load?.toPlainString().orEmpty() else ""
+    return if(selectedMachineId!=null) ""
+        else (issued as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty()
 }
 
 /** One shared Material 3 selector for both generated and custom workout journals. */

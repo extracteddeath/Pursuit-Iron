@@ -5,9 +5,13 @@ full web parity. See [Launch beta scope](LAUNCH_BETA_SCOPE.md) for the features
 that must work, intentional deferrals, feedback/data recovery requirements and
 one-Kotlin-engine release gate. The code below describes historic development
 milestones and preview-only workflows; it is **not** proof the beta is ready.
-The app's current launcher still runs the old JS-backed runtime during the
-Kotlin cutover. Release is explicitly blocked until that second runtime is
-removed from the installable artifact and Kotlin owns the complete journey.
+MainActivity now opens the existing Kotlin-owned journey directly;
+the debug Kotlin Lab launcher subclasses it so both use exactly the same
+navigation. No JS engine is initialized at launch. The dormant old JS code
+and `:engine-runtime` dependency are **still on the release classpath**:
+the early-beta release guard remains intentionally blocking until that
+legacy dependency is removed. Old JS workouts are **not silently imported**
+to the Kotlin store, and on-device acceptance is still required.
 
 This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
 

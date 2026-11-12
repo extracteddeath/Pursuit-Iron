@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
-        <!-- Preserve the original native launcher outside Kotlin Lab. -->
+        <!-- Release uses MainActivity's one Kotlin-owned journey.
+             The legacy JS runtime remains blocked from beta packaging. -->
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

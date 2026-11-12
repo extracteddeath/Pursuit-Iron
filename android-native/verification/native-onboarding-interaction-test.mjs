@@ -4,7 +4,14 @@ const root='android-native/app/src/main/java/io/github/extracteddeath/pursuitiro
 const ui=fs.readFileSync(root+'NativeOnboardingScreen.kt','utf8');
 const screens=fs.readFileSync(root+'NativeScreens.kt','utf8');
 const host=fs.readFileSync(root+'NativeRuntimeHost.kt','utf8');
-const activity=fs.readFileSync(root+'MainActivity.kt','utf8');
+// Historical JS source contract only: archived outside Android source sets.
+// This is NOT evidence of the new beta's active launcher or engine.
+const activity=fs.readFileSync('android-native/verification/fixtures/legacy-main-activity-source.kt.txt','utf8');
+const betaActivity=fs.readFileSync(root+'MainActivity.kt','utf8');
+assert.ok(betaActivity.includes('NativeKotlinCandidateJourney(') &&
+  !betaActivity.includes('NativePreviewApp(') &&
+  !betaActivity.includes('nativeRuntime'),
+  'The actual Android beta must not open the historical JS training runtime');
 const shell=fs.readFileSync(root+'NativePreviewApp.kt','utf8');
 const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
 for (const field of ['name','goal','experience','unit','split','days','session','equipment','bodyweight','supersets','barbellCap'])

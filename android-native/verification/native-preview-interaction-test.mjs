@@ -157,7 +157,8 @@ assert.ok(syntheticReader.includes('internal interface CanonicalSyntheticOutline
   packaged.includes('SandboxWorkoutOutline(worker)') &&
   packaged.includes('outlines.inspect(split, dayIndex)') &&
   shell.includes('syntheticOutlineReader = syntheticOutlineReader') &&
-  activity.includes('syntheticOutlineReader = readOnlyVerifier') &&
+  !activity.includes('syntheticOutlineReader = readOnlyVerifier') &&
+  activity.includes('NativeKotlinCandidateJourney(') &&
   screens.includes('SyntheticCanonicalWorkoutPanel(reader = syntheticOutlineReader)') &&
   syntheticPanel.includes('LaunchedEffect(reader, request)') &&
   syntheticPanel.includes('withContext(Dispatchers.IO)') &&
@@ -183,15 +184,17 @@ assert.ok(!packaged.includes('previewAsync(') &&
   !packaged.includes('openOutputStream(') &&
   !packaged.includes('takePersistableUriPermission('),
   'Read-only UI path must expose no prescriptions, writes or persistent grants');
-assert.ok(application.includes('nativeRuntime by lazy') && application.includes('nativeRuntime.close()') &&
-  runtimeHost.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(context)') &&
+// Preserve the archived JS worker's own cancellation/read-only guarantees
+// for migration tests. It is no longer initialized by either beta launcher.
+assert.ok(runtimeHost.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(context)') &&
   runtimeHost.includes('CoroutineScope(SupervisorJob()+Dispatchers.IO)') &&
   runtimeHost.includes('if (closed || !isActive) { loaded?.close();return@launch }') &&
   runtimeHost.includes('actionVersion.incrementAndGet()') &&
-  activity.includes('runtime.state.collectAsStateWithLifecycle()') &&
-  activity.indexOf('setContent {') < activity.indexOf('runtime.start()') &&
-  !activity.includes('readOnlyVerifier?.close()'),
-  'One process runtime must load off the first frame, survive rotation, and discard cancelled actions');
+  !application.includes('nativeRuntime') &&
+  !activity.includes('runtime.state.collectAsStateWithLifecycle()') &&
+  !activity.includes('runtime.start()') &&
+  activity.includes('NativeKotlinCandidateJourney('),
+  'Archived JS worker retains cancellation semantics but beta must launch Kotlin only');
 
 const backupInventoryUi = fs.readFileSync(root + 'BackupSavedProgramInventoryPanel.kt','utf8');
 const approvedProgramUi = fs.readFileSync(root + 'SavedProgramOverviewPanel.kt','utf8');

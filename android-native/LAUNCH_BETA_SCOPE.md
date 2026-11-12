@@ -55,9 +55,11 @@ time or set-dose constraints fail.
   prescription, progression, fatigue options and workout decisions. The
   current `:engine-runtime` JS bridge and any alternative active policy are
   **development migration tools only**, not release dependencies. Android
-  `MainActivity` still uses `NativeRuntimeHost` today; cut it over before
-  shipping. `app/build.gradle.kts` fails release builds while the legacy
-  runtime is still packaged.
+  `MainActivity` now launches the Kotlin-owned journey, and the debug Lab
+  reuses that same Activity. The dormant old JS sources and `:engine-runtime`
+  dependency still compile in `:app`, so `app/build.gradle.kts` correctly
+  blocks release packaging until they are excluded and the old athlete data
+  has a separately approved migration/recovery path.
 - Keep separate Kotlin modules only where they express a real responsibility
   (engine, signed storage, Compose), not a new generator/coaching policy per
   screen, exercise, phase or edge case. One verified physical-stock rule.
@@ -93,8 +95,8 @@ A beta build is allowed only after:
   opt-in tester feedback. Improvements over the web engine must be measured
   against actual lifter outcomes; otherwise report accuracy as unproven.
 
-**Current blockers:** old JS is still on the launcher/runtime classpath,
-Kotlin-only launcher cutover and full-cycle issuance are incomplete, device
-testing is pending, and the feedback/export experience has not passed
-acceptance. The old comprehensive parity ledger is a **post-beta backlog**,
+**Current blockers:** the launcher now runs Kotlin, but old JS classes still
+remain on the release runtime classpath, full-cycle issuance needs more
+acceptance, physical-device testing is pending, and feedback/export and
+explicit old-data migration have not passed the beta acceptance gates. The old comprehensive parity ledger is a **post-beta backlog**,
 not a commitment to ship everything at beta launch.

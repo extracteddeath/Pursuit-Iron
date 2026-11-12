@@ -9,9 +9,9 @@ const workflow=read('.github/workflows/android-kotlin-rebuild.yml');
 const root='android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild';
 const kotlinFiles=fs.readdirSync(root).filter(filename=>filename.endsWith('.kt'));
 assert.ok(nativeSettings.includes('":kotlin-engine"'));
-// The app MAY now compile the isolated Kotlin candidate, but its LIVE
-// runtime and Compose screens must still own only the unchanged JS-backed
-// canonical store until the explicit full-runtime cutover gate is met.
+// The beta Activity now launches the actual Kotlin journey. Keep the
+// historical JS source isolated as read-only migration/development context
+// until it can be removed from the release dependency graph.
 assert.ok(app.includes('project(":kotlin-engine")') &&
   app.includes('project(":native-coach-store")'),
   'The isolated Android Kotlin candidate must compile against native source');
@@ -30,11 +30,17 @@ assert.ok(!read('android-native/app/src/main/AndroidManifest.xml').includes('Kot
   'Kotlin testing entry must remain debug-only until product cutover');
 assert.doesNotMatch(debugActivity,/nativeRuntime|NativeRuntimeHost|CanonicalJsSandboxProbe/,
   'Kotlin launcher cannot start or switch into the JavaScript runtime');
-assert.ok(application.includes('by lazy { NativeKotlinCandidateHost(applicationContext) }'),
-  'Kotlin candidate must not start or enroll anyone at Application startup');
-assert.doesNotMatch(mainActivity,
-  /KotlinCandidateHost|kotlinCandidate|kotlinWorkoutSession|NativeKotlinWorkoutCandidateScreen|kotlin-engine|nativecoachstore/,
-  'No Compose screen may switch workout ownership before native cutover');
+assert.match(application,/internal val kotlinCandidate by lazy\s*\{\s*NativeKotlinCandidateHost\(applicationContext\)\s*\}/,
+  'One Kotlin owner must remain lazy; Application may not enroll a new athlete on startup');
+assert.doesNotMatch(application,/NativeRuntimeHost\(|nativeRuntime|kotlinWorkoutSession/,
+  'Application must not start a second JavaScript runtime or competing workout controller');
+assert.ok(mainActivity.includes('NativeKotlinCandidateJourney(') &&
+  !mainActivity.includes('NativePreviewApp(') &&
+  !mainActivity.includes('NativeRuntimeHost(') &&
+  !mainActivity.includes('runtime.start()'),
+  'Beta launcher must render the real Kotlin-owned journey, not JS-backed training');
+assert.match(debugActivity,/class KotlinEnginePreviewActivity:MainActivity\(\)/,
+  'Debug Lab must share the beta activity instead of forking its training UI');
 assert.doesNotMatch(legacyRuntime, /KotlinCandidateHost|kotlinCandidate|nativecoachstore/,
   'The active legacy workout runtime must not change its owner or journal');
 assert.ok(legacyRuntime.includes('CanonicalWorkoutStorePersistence') &&
@@ -59,7 +65,7 @@ assert.ok(candidateScreen.includes('PursuitCard') &&
   'Kotlin workout candidate must share M3E controls and render only acknowledged native receipts');
 assert.ok(!legacyRuntime.includes('NativeKotlinSessionController') &&
   !mainActivity.includes('NativeKotlinSessionController'),
-  'Independent Kotlin session controller must not switch live workout ownership');
+  'Old JS worker and new Kotlin session controller must never directly share journal ownership');
 const storeBuild=read('android-native/native-coach-store/build.gradle.kts');
 assert.ok(nativeSettings.includes('":native-coach-store"') &&
   storeBuild.includes('project(":kotlin-engine")') &&

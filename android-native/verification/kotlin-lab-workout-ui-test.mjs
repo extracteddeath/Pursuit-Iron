@@ -517,6 +517,35 @@ const lastHelper=lastPicker.slice(
     lastPicker.indexOf('internal fun kotlinLoadBasisLabel('));
 assert.doesNotMatch(lastHelper,/\.record\(|\.finish\(|\.write\(|\.approve\(|changePrescription\(/);
 
+// Both package identities launch the identical one-engine UI and never
+// instantiate the obsolete JS training runtime during app startup.
+const betaMain=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
+const betaApplication=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt');
+const betaDebugLauncher=read('android-native/app/src/debug/java/io/github/extracteddeath/pursuitiron/KotlinEnginePreviewActivity.kt');
+const betaReleaseManifest=read('android-native/app/src/release/AndroidManifest.xml');
+const betaDebugManifest=read('android-native/app/src/debug/AndroidManifest.xml');
+assert.ok(betaMain.includes('NativeKotlinCandidateJourney(') &&
+  !betaMain.includes('NativeRuntimeHost(') &&
+  !betaMain.includes('nativeRuntime') &&
+  !betaMain.includes('NativePreviewApp(') &&
+  !betaApplication.includes('NativeRuntimeHost') &&
+  betaApplication.includes('NativeKotlinCandidateHost(applicationContext)') &&
+  betaDebugLauncher.includes('class KotlinEnginePreviewActivity:MainActivity()') &&
+  betaReleaseManifest.includes('android:name=".MainActivity"') &&
+  betaDebugManifest.includes('android:name=".KotlinEnginePreviewActivity"'),
+  'Release and debug entry points must start one Kotlin journey, never the legacy JS runtime');
+assert.ok(betaMain.includes('pursuit_native_appearance') &&
+  betaMain.includes('PursuitIronTheme(themeId=themeId)') &&
+  betaMain.includes('safeDrawingPadding()'),
+  'Kotlin launcher must preserve existing theme choice and system-bar insets');
+
+// The legacy runtime is still present as a dependency during migration.
+// Do not equate Kotlin launcher cutover with a releasable one-engine artifact.
+const migrationGradle=read('android-native/app/build.gradle.kts');
+assert.ok(migrationGradle.includes('implementation(project(":engine-runtime"))') &&
+  migrationGradle.includes('verifyEarlyBetaRuntime'),
+  'Keep the distributable beta blocked until the JS dependency is removed');
+
 // Early beta uses one Kotlin runtime and a voluntary feedback route. These
 // are source-only guards: final release still needs signed artifact inspection
 // and real Android testing, and no feedback is uploaded by the app itself.

@@ -1,9 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application android:name=".PursuitIronApplication" android:allowBackup="false"
-        android:label="Pursuit Iron Native Preview"
+        android:label="Pursuit Iron Beta"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
-        <!-- Keep MainActivity available for explicit internal navigation.
-             Only the release variant exposes it as the entry-point. -->
+        <!-- One Kotlin-owned beta launcher. Debug uses a separate
+             subclass and install identity, but the same Compose journey. -->
         <activity android:name=".MainActivity" android:exported="true" />
     </application>
 </manifest>

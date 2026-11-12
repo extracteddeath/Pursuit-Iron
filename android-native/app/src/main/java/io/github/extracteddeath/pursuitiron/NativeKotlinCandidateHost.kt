@@ -10,10 +10,9 @@ import java.math.BigDecimal
  * engine: app-private owner, program approvals, revision fence and issued
  * workout journal all belong to ONE process-scoped native host.
  *
- * NOT ACTIVE in NativeRuntimeHost or the Compose workout screen yet.
- * The legacy web-backed runtime remains the live owner until a deliberate
- * migrated and fully verified cutover. Do not call this host with converted
- * JS training output and claim native engine approval.
+ * The normal Android launcher now uses this Kotlin-owned host.
+ * Historical JS-backed data remains separately stored; do not use converted
+ * JS training output as if it had native source approval or invent an import.
  *
  * R&D calls must run off the main thread; all methods perform disk I/O.
  */

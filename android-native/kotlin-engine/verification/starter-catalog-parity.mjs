@@ -8,7 +8,7 @@ import {CURATED_EXERCISES,EXERCISE_MAP} from '../../../modules/next-engine/exerc
  * to independent exercise-science claims.
  */
 const source=fs.readFileSync('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StarterExerciseTranche.kt','utf8');
-const declared=[...source.matchAll(/\bentry\("([a-z0-9_]+)"/g)].map(x=>x[1]);
+const declared=[...source.matchAll(/\bentry\("([a-z0-9_-]+)"/g)].map(x=>x[1]);
 const baseline=[
   ['barbell_bench','horizontal_press',[1,15],['barbell','bench','rack']],
   ['paused_bench','horizontal_press',[2,12],['barbell','bench','rack']],
@@ -32,8 +32,12 @@ const baseline=[
   ['seated_leg_curl','knee_flexion',[6,25],['machine']]
 ];
 const indexed=new Map(CURATED_EXERCISES.map(x=>[x.id,x]));
-assert.deepEqual(declared,baseline.map(x=>x[0]),
-  'Kotlin provisional tranche IDs must exactly match this review version');
+assert.deepEqual(declared.slice(0,baseline.length),baseline.map(x=>x[0]),
+  'The first 20 source identities must remain stable for existing records');
+const appended=['wrist-curl','reverse-wrist-curl',
+  'inc-bb-bench','incline_smith','machine_press','leg_press'];
+assert.deepEqual(declared.slice(baseline.length),appended,
+  'Appended reviewed identities must not be lost or silently reordered');
 assert.equal(new Set(declared).size,declared.length);
 for(const [id,family,reps,equipment] of baseline) {
   const record=indexed.get(id);
@@ -44,6 +48,32 @@ for(const [id,family,reps,equipment] of baseline) {
   assert.equal(EXERCISE_MAP.get(id),record,
     'Curated definition no longer wins canonical web catalog: '+id);
 }
+// Only validate the new source-record facts. Kotlin source-specific physical
+// stock, facility and muscle-credit decisions are tested independently in
+// StarterExerciseTrancheTest, not copied blindly from this web metadata.
+for(const [id,family,reps,equipment] of [
+  ['inc-bb-bench','horizontal_press',[6,10],['barbell','inclinebench','rack']],
+  ['incline_smith','horizontal_press',[5,20],['smith','bench']],
+  ['machine_press','horizontal_press',[5,25],['machine']],
+  ['leg_press','leg_press',[6,25],['leg_press']]
+]) {
+  const definition=EXERCISE_MAP.get(id);
+  assert.ok(definition,'Missing active web definition '+id);
+  assert.equal(definition.movementFamily,family,'Source family drift for '+id);
+  assert.deepEqual(definition.practicalReps,reps,'Source rep-band drift for '+id);
+  assert.deepEqual(definition.equipment,equipment,'Source equipment drift for '+id);
+}
+for(const fragment of [
+  'entry("inc-bb-bench","bench_press","incline-barbell"',
+  'BAR,LoadBasis.BARBELL_TOTAL,setOf("incline-bench","rack"),6..10',
+  'entry("incline_smith","bench_press","incline-smith"',
+  '"incline-smith-station",LoadBasis.SMITH_TOTAL',
+  'entry("machine_press","machine_chest_press","chest-press"',
+  '"chest-press-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("leg_press","leg_press","machine"',
+  '"leg-press-machine",LoadBasis.EXERCISE_OVERRIDE'
+])assert.ok(source.includes(fragment),'Missing independently authored stock rule '+fragment);
+
 for(const id of ['one_arm_db_row','db_rdl','barbell_row','rdl','conventional_deadlift','db_rear_delt_raise','pullup']) {
   assert.ok(Object.hasOwn(indexed.get(id).muscles,'back'),
     'Broad-back source changed; explicit Kotlin credit remap must be reviewed');

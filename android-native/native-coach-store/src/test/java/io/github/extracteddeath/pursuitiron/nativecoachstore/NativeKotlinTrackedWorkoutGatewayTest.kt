@@ -261,6 +261,42 @@ class NativeKotlinTrackedWorkoutGatewayTest {
             assertArrayEquals(java.nio.file.Files.readAllBytes(
                 root.resolve(relative)),entry.contents)
         }
+        // Exercise the eventual restore format against REAL readers in an
+        // isolated second directory. This is cold replay, not a production
+        // overwrite/restore API: the active owner's files are untouched.
+        val staging=root.resolveSibling(root.fileName.toString()+"-restore-proof")
+        java.nio.file.Files.createDirectory(staging)
+        copies.values.forEach {file->
+            val target=staging.resolve(file.relativePath)
+            java.nio.file.Files.createDirectories(target.parent)
+            java.nio.file.Files.write(target,file.contents)
+        }
+        val coldJournal=KotlinNativeJournalFileStore(staging)
+        val replayed=coldJournal.openStored(
+            "owner-1","workout-1"){o,from->
+                o=="owner-1" && from.athleteId=="athlete-1"
+            }
+        assertTrue(replayed.toString(),replayed is NativeJournalFileResult.Durable)
+        val replay=(replayed as NativeJournalFileResult.Durable).journal
+        assertEquals("finish-1",replay.finishedByEventId)
+        assertEquals(3L,replay.revision)
+        val coldLedger=NativeKotlinHistoryManifestFileStore(staging)
+        assertEquals(3L,(coldLedger.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.revision)
+        val replayHistory=NativeKotlinGlobalHistoryReadCoordinator(
+            coldJournal,
+            KotlinNativeSavedCorrectionFileStore(staging,coldJournal),
+            authority,
+            NativeKotlinHistoryManifestFileAuthority(
+                coldLedger,{_,_->active}),
+            NativeKotlinApprovalRevisionFence(staging)
+        ).read("owner-1","athlete-1")
+        assertTrue(replayHistory.toString(),
+            replayHistory is NativeKotlinHistoryReadResult.Review)
+        assertEquals(3,(replayHistory as NativeKotlinHistoryReadResult.Review)
+            .index.lastByExercise.getValue("bench")
+            .workingSets.last().actual?.reps)
+
         // Journal and correction history are still independently valid
         // after backup; no Finish, new session or revision was issued.
         val latest=original()

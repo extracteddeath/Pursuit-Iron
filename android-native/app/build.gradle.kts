@@ -1,4 +1,5 @@
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("com.android.application")
@@ -69,9 +70,10 @@ android {
 }
 dependencies {
     implementation(project(":domain-contract"))
-    // Verified pure canonical runtime; NativeRuntimeHost owns session persistence.
-    implementation(project(":engine-runtime"))
-    // Isolated native Kotlin coach candidate; NOT selected by live screens.
+    // Historical JS adapter is exclusively for development/old source tests.
+    // Never link its JavaScript sandbox, assets or metadata worker into beta.
+    debugImplementation(project(":engine-runtime"))
+    // The beta launcher and workout journey select this ONE Kotlin engine.
     implementation(project(":kotlin-engine"))
     implementation(project(":native-coach-store"))
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
@@ -83,6 +85,79 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+
+// A deliberately small, FAIL-CLOSED source allowlist for the Android beta.
+// Old preview/JS workflow screens stay in the development source tree for
+// existing historical regression tests, and compile only for debug.
+// The release compiler sees the same signed Kotlin host, Compose screens and
+// shared Material primitives; it cannot silently include another old engine
+// when a legacy file is added to src/main in a future change.
+val earlyBetaKotlinSources=listOf(
+    "**/NativeKotlin*.kt",
+    "**/AppPrivateKotlinLocalAthlete.kt",
+    "**/MainActivity.kt",
+    "**/PursuitIronApplication.kt",
+    "**/NativeComponents.kt",
+    "**/NativeDesignTokens.kt",
+    "**/NativeAppearanceSheet.kt",
+    "**/NativeExerciseFavorites.kt",
+    "**/NativeStrengthFavorites.kt",
+    "**/PursuitDesignComponents.kt"
+)
+tasks.withType<KotlinJvmCompile>().configureEach {
+    if(name=="compileReleaseKotlin") {
+        includes.addAll(earlyBetaKotlinSources)
+    }
+}
+
+// Verify both what Gradle compiled and what it plans to package. This can
+// run in source-only CI and never assembles a distributable APK or AAB.
+val verifyEarlyBetaSourceClasses by tasks.registering {
+    group="verification"
+    description="Verify release Kotlin classes exclude historic preview/JS screens"
+    dependsOn("compileReleaseKotlin")
+    doLast {
+        val compileTask=tasks.findByName("compileReleaseKotlin") as? KotlinJvmCompile
+            ?:error("Kotlin release compile task is unavailable")
+        check(earlyBetaKotlinSources.all { it in compileTask.includes }) {
+            "Early beta release must enforce the explicit Kotlin-only source allowlist"
+        }
+        val compiled=compileTask.destinationDirectory.get().asFile
+        check(compiled.isDirectory) { "Release Kotlin classes were not compiled" }
+        val legacyTypes=listOf("NativeRuntimeHost", "NativePreviewApp",
+            "NativeWorkoutScreen", "NativeOnboardingScreen",
+            "PackagedReadOnlySchemaVerifier", "NativeProgramDraftEditor",
+            "NativeScreens", "SyntheticCanonicalWorkoutPanel")
+        val prohibited=compiled.walkTopDown().filter {
+            it.isFile && it.extension=="class" &&
+                legacyTypes.any { type ->
+                    it.nameWithoutExtension==type ||
+                        it.nameWithoutExtension.startsWith(type+"$")
+                }
+        }.map {it.relativeTo(compiled).path}.toList()
+        check(prohibited.isEmpty()) {
+            "Legacy JS/preview Kotlin classes leaked into beta: $prohibited"
+        }
+        check(compiled.walkTopDown().any {
+            it.isFile && it.name=="MainActivity.class"
+        }) { "Kotlin beta launcher was not compiled" }
+    }
+}
+
+// External beta is NOT approved yet. Keep source/release dependency checks
+// usable in CI, but do not produce a release artifact before data export,
+// phone accessibility, signed upgrade and end-to-end training acceptance.
+// This gate must be deliberately replaced by evidence-backed release policy.
+val verifyEarlyBetaAcceptance by tasks.registering {
+    group="verification"
+    description="Block release artifacts until actual early beta acceptance"
+    doLast {
+        error("Early beta artifact is NOT authorized: complete on-device " +
+            "Kotlin workout journey, source/data recovery and stable-signed " +
+            "upgrade acceptance before changing this gate. No APK/AAB yet.")
+    }
 }
 
 // Early-launch beta must ship ONE Kotlin engine. The existing dev/debug app
@@ -118,5 +193,6 @@ tasks.matching {
         "bundleRelease", "packageReleaseBundle"
     )
 }.configureEach {
-    dependsOn(verifyEarlyBetaRuntime)
+    dependsOn(verifyEarlyBetaRuntime,verifyEarlyBetaSourceClasses,
+        verifyEarlyBetaAcceptance)
 }

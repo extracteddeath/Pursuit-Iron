@@ -93,6 +93,16 @@ sealed interface NativePinnedNoteWrite {
     data class Rejected(val reason:NativePinnedNoteRefusal):NativePinnedNoteWrite
 }
 
+/** An exhaustive saved-note inventory is not an exercise-catalog audit.
+ * Notes and older setup keys may legitimately outlive the original lift.
+ * All physical note files must nonetheless belong to this exact athlete.
+ */
+internal sealed interface NativePinnedNoteInventory {
+    data class Verified(val notes:List<NativePinnedExerciseNote>):
+        NativePinnedNoteInventory
+    data object InvalidOrUnrecognized:NativePinnedNoteInventory
+}
+
 /**
  * Single-exercise files avoid whole-map conflicts when another exercise's
  * note is edited. Atomic per-owner lock + per-exercise CAS prevent concurrent
@@ -170,17 +180,10 @@ class NativeKotlinPinnedExerciseNoteFileStore(
             }
         }.toByteArray()
     }
-    private fun readDisk(key:String,athlete:String,exercise:String):
-        NativePinnedExerciseNote {
-        if(Files.exists(pending(key,exercise)))
-            throw IOException("pending exercise note write")
-        val path=file(key,exercise)
-        if(!Files.exists(path))return fresh(key,athlete,exercise)
-        if(Files.isSymbolicLink(root)||Files.isSymbolicLink(path) ||
-            !Files.isRegularFile(path)||Files.size(path) !in 40L..maxBytes.toLong())
-            throw IOException("invalid exercise note file")
-        val all=Files.readAllBytes(path)
-        return DataInputStream(ByteArrayInputStream(all)).use { input ->
+    // The shared decoder is used by normal cold reads and exhaustive
+    // restore inventory: neither path may apply a different note format.
+    private fun decode(all:ByteArray):NativePinnedExerciseNote =
+        DataInputStream(ByteArrayInputStream(all)).use { input ->
             val size=input.readInt()
             if(size !in 16..maxBytes-36 || size+36!=all.size)
                 throw IOException("invalid note envelope")
@@ -219,11 +222,25 @@ class NativeKotlinPinnedExerciseNoteFileStore(
                 if(data.available()!=0)throw IOException("trailing note bytes")
                 NativePinnedExerciseNote(storedKey,storedAthlete,storedExercise,
                     revision,text,Collections.unmodifiableMap(setup),event).also{
-                    if(!valid(it)||it.ownerKey!=key||it.athleteId!=athlete||
-                        it.exerciseId!=exercise)
-                        throw IOException("note owner or content mismatch")
+                    if(!valid(it))
+                        throw IOException("note content invalid")
                 }
             }
+        }
+
+    private fun readDisk(key:String,athlete:String,exercise:String):
+        NativePinnedExerciseNote {
+        if(Files.exists(pending(key,exercise)))
+            throw IOException("pending exercise note write")
+        val path=file(key,exercise)
+        if(!Files.exists(path))return fresh(key,athlete,exercise)
+        if(Files.isSymbolicLink(root)||Files.isSymbolicLink(path) ||
+            !Files.isRegularFile(path)||Files.size(path) !in 40L..maxBytes.toLong())
+            throw IOException("invalid exercise note file")
+        return decode(Files.readAllBytes(path)).also {
+            if(it.ownerKey!=key||it.athleteId!=athlete||
+                it.exerciseId!=exercise)
+                throw IOException("note owner or content mismatch")
         }
     }
     private fun atomic(key:String,exercise:String,next:NativePinnedExerciseNote) {
@@ -261,6 +278,49 @@ class NativeKotlinPinnedExerciseNoteFileStore(
         }.getOrElse{NativePinnedNoteRead.Rejected(
             NativePinnedNoteRefusal.STORAGE_UNAVAILABLE)}
     }
+
+    /**
+     * Owner-fenced recovery inventory; reads EVERY saved note. A normal
+     * per-exercise read is allowed to return an empty default, but restore
+     * must never overlook a corrupt, foreign, renamed or pending note file.
+     * Only physical note records are inventoried; missing files are valid.
+     */
+    internal fun inventoryOwner(key:String):NativePinnedNoteInventory =
+        runCatching {
+            fence.withOwnerTransaction(key) {
+                val current=owner(key)
+                    ?:return@withOwnerTransaction NativePinnedNoteInventory.InvalidOrUnrecognized
+                if(!Files.exists(root,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                    return@withOwnerTransaction NativePinnedNoteInventory.Verified(
+                        emptyList())
+                require(!Files.isSymbolicLink(root) &&
+                    Files.isDirectory(root,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                val physical=Files.list(root).use {stream->
+                    stream.filter {
+                        it.fileName.toString().startsWith("pinned-exercise-")
+                    }.toList()
+                }
+                require(physical.size<=4096)
+                val notes=mutableListOf<NativePinnedExerciseNote>()
+                val exerciseIds=mutableSetOf<String>()
+                val name=Regex("^pinned-exercise-[a-f0-9]{64}\\.bin$")
+                for(path in physical.sortedBy{it.fileName.toString()}) {
+                    require(name.matches(path.fileName.toString()) &&
+                        !Files.isSymbolicLink(path) &&
+                        Files.isRegularFile(path,java.nio.file.LinkOption.NOFOLLOW_LINKS) &&
+                        Files.size(path) in 40L..maxBytes.toLong())
+                    val note=decode(Files.readAllBytes(path))
+                    require(note.ownerKey==key &&
+                        note.athleteId==current.athleteId &&
+                        note.revision>0L &&
+                        file(key,note.exerciseId)==path &&
+                        exerciseIds.add(note.exerciseId))
+                    notes.add(note)
+                }
+                NativePinnedNoteInventory.Verified(
+                    Collections.unmodifiableList(notes))
+            }
+        }.getOrElse {NativePinnedNoteInventory.InvalidOrUnrecognized}
 
     fun save(
         key:String,exercise:String,expectedRevision:Long,eventId:String,

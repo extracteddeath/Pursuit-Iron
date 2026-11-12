@@ -418,33 +418,40 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 color=MaterialTheme.colorScheme.error)
         }
         activeKeys.forEach{set->
-            editorStates.SaveableStateProvider("composer-set:${set.target.setKey}") {
-                val perSetMachineConfig=issuedGymId?.let {gymId->
-                    KotlinMachineAlternativesDomain.forGymExercise(
-                        machineRoster?.configurations.orEmpty(),gymId,
-                        set.target.exerciseId)
+            val perSetMachineConfig=issuedGymId?.let {gymId->
+                KotlinMachineAlternativesDomain.forGymExercise(
+                    machineRoster?.configurations.orEmpty(),gymId,
+                    set.target.exerciseId)
+            }
+            val perSetMachineId=perSetMachineConfig?.let {
+                workoutMachineChoice(machineChoices.encoded,set.target.exerciseId,null)
+            }
+            // A historical skip has no recorded machine. Correcting
+            // it to an attempt must require a current active station.
+            val needsMachineSelection=set.actual==null &&
+                perSetMachineConfig?.machines?.isNotEmpty()==true &&
+                perSetMachineConfig.machines.none{
+                    it.id==perSetMachineId && it.active
                 }
-                val perSetMachineId=perSetMachineConfig?.let {
-                    workoutMachineChoice(machineChoices.encoded,set.target.exerciseId,null)
-                }
-                // A historical skip has no recorded machine. Correcting
-                // it to an attempt must require a current active station.
-                val needsMachineSelection=set.actual==null &&
-                    perSetMachineConfig?.machines?.isNotEmpty()==true &&
-                    perSetMachineConfig.machines.none{
-                        it.id==perSetMachineId && it.active
-                    }
+            // Correcting an existing set must never reassign it to the
+            // currently selected B machine. Null here means legacy.
+            val previouslyAttempted=set.actual
+            val recordedMachineId=if(set.currentReceipt!=null &&
+                previouslyAttempted!=null)
+                previouslyAttempted.machineInstanceId else perSetMachineId
+            // SaveableStateHolder retains each physical station's UNSAVED
+            // editor across Focus/All, A -> B -> A, and rotation. One station
+            // cannot inherit another station's typed load. Durable actuals
+            // are still authoritative after the saved receipt revision moves.
+            editorStates.SaveableStateProvider(
+                "composer-set:${set.target.setKey}:station:"+
+                    (recordedMachineId?.let{"id:$it"} ?: "none")
+            ) {
                 if(needsMachineSelection)
                     Text("Choose an active physical machine before recording this set. "+
                         "Skipping is still allowed.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
-                // Correcting an existing set must never reassign it to the
-                // currently selected B machine. Null here means legacy.
-                val previouslyAttempted=set.actual
-                val recordedMachineId=if(set.currentReceipt!=null &&
-                    previouslyAttempted!=null)
-                    previouslyAttempted.machineInstanceId else perSetMachineId
                 NativeKotlinSetCard(set,presentation.finished,
                     state.busy || machineChoices.busy || !machineChoices.ready,
                     machineInstanceId=recordedMachineId,

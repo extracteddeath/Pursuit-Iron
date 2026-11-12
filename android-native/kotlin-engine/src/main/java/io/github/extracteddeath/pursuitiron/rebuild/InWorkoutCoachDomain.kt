@@ -123,6 +123,15 @@ object InWorkoutCoachDomain {
             val verifiedPrior=EquipmentLoadDomain.inspect(
                 request.equipment,actual,request.unit)
             val unchangedActual=previous.issuedLoad?.compareTo(actual)==0
+            // An athlete-entered actual is not evidence that the coach
+            // authored a lighter next set. Distinguish it from a genuine
+            // issued backoff before showing any explanatory cue.
+            if(!unchangedActual)
+                return result(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,
+                    if(previous.issuedLoad==null)
+                        "The previous set's issued weight is unavailable. Keep the next issued target unchanged and review the actual before considering a change."
+                    else
+                        "The previous set used an athlete-recorded weight different from its issued target. The next target remains ${kept.toPlainString()} ${request.unit.name.lowercase()}; no backoff or reduction was authorized.")
             if(unchangedActual && verifiedPrior is LoadInspection.Confirmed &&
                 verifiedPrior.exact && kept<actual)
                 return result(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,

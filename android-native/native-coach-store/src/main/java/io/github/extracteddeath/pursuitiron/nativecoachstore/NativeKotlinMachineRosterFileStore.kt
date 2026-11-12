@@ -4,6 +4,9 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.io.*
 import java.math.BigDecimal
 import java.nio.file.*
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.util.concurrent.ConcurrentHashMap
 import java.security.MessageDigest
 
 /**
@@ -23,6 +26,13 @@ sealed interface NativeMachineRosterResult {
     data class Rejected(val reason:String):NativeMachineRosterResult
 }
 class NativeKotlinMachineRosterFileStore(private val root:Path) {
+    companion object {
+        // @Synchronized protects one object only. The app can open independent
+        // store instances after a process restart, in a background worker, or
+        // from another owner-fenced service. Same-process calls need a shared
+        // mutex before the OS lock (Java disallows overlapping JVM file locks).
+        private val localCasLocks=ConcurrentHashMap<Path,Any>()
+    }
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private fun key(ownerId:String):Path {
         require(id.matches(ownerId))
@@ -134,25 +144,56 @@ class NativeKotlinMachineRosterFileStore(private val root:Path) {
         }
     }.getOrElse {NativeMachineRosterResult.Rejected("UNREADABLE_OR_INVALID")}
 
-    /** CAS edit; never overwrites on a stale revision. */
+    /**
+     * The read/compare/write is ONE transaction across separately constructed
+     * stores and processes. The higher-level athlete fence still authenticates
+     * the caller and enforces current-gym edits; this lower-level lock cannot
+     * be skipped by another store instance that knows the same private root.
+     */
     @Synchronized fun save(
         ownerId:String,expectedRevision:Long,
         configs:List<KotlinGymMachineAlternatives>
     ):NativeMachineRosterResult {
+        if(!id.matches(ownerId))
+            return NativeMachineRosterResult.Rejected("INVALID_OWNER")
+        return runCatching {
+            Files.createDirectories(root)
+            val lockPath=key(ownerId).toAbsolutePath().normalize()
+                .resolveSibling(key(ownerId).fileName.toString()+".lock")
+            val monitor=localCasLocks.computeIfAbsent(lockPath){Any()}
+            synchronized(monitor) {
+                FileChannel.open(lockPath,StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE).use{channel ->
+                    channel.lock().use {saveWithinLock(ownerId,expectedRevision,configs)}
+                }
+            }
+        }.getOrElse {NativeMachineRosterResult.Rejected("STORAGE_UNAVAILABLE")}
+    }
+
+    private fun saveWithinLock(
+        ownerId:String,expectedRevision:Long,
+        configs:List<KotlinGymMachineAlternatives>
+    ):NativeMachineRosterResult {
+        // Re-read UNDER the file lock: no stale first writer can be reused.
         val prior=read(ownerId)
-        if(prior !is NativeMachineRosterResult.Saved)
-            return prior
+        if(prior !is NativeMachineRosterResult.Saved)return prior
         if(prior.snapshot.revision!=expectedRevision)
             return NativeMachineRosterResult.Rejected("STALE_REVISION")
         val changed=NativeMachineRosterSnapshot(ownerId,expectedRevision+1,configs)
         val bytes=runCatching {encode(changed)}
-            .getOrElse {return NativeMachineRosterResult.Rejected("INVALID_ROSTER")}
+            .getOrElse{return NativeMachineRosterResult.Rejected("INVALID_ROSTER")}
         return runCatching {
-            Files.createDirectories(root)
             val target=key(ownerId)
             val temp=Files.createTempFile(root,"machine-roster-", ".pending")
             try {
-                Files.write(temp,bytes)
+                // Force the complete versioned, checksummed file to disk
+                // before publishing it as the one current roster.
+                FileChannel.open(temp,StandardOpenOption.WRITE,
+                    StandardOpenOption.TRUNCATE_EXISTING).use{out ->
+                    val buffer=ByteBuffer.wrap(bytes)
+                    while(buffer.hasRemaining())out.write(buffer)
+                    out.force(true)
+                }
                 try {Files.move(temp,target,StandardCopyOption.ATOMIC_MOVE,
                     StandardCopyOption.REPLACE_EXISTING)}
                 catch(_:AtomicMoveNotSupportedException) {

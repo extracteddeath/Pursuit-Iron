@@ -65,11 +65,12 @@ object CoachFirstProgramStartDomain {
     const val ALLOCATION_POLICY_VERSION="first-program-reference-v4"
     const val PREVIOUS_PHASE_POLICY_VERSION="first-program-reference-v5"
     const val V6_POLICY_VERSION="first-program-reference-v6"
-    const val POLICY_VERSION="first-program-reference-v7"
+    const val V7_POLICY_VERSION="first-program-reference-v7"
+    const val POLICY_VERSION="first-program-reference-v8"
     fun supportsPolicy(version:String)=version in setOf(
         LEGACY_POLICY_VERSION,PREVIOUS_POLICY_VERSION,TIMED_POLICY_VERSION,
         ALLOCATION_POLICY_VERSION,PREVIOUS_PHASE_POLICY_VERSION,
-        V6_POLICY_VERSION,POLICY_VERSION)
+        V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION)
     private const val MAX_PHASE_REVIEWS=32
     private val zero=BigDecimal.ZERO
     private fun num(v:Int)=BigDecimal(v)
@@ -139,7 +140,7 @@ object CoachFirstProgramStartDomain {
      */
     fun review(input:FirstProgramStartRequest):FirstProgramStartReview {
         if(input.policyVersion !in setOf(
-                PREVIOUS_PHASE_POLICY_VERSION,V6_POLICY_VERSION,POLICY_VERSION) ||
+                PREVIOUS_PHASE_POLICY_VERSION,V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) ||
             input.phase==TrainingPhase.HYPERTROPHY)
             return reviewOnce(input)
         if(!input.setup.mayReviewProgramCandidate || input.catalog.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
@@ -165,7 +166,7 @@ object CoachFirstProgramStartDomain {
         // A Romanian hinge is NOT silently substituted for a conventional
         // deadlift skill; this is a provisional 2/2/1 review offer, not
         // mandatory dogma for every athlete, phase or custom cycle.
-        val fiveDaySkill=if(input.policyVersion==POLICY_VERSION &&
+        val fiveDaySkill=if(input.policyVersion in setOf(V7_POLICY_VERSION,POLICY_VERSION) &&
             input.setup.reviewed?.split==ComposerSplit.ULPPL && days==5) {
             fun main(family:String,variant:String?=null)=primaries.firstOrNull {
                 it.familyId==family &&
@@ -215,7 +216,7 @@ object CoachFirstProgramStartDomain {
         // a day to manufacture frequency.
         data class PhaseOffer(val lifts:List<String>,val requiredDays:Int)
         val repeatOffers=if(input.policyVersion !in setOf(
-                V6_POLICY_VERSION,POLICY_VERSION) ||
+                V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) ||
             input.setup.reviewed?.split==ComposerSplit.FULL_BODY)
             emptyList() else groups.filter{2*it.size<=days}
                 .take(4).map{PhaseOffer(it,2)}
@@ -384,7 +385,7 @@ object CoachFirstProgramStartDomain {
         // incline variant when several were selected. V1-v5 replay unchanged.
         // This is a *required exposure*, not an automatic load transfer or
         // authority to replace the athlete's chosen main bench lift.
-        if(input.policyVersion in setOf(V6_POLICY_VERSION,POLICY_VERSION) &&
+        if(input.policyVersion in setOf(V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) &&
             input.phase!=TrainingPhase.HYPERTROPHY) {
             val calibratedPrimaryFamilies=selected.filter {
                 it.role==ComposerRole.PRIMARY &&
@@ -415,7 +416,7 @@ object CoachFirstProgramStartDomain {
         // here would falsely set hamstrings/glutes to zero maximum and make
         // the fully checked deadlift visit impossible.
         val phaseDoseSources=if(input.policyVersion in setOf(
-                V6_POLICY_VERSION,POLICY_VERSION) &&
+                V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) &&
             input.phase!=TrainingPhase.HYPERTROPHY &&
             namedPrimaries!=null)selected.filter {
                 it.role!=ComposerRole.PRIMARY ||
@@ -446,7 +447,7 @@ object CoachFirstProgramStartDomain {
             TrainingPhase.STRENGTH,TrainingPhase.PEAK ->
                 if(input.policyVersion in setOf(
                     PREVIOUS_PHASE_POLICY_VERSION,
-                    V6_POLICY_VERSION,POLICY_VERSION) &&
+                    V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) &&
                     skillDays!=null)
                     linkedMapOf(ComposerSessionPurpose.STRENGTH_SKILL to skillDays,
                         ComposerSessionPurpose.GENERAL_PREPARATION to
@@ -467,7 +468,8 @@ object CoachFirstProgramStartDomain {
                 ALLOCATION_POLICY_VERSION->"v4"
                 PREVIOUS_PHASE_POLICY_VERSION->"v5"
                 V6_POLICY_VERSION->"v6"
-                else->"v7"
+                V7_POLICY_VERSION->"v7"
+                else->"v8"
             },
             rationale="Versioned provisional volume and effort starting plan; personal responses, fatigue and recoverable dose require calibration.",
             athleteId=athlete.athleteProfileId,
@@ -481,7 +483,7 @@ object CoachFirstProgramStartDomain {
                 input.phase!=TrainingPhase.HYPERTROPHY)
                 if(input.policyVersion in setOf(
                     PREVIOUS_PHASE_POLICY_VERSION,
-                    V6_POLICY_VERSION,POLICY_VERSION) &&
+                    V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) &&
                     namedPrimaries!=null)
                     namedPrimaries.associateWith{requiredPrimaryDays}
                 else mapOf(primary.exerciseId to 1) else emptyMap())
@@ -503,7 +505,24 @@ object CoachFirstProgramStartDomain {
             val practical=source.sourcePracticalReps ?:desired
             val lower=maxOf(desired.minimum,practical.minimum)
             val upper=minOf(desired.maximum,practical.maximum)
-            if(lower>upper)return null
+            // V8 keeps explicitly selected source-linked secondary and
+            // accessory movements when practical reps do not intersect
+            // the generic preset (e.g. BW squat 15..25 versus 6..12).
+            // The bounded source-valid fallback is a PROVISIONAL starting
+            // prescription, not empirical individualized rep optimization.
+            // Saved V1–V7 behavior and PRIMARY skill bands are untouched.
+            val chosenReps=when {
+                lower<=upper->RepBand(lower,upper)
+                input.policyVersion!=POLICY_VERSION ||
+                    source.role==ComposerRole.PRIMARY->return null
+                desired.maximum<practical.minimum->
+                    RepBand(practical.minimum,
+                        minOf(practical.maximum,practical.minimum+5))
+                desired.minimum>practical.maximum->
+                    RepBand(maxOf(practical.minimum,practical.maximum-5),
+                        practical.maximum)
+                else->return null
+            }
             // Preserve the v2 low-volume rehearsal exactly. V3 and later
             // use their reviewed durations while choosing working sets.
             val warmup=if(input.policyVersion!=LEGACY_POLICY_VERSION &&
@@ -518,14 +537,14 @@ object CoachFirstProgramStartDomain {
                 else emptyList()
             } else emptyList()
             return ExercisePrescriptionPolicy(
-                exerciseId,purpose,RepBand(lower,upper),
+                exerciseId,purpose,chosenReps,
                 targetRir=if(athlete.experience==AthleteExperience.BEGINNER)3 else 2,
                 activeSecondsPerSet=workSeconds,restSecondsPerSet=restSeconds,
                 scheme=SetLoadScheme.STRAIGHT,warmups=warmup,dayIndex=dayIndex)
         }
         val timed=input.policyVersion in setOf(TIMED_POLICY_VERSION,
             ALLOCATION_POLICY_VERSION,PREVIOUS_PHASE_POLICY_VERSION,
-            V6_POLICY_VERSION,POLICY_VERSION)
+            V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION)
         val sharedPolicies=if(timed)purposes.keys.flatMap {purpose->choices.mapNotNull {choice->
             prescription(choice.exerciseId,choice.selectedLoad,
                 choice.activeSecondsPerSet,choice.restSecondsPerSet,
@@ -554,8 +573,7 @@ object CoachFirstProgramStartDomain {
         }
         val initialAudit=generated.candidate?.catalogReview?.draft?.audit
         if(input.policyVersion in setOf(ALLOCATION_POLICY_VERSION,
-            PREVIOUS_PHASE_POLICY_VERSION,V6_POLICY_VERSION,
-            POLICY_VERSION) &&
+            PREVIOUS_PHASE_POLICY_VERSION,V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION) &&
             generated.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW &&
             initialAudit?.satisfiesDeclaredHardConstraints==true &&
             initialAudit.sessions.any {it.finding==TimeWindowFinding.ABOVE_PREFERENCE}) {
@@ -600,7 +618,7 @@ object CoachFirstProgramStartDomain {
             // merely finding the deadlift on ANY skill day is insufficient.
             // It must share a real, audited squat-skill lower session.
             // Check actual visits, not labels or the authored intent alone.
-            val requiredCompanionDays=if(input.policyVersion==POLICY_VERSION &&
+            val requiredCompanionDays=if(input.policyVersion in setOf(V7_POLICY_VERSION,POLICY_VERSION) &&
                 athlete.split==ComposerSplit.ULPPL && namedPrimaries!=null) {
                 val namedSquats=selected.filter {
                     it.exerciseId in namedPrimaries &&

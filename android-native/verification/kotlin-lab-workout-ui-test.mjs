@@ -259,8 +259,11 @@ assert.ok(starterVariantRetention.includes('val calibratedPrimaryFamilies=select
   starterVariantRetention.includes('it.variantId.contains("incline",ignoreCase=true)') &&
   starterVariantRetention.includes('it.familyId in calibratedPrimaryFamilies') &&
   starterVariantRetention.includes('choices[index]=choices[index].copy(requiredVisits=1)') &&
-  starterVariantRetention.includes('input.policyVersion==POLICY_VERSION'),
-  'New v6 strength/peak policies must not drop an explicitly calibrated related incline press');
+  starterVariantRetention.includes('if(input.policyVersion in setOf(') &&
+  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,POLICY_VERSION') &&
+  starterVariantRetention.includes('V7_POLICY_VERSION->"v7"') &&
+  starterVariantRetention.includes('else->"v8"'),
+  'V6/V7 replay and V8 strength/peak policies must retain calibrated related incline presses');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
   machineLast.includes('val machineSets:Map<WorkoutMachineReferenceKey,WorkoutLastSetReference>') &&

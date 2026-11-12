@@ -149,7 +149,9 @@ internal fun NativeKotlinCandidateJourney(
     // returning lifter through onboarding again. No silent workout issuance
     // or journal opening: TRAIN independently revalidates saved receipts.
     var landingChecked by remember(host) { mutableStateOf(false) }
-    var navigationTouched by remember { mutableStateOf(false) }
+    // A restored explicit navigation choice (including Setup) must not be
+    // stolen by the asynchronous cold-start destination check on rotation.
+    var navigationTouched by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(host) {
         if(!landingChecked) {
             val initial=withContext(Dispatchers.IO) {

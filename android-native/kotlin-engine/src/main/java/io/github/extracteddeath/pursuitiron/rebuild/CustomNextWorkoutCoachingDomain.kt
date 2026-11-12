@@ -340,6 +340,39 @@ object CustomNextWorkoutCoachingDomain {
         if(appearances.isEmpty())
             return result(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,
                 explanation="No comparable performance on this physical machine and training day. Establish a separate A/B baseline.")
+        // A verified B-only visit between two A workouts is harmless to A's
+        // independent progression. A MIXED, unrecorded or unassigned visit
+        // is different: it might conceal a failed A set. Never select two
+        // older successful A workouts by silently skipping that uncertainty.
+        //
+        // Compare only the window from the oldest of the two station-specific
+        // exposures being considered through the last completed day. Once
+        // two fresh A sessions follow an ambiguous workout, the old ambiguity
+        // can no longer contaminate their evidence. Frozen V1 receipts must
+        // replay their historical algorithm; new V2/V3 reviews use this guard.
+        val machineEvidenceFence=appearances.takeLast(2).first().completionOrder
+        if(request.repForecastPolicy.usesTargetRir()) {
+            val unresolved=dayAppearances.any {session ->
+                if(session.completionOrder<machineEvidenceFence)false
+                else {
+                    val priorSets=session.evidence.visits.filter{
+                        it.slotId==target.slotId &&
+                            it.part==CustomWorkoutVisitPart.MAIN &&
+                            it.setType==DraftSetType.WORKING
+                    }
+                    val observed=machines(session)
+                    priorSets.isEmpty() || priorSets.any{it.actual==null} ||
+                        observed.size!=1 ||
+                        (targetMachine!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
+                            KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in observed)
+                }
+            }
+            if(unresolved)
+                return result(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                    appearances.takeLast(2).map{it.evidence.workoutId},
+                    appearances.last().evidence.workoutId,
+                    explanation="A mixed or unassigned physical-machine workout appears inside the required progression window. It might hide work on this station. Keep its current targets and establish fresh comparable sets on the selected machine; a different, fully identified station does not block progress.")
+        }
         val latest=appearances.last()
         val ids=appearances.takeLast(2).map{it.evidence.workoutId}
         val oldSlot=latest.snapshot.slots.singleOrNull{it.slotId==target.slotId}

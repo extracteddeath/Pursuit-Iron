@@ -174,7 +174,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,76);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,146);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

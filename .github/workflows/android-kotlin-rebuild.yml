@@ -127,6 +127,10 @@ jobs:
         run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
       - name: Verify first curated starter tranche provenance
         run: node android-native/kotlin-engine/verification/starter-catalog-parity.mjs
+      - name: Audit web built-in exercise coverage against actual Kotlin starter catalog
+        run: |
+          node android-native/kotlin-engine/verification/web-native-catalog-parity-audit.mjs --self-test
+          node android-native/kotlin-engine/verification/web-native-catalog-parity-audit.mjs --audit --write-report
       - name: Verify shipped web palettes and native Amethyst first-install appearance
         run: |
           node android-native/verification/native-original-theme-parity-test.mjs
@@ -205,6 +209,14 @@ jobs:
             android-native/kotlin-engine/build/reports/paired-progression-native.json
             android-native/kotlin-engine/build/reports/paired-functional.json
             android-native/kotlin-engine/build/reports/paired-functional-native.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Attach incomplete web/Kotlin built-in catalog parity (not release approval)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-native-exercise-catalog-parity-incomplete
+          path: android-native/kotlin-engine/reports/web-native-catalog-parity-audit.json
           if-no-files-found: warn
           retention-days: 7
       - name: Attach legacy migration review inventory (not coaching-approved)

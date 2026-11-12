@@ -4,6 +4,76 @@
 
 **Status vocabulary:** **Implemented/source-tested** = exact behavior is in native source, with explicit tests/CI required before release; **Partial** = some native behavior exists but meaningful web capability is missing; **Open** = not verified in current Kotlin rebuild and must not be advertised as available; **Adapt** = web-specific mechanism not appropriate for native Android, preserve the user value by a native equivalent. No status is a release sign-off without real phone/foldable/TalkBack acceptance.
 
+## Live web baseline reconciliation — Build 1011
+
+On November 12, 2026, the latest publicly deployed-source reference is
+`main` commit `12e2bd37258c56255c687cc6abed78d1921f6c07`.
+`main/CHANGELOG.md` has **Build 1011** at its top; the Kotlin feature branch
+contains changelog entries only through Build 998. The active exercise-catalog
+files `modules/next-engine/exercise-db.js` and
+`modules/next-engine/extended-exercise-catalog.js` have the **same Git blob
+SHAs** on `main` and `architecture/kotlin-engine-rebuild`:
+`4d61f68939e2917a71f640f287be302202a50a6a` and
+`f49b3bada71d5d167b17e9f367637debddbaa65a`, respectively.
+Thus the current 376-ID catalog inventory is from the real current web
+catalog, but an old frozen JS comparison alone does not certify *current*
+web-engine behavioral parity.
+
+**New mandatory behavioral baselines from web:**
+
+- **Build 1011:** distinct physical Machine A/B instances within each saved
+  gym, per-station labels/defaults/increments and active status, station ID
+  retained on actual workout sets, independent exercise Last, progression
+  evidence, personal records and strength charts; preserve unassigned legacy
+  records and deactivated stations. Native domain and persistence code is not
+  accepted as parity until this whole behavior is tested end to end.
+- **Build 1010:** eligible five-day ULPPL/PPLUL mixed-goal strength,
+  intensification and peak blocks plan **two bench, two squat, one deadlift**
+  skill exposures weekly unless explicit authored preferences take priority.
+  Push can select an equipment-qualified incline DB or Smith bench variant
+  when adjustable equipment exists; flat-only gyms cannot invent it. Changed
+  split/day counts in a later block must affect the effective schedule while
+  retaining old issued sessions and custom-authored rosters. The web itself
+  still acknowledges strength/peak long-session underfill; parity should
+  correct that defect, not perpetuate it.
+
+**Baseline control:** re-run matched functional fixtures against an immutable
+head of current web `main` (record commit hash and exact input digest)
+before claiming 100% parity. Existing archived comparisons of earlier JS
+policy remain history, not up-to-date acceptance. This is a factual
+discovery from reviewed repository source, not a claim that latest web behavior
+has been independently device-tested in this audit.
+
+## Measured source coverage checkpoint — November 12, 2026
+
+- Web's effective built-in exercise catalog contains **376 active identities**
+  (39 curated and 363 extended source definitions before web duplicate-name/ID
+  filtering). Kotlin's reviewed-provenance **starter tranche defines 22** of
+  those IDs: **354 active web IDs are absent from this starter tranche**.
+  This is a source-coverage count, **not** proof that 20 exercises have matching
+  training behavior, or that Kotlin has only 20 possible custom exercises.
+- An executable, read-only source inventory now regenerates the exact gaps
+  and missing movement-family distribution in CI:
+  `kotlin-engine/verification/web-native-catalog-parity-audit.mjs --audit
+  --write-report`. Output: `kotlin-engine/reports/web-native-catalog-parity-audit.json`.
+  Unreviewed web muscle metadata must never become native training authority
+  merely to force a 100% count. Independently reconcile movement identities,
+  equipment/attachment variants, achievable loads, muscle credits, allowable
+  rep bands, exercise substitutions, physical Machine A/B and history identity.
+- The objective superiority scorecard previously required 49 paired proof
+  channels across 33 cases. Three new critical engine acceptance scenarios
+  (silent load stability, physical machine isolation, and independent Upper/
+  Push progression) add six proof channels, making the new requirement
+  **55 proof channels across 36 cases**. None of the new scenarios is
+  certified by adding it to the matrix. Re-run the current scorecard in CI;
+  stale recorded claims do not count.
+- **Release verdict: WEB ENGINE PARITY NOT YET VERIFIED; SUPERIORITY NOT
+  PROVEN.** A lean early beta is not an excuse to remove engine functions.
+  Source tests, real stored-workout tests, matched web/Kotlin comparisons
+  and Android-device acceptance must pass for the full supported scope.
+  See `LAUNCH_BETA_SCOPE.md` for updated ordering and the separate
+  user-visible UI scope.
+
 ## Priority 0 — functionality that must survive the rewrite
 
 | Web capability / changelog proof | Current Kotlin result | Missing acceptance requirement |

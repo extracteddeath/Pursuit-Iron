@@ -621,6 +621,10 @@ internal fun NativeKotlinCustomJournalScreen(
                             val mainMachineId=if(previouslyAttempted!=null)
                                 previouslyAttempted.machineInstanceId
                             else selectedMachineId
+                            val expectedCoachMachineScope=
+                                if(config?.machines?.isNotEmpty()==true)
+                                    LiveMachineCoachScope.Physical(selectedMachineId)
+                                else LiveMachineCoachScope.ExerciseOnly
                             val advice=liveCoach?.takeIf {
                                 // Hide prior advice immediately after an
                                 // injury restriction, before a fresh review.
@@ -628,7 +632,10 @@ internal fun NativeKotlinCustomJournalScreen(
                                 !busy && !finished && machineChoices.ready &&
                                     !machineChoices.busy && mainKey==nextVisit &&
                                     it.workoutId==workoutId && it.setKey==set.setKey &&
-                                    it.journalRevision==current.revision
+                                    it.journalRevision==current.revision &&
+                                    // Reject an old A review immediately when
+                                    // the durable selector changes to B.
+                                    it.machineScope==expectedCoachMachineScope
                             }
                             if(advice!=null) {
                                 Text("Coach · next set",

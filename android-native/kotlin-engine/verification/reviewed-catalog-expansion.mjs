@@ -59,7 +59,7 @@ function validateRows(manifest,web=EXERCISES) {
  assert.ok(Array.isArray(web)&&web.length>0);
  const webById=new Map(web.map(x=>[x.id,x]));
  assert.equal(webById.size,web.length,'active web source has duplicate IDs');
- const usedIds=new Set(),familyVariants=new Set(),implements=new Set();
+ const usedIds=new Set(),familyVariants=new Set();
  for(const row of manifest.records) {
    assert.match(row.id,/^[a-z0-9][a-z0-9_-]+$/);
    assert.ok(!usedIds.has(row.id),'duplicate reviewed ID '+row.id);

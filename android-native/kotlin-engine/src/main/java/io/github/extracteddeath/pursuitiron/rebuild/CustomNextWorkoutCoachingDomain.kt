@@ -374,12 +374,12 @@ object CustomNextWorkoutCoachingDomain {
                 explanation="The gym, plan, phase or training-day purpose changed between required machine-specific performances. Re-establish two comparable workouts under the current source before proposing an increase; identified A/B machines alone do not prove continuity.")
             val unresolved=evidenceWindow.any {session ->
                 val priorSets=session.evidence.visits.filter{
-                        it.slotId==target.slotId &&
-                            it.part==CustomWorkoutVisitPart.MAIN &&
-                            it.setType==DraftSetType.WORKING
-                    }
-                    val observed=machines(session)
-                    priorSets.isEmpty() || priorSets.any{it.actual==null} ||
+                    it.slotId==target.slotId &&
+                        it.part==CustomWorkoutVisitPart.MAIN &&
+                        it.setType==DraftSetType.WORKING
+                }
+                val observed=machines(session)
+                priorSets.isEmpty() || priorSets.any{it.actual==null} ||
                     observed.size!=1 ||
                     (targetMachine!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
                         KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in observed)

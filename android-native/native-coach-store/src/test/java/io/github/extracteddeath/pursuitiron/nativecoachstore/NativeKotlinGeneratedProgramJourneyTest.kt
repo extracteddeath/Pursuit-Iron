@@ -166,6 +166,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
             is NativeCustomPrepareResult.Prepared)
         assertTrue(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
             is NativeCustomJournalResult.Durable)
+        val gymId=checkNotNull((Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal
+            .originalSnapshot.stamp.gymId)
+        val firstExercise=(Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal
+            .snapshot.slots.first().exerciseId
+        val choice=Disk().choices.save(owner,id,true,gymId,0,
+            mapOf(firstExercise to "machine-a"))
+        assertTrue(choice.toString(),
+            choice is NativeWorkoutMachineChoiceResult.Saved)
+        val coaching=Disk().settings.save(owner,0,
+            CoachAssistancePolicy(false,false,false))
+        assertTrue(coaching.toString(),
+            coaching is NativeCoachSettingsWrite.Saved)
         val expected=NativeKotlinOwnerIdentity(owner,athlete)
         val before=NativeKotlinStagedCoreStoreAudit.inspect(d.root,expected)
         assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
@@ -175,6 +189,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(1,active.customIssued)
         assertEquals(1,active.customUnfinished)
         assertEquals(0,active.generatedIssued)
+        assertEquals(1,active.machineChoiceRecords)
+        assertEquals(1L,active.coachingSettingsRevision)
         val password="generated-day-one-recovery-password".toCharArray()
         val original=(Disk().journals.open(owner,id)
             as NativeCustomJournalResult.Durable).issued.journal
@@ -215,6 +231,81 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(original,reopened.issued.journal)
         assertEquals(original,(Disk().journals.open(owner,id)
             as NativeCustomJournalResult.Durable).issued.journal)
+    }
+
+    @Test fun stagedAuditRejectsOrphanMachineChoiceAndWrongWorkoutGym() {
+        val (cycle,inputs)=saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val id="machine-scope-first-day"
+        val day=cycle.blocks.single().days.first()
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        val issued=(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val exercise=issued.snapshot.slots.first().exerciseId
+        val choices=Disk().choices
+        val wrong=choices.save(owner,id,true,"different-gym",0,
+            mapOf(exercise to "machine-a"))
+        assertTrue(wrong.toString(),
+            wrong is NativeWorkoutMachineChoiceResult.Saved)
+        val expected=NativeKotlinOwnerIdentity(owner,athlete)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.MACHINE_CHOICES_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        // A valid separate record for a workout never issued in this
+        // program is also disallowed; otherwise it could silently mask
+        // missing/foreign machine history during restore.
+        val nonexistent=choices.save(owner,"orphan-workout",true,
+            issued.originalSnapshot.stamp.gymId,0,
+            mapOf(exercise to "machine-b"))
+        assertTrue(nonexistent.toString(),
+            nonexistent is NativeWorkoutMachineChoiceResult.Saved)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.MACHINE_CHOICES_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+    }
+
+    @Test fun stagedAuditCannotSilentlyReenableCorruptCoachingOptOut() {
+        val (cycle,inputs)=saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val expected=NativeKotlinOwnerIdentity(owner,athlete)
+        assertTrue(NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected) is NativeKotlinStagedCoreAuditResult.Verified)
+        assertTrue(Disk().settings.save(owner,0,
+            CoachAssistancePolicy(false,false,false))
+            is NativeCoachSettingsWrite.Saved)
+        val saved=NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected)
+        assertTrue(saved.toString(),
+            saved is NativeKotlinStagedCoreAuditResult.Verified)
+        assertEquals(1L,(saved as NativeKotlinStagedCoreAuditResult.Verified)
+            .coachingSettingsRevision)
+        val file=java.nio.file.Files.list(temp.root.toPath()).use {stream->
+            stream.filter {it.fileName.toString().startsWith("coach-assistance-")}
+                .findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(file,bytes)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.COACH_SETTINGS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        assertArrayEquals(bytes,java.nio.file.Files.readAllBytes(file))
+    }
+
+    @Test fun stagedAuditFailsClosedOnOrphanPendingMachineFile() {
+        saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val suspicious=temp.root.toPath().resolve(
+            "workout-machine-"+
+            "a".repeat(64)+".pending")
+        java.nio.file.Files.write(suspicious,byteArrayOf(1,2,3))
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.MACHINE_CHOICES_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(
+                temp.root.toPath(),NativeKotlinOwnerIdentity(owner,athlete)))
+        assertArrayEquals(byteArrayOf(1,2,3),
+            java.nio.file.Files.readAllBytes(suspicious))
     }
 
     @Test fun stagedAuditRejectsCorruptedUnfinishedCustomJournalWithoutTouchingIt() {

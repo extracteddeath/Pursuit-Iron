@@ -34,6 +34,17 @@ sealed interface NativeWorkoutMachineChoiceResult {
     data class Rejected(val reason:String):NativeWorkoutMachineChoiceResult
 }
 
+/**
+ * Every persisted workout-machine selection must be accounted for, including
+ * archived and unfinished workouts. This inventory is read-only; callers must
+ * independently confirm gym, exercise and issued-workout identity.
+ */
+sealed interface NativeWorkoutMachineChoiceInventoryResult {
+    data class Verified(val choices:List<NativeWorkoutMachineChoiceSnapshot>):
+        NativeWorkoutMachineChoiceInventoryResult
+    data class Rejected(val reason:String):NativeWorkoutMachineChoiceInventoryResult
+}
+
 class NativeKotlinWorkoutMachineChoiceFileStore(private val root:Path) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val maxRevision=9_007_199_254_740_990L
@@ -130,6 +141,45 @@ class NativeKotlinWorkoutMachineChoiceFileStore(private val root:Path) {
             else NativeWorkoutMachineChoiceResult.Saved(recovered)
         }
     }.getOrElse{NativeWorkoutMachineChoiceResult.Rejected("UNREADABLE_OR_INVALID")}
+
+    /**
+     * Complete physical inventory of all native machine-choice records.
+     * A valid but foreign owner's record, an orphan, pending write, renamed
+     * file or corrupt checksum must never vanish from a restore audit.
+     * Caller holds the existing native owner transaction fence.
+     */
+    internal fun inventoryOwner(ownerId:String):
+        NativeWorkoutMachineChoiceInventoryResult = runCatching {
+        require(id.matches(ownerId))
+        if(!Files.exists(root,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            return@runCatching NativeWorkoutMachineChoiceInventoryResult.Verified(
+                emptyList())
+        require(!Files.isSymbolicLink(root) &&
+            Files.isDirectory(root,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+        val files=Files.list(root).use { stream->
+            stream.filter{it.fileName.toString().startsWith("workout-machine-")}
+                .toList()
+        }
+        require(files.size<=4096)
+        val snapshots=mutableListOf<NativeWorkoutMachineChoiceSnapshot>()
+        val names=mutableSetOf<String>()
+        for(file in files.sortedBy{it.fileName.toString()}) {
+            val name=file.fileName.toString()
+            require(Regex("^workout-machine-[a-f0-9]{64}\\.bin$").matches(name))
+            require(!Files.isSymbolicLink(file) &&
+                Files.isRegularFile(file,java.nio.file.LinkOption.NOFOLLOW_LINKS) &&
+                Files.size(file) in 44L..65_572L)
+            val snapshot=decode(Files.readAllBytes(file))
+            require(snapshot.ownerId==ownerId && snapshot.revision>0L &&
+                key(snapshot.ownerId,snapshot.workoutId,snapshot.custom)==file)
+            require(names.add(snapshot.workoutId+"|"+snapshot.custom))
+            snapshots.add(snapshot)
+        }
+        NativeWorkoutMachineChoiceInventoryResult.Verified(snapshots)
+    }.getOrElse {
+        NativeWorkoutMachineChoiceInventoryResult.Rejected(
+            "UNVERIFIED_OR_UNRECOGNIZED_WORKOUT_MACHINE_FILE")
+    }
 
     /** CAS under caller's owner fence; a full cold read precedes every write. */
     @Synchronized fun save(

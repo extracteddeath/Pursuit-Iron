@@ -12,8 +12,10 @@ import java.nio.file.Path
  *
  * This is a milestone toward a full beta restore verifier, NOT the final
  * release gate. Advanced future-block approvals, workout-machine-choice
- * orphans, every retained legacy format and every independent note/settings
- * file still need explicit inventory coverage before UI import is permitted.
+ * orphans, every retained legacy format and pinned-exercise notes,
+ * advanced approvals/signoffs still need explicit inventory coverage before
+ * UI import is permitted. Machine choices and coaching opt-out settings now
+ * use their existing native readers with complete physical file scans.
  * No workout, approval, note or training file is ever mutated by this API.
  */
 enum class NativeKotlinStagedCoreRefusal {
@@ -21,6 +23,8 @@ enum class NativeKotlinStagedCoreRefusal {
     AUTHORING_SOURCE_UNAVAILABLE,
     DRAFTS_UNVERIFIED,
     MACHINE_ROSTER_UNVERIFIED,
+    COACH_SETTINGS_UNVERIFIED,
+    MACHINE_CHOICES_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
     GENERATED_INVENTORY_UNVERIFIED,
@@ -37,7 +41,9 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val generatedUnfinished:Int,
         val customPrepared:Int,
         val customIssued:Int,
-        val customUnfinished:Int
+        val customUnfinished:Int,
+        val machineChoiceRecords:Int=0,
+        val coachingSettingsRevision:Long=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -76,6 +82,9 @@ object NativeKotlinStagedCoreStoreAudit {
             val handoff=NativeKotlinFutureActivationHandoffFileStore(
                 stagedRoot,fence,identity,sources)
             val machineRosters=NativeKotlinMachineRosterFileStore(stagedRoot)
+            val machineChoices=NativeKotlinWorkoutMachineChoiceFileStore(stagedRoot)
+            val coachSettings=NativeKotlinCoachAssistanceSettingsStore(
+                stagedRoot,fence,identity)
             val preflight=NativeKotlinCustomWorkoutPreflight(
                 fence,identity,drafts,sources,signoffs,machineRosters)
             val prepared=NativeKotlinCustomWorkoutPreparedStore(
@@ -113,6 +122,13 @@ object NativeKotlinStagedCoreStoreAudit {
                     !is NativeMachineRosterResult.Saved)
                     return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.MACHINE_ROSTER_UNVERIFIED)
+                val settings=coachSettings.inventoryOnlyCurrentOwner(
+                    expected.ownerKey) as? NativeCoachSettingsRead.Current
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.COACH_SETTINGS_UNVERIFIED)
+                if(settings.settings.athleteId!=expected.athleteId)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.COACH_SETTINGS_UNVERIFIED)
                 // Mixed History fully replays every manifest-backed
                 // generated/custom completion and all saved corrections.
                 val verifiedHistory=mixed.read(
@@ -156,6 +172,49 @@ object NativeKotlinStagedCoreStoreAudit {
                     })
                     return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.JOURNAL_MANIFEST_MISMATCH)
+                // All physical machine-choice files must correspond to
+                // exactly one owner-verified issued workout with its issued
+                // gym and a real exercise in that saved workout. No orphan,
+                // cross-gym selection or missing/corrupt record is silently
+                // dropped. The current gym roster can legitimately have
+                // changed since an older workout was issued.
+                val issuedCustom=custom.inventory(expected.ownerKey)
+                    as? NativeIssuedInventoryResult.Found
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.CUSTOM_INVENTORY_UNVERIFIED)
+                val choices=machineChoices.inventoryOwner(expected.ownerKey)
+                    as? NativeWorkoutMachineChoiceInventoryResult.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.MACHINE_CHOICES_UNVERIFIED)
+                val generatedById=generatedScan.journals.associateBy {
+                    it.snapshot.workoutId
+                }
+                val customById=issuedCustom.workouts.associateBy {
+                    it.journal.workoutId
+                }
+                if(choices.choices.any { choice ->
+                    if(choice.custom) {
+                        val issued=customById[choice.workoutId]
+                        issued==null ||
+                            choice.gymId!=issued.journal.originalSnapshot.stamp.gymId ||
+                            choice.machines.keys.any{exercise->
+                                issued.journal.snapshot.slots.none{
+                                    it.exerciseId==exercise
+                                }
+                            }
+                    } else {
+                        val issued=generatedById[choice.workoutId]
+                        issued==null ||
+                            choice.gymId!=issued.originalSnapshot.source.gymId ||
+                            choice.machines.keys.any{exercise->
+                                issued.snapshot.targets.none{
+                                    it.exerciseId==exercise
+                                }
+                            }
+                    }
+                })
+                    return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.MACHINE_CHOICES_UNVERIFIED)
                 NativeKotlinStagedCoreAuditResult.Verified(
                     expected.athleteId,timeline.manifestRevision,
                     timeline.completions.size,
@@ -163,7 +222,8 @@ object NativeKotlinStagedCoreStoreAudit {
                     generatedScan.journals.count{it.finishedByEventId==null},
                     customScan.sessions.size,
                     customScan.sessions.count{it.issued},
-                    customScan.outstanding.count{it.issued})
+                    customScan.outstanding.count{it.issued},
+                    choices.choices.size,settings.settings.revision)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

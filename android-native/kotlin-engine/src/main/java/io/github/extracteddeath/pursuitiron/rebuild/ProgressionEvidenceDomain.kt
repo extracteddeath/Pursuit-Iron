@@ -29,7 +29,9 @@ enum class ProgressionEvidenceSignal {
     BELOW_REP_FLOOR,
     BUILDING_REPS,
     MIXED_LOAD_CEILING,
-    UNIFORM_LOAD_CEILING_FOR_REVIEW
+    UNIFORM_LOAD_CEILING_FOR_REVIEW,
+    /** Rep ceiling in a signed unweighted bodyweight prescription: no load claim. */
+    UNLOADED_REP_CEILING_FOR_REVIEW
 }
 
 data class ProgressionEvidence(
@@ -62,22 +64,28 @@ object DoubleProgressionEvidenceDomain {
     fun assess(
         targets: RepBand,
         expectedWorkingSets: Int,
-        observations: List<WorkingSetFact>
+        observations: List<WorkingSetFact>,
+        /** Only the authenticated unweighted source may enable this mode.
+         * Never turn missing machine/dumbbell loads into bodyweight work. */
+        explicitlyUnloaded: Boolean = false
     ): ProgressionEvidence {
         require(expectedWorkingSets in 1..32)
         require(observations.size <= expectedWorkingSets)
         require(observations.map { it.workingOrdinal }.distinct().size == observations.size)
         for (observation in observations) {
             require(observation.workingOrdinal in 0 until expectedWorkingSets)
-            require(observation.issuedLoad == null || validLoad(observation.issuedLoad))
+            require(if(explicitlyUnloaded)observation.issuedLoad==null
+                else observation.issuedLoad==null || validLoad(observation.issuedLoad))
             require(observation.issuedRir == null || observation.issuedRir in 0..10)
             when(observation.outcome) {
                 SetOutcome.COMPLETED -> require(
-                    validLoad(observation.actualLoad) &&
+                    (if(explicitlyUnloaded)observation.actualLoad==null
+                        else validLoad(observation.actualLoad)) &&
                         observation.actualReps != null && observation.actualReps in 1..100 &&
                         (observation.actualRir == null || observation.actualRir in 0..10))
                 SetOutcome.FAILED_ATTEMPT -> require(
-                    validLoad(observation.actualLoad) &&
+                    (if(explicitlyUnloaded)observation.actualLoad==null
+                        else validLoad(observation.actualLoad)) &&
                         observation.actualReps == 0 && observation.actualRir == null)
                 SetOutcome.SKIPPED -> require(
                     observation.actualLoad == null &&
@@ -101,7 +109,8 @@ object DoubleProgressionEvidenceDomain {
             .map { it.workingOrdinal }.toSet()
         val effortKnown=completed.filter { it.actualRir != null }
             .map { it.workingOrdinal }.toSet()
-        val distinctLoads=completed.map { it.actualLoad!!.stripTrailingZeros() }.distinct()
+        val distinctLoads=if(explicitlyUnloaded)emptyList() else
+            completed.map { checkNotNull(it.actualLoad).stripTrailingZeros() }.distinct()
         val mixed=distinctLoads.size>1
 
         val signal=when {
@@ -109,6 +118,7 @@ object DoubleProgressionEvidenceDomain {
             below.isNotEmpty() -> ProgressionEvidenceSignal.BELOW_REP_FLOOR
             atCeiling.size!=expectedWorkingSets -> ProgressionEvidenceSignal.BUILDING_REPS
             mixed -> ProgressionEvidenceSignal.MIXED_LOAD_CEILING
+            explicitlyUnloaded ->ProgressionEvidenceSignal.UNLOADED_REP_CEILING_FOR_REVIEW
             else -> ProgressionEvidenceSignal.UNIFORM_LOAD_CEILING_FOR_REVIEW
         }
         return ProgressionEvidence(

@@ -26,8 +26,12 @@ const webPaths=[
   'modules/next-engine/extended-exercise-catalog.js'
 ];
 const native=readFileSync(nativePath,'utf8');
-const nativeStarterIds=[...native.matchAll(/\bentry\("([a-z0-9_]+)"/g)].map(m=>m[1]);
-const webIds=EXERCISES.map(ex=>ex.id);
+export function parseNativeStarterIds(source) {
+  // Canonical web IDs include both underscores and hyphens. Never silently
+  // omit valid Kotlin entries such as wrist-curl and reverse-wrist-curl.
+  return [...source.matchAll(/\\bentry\\("([a-z0-9_-]+)"/g)].map(m=>m[1]);
+}
+const nativeStarterIds=parseNativeStarterIds(native);
 const sha256=buffer=>createHash('sha256').update(buffer).digest('hex');
 
 export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
@@ -75,6 +79,12 @@ export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
 }
 
 function selfTest() {
+  assert.deepEqual(parseNativeStarterIds(
+    'entry("bench","family",...)\\nentry("wrist-curl","family",...)\\nentry("reverse-wrist-curl","family",...)'
+  ),['bench','wrist-curl','reverse-wrist-curl'],
+  'hyphenated canonical IDs must not vanish from Kotlin starter inventory');
+  assert.equal(nativeStarterIds.length,22,
+    'starter parser must include every one of the 22 declared definitions');
   const sample=[
     {id:'bench',name:'Bench',movementFamily:'horizontal_press'},
     {id:'cable_press',name:'Cable Press',movementFamily:'horizontal_press'}

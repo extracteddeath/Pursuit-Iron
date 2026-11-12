@@ -26,6 +26,7 @@ enum class NativeKotlinStagedCoreRefusal {
     COACH_SETTINGS_UNVERIFIED,
     MACHINE_CHOICES_UNVERIFIED,
     PINNED_NOTES_UNVERIFIED,
+    ADAPTIVE_PERMISSIONS_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
     GENERATED_INVENTORY_UNVERIFIED,
@@ -45,7 +46,9 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val customUnfinished:Int,
         val machineChoiceRecords:Int=0,
         val coachingSettingsRevision:Long=0,
-        val pinnedExerciseNotes:Int=0
+        val pinnedExerciseNotes:Int=0,
+        val adaptivePermissionRecords:Int=0,
+        val revokedAdaptivePermissions:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -88,6 +91,8 @@ object NativeKotlinStagedCoreStoreAudit {
             val coachSettings=NativeKotlinCoachAssistanceSettingsStore(
                 stagedRoot,fence,identity)
             val pinnedNotes=NativeKotlinPinnedExerciseNoteFileStore(
+                stagedRoot,fence,identity)
+            val adaptivePermissions=NativeKotlinAdaptiveCyclePermissionFileStore(
                 stagedRoot,fence,identity)
             val preflight=NativeKotlinCustomWorkoutPreflight(
                 fence,identity,drafts,sources,signoffs,machineRosters)
@@ -140,6 +145,13 @@ object NativeKotlinStagedCoreStoreAudit {
                     as? NativePinnedNoteInventory.Verified
                     ?:return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.PINNED_NOTES_UNVERIFIED)
+                // A revoked permission is a durable athlete decision, not
+                // equivalent to a missing/default permission. Preserve all
+                // valid historical cycle grants, even if a cycle was retired.
+                val permissions=adaptivePermissions.inventoryOwner(expected.ownerKey)
+                    as? NativeAdaptivePermissionInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.ADAPTIVE_PERMISSIONS_UNVERIFIED)
                 // Mixed History fully replays every manifest-backed
                 // generated/custom completion and all saved corrections.
                 val verifiedHistory=mixed.read(
@@ -235,7 +247,8 @@ object NativeKotlinStagedCoreStoreAudit {
                     customScan.sessions.count{it.issued},
                     customScan.outstanding.count{it.issued},
                     choices.choices.size,settings.settings.revision,
-                    notes.notes.size)
+                    notes.notes.size,permissions.records.size,
+                    permissions.records.count{it.revoked})
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

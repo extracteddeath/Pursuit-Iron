@@ -189,6 +189,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
             "Old machine pad reference",mapOf("oldPadSetting" to "7"))
         assertTrue(oldExercise.toString(),
             oldExercise is NativePinnedNoteWrite.Saved)
+        val permissions=NativeKotlinAdaptiveCyclePermissionFileStore(
+            d.root,d.fence,identity)
+        val currentKinds=setOf(CustomCycleChangeKind.EXERCISES,
+            CustomCycleChangeKind.SPLIT)
+        assertEquals(NativeAdaptivePermissionWrite.Committed(1),
+            permissions.confirm(owner,cycleId,0,currentKinds,true))
+        assertEquals(NativeAdaptivePermissionWrite.Committed(1),
+            permissions.confirm(owner,"retired-cycle",0,
+                setOf(CustomCycleChangeKind.DAY_COUNT),true))
+        assertEquals(NativeAdaptivePermissionWrite.Committed(2),
+            permissions.revoke(owner,"retired-cycle",1))
         val expected=NativeKotlinOwnerIdentity(owner,athlete)
         val before=NativeKotlinStagedCoreStoreAudit.inspect(d.root,expected)
         assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
@@ -201,6 +212,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(1,active.machineChoiceRecords)
         assertEquals(1L,active.coachingSettingsRevision)
         assertEquals(2,active.pinnedExerciseNotes)
+        assertEquals(2,active.adaptivePermissionRecords)
+        assertEquals(1,active.revokedAdaptivePermissions)
         val originalPinned=(pinned.read(owner,firstExercise)
             as NativePinnedNoteRead.Current).note
         val retiredPinned=(pinned.read(owner,"retired_press")
@@ -234,6 +247,14 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(retiredPinned,
             (restoredPinned.read(owner,"retired_press")
                 as NativePinnedNoteRead.Current).note)
+        val coldPermissions=NativeKotlinAdaptiveCyclePermissionFileStore(
+            restoredRoot,NativeKotlinApprovalRevisionFence(restoredRoot),
+            NativeKotlinCurrentIdentity{expected})
+        assertEquals(currentKinds,
+            (coldPermissions.read(owner,cycleId)
+                as NativeAdaptivePermissionRead.Found).receipt.allowedKinds)
+        assertEquals(NativeAdaptivePermissionRead.Revoked(2),
+            coldPermissions.read(owner,"retired-cycle"))
         val restoredIdentity=NativeKotlinCurrentIdentity{expected}
         val restoredFence=NativeKotlinApprovalRevisionFence(restoredRoot)
         val drafts=NativeCustomCycleDraftFileStore(
@@ -254,6 +275,45 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(original,reopened.issued.journal)
         assertEquals(original,(Disk().journals.open(owner,id)
             as NativeCustomJournalResult.Durable).issued.journal)
+    }
+
+    @Test fun stagedAuditRefusesCorruptAndPendingAdaptiveCyclePermissions() {
+        saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val expected=NativeKotlinOwnerIdentity(owner,athlete)
+        val permissions=NativeKotlinAdaptiveCyclePermissionFileStore(
+            temp.root.toPath(),Disk().fence,identity)
+        assertEquals(NativeAdaptivePermissionWrite.Committed(1),
+            permissions.confirm(owner,cycleId,0,
+                setOf(CustomCycleChangeKind.EXERCISES),true))
+        val before=NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected)
+        assertTrue(before.toString(),
+            before is NativeKotlinStagedCoreAuditResult.Verified)
+        assertEquals(1,(before as NativeKotlinStagedCoreAuditResult.Verified)
+            .adaptivePermissionRecords)
+        val path=java.nio.file.Files.list(temp.root.toPath()).use{stream->
+            stream.filter{it.fileName.toString().startsWith("adapt-permission-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val original=java.nio.file.Files.readAllBytes(path)
+        val broken=original.copyOf()
+        broken[broken.lastIndex]=(broken.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(path,broken)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.ADAPTIVE_PERMISSIONS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        assertArrayEquals(broken,java.nio.file.Files.readAllBytes(path))
+        java.nio.file.Files.write(path,original)
+        val pending=path.resolveSibling(
+            "adapt-permission-"+"e".repeat(64)+".pending")
+        java.nio.file.Files.write(pending,byteArrayOf(4))
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.ADAPTIVE_PERMISSIONS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        java.nio.file.Files.delete(pending)
+        assertTrue(NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected) is NativeKotlinStagedCoreAuditResult.Verified)
     }
 
     @Test fun stagedAuditRejectsCorruptOrPendingNotesRatherThanLosingSetupData() {

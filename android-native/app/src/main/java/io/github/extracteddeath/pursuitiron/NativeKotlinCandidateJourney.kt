@@ -31,11 +31,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Source-only KOTLIN-OWNED journey, intentionally not substituted for the
- * live app's NativeRuntimeHost or legacy-backed MainActivity screen.
- *
- * Mounted by the debug-only Kotlin Lab launcher. Shared controllers keep a single app-private source owner
- * while screen navigation preserves authored draft revisions.
+ * Kotlin-owned onboarding, program, training and history journey.
+ * The normal beta launcher and isolated debug lab now share this one UI.
+ * Signed source/receipt stores, not Compose state, own training decisions.
  */
 private enum class KotlinCandidateDestination(val label:String) {
     ONBOARD("My setup"),GYM("My gym"),STARTER("Build first"),PROGRAM("My program"),

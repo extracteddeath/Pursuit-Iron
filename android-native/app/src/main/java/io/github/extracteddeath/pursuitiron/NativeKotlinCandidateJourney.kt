@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeApprovalWriteResult
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinShortSessionStatus
@@ -141,12 +142,27 @@ internal fun NativeKotlinCandidateJourney(
                 if(unfinished?.workouts?.isNotEmpty()==true)
                     KotlinCandidateDestination.TRAIN
                 else {
-                    val programs=runCatching {
-                        host.listOwnedCustomCycleDrafts()
-                    }.getOrNull() as? NativeCustomDraftListResult.Ready
-                    if(programs?.drafts?.isNotEmpty()==true)
-                        KotlinCandidateDestination.PROGRAM
-                    else KotlinCandidateDestination.ONBOARD
+                    // A cold launch must recognize an unfinished GENERATED
+                    // Kotlin journal too. Its current owner/approval is
+                    // independently rechecked; an approved but unissued or
+                    // already Finished workout is not a resume candidate.
+                    // Navigation alone never issues/records any set.
+                    val generated=runCatching {
+                        host.currentlyApprovedKotlinWorkoutId()?.let { id ->
+                            host.recoverWorkout(id)
+                        }
+                    }.getOrNull() as? NativeJournalFileResult.Durable
+                    if(generated!=null &&
+                        generated.journal.finishedByEventId==null)
+                        KotlinCandidateDestination.TRAIN
+                    else {
+                        val programs=runCatching {
+                            host.listOwnedCustomCycleDrafts()
+                        }.getOrNull() as? NativeCustomDraftListResult.Ready
+                        if(programs?.drafts?.isNotEmpty()==true)
+                            KotlinCandidateDestination.PROGRAM
+                        else KotlinCandidateDestination.ONBOARD
+                    }
                 }
             }
             // Do not steal focus after a deliberate tab choice, or from a
@@ -590,6 +606,55 @@ private fun NativeKotlinCandidateTrainEntry(
                     Text("Your completed sets are loaded from the saved journal. Unsubmitted edits are never treated as recorded sets.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            // This is the COLD-RESTART case: a disk-issued generated
+            // session exists, but there is no in-memory minimized shortcut.
+            // Keep resume visible before the custom-workout inventory and
+            // time-choice controls. Reverify the current athlete and journal
+            // on click; showing the card never creates a workout.
+            timePreview?.takeIf {
+                it.alreadyIssued && minimizedGeneratedId==null
+            }?.let { issued ->
+                PursuitCard(highlighted=true) {
+                    PursuitSectionHeading("Resume your saved workout",
+                        "Your previously recorded sets and prescribed weights are kept.")
+                    PursuitPrimaryAction("Resume saved workout",
+                        enabled=!resumeChecking && !searching && !reviewingResume &&
+                            !timePreviewBusy,
+                        onClick={
+                            if(!resumeChecking && !searching && !reviewingResume) {
+                                resumeChecking=true
+                                selectionMessage=null
+                                scope.launch {
+                                    try {
+                                        val isCurrentAndUnfinished=withContext(
+                                            Dispatchers.IO
+                                        ) {
+                                            runCatching {
+                                                val approved=host.currentlyApprovedKotlinWorkoutId()
+                                                if(approved!=issued.workoutId)false
+                                                else {
+                                                    val opened=host.recoverWorkout(
+                                                        issued.workoutId)
+                                                    opened is NativeJournalFileResult.Durable &&
+                                                        opened.journal.finishedByEventId==null
+                                                }
+                                            }.getOrDefault(false)
+                                        }
+                                        if(selectedId==null && customWorkoutId==null &&
+                                            timePreview?.workoutId==issued.workoutId) {
+                                            if(isCurrentAndUnfinished)
+                                                selectedId=issued.workoutId
+                                            else {
+                                                timePreview=null
+                                                selectionMessage="The saved workout could not be verified. Review your current program or refresh Train."
+                                            }
+                                        }
+                                    } finally {resumeChecking=false}
+                                }
+                            }
+                        })
                 }
             }
             selectionMessage?.takeIf{minimizedGeneratedId==null}?.let {

@@ -182,7 +182,6 @@ class StarterCatalogPrescribingAcceptanceTest {
                     else
                         assertEquals(expected,
                             (set.load as DraftSetLoad.Verified).value)
-                    assertEquals(SetLoadScheme.STRAIGHT,SetLoadScheme.STRAIGHT)
                     assertEquals(2,set.targetRir)
                 }
             }

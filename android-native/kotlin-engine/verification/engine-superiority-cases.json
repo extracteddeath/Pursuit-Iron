@@ -347,6 +347,39 @@
       "requiredProof": [
         "human"
       ]
+    },
+    {
+      "id": "issued-straight-set-load-stability",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "Generated and authored-custom four-set straight prescriptions of 215 lb at 5–8 reps encounter repeated 2-rep/0-RIR results, navigation, unsaved athlete edits, cold resume, corrections, fatigue/coaching switches and next-session reapproval. Contrast with intentionally authored and labeled back-off sets.",
+      "expected": "All original issued working targets stay exactly 215 lb across every transition until the athlete explicitly authorizes a new prescription; actual logged loads, optional suggestions and named back-offs remain separate. No RIR or fatigue observation silently changes this workout or a future week.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "physical-machine-a-b-isolation",
+      "domain": "equipment",
+      "severity": "critical",
+      "scenario": "At one gym a machine chest press has physical A/B stations with different calibrations; switch A to B, edit an unsaved B load, return to A and reopen after restart. Compare with another gym default and prior logged PRs.",
+      "expected": "Both real machines preserve distinct verified loading, independent historical baselines, unsaved edits, coaching observations, PRs and gym defaults. Never label B a sudden strength loss or borrow A fatigue evidence; changing a source must require revalidation.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "same-exercise-separate-day-progression",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "A five-day ULPPL strength block includes bench on Upper and Push with distinct weights, repetition demands, context and subsequent performance, including a missed Push exposure.",
+      "expected": "An earned Upper bench adjustment does not overwrite Push targets, history or progression; both days retain meaningful lift practice, exact stock rounding and independent fatigue/recovery evidence across blocks.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
     }
   ]
 }

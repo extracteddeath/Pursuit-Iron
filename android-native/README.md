@@ -9,9 +9,12 @@ MainActivity now opens the existing Kotlin-owned journey directly;
 the debug Kotlin Lab launcher subclasses it so both use exactly the same
 navigation. No JS engine is initialized at launch. The dormant old JS code
 and `:engine-runtime` dependency are **still on the release classpath**:
-the early-beta release guard remains intentionally blocking until that
-legacy dependency is removed. Old JS workouts are **not silently imported**
-to the Kotlin store, and on-device acceptance is still required.
+old JavaScript components now compile only for debug and are not linked into
+the release classpath. The source-only CI compiles the Kotlin-only release
+sources, verifies no legacy classes or runtime dependency, then stops.
+**Release packaging is still blocked** until real-device acceptance, verified
+data recovery and stable-signed update continuity. Old JS workouts are **not
+silently imported** into the Kotlin store.
 
 This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
 

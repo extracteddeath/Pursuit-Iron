@@ -229,7 +229,7 @@ class StarterExerciseTrancheTest {
             choice("leg_press",n("100")))
         val reviewed=CoachExerciseCatalogDomain.review(
             StarterExerciseTranche.forGym(template(),selections,
-                gym(facilities=emptySet(),stock=gymStock)))
+                gym(facilities=setOf("flat-bench"),stock=gymStock)))
         assertEquals(CatalogWeekStatus.VERIFIED_CATALOG_DRAFT_FOR_REVIEW,
             reviewed.status)
         val draft=checkNotNull(reviewed.draft)

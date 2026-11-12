@@ -16,8 +16,13 @@ assert.match(settings, /include\(":app", ":domain-contract", ":engine-runtime"(?
   'The original read-only sandbox modules must stay registered, even after the independent Kotlin engine and coach store are included');
 assert.match(settings, /":kotlin-engine"/);
 assert.match(settings, /":native-coach-store"/);
-assert.match(app, /implementation\(project\(":engine-runtime"\)\)/,
-  'App needs the independently gated read-only metadata runtime');
+assert.doesNotMatch(app, /implementation\(project\(":engine-runtime"\)\)/,
+  'Read-only JS sandbox stays in the research module, never the Kotlin beta app');
+assert.ok(app.includes('"**/NativeKotlin*.kt"') &&
+  app.includes('verification/BETA_DEVICE_ACCEPTANCE.md') &&
+  app.includes('addGeneratedSourceDirectory(') &&
+  app.includes('kotlin.setSrcDirs(emptyList<String>())'),
+  'Kotlin beta must use an explicit source allowlist and keep device acceptance gate');
 const shell = read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt');
 const activity = read('app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
 const packaged = read('app/src/main/java/io/github/extracteddeath/pursuitiron/PackagedReadOnlySchemaVerifier.kt');

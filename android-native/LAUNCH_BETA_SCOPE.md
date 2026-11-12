@@ -38,6 +38,14 @@ a production-store AAB milestone, or permission to ship incomplete code.
    personal record but **not a restorable app backup**: it does not recover
    unfinished journals, program approval, equipment or app-private ownership.
    Tested complete recovery remains a separate beta release blocker.
+   A versioned, password-encrypted, owner-fenced snapshot of the entire
+   app-private Kotlin training directory is now implemented and tested
+   against actual completed/corrected journal and History bytes; an
+   isolated test-directory cold replay also succeeds. This is strictly a
+   development-only archive foundation. **No user-facing backup button or
+   app restore exists yet**; no beta may be released until explicit
+   clean-device staging, full receipt/owner validation, atomic restore,
+   rollback, and on-device export/import acceptance succeed.
 
 ## Not beta blockers / do not ship as misleading unfinished UI
 

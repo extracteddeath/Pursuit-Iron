@@ -1134,7 +1134,6 @@ class CustomNextWorkoutCoachingDomainTest {
         val b2=station(2,2,"B")
         val a3=station(3,3,"A")
         val a4=station(4,4,"A")
-        val a5=station(5,5,"A")
         val mixed=b2.copy(evidence=b2.evidence.copy(visits=
             b2.evidence.visits.mapIndexed {index,visit->
                 visit.copy(actual=visit.actual?.copy(
@@ -1187,10 +1186,13 @@ class CustomNextWorkoutCoachingDomainTest {
             // A failed/unassigned workout AFTER the latest A is also an
             // unresolved next-session boundary, not an invitation to revive
             // the two older successful A workouts.
-            val after=unrecorded.copy(completionOrder=4,
-                snapshot=snapshot(4),
-                evidence=unrecorded.evidence.copy(
-                    workoutId="workout-4-0",finishEventId="finish-4-0"))
+            val after=completed(4,4).let {base ->
+                base.copy(evidence=base.evidence.copy(visits=
+                    base.evidence.visits.map {visit ->
+                        visit.copy(outcome=KotlinJournalSetOutcome.SKIPPED,
+                            actual=null)
+                    }))
+            }
             val newestUnknown=machineReview(listOf(a1,a3,after),5,policy)
             assertEquals(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
                 newestUnknown.status)

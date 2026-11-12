@@ -56,7 +56,10 @@ class CoachFirstProgramFiveDayStrengthTest {
         reviewed:AthleteSetupReview=setup(),
         starts:Map<String,BigDecimal> =calibrations(),
         phase:TrainingPhase=TrainingPhase.STRENGTH,
-        overhead:Int=2100,
+        // Match the production first-program default: 15 minutes of declared
+        // non-set/setup time, instead of forcing a 35-minute overhead into
+        // a 40–60-minute bucket before the actual lifts are counted.
+        overhead:Int=900,
         version:String=CoachFirstProgramStartDomain.POLICY_VERSION
     )=FirstProgramStartRequest(reviewed,
         StarterExerciseTranche.movements(),starts,emptySet(),phase,
@@ -174,7 +177,16 @@ class CoachFirstProgramFiveDayStrengthTest {
             input(reviewed=absentBar))
         assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,absent.status)
         assertFalse(absent.mayIssueWorkout)
-        val tooLong=CoachFirstProgramStartDomain.review(input(overhead=3600))
+        // The failed v7 rehearsal with 35 minutes of non-set overhead
+        // had correct named lifts but sessions lasting 60–80 minutes.
+        // The product must refuse that 40–60-minute preview rather than
+        // silently hide the violation or reduce the required 2/2/1 visits.
+        val cramped=CoachFirstProgramStartDomain.review(input(overhead=2100))
+        assertEquals(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,cramped.status)
+        assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+            cramped.policy?.primaryLiftMinimumDays)
+        assertFalse(cramped.mayIssueWorkout)
+                val tooLong=CoachFirstProgramStartDomain.review(input(overhead=3600))
         assertEquals(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,tooLong.status)
         assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
             tooLong.policy?.primaryLiftMinimumDays)

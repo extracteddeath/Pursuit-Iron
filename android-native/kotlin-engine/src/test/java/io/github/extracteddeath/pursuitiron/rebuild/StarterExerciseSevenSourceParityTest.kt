@@ -59,6 +59,20 @@ class StarterExerciseSevenSourceParityTest {
             byId.getValue("cable_fly").movement.equipmentId)
     }
 
+    @Test fun exerciseRepRangesMatchActualEffectiveWebSource() {
+        val declared=mapOf("db-bench" to RepBand(8,12),
+            "db-fly" to RepBand(12,18),
+            "db-shoulder" to RepBand(8,12),
+            "inc-curl" to RepBand(8,12),
+            "hammer" to RepBand(10,15),
+            "face-pull" to RepBand(12,20),
+            "pec-deck" to RepBand(12,20))
+        for((id,repBand) in declared) {
+            assertEquals(id,repBand,byId.getValue(id).practicalRepBand)
+            assertEquals(id,repBand,byId.getValue(id).movement.sourcePracticalReps)
+        }
+    }
+
     @Test fun brachialisAndBicepsAreNotAccidentallyMerged() {
         val neutral=byId.getValue("hammer").movement
         val incline=byId.getValue("inc-curl").movement

@@ -41,7 +41,11 @@ const appended=['wrist-curl','reverse-wrist-curl',
   'cable_fly','chest_supported_row','neutral_pulldown',
   'rear_delt_fly','machine_ohp','preacher_curl',
   'cable_curl','cable_triceps','overhead_cable_triceps',
-  'standing_calf','cable_crunch'];
+  'standing_calf','cable_crunch',
+  // Preserve the original reviewed 42 in order. New source-linked
+  // identities must be appended, not spliced into old persisted IDs.
+  'db-bench','db-fly','db-shoulder','inc-curl','hammer',
+  'face-pull','pec-deck'];
 assert.deepEqual(declared.slice(baseline.length),appended,
   'Appended reviewed identities must not be lost or silently reordered');
 assert.equal(new Set(declared).size,declared.length);
@@ -126,6 +130,34 @@ for(const fragment of [
   'entry("cable_crunch","trunk_flexion","cable-rope"',
   'direct(TrainingMuscle.ABS),attachmentId="rope"'
 ])assert.ok(source.includes(fragment),'Missing independently authored stock rule '+fragment);
+
+// Exact active web extended IDs, practical rep ranges and source equipment
+// are checked against the live canonical map, not trusted because the Kotlin
+// author merely typed their names. No transfer of web fatigue coefficients.
+for(const [id,family,reps,equipment] of [
+  ['db-bench','horizontal_press',[8,12],['dumbbell','bench']],
+  ['db-fly','chest_adduction',[12,18],['dumbbell','bench']],
+  ['db-shoulder','vertical_press',[8,12],['dumbbell']],
+  ['inc-curl','elbow_flexion',[8,12],['dumbbell','inclinebench']],
+  ['hammer','elbow_flexion',[10,15],['dumbbell']],
+  ['face-pull','rear_delt',[12,20],['cable']],
+  ['pec-deck','chest_adduction',[12,20],['pecdeck']]
+]) {
+  const web=EXERCISE_MAP.get(id);
+  assert.ok(web,'Missing actual live web source definition '+id);
+  assert.equal(web.movementFamily,family,'Live movement family drift '+id);
+  assert.deepEqual(web.practicalReps,reps,'Live practical reps drift '+id);
+  assert.deepEqual(web.equipment,equipment,'Live gym equipment drift '+id);
+  assert.equal(web.source,'legacy_v661','Missing original web source provenance '+id);
+  const kotlin=source.match(new RegExp('\\bentry\\("'+id+'","[^"]+","[^"]+"'));
+  assert.ok(kotlin,'Kotlin identity absent '+id);
+  assert.ok(source.includes(','+reps[0]+'..'+reps[1]+',\n            "Active web'),
+    'Kotlin practical rep range changed '+id);
+}
+assert.ok(source.includes('direct(TrainingMuscle.BRACHIALIS)'),
+  'Source brachialis subregion must remain explicitly distinct from biceps and generic forearms');
+assert.ok(source.includes('direct(TrainingMuscle.BICEPS)'),
+  'Biceps work remains independently tracked from brachialis');
 
 for(const id of ['one_arm_db_row','db_rdl','barbell_row','rdl','conventional_deadlift','db_rear_delt_raise','pullup']) {
   assert.ok(Object.hasOwn(indexed.get(id).muscles,'back'),

@@ -233,6 +233,8 @@ object CustomNextWorkoutCoachingDomain {
         var assumedForReview=0
         var trendDrops:List<Int> = emptyList()
         var hasComparableReportedTrend=false
+        // Canonical source owns current-policy uncertainty and provenance.
+        var sharedForecastLimitations:Set<RepForecastLimitation> = emptySet()
         fun result(
             status:CustomNextWorkoutCoachingStatus,
             ids:List<String> = emptyList(),latest:String?=null,
@@ -254,6 +256,13 @@ object CustomNextWorkoutCoachingDomain {
                     add(RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
                     if(reps.dropLast(1).any {it.changed})
                         add(RepForecastLimitation.EARLIER_SET_WORK_CHANGED)
+                    addAll(sharedForecastLimitations)
+                    // Only a genuine comparable prior V3 history can
+                    // remove the one-session uncertainty flag.
+                    if(request.repForecastPolicy==
+                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3 &&
+                        hasComparableReportedTrend)
+                        remove(RepForecastLimitation.SINGLE_EXPOSURE)
                 }
             else emptySet(),
             Collections.unmodifiableList(trendDrops.toList()))
@@ -439,62 +448,133 @@ object CustomNextWorkoutCoachingDomain {
             }
         }
 
-        // V1 replay retains its exact one-rep-per-set behavior. New opt-in
-        // V2 estimates each ordinal at its OWN intended RIR; no invented
-        // universal one-rep ceiling and no heaviest-set load transfer.
-        // Neither approach predicts capacity after extra earlier-set work.
-        // Set keys include absolute week; join the last completed set to
-        // next week's set by stable slot ordinal, never by different-week ID.
-        val proposed=nextSets.zip(oldSets).map {(set,previousSet)->
-            val observation=facts.single{it.setKey==previousSet.setKey}
-            val actual=checkNotNull(observation.actual)
-            val upper=set.prescription.reps.maximum
-            val lower=set.prescription.reps.minimum
-            val issued=set.prescription.load
-            val sameIssued=when(issued) {
-                is DraftSetLoad.Verified ->
-                    actual.load!=null && actual.unit==issued.unit &&
-                        same(actual.load,issued.value)
-                DraftSetLoad.ExplicitBodyweight ->
-                    actual.load==null && actual.unit==null
-            }
-            val observed=actual.reps.coerceIn(lower,upper)
-            val effortForSet=effort.getValue(previousSet.setKey)
-            val next=if(!sameIssued || actual.reps>upper) observed
-                else when(request.repForecastPolicy) {
-                    CustomRepForecastPolicy.LEGACY_STEP_V1 ->
-                        if(checkNotNull(effortForSet.rir)>=2)
-                            (observed+1).coerceAtMost(upper) else observed
-                    CustomRepForecastPolicy.TARGET_RIR_V2,
-                    CustomRepForecastPolicy.TARGET_RIR_TREND_V3 -> {
-                        // Use the SAME canonical target-RIR feasibility
-                        // as generated sessions. Never raise a below-floor
-                        // estimate into an unearned minimum prescription.
-                        FatigueAwareRepTargetReviewDomain.estimateTargetRirReps(
-                            actual.reps,checkNotNull(effortForSet.rir),
-                            checkNotNull(set.prescription.targetRir),
-                            set.prescription.reps)
-                    }
-                }
-            if(next==null)null else CustomNextSetCoaching(
-                set.setKey,actual.reps,next,actual.actualRir,
-                next>observed,effortForSet.rir,effortForSet.source)
-        }
-        if(proposed.any{it==null})
-            return result(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
-                ids,latest.evidence.workoutId,
-                explanation="At the prescribed goal RIR, at least one completed set is projected below its minimum rep target. Review that set's verified load, range or recovery before changing the future program. No reps were raised to an invented minimum.")
-        val suggestions=proposed.filterNotNull()
-        val increased=suggestions.any{it.changed}
-        // Exceeding an authored rep ceiling is not permission to package a
-        // LOWER capped rep number as an "earned" rep increase. V2/V3 can
-        // still evaluate an independently supported, physically verified
-        // LOAD step below. Signed legacy V1 results retain exact replay.
+        // Current custom and generated sessions use the SAME complete
+        // FatigueAwareRepTargetReviewDomain assessment. This adapter only
+        // translates exact, owner-verified custom slot receipts to its
+        // canonical working-set evidence. No second rep/effort rule lives here.
+        // Historical V1 alone retains its frozen, previously accepted steps.
         val overshotRepCeiling=request.repForecastPolicy.usesTargetRir() &&
-            facts.any{fact->
+            facts.any {fact->
                 val issued=oldSets.single{it.setKey==fact.setKey}
                 checkNotNull(fact.actual).reps>issued.prescription.reps.maximum
             }
+        val currentReview=if(request.repForecastPolicy.usesTargetRir()) {
+            val bands=nextSets.map{it.prescription.reps}.distinct()
+            val unloaded=nextSets.all{
+                it.prescription.load==DraftSetLoad.ExplicitBodyweight
+            } && oldSets.all{
+                it.prescription.load==DraftSetLoad.ExplicitBodyweight
+            }
+            val loads=nextSets.map{it.prescription.load as? DraftSetLoad.Verified}
+            val verified=loads.filterNotNull()
+            if(bands.size!=1 || (!unloaded && (
+                verified.size!=nextSets.size ||
+                verified.map{it.unit}.distinct().size!=1 ||
+                verified.map{it.basis}.distinct().size!=1)))
+                return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+                    ids,latest.evidence.workoutId,
+                    explanation="This set scheme needs a consistent verified implement or explicit unloaded bodyweight identity and compatible rep ranges for the shared next-session review.")
+            val observations=oldSets.mapIndexed{ordinal,set->
+                val receipt=facts.single{it.setKey==set.setKey}
+                val actual=receipt.actual
+                WorkingSetFact(ordinal,when(receipt.outcome) {
+                    KotlinJournalSetOutcome.COMPLETED->SetOutcome.COMPLETED
+                    KotlinJournalSetOutcome.SKIPPED->SetOutcome.SKIPPED
+                    KotlinJournalSetOutcome.FAILED_ATTEMPT->SetOutcome.FAILED_ATTEMPT
+                },actual?.load,actual?.reps,actual?.actualRir,
+                    (set.prescription.load as? DraftSetLoad.Verified)?.value,
+                    set.prescription.targetRir)
+            }
+            runCatching {
+                val goals=nextSets.map{it.prescription.targetRir}
+                if(unloaded)
+                    FatigueAwareRepTargetReviewDomain.assessBodyweight(
+                        BodyweightRepTargetEvidence(
+                            latest.evidence.workoutId,target.exerciseId,
+                            bands.single(),oldSets.size,observations),
+                        request.readiness,request.movementRestricted,
+                        targetRirByOrdinal=goals)
+                else FatigueAwareRepTargetReviewDomain.assess(
+                    ProgressionWorkoutEvidence(latest.evidence.workoutId,
+                        target.exerciseId,verified.first().unit,
+                        bands.single(),oldSets.size,observations,
+                        trainingDayId="${request.next.stamp.cycleId}:${request.next.weekday}:${target.slotId}"),
+                    request.verifiedStock,verified.first().basis,
+                    request.readiness,request.movementRestricted,
+                    // Mixed loads are acceptable only because the already
+                    // signed custom slot supplies each immutable load and
+                    // the canonical policy verifies EVERY recorded increment.
+                    verifiedPerSetLoading=true,
+                    policyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2,
+                    targetRirByOrdinal=goals,
+                    // A same-slot signed, unchanged-load REP preview can
+                    // survive an unavailable current gym read. This NEVER
+                    // earns a load step, bypasses contradictory stock, or
+                    // applies to unverified physical Machine A/B stations.
+                    unchangedIssuedLoadReviewOnly=
+                        request.verifiedStock==null &&
+                        request.requestedMachineInstanceId==null)
+            }.getOrElse {
+                return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
+                    ids,latest.evidence.workoutId,
+                    explanation="The authentic working-set evidence could not be reviewed under the shared target-RIR policy.")
+            }
+        } else null
+
+        sharedForecastLimitations=currentReview?.forecastLimitations.orEmpty()
+
+        // All present and future V2/V3 rep outcomes come from the canonical
+        // assessment, including load verification, user edits, rep ceilings,
+        // missing RIR and per-set fatigue uncertainty. Only V1 uses a frozen
+        // compatibility algorithm for previously accepted receipts.
+        if(currentReview!=null) when(currentReview.reason) {
+            FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW ->
+                return result(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+                    ids,latest.evidence.workoutId,
+                    explanation="At the prescribed goal RIR, at least one completed set is projected below its minimum rep target. Review that set's verified load, range or recovery before changing the future program. No reps were raised to an invented minimum.")
+            FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
+            FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM,
+            FatigueRepReviewReason.ALREADY_AT_REP_CEILING,
+            // An over-ceiling session can STILL earn an independent
+            // verified load review from two compatible complete workouts.
+            FatigueRepReviewReason.REP_CEILING_OVERSHOT_REQUIRES_LOAD_REVIEW -> Unit
+            else ->return result(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+                ids,latest.evidence.workoutId,
+                explanation="The shared target-RIR review rejected these working-set facts: ${currentReview.reason}. Do not invent a new rep or load target.")
+        }
+
+        val targets=currentReview?.candidateRepTargets
+        val suggestions=nextSets.zip(oldSets).mapIndexed{ordinal,(set,previousSet)->
+            val observation=facts.single{it.setKey==previousSet.setKey}
+            val actual=checkNotNull(observation.actual)
+            val observed=actual.reps.coerceIn(
+                set.prescription.reps.minimum,set.prescription.reps.maximum)
+            val effortForSet=effort.getValue(previousSet.setKey)
+            val next=if(currentReview!=null) {
+                targets?.get(ordinal) ?: observed
+            } else {
+                // Frozen V1: historical receipt replay only; no new V1
+                // algorithm is added and no old approval is rewritten.
+                val issued=set.prescription.load
+                val sameIssued=when(issued) {
+                    is DraftSetLoad.Verified ->
+                        actual.load!=null && actual.unit==issued.unit &&
+                            same(actual.load,issued.value)
+                    DraftSetLoad.ExplicitBodyweight ->
+                        actual.load==null && actual.unit==null
+                }
+                if(!sameIssued || actual.reps>set.prescription.reps.maximum)
+                    observed
+                else if(checkNotNull(effortForSet.rir)>=2)
+                    (observed+1).coerceAtMost(set.prescription.reps.maximum)
+                else observed
+            }
+            CustomNextSetCoaching(set.setKey,actual.reps,next,
+                actual.actualRir,next>observed,effortForSet.rir,effortForSet.source)
+        }
+        val increased=currentReview?.reason==
+            FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW ||
+            (currentReview==null && suggestions.any{it.changed})
 
         // An additional LOAD is only considered after TWO comparable,
         // uniformly loaded, completed ceiling sessions. Verified stock and

@@ -8,8 +8,8 @@
 
 - Web's effective built-in exercise catalog contains **376 active identities**
   (39 curated and 363 extended source definitions before web duplicate-name/ID
-  filtering). Kotlin's reviewed-provenance **starter tranche defines 20** of
-  those IDs: **356 active web IDs are absent from this starter tranche**.
+  filtering). Kotlin's reviewed-provenance **starter tranche defines 22** of
+  those IDs: **354 active web IDs are absent from this starter tranche**.
   This is a source-coverage count, **not** proof that 20 exercises have matching
   training behavior, or that Kotlin has only 20 possible custom exercises.
 - An executable, read-only source inventory now regenerates the exact gaps

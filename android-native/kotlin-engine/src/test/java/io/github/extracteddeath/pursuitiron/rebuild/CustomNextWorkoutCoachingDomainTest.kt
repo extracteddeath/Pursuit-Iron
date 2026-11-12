@@ -108,6 +108,30 @@ class CustomNextWorkoutCoachingDomainTest {
         CustomNextWorkoutCoachingRequest(next,"main",sessions,
             stock,n(step),readiness,restricted))
 
+    @Test fun identicalCustomAndGeneratedEvidenceHasIdenticalCurrentRepTargets() {
+        val last=completed(2,4,reps=listOf(5,6),rirs=listOf(5,4))
+        val custom=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(snapshot(5),"main",
+                listOf(completed(1,3),last),stock(),n(5),
+                CoachReadiness.NORMAL,false,CustomRepForecastPolicy.TARGET_RIR_V2))
+        val canonical=FatigueAwareRepTargetReviewDomain.assess(
+            ProgressionWorkoutEvidence("workout-4-0","chest_press",
+                LoadUnit.LB,RepBand(5,8),2,listOf(
+                    WorkingSetFact(0,SetOutcome.COMPLETED,n(200),5,5,n(200),2),
+                    WorkingSetFact(1,SetOutcome.COMPLETED,n(200),6,4,n(200),2))),
+            stock(),LoadBasis.MACHINE_STACK,CoachReadiness.NORMAL,false,
+            verifiedPerSetLoading=true,
+            targetRirByOrdinal=listOf(2,2))
+        assertEquals(FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
+            canonical.reason)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,custom.status)
+        assertEquals(canonical.candidateRepTargets,
+            custom.nextSetSuggestions.map{it.proposedNextReps})
+        assertEquals(canonical.assumedGoalRirSetCount,
+            custom.assumedGoalRirSetCount)
+        assertTrue(custom.nextSetSuggestions.none{it.actualRir==null})
+    }
+
     @Test fun targetRirV2UsesCanonicalStockEvidenceNotACustomShortcut() {
         val older=completed(1,3,reps=listOf(5,5))
         val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(5,4))

@@ -233,7 +233,7 @@ class NativeKotlinCustomNextRepApprovalFileStore(
         key:String,workoutId:String,inputs:CustomCoachAuditInputs,
         week:Int,weekday:Int,slot:String,readiness:CoachReadiness,
         restricted:Boolean,maxIncrease:BigDecimal,
-        repForecastPolicy:CustomRepForecastPolicy
+        repForecastPolicy:CustomRepForecastPolicy?
     ):NativeCustomNextRepPreview {
         fun fail(reason:NativeCustomNextRepRefusal)=
             NativeCustomNextRepPreview.Rejected(reason)
@@ -247,7 +247,11 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             ?:return fail(NativeCustomNextRepRefusal.REVIEW_NOT_READY)
         if(snap.stamp.athleteId!=signed.athleteId)
             return fail(NativeCustomNextRepRefusal.NOT_AUTHORIZED)
-        if(review.review.repForecastPolicy!=repForecastPolicy)
+        // A NEW preview inherits the owner-verified current policy chosen
+        // by the SAME review. Only an explicit version may re-derive a
+        // historical immutable approval; never silently default to V1.
+        val selectedPolicy=review.review.repForecastPolicy
+        if(repForecastPolicy!=null && selectedPolicy!=repForecastPolicy)
             return fail(NativeCustomNextRepRefusal.REVIEW_NOT_READY)
         val amended=CustomNextRepAmendmentDomain.propose(
             snap,slot,review.review)
@@ -263,11 +267,11 @@ class NativeKotlinCustomNextRepApprovalFileStore(
 
         val signature=ByteArrayOutputStream()
         DataOutputStream(signature).use{out->
-            if(repForecastPolicy==CustomRepForecastPolicy.LEGACY_STEP_V1)
+            if(selectedPolicy==CustomRepForecastPolicy.LEGACY_STEP_V1)
                 out.writeUTF("future-rep-approval-v1")
             else {
                 out.writeUTF("future-rep-approval-v2")
-                out.writeUTF(repForecastPolicy.name)
+                out.writeUTF(selectedPolicy.name)
             }
             out.writeUTF(key);out.writeUTF(signed.athleteId)
             out.writeUTF(workoutId);out.writeUTF(slot)
@@ -291,7 +295,7 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             review.approvedConsentRevision,review.historyRevision,
             hash(signature.toByteArray()),amended.amendment.originalSetKeys,
             amended.amendment.nextMinimumReps,readiness,restricted,maxIncrease,
-            repForecastPolicy)
+            selectedPolicy)
         return NativeCustomNextRepPreview.Ready(
             receipt,amended.amendment,review.review)
     }
@@ -300,8 +304,8 @@ class NativeKotlinCustomNextRepApprovalFileStore(
         key:String,workoutId:String,inputs:CustomCoachAuditInputs,
         week:Int,weekday:Int,slot:String,readiness:CoachReadiness,
         restricted:Boolean,maxIncrease:BigDecimal,
-        repForecastPolicy:CustomRepForecastPolicy=
-            CustomRepForecastPolicy.LEGACY_STEP_V1
+        /** Null selects current owner policy; explicit V1 only for old receipts. */
+        repForecastPolicy:CustomRepForecastPolicy?=null
     ):NativeCustomNextRepPreview {
         if(!listOf(key,workoutId,slot).all(id::matches) ||
             week !in 1..104 || weekday !in 0..6)
@@ -329,8 +333,8 @@ class NativeKotlinCustomNextRepApprovalFileStore(
         expectedFingerprint:String,expectedHistoryRevision:Long,
         expectedConsentRevision:Long,shownSetKeys:List<String>,
         shownNextMinimumReps:List<Int>,athleteConfirmed:Boolean,
-        repForecastPolicy:CustomRepForecastPolicy=
-            CustomRepForecastPolicy.LEGACY_STEP_V1
+        /** Null selects current owner policy; explicit V1 only for old receipts. */
+        repForecastPolicy:CustomRepForecastPolicy?=null
     ):NativeCustomNextRepWrite {
         fun fail(reason:NativeCustomNextRepRefusal)=
             NativeCustomNextRepWrite.Rejected(reason)

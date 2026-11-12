@@ -1,0 +1,149 @@
+package io.github.extracteddeath.pursuitiron.rebuild
+
+import java.math.BigDecimal
+import org.junit.Assert.*
+import org.junit.Test
+
+/**
+ * The real five-day ULPPL source path, not a mocked set of desired labels.
+ * A 2 bench / 2 squat / 1 conventional deadlift strength week has five
+ * physical exposures on FOUR strength-skill days: a verified lower day
+ * contains both squat and deadlift. No sixth day or cross-lift load transfer.
+ */
+class CoachFirstProgramFiveDayStrengthTest {
+    private fun n(v:String)=BigDecimal(v)
+    private val bar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),
+        mapOf(n("45") to 2,n("25") to 2,n("10") to 2,n("5") to 2))
+    private val dumbbells=VerifiedLoadStock.Totals(LoadUnit.LB,
+        LoadBasis.DUMBBELL_PER_HAND,listOf(n("15"),n("20"),n("25"),n("30"),
+            n("35"),n("40"),n("45"),n("50")))
+    private fun setup(gym:GymProfileDraft=GymProfileDraft(
+        "five-day-gym",LoadUnit.LB,
+        mapOf("straight-bar" to bar,"dumbbell-rack" to dumbbells),
+        emptySet(),setOf("flat-bench","incline-bench","rack")
+    ))=CoachAthleteSetupDomain.review(AthleteSetupDraft(
+        profileRevision="revision-5day",athleteProfileId="athlete-5day",
+        goal=AthleteTrainingGoal.POWERBUILDING,
+        experience=AthleteExperience.ADVANCED,
+        split=ComposerSplit.ULPPL,
+        trainingWeekdays=setOf(0,1,3,4,5),
+        timezoneId="America/New_York",
+        sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
+        hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
+        gym=gym,allowBodyweight=false,allowSupersets=false,
+        allowTricepsOnLower=false,maxBarbellExercisesPerDay=2,
+        focusedMuscles=emptySet(),reducedMuscles=emptySet(),
+        excludedExerciseIds=emptySet(),lockedTrainingDays=emptySet(),
+        hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
+        declaredRestDays=setOf(2,6)
+    ))
+    private fun calibrations()=linkedMapOf(
+        "barbell_bench" to n("135"),"back_squat" to n("135"),
+        "conventional_deadlift" to n("135"),
+        "incline_db_press" to n("30"),
+        "one_arm_db_row" to n("30"),
+        "db_lateral_raise" to n("20"),
+        "db_curl" to n("20"),
+        "db_overhead_triceps" to n("20"),
+        "db_calf_raise" to n("30"),
+        "db_split_squat" to n("30"),
+        "db_rear_delt_raise" to n("20")
+    )
+    private fun input(
+        reviewed:AthleteSetupReview=setup(),
+        starts:Map<String,BigDecimal> =calibrations(),
+        phase:TrainingPhase=TrainingPhase.STRENGTH,
+        overhead:Int=1800,
+        version:String=CoachFirstProgramStartDomain.POLICY_VERSION
+    )=FirstProgramStartRequest(reviewed,
+        StarterExerciseTranche.movements(),starts,emptySet(),phase,
+        nonSetSecondsPerDay=overhead,policyVersion=version)
+
+    @Test fun calibratedFiveDayULPPLCanReviewTwoBenchTwoSquatOneDeadliftWithNoLoadTransfer() {
+        val result=CoachFirstProgramStartDomain.review(input())
+        assertEquals(result.issues.joinToString(" | "),
+            FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
+            result.status)
+        assertEquals(1,result.phasePoliciesChecked)
+        assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+            result.policy?.primaryLiftMinimumDays)
+        val generation=checkNotNull(result.generation)
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
+            generation.status)
+        val week=checkNotNull(generation.candidate?.catalogReview?.draft)
+        val weekdays=checkNotNull(generation.candidate?.catalogReview
+            ?.composedRequest).days.map{it.calendarDay}
+        assertEquals(5,week.sessions.size)
+        assertEquals(4,week.sessions.count{
+            it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+        })
+        val visits=week.visits
+        fun days(id:String)=visits.filter{it.exerciseId==id}
+            .map{weekdays[it.dayIndex]}.toSet()
+        assertEquals(2,days("barbell_bench").size)
+        assertEquals(2,days("back_squat").size)
+        assertEquals(1,days("conventional_deadlift").size)
+        val deadliftIndex=visits.single{
+            it.exerciseId=="conventional_deadlift"
+        }.dayIndex
+        assertEquals(ComposerSessionPurpose.STRENGTH_SKILL,
+            week.sessions[deadliftIndex].purpose)
+        assertTrue(week.sessions[deadliftIndex].orderedVisits.any{
+            it.exerciseId=="back_squat"
+        })
+        assertEquals(n("135"),calibrations().getValue("conventional_deadlift"))
+        assertTrue(week.audit.satisfiesDeclaredHardConstraints)
+        assertTrue(checkNotNull(result.prescription).finalAudit
+            ?.daysOutsidePreferredWindow?.isEmpty()==true)
+        assertFalse(result.mayIssueWorkout)
+        assertFalse(result.maySaveProgram)
+        assertEquals(result,CoachFirstProgramStartDomain.review(input()))
+    }
+
+    @Test fun strengthAndPeakKeepTheFiveDayTargetButV6SavedPolicyReplays() {
+        val peak=CoachFirstProgramStartDomain.review(
+            input(phase=TrainingPhase.PEAK))
+        assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+            peak.policy?.primaryLiftMinimumDays)
+        assertEquals(1,peak.phasePoliciesChecked)
+        assertFalse(peak.mayIssueWorkout)
+        // This is not proof of an individualized taper or meet-day peak.
+        val previous=CoachFirstProgramStartDomain.review(input(
+            version=CoachFirstProgramStartDomain.V6_POLICY_VERSION))
+        assertEquals("first-program-reference-v6",previous.policy?.policyId)
+        assertEquals("v6",previous.policy?.revision)
+        assertTrue(CoachFirstProgramStartDomain.supportsPolicy(
+            CoachFirstProgramStartDomain.V6_POLICY_VERSION))
+        assertEquals("v7",CoachFirstProgramStartDomain.review(input())
+            .policy?.revision)
+    }
+
+    @Test fun impossibleGymAndTimeNeverQuietlyReduceTheNamedSkillFrequency() {
+        val absentBar=setup(GymProfileDraft("no-barbell",LoadUnit.LB,
+            mapOf("dumbbell-rack" to dumbbells),
+            emptySet(),setOf("flat-bench","incline-bench","rack")))
+        val absent=CoachFirstProgramStartDomain.review(
+            input(reviewed=absentBar))
+        assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,absent.status)
+        assertFalse(absent.mayIssueWorkout)
+        val tooLong=CoachFirstProgramStartDomain.review(input(overhead=3600))
+        assertEquals(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,tooLong.status)
+        assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+            tooLong.policy?.primaryLiftMinimumDays)
+        assertTrue(tooLong.issues.any{
+            it.contains("No lower-frequency substitution was silently accepted")
+        })
+        assertFalse(tooLong.mayIssueWorkout)
+        assertEquals(1,tooLong.phasePoliciesChecked)
+    }
+
+    @Test fun noUncalibratedDeadliftOrRomanianHingeCanPretendToBeConventionalSkill() {
+        val without=calibrations()-"conventional_deadlift"
+        val alternative=CoachFirstProgramStartDomain.review(input(
+            starts=without+("db_rdl" to n("30"))))
+        assertFalse(alternative.issues.any{it.contains(
+            "bench 2 / squat 2 / deadlift 1 goal")})
+        assertFalse(alternative.chosenExerciseIds.contains("conventional_deadlift"))
+        assertFalse(alternative.mayIssueWorkout)
+    }
+}

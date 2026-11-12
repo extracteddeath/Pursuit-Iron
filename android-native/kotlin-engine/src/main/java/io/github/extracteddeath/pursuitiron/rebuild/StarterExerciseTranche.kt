@@ -346,11 +346,55 @@ object StarterExerciseTranche {
             ComposerPattern.CORE,ComposerRole.ACCESSORY,all,
             "cable-station",LoadBasis.CABLE_STACK,emptySet(),8..30,
             "Curated generic core is narrowly mapped to abdominal trunk flexion; rope attachment and verified cable loading are mandatory.",
-            direct(TrainingMuscle.ABS),attachmentId="rope")
+            direct(TrainingMuscle.ABS),attachmentId="rope"),
+        // Seven source-matched active web exercise IDs. These are separate,
+        // athlete-calibrated physical movements, not aliases for the first
+        // 42 lifts or authority to transfer their working loads/history.
+        entry("db-bench","bench_press","flat-dumbbell",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("flat-bench"),5..20,
+            "Active web flat dumbbell bench uses verified PER-HAND dumbbells and an actual flat bench. Incline, barbell and machine presses retain independent baselines.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.5")),
+        entry("db-fly","chest_adduction","flat-dumbbell-fly",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("flat-bench"),8..25,
+            "Active web dumbbell fly: verified per-hand loads and flat-bench availability; no cable fly or pec-deck loading is presumed.",
+            direct(TrainingMuscle.CHEST)),
+        entry("db-shoulder","overhead_press","dumbbell",
+            ComposerPattern.VERTICAL_PRESS,ComposerRole.SECONDARY,press,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),5..20,
+            "Active web dumbbell shoulder press: verified per-hand loading distinct from barbell OHP and shoulder-press machines.",
+            direct(TrainingMuscle.FRONT_DELTS),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.SIDE_DELTS,"0.25")),
+        entry("inc-curl","elbow_flexion","incline-dumbbell-supinated",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("incline-bench"),6..25,
+            "Active web incline dumbbell curl requires a confirmed incline bench and per-hand stock; direct biceps without undocumented brachialis credit.",
+            direct(TrainingMuscle.BICEPS)),
+        entry("hammer","elbow_flexion","dumbbell-neutral-grip",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),6..25,
+            "Active web hammer curl is a separate neutral-grip movement: provisional direct brachialis and indirect biceps, not a generic mixed elbow-flexor bucket or an automatic DB-curl load transfer.",
+            direct(TrainingMuscle.BRACHIALIS),
+            indirect(TrainingMuscle.BICEPS,"0.5")),
+        entry("face-pull","rear_delt_fly","cable-rope",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),10..30,
+            "Active web cable face pull is offered only with the real rope attachment and verified local cable stack; rear-deltoid direct credit only.",
+            direct(TrainingMuscle.REAR_DELTS),attachmentId="rope"),
+        entry("pec-deck","chest_adduction","pec-deck-machine",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "pec-deck-machine",LoadBasis.EXERCISE_OVERRIDE,
+            emptySet(),8..25,
+            "Active web pec deck uses one verified physical machine resistance scale; cannot borrow chest-press, cable or dumbbell-fly values.",
+            direct(TrainingMuscle.CHEST))
     )
 
     init {
-        require(definitions.size==42)
+        require(definitions.size==49)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

@@ -59,11 +59,16 @@ class StarterExerciseTrancheTest {
             "neutral_pulldown","rear_delt_fly","machine_ohp",
             "preacher_curl","cable_curl","cable_triceps",
             "overhead_cable_triceps","standing_calf","cable_crunch"),
-            data.drop(31).map{it.legacyCuratedId})
-        assertEquals(42,data.size)
-        assertEquals(42,data.map {it.legacyCuratedId}.distinct().size)
+            data.drop(31).take(11).map{it.legacyCuratedId})
+        // The old 42 identities and their ordering are a saved-data
+        // compatibility contract. Seven more active-web IDs append only.
+        assertEquals(listOf("db-bench","db-fly","db-shoulder",
+            "inc-curl","hammer","face-pull","pec-deck"),
+            data.drop(42).map{it.legacyCuratedId})
+        assertEquals(49,data.size)
+        assertEquals(49,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(42,data.map {
+        assertEquals(49,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {

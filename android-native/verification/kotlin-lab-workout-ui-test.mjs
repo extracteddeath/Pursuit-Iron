@@ -72,6 +72,21 @@ assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') 
   exerciseHistory.includes('DraftSetType.WORKING') &&
   exerciseHistory.includes('RIR not reported'),
   'Custom workout History must open complete correction-aware exercise facts, never invent RIR');
+const controller=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt');
+const generatedCoach=controller.slice(controller.indexOf('fun reviewNextSet('),
+  controller.indexOf('fun saveSessionNote('));
+const customCoachStart=journal.indexOf('LaunchedEffect(host,workoutId,current.revision,');
+const customCoach=journal.slice(customCoachStart,
+  journal.indexOf('PageHeading("TODAY',customCoachStart));
+for(const [name,body] of [['generated',generatedCoach],['custom',customCoach]]) {
+  assert.ok(body.includes('host.reviewLive'+(name==='generated'
+      ?'IssuedNextSet(':'CustomNextSet(')) &&
+    body.includes('catch(cancelled:CancellationException)') &&
+    body.includes('throw cancelled') &&
+    body.includes('catch(_:Exception)') &&
+    body.includes('null'),
+    name+' optional live-coaching storage errors must fail closed, not crash the workout or hide coroutine cancellation');
+}
 const composer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
 // Machine A/B must be scoped to the gym that issued the workout. The
 // displayed Last AND the editable one-tap "Use Last" must share the same

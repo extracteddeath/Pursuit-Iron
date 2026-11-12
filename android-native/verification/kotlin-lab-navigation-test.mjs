@@ -14,6 +14,7 @@ const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 const labActivity=read('android-native/app/src/debug/java/io/github/extracteddeath/pursuitiron/KotlinEnginePreviewActivity.kt');
+const betaActivity=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
 const tokens=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeDesignTokens.kt');
 const nativeSettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
 const standards=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthStandardsScreen.kt');
@@ -72,7 +73,7 @@ assert.doesNotMatch(main,/android.intent.category.LAUNCHER/,
   'Base manifest must not duplicate the Kotlin Lab launcher');
 assert.match(release,/android:name="\.MainActivity"/);
 assert.equal((release.match(/android.intent.category.LAUNCHER/g)||[]).length,1,
-  'Release variant must keep the original native MainActivity launcher');
+  'Release variant must launch the Kotlin-owned MainActivity exactly once');
 assert.match(debug,/android:name="\.KotlinEnginePreviewActivity"/);
 assert.equal((debug.match(/android.intent.category.LAUNCHER/g)||[]).length,1,
   'Debug variant must have only the Kotlin Lab launcher');
@@ -643,10 +644,11 @@ assert.ok((host.match(/enableRepeatedFatigueReview=assistance.offersFatigueAdvic
   'Both next-rep preview and final acceptance must preserve the athlete fatigue-advice switch');
 assert.ok(tokens.includes('const val DEFAULT_ID="amethyst"') &&
   !tokens.includes('const val DEFAULT_ID="lime"') &&
-  labActivity.includes('PursuitIronTheme(themeId=themeId)') &&
-  labActivity.includes('PursuitThemes.find(requested)!=null') &&
-  labActivity.includes('appearance.edit().putString("theme_id",requested).apply()') &&
-  labActivity.includes('bars.isAppearanceLightStatusBars=themeUsesLightBars') &&
+  labActivity.includes('class KotlinEnginePreviewActivity:MainActivity()') &&
+  betaActivity.includes('PursuitIronTheme(themeId=themeId)') &&
+  betaActivity.includes('PursuitThemes.find(requested)!=null') &&
+  betaActivity.includes('appearance.edit().putString("theme_id",requested).apply()') &&
+  betaActivity.includes('bars.isAppearanceLightStatusBars=themeUsesLightBars') &&
   journey.includes('NativeAppearanceSheet(') &&
   journey.includes('onSelect=onThemeSelected') &&
   journey.includes('DropdownMenuItem(text={Text("Appearance")}') &&

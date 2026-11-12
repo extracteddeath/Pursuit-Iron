@@ -1,0 +1,838 @@
+{
+  "schemaVersion": 1,
+  "notes": "Manually reviewed physical equipment, source identity and explicit muscle-credit decisions. JSON is CI-only authoring provenance; committed Kotlin is the ONLY runtime catalog. All entries remain provisional; never transfer weights or history between variants.",
+  "originalStablePrefixCount": 49,
+  "records": [
+    {
+      "id": "low-inc-bb-bench",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "inclinebench",
+          "rack"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "low-incline-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "incline-bench",
+          "rack"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.5",
+          "FRONT_DELTS:0.5"
+        ],
+        "attachment": null,
+        "note": "Low incline barbell is independent of flat/high incline and needs a real incline bench, rack and complete physical bar stock."
+      }
+    },
+    {
+      "id": "high-inc-bb-bench",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "inclinebench",
+          "rack"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "high-incline-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "incline-bench",
+          "rack"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.5",
+          "FRONT_DELTS:0.5"
+        ],
+        "attachment": null,
+        "note": "High incline barbell uses verified total bar weight; never borrow any flat or low incline prescription."
+      }
+    },
+    {
+      "id": "smith-bench",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "smith",
+          "bench"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "flat-smith",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "flat-smith-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.5",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "A physical flat Smith station has independently verified bar-total stock; do not transfer free-bar or another Smith setting."
+      }
+    },
+    {
+      "id": "front-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          5,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "front-barbell",
+        "pattern": "SQUAT",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Front squat has a separate exercise identity, rack and physical bar stock; hamstring source minor credit is intentionally quarantined."
+      }
+    },
+    {
+      "id": "smith-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "smith"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "smith-station",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "squat-smith-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Smith squat uses verified station-specific total; never borrow back squat or another physical Smith weight."
+      }
+    },
+    {
+      "id": "walking-lunge",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "walking-dumbbells",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": null,
+        "note": "Walking lunges are authored with two per-hand dumbbells and per-side reps; actual two-dumbbell gym stock is required."
+      }
+    },
+    {
+      "id": "bulgarian",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "bulgarian-dumbbells",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": null,
+        "note": "Bulgarian split squat uses two per-hand dumbbells and a confirmed rear-foot bench; unilateral reps remain per side."
+      }
+    },
+    {
+      "id": "lying-curl",
+      "source": {
+        "movementFamily": "knee_flexion",
+        "equipment": [
+          "legcurl"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_flexion",
+        "variant": "lying-machine",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "lying-leg-curl-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "HAMSTRINGS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Lying leg curl has independently verified physical machine settings, not seated-leg-curl or generic machine weights."
+      }
+    },
+    {
+      "id": "seated-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "calfmachine"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "seated-machine",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "seated-calf-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Seated calf machine resistance and stack are physical-station specific and not inferred from standing-calf loading."
+      }
+    },
+    {
+      "id": "bb-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "straight-barbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Straight barbell curl requires total verified barbell weight and records biceps separately from brachialis."
+      }
+    },
+    {
+      "id": "ez-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "ezbar"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "ez-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "ez-curl-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "EZ curl bar stock and empty-bar mass must be verified independently of a straight bar."
+      }
+    },
+    {
+      "id": "bayesian-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "bayesian-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Bayesian curl needs a real single-handle cable attachment, exact pulley and verified local stack."
+      }
+    },
+    {
+      "id": "cgbp",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "barbell",
+          "bench",
+          "rack"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "close-grip-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack"
+        ],
+        "direct": "TRICEPS",
+        "indirect": [
+          "CHEST:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Close grip bench is a compound horizontal press with direct triceps, confirmed rack and bench; separate from conventional bench history."
+      }
+    },
+    {
+      "id": "skullcrusher",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "ezbar",
+          "bench"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "ez-skullcrusher",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "ez-curl-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "EZ-bar skull crusher requires a real flat bench and its own bar weight/plate stock, never another extension load."
+      }
+    },
+    {
+      "id": "pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "straight-bar-pushdown",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Straight bar cable pushdown requires the real attachment and verified physical stack; no rope-equivalence assumption."
+      }
+    },
+    {
+      "id": "ez-pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "ez-cable-pushdown",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "ez-bar",
+        "note": "EZ-bar cable pushdown requires its exact handle and verified cable stack; independently track other pushdowns."
+      }
+    },
+    {
+      "id": "oh-cable-ext",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "overhead-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "rope",
+        "note": "Overhead cable extension is represented with a real rope, verified pulley and no invisible straight-bar equivalence."
+      }
+    },
+    {
+      "id": "machine-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "machinerow"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "machine_row",
+        "variant": "seated-machine",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "machine-row-station",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Seated machine row gets provisional upper-back direct credit, not generic back double counting; machine stock is independent."
+      }
+    },
+    {
+      "id": "seated-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "cable_row",
+        "variant": "seated-cable",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "seated-row-handle",
+        "note": "Seated cable row needs its exact row handle and verified stack; broad legacy back and trap credit not silently copied."
+      }
+    },
+    {
+      "id": "front-raise",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "shoulder_flexion",
+        "variant": "dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Dumbbell front raise uses per-hand verified dumbbell weights; shoulder-flexion isolation is not an OHP."
+      }
+    },
+    {
+      "id": "arnold",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "arnold-dumbbell",
+        "pattern": "VERTICAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Arnold press uses per-hand verified dumbbells, separate from seated DB, Smith and barbell shoulder press."
+      }
+    },
+    {
+      "id": "pushup",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "pushup",
+        "variant": "standard-bodyweight",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Only an unweighted standard pushup; added external resistance requires a separately calibrated movement."
+      }
+    },
+    {
+      "id": "bw-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "bodyweight",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Only bodyweight squat: no phantom zero-pound machine or borrowed barbell load."
+      }
+    },
+    {
+      "id": "diamond-pushup",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "pushup",
+        "variant": "diamond-bodyweight",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [
+          "CHEST:0.25"
+        ],
+        "attachment": null,
+        "note": "Diamond pushup is a triceps-priority bodyweight variant, separate from standard pushup and weighted dips."
+      }
+    },
+    {
+      "id": "pike-pushup",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "pushup",
+        "variant": "pike-bodyweight",
+        "pattern": "VERTICAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Pike pushup is unweighted bodyweight shoulder practice, not mechanically equivalent to overhead press."
+      }
+    },
+    {
+      "id": "incline-pushup",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "pushup",
+        "variant": "incline-bodyweight",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Incline pushup requires a stable confirmed elevated surface; only flat-bench support is offered in this provisional variant."
+      }
+    },
+    {
+      "id": "decline-pushup",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "pushup",
+        "variant": "decline-bodyweight",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Decline pushup requires a stable confirmed bench for foot elevation and no externally loaded equivalence."
+      }
+    }
+  ]
+}

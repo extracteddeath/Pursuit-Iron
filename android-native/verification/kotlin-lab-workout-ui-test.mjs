@@ -583,7 +583,7 @@ assert.ok(betaMain.includes('pursuit_native_appearance') &&
 // Launch readiness still requires physical-device evidence before release.
 const migrationGradle=read('android-native/app/build.gradle.kts');
 assert.ok(!migrationGradle.includes('implementation(project(":engine-runtime"))') &&
-  migrationGradle.includes('kotlin.include(') &&
+  migrationGradle.includes('stageKotlinBetaSources') &&
   migrationGradle.includes('"**/NativeKotlin*.kt"') &&
   migrationGradle.includes('verifyEarlyBetaRuntime') &&
   migrationGradle.includes('verification/BETA_DEVICE_ACCEPTANCE.md'),

@@ -960,15 +960,16 @@ private fun NativeKotlinCustomVisitEditor(
                 follower?.followUpReps else prescription.reps.minimum)
                 ?.toString().orEmpty())
     }
-    var actualLoad by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
-        mutableStateOf(saved?.performed?.load?.toPlainString() ?:
-            if(machineInstanceId!=null)"" else verified?.value?.toPlainString().orEmpty())
+    // A/B station changes invalidate only this unsaved editor baseline,
+    // never the issued prescription or a durable actual. No asynchronous
+    // effect may erase an in-progress athlete edit during recomposition.
+    var actualLoad by rememberSaveable(
+        set.setKey,part.name,existing?.appliedRevision,machineInstanceId
+    ) {
+        mutableStateOf(initialMachineScopedLoad(target,saved?.performed,machineInstanceId))
     }
     var actualRir by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved?.performed?.actualRir?.toString().orEmpty())
-    }
-    LaunchedEffect(machineInstanceId) {
-        if(saved==null && machineInstanceId!=null && !locked)actualLoad=""
     }
     val weight=if(verified==null)null else
         runCatching{BigDecimal(actualLoad.trim())}.getOrNull()

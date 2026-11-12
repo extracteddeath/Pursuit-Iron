@@ -148,13 +148,26 @@ class CustomNextWorkoutCoachingDomainTest {
         assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,verified.status)
         assertEquals(listOf(8,8),
             verified.nextSetSuggestions.map{it.proposedNextReps})
-        // No inventory or user-edited unverified physical loads may be
-        // promoted by the custom path when the generated engine refuses.
+        // The ORIGINAL signed, unchanged-load sets may support a provisional
+        // rep-only review even without a fresh gym read; no new load can be
+        // proposed, and final issuance still requires the complete audit.
         val missingStock=reviewWith(inventory=null)
-        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
             missingStock.status)
-        assertTrue(missingStock.nextSetSuggestions.isEmpty())
+        assertEquals(listOf(8,8),
+            missingStock.nextSetSuggestions.map{it.proposedNextReps})
         assertNull(missingStock.loadReviewCandidate)
+        assertTrue(missingStock.forecastLimitations.contains(
+            RepForecastLimitation.CURRENT_EQUIPMENT_NOT_REVERIFIED))
+        // Available but CONTRADICTORY inventory never inherits this
+        // read-only exception. Weights missing from a real rack are refused.
+        val wrongStock=reviewWith(inventory=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,
+            listOf(n(195),n(205))))
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+            wrongStock.status)
+        assertTrue(wrongStock.nextSetSuggestions.isEmpty())
+        assertNull(wrongStock.loadReviewCandidate)
         val edited=reviewWith(history=completed(2,4,reps=listOf(5,6),
             rirs=listOf(5,4),actual=listOf(205,200)))
         assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,

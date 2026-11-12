@@ -10,6 +10,42 @@ import org.junit.Test
  * capacity to later sets and inventing observed effort are not.
  */
 class FatigueAwareRepTargetReviewDomainTest {
+    @Test fun exactUnloadedBodyweightUsesTheSameRepPolicyWithoutInventingWeight() {
+        val facts=listOf(
+            WorkingSetFact(0,SetOutcome.COMPLETED,null,10,3,null,2),
+            WorkingSetFact(1,SetOutcome.COMPLETED,null,10,3,null,2))
+        val bodyweight=BodyweightRepTargetEvidence("core-w2","bodyweight_crunch",
+            RepBand(10,15),2,facts)
+        val reviewed=FatigueAwareRepTargetReviewDomain.assessBodyweight(
+            bodyweight,CoachReadiness.NORMAL,false,
+            targetRirByOrdinal=listOf(2,2))
+        assertEquals(FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
+            reviewed.reason)
+        assertEquals(listOf(11,11),reviewed.candidateRepTargets)
+        assertEquals(listOf(10,10),reviewed.observedReps)
+        assertNull(reviewed.observedLoad)
+        assertNull(reviewed.observedSetLoads)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertEquals(ProgressionEvidenceSignal.UNLOADED_REP_CEILING_FOR_REVIEW,
+            DoubleProgressionEvidenceDomain.assess(RepBand(10,15),2,
+                facts.map{it.copy(actualReps=15)},explicitlyUnloaded=true).signal)
+        assertTrue(runCatching {
+            FatigueAwareRepTargetReviewDomain.assessBodyweight(
+                bodyweight.copy(observations=facts.mapIndexed{i,working->
+                    if(i==0)working.copy(actualLoad=n("20")) else working
+                }),CoachReadiness.NORMAL,false)
+        }.isFailure)
+        // A physical set with no logged load cannot escape numeric checks
+        // merely because the bodyweight policy now exists.
+        val numericWithNoWeight=session().copy(
+            observations=session().observations.map{it.copy(actualLoad=null)})
+        assertTrue(runCatching {
+            FatigueAwareRepTargetReviewDomain.assess(
+                numericWithNoWeight,gym,LoadBasis.DUMBBELL_PER_HAND,
+                CoachReadiness.NORMAL,false)
+        }.isFailure)
+    }
+
     @Test fun generatedPolicyUsesSameBelowFloorReviewAsCustomNextWeek() {
         val observed=session(reps=listOf(10,12,12),rir=listOf(2,2,2))
         val reviewed=FatigueAwareRepTargetReviewDomain.assess(

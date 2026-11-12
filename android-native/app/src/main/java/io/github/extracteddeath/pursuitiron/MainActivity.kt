@@ -4,10 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -15,91 +19,57 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
+/**
+ * Early beta entry: the ONE Kotlin-owned journey. It never constructs
+ * NativeRuntimeHost, reads a JS training cursor, or starts the legacy worker.
+ *
+ * This deliberately does not convert an old private JS store into Kotlin
+ * history. Historical import requires a separate owner-verified, lossless,
+ * explicitly accepted migration; no hidden reset or merged athlete identity.
+ */
+open class MainActivity:ComponentActivity() {
+    override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val runtime=(application as PursuitIronApplication).nativeRuntime
-        // Render before any asset I/O. The Application owns the worker/writer
-        // so rotation cannot create competing file owners or sandbox leases.
+        val appearance=getSharedPreferences("pursuit_native_appearance",MODE_PRIVATE)
         setContent {
-            val state by runtime.state.collectAsStateWithLifecycle()
-            val readOnlyVerifier=state.verifier
-            // Appearance is intentionally device-local: never overwrite a
-            // canonical training snapshot or claim to sync web settings.
-            val appearance=remember {
-                getSharedPreferences("pursuit_native_appearance",MODE_PRIVATE)
-            }
             var themeId by remember {
-                mutableStateOf(appearance.getString("theme_id",PursuitThemes.DEFAULT_ID)
-                    ?.takeIf { PursuitThemes.find(it)!=null } ?: PursuitThemes.DEFAULT_ID)
+                mutableStateOf(
+                    appearance.getString("theme_id",PursuitThemes.DEFAULT_ID)
+                        ?.takeIf { PursuitThemes.find(it)!=null }
+                        ?:PursuitThemes.DEFAULT_ID
+                )
             }
             val themeUsesLightBars=PursuitThemes.resolve(themeId).isLight
-            // The OS may be dark while a user selects Mint/Clay/etc. Status
-            // and navigation icon contrast must follow the ORIGINAL chosen
-            // palette rather than the Android wallpaper/system preference.
             SideEffect {
                 val bars=WindowCompat.getInsetsController(window,window.decorView)
                 bars.isAppearanceLightStatusBars=themeUsesLightBars
                 bars.isAppearanceLightNavigationBars=themeUsesLightBars
             }
             PursuitIronTheme(themeId=themeId) {
-                NativePreviewApp(
-                    themeId=themeId,
-                    onThemeSelected={ requested ->
-                        if(PursuitThemes.find(requested)!=null) {
-                            themeId=requested
-                            appearance.edit().putString("theme_id",requested).apply()
-                        }
-                    },
-                    schemaVerifier=readOnlyVerifier,
-                    schemaVerifierLoading=state.loading,
-                    syntheticOutlineReader = readOnlyVerifier,
-                    activeProgramId=state.saved?.program?.id,
-                    currentPlanSource=state.planSource,
-                    canonicalStoreChangeKey=state.storeChangeKey,
-                    onboarding=state,
-                    onReviewProgram=runtime::review,
-                    onSaveProgram=runtime::save,
-                    onEditProgram=runtime::edit,
-                    onStartWorkout={runtime.startWorkout()},
-                    onPreviewShortSession=runtime::previewShorterSession,
-                    onStartShortWorkout={runtime.startWorkout(it)},
-                    onRecordSet=runtime::recordSet,
-                    onCorrectSet=runtime::correctSet,
-                    onSkipExercise=runtime::skipRemainingExercise,
-                    onInspectMuscles=runtime::inspectWorkoutMuscles,
-                    onInspectEquipmentLoad=runtime::inspectEquipmentLoad,
-                    onSkipAffectedMuscle=runtime::skipAffectedMuscle,
-                    onReduceAffectedMuscle=runtime::reduceAffectedMuscle,
-                    onFinishWorkout=runtime::finishWorkout,
-                    onSaveSessionNote=runtime::saveSessionNote,
-                    onSaveWarmup=runtime::saveWarmup,
-                    onSaveExerciseNote=runtime::saveExerciseNote,
-                    onCorrectHistory=runtime::correctHistory,
-                    onReloadHistory=runtime::reloadHistory,
-                    onOpenHistory=runtime::openHistory,
-                    onOpenLatestHistory=runtime::openLatestCompletedWorkout,
-                    onHistoryPage=runtime::loadHistoryPage,
-                    onHistoryList=runtime::showHistoryList,
-                    onFilterHistory=runtime::filterHistory,
-                    onHistoryCalendar=runtime::loadHistoryCalendar,
-                    onExportBackup=runtime::exportBackup,
-                    onResetBackupExport=runtime::resetBackupExportStatus,
-                    onPreviewBackupMerge=runtime::previewBackupMerge,
-                    onVerifyBackupMerge=runtime::verifyBackupMergeSelection,
-                    onDiscardBackupReview=runtime::discardBackupReview,
-                    onSaveProgramEdits=runtime::saveProgramEdits,
-                    onSaveGymInventory=runtime::saveGymInventory,
-                    onLookupProgramExercises=runtime::lookupProgramExerciseNames
-                )
+                Surface(
+                    Modifier.fillMaxSize(),
+                    color=MaterialTheme.colorScheme.background
+                ) {
+                    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                        NativeKotlinCandidateJourney(
+                            themeId=themeId,
+                            onThemeSelected={requested->
+                                if(PursuitThemes.find(requested)!=null) {
+                                    themeId=requested
+                                    appearance.edit()
+                                        .putString("theme_id",requested).apply()
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
-        runtime.start()
     }
 }
 

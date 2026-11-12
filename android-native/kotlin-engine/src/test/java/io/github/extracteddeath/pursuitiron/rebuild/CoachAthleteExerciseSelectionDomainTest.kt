@@ -162,6 +162,38 @@ class CoachAthleteExerciseSelectionDomainTest {
         })
     }
 
+    @Test fun fullWebSizedCatalogAndOffersStillSelectOnlyFeasibleStock() {
+        val extraCount=376-catalog.size
+        val extras=(1..extraCount).map { index ->
+            movement("web-source-$index",TrainingMuscle.LATS,
+                ComposerPattern.HORIZONTAL_PULL,
+                equipmentId="not-stocked",basis=LoadBasis.MACHINE_STACK)
+        }
+        val all=catalog+extras
+        assertEquals(376,all.size)
+        val offered=listOf(choose("press",required=1),choose("back"))+
+            extras.map{choose(it.exerciseId)}
+        val review=CoachAthleteExerciseSelectionDomain.review(
+            request(offered=offered).copy(catalog=all))
+        assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,review.status)
+        assertEquals(setOf("press","back"),review.choices.map{it.exerciseId}.toSet())
+        assertEquals(extraCount,review.excluded.size)
+        assertFalse(review.mayIssueWorkout)
+        val over=all+(1..(CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES+1-
+                all.size)).map{index->
+            movement("overflow-$index",TrainingMuscle.LATS,
+                ComposerPattern.HORIZONTAL_PULL,equipmentId="not-stocked",
+                basis=LoadBasis.MACHINE_STACK)
+        }
+        assertEquals(CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES+1,over.size)
+        val refused=CoachAthleteExerciseSelectionDomain.review(
+            request(offered=listOf(choose("press",required=1),choose("back")))
+                .copy(catalog=over))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,refused.status)
+        assertTrue(refused.issues.any{
+            it.kind==AthleteSelectionProblem.INVALID_CATALOG})
+    }
+
     @Test fun identicalOffersInDifferentOrderProduceIdenticalReview() {
         val initial=request()
         val a=CoachAthleteExerciseSelectionDomain.review(initial)

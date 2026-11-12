@@ -156,8 +156,8 @@ object CoachAthleteExerciseSelectionDomain {
             return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
         }
         val policy=checkNotNull(input.policy)
-        if(input.catalog.size !in 1..256 ||
-            input.offered.size !in 1..256 ||
+        if(input.catalog.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
+            input.offered.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
             input.maximumOptions !in 1..32 ||
             input.preferredPatternsPerDay !in 1..4 ||
             input.usableFocus.isEmpty() ||

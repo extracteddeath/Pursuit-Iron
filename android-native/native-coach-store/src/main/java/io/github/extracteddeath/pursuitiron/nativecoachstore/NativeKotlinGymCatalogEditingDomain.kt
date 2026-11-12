@@ -165,7 +165,7 @@ object NativeKotlinGymCatalogEditingDomain {
         check(source,expectedRevision)?.let {
             return NativeGymCatalogEdit.Rejected(it)
         }
-        if(catalog.isEmpty() || catalog.size>256 ||
+        if(catalog.isEmpty() || catalog.size>CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
             catalog.map{it.exerciseId}.distinct().size!=catalog.size ||
             catalog.map{it.familyId to it.variantId}.distinct().size!=catalog.size ||
             catalog.any { move ->

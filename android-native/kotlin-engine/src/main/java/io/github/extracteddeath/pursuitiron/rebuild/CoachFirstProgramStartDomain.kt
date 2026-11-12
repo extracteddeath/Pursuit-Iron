@@ -140,7 +140,7 @@ object CoachFirstProgramStartDomain {
                 PREVIOUS_PHASE_POLICY_VERSION,POLICY_VERSION) ||
             input.phase==TrainingPhase.HYPERTROPHY)
             return reviewOnce(input)
-        if(!input.setup.mayReviewProgramCandidate || input.catalog.size !in 1..256 ||
+        if(!input.setup.mayReviewProgramCandidate || input.catalog.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
             input.startingLoads.size>32 || input.selectedBodyweightExerciseIds.size>32)
             return reviewOnce(input)
         val primaries=input.catalog.filter {
@@ -252,7 +252,7 @@ object CoachFirstProgramStartDomain {
             input.selectedBodyweightExerciseIds.size>32 ||
             input.startingLoads.keys.intersect(
                 input.selectedBodyweightExerciseIds).isNotEmpty() ||
-            input.catalog.size !in 1..256 ||
+            input.catalog.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
             input.catalog.map{it.exerciseId}.distinct().size!=input.catalog.size) {
             issues+="Starting time, exercise choices or calibration inputs are invalid."
             return output(FirstProgramStartStatus.INVALID_CALIBRATION)

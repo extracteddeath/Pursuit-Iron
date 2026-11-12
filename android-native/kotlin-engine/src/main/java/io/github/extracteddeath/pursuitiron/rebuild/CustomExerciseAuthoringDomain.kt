@@ -59,7 +59,7 @@ object CustomExerciseAuthoringDomain {
         val athlete = setup.reviewed?.takeIf {
             setup.status == AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW
         } ?: return emptyList()
-        if (catalog.isEmpty() || catalog.size > 256 ||
+        if (catalog.isEmpty() || catalog.size > CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
             catalog.map { it.exerciseId }.distinct().size != catalog.size ||
             catalog.map { it.familyId to it.variantId }.distinct().size !=
                 catalog.size) return emptyList()

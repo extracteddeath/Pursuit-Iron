@@ -16,8 +16,10 @@ assert.match(settings, /include\(":app", ":domain-contract", ":engine-runtime"(?
   'The original read-only sandbox modules must stay registered, even after the independent Kotlin engine and coach store are included');
 assert.match(settings, /":kotlin-engine"/);
 assert.match(settings, /":native-coach-store"/);
-assert.match(app, /implementation\(project\(":engine-runtime"\)\)/,
-  'App needs the independently gated read-only metadata runtime');
+assert.match(app, /debugImplementation\(project\(":engine-runtime"\)\)/,
+  'Legacy metadata sandbox may compile only in debug, never beta release');
+assert.doesNotMatch(app,/\n\s+implementation\(project\(":engine-runtime"\)\)/,
+  'The release build must not include the old JS runtime dependency');
 const shell = read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt');
 const activity = read('app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
 const packaged = read('app/src/main/java/io/github/extracteddeath/pursuitiron/PackagedReadOnlySchemaVerifier.kt');

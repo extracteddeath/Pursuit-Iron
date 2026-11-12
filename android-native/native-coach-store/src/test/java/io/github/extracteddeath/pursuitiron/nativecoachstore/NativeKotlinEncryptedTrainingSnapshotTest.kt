@@ -104,7 +104,7 @@ class NativeKotlinEncryptedTrainingSnapshotTest {
         assertEquals(NativeKotlinTrainingSnapshotRead.Rejected(
             NativeKotlinTrainingSnapshotRefusal.OWNER_MISMATCH),
             NativeKotlinEncryptedTrainingSnapshot.inspect(
-                encrypted,password,owner.copy(athleteId="other")))
+                encrypted,password,NativeKotlinOwnerIdentity(owner.ownerKey,"other")))
     }
 
     @Test fun currentOwnerAndVerifiedHistoryAreMandatory() {
@@ -112,7 +112,7 @@ class NativeKotlinEncryptedTrainingSnapshotTest {
         write("workouts/set.bin","an existing saved workout")
         assertEquals(NativeKotlinTrainingSnapshotResult.Rejected(
             NativeKotlinTrainingSnapshotRefusal.OWNER_MISMATCH),
-            capture(currentOwner={owner.copy(athleteId="other")}))
+            capture(currentOwner={NativeKotlinOwnerIdentity(owner.ownerKey,"other")}))
         assertEquals(NativeKotlinTrainingSnapshotResult.Rejected(
             NativeKotlinTrainingSnapshotRefusal.UNVERIFIED_HISTORY),
             capture(history={false}))

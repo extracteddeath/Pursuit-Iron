@@ -17,8 +17,8 @@ class StarterExerciseSevenSourceParityTest {
     private val byId=entries.associateBy{it.legacyCuratedId}
 
     @Test fun allSevenSourceIdsStayDistinctAndProvisional() {
-        assertEquals(49,entries.size)
-        assertEquals(49,byId.size)
+        assertTrue(entries.size>=49)
+        assertEquals(entries.size,byId.size)
         assertTrue(byId.keys.containsAll(additions))
         for(id in additions) {
             val entry=checkNotNull(byId[id])

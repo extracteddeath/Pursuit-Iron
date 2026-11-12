@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {validateReviewedCatalogExpansion} from './reviewed-catalog-expansion.mjs';
 import fs from 'node:fs';
 import {CURATED_EXERCISES,EXERCISE_MAP} from '../../../modules/next-engine/exercise-db.js';
 
@@ -46,8 +47,13 @@ const appended=['wrist-curl','reverse-wrist-curl',
   // identities must be appended, not spliced into old persisted IDs.
   'db-bench','db-fly','db-shoulder','inc-curl','hammer',
   'face-pull','pec-deck'];
-assert.deepEqual(declared.slice(baseline.length),appended,
-  'Appended reviewed identities must not be lost or silently reordered');
+assert.deepEqual(declared.slice(baseline.length,49),appended,
+  'Original 49 reviewed identities must not be lost or silently reordered');
+const reviewedManifest=JSON.parse(fs.readFileSync(
+  'android-native/kotlin-engine/verification/reviewed-catalog-expansion.json','utf8'));
+validateReviewedCatalogExpansion(reviewedManifest,source,undefined);
+assert.deepEqual(declared.slice(49),reviewedManifest.records.map(r=>r.id),
+  'All additional source-reviewed Kotlin definitions must follow the stable 49-ID prefix');
 assert.equal(new Set(declared).size,declared.length);
 for(const [id,family,reps,equipment] of baseline) {
   const record=indexed.get(id);

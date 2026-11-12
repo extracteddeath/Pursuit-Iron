@@ -108,6 +108,45 @@ class CustomNextWorkoutCoachingDomainTest {
         CustomNextWorkoutCoachingRequest(next,"main",sessions,
             stock,n(step),readiness,restricted))
 
+    @Test fun V2AndV3UseGeneratedEnginesBelowFloorTargetRirRule() {
+        // Same factual 5 reps at 2 RIR with an issued 4 RIR goal is
+        // estimated at 3 reps at goal. It is NOT an earned 5-rep target.
+        fun goal4(day:CustomWorkoutDaySnapshot)=day.copy(
+            slots=day.slots.map{slot->slot.copy(
+                sets=slot.sets.map{set->set.copy(
+                    prescription=set.prescription.copy(targetRir=4))})})
+        fun goal4(entry:CustomCoachingHistoricalSession)=entry.copy(
+            snapshot=goal4(entry.snapshot),
+            evidence=entry.evidence.copy(visits=entry.evidence.visits.map{
+                it.copy(prescribedRir=4)
+            }))
+        val history=listOf(
+            goal4(completed(1,3,reps=listOf(5,5),rirs=listOf(2,2))),
+            goal4(completed(2,4,reps=listOf(5,5),rirs=listOf(2,2))))
+        val next=goal4(snapshot(5))
+        fun check(policy:CustomRepForecastPolicy)=
+            CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(next,"main",history,
+                    stock(),n(5),CoachReadiness.NORMAL,false,policy))
+        for(policy in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            val reviewed=check(policy)
+            assertEquals(policy.toString(),CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+                reviewed.status)
+            assertTrue(reviewed.nextSetSuggestions.isEmpty())
+            assertNull(reviewed.loadReviewCandidate)
+            assertTrue(reviewed.explanation.contains("below its minimum"))
+            assertEquals(CustomNextRepAmendmentResult.Rejected(
+                CustomNextRepAmendmentRefusal.NOT_AN_ELIGIBLE_REP_REVIEW),
+                CustomNextRepAmendmentDomain.propose(next,"main",reviewed))
+        }
+        // Historical frozen V1 receipts still replay their old rule.
+        val legacy=check(CustomRepForecastPolicy.LEGACY_STEP_V1)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,legacy.status)
+        assertEquals(listOf(6,6),
+            legacy.nextSetSuggestions.map{it.proposedNextReps})
+    }
+
     @Test fun differentMachineStacksNeverCreateFalseStrengthDropOrBorrowProgression() {
         fun tagged(session:CustomCoachingHistoricalSession,id:String):
             CustomCoachingHistoricalSession =

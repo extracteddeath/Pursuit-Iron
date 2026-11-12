@@ -445,7 +445,7 @@ object CustomNextWorkoutCoachingDomain {
         // Neither approach predicts capacity after extra earlier-set work.
         // Set keys include absolute week; join the last completed set to
         // next week's set by stable slot ordinal, never by different-week ID.
-        val suggestions=nextSets.zip(oldSets).map {(set,previousSet)->
+        val proposed=nextSets.zip(oldSets).map {(set,previousSet)->
             val observation=facts.single{it.setKey==previousSet.setKey}
             val actual=checkNotNull(observation.actual)
             val upper=set.prescription.reps.maximum
@@ -467,18 +467,24 @@ object CustomNextWorkoutCoachingDomain {
                             (observed+1).coerceAtMost(upper) else observed
                     CustomRepForecastPolicy.TARGET_RIR_V2,
                     CustomRepForecastPolicy.TARGET_RIR_TREND_V3 -> {
-                        val goal=checkNotNull(set.prescription.targetRir)
-                        val capacityAtGoal=actual.reps+
-                            checkNotNull(effortForSet.rir)-goal
-                        // Do not turn a low-effort set into an invented
-                        // below-range target; effort/working-load review is
-                        // distinct from this rep-only amendment.
-                        capacityAtGoal.coerceIn(lower,upper)
+                        // Use the SAME canonical target-RIR feasibility
+                        // as generated sessions. Never raise a below-floor
+                        // estimate into an unearned minimum prescription.
+                        FatigueAwareRepTargetReviewDomain.estimateTargetRirReps(
+                            actual.reps,checkNotNull(effortForSet.rir),
+                            checkNotNull(set.prescription.targetRir),
+                            set.prescription.reps)
                     }
                 }
-            CustomNextSetCoaching(set.setKey,actual.reps,next,
-                actual.actualRir,next>observed,effortForSet.rir,effortForSet.source)
+            if(next==null)null else CustomNextSetCoaching(
+                set.setKey,actual.reps,next,actual.actualRir,
+                next>observed,effortForSet.rir,effortForSet.source)
         }
+        if(proposed.any{it==null})
+            return result(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+                ids,latest.evidence.workoutId,
+                explanation="At the prescribed goal RIR, at least one completed set is projected below its minimum rep target. Review that set's verified load, range or recovery before changing the future program. No reps were raised to an invented minimum.")
+        val suggestions=proposed.filterNotNull()
         val increased=suggestions.any{it.changed}
         // Exceeding an authored rep ceiling is not permission to package a
         // LOWER capped rep number as an "earned" rep increase. V2/V3 can

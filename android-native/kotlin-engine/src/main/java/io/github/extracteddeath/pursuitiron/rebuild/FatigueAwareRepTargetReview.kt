@@ -88,6 +88,22 @@ object FatigueAwareRepTargetReviewDomain {
     private val zero=BigDecimal.ZERO
 
     /**
+     * ONE current-policy estimate for a set's own load/ordinal and goal RIR.
+     * A below-floor estimate is NOT promoted to the minimum prescribed reps:
+     * the target/load/range needs a separate review instead. Unlike frozen
+     * V1 receipt replay, all new generated and custom target-RIR forecasts
+     * must use this same rule, without rewriting measured actuals.
+     */
+    internal fun estimateTargetRirReps(
+        actualReps:Int,effectiveRir:Int,goalRir:Int,band:RepBand
+    ):Int? {
+        require(actualReps>=0 && effectiveRir in 0..10 && goalRir in 0..10)
+        val estimated=actualReps+effectiveRir-goalRir
+        return if(estimated<band.minimum)null else
+            estimated.coerceAtMost(band.maximum)
+    }
+
+    /**
      * One load, one finished session, original set order. The caller must
      * separately authenticate full history, program source and actual session
      * purpose before accepting any proposal into a NEW approved program.
@@ -182,13 +198,13 @@ object FatigueAwareRepTargetReviewDomain {
             // a universal dose-response equation or a success probability.
             // Assumed effort supplies zero extra headroom when the goal is unchanged.
             val estimates=ordered.mapIndexed {i,it ->
-                checkNotNull(it.actualReps)+
-                    checkNotNull(effort.getValue(it.workingOrdinal).rir)-
-                    checkNotNull(goals[i])
+                estimateTargetRirReps(checkNotNull(it.actualReps),
+                    checkNotNull(effort.getValue(it.workingOrdinal).rir),
+                    checkNotNull(goals[i]),session.targetReps)
             }
-            if(estimates.any {it<session.targetReps.minimum})
+            if(estimates.any {it==null})
                 return result(FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
-            val candidate=estimates.map {it.coerceAtMost(session.targetReps.maximum)}
+            val candidate=estimates.map {checkNotNull(it)}
             val changed=candidate.indices.filter {candidate[it]!=checkNotNull(reps)[it]}
             if(changed.isEmpty()) return result(
                 if(ordered.all {it.actualReps==session.targetReps.maximum})

@@ -121,7 +121,7 @@ object NativeKotlinCleanStoreRestore {
                     throw IOException("unsafe stale staging path")
                 if(paths.size>=MAX_CLEANUP_FILES)
                     throw IOException("unbounded stale staging contents")
-                paths+=path
+                paths.add(path)
             }
         }
         paths.sortWith(Comparator {a,b->b.nameCount.compareTo(a.nameCount)})

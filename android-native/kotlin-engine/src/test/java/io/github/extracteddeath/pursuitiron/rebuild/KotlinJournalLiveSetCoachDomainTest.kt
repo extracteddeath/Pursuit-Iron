@@ -366,6 +366,82 @@ class KotlinJournalLiveSetCoachDomainTest {
         assertEquals(n("10"),stockFor(fixed,"first:s1","B")?.increment)
     }
 
+    @Test fun generatedMachineSwitchWithholdsAllPriorStationFatigueNotOnlyLoadStock() {
+        val issued=started((0..2).map{target(it)})
+        val first=(KotlinWorkoutJournalDomain.reduce(issued,
+            KotlinJournalOperation.RecordSet("a-observation",0,"bench:s0",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("215"),LoadUnit.LB,2,0,"A")))
+            as KotlinJournalDecision.Proposed).state
+        fun review(j:KotlinWorkoutJournalState,physical:String?,
+            candidateStock:VerifiedLoadStock?=stock)=
+            KotlinJournalLiveSetCoachDomain.review(j,"bench:s1",
+                candidateStock,CoachReadiness.NORMAL,false,n("5"),
+                machineScope=LiveMachineCoachScope.Physical(physical))
+        // Even if gym B has a confirmed stack, A performance cannot cause
+        // an optional smaller load OR misleading rep/fatigue advice for B.
+        val mismatched=LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.PHYSICAL_MACHINE_HISTORY_MISMATCH)
+        assertEquals(mismatched,review(first,"B"))
+        assertEquals(mismatched,review(first,"B",null))
+        assertEquals(mismatched,review(first,null))
+        val onA=review(first,"A") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            onA.coaching.direction)
+        assertEquals(n("215"),onA.coaching.issuedTargetUnchanged)
+        assertFalse(onA.coaching.canApplyAutomatically)
+        // A confirmed correction is the ONLY source allowed to replace the
+        // effective machine observation. It does not rewrite the prescription.
+        val corrected=(KotlinWorkoutJournalDomain.reduce(first,
+            KotlinJournalOperation.RecordSet("b-correction",first.revision,
+                "bench:s0",KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("215"),LoadUnit.LB,6,3,"B"),
+                correctsEventId="a-observation"))
+            as KotlinJournalDecision.Proposed).state
+        val onB=review(corrected,"B") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,
+            onB.coaching.direction)
+        assertEquals(mismatched,review(corrected,"A"))
+        assertEquals(issued.snapshot,corrected.snapshot)
+    }
+
+    @Test fun customMachineSwitchCannotBorrowAnotherPhysicalStationsFatigue() {
+        val issued=custom()
+        val first=(CustomWorkoutJournalDomain.reduce(issued,
+            CustomWorkoutJournalOperation.Record("a-observation",0,
+                CustomWorkoutVisitKey("first:s0",CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("215"),LoadUnit.LB,2,0,"A")))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        fun review(j:CustomWorkoutJournalDraft,machine:String?,
+            candidateStock:VerifiedLoadStock?=stock)=
+            KotlinJournalLiveSetCoachDomain.review(j,"first:s1",
+                candidateStock,CoachReadiness.NORMAL,false,n("5"),
+                machineScope=LiveMachineCoachScope.Physical(machine))
+        val blocked=LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.PHYSICAL_MACHINE_HISTORY_MISMATCH)
+        assertEquals(blocked,review(first,"B"))
+        assertEquals(blocked,review(first,"B",null))
+        assertEquals(blocked,review(first,null))
+        val onA=review(first,"A") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            onA.coaching.direction)
+        assertFalse(onA.canModifyWorkout)
+        val corrected=(CustomWorkoutJournalDomain.reduce(first,
+            CustomWorkoutJournalOperation.Record("b-correction",
+                first.revision,CustomWorkoutVisitKey("first:s0",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("215"),LoadUnit.LB,6,3,"B"),
+                correctsEventId="a-observation"))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val onB=review(corrected,"B") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,
+            onB.coaching.direction)
+        assertEquals(blocked,review(corrected,"A"))
+        assertEquals(issued.snapshot,corrected.snapshot)
+    }
+
     @Test fun bothJournalKindsRespectFatigueOptOutAndKeepRestrictionBoundary() {
         val regular=record(started(),"bench:s0")
         val authored=customRecord(custom(),"first:s0",2,"215")

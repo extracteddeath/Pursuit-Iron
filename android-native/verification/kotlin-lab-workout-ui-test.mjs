@@ -159,6 +159,17 @@ assert.ok(journal.includes('current.originalSnapshot.stamp.gymId') &&
   machineSelector.includes('normalizeMachineId(\n                it.actual?.machineInstanceId)'),
   'Issued gym and legacy-only Last selection must remain explicit');
 const generatedCoachHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const liveCoachDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinJournalLiveSetCoachDomain.kt');
+const customLiveSetBridge=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomLiveSetCoachReview.kt');
+assert.ok(liveCoachDomain.includes('sealed interface LiveMachineCoachScope') &&
+  liveCoachDomain.includes('LiveMachineCoachScope.Physical') &&
+  liveCoachDomain.includes('PHYSICAL_MACHINE_HISTORY_MISMATCH') &&
+  liveCoachDomain.includes('target.performed?.machineInstanceId!=machineId') &&
+  generatedCoachHost.includes('LiveMachineCoachScope.Physical(selectedPhysicalMachine)') &&
+  generatedCoachHost.includes('maximumReviewStep,assistance,machineScope)') &&
+  customLiveSetBridge.includes('LiveMachineCoachScope.Physical(selectedPhysicalMachine)') &&
+  customLiveSetBridge.includes('machineScope)'),
+  'Both native live-coaching bridges must enforce A/B history identity, even when stock is unverified');
 const physicalStockDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinMachineLiveCoachingDomain.kt');
 assert.ok(generatedCoachHost.includes('val issuedGym=journal.originalSnapshot.source.gymId') &&
   generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&

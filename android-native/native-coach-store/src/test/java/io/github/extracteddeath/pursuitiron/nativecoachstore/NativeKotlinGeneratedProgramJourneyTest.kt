@@ -235,17 +235,18 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(load.value-n("5"),advice.coaching.weightForHumanReview)
         assertEquals(journal.revision,advice.journalRevision)
         assertFalse(advice.canModifyWorkout)
-        // A gym's generic rack inventory must not authorize load changes
-        // after this exact lift receives alternative physical stations.
+        // Introducing physical A/B stations after an unassigned set must
+        // not reinterpret that set's actuals as station A or B fatigue.
+        // With no pinned machine and no same-station observations, the
+        // entire live review is unavailable, not merely the load step.
         val station=KotlinGymMachineAlternatives("gym-1",slot.exerciseId,"A",
             listOf(KotlinPhysicalMachine("A","Station A"),
                 KotlinPhysicalMachine("B","Station B")))
         assertTrue(Disk().machines.save(owner,0,listOf(station))
             is NativeMachineRosterResult.Saved)
-        val physical=(look() as LiveSetCoachResult.Reviewed).coaching
-        assertEquals(InWorkoutDirection.VERIFY_PLANNED_EQUIPMENT,
-            physical.direction)
-        assertNull(physical.weightForHumanReview)
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.PHYSICAL_MACHINE_HISTORY_MISMATCH),
+            look())
         assertTrue(Disk().machines.save(owner,1,listOf(
             KotlinGymMachineAlternatives("gym-1",slot.exerciseId,null,emptyList())))
             is NativeMachineRosterResult.Saved)

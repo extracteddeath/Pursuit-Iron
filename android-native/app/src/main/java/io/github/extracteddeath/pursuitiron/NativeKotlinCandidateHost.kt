@@ -2569,37 +2569,40 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 }?:return@withOwnerTransaction null
                 val current=gymCoherentAuthority.currentApprovedWorkout(
                     signed.ownerKey,workoutId)
-                // An exercise-level stack is not proof of the resistance
-                // on physical Machine A or B. Until this generated-workout
-                // coach consumes a verified selected station and THAT
-                // station's confirmed min/step/max, keep rep/fatigue advice
-                // but withhold automatic weight-step candidates.
+                // A physical-machine selection is not itself performance
+                // evidence. The ONE Kotlin coaching policy must also refuse
+                // to read A's fatigue history when the workout now uses B.
                 val roster=(machineRosters.read(signed.ownerKey)
                     as? NativeMachineRosterResult.Saved)?.snapshot
                 val issuedGym=journal.originalSnapshot.source.gymId
                 val hasPhysicalStations=roster?.configurations?.any{
                     it.gymId==issuedGym && it.exerciseId==selected.exerciseId && it.machines.isNotEmpty()
                 } == true
+                val selectedPhysicalMachine=if(hasPhysicalStations) {
+                    val choices=(workoutMachineChoices.read(signed.ownerKey,
+                        workoutId,false,issuedGym)
+                        as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                    choices?.takeIf{it.revision>0 &&
+                        it.ownerId==signed.ownerKey && it.gymId==issuedGym}
+                        ?.machines?.get(selected.exerciseId)
+                } else null
+                val machineScope=if(hasPhysicalStations)
+                    LiveMachineCoachScope.Physical(selectedPhysicalMachine)
+                else LiveMachineCoachScope.ExerciseOnly
                 val stock:VerifiedLoadStock?=
                     if(current?.approvedSource!=journal.snapshot.source ||
                         roster==null) null
                     else if(hasPhysicalStations) {
                         val config=KotlinMachineAlternativesDomain.forGymExercise(
                             roster.configurations,issuedGym,selected.exerciseId)
-                        val choices=(workoutMachineChoices.read(signed.ownerKey,
-                            workoutId,false,issuedGym)
-                            as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
-                        val machine=choices?.takeIf{it.revision>0 &&
-                            it.ownerId==signed.ownerKey && it.gymId==issuedGym}
-                            ?.machines?.get(selected.exerciseId)
                         KotlinMachineLiveCoachingDomain.confirmedForNext(
-                            journal,setKey,machine,config)
+                            journal,setKey,selectedPhysicalMachine,config)
                     } else (current.program.exercises.singleOrNull{
                         it.exerciseId==selected.exerciseId
                     }?.equipment as? ComposerEquipment.Verified)?.inventory
                 KotlinJournalLiveSetCoachDomain.review(
                     journal,setKey,stock,readiness,movementRestricted,
-                    maximumReviewStep,assistance)
+                    maximumReviewStep,assistance,machineScope)
             }
         }.getOrNull()
     }

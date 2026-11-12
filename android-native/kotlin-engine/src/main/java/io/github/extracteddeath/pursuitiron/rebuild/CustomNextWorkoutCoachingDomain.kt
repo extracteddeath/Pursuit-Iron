@@ -352,20 +352,37 @@ object CustomNextWorkoutCoachingDomain {
         // replay their historical algorithm; new V2/V3 reviews use this guard.
         val machineEvidenceFence=appearances.takeLast(2).first().completionOrder
         if(request.repForecastPolicy.usesTargetRir()) {
-            val unresolved=dayAppearances.any {session ->
-                if(session.completionOrder<machineEvidenceFence)false
-                else {
-                    val priorSets=session.evidence.visits.filter{
-                        it.slotId==target.slotId &&
-                            it.part==CustomWorkoutVisitPart.MAIN &&
-                            it.setType==DraftSetType.WORKING
-                    }
-                    val observed=machines(session)
-                    priorSets.isEmpty() || priorSets.any{it.actual==null} ||
-                        observed.size!=1 ||
-                        (targetMachine!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
-                            KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in observed)
+            // A separately identified B visit is independent ONLY while the
+            // underlying program/gym/phase contract is continuous. It must
+            // never conceal an intervening gym revision or cycle rewrite
+            // followed by a return to an older A prescription. Do not
+            // cherry-pick two good A workouts across source drift.
+            val evidenceWindow=dayAppearances.filter{
+                it.completionOrder>=machineEvidenceFence
+            }
+            if(evidenceWindow.any{session->
+                val old=session.snapshot
+                old.stamp!=request.next.stamp ||
+                    old.phase!=request.next.phase ||
+                    old.split!=request.next.split ||
+                    old.blockPurpose!=request.next.blockPurpose ||
+                    old.sessionPurpose!=request.next.sessionPurpose
+            }) return result(
+                CustomNextWorkoutCoachingStatus.CHANGED_COACHING_SOURCE,
+                appearances.takeLast(2).map{it.evidence.workoutId},
+                appearances.last().evidence.workoutId,
+                explanation="The gym, plan, phase or training-day purpose changed between required machine-specific performances. Re-establish two comparable workouts under the current source before proposing an increase; identified A/B machines alone do not prove continuity.")
+            val unresolved=evidenceWindow.any {session ->
+                val priorSets=session.evidence.visits.filter{
+                    it.slotId==target.slotId &&
+                        it.part==CustomWorkoutVisitPart.MAIN &&
+                        it.setType==DraftSetType.WORKING
                 }
+                val observed=machines(session)
+                priorSets.isEmpty() || priorSets.any{it.actual==null} ||
+                    observed.size!=1 ||
+                    (targetMachine!=KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID &&
+                        KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID in observed)
             }
             if(unresolved)
                 return result(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,

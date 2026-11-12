@@ -194,7 +194,7 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
         // Saved identities are append-only: the first 42 retain their
         // exact ordinal/source IDs while the seven new variants follow.
-        assertEquals(49,starter.catalog.size)
+        assertTrue(starter.catalog.size>=76)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",
@@ -210,7 +210,15 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             starter.catalog.drop(31).take(11).map{it.exerciseId})
         assertEquals(listOf("db-bench","db-fly","db-shoulder",
             "inc-curl","hammer","face-pull","pec-deck"),
-            starter.catalog.drop(42).map{it.exerciseId})
+            starter.catalog.drop(42).take(7).map{it.exerciseId})
+        assertEquals(listOf("low-inc-bb-bench","high-inc-bb-bench","smith-bench",
+            "front-squat","smith-squat","walking-lunge","bulgarian",
+            "lying-curl","seated-calf","bb-curl","ez-curl",
+            "bayesian-curl","cgbp","skullcrusher","pushdown","ez-pushdown",
+            "oh-cable-ext","machine-row","seated-row","front-raise",
+            "arnold","pushup","bw-squat","diamond-pushup","pike-pushup",
+            "incline-pushup","decline-pushup"),
+            starter.catalog.drop(49).take(27).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)
@@ -233,7 +241,9 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         // deck, or an absent dumbbell rack.
         assertFalse(eligible.any{it.exerciseId in setOf(
             "db-bench","db-fly","db-shoulder","inc-curl","hammer",
-            "face-pull","pec-deck")})
+            "face-pull","pec-deck","front-squat","smith-squat",
+            "machine-row","lying-curl","seated-calf","bb-curl",
+            "arnold","bayesian-curl")})
         assertTrue(eligible.any{
             it.exerciseId=="bodyweight_crunch" && it.bodyweight
         })

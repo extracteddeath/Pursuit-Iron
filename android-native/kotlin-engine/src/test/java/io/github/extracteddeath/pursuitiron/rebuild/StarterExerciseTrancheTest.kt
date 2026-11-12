@@ -64,11 +64,12 @@ class StarterExerciseTrancheTest {
         // compatibility contract. Seven more active-web IDs append only.
         assertEquals(listOf("db-bench","db-fly","db-shoulder",
             "inc-curl","hammer","face-pull","pec-deck"),
-            data.drop(42).map{it.legacyCuratedId})
-        assertEquals(49,data.size)
-        assertEquals(49,data.map {it.legacyCuratedId}.distinct().size)
+            data.drop(42).take(7).map{it.legacyCuratedId})
+        // Historical tranches are stable prefixes, not hardcoded total size.
+        assertTrue(data.size>=49)
+        assertEquals(data.size,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(49,data.map {
+        assertEquals(data.size,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {

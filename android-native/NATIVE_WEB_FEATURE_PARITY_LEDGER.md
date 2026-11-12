@@ -44,6 +44,29 @@ policy remain history, not up-to-date acceptance. This is a factual
 discovery from reviewed repository source, not a claim that latest web behavior
 has been independently device-tested in this audit.
 
+## Current in-progress source coverage — updated November 12, 2026
+
+The immutable **historical baseline below** was 22 of 376. The subsequent
+source-linked review added 4 press/leg movements in [#535](https://github.com/extracteddeath/Pursuit-Iron/pull/535),
+and proposes 5 more high-use cable/pull/lower movements in
+[#537](https://github.com/extracteddeath/Pursuit-Iron/pull/537).
+The review branch therefore has **31 of 376 exact active web IDs** and
+**345 IDs remain outside the reviewed starter tranche**; the executable CI
+inventory, not this manually written checkpoint, is authoritative for later
+counts. The 1,024-entry bounded capacity fix in
+[#536](https://github.com/extracteddeath/Pursuit-Iron/pull/536)
+proves the system can *carry* web-sized catalogs without truncation. It does
+**not** import 376 qualified exercise definitions or prove any 376-exercise
+programming, history or machine-specific loading parity.
+
+All 31 source-linked records are engineering-provisional and require a real
+verified gym setup and athlete-specific starting load where applicable.
+Matching source IDs do not establish comparable muscle stimulus, progression,
+machine A/B or real-device behavior. The independent full web/Kotlin functional
+parity gate, issue #518 load stability and separate superiority gate remain
+**OPEN**. Do not publish beta, a parity percentage based only on catalog size,
+or a claim of a better engine from this checkpoint alone.
+
 ## Measured source coverage checkpoint — November 12, 2026
 
 - Web's effective built-in exercise catalog contains **376 active identities**

@@ -54,9 +54,14 @@ class StarterExerciseTrancheTest {
             data.drop(22).take(4).map{it.legacyCuratedId})
         assertEquals(listOf("hack_squat","hip_thrust",
             "cable_lateral_raise","lat-pulldown","rope-pushdown"),
-            data.drop(26).map{it.legacyCuratedId})
-        assertEquals(31,data.size)
-        assertEquals(31,data.map {it.legacyCuratedId}.distinct().size)
+            data.drop(26).take(5).map{it.legacyCuratedId})
+        assertEquals(listOf("cable_fly","chest_supported_row",
+            "neutral_pulldown","rear_delt_fly","machine_ohp",
+            "preacher_curl","cable_curl","cable_triceps",
+            "overhead_cable_triceps","standing_calf","cable_crunch"),
+            data.drop(31).map{it.legacyCuratedId})
+        assertEquals(42,data.size)
+        assertEquals(42,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
         assertEquals(31,data.map {
             it.movement.familyId to it.movement.variantId
@@ -625,4 +630,102 @@ class StarterExerciseTrancheTest {
         assertEquals(n("135"),choices.first().selectedLoad)
         assertFalse(CoachExerciseCatalogDomain.review(selected).mayIssueWorkout)
     }
+    @Test fun curatedAccessoryIdentitiesRequireExactImplementFacilityAndAttachment() {
+        val newIds=listOf("cable_fly","chest_supported_row",
+            "neutral_pulldown","rear_delt_fly","machine_ohp",
+            "preacher_curl","cable_curl","cable_triceps",
+            "overhead_cable_triceps","standing_calf","cable_crunch")
+        val entries=data.drop(31)
+        assertEquals(newIds,entries.map{it.legacyCuratedId})
+        assertTrue(entries.none{it.mayTransferPreviousLoad})
+        val byId=entries.associateBy{it.legacyCuratedId}
+        val machineIds=listOf("rear_delt_fly","machine_ohp",
+            "preacher_curl","standing_calf")
+        assertTrue(machineIds.all{
+            byId.getValue(it).movement.expectedLoadBasis==
+                LoadBasis.EXERCISE_OVERRIDE
+        })
+        assertEquals(4,machineIds.map{
+            byId.getValue(it).movement.equipmentId
+        }.distinct().size)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,
+            byId.getValue("chest_supported_row").movement.expectedLoadBasis)
+        assertEquals(setOf("incline-bench"),
+            byId.getValue("chest_supported_row").movement.requiredFacilityIds)
+        val cables=newIds.filter{it in setOf("cable_fly","neutral_pulldown",
+            "cable_curl","cable_triceps","overhead_cable_triceps","cable_crunch")}
+        assertEquals(6,cables.size)
+        assertTrue(cables.all {
+            byId.getValue(it).movement.expectedLoadBasis==LoadBasis.CABLE_STACK &&
+                byId.getValue(it).movement.equipmentId=="cable-station" &&
+                byId.getValue(it).movement.attachmentId!=null
+        })
+        assertEquals("dual-handles",
+            byId.getValue("cable_fly").movement.attachmentId)
+        assertEquals("neutral-grip-bar",
+            byId.getValue("neutral_pulldown").movement.attachmentId)
+        assertEquals("straight-bar",
+            byId.getValue("cable_curl").movement.attachmentId)
+        assertEquals("straight-bar",
+            byId.getValue("cable_triceps").movement.attachmentId)
+        assertEquals("rope",
+            byId.getValue("overhead_cable_triceps").movement.attachmentId)
+        assertEquals("rope",
+            byId.getValue("cable_crunch").movement.attachmentId)
+        assertEquals(listOf(TrainingMuscle.ABS),
+            byId.getValue("cable_crunch").movement.credits.map{it.muscle})
+        assertEquals(listOf(TrainingMuscle.BICEPS),
+            byId.getValue("preacher_curl").movement.credits.map{it.muscle})
+        assertEquals(listOf(TrainingMuscle.REAR_DELTS),
+            byId.getValue("rear_delt_fly").movement.credits.map{it.muscle})
+        assertFalse(byId.getValue("chest_supported_row").movement.credits.any{
+            it.muscle==TrainingMuscle.LOWER_BACK
+        })
+        val machine=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("40"),n("50"),n("60")))
+        val cable=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.CABLE_STACK,listOf(n("15"),n("20"),n("25")))
+        val stocks=mapOf("cable-station" to cable,
+            "reverse-pec-deck-machine" to machine,
+            "shoulder-press-machine" to machine,
+            "preacher-curl-machine" to machine,
+            "standing-calf-machine" to machine,
+            "dumbbell-rack" to db)
+        fun reviewed(id:String,weight:String="20",
+            stock:Map<String,VerifiedLoadStock> =stocks,
+            attached:Set<String> =emptySet(),
+            facilities:Set<String> =setOf("incline-bench"))=
+            CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice(id,n(weight))),
+                CatalogGym(stock,attached,facilities)))
+        fun issue(id:String,kind:CatalogIssueType,
+            result:CatalogWeekReview)=result.issues.any {
+                it.exerciseId==id && it.kind==kind
+            }
+        assertTrue(issue("cable_fly",CatalogIssueType.ATTACHMENT_UNAVAILABLE,
+            reviewed("cable_fly")))
+        assertFalse(issue("cable_fly",CatalogIssueType.ATTACHMENT_UNAVAILABLE,
+            reviewed("cable_fly",attached=setOf("dual-handles"))))
+        assertTrue(issue("neutral_pulldown",
+            CatalogIssueType.ATTACHMENT_UNAVAILABLE,
+            reviewed("neutral_pulldown",attached=setOf("rope"))))
+        assertTrue(issue("cable_curl",CatalogIssueType.ATTACHMENT_UNAVAILABLE,
+            reviewed("cable_curl",attached=setOf("rope"))))
+        assertTrue(issue("chest_supported_row",CatalogIssueType.FACILITY_UNAVAILABLE,
+            reviewed("chest_supported_row","30",facilities=emptySet())))
+        assertTrue(issue("preacher_curl",CatalogIssueType.EQUIPMENT_UNAVAILABLE,
+            reviewed("preacher_curl","50",
+                stock=stocks-"preacher-curl-machine")))
+        assertTrue(issue("standing_calf",CatalogIssueType.LOAD_UNVERIFIED,
+            reviewed("standing_calf","55")))
+        assertTrue(issue("machine_ohp",CatalogIssueType.EQUIPMENT_BASIS_MISMATCH,
+            reviewed("machine_ohp","20",stock=stocks+
+                ("shoulder-press-machine" to cable))))
+        val crunch=reviewed("cable_crunch",attached=setOf("rope"))
+        assertFalse(issue("cable_crunch",CatalogIssueType.LOAD_UNVERIFIED,crunch))
+        assertFalse(issue("cable_crunch",CatalogIssueType.ATTACHMENT_UNAVAILABLE,crunch))
+        assertFalse(crunch.mayIssueWorkout)
+        assertFalse(crunch.mayOverwriteAuthoredProgram)
+    }
+
 }

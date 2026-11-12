@@ -3512,6 +3512,44 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
 
+    @Test fun defaultRepApprovalRejectsPreferenceDriftAndManualOptOut() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13,actualRir=3)
+        val id="owner-policy-switch-week6"
+        assertTrue(f.assistance.save("owner-1",0,
+            CoachAssistancePolicy.PROGRESSION_ONLY)
+            is NativeCoachSettingsWrite.Saved)
+        val preview=f.repApprovals.preview("owner-1",id,futureInputs(),
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(preview.toString(),preview is NativeCustomNextRepPreview.Ready)
+        val offer=preview as NativeCustomNextRepPreview.Ready
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_V2,
+            offer.receipt.repForecastPolicy)
+        assertEquals(listOf(14),offer.receipt.nextMinimumReps)
+        assertTrue(f.assistance.save("owner-1",1,
+            CoachAssistancePolicy.STANDARD) is NativeCoachSettingsWrite.Saved)
+        // The athlete approved only a V2 view. A different current V3
+        // policy/assistance revision cannot accept an old fingerprint.
+        assertEquals(NativeCustomNextRepWrite.Rejected(
+            NativeCustomNextRepRefusal.FINGERPRINT_CHANGED),
+            f.repApprovals.accept("owner-1",id,futureInputs(),
+                6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+                offer.receipt.fingerprint,offer.receipt.historyRevision,
+                offer.receipt.consentRevision,offer.receipt.setKeys,
+                offer.receipt.nextMinimumReps,true))
+        assertEquals(NativeCustomNextRepRead.Missing,
+            f.repApprovals.readCurrent("owner-1",id,futureInputs(),6,1))
+        assertTrue(f.assistance.save("owner-1",2,
+            CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomNextRepPreview.Rejected(
+            NativeCustomNextRepRefusal.REVIEW_NOT_READY),
+            f.repApprovals.preview("owner-1",id,futureInputs(),
+                6,1,"slot-1",CoachReadiness.NORMAL,false,n("5")))
+        assertEquals(NativeCustomNextRepRead.Missing,
+            f.repApprovals.readCurrent("owner-1",id,futureInputs(),6,1))
+    }
+
     @Test fun acceptedRepAmendmentCannotSurviveRevokedOrReconfirmedCycleConsent() {
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)

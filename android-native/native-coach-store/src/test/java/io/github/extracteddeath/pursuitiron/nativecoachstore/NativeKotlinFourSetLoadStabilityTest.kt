@@ -133,7 +133,7 @@ class NativeKotlinFourSetLoadStabilityTest {
         loads:List<String> =listOf("215","215","215","215")
     ):CustomWorkoutDaySnapshot {
         val sets=loads.mapIndexed{ordinal,value->
-            CustomWorkoutSetSnapshot("slot-a:s$ordinal","slot-a",
+            CustomWorkoutSetSnapshot("cycle-1:w1:d0:slot-a:s${ordinal+1}","slot-a",
                 ordinal+1,CustomAuthoredSet(DraftSetType.WORKING,
                     DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(value)),
                     RepBand(5,8),2,60,120))
@@ -145,7 +145,7 @@ class NativeKotlinFourSetLoadStabilityTest {
                 "gym-1",1),
             1,1,"base",TrainingPhase.STRENGTH,CustomBlockPurpose.TRAINING,
             CustomSplitIdentity.Freeform("My split"),0,"Upper",
-            ComposerSessionPurpose.STRENGTH_SKILL,listOf(slot),1080,900)
+            ComposerSessionPurpose.STRENGTH_SKILL,listOf(slot),720,900)
     }
     private fun coldCustom(journal:CustomWorkoutJournalDraft):
         CustomWorkoutJournalDraft {
@@ -167,7 +167,7 @@ class NativeKotlinFourSetLoadStabilityTest {
             "custom-stability",issued,"a".repeat(64)))
         assertEquals(List(4){n("215")},customLoads(journal))
         for(index in 0..3) {
-            val key="slot-a:s$index"
+            val key="cycle-1:w1:d0:slot-a:s${index+1}"
             if(index>0) {
                 val advice=KotlinJournalLiveSetCoachDomain.review(journal,key,
                     stock,CoachReadiness.NORMAL,false,n("5"),
@@ -215,14 +215,14 @@ class NativeKotlinFourSetLoadStabilityTest {
         val original=journal.originalSnapshot
         val event=CustomWorkoutJournalOperation.Record(
             "first-top-set",journal.revision,
-            CustomWorkoutVisitKey("slot-a:s0",CustomWorkoutVisitPart.MAIN),
+            CustomWorkoutVisitKey("cycle-1:w1:d0:slot-a:s1",CustomWorkoutVisitPart.MAIN),
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(n("215"),LoadUnit.LB,2,0))
         journal=coldCustom((CustomWorkoutJournalDomain.reduce(journal,event)
             as CustomWorkoutJournalDecision.Proposed).draft)
         assertEquals(LiveSetCoachResult.Unavailable(
             LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME),
-            KotlinJournalLiveSetCoachDomain.review(journal,"slot-a:s1",stock,
+            KotlinJournalLiveSetCoachDomain.review(journal,"cycle-1:w1:d0:slot-a:s2",stock,
                 CoachReadiness.NORMAL,false,n("5")))
         assertEquals(original,journal.originalSnapshot)
         assertEquals(listOf(n("215"),n("215"),n("205"),n("205")),

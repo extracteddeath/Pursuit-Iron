@@ -108,8 +108,15 @@ val verifyEarlyBetaRuntime by tasks.registering {
         }
     }
 }
-// Source-only/debug CI remains available during migration. This release
-// invariant is evaluated by all ordinary release-build entry points.
-tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+// CI must still be able to compile BOTH debug and release source without
+// assembling any artifact. Bind this to actual distributable packaging, not
+// preReleaseBuild (a dependency of source compilation). The final unsigned
+// or signed artifact is refused while the parallel JS runtime is packaged.
+tasks.matching {
+    it.name in setOf(
+        "packageRelease", "assembleRelease",
+        "bundleRelease", "packageReleaseBundle"
+    )
+}.configureEach {
     dependsOn(verifyEarlyBetaRuntime)
 }

@@ -89,6 +89,124 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         return current
     }
 
+    @Test fun coldResumedFourSetWorkoutNeverReissuesWeightAfterFatigueOrManualCorrection() {
+        // A real disk-backed workout/history journey, not only a pure
+        // policy assertion. Three hard sets must not make the next 215 lb
+        // issued set become 210 lb after a cold gateway open. A deliberate
+        // correction to the ACTUAL is retained separately in history.
+        val prescribed = BigDecimal("215")
+        val targets = (0..3).map {ordinal->
+            KotlinWorkoutTarget(
+                "bench",ComposerRole.PRIMARY,
+                ComposerSessionPurpose.STRENGTH_SKILL,"hard-set-$ordinal",
+                DraftSetType.WORKING,ordinal,
+                DraftSetLoad.Verified(
+                    LoadUnit.LB,LoadBasis.SMITH_TOTAL,prescribed),
+                RepBand(5,8),3,60,120)
+        }
+        val snapshot=KotlinStagedWorkout(
+            source,"grant-four","four-set-safety",0,0,
+            ComposerSessionPurpose.STRENGTH_SKILL,55,targets)
+        val identity=KotlinStoredWorkoutIdentity(
+            "storage-four","four-set-safety",source,1)
+        val issued=journal().issue("owner-1",snapshot,identity)
+        assertTrue(issued.toString(),issued is NativeJournalFileResult.Durable)
+        enroll()
+
+        // New gateway/coordinator/journal reader per call, as after the
+        // UI or process recreates state. No Compose draft carries targets.
+        fun cold():KotlinWorkoutJournalState {
+            val opened=gateway().open("owner-1","athlete-1","four-set-safety")
+            assertTrue(opened.toString(),
+                opened is NativeJournalFileResult.Durable)
+            return (opened as NativeJournalFileResult.Durable).journal
+        }
+        fun unchanged(j:KotlinWorkoutJournalState) {
+            assertEquals(snapshot,j.originalSnapshot)
+            assertEquals(snapshot,j.snapshot)
+            assertEquals(List(4){prescribed},j.snapshot.targets.map {
+                (it.load as DraftSetLoad.Verified).value
+            })
+        }
+        unchanged(cold())
+        var saved=cold()
+        for (ordinal in 0..3) {
+            val logged=gateway().append("owner-1","athlete-1",
+                "four-set-safety",KotlinJournalOperation.RecordSet(
+                    "hard-event-$ordinal",saved.revision,
+                    "hard-set-$ordinal",KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(prescribed,LoadUnit.LB,2,0,"A")))
+            assertTrue(logged.toString(),
+                logged is NativeJournalFileResult.Durable)
+            saved=cold()
+            unchanged(saved)
+            assertEquals(ordinal+1,saved.resolvedSetCount)
+            if(ordinal==0) {
+                val reviewed=KotlinJournalLiveSetCoachDomain.review(
+                    saved,"hard-set-1",
+                    VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+                        listOf(BigDecimal("205"),BigDecimal("210"),prescribed)),
+                    CoachReadiness.NORMAL,false,BigDecimal("5"))
+                    as LiveSetCoachResult.Reviewed
+                assertEquals(prescribed,reviewed.coaching.issuedTargetUnchanged)
+                assertFalse(reviewed.canModifyWorkout)
+                assertFalse(reviewed.canIssueWorkout)
+                assertFalse(reviewed.coaching.canApplyAutomatically)
+            }
+            if(ordinal==1) {
+                // Correct only the completed first set's actual load.
+                // An athlete-entered lower result must not propagate to
+                // any pending set or rewrite the signed prescription.
+                val corrected=gateway().append("owner-1","athlete-1",
+                    "four-set-safety",KotlinJournalOperation.RecordSet(
+                        "hard-correction",saved.revision,
+                        "hard-set-0",KotlinJournalSetOutcome.COMPLETED,
+                        KotlinPerformedSet(BigDecimal("210"),LoadUnit.LB,2,0,"A"),
+                        correctsEventId="hard-event-0"))
+                assertTrue(corrected.toString(),
+                    corrected is NativeJournalFileResult.Durable)
+                saved=cold()
+                unchanged(saved)
+                assertEquals(BigDecimal("210"),
+                    (saved.effectiveSets.getValue("hard-set-0").operation
+                        as KotlinJournalOperation.RecordSet).performed?.load)
+                assertEquals(2,saved.resolvedSetCount)
+            }
+        }
+        assertTrue(saved.canProposeFinish)
+        val completed=gateway().append("owner-1","athlete-1",
+            "four-set-safety",KotlinJournalOperation.Finish(
+                "hard-finish",saved.revision))
+        assertTrue(completed.toString(),
+            completed is NativeJournalFileResult.Durable)
+        val finished=cold()
+        unchanged(finished)
+        assertEquals("hard-finish",finished.finishedByEventId)
+        assertEquals(5,finished.receipts.count {
+            it.operation is KotlinJournalOperation.RecordSet
+        })
+        assertTrue(KotlinWorkoutJournalReplayDomain.verifyStoredState(finished)
+            is KotlinJournalReplayResult.Recovered)
+
+        // Cold history must distinguish four issued 215-lb targets from
+        // the one explicitly corrected actual of 210 lb.
+        val manifest=NativeKotlinHistoryManifestFileAuthority(
+            ledger(),{_,_->active})
+        val outcome=NativeKotlinGlobalHistoryReadCoordinator(
+            journal(),correction(),authority,manifest,fence()
+        ).read("owner-1","athlete-1")
+        assertTrue(outcome.toString(),
+            outcome is NativeKotlinHistoryReadResult.Review)
+        val facts=(outcome as NativeKotlinHistoryReadResult.Review)
+            .index.lastByExercise.getValue("bench").workingSets
+        assertEquals(List(4){prescribed},facts.map{
+            (it.issuedLoad as DraftSetLoad.Verified).value
+        })
+        assertEquals(listOf(BigDecimal("210"),prescribed,prescribed,prescribed),
+            facts.map{it.actual?.load})
+        assertEquals(setOf("A"),facts.map{it.actual?.machineInstanceId}.toSet())
+    }
+
     @Test fun withoutEnrolledHistoryAllCandidateEntryPointsFailClosed() {
         issue()
         val facade = gateway()

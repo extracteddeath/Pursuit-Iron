@@ -20,7 +20,7 @@ class KotlinJournalLiveSetCoachDomainTest {
         DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(load)),
         reps,3,60,120)
     private fun started(sets:List<KotlinWorkoutTarget> =listOf(
-        target(0),target(1),target(2,"205"),target(3,"205")
+        target(0),target(1),target(2),target(3)
     )):KotlinWorkoutJournalState {
         val snapshot=KotlinStagedWorkout(source,"grant-1","workout-1",
             0,0,ComposerSessionPurpose.STRENGTH_SKILL,48,sets)
@@ -43,25 +43,24 @@ class KotlinJournalLiveSetCoachDomainTest {
     )=KotlinJournalLiveSetCoachDomain.review(
         j,set,gym,CoachReadiness.NORMAL,false,n("5"))
 
-    @Test fun completedTopSetRecognizesAlreadyPlannedLighterBackoff() {
-        val j=record(started(),"bench:s0")
-        val first=look(j,"bench:s1") as LiveSetCoachResult.Reviewed
-        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
-            first.coaching.direction)
-        assertEquals(n("210"),first.coaching.weightForHumanReview)
-        val planned=look(j,"bench:s2") as LiveSetCoachResult.Reviewed
-        assertEquals(InWorkoutDirection.PRIOR_SET_UNRESOLVED,
-            planned.coaching.direction)
-        val j2=record(j,"bench:s1",2,0,"215")
-        val coached=look(j2,"bench:s2") as LiveSetCoachResult.Reviewed
-        assertEquals(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,
-            coached.coaching.direction)
-        assertNull(coached.coaching.weightForHumanReview)
-        assertEquals(n("205"),coached.coaching.issuedTargetUnchanged)
-        assertFalse(coached.canIssueWorkout)
-        assertFalse(coached.canModifyWorkout)
-        assertEquals(n("205"),
-            (j2.snapshot.targets[2].load as DraftSetLoad.Verified).value)
+    @Test fun mixedUnlabeledWorkingWeightsCannotMasqueradeAsPlannedBackoff() {
+        // A mixed issued snapshot is immutable, but no straight-set
+        // feedback may infer a named backoff without verified scheme intent.
+        val mixed=started(listOf(target(0),target(1),
+            target(2,"205"),target(3,"205")))
+        val saved=record(mixed,"bench:s0")
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME),
+            look(saved,"bench:s1"))
+        val later=record(saved,"bench:s1")
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME),
+            look(later,"bench:s2"))
+        assertEquals(mixed.snapshot,later.snapshot)
+        assertEquals(listOf(n("215"),n("215"),n("205"),n("205")),
+            later.snapshot.targets.map{
+                (it.load as DraftSetLoad.Verified).value
+            })
     }
 
     @Test fun onlyDurableEffectiveCorrectionMayInfluenceNextCoaching() {
@@ -230,6 +229,28 @@ class KotlinJournalLiveSetCoachDomainTest {
             KotlinJournalSetOutcome.COMPLETED,
             KotlinPerformedSet(n(load),LoadUnit.LB,reps,rir),corrects))
         as CustomWorkoutJournalDecision.Proposed).draft
+
+    @Test fun customMixedLoadsAlsoRefuseStraightSetFatigueCoaching() {
+        val base=custom()
+        val mixed=base.copy(snapshot=base.snapshot.copy(
+            slots=base.snapshot.slots.map{slot->
+                if(slot.slotId!="first")slot else slot.copy(
+                    sets=slot.sets.mapIndexed{i,set->
+                        if(i!=2)set else set.copy(
+                            prescription=set.prescription.copy(
+                                load=DraftSetLoad.Verified(
+                                    LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("205"))))
+                    })
+            }))
+        val review=KotlinJournalLiveSetCoachDomain.review(
+            mixed,"first:s1",stock,CoachReadiness.NORMAL,false,n("5"))
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME),review)
+        assertEquals(listOf(n("215"),n("215"),n("205")),
+            mixed.snapshot.slots.first().sets.map{
+                (it.prescription.load as DraftSetLoad.Verified).value
+            })
+    }
 
     @Test fun customLiveAdviceUsesOnlyItsStableSlotAndSavedEffectiveCorrection() {
         val saved=customRecord(custom(),"first:s0",2,"215")

@@ -180,8 +180,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             as NativeCustomJournalResult.Durable).issued.journal
         val archive=NativeKotlinEncryptedTrainingSnapshot.capture(
             d.root,d.fence,expected,{expected},
-            {Disk().timeline.read(owner,athlete)
-                is NativeKotlinMixedHistoryReadResult.Review},password)
+            {(Disk().timeline.read(owner,athlete) is NativeKotlinMixedHistoryReadResult.Review)},password)
         assertTrue(archive.toString(),
             archive is NativeKotlinTrainingSnapshotResult.Ready)
         val newDevice=temp.newFolder("another-install").toPath()
@@ -189,8 +188,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             newDevice.resolve("kotlin-coach-v1"),
             (archive as NativeKotlinTrainingSnapshotResult.Ready).encrypted,
             password,expected,{stage,who->
-                NativeKotlinStagedCoreStoreAudit.inspect(stage,who)
-                    is NativeKotlinStagedCoreAuditResult.Verified
+                (NativeKotlinStagedCoreStoreAudit.inspect(stage,who) is NativeKotlinStagedCoreAuditResult.Verified)
             })
         assertTrue(result.toString(),
             result is NativeKotlinCleanRestoreResult.Committed)

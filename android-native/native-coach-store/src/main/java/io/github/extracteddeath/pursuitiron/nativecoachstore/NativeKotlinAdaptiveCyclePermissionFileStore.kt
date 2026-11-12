@@ -53,6 +53,21 @@ private data class AdaptivePermissionRecord(
     val kinds:Set<CustomCycleChangeKind>?
 )
 
+/** Every historical grant and revocation belongs to the same owner.
+ * Revocation records must survive a cold restore; missing != revoked.
+ * These records do NOT authorize any automatic program modification.
+ */
+internal data class NativeAdaptivePermissionInventoryFact(
+    val cycleId:String,val revision:Long,
+    val allowedKinds:Set<CustomCycleChangeKind>?,
+    val revoked:Boolean
+)
+internal sealed interface NativeAdaptivePermissionInventory {
+    data class Verified(val records:List<NativeAdaptivePermissionInventoryFact>):
+        NativeAdaptivePermissionInventory
+    data object InvalidOrForeign:NativeAdaptivePermissionInventory
+}
+
 /** Versioned checksum, cross-process owner fence and atomic revision CAS. */
 class NativeKotlinAdaptiveCyclePermissionFileStore(
     private val directory:Path,
@@ -192,6 +207,49 @@ class NativeKotlinAdaptiveCyclePermissionFileStore(
         }.getOrElse{NativeAdaptivePermissionRead.Rejected(
             NativeAdaptivePermissionRefusal.STORAGE_UNAVAILABLE)}
     }
+    /**
+     * Exhaustive owner-fenced physical inventory. Ordinary read(cycleId)
+     * legitimately reports Missing for a different cycle; a clean restore
+     * must reject a corrupt, foreign, renamed, or pending grant rather
+     * than invisibly replacing a saved athlete decision with defaults.
+     */
+    internal fun inventoryOwner(ownerKey:String):
+        NativeAdaptivePermissionInventory = runCatching {
+        fence.withOwnerTransaction(ownerKey) {
+            val signed=owner(ownerKey)
+                ?:return@withOwnerTransaction NativeAdaptivePermissionInventory.InvalidOrForeign
+            if(!Files.exists(directory,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                return@withOwnerTransaction NativeAdaptivePermissionInventory.Verified(
+                    emptyList())
+            require(!Files.isSymbolicLink(directory) &&
+                Files.isDirectory(directory,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            val physical=Files.list(directory).use {stream->
+                stream.filter {it.fileName.toString().startsWith(
+                    "adapt-permission-")}.toList()
+            }
+            require(physical.size<=4096)
+            val seen=mutableSetOf<String>()
+            val name=Regex("^adapt-permission-[a-f0-9]{64}\\.bin$")
+            val records=mutableListOf<NativeAdaptivePermissionInventoryFact>()
+            for(file in physical.sortedBy{it.fileName.toString()}) {
+                require(name.matches(file.fileName.toString()) &&
+                    !Files.isSymbolicLink(file) &&
+                    Files.isRegularFile(file,java.nio.file.LinkOption.NOFOLLOW_LINKS) &&
+                    Files.size(file) in 44L..maxBytes.toLong())
+                val stored=decode(file) ?:error("Missing physical grant")
+                require(stored.owner==ownerKey &&
+                    stored.athlete==signed.athleteId &&
+                    stored.revision>0 &&
+                    path(ownerKey,stored.cycle)==file &&
+                    seen.add(stored.cycle))
+                records.add(NativeAdaptivePermissionInventoryFact(
+                    stored.cycle,stored.revision,stored.kinds,
+                    revoked=stored.kinds==null))
+            }
+            NativeAdaptivePermissionInventory.Verified(records)
+        }
+    }.getOrElse {NativeAdaptivePermissionInventory.InvalidOrForeign}
+
     /** Replacing a grant (including removing rights) always needs consent. */
     fun confirm(
         ownerKey:String,cycleId:String,expectedRevision:Long,

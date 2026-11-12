@@ -287,7 +287,8 @@ class NativeKotlinCustomNextWorkoutReview(
             val reduced=CustomReducedBaselineProgressionDomain.review(
                 CustomNextWorkoutCoachingRequest(next,slotId,machineComparable,verifiedStock,
                     maximumAuthorizedIncrease,preference.coachingReadiness(readiness),
-                    movementRestricted,requestedMachineInstanceId=selectedMachine))
+                    movementRestricted,selectedPolicy,
+                    requestedMachineInstanceId=selectedMachine))
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,

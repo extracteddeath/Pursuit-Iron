@@ -20,7 +20,11 @@ sealed interface LiveSetCoachResult {
         val journalRevision:Long,
         val setKey:String,
         val previousSetKey:String,
-        val coaching:InWorkoutReviewResult
+        val coaching:InWorkoutReviewResult,
+        // What the trusted host actually reviewed. UI cannot show an A
+        // result after a new durable Machine B choice on the same journal
+        // revision before its next asynchronous review completes.
+        val machineScope:LiveMachineCoachScope=LiveMachineCoachScope.ExerciseOnly
     ):LiveSetCoachResult {
         val canModifyWorkout:Boolean get()=false
         val canIssueWorkout:Boolean get()=false
@@ -137,7 +141,7 @@ object KotlinJournalLiveSetCoachDomain {
             readiness=assistance.coachingReadiness(readiness),
             movementRestricted=movementRestricted))
         return LiveSetCoachResult.Reviewed(workoutId,revision,nextSetKey,
-            ordered[index-1].setKey,coaching)
+            ordered[index-1].setKey,coaching,machineScope)
     }
 
     /** Generated-program journal: translate durable set receipts, no policy. */

@@ -122,6 +122,9 @@ val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
             "**/AppPrivateKotlinLocalAthlete.kt",
             "**/NativeKotlin*.kt",
             "**/NativeComponents.kt",
+            "**/NativeRestTimer.kt",
+            "**/NativeExerciseFavorites.kt",
+            "**/NativeStrengthFavorites.kt",
             "**/PursuitDesignComponents.kt",
             "**/NativeDesignTokens.kt",
             "**/NativeAppearanceSheet.kt"

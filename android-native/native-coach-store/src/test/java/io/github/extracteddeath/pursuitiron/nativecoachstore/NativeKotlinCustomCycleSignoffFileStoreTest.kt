@@ -3551,20 +3551,22 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     @Test fun acceptedRepAmendmentCannotSurviveRevokedOrReconfirmedCycleConsent() {
+        // Frozen V1 approval/receipt recovery. New beta preview requests
+        // deliberately use the owner's current target-RIR policy.
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
         val nextId="future-rep-revocation-test"
         val inputs=futureInputs()
         val candidate=f.repApprovals.preview("owner-1",nextId,inputs,
-            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),CustomRepForecastPolicy.LEGACY_STEP_V1)
             as NativeCustomNextRepPreview.Ready
         assertTrue(f.repApprovals.accept("owner-1",nextId,inputs,
             6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
             candidate.receipt.fingerprint,
             candidate.receipt.historyRevision,
             candidate.receipt.consentRevision,
-            candidate.receipt.setKeys,candidate.receipt.nextMinimumReps,true)
+            candidate.receipt.setKeys,candidate.receipt.nextMinimumReps,true,CustomRepForecastPolicy.LEGACY_STEP_V1)
             is NativeCustomNextRepWrite.Accepted)
         val original=f.repApprovals.readCurrent("owner-1",nextId,
             inputs,6,1)
@@ -3901,6 +3903,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
 
     @Test fun savedRepAdviceNeverResurrectsAfterCoachWasTurnedOffThenOn() {
+        // Frozen V1 approval/receipt recovery. New beta preview requests
+        // deliberately use the owner's current target-RIR policy.
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
@@ -3908,13 +3912,13 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val workoutId="toggle-coach-week6"
         val input=futureInputs()
         val shown=f.repApprovals.preview(key,workoutId,input,6,1,"slot-1",
-            CoachReadiness.NORMAL,false,n("5"))
+            CoachReadiness.NORMAL,false,n("5"),CustomRepForecastPolicy.LEGACY_STEP_V1)
             as NativeCustomNextRepPreview.Ready
         assertTrue(f.repApprovals.accept(key,workoutId,input,6,1,"slot-1",
             CoachReadiness.NORMAL,false,n("5"),
             shown.receipt.fingerprint,shown.receipt.historyRevision,
             shown.receipt.consentRevision,shown.receipt.setKeys,
-            shown.receipt.nextMinimumReps,true)
+            shown.receipt.nextMinimumReps,true,CustomRepForecastPolicy.LEGACY_STEP_V1)
             is NativeCustomNextRepWrite.Accepted)
         assertTrue(f.repApprovals.readCurrent(key,workoutId,input,6,1)
             is NativeCustomNextRepRead.Current)
@@ -4000,19 +4004,21 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     @Test fun corruptedAdviceStillFailsClosedInsteadOfSilentlyFallingBack() {
+        // Frozen V1 approval/receipt recovery. New beta preview requests
+        // deliberately use the owner's current target-RIR policy.
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
         val id="corrupted-rep-advice"
         val inputs=futureInputs()
         val proposal=f.repApprovals.preview("owner-1",id,inputs,
-            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),CustomRepForecastPolicy.LEGACY_STEP_V1)
             as NativeCustomNextRepPreview.Ready
         val r=proposal.receipt
         assertTrue(f.repApprovals.accept("owner-1",id,inputs,6,1,"slot-1",
             CoachReadiness.NORMAL,false,n("5"),r.fingerprint,
             r.historyRevision,r.consentRevision,r.setKeys,r.nextMinimumReps,
-            true) is NativeCustomNextRepWrite.Accepted)
+            true,CustomRepForecastPolicy.LEGACY_STEP_V1) is NativeCustomNextRepWrite.Accepted)
         val file=Files.list(temp.root.toPath()).use{stream->
             stream.filter{
                 it.fileName.toString().startsWith("future-rep-") &&
@@ -4035,6 +4041,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
 
     @Test fun explicitRepResetRestoresAuthoredWorkoutAndKeepsJournalImmutable() {
+        // Frozen V1 approval/receipt recovery. New beta preview requests
+        // deliberately use the owner's current target-RIR policy.
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
@@ -4042,14 +4050,14 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val workout="reset-rep-before-start"
         val inputs=futureInputs()
         val advice=f.repApprovals.preview(key,workout,inputs,6,1,"slot-1",
-            CoachReadiness.NORMAL,false,n("5"))
+            CoachReadiness.NORMAL,false,n("5"),CustomRepForecastPolicy.LEGACY_STEP_V1)
             as NativeCustomNextRepPreview.Ready
         val proposed=advice.receipt
         assertTrue(f.repApprovals.accept(key,workout,inputs,6,1,
             "slot-1",CoachReadiness.NORMAL,false,n("5"),
             proposed.fingerprint,proposed.historyRevision,
             proposed.consentRevision,proposed.setKeys,
-            proposed.nextMinimumReps,true)
+            proposed.nextMinimumReps,true,CustomRepForecastPolicy.LEGACY_STEP_V1)
             is NativeCustomNextRepWrite.Accepted)
         val prepared=f.prepared.prepareActivated(key,workout,"cycle-1",6,1,
             inputs,f.signoff,f.activation,f.repApprovals)
@@ -4203,6 +4211,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
 
     @Test fun cannotResetAnAlreadyIssuedAdjustedWorkoutOrRetargetItsHistory() {
+        // Frozen V1 approval/receipt recovery. New beta preview requests
+        // deliberately use the owner's current target-RIR policy.
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
@@ -4210,12 +4220,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val id="issued-adjusted-cannot-reset"
         val inputs=futureInputs()
         val proposal=f.repApprovals.preview(key,id,inputs,6,1,"slot-1",
-            CoachReadiness.NORMAL,false,n("5")) as NativeCustomNextRepPreview.Ready
+            CoachReadiness.NORMAL,false,n("5"),CustomRepForecastPolicy.LEGACY_STEP_V1) as NativeCustomNextRepPreview.Ready
         val receipt=proposal.receipt
         assertTrue(f.repApprovals.accept(key,id,inputs,6,1,"slot-1",
             CoachReadiness.NORMAL,false,n("5"),receipt.fingerprint,
             receipt.historyRevision,receipt.consentRevision,
-            receipt.setKeys,receipt.nextMinimumReps,true)
+            receipt.setKeys,receipt.nextMinimumReps,true,CustomRepForecastPolicy.LEGACY_STEP_V1)
             is NativeCustomNextRepWrite.Accepted)
         assertTrue(f.prepared.prepareActivated(key,id,"cycle-1",6,1,inputs,
             f.signoff,f.activation,f.repApprovals)
@@ -4241,6 +4251,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     @Test fun resetPreviewExpiresWhenCoachPreferenceRevisionChanges() {
+        // Frozen V1 approval/receipt recovery. New beta preview requests
+        // deliberately use the owner's current target-RIR policy.
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
@@ -4248,12 +4260,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val id="prepared-reset-preference-cas"
         val inputs=futureInputs()
         val shown=f.repApprovals.preview(key,id,inputs,6,1,"slot-1",
-            CoachReadiness.NORMAL,false,n("5")) as NativeCustomNextRepPreview.Ready
+            CoachReadiness.NORMAL,false,n("5"),CustomRepForecastPolicy.LEGACY_STEP_V1) as NativeCustomNextRepPreview.Ready
         val receipt=shown.receipt
         assertTrue(f.repApprovals.accept(key,id,inputs,6,1,"slot-1",
             CoachReadiness.NORMAL,false,n("5"),receipt.fingerprint,
             receipt.historyRevision,receipt.consentRevision,
-            receipt.setKeys,receipt.nextMinimumReps,true)
+            receipt.setKeys,receipt.nextMinimumReps,true,CustomRepForecastPolicy.LEGACY_STEP_V1)
             is NativeCustomNextRepWrite.Accepted)
         val adjusted=f.prepared.prepareActivated(key,id,"cycle-1",6,1,
             inputs,f.signoff,f.activation,f.repApprovals)

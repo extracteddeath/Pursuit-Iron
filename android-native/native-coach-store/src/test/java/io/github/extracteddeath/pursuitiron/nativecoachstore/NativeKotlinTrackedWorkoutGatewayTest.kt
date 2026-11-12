@@ -254,10 +254,13 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertArrayEquals(java.nio.file.Files.readAllBytes(
             root.resolve("local-athlete.bin")),
             copies.getValue("local-athlete.bin").contents)
-        assertTrue(copies.values.any{entry->
-            val bytes=entry.contents.toString(Charsets.ISO_8859_1)
-            bytes.contains("finish-1") || bytes.contains("correction-1")
-        } || archive.fileCount>=3)
+        assertTrue(copies.keys.any{it!="local-athlete.bin"})
+        for((relative,entry) in copies) {
+            // Compare the exact real binary journal, correction and ledger
+            // records, not merely decoded or synthetic set-level DTOs.
+            assertArrayEquals(java.nio.file.Files.readAllBytes(
+                root.resolve(relative)),entry.contents)
+        }
         // Journal and correction history are still independently valid
         // after backup; no Finish, new session or revision was issued.
         val latest=original()

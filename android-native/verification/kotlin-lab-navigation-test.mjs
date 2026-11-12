@@ -572,6 +572,11 @@ assert.ok(journey.includes('Resume your saved workout') &&
   journey.includes('The saved workout could not be verified.') &&
   !journey.includes('host.issueWorkout(issuedId)'),
   'A cold generated workout must resume independently of time-budget previews, with fresh consent and disk verification');
+assert.ok(journey.includes('Other unfinished workouts') &&
+  journey.includes('No unfinished custom workouts. Resume your saved generated workout above.') &&
+  journey.includes('Custom workout inventory could not be verified') &&
+  journey.includes('PursuitCard(highlighted=resumableGeneratedId==null)'),
+  'Do not misleadingly claim there are no unfinished workouts when generated resume is available');
 for(const required of [
   'KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)',
   'KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)',

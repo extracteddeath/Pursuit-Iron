@@ -1,4 +1,38 @@
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+import javax.inject.Inject
+
+/**
+ * AGP 9 built-in Kotlin uses whole source directories; it does not support
+ * include patterns on AndroidSourceSet.kotlin. Stage ONLY the approved beta
+ * sources into a generated directory with a proper Gradle task dependency.
+ * Legacy preview source remains in the repo for audit, not in the app.
+ */
+abstract class StageKotlinBetaSources @Inject constructor(
+    private val fileOps:FileSystemOperations
+):DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val betaFiles:ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory:DirectoryProperty
+
+    @TaskAction fun stage() {
+        fileOps.sync {
+            from(betaFiles)
+            into(outputDirectory)
+        }
+    }
+}
 
 plugins {
     id("com.android.application")
@@ -61,24 +95,13 @@ android {
             }
         }
     }
-    // Kotlin is the only training runtime for the early-launch beta.
-    // The old web-backed preview remains in repository history for parity
-    // audits but must not be compiled or packaged into this app. Keeping
-    // an explicit source allowlist avoids accidentally shipping another
-    // preview screen or the JavaScript worker through a new source file.
+    // No original app source root is compiled by default. The generated
+    // source directory below is the ONLY Kotlin beta app code. JavaScript
+    // preview sources are retained for parity/migration work, not packaged.
     sourceSets {
         getByName("main") {
-            // AGP 9 built-in Kotlin reads AndroidSourceSet.kotlin, not .java.
-            kotlin.include(
-                "**/MainActivity.kt",
-                "**/PursuitIronApplication.kt",
-                "**/AppPrivateKotlinLocalAthlete.kt",
-                "**/NativeKotlin*.kt",
-                "**/NativeComponents.kt",
-                "**/PursuitDesignComponents.kt",
-                "**/NativeDesignTokens.kt",
-                "**/NativeAppearanceSheet.kt"
-            )
+            kotlin.setSrcDirs(emptyList<String>())
+            java.setSrcDirs(emptyList<String>())
         }
     }
     buildFeatures { compose = true }
@@ -87,6 +110,30 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+// Explicit app source inventory: any new screen needs an intentional
+// allowlist change AND Kotlin/Compose verification before the beta includes it.
+val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
+    "stageKotlinBetaSources"
+) {
+    betaFiles.from(fileTree("src/main/java") {
+        include(
+            "**/MainActivity.kt",
+            "**/PursuitIronApplication.kt",
+            "**/AppPrivateKotlinLocalAthlete.kt",
+            "**/NativeKotlin*.kt",
+            "**/NativeComponents.kt",
+            "**/PursuitDesignComponents.kt",
+            "**/NativeDesignTokens.kt",
+            "**/NativeAppearanceSheet.kt"
+        )
+    })
+    outputDirectory.set(layout.buildDirectory.dir("generated/kotlin-beta-src"))
+}
+androidComponents.onVariants { variant ->
+    variant.sources.kotlin?.addGeneratedSourceDirectory(
+        stageKotlinBetaSources,StageKotlinBetaSources::outputDirectory)
+}
+
 dependencies {
     implementation(project(":domain-contract"))
     // One canonical, independently tested Kotlin coach and native persistence.

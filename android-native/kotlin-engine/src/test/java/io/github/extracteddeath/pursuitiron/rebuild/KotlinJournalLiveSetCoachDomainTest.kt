@@ -148,6 +148,62 @@ class KotlinJournalLiveSetCoachDomainTest {
         assertNull(suggestion.coaching.weightForHumanReview)
     }
 
+    @Test fun generatedAndCustomJournalsShareOneStraightSetDecision() {
+        // Identical issued straight-set intent and observed effort must not
+        // produce two coaching policies based on which journal owns storage.
+        val generated=record(started((0..2).map{target(it)}),
+            "bench:s0",2,0,"215")
+        val customSaved=customRecord(custom(),"first:s0",2,"215",0)
+        val generatedReview=KotlinJournalLiveSetCoachDomain.review(
+            generated,"bench:s1",stock,CoachReadiness.NORMAL,false,n("5"))
+            as LiveSetCoachResult.Reviewed
+        val customReview=KotlinJournalLiveSetCoachDomain.review(
+            customSaved,"first:s1",stock,CoachReadiness.NORMAL,false,n("5"))
+            as LiveSetCoachResult.Reviewed
+        assertEquals(generatedReview.coaching.direction,
+            customReview.coaching.direction)
+        assertEquals(generatedReview.coaching.weightForHumanReview,
+            customReview.coaching.weightForHumanReview)
+        assertEquals(generatedReview.coaching.confidence,
+            customReview.coaching.confidence)
+        assertEquals(generatedReview.coaching.issuedTargetUnchanged,
+            customReview.coaching.issuedTargetUnchanged)
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            customReview.coaching.direction)
+        assertEquals(n("210"),customReview.coaching.weightForHumanReview)
+    }
+
+    @Test fun missingRirHasSameMeaningInBothStraightSetJournals() {
+        val generated=record(started((0..2).map{target(it)}),
+            "bench:s0",2,null,"215")
+        val customSaved=customRecord(custom(),"first:s0",2,"215",null)
+        val a=KotlinJournalLiveSetCoachDomain.review(generated,"bench:s1",
+            stock,CoachReadiness.NORMAL,false,n("5"))
+            as LiveSetCoachResult.Reviewed
+        val b=KotlinJournalLiveSetCoachDomain.review(customSaved,"first:s1",
+            stock,CoachReadiness.NORMAL,false,n("5"))
+            as LiveSetCoachResult.Reviewed
+        assertEquals(a.coaching.direction,b.coaching.direction)
+        assertEquals(a.coaching.confidence,b.coaching.confidence)
+        assertEquals(a.coaching.actualRirKnown,b.coaching.actualRirKnown)
+        assertFalse(b.coaching.actualRirKnown)
+    }
+
+    @Test fun customStraightSetCannotBypassCommonDuplicateOrdinalGuard() {
+        val base=custom()
+        val malformed=base.copy(snapshot=base.snapshot.copy(
+            slots=base.snapshot.slots.map {slot->
+                if(slot.slotId!="first")slot else slot.copy(
+                    sets=slot.sets.mapIndexed{index,set->
+                        if(index==1)set.copy(ordinalInSlot=1) else set
+                    })
+            }))
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME),
+            KotlinJournalLiveSetCoachDomain.review(malformed,"first:s1",
+                stock,CoachReadiness.NORMAL,false,n("5")))
+    }
+
     private fun custom():CustomWorkoutJournalDraft {
         fun slot(id:String,load:String)=CustomWorkoutSlotSnapshot(
             id,"bench","press","smith",ComposerRole.PRIMARY,null,null,

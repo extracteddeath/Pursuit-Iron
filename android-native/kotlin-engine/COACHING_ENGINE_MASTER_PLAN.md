@@ -72,6 +72,43 @@ Use stable, opaque identities:
 
 Use the existing typed Kotlin and native-store models first. **Do not replace their authority with new parallel DTO universes**. Add fields with versioned codec migrations, cold-reopen tests, and independent stable-ID mapping tests.
 
+### Enforced direction: one engine, distinct input adapters (November 11, 2026)
+
+The product is **one policy system**, not one giant source file and not a second
+decision engine per screen. Native stores own source verification and durable
+receipts; generated and custom journals translate their facts into the same
+policy inputs. Shared rules own the actual conclusion. Compose never chooses
+loads, volume, rep progression, fatigue adjustments or cycle structure.
+
+| Responsibility | Existing authoritative rule owner | Allowed adapters (not new policies) |
+| --- | --- | --- |
+| Athlete and gym feasibility | `CoachAthleteSetupDomain`, `CoachExerciseCatalogDomain` and `EquipmentLoadDomain` | Gym/profile stores and UI input binding |
+| Program structure and calendar | `CoachAthleteProgramGenerator` and `CoachWeekComposer` | Starter and custom request mapping; never a second composer |
+| Dose, recovery, time, physical feasibility | `WeeklyDoseFeasibilityDomain` and catalog/goal realization audits | Block/week presenters, no alternative feasibility math |
+| Issued set targets | `CoachSessionPrescriptionDomain` | Generated/custom issuance must retain lossless authored source |
+| Within-workout straight sets | **`InWorkoutCoachDomain.review`**; `KotlinJournalLiveSetCoachDomain` is its shared evidence/eligibility entry | Generated and custom journal extractors only; neither may use separate thresholds |
+| Reported vs assumed effort | `ProgressionEffortDomain` | Historical projection may state provenance but cannot fill actual RIR |
+| Progressive load feasibility | `ConservativeProgressionReview` plus exact equipment stock domain | Machine A/B and day-slot evidence scopes only; never generic machine stacks |
+| Future custom-week changes | `ReviewedFutureWeekProgressionDomain` through the existing builder, transition permission and whole-cycle audit | Source/approval and consent adapters; no edits to issued work |
+
+**Prohibition:** no new generated-only, custom-only, Machine-A-only or
+phase-only *coaching algorithm* to repair a failing example. If the rule is
+general, change its one canonical owner and add paired generated/custom and
+machine/day/phase tests. Typed source adapters can be different because their
+signed evidence models are different. A new policy version is permitted only
+for an intentional semantic change with preserved historical replay, never as
+a convenient workaround for a failing current rule.
+
+**Current limitation:** next-session progression, periodization, whole-block
+candidate ranking and athlete-specific acute/chronic fatigue are not yet one
+fully integrated calibrated decision system. Existing bounded review modules
+are not proof of this final capability. Before calling the engine "complete",
+their inputs must converge on a single authenticated history/slot decision,
+an audited full-block output and one explicit-approval/issuance flow, with
+retirement of overlapping active paths. This is a tracked architecture gate,
+not a claim that consolidation has already finished.
+
+
 ## 3. Program generation: high-quality from day one
 
 **A. Evidence-backed initial coaching presets.** Provide curated, **versioned, source-reviewed** starting policy families by goal, experience and phase: weekly direct/indirect muscle dose bounds, direct frequency, main-lift practice, exercise roles/variants, sensible rep/RIR/rest envelopes, session density and recovery. These are *initial heuristics*, not scientifically universal MEV/MAV/MRV claims. Adapt to actual athlete capacity and report low confidence. Expose a useful recommendation before historical calibration; if a critical fact is missing, surface a focused confirmation rather than fail all program creation.

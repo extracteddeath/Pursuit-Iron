@@ -517,4 +517,27 @@ const lastHelper=lastPicker.slice(
     lastPicker.indexOf('internal fun kotlinLoadBasisLabel('));
 assert.doesNotMatch(lastHelper,/\.record\(|\.finish\(|\.write\(|\.approve\(|changePrescription\(/);
 
+// Early beta uses one Kotlin runtime and a voluntary feedback route. These
+// are source-only guards: final release still needs signed artifact inspection
+// and real Android testing, and no feedback is uploaded by the app itself.
+const betaSettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
+const betaGradle=read('android-native/app/build.gradle.kts');
+const betaScope=read('android-native/LAUNCH_BETA_SCOPE.md');
+assert.ok(betaSettings.includes('Share beta feedback') &&
+  betaSettings.includes('Intent(Intent.ACTION_SEND)') &&
+  betaSettings.includes('context.startActivity(Intent.createChooser(') &&
+  betaSettings.includes('feedbackDraft=it.take(2000)') &&
+  betaSettings.includes('enabled=feedbackDraft.isNotBlank()') &&
+  betaSettings.includes('No training records, injury notes or diagnostics are attached automatically.') &&
+  !betaSettings.includes('READ_CONTACTS'),
+  'Early beta feedback requires an explicit opt-in share, no silent training/medical data upload');
+assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
+  betaGradle.includes('releaseRuntimeClasspath') &&
+  betaGradle.includes('component?.projectPath == ":engine-runtime"') &&
+  betaGradle.includes('"packageRelease", "assembleRelease"') &&
+  betaGradle.includes('"bundleRelease", "packageReleaseBundle"') &&
+  !betaGradle.includes('it.name == "preReleaseBuild"') &&
+  betaScope.includes('one Kotlin engine'),
+  'Early beta release must refuse the legacy JS engine and document single-policy ownership');
+
 console.log('PASS native workout recording and verified Finish-to-History/Coach navigation and safe Last draft');

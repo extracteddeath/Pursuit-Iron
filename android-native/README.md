@@ -1,4 +1,13 @@
-# Pursuit Iron — native Android experience preview
+# Pursuit Iron — native Android early-launch beta development
+
+**Current destination:** a small, reliable, several-month Android beta, not
+full web parity. See [Launch beta scope](LAUNCH_BETA_SCOPE.md) for the features
+that must work, intentional deferrals, feedback/data recovery requirements and
+one-Kotlin-engine release gate. The code below describes historic development
+milestones and preview-only workflows; it is **not** proof the beta is ready.
+The app's current launcher still runs the old JS-backed runtime during the
+Kotlin cutover. Release is explicitly blocked until that second runtime is
+removed from the installable artifact and Kotlin owns the complete journey.
 
 This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
 

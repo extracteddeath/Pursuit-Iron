@@ -196,6 +196,51 @@ class StarterExerciseTrancheTest {
         assertTrue(request.template.exercises.isEmpty())
     }
 
+    @Test fun newInclineBarbellBenchComposesARealThreeDayWeek() {
+        val selections=listOf(
+            choice("inc-bb-bench",n("135")),
+            choice("one_arm_db_row",n("30")),
+            choice("back_squat",n("135")))
+        val reviewed=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),selections,gym()))
+        assertEquals(CatalogWeekStatus.VERIFIED_CATALOG_DRAFT_FOR_REVIEW,
+            reviewed.status)
+        val draft=checkNotNull(reviewed.draft)
+        assertTrue(draft.audit.satisfiesDeclaredHardConstraints)
+        assertTrue(draft.visits.any{it.exerciseId=="inc-bb-bench"})
+        assertTrue(draft.visits.none{it.exerciseId=="barbell_bench"})
+        assertFalse(reviewed.mayIssueWorkout)
+        // Review-only composition cannot rewrite athlete-entered working loads.
+        assertEquals(n("135"),selections.first().selectedLoad)
+    }
+
+    @Test fun realMachinePressAndLegPressCanComposeWithoutInventedBarbells() {
+        val gymStock=mapOf(
+            "chest-press-machine" to VerifiedLoadStock.Totals(
+                LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+                listOf(n("40"),n("50"),n("60"))),
+            "leg-press-machine" to VerifiedLoadStock.Totals(
+                LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+                listOf(n("90"),n("100"),n("110"))),
+            "dumbbell-rack" to db)
+        val selections=listOf(
+            choice("machine_press",n("50")),
+            choice("one_arm_db_row",n("30")),
+            choice("leg_press",n("100")))
+        val reviewed=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),selections,
+                gym(facilities=emptySet(),stock=gymStock)))
+        assertEquals(CatalogWeekStatus.VERIFIED_CATALOG_DRAFT_FOR_REVIEW,
+            reviewed.status)
+        val draft=checkNotNull(reviewed.draft)
+        assertTrue(draft.audit.satisfiesDeclaredHardConstraints)
+        assertTrue(draft.visits.any{it.exerciseId=="machine_press"})
+        assertTrue(draft.visits.any{it.exerciseId=="leg_press"})
+        assertTrue(draft.visits.none{it.exerciseId=="back_squat"})
+        assertTrue(reviewed.issues.isEmpty())
+        assertFalse(reviewed.mayIssueWorkout)
+    }
+
     @Test fun theSameBarbellCannotBenchWithoutBenchOrSquatWithoutRack() {
         val withoutBench=CoachExerciseCatalogDomain.review(
             StarterExerciseTranche.forGym(template(),selected(),

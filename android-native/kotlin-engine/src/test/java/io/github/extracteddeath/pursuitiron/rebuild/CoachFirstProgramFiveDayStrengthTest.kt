@@ -202,8 +202,15 @@ class CoachFirstProgramFiveDayStrengthTest {
         assertEquals("v6",previous.policy?.revision)
         assertTrue(CoachFirstProgramStartDomain.supportsPolicy(
             CoachFirstProgramStartDomain.V6_POLICY_VERSION))
-        assertEquals("v7",CoachFirstProgramStartDomain.review(input())
+        assertEquals("v8",CoachFirstProgramStartDomain.review(input())
             .policy?.revision)
+        val savedV7=CoachFirstProgramStartDomain.review(input(
+            version=CoachFirstProgramStartDomain.V7_POLICY_VERSION))
+        assertEquals("v7",savedV7.policy?.revision)
+        assertEquals(mapOf("barbell_bench" to 2,"back_squat" to 2),
+            savedV7.policy?.primaryLiftMinimumDays)
+        assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
+            savedV7.status)
     }
 
     @Test fun impossibleGymAndTimeNeverQuietlyReduceTheNamedSkillFrequency() {

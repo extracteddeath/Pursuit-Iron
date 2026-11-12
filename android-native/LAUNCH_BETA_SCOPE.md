@@ -1,9 +1,54 @@
 # Pursuit Iron — early-launch beta contract
 
-**Release intent:** a deliberately small, reliable **several-month Android beta** in
-which real lifters train, retain their data, report problems and help validate
-coaching. This is **not** the eventual full product, web-feature parity release,
-a production-store AAB milestone, or permission to ship incomplete code.
+**Release intent:** a deliberately lean, reliable **several-month Android beta**
+in which real lifters train, retain their data, report problems and help
+validate coaching. Lean refers to the distribution footprint and optional
+product UI, **not a reduced or partially ported training engine**. This is not
+a production-store AAB milestone or permission to ship incomplete code.
+
+## Engine parity before superiority (athlete direction, November 12, 2026)
+
+**100% functional parity with the current web training engine is now an
+explicit acceptance gate for the Kotlin engine.** The previous "not beta
+blockers" clause must not be used to exclude web coaching functions in order
+to launch faster. The *Android UI* may remain intentionally smaller, but no
+supported plan/day/cycle may use an incomplete or weaker engine silently.
+
+- Inventory and review every active web training capability and supported
+  exercise/variant, equipment, loading, progression and volume behavior.
+  Preserve the user outcome, not necessarily the JavaScript implementation.
+  Custom and generated programs, all supported splits/goals/days, warmups,
+  advanced techniques, fatigue toggles, Machine A/B, independently tracked
+  days, coach approvals, deloads and immutable history remain in scope.
+- Demonstrate parity through shared-input headless tests, native durable
+  persistence, and actual Android workflow acceptance. A matching API name,
+  passing source compilation, a mock UI or a single successful scenario is
+  not enough. The native code must have one coherent Kotlin training policy;
+  do not import JavaScript as a hidden runtime or accumulate patch layers.
+- Resolve known web defects *more safely than web* (not by copying bad
+  outputs), notably silent weight drops, unearned progression, invalid
+  equipment increments, underdosed strength/peak phases and altered custom
+  program settings. Record independent expectations and exact regression
+  fixtures. Retain optional coaching-off behavior.
+- Only after **all engine parity requirements pass** should the product
+  be described as better. The separate engine-superiority gate then requires
+  matched objective coaching results, independent human review, reliability
+  proof and real-device acceptance. No release/100%/superiority claims until
+  the recorded evidence supports them.
+- The current catalog audit checks source-linked Kotlin starter definitions
+  against the active web built-ins and reports missing identities. It is one
+  necessary inventory check, **not** proof of equivalent exercise metadata,
+  coaching quality or functional program parity.
+
+### Release ordering
+
+1. Complete and certify engine functional parity across generated/custom
+   programs and longitudinal training; do not silently waive any web feature.
+2. Prove improved decisions and no regression on actual paired cases,
+   including individualized fatigue and all working-set loads.
+3. Finish reliable lean Kotlin/Compose user journeys, encrypted export/restore,
+   on-device acceptance and signed update tests; then permit an early beta.
+   No frequent APKs or an AAB while these gates remain open.
 
 ## Product included in the beta
 
@@ -95,14 +140,15 @@ a production-store AAB milestone, or permission to ship incomplete code.
 
 ## Not beta blockers / do not ship as misleading unfinished UI
 
-Full web parity; social/sharing/leaderboards; comprehensive visual
-analytics; AI conversation and unvalidated fatigue modeling; all possible
-equipment, attachment and amplifier variations; every advanced split and
-adaptive phase; elaborate charts; developer demos, benchmark panels,
-exploratory settings and prototype-only interactions. A feature can enter
-beta only after its **complete** flow is verified; otherwise hide/remove its
-release entry point and put it on the post-beta backlog. Do not make broken
-controls look like supported features.
+Optional web UI breadth (such as social/sharing/leaderboards, elaborate
+visual analytics, developer demos, benchmark panels and prototype-only
+screens) can stay outside the lean beta. **This excludes neither web-engine
+functional parity nor any supported progression, split, cycle, exercise
+identity, volume constraint, gym/loading rule, custom-program authoring,
+phase transition or recovery behavior.** Unvalidated probabilistic coaching
+claims must remain disabled; scientific unknowns must be made explicit.
+A feature can enter beta only after its **complete** flow is verified.
+Do not make broken controls look like supported features.
 
 **Important:** correctly prescribed strength/peak sessions and realistic
 progression are fundamental to any *enabled* cycle, not optional polish.

@@ -56,7 +56,7 @@ class CoachFirstProgramFiveDayStrengthTest {
         reviewed:AthleteSetupReview=setup(),
         starts:Map<String,BigDecimal> =calibrations(),
         phase:TrainingPhase=TrainingPhase.STRENGTH,
-        overhead:Int=1800,
+        overhead:Int=2100,
         version:String=CoachFirstProgramStartDomain.POLICY_VERSION
     )=FirstProgramStartRequest(reviewed,
         StarterExerciseTranche.movements(),starts,emptySet(),phase,
@@ -74,7 +74,10 @@ class CoachFirstProgramFiveDayStrengthTest {
                         m.gapToMev.signum()>0 || m.missingDirectDays>0 ||
                             m.excessAboveMrv.signum()>0
                     }.map{m->m.muscle to m.gapToMev}+
-                    "; time="+it.audit.daysOutsidePreferredWindow
+                    "; time="+it.audit.daysOutsidePreferredWindow+
+                    "; sessions="+it.audit.sessions.map{day->
+                        "${day.dayIndex}:${day.roundedMinutes}m:${day.finding}"
+                    }
                 },
             FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
             result.status)

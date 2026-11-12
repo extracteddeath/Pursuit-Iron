@@ -7,6 +7,7 @@ import java.io.DataOutputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
@@ -162,6 +163,37 @@ object NativeKotlinEncryptedTrainingSnapshot {
         return files
     }
 
+    /**
+     * Validate the same checksum/versioned owner file that the Android
+     * local-athlete host uses. A malicious or interrupted backup must not
+     * forge the owner just by changing the inner archive metadata.
+     * Android AtomicFile treats a surviving .bak as the recoverable copy.
+     */
+    private fun hasMatchingLocalIdentity(
+        owner:NativeKotlinOwnerIdentity,
+        files:List<NativeKotlinTrainingSnapshotFile>
+    ):Boolean {
+        val identity=files.firstOrNull{
+            it.relativePath=="local-athlete.bin.bak"
+        } ?:files.firstOrNull{it.relativePath=="local-athlete.bin"}
+            ?:return false
+        val content=identity.contents
+        if(content.size !in 44..256)return false
+        val body=content.copyOfRange(0,content.size-32)
+        val checksum=content.copyOfRange(content.size-32,content.size)
+        if(!MessageDigest.isEqual(
+            MessageDigest.getInstance("SHA-256").digest(body),checksum))
+            return false
+        return runCatching {
+            DataInputStream(ByteArrayInputStream(body)).use {input->
+                input.readInt()==0x50494F31 && input.readInt()==1 &&
+                    input.readUTF()==owner.ownerKey &&
+                    input.readUTF()==owner.athleteId &&
+                    input.available()==0
+            }
+        }.getOrDefault(false)
+    }
+
     private fun unchanged(
         before:List<NativeKotlinTrainingSnapshotFile>,
         after:List<NativeKotlinTrainingSnapshotFile>
@@ -205,6 +237,9 @@ object NativeKotlinEncryptedTrainingSnapshot {
                 if(!unchanged(first,again) || currentOwner()!=requested)
                     return@withOwnerTransaction NativeKotlinTrainingSnapshotResult.Rejected(
                         NativeKotlinTrainingSnapshotRefusal.CHANGED_DURING_READ)
+                if(!hasMatchingLocalIdentity(requested,first))
+                    return@withOwnerTransaction NativeKotlinTrainingSnapshotResult.Rejected(
+                        NativeKotlinTrainingSnapshotRefusal.INVALID_STORAGE)
                 val plaintext=ByteArrayOutputStream()
                 DataOutputStream(plaintext).use {out->
                     out.writeInt(INNER_MAGIC)
@@ -297,9 +332,9 @@ object NativeKotlinEncryptedTrainingSnapshot {
                         total+=length
                         files+=NativeKotlinTrainingSnapshotFile(path,content)
                     }
-                    if(bytes.available()!=0 || seen.none {
-                        it=="local-athlete.bin" || it=="local-athlete.bin.bak"
-                    })throw IllegalArgumentException("incomplete backup payload")
+                    if(bytes.available()!=0 ||
+                        !hasMatchingLocalIdentity(owner,files))
+                        throw IllegalArgumentException("incomplete or foreign identity")
                     return NativeKotlinTrainingSnapshotRead.Verified(owner,files)
                 }
             } finally {decrypted.fill(0)}

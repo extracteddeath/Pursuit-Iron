@@ -1031,8 +1031,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             root,revisionFence,owner,
             currentOwner={localAthlete.signedInIdentity()},
             verifyHistory={
-                (mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
-                    is NativeKotlinMixedHistoryReadResult.Review)
+                mixedHistoryReader.read(owner.ownerKey,owner.athleteId) is NativeKotlinMixedHistoryReadResult.Review
             },
             password=password)
     }

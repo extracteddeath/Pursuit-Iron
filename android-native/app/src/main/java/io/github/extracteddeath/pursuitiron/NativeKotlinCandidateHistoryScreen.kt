@@ -180,7 +180,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 else "Export completed workouts (CSV)")
                         }
                         Text(
-                            "Choose where to save your completed workout and set history. Includes target and actual weights, corrections, and machine A/B IDs. No dates are invented. This is a personal record, not a full backup or restore.",
+                            "Choose where to save your completed workout and set history. Includes target and actual weights, corrections, gym IDs and machine A/B IDs. No dates are invented. This is a personal record, not a full backup or restore.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant
                         )

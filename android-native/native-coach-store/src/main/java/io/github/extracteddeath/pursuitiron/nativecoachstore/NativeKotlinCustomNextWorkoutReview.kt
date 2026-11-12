@@ -74,10 +74,9 @@ class NativeKotlinCustomNextWorkoutReview(
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
         maximumAuthorizedIncrease:BigDecimal,
-        /** V1 remains default for signed custom receipts. V2 requires an
-         * explicit caller and separately versioned saved approval. */
-        repForecastPolicy:CustomRepForecastPolicy=
-            CustomRepForecastPolicy.LEGACY_STEP_V1
+        /** Null selects the CURRENT policy from owner-verified assistance
+         * settings. Explicit versions replay already accepted receipts. */
+        repForecastPolicy:CustomRepForecastPolicy?=null
     ):NativeCustomNextCoachResult =reviewSelected(ownerKey,null,inputs,
         nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
         maximumAuthorizedIncrease,repForecastPolicy)
@@ -88,8 +87,7 @@ class NativeKotlinCustomNextWorkoutReview(
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
         maximumAuthorizedIncrease:BigDecimal,
-        repForecastPolicy:CustomRepForecastPolicy=
-            CustomRepForecastPolicy.LEGACY_STEP_V1
+        repForecastPolicy:CustomRepForecastPolicy?=null
     ):NativeCustomNextCoachResult =reviewSelected(ownerKey,cycleId,inputs,
         nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
         maximumAuthorizedIncrease,repForecastPolicy)
@@ -99,7 +97,7 @@ class NativeKotlinCustomNextWorkoutReview(
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
         maximumAuthorizedIncrease:BigDecimal,
-        repForecastPolicy:CustomRepForecastPolicy
+        repForecastPolicy:CustomRepForecastPolicy?
     ):NativeCustomNextCoachResult {
         fun reject(reason:NativeCustomNextCoachRefusal)=
             NativeCustomNextCoachResult.Rejected(reason)
@@ -118,8 +116,17 @@ class NativeKotlinCustomNextWorkoutReview(
                     ?:return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.COACH_SETTINGS_UNAVAILABLE)
             val preference=currentSettings?.policy ?:CoachAssistancePolicy.STANDARD
+            // A NEW review must never accidentally use the frozen V1
+            // algorithm merely because the caller omitted a version.
+            // Only an explicitly requested, versioned historical replay
+            // may use V1. The existing selector is the single authority
+            // for current standard/progression-only/manual behavior.
+            val selectedPolicy=repForecastPolicy
+                ?:CustomRepForecastPolicyDomain.newProposal(preference)
+                ?:return@withOwnerTransaction reject(
+                    NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
             if(!CustomRepForecastPolicyDomain.permits(
-                    preference,repForecastPolicy))
+                    preference,selectedPolicy))
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
             val next:CustomWorkoutDaySnapshot
@@ -260,7 +267,7 @@ class NativeKotlinCustomNextWorkoutReview(
                     next,slotId,completions,verifiedStock,
                     maximumAuthorizedIncrease,
                     preference.coachingReadiness(readiness),movementRestricted,
-                    repForecastPolicy,selectedMachine)
+                    selectedPolicy,selectedMachine)
             )}.getOrNull()
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
@@ -280,7 +287,8 @@ class NativeKotlinCustomNextWorkoutReview(
             val reduced=CustomReducedBaselineProgressionDomain.review(
                 CustomNextWorkoutCoachingRequest(next,slotId,machineComparable,verifiedStock,
                     maximumAuthorizedIncrease,preference.coachingReadiness(readiness),
-                    movementRestricted,requestedMachineInstanceId=selectedMachine))
+                    movementRestricted,selectedPolicy,
+                    requestedMachineInstanceId=selectedMachine))
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,

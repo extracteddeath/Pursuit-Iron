@@ -1486,7 +1486,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
         movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
-        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
+        repForecastPolicy:CustomRepForecastPolicy?=null
     ):NativeCustomNextCoachResult {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCoachResult.Rejected(
@@ -1501,7 +1501,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
         movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
-        repForecastPolicy:CustomRepForecastPolicy=CustomRepForecastPolicy.LEGACY_STEP_V1
+        repForecastPolicy:CustomRepForecastPolicy?=null
     ):NativeCustomNextCoachResult {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCoachResult.Rejected(

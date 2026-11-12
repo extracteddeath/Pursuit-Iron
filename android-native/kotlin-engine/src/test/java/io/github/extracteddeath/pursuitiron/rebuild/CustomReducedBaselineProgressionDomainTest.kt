@@ -49,6 +49,29 @@ class CustomReducedBaselineProgressionDomainTest {
         assertNull(r.amendment);assertTrue(r.sets.isEmpty())
     }
 
+    @Test fun reducedBaselineUsesTheSameExplicitCurrentPolicyAsItsParentReview() {
+        val original=snapshot(3,listOf(30,30))
+        val history=listOf(finished(snapshot(1)),finished())
+        for(current in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            val inspected=CustomReducedBaselineProgressionDomain.review(
+                CustomNextWorkoutCoachingRequest(
+                    original,"bench",history,stock,n(5),
+                    CoachReadiness.NORMAL,false,current))
+            assertEquals(current.toString(),
+                CustomReducedBaselineProgressionStatus.READY_FOR_REVIEW,
+                inspected.status)
+            assertEquals(current,inspected.progression?.repForecastPolicy)
+            assertEquals(listOf(n(25),n(25)),
+                inspected.sets.map{it.proposedLoad})
+            assertNull(inspected.progression?.nextSetSuggestions
+                ?.firstOrNull{it.changed})
+            assertFalse(inspected.mayIssueWorkout)
+        }
+        assertEquals(listOf(n(20),n(20)),
+            history.last().evidence.visits.map{it.actual?.load})
+    }
+
     @Test fun twoCeilingWorkoutsEarnOneExactStepFromTheIssuedBaseline() {
         val next=snapshot(3,listOf(30,30));val history=listOf(finished(snapshot(1)),finished())
         val before=history.toString();val result=review(next,history)

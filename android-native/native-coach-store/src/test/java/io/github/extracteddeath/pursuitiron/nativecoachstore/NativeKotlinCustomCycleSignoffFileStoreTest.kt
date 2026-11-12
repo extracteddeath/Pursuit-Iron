@@ -2136,7 +2136,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
     private fun finishRealActivatedSession(
         f:LiveFutureCoachFixture,week:Int,reps:Int,
-        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null
+        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null,
+        actualRir:Int?=2
     ):String {
         val workoutId="real-activated-week$week"
         val inputs=futureInputs()
@@ -2154,7 +2155,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 KotlinJournalSetOutcome.COMPLETED,
                 KotlinPerformedSet(
                     if(weightedFixture)n("20") else null,
-                    if(weightedFixture)LoadUnit.LB else null,reps,2)))
+                    if(weightedFixture)LoadUnit.LB else null,reps,actualRir)))
         assertTrue(recorded.toString(),recorded is NativeCustomJournalResult.Durable)
         val finish=NativeKotlinCustomHistoryTransaction(
             f.history,f.issuer,fence,identity)
@@ -3360,10 +3361,26 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
         finishRealActivatedSession(f,5,13)
-        val coaching=f.coach.review("owner-1",futureInputs(),6,1,
+        // A NEW review must not invent headroom: both logged sessions
+        // hit their original 2-RIR goal, so current V3 holds the targets.
+        val current=f.coach.review("owner-1",futureInputs(),6,1,
             "slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(current.toString(),current is NativeCustomNextCoachResult.Reviewed)
+        val currentReview=(current as NativeCustomNextCoachResult.Reviewed).review
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_TREND_V3,
+            currentReview.repForecastPolicy)
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+            currentReview.status)
+        assertTrue(currentReview.nextSetSuggestions.none{it.changed})
+        // Reopen a previously accepted V1 behavior EXPLICITLY. The historic
+        // native approval receipt/acceptance path below still uses V1.
+        val coaching=f.coach.review("owner-1",futureInputs(),6,1,
+            "slot-1",CoachReadiness.NORMAL,false,n("5"),
+            CustomRepForecastPolicy.LEGACY_STEP_V1)
         assertTrue(coaching.toString(),coaching is NativeCustomNextCoachResult.Reviewed)
         val suggestion=(coaching as NativeCustomNextCoachResult.Reviewed).review
+        assertEquals(CustomRepForecastPolicy.LEGACY_STEP_V1,
+            suggestion.repForecastPolicy)
         assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
             suggestion.status)
         assertEquals(14,suggestion.nextSetSuggestions.single().proposedNextReps)
@@ -3759,7 +3776,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     @Test fun fatigueOffKeepsEarnedProgressionWithoutReadinessSuggestions() {
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)
-        finishRealActivatedSession(f,5,13)
+        // Actual 3 RIR vs issued goal 2 leaves one real rep of headroom
+        // under the CURRENT V2 policy, without inventing effort.
+        finishRealActivatedSession(f,5,13,actualRir=3)
         assertEquals(NativeCustomNextCoachResult.Reviewed::class,
             f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
                 CoachReadiness.NORMAL,false,n("5"))::class)

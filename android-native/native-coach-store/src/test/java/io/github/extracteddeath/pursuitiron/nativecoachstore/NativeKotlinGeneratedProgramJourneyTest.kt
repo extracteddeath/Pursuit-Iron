@@ -651,6 +651,56 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,v3.status)
         assertTrue(v3.capacityDropsFromPreviousSession.isEmpty())
         assertFalse(v3.mayIssueWorkout)
+        // Fresh owner-authenticated review with NO explicit version must
+        // choose the SAME current policy as the athlete's current settings.
+        // It must not silently fall back to a frozen V1 recipe.
+        val current=ownerCoach.reviewAuthored(owner,cycleId,inputs,
+            2,day.weekday,selected.slotId,CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(current.toString(),
+            current is NativeCustomNextCoachResult.Reviewed)
+        val selectedCurrent=(current as NativeCustomNextCoachResult.Reviewed).review
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_TREND_V3,
+            selectedCurrent.repForecastPolicy)
+        assertEquals(v3.status,selectedCurrent.status)
+        assertEquals(v3.nextSetSuggestions,selectedCurrent.nextSetSuggestions)
+        // Historical signed V1 replay must remain EXPLICIT and unchanged.
+        val replay=ownerCoach.reviewAuthored(owner,cycleId,inputs,
+            2,day.weekday,selected.slotId,CoachReadiness.NORMAL,false,n("5"),
+            CustomRepForecastPolicy.LEGACY_STEP_V1)
+        assertTrue(replay.toString(),replay is NativeCustomNextCoachResult.Reviewed)
+        assertEquals(CustomRepForecastPolicy.LEGACY_STEP_V1,
+            (replay as NativeCustomNextCoachResult.Reviewed).review.repForecastPolicy)
+        assertEquals(source,reopened.snapshot)
+        // A real saved off-switch is selected within the SAME owner fence.
+        // Progression-only uses the current V2 policy without optional
+        // longitudinal-fatigue decisions; MANUAL suppresses new proposals.
+        val progressionSave=disk.settings.save(owner,0,
+            CoachAssistancePolicy.PROGRESSION_ONLY)
+        assertTrue(progressionSave.toString(),
+            progressionSave is NativeCoachSettingsWrite.Saved)
+        val settingsCoach=NativeKotlinCustomNextWorkoutReview(
+            disk.fence,identity,null,null,disk.sources,disk.timeline,
+            disk.journals,disk.settings,disk.preflight)
+        val progressionOnly=settingsCoach.reviewAuthored(owner,cycleId,
+            inputs,2,day.weekday,selected.slotId,
+            CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(progressionOnly.toString(),
+            progressionOnly is NativeCustomNextCoachResult.Reviewed)
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_V2,
+            (progressionOnly as NativeCustomNextCoachResult.Reviewed)
+                .review.repForecastPolicy)
+        assertEquals(actualCoach.review.nextSetSuggestions,
+            progressionOnly.review.nextSetSuggestions)
+        val manualSave=disk.settings.save(owner,1,
+            CoachAssistancePolicy.MANUAL)
+        assertTrue(manualSave.toString(),manualSave is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED),
+            settingsCoach.reviewAuthored(owner,cycleId,inputs,
+                2,day.weekday,selected.slotId,
+                CoachReadiness.NORMAL,false,n("5")))
+        val restored=disk.settings.save(owner,2,CoachAssistancePolicy.STANDARD)
+        assertTrue(restored.toString(),restored is NativeCoachSettingsWrite.Saved)
         // Without activated signoff owners, an activated review cannot be
         // used as a fallback bypass for an ordinary program.
         assertEquals(NativeCustomNextCoachResult.Rejected(

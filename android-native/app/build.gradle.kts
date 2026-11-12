@@ -61,6 +61,25 @@ android {
             }
         }
     }
+    // Kotlin is the only training runtime for the early-launch beta.
+    // The old web-backed preview remains in repository history for parity
+    // audits but must not be compiled or packaged into this app. Keeping
+    // an explicit source allowlist avoids accidentally shipping another
+    // preview screen or the JavaScript worker through a new source file.
+    sourceSets {
+        getByName("main") {
+            java.include(
+                "**/MainActivity.kt",
+                "**/PursuitIronApplication.kt",
+                "**/AppPrivateKotlinLocalAthlete.kt",
+                "**/NativeKotlin*.kt",
+                "**/NativeComponents.kt",
+                "**/PursuitDesignComponents.kt",
+                "**/NativeDesignTokens.kt",
+                "**/NativeAppearanceSheet.kt"
+            )
+        }
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -69,9 +88,8 @@ android {
 }
 dependencies {
     implementation(project(":domain-contract"))
-    // Verified pure canonical runtime; NativeRuntimeHost owns session persistence.
-    implementation(project(":engine-runtime"))
-    // Isolated native Kotlin coach candidate; NOT selected by live screens.
+    // One canonical, independently tested Kotlin coach and native persistence.
+    // No JavaScript engine-runtime dependency in any app variant.
     implementation(project(":kotlin-engine"))
     implementation(project(":native-coach-store"))
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
@@ -85,14 +103,14 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// Early-launch beta must ship ONE Kotlin engine. The existing dev/debug app
-// deliberately still hosts the legacy JS runtime during cutover; it is NOT
-// releasable. Fail the release variant before artifact generation while that
-// parallel engine would be packaged. Tests and historical migration tools may
-// remain in the repository; they are not an excuse to ship two runtimes.
+// Beta release has TWO independent gates:
+//   1. No transitive JavaScript engine code in the app's runtime graph.
+//   2. Independently checked, on-device complete-workout acceptance evidence.
+// Source CI and debug compilation can run without issuing a release APK/AAB.
+// The evidence file is intentionally NOT checked in during development.
 val verifyEarlyBetaRuntime by tasks.registering {
     group = "verification"
-    description = "Refuse a beta release if legacy JS engine-runtime is packaged"
+    description = "Require Kotlin-only runtime and actual beta device acceptance"
     doLast {
         val components = configurations.getByName("releaseRuntimeClasspath")
             .incoming.resolutionResult.allComponents
@@ -101,17 +119,17 @@ val verifyEarlyBetaRuntime by tasks.registering {
             component?.projectPath == ":engine-runtime"
         }
         check(!containsLegacyRuntime) {
-            "Early beta release blocked: the app still packages :engine-runtime " +
-                "(the legacy JS execution path). Cut MainActivity and its " +
-                "runtime host over to the ONE Kotlin engine, remove the old " +
-                "runtime dependency, then rerun the full native beta gates."
+            "Early beta release blocked: :engine-runtime (legacy JavaScript) " +
+                "is still on the app's release classpath."
+        }
+        check(rootProject.file("verification/BETA_DEVICE_ACCEPTANCE.md").isFile) {
+            "Early beta release blocked: verified Android-device onboarding, " +
+                "workout, cold resume and History acceptance evidence is missing."
         }
     }
 }
-// CI must still be able to compile BOTH debug and release source without
-// assembling any artifact. Bind this to actual distributable packaging, not
-// preReleaseBuild (a dependency of source compilation). The final unsigned
-// or signed artifact is refused while the parallel JS runtime is packaged.
+// Bind verification only to actual packaging; source-only CI must still
+// compile to establish the Kotlin app's readiness before device milestones.
 tasks.matching {
     it.name in setOf(
         "packageRelease", "assembleRelease",

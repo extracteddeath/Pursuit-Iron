@@ -681,8 +681,9 @@ private fun NativeKotlinCandidateTrainEntry(
                 Text(it,style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
             }
-            PursuitCard(highlighted=true) {
-                Text("Your unfinished workouts",
+            PursuitCard(highlighted=resumableGeneratedId==null) {
+                Text(if(resumableGeneratedId!=null)"Other unfinished workouts"
+                    else "Your unfinished workouts",
                     style=MaterialTheme.typography.titleMedium)
                 Text("Your saved sets and exercise targets are checked before you resume.",
                     style=MaterialTheme.typography.bodySmall)
@@ -695,7 +696,9 @@ private fun NativeKotlinCandidateTrainEntry(
                 when(val result=resumable) {
                     is NativeCustomResumeReview.Ready -> {
                         if(result.workouts.isEmpty()) {
-                            Text("You have no unfinished workouts. Open your program to continue.",
+                            Text(if(resumableGeneratedId!=null)
+                                "No unfinished custom workouts. Resume your saved generated workout above."
+                                else "No unfinished custom workouts. Open your program to continue.",
                                 style=MaterialTheme.typography.bodySmall)
                         } else {
                             Text("${result.workouts.size} unfinished workouts",
@@ -735,11 +738,11 @@ private fun NativeKotlinCandidateTrainEntry(
                         }
                     }
                     is NativeCustomResumeReview.Rejected ->
-                        Text("Saved workouts could not be verified (${result.reason.name.replace('_',' ').lowercase()}). No workout opened. If Finish was interrupted, recover it from the native custom workout before retrying.",
+                        Text("Custom workout inventory could not be verified (${result.reason.name.replace('_',' ').lowercase()}). No custom workout opened. A separately verified generated workout can still be resumed above.",
                             color=MaterialTheme.colorScheme.error,
                             style=MaterialTheme.typography.bodySmall)
                     null -> if(!reviewingResume) Text(
-                        "Saved workouts could not be read. Refresh to try again.",
+                        "Custom workout inventory could not be read. Refresh to try again.",
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
                 }

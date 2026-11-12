@@ -641,7 +641,13 @@ internal fun NativeKotlinCustomJournalScreen(
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             if(activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP)
-                                editorStates.SaveableStateProvider("main:${set.setKey}") {
+                                // Keep each physical machine's unsaved main-set
+                                // fields separate and restore them on A -> B -> A.
+                                // Recorded actuals remain journal-owned.
+                                editorStates.SaveableStateProvider(
+                                    "main:${set.setKey}:station:"+
+                                        (mainMachineId?.let{"id:$it"} ?: "none")
+                                ) {
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,

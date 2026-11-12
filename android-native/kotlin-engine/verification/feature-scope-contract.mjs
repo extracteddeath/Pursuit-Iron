@@ -65,6 +65,8 @@ assert.ok(index.includes('FULL_REPLACEMENT_CONTRACT.md'),
     'Kotlin engine index must explicitly point to the full replacement requirement');
 const app=read('android-native/app/build.gradle.kts');
 const stillJs=app.includes('implementation(project(":engine-runtime"))');
-assert.ok(stillJs,
-    'This isolated research branch should NOT silently switch the app engine. Cutover needs a separately approved integration pass.');
-console.log('PASS scope: '+ids.length+' features, E01–E41 engine requirements, U01–U13 native UX tests, and mandatory Kotlin-only final runtime cutover (currently pending).');
+assert.ok(!stillJs && app.includes('java.include(') &&
+    app.includes('"**/NativeKotlin*.kt"') &&
+    app.includes('verification/BETA_DEVICE_ACCEPTANCE.md'),
+    'The Kotlin-only source/classpath cutover must remain explicit; a signed beta stays blocked until device proof.');
+console.log('PASS scope: '+ids.length+' features, E01–E41 engine requirements, U01–U13 native UX tests, Kotlin-only app graph, device beta acceptance still pending.');

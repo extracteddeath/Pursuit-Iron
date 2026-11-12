@@ -62,7 +62,7 @@ class NativeKotlinVerifiedHistoryCsvExportTest {
                     KotlinJournalSetOutcome.COMPLETED,
                     KotlinPerformedSet(null,null,12,null),
                     "custom-bodyweight-3")
-            )))
+            )),"gym-2")
 
     private fun timeline(
         vararg entries:NativeKotlinMixedHistoryCompletion
@@ -78,14 +78,17 @@ class NativeKotlinVerifiedHistoryCsvExportTest {
         val rows=ready.csv.trimEnd().lines()
         assertEquals(6,rows.size)
         assertTrue(rows.first().contains("\"target_load\""))
+        assertTrue(rows.first().contains("\"gym_id\""))
         assertTrue(rows.first().contains("\"actual_rir\""))
         assertTrue(rows[1].contains("\"GENERATED\""))
+        assertTrue(rows[1].contains("\"workout-1\",\"gym-1\""))
         assertTrue(rows[1].contains("\"215\",\"LB\",\"SMITH_TOTAL\""))
         assertTrue(rows[1].contains("\"210\",\"LB\",\"2\",\"\",\"A\""))
         assertTrue(rows[2].contains("\"SKIPPED\""))
         assertTrue(rows[2].contains("\"215\",\"LB\",\"SMITH_TOTAL\""))
         assertTrue(rows[2].contains("\"\",\"\",\"\",\"\",\"\""))
         assertTrue(rows[3].contains("\"CUSTOM\""))
+        assertTrue(rows[3].contains("\"workout-2\",\"gym-2\""))
         assertTrue(rows[3].contains("\"40\",\"LB\",\"DUMBBELL_PER_HAND\""))
         assertTrue(rows[3].contains("\"30\",\"LB\",\"8\",\"2\",\"B\""))
         assertTrue(rows[4].contains("\"FOLLOW_UP\""))

@@ -108,6 +108,44 @@ class CustomNextWorkoutCoachingDomainTest {
         CustomNextWorkoutCoachingRequest(next,"main",sessions,
             stock,n(step),readiness,restricted))
 
+    @Test fun targetRirV2UsesCanonicalStockEvidenceNotACustomShortcut() {
+        val older=completed(1,3,reps=listOf(5,5))
+        val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(5,4))
+        val next=snapshot(5)
+        fun reviewWith(
+            history:CustomCoachingHistoricalSession=latest,
+            inventory:VerifiedLoadStock?=stock(),
+            policy:CustomRepForecastPolicy=CustomRepForecastPolicy.TARGET_RIR_V2
+        )=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(next,"main",
+                listOf(older,history),inventory,n(5),
+                CoachReadiness.NORMAL,false,policy))
+        val verified=reviewWith()
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,verified.status)
+        assertEquals(listOf(8,8),
+            verified.nextSetSuggestions.map{it.proposedNextReps})
+        // No inventory or user-edited unverified physical loads may be
+        // promoted by the custom path when the generated engine refuses.
+        val missingStock=reviewWith(inventory=null)
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+            missingStock.status)
+        assertTrue(missingStock.nextSetSuggestions.isEmpty())
+        assertNull(missingStock.loadReviewCandidate)
+        val edited=reviewWith(history=completed(2,4,reps=listOf(5,6),
+            rirs=listOf(5,4),actual=listOf(205,200)))
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+            edited.status)
+        assertTrue(edited.nextSetSuggestions.isEmpty())
+        assertNull(edited.loadReviewCandidate)
+        assertEquals(listOf(5,6),latest.evidence.visits.map{it.actual?.reps})
+        // Older signed V1 receipts still replay the old policy exactly.
+        val legacy=reviewWith(inventory=null,
+            policy=CustomRepForecastPolicy.LEGACY_STEP_V1)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,legacy.status)
+        assertEquals(listOf(6,7),
+            legacy.nextSetSuggestions.map{it.proposedNextReps})
+    }
+
     @Test fun V2AndV3UseGeneratedEnginesBelowFloorTargetRirRule() {
         // Same factual 5 reps at 2 RIR with an issued 4 RIR goal is
         // estimated at 3 reps at goal. It is NOT an earned 5-rep target.

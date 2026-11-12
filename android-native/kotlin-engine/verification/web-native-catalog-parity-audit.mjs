@@ -29,7 +29,7 @@ const native=readFileSync(nativePath,'utf8');
 export function parseNativeStarterIds(source) {
   // Canonical web IDs include both underscores and hyphens. Never silently
   // omit valid Kotlin entries such as wrist-curl and reverse-wrist-curl.
-  return [...source.matchAll(/\\bentry\\("([a-z0-9_-]+)"/g)].map(m=>m[1]);
+  return [...source.matchAll(/\bentry\("([a-z0-9_-]+)"/g)].map(m=>m[1]);
 }
 const nativeStarterIds=parseNativeStarterIds(native);
 const sha256=buffer=>createHash('sha256').update(buffer).digest('hex');
@@ -80,7 +80,7 @@ export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
 
 function selfTest() {
   assert.deepEqual(parseNativeStarterIds(
-    'entry("bench","family",...)\\nentry("wrist-curl","family",...)\\nentry("reverse-wrist-curl","family",...)'
+    'entry("bench","family",...)\nentry("wrist-curl","family",...)\nentry("reverse-wrist-curl","family",...)'
   ),['bench','wrist-curl','reverse-wrist-curl'],
   'hyphenated canonical IDs must not vanish from Kotlin starter inventory');
   assert.equal(nativeStarterIds.length,22,

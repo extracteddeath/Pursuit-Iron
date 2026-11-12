@@ -3386,7 +3386,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(14,suggestion.nextSetSuggestions.single().proposedNextReps)
         assertNull(suggestion.loadReviewCandidate)
         val approvalPreview=f.repApprovals.preview("owner-1","real-activated-week6",
-            futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+            CustomRepForecastPolicy.LEGACY_STEP_V1)
         assertTrue(approvalPreview.toString(),
             approvalPreview is NativeCustomNextRepPreview.Ready)
         val offered=(approvalPreview as NativeCustomNextRepPreview.Ready)
@@ -3398,7 +3399,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,
                 n("5"),offered.receipt.fingerprint,
                 offered.receipt.historyRevision,offered.receipt.consentRevision,
-                offered.receipt.setKeys,offered.receipt.nextMinimumReps,false))
+                offered.receipt.setKeys,offered.receipt.nextMinimumReps,false,
+                CustomRepForecastPolicy.LEGACY_STEP_V1))
         assertEquals(NativeCustomNextRepRead.Missing,
             f.repApprovals.readCurrent("owner-1","real-activated-week6",
                 futureInputs(),6,1))
@@ -3406,7 +3408,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
             offered.receipt.fingerprint,offered.receipt.historyRevision,
             offered.receipt.consentRevision,offered.receipt.setKeys,
-            offered.receipt.nextMinimumReps,true)
+            offered.receipt.nextMinimumReps,true,
+            CustomRepForecastPolicy.LEGACY_STEP_V1)
         assertEquals(NativeCustomNextRepWrite.Accepted(offered.receipt,false),
             accepted)
         assertEquals(NativeCustomNextRepRead.Current(
@@ -3453,6 +3456,60 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 .evidence.visits.single().actual?.reps)
     }
 
+
+
+    @Test fun newCurrentPolicyRepApprovalSurvivesColdReopenAndIssuance() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        // Earned rep headroom: reported 3 RIR against original 2-RIR goal.
+        finishRealActivatedSession(f,5,13,actualRir=3)
+        val id="new-current-v3-week6"
+        val previous=f.coach.review("owner-1",futureInputs(),6,1,
+            "slot-1",CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_TREND_V3,
+            previous.review.repForecastPolicy)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            previous.review.status)
+        assertEquals(listOf(14),previous.review.nextSetSuggestions.map{
+            it.proposedNextReps
+        })
+        val proposed=f.repApprovals.preview("owner-1",id,futureInputs(),
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(proposed.toString(),proposed is NativeCustomNextRepPreview.Ready)
+        val ready=proposed as NativeCustomNextRepPreview.Ready
+        assertEquals(CustomRepForecastPolicy.TARGET_RIR_TREND_V3,
+            ready.receipt.repForecastPolicy)
+        assertEquals(listOf(14),ready.receipt.nextMinimumReps)
+        assertEquals(previous.review.nextSetSuggestions,
+            ready.coaching?.nextSetSuggestions)
+        assertFalse(ready.amendment.mayIssueWorkout)
+        val signed=f.repApprovals.accept("owner-1",id,futureInputs(),
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+            ready.receipt.fingerprint,ready.receipt.historyRevision,
+            ready.receipt.consentRevision,ready.receipt.setKeys,
+            ready.receipt.nextMinimumReps,true)
+        assertEquals(NativeCustomNextRepWrite.Accepted(
+            ready.receipt,false),signed)
+        val afterRestart=NativeKotlinCustomNextRepApprovalFileStore(
+            temp.root.toPath(),fence,identity,f.activation,f.coach,
+            f.prepared,f.issuer)
+        assertEquals(NativeCustomNextRepRead.Current(
+            ready.receipt,ready.amendment),
+            afterRestart.readCurrent("owner-1",id,futureInputs(),6,1))
+        // The exact authenticated V3 offer, not a parallel V1 number,
+        // enters the prepared immutable workout only after approval.
+        val prepared=f.prepared.prepareActivated("owner-1",id,
+            "cycle-1",6,1,futureInputs(),f.signoff,f.activation,
+            afterRestart) as NativeCustomPrepareResult.Prepared
+        assertEquals(RepBand(14,15),
+            prepared.workout.snapshot.slots.single().sets.single().prescription.reps)
+        val issued=f.issuer.issueActivated("owner-1",id,"cycle-1",6,1,
+            futureInputs(),f.signoff,f.activation,afterRestart)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(prepared.workout.snapshot,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+    }
 
 
     @Test fun acceptedRepAmendmentCannotSurviveRevokedOrReconfirmedCycleConsent() {

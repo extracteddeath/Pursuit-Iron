@@ -61,8 +61,7 @@ open class MainActivity:ComponentActivity() {
                             onThemeSelected={requested->
                                 if(PursuitThemes.find(requested)!=null) {
                                     themeId=requested
-                                    appearance.edit()
-                                        .putString("theme_id",requested).apply()
+                                    appearance.edit().putString("theme_id",requested).apply()
                                 }
                             }
                         )

@@ -101,6 +101,14 @@ object CoachFirstProgramDraftConversionDomain {
                 }} })
             return reject(FirstProgramDraftStatus.UNRESOLVED_PRESCRIPTION,
                 "The original generated exercise, muscle-dose, time or set review is incomplete.")
+        // A source-authored required PRIMARY visit may be a companion
+        // skill sharing a session with the named main lift (e.g. ULPPL
+        // squat + conventional deadlift). It must survive conversion into
+        // four-month custom/adaptive blocks as an athlete-protected slot,
+        // not become removable just because it isn't the day header.
+        val hardPinnedPrimaryIds=composed.exercises.filter {
+            it.role==ComposerRole.PRIMARY && it.requiredVisits>0
+        }.map{it.exerciseId}.toSet()
         val days=prescribed.sessions.map {session->
             val day=composed.days.getOrNull(session.dayIndex)
                 ?:return reject(FirstProgramDraftStatus.UNRESOLVED_PRESCRIPTION,
@@ -121,11 +129,12 @@ object CoachFirstProgramDraftConversionDomain {
                                     set.targetRir,set.activeSeconds,
                                     set.restSeconds)
                             }),
-                            pinned=generated.intents.any { intent ->
-                                intent.weekday==day.calendarDay &&
-                                    intent.requiredPrimaryExerciseId==exercise.exerciseId &&
-                                    exercise.role==ComposerRole.PRIMARY
-                            })
+                            pinned=exercise.role==ComposerRole.PRIMARY &&
+                                (exercise.exerciseId in hardPinnedPrimaryIds ||
+                                    generated.intents.any { intent ->
+                                        intent.weekday==day.calendarDay &&
+                                            intent.requiredPrimaryExerciseId==exercise.exerciseId
+                                    }))
                     }))
         }
         val next=CustomTrainingCycle(

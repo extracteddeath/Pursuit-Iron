@@ -451,14 +451,20 @@ object CustomNextWorkoutCoachingDomain {
             }
         val currentReview=if(request.repForecastPolicy.usesTargetRir()) {
             val bands=nextSets.map{it.prescription.reps}.distinct()
+            val unloaded=nextSets.all{
+                it.prescription.load==DraftSetLoad.ExplicitBodyweight
+            } && oldSets.all{
+                it.prescription.load==DraftSetLoad.ExplicitBodyweight
+            }
             val loads=nextSets.map{it.prescription.load as? DraftSetLoad.Verified}
             val verified=loads.filterNotNull()
-            if(bands.size!=1 || verified.size!=nextSets.size ||
+            if(bands.size!=1 || (!unloaded && (
+                verified.size!=nextSets.size ||
                 verified.map{it.unit}.distinct().size!=1 ||
-                verified.map{it.basis}.distinct().size!=1)
+                verified.map{it.basis}.distinct().size!=1)))
                 return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                     ids,latest.evidence.workoutId,
-                    explanation="This set scheme needs one authenticated load basis and compatible working-set rep ranges before target-RIR progression can be reviewed.")
+                    explanation="This set scheme needs a consistent verified implement or explicit unloaded bodyweight identity and compatible rep ranges for the shared next-session review.")
             val observations=oldSets.mapIndexed{ordinal,set->
                 val receipt=facts.single{it.setKey==set.setKey}
                 val actual=receipt.actual
@@ -467,15 +473,23 @@ object CustomNextWorkoutCoachingDomain {
                     KotlinJournalSetOutcome.SKIPPED->SetOutcome.SKIPPED
                     KotlinJournalSetOutcome.FAILED_ATTEMPT->SetOutcome.FAILED_ATTEMPT
                 },actual?.load,actual?.reps,actual?.actualRir,
-                    (set.prescription.load as DraftSetLoad.Verified).value,
+                    (set.prescription.load as? DraftSetLoad.Verified)?.value,
                     set.prescription.targetRir)
             }
             runCatching {
-                FatigueAwareRepTargetReviewDomain.assess(
+                val goals=nextSets.map{it.prescription.targetRir}
+                if(unloaded)
+                    FatigueAwareRepTargetReviewDomain.assessBodyweight(
+                        BodyweightRepTargetEvidence(
+                            latest.evidence.workoutId,target.exerciseId,
+                            bands.single(),oldSets.size,observations),
+                        request.readiness,request.movementRestricted,
+                        targetRirByOrdinal=goals)
+                else FatigueAwareRepTargetReviewDomain.assess(
                     ProgressionWorkoutEvidence(latest.evidence.workoutId,
                         target.exerciseId,verified.first().unit,
                         bands.single(),oldSets.size,observations,
-                        trainingDayId=target.slotId),
+                        trainingDayId="${request.next.stamp.cycleId}:${request.next.weekday}:${target.slotId}"),
                     request.verifiedStock,verified.first().basis,
                     request.readiness,request.movementRestricted,
                     // Mixed loads are acceptable only because the already
@@ -483,9 +497,7 @@ object CustomNextWorkoutCoachingDomain {
                     // the canonical policy verifies EVERY recorded increment.
                     verifiedPerSetLoading=true,
                     policyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2,
-                    targetRirByOrdinal=nextSets.map{
-                        it.prescription.targetRir
-                    })
+                    targetRirByOrdinal=goals)
             }.getOrElse {
                 return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                     ids,latest.evidence.workoutId,

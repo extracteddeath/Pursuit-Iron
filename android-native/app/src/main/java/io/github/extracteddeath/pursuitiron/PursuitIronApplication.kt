@@ -2,19 +2,13 @@ package io.github.extracteddeath.pursuitiron
 
 import android.app.Application
 
-/** Exactly one canonical worker and native writer across Activity recreation. */
-class PursuitIronApplication : Application() {
-    internal val nativeRuntime by lazy { NativeRuntimeHost(applicationContext) }
-    // Separate Kotlin-only lifecycle. No implicit owner enrollment, JS import,
-    // screen selection or mutation of the existing canonical store.
-    internal val kotlinCandidate by lazy { NativeKotlinCandidateHost(applicationContext) }
-    // One isolated off-main-thread Kotlin workout controller per app process;
-    // NOT wired to MainActivity, so no live engine or journal switch occurs.
-    internal val kotlinWorkoutSession by lazy {
-        NativeKotlinSessionController(kotlinCandidate)
-    }
-    override fun onTerminate() {
-        nativeRuntime.close()
-        super.onTerminate()
+/**
+ * One process-scoped Kotlin source owner. No JS engine is created or started
+ * by the beta launcher; an independent data migration is required for any
+ * older legacy history and must never silently overwrite this store.
+ */
+class PursuitIronApplication:Application() {
+    internal val kotlinCandidate by lazy {
+        NativeKotlinCandidateHost(applicationContext)
     }
 }

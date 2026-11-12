@@ -99,8 +99,10 @@ object NativeKotlinCleanStoreRestore {
             throw IOException("unsafe existing staging directory")
         val marker=stage.resolve(MARKER)
         if(existing(marker)) {
-            if(!Files.isRegularFile(marker,noFollow) ||
-                Files.isSymbolicLink(marker) ||
+            if(Files.isSymbolicLink(marker) ||
+                !Files.isRegularFile(marker,noFollow))
+                throw IOException("unsafe staging marker path")
+            if(!ownedByThisAttempt &&
                 Files.readAllBytes(marker).toString(Charsets.UTF_8)!=MARKER_BYTES)
                 throw IOException("unknown staging directory: manual review required")
         } else if(!ownedByThisAttempt) {
@@ -212,9 +214,12 @@ object NativeKotlinCleanStoreRestore {
                         }
                         Files.createDirectory(stage)
                         val stagingOwnedByThisAttempt=true
-                        writeAndForce(stage.resolve(MARKER),
-                            MARKER_BYTES.toByteArray(Charsets.UTF_8))
                         try {
+                            // Include marker creation in rollback scope:
+                            // disk-full or interrupted first write must not
+                            // strand an untrusted but known empty stage.
+                            writeAndForce(stage.resolve(MARKER),
+                                MARKER_BYTES.toByteArray(Charsets.UTF_8))
                             for(file in archive.files) {
                                 val relative=Paths.get(file.relativePath)
                                 val path=stage.resolve(relative).normalize()

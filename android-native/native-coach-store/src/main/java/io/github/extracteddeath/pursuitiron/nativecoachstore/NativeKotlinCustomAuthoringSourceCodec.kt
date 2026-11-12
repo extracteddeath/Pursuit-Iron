@@ -227,7 +227,7 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
         val athlete=record.setup.reviewed
         require(record.setup.status == AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
             athlete!=null && athlete.athleteProfileId==record.athleteId)
-        require(record.catalog.size in 1..256)
+        require(record.catalog.size in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES)
         require(record.catalog.map { it.exerciseId }.distinct().size ==
             record.catalog.size)
         require(record.catalog.map { it.familyId to it.variantId }.distinct().size ==
@@ -263,7 +263,7 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
                         throw IOException("Unknown native authoring version")
                     val owner=readUTF();val athleteId=readUTF()
                     val revision=readLong();val setup=setup()
-                    val catalog=items(256) { movement() }
+                    val catalog=items(CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES) { movement() }
                     if (available()!=0) throw IOException("Trailing source bytes")
                     NativeCustomAuthoringSnapshot(owner,athleteId,
                         revision,setup,Collections.unmodifiableList(catalog))

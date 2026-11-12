@@ -10,7 +10,8 @@ import java.math.BigDecimal
  */
 enum class LiveSetCoachUnavailable {
     FINISHED, UNKNOWN_OR_COMPLETED_SET, WARMUP_OR_FIRST_WORKING_SET,
-    UNVERIFIED_OR_MIXED_SET_SCHEME, ASSISTANCE_DISABLED
+    UNVERIFIED_OR_MIXED_SET_SCHEME, PHYSICAL_MACHINE_HISTORY_MISMATCH,
+    ASSISTANCE_DISABLED
 }
 sealed interface LiveSetCoachResult {
     data class Unavailable(val reason:LiveSetCoachUnavailable):LiveSetCoachResult
@@ -24,6 +25,17 @@ sealed interface LiveSetCoachResult {
         val canModifyWorkout:Boolean get()=false
         val canIssueWorkout:Boolean get()=false
     }
+}
+
+/**
+ * An authenticated workout with physical A/B machines must provide the
+ * selected station identity before fatigue evidence can be used. ExerciseOnly
+ * is for workouts without a physical-machine identity requirement, not a
+ * fallback when a required station is missing.
+ */
+sealed interface LiveMachineCoachScope {
+    data object ExerciseOnly:LiveMachineCoachScope
+    data class Physical(val selectedMachineId:String?):LiveMachineCoachScope
 }
 
 /**
@@ -56,7 +68,8 @@ object KotlinJournalLiveSetCoachDomain {
         readiness:CoachReadiness,
         movementRestricted:Boolean,
         maximumReviewStep:BigDecimal,
-        assistance:CoachAssistancePolicy
+        assistance:CoachAssistancePolicy,
+        machineScope:LiveMachineCoachScope
     ):LiveSetCoachResult {
         val ordered=working.sortedBy{it.ordinal}
         val index=ordered.indexOfFirst{it.setKey==nextSetKey}
@@ -85,6 +98,23 @@ object KotlinJournalLiveSetCoachDomain {
                     }!=true
             })
             return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
+
+        // Stock verification alone is not enough. A selected B with a
+        // completed A set must not receive A-based fatigue, rep, or load
+        // recommendations merely because the physical stock was withheld.
+        // Corrections are authoritative because the adapters already read
+        // only effective journal receipts. Skips have no machine/effort.
+        if(machineScope is LiveMachineCoachScope.Physical) {
+            val machineId=machineScope.selectedMachineId
+            if(!KotlinMachineAlternativesDomain.validInstanceId(machineId) ||
+                ordered.any { target->
+                    target.outcome!=null &&
+                        target.outcome!=KotlinJournalSetOutcome.SKIPPED &&
+                        target.performed?.machineInstanceId!=machineId
+                })
+                return unavailable(
+                    LiveSetCoachUnavailable.PHYSICAL_MACHINE_HISTORY_MISMATCH)
+        }
 
         // Include later logged sets. Their presence must prevent a stale
         // out-of-order recommendation, for BOTH workout formats.
@@ -118,7 +148,8 @@ object KotlinJournalLiveSetCoachDomain {
         readiness:CoachReadiness,
         movementRestricted:Boolean,
         maximumReviewStep:BigDecimal,
-        assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD
+        assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD,
+        machineScope:LiveMachineCoachScope=LiveMachineCoachScope.ExerciseOnly
     ):LiveSetCoachResult {
         if(journal.finishedByEventId!=null)
             return unavailable(LiveSetCoachUnavailable.FINISHED)
@@ -140,7 +171,7 @@ object KotlinJournalLiveSetCoachDomain {
         }
         return reviewStraightSets(journal.snapshot.workoutId,journal.revision,
             nextSetKey,working,true,currentGymStock,readiness,
-            movementRestricted,maximumReviewStep,assistance)
+            movementRestricted,maximumReviewStep,assistance,machineScope)
     }
 
     /** Custom-cycle journal: only translate actual same-slot MAIN visits. */
@@ -151,7 +182,8 @@ object KotlinJournalLiveSetCoachDomain {
         readiness:CoachReadiness,
         movementRestricted:Boolean,
         maximumReviewStep:BigDecimal,
-        assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD
+        assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD,
+        machineScope:LiveMachineCoachScope=LiveMachineCoachScope.ExerciseOnly
     ):LiveSetCoachResult {
         if(journal.finishedByEventId!=null)
             return unavailable(LiveSetCoachUnavailable.FINISHED)
@@ -184,6 +216,6 @@ object KotlinJournalLiveSetCoachDomain {
             slot.sets.none{it.prescription.amplifier!=null}
         return reviewStraightSets(journal.workoutId,journal.revision,
             nextSetKey,working,straight,currentGymStock,readiness,
-            movementRestricted,maximumReviewStep,assistance)
+            movementRestricted,maximumReviewStep,assistance,machineScope)
     }
 }

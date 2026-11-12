@@ -192,10 +192,13 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
 
     @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
-        assertEquals(22,starter.catalog.size)
+        assertEquals(26,starter.catalog.size)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
-            starter.catalog.takeLast(2).map{it.exerciseId})
-        assertEquals(20,starter.catalog.dropLast(2).size)
+            starter.catalog.drop(20).take(2).map{it.exerciseId})
+        assertEquals(listOf("inc-bb-bench","incline_smith",
+            "machine_press","leg_press"),
+            starter.catalog.drop(22).map{it.exerciseId})
+        assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)
         assertEquals(starter,restored)

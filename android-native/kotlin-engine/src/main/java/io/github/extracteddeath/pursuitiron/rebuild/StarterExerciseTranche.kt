@@ -43,6 +43,7 @@ object StarterExerciseTranche {
     private val reviewedRecoveryGroups=mapOf(
         "barbell_bench" to ("heavy-bench" to 2),
         "paused_bench" to ("heavy-bench" to 2),
+        "inc-bb-bench" to ("heavy-bench" to 2),
         "rdl" to ("heavy-barbell-hinge" to 2),
         "conventional_deadlift" to ("heavy-barbell-hinge" to 2)
     )
@@ -209,11 +210,45 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
             DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),12..20,
             "Source extended reverse-wrist-curl, not generic forearms. Direct wrist extensors only; no wrist-flexor or brachialis credit. Per-hand dumbbell load.",
-            direct(TrainingMuscle.WRIST_EXTENSORS))
+            direct(TrainingMuscle.WRIST_EXTENSORS)),
+        // Source-backed additional candidates. Exact identity, real gym stock
+        // and verified load semantics are required before composition; this
+        // tranche does not reuse legacy loading, invent station increments, or
+        // treat web muscle coefficients as individualized dose science.
+        entry("inc-bb-bench","bench_press","incline-barbell",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            BAR,LoadBasis.BARBELL_TOTAL,setOf("incline-bench","rack"),6..10,
+            "Incline barbell press is a separate movement identity from flat bench and dumbbell incline. Requires an actual incline bench and rack; verified total-bar loading. Never borrow flat-bench weight or PR.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.5")),
+        entry("incline_smith","bench_press","incline-smith",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            "incline-smith-station",LoadBasis.SMITH_TOTAL,
+            setOf("incline-bench"),5..20,
+            "Incline Smith loading must use the verified station-specific Smith total, not a free-weight bar or generic machine stack. No automatic transfer of free-weight or alternative Smith loads.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.5")),
+        entry("machine_press","machine_chest_press","chest-press",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            "chest-press-machine",LoadBasis.EXERCISE_OVERRIDE,
+            emptySet(),5..25,
+            "The selected physical chest-press machine must have its own verified loads. Machine A/B histories and progression remain separate; zero generic machine stacks or equivalences are inferred.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.5")),
+        entry("leg_press","leg_press","machine",
+            ComposerPattern.SQUAT,ComposerRole.SECONDARY,lower,
+            "leg-press-machine",LoadBasis.EXERCISE_OVERRIDE,
+            emptySet(),6..25,
+            "Leg press uses a distinct physical machine and its confirmed exercise-specific load scale, not the squat barbell or a generic machine increment. Loaded sled mechanics and cross-machine comparison are not presumed.",
+            direct(TrainingMuscle.QUADS),
+            indirect(TrainingMuscle.GLUTES,"0.5"))
     )
 
     init {
-        require(definitions.size==22)
+        require(definitions.size==26)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

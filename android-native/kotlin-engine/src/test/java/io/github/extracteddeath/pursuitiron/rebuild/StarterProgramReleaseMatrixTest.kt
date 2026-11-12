@@ -88,7 +88,9 @@ class StarterProgramReleaseMatrixTest {
 
     @Test fun wristFlexionAndExtensionRemainSeparateAndSourceLinked() {
         val entries=StarterExerciseTranche.entries()
-        assertEquals(22,entries.size)
+        assertTrue(entries.size>=22)
+        assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
+            entries.drop(20).take(2).map{it.legacyCuratedId})
         val flex=entries.single{it.legacyCuratedId=="wrist-curl"}
         val ext=entries.single{it.legacyCuratedId=="reverse-wrist-curl"}
         assertEquals("wrist-curl",flex.movement.exerciseId)

@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron
 
+import android.content.Intent
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -21,8 +24,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCoachSettingsRead
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCoachSettingsWrite
@@ -47,6 +52,9 @@ internal fun NativeKotlinCoachSettingsScreen(
     onBack:()->Unit
 ) {
     val scope=rememberCoroutineScope()
+    val context=LocalContext.current
+    var feedbackOpen by rememberSaveable { mutableStateOf(false) }
+    var feedbackDraft by rememberSaveable { mutableStateOf("") }
     var current by remember(host) {
         mutableStateOf<NativeCoachAssistanceSettings?>(null)
     }
@@ -215,6 +223,19 @@ internal fun NativeKotlinCoachSettingsScreen(
                 )
             }
         }
+        PursuitFormSection(
+            "Early beta feedback",
+            "Tell us which workout or screen felt wrong. You decide what to share."
+        ) {
+            OutlinedButton(onClick={feedbackOpen=true}) {
+                Text("Share beta feedback")
+            }
+            Text(
+                "Opens an app you choose. No training records, injury notes or diagnostics are attached automatically.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         if(saving) {
             Text("Saving coaching preferences…",
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -227,5 +248,57 @@ internal fun NativeKotlinCoachSettingsScreen(
         Text("Isolated Kotlin candidate · production settings are not changed.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if(feedbackOpen) {
+        AlertDialog(
+            onDismissRequest={ feedbackOpen=false },
+            title={Text("Share early beta feedback")},
+            text={
+                Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text("Describe what happened or what you would improve. Avoid personal or medical details unless you choose to include them.",
+                        style=MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(
+                        value=feedbackDraft,
+                        onValueChange={feedbackDraft=it.take(2000)},
+                        label={Text("Your feedback")},
+                        minLines=3,
+                        maxLines=7,
+                        modifier=Modifier.fillMaxWidth()
+                    )
+                    Text("Only your message and app version are shared after you choose an app. This does not send anything automatically.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton={
+                TextButton(
+                    enabled=feedbackDraft.isNotBlank(),
+                    onClick={
+                        val version=runCatching {
+                            context.packageManager.getPackageInfo(
+                                context.packageName,0).versionName
+                        }.getOrNull().orEmpty().ifBlank { "unknown" }
+                        val report="Pursuit Iron early beta feedback\n"+
+                            "App version: $version\n\n"+
+                            feedbackDraft.trim()
+                        val send=Intent(Intent.ACTION_SEND).apply {
+                            type="text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT,
+                                "Pursuit Iron early beta feedback")
+                            putExtra(Intent.EXTRA_TEXT,report)
+                        }
+                        val launched=runCatching {
+                            context.startActivity(Intent.createChooser(
+                                send,"Choose where to share feedback"))
+                        }.isSuccess
+                        if(launched) feedbackOpen=false
+                        else notice="No app could open the feedback share sheet."
+                    }
+                ) {Text("Choose app to send")}
+            },
+            dismissButton={
+                TextButton(onClick={feedbackOpen=false}) {Text("Cancel")}
+            }
+        )
     }
 }

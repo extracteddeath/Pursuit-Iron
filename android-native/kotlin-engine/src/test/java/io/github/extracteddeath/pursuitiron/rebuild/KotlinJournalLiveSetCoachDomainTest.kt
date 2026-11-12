@@ -392,4 +392,54 @@ class KotlinJournalLiveSetCoachDomainTest {
                     slots=listOf(changed)+saved.snapshot.slots.drop(1)))))
         }
     }
+
+    @Test fun repeatedUnderFloorSetsNeverSilentlyLowerIssuedGeneratedLoads() {
+        // Mirrors a reported legacy failure: a bad first set caused lower
+        // targets to appear on every subsequent set. Advice is not issuance.
+        val issued=started((0..3).map {target(it,"215")})
+        val original=issued.snapshot
+        var journal=issued
+        for (ordinal in 0..2) {
+            journal=record(journal,"bench:s$ordinal",2,0,"215")
+            val reviewed=look(journal,"bench:s${ordinal+1}")
+                as LiveSetCoachResult.Reviewed
+            assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+                reviewed.coaching.direction)
+            assertEquals(n("210"),reviewed.coaching.weightForHumanReview)
+            assertEquals(n("215"),reviewed.coaching.issuedTargetUnchanged)
+            assertFalse(reviewed.coaching.canApplyAutomatically)
+            assertFalse(reviewed.canModifyWorkout)
+            assertFalse(reviewed.canIssueWorkout)
+            assertEquals(original,journal.snapshot)
+            assertEquals(listOf(n("215"),n("215"),n("215"),n("215")),
+                journal.snapshot.targets.map {
+                    (it.load as DraftSetLoad.Verified).value
+                })
+        }
+    }
+
+    @Test fun repeatedUnderFloorSetsNeverSilentlyLowerIssuedCustomLoads() {
+        val issued=custom()
+        val original=issued.snapshot
+        var journal=issued
+        for (ordinal in 0..1) {
+            journal=customRecord(journal,"first:s$ordinal",2,"215",0)
+            val reviewed=KotlinJournalLiveSetCoachDomain.review(
+                journal,"first:s${ordinal+1}",stock,CoachReadiness.NORMAL,
+                false,n("5")) as LiveSetCoachResult.Reviewed
+            assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+                reviewed.coaching.direction)
+            assertEquals(n("210"),reviewed.coaching.weightForHumanReview)
+            assertEquals(n("215"),reviewed.coaching.issuedTargetUnchanged)
+            assertFalse(reviewed.coaching.canApplyAutomatically)
+            assertFalse(reviewed.canModifyWorkout)
+            assertFalse(reviewed.canIssueWorkout)
+            assertEquals(original,journal.snapshot)
+            assertEquals(listOf(n("215"),n("215"),n("215")),
+                journal.snapshot.slots.first().sets.map {
+                    (it.prescription.load as DraftSetLoad.Verified).value
+                })
+        }
+    }
+
 }

@@ -134,7 +134,9 @@ val verifyEarlyBetaSourceClasses by tasks.registering {
             it.isFile && it.extension=="class" &&
                 legacyTypes.any { type ->
                     it.nameWithoutExtension==type ||
-                        it.nameWithoutExtension.startsWith(type+"$")
+                        it.nameWithoutExtension==type+"Kt" ||
+                        it.nameWithoutExtension.startsWith(type+"$") ||
+                        it.nameWithoutExtension.startsWith(type+"Kt$")
                 }
         }.map {it.relativeTo(compiled).path}.toList()
         check(prohibited.isEmpty()) {

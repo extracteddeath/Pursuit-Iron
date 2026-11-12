@@ -1004,6 +1004,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * private journals under the authenticated shared owner fence.
      * Review-only: does not authorize PR banners or progression mutations.
      */
+    /**
+     * A transient identity fence for user-initiated private CSV export.
+     * Never serialized into the exported file. The History reader still
+     * independently validates its current owner and all durable receipts.
+     */
+    fun currentHistoryExportOwner():NativeKotlinOwnerIdentity? =
+        localAthlete.signedInIdentity()
+
     fun reviewVerifiedKotlinHistory():NativeKotlinMixedHistoryReadResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinMixedHistoryReadResult.Rejected(

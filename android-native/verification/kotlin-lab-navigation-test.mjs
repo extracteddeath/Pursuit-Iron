@@ -13,6 +13,35 @@ const release=read('android-native/app/src/release/AndroidManifest.xml');
 const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
+const csvExport=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinVerifiedHistoryCsvExport.kt');
+assert.ok(csvExport.includes('fun prepare(history:NativeKotlinMixedHistoryTimeline)') &&
+  csvExport.includes('NativeKotlinMixedHistoryCompletion.Composer') &&
+  csvExport.includes('NativeKotlinMixedHistoryCompletion.Custom') &&
+  csvExport.includes('number(actual?.load)') &&
+  csvExport.includes('actual?.actualRir?.toString().orEmpty()') &&
+  csvExport.includes('actual?.machineInstanceId.orEmpty()') &&
+  csvExport.includes('"gym_id"') &&
+  csvExport.includes('fact.source.gymId') &&
+  csvExport.includes('completion.gymId') &&
+  csvExport.includes('visit.amplifierKind?.name.orEmpty()') &&
+  csvExport.includes("if(dangerous)\"'$text\"") &&
+  !csvExport.includes('ProgressionEvidenceDomain'),
+  'Export must preserve only corrected factual history, missing RIR and machine identities, without formula execution or new coaching');
+assert.ok(history.includes('rememberLauncherForActivityResult(') &&
+  history.includes('ActivityResultContracts.CreateDocument("text/csv")') &&
+  history.includes('host.reviewVerifiedKotlinHistory()') &&
+  history.includes('host.currentHistoryExportOwner()') &&
+  history.includes('ownerBefore!=ownerAfter') &&
+  history.includes('ownerBefore.ownerKey!=expected.first') &&
+  history.includes('ownerBefore.athleteId!=expected.second') &&
+  history.includes('trusted.athleteId!=expected.second') &&
+  history.includes('trusted.manifestRevision!=expected.third') &&
+  history.includes('NativeKotlinVerifiedHistoryCsvExport.prepare(trusted)') &&
+  history.includes('context.contentResolver.openOutputStream(uri,"wt")') &&
+  history.includes('CSV is not a restorable app backup') &&
+  history.includes('Export completed workouts (CSV)'),
+  'Kotlin History export requires a user-selected document and fresh owner/revision verification; never claim it restores app data');
+
 const labActivity=read('android-native/app/src/debug/java/io/github/extracteddeath/pursuitiron/KotlinEnginePreviewActivity.kt');
 const betaActivity=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
 const tokens=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeDesignTokens.kt');

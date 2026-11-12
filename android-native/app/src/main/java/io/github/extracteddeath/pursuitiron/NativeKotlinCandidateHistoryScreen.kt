@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -8,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
@@ -31,6 +34,75 @@ internal fun NativeKotlinCandidateHistoryScreen(
     var showSeparateHistoryConsent by remember{mutableStateOf(false)}
     var understandsSeparateHistory by remember{mutableStateOf(false)}
     var enrollmentMessage by remember{mutableStateOf<String?>(null)}
+    val context=LocalContext.current
+    // This is an export intent, not a cache of any athlete's sensitive data.
+    // Recheck the complete owner-verified history after Android returns from
+    // the document picker; account switches or new corrections fail closed.
+    var pendingCsvExport by remember {
+        // ownerKey, athleteId, approved History revision
+        mutableStateOf<Triple<String,String,Long>?>(null)
+    }
+    var exporting by remember {mutableStateOf(false)}
+    var exportNotice by remember {mutableStateOf<String?>(null)}
+    val csvDocument=rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        val expected=pendingCsvExport
+        pendingCsvExport=null
+        if(uri==null) {
+            exportNotice="History export canceled. No training data was shared."
+        } else if(expected==null) {
+            exportNotice="Could not verify your export request. The selected file may be empty; please delete it."
+        } else {
+            exporting=true
+            scope.launch {
+                exportNotice=withContext(Dispatchers.IO) {
+                    val ownerBefore=runCatching {
+                        host.currentHistoryExportOwner()
+                    }.getOrNull()
+                    val reread=runCatching {
+                        host.reviewVerifiedKotlinHistory()
+                    }.getOrNull()
+                    val ownerAfter=runCatching {
+                        host.currentHistoryExportOwner()
+                    }.getOrNull()
+                    val trusted=(reread as?
+                        NativeKotlinMixedHistoryReadResult.Review)?.timeline
+                    if(ownerBefore==null || ownerBefore!=ownerAfter ||
+                        ownerBefore.ownerKey!=expected.first ||
+                        ownerBefore.athleteId!=expected.second ||
+                        trusted==null ||
+                        trusted.athleteId!=expected.second ||
+                        trusted.manifestRevision!=expected.third) {
+                        "History changed or could not be verified. Nothing was exported. Delete the empty file and try again."
+                    } else when(val csv=
+                        NativeKotlinVerifiedHistoryCsvExport.prepare(trusted)) {
+                        is NativeKotlinHistoryCsvResult.Ready -> {
+                            // The signed owner cannot silently change while
+                            // we produce a file selected in a prior Activity.
+                            val success=runCatching {
+                                check(host.currentHistoryExportOwner()==ownerBefore)
+                                context.contentResolver.openOutputStream(uri,"wt")
+                                    ?.use {output->
+                                        output.write(csv.csv.toByteArray(Charsets.UTF_8))
+                                        output.flush()
+                                    } ?:error("Could not open destination")
+                            }.isSuccess
+                            if(success)
+                                "Exported ${csv.sessionCount} completed workouts and ${csv.rowCount} set entries. Keep the file private; CSV is not a restorable app backup."
+                            else
+                                "Could not write the history file. It may be empty or incomplete; delete it and try again."
+                        }
+                        NativeKotlinHistoryCsvResult.InvalidHistory ->
+                            "History could not be safely exported. Delete the empty file; saved records are unchanged."
+                        NativeKotlinHistoryCsvResult.TooLarge ->
+                            "This history exceeds the CSV export limit. Delete the empty file; saved records are unchanged."
+                    }
+                }
+                exporting=false
+            }
+        }
+    }
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     var exerciseSearch by rememberSaveable{mutableStateOf("")}
     fun reload() {
@@ -85,6 +157,9 @@ internal fun NativeKotlinCandidateHistoryScreen(
             enrollmentMessage?.let { Text(it,
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                 style=MaterialTheme.typography.bodyMedium) }
+            exportNotice?.let { Text(it,
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                style=MaterialTheme.typography.bodyMedium) }
         }
         when(val read=result) {
             is NativeKotlinMixedHistoryReadResult.Review -> {
@@ -102,6 +177,51 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Review next workout with Coach")
                         }
+                    if(read.timeline.completions.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick={
+                                exporting=true
+                                exportNotice=null
+                                scope.launch {
+                                    val current=withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            val first=host.currentHistoryExportOwner()
+                                            val timeline=(host.reviewVerifiedKotlinHistory()
+                                                as? NativeKotlinMixedHistoryReadResult.Review)
+                                                ?.timeline
+                                            val second=host.currentHistoryExportOwner()
+                                            if(first!=null && first==second &&
+                                                timeline!=null &&
+                                                first.athleteId==timeline.athleteId &&
+                                                timeline.athleteId==read.timeline.athleteId &&
+                                                timeline.manifestRevision==
+                                                    read.timeline.manifestRevision)
+                                                Triple(first.ownerKey,first.athleteId,
+                                                    timeline.manifestRevision)
+                                            else null
+                                        }.getOrNull()
+                                    }
+                                    exporting=false
+                                    if(current==null)
+                                        exportNotice="History or athlete changed. Refresh History before exporting."
+                                    else {
+                                        pendingCsvExport=current
+                                        csvDocument.launch("Pursuit-Iron-training-history.csv")
+                                    }
+                                }
+                            },
+                            enabled=!busy && !exporting,
+                            modifier=Modifier.fillMaxWidth()
+                        ) {
+                            Text(if(exporting)"Preparing history export…"
+                                else "Export completed workouts (CSV)")
+                        }
+                        Text(
+                            "Choose where to save your completed workout and set history. Includes target and actual weights, corrections, gym IDs and machine A/B IDs. No dates are invented. This is a personal record, not a full backup or restore.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 if(read.timeline.completions.isEmpty())item {Text("Your first finished workout will appear here.")}
                 if(read.timeline.completions.isNotEmpty())item {

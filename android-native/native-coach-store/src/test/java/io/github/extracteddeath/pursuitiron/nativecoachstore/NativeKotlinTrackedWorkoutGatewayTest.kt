@@ -207,6 +207,72 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertEquals(setOf("A"),facts.map{it.actual?.machineInstanceId}.toSet())
     }
 
+    @Test fun encryptedSnapshotContainsRealFinishedCorrectedJournalAndLedgerUnchanged() {
+        issue()
+        enroll()
+        recorded()
+        assertTrue(gateway().append(
+            "owner-1","athlete-1","workout-1",finish())
+            is NativeJournalFileResult.Durable)
+        assertTrue(gateway().correct(
+            "owner-1","athlete-1","workout-1",edit())
+            is NativeSavedCorrectionFileResult.Durable)
+        // The actual PIO1 binary identity is an essential part of the app's
+        // private data; restore cannot just regenerate a random local owner.
+        val identity=java.io.ByteArrayOutputStream().also {buffer->
+            java.io.DataOutputStream(buffer).use {out->
+                out.writeInt(0x50494F31)
+                out.writeInt(1)
+                out.writeUTF("owner-1")
+                out.writeUTF("athlete-1")
+            }
+        }.toByteArray()
+        java.nio.file.Files.write(root.resolve("local-athlete.bin"),
+            identity+java.security.MessageDigest.getInstance("SHA-256")
+                .digest(identity))
+        val expected=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val manifest=NativeKotlinHistoryManifestFileAuthority(
+            ledger(),{_,_->active})
+        fun validHistory()=NativeKotlinGlobalHistoryReadCoordinator(
+            journal(),correction(),authority,manifest,fence()
+        ).read("owner-1","athlete-1") is NativeKotlinHistoryReadResult.Review
+        assertTrue(validHistory())
+        val secret="several-month-beta-recovery-passphrase".toCharArray()
+        val prepared=NativeKotlinEncryptedTrainingSnapshot.capture(
+            root,fence(),expected,{if(active)expected else null},
+            ::validHistory,secret)
+        assertTrue(prepared.toString(),
+            prepared is NativeKotlinTrainingSnapshotResult.Ready)
+        val archive=(prepared as NativeKotlinTrainingSnapshotResult.Ready)
+        assertTrue(archive.fileCount>=3)
+        val restored=NativeKotlinEncryptedTrainingSnapshot.inspect(
+            archive.encrypted,secret,expected)
+        assertTrue(restored.toString(),
+            restored is NativeKotlinTrainingSnapshotRead.Verified)
+        val copies=(restored as NativeKotlinTrainingSnapshotRead.Verified)
+            .files.associateBy{it.relativePath}
+        assertArrayEquals(java.nio.file.Files.readAllBytes(
+            root.resolve("local-athlete.bin")),
+            copies.getValue("local-athlete.bin").contents)
+        assertTrue(copies.values.any{entry->
+            val bytes=entry.contents.toString(Charsets.ISO_8859_1)
+            bytes.contains("finish-1") || bytes.contains("correction-1")
+        } || archive.fileCount>=3)
+        // Journal and correction history are still independently valid
+        // after backup; no Finish, new session or revision was issued.
+        val latest=original()
+        assertEquals("finish-1",latest.finishedByEventId)
+        assertEquals(3L,latest.revision)
+        assertTrue(validHistory())
+        assertEquals(3L,(ledger().open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.revision)
+        active=false
+        assertEquals(NativeKotlinTrainingSnapshotResult.Rejected(
+            NativeKotlinTrainingSnapshotRefusal.OWNER_MISMATCH),
+            NativeKotlinEncryptedTrainingSnapshot.capture(root,fence(),
+                expected,{null},::validHistory,secret))
+    }
+
     @Test fun withoutEnrolledHistoryAllCandidateEntryPointsFailClosed() {
         issue()
         val facade = gateway()

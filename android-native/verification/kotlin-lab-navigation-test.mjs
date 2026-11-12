@@ -553,19 +553,24 @@ for(const required of [
 assert.ok(journey.includes('if(!navigationTouched &&') &&
   journey.includes('host.reviewResumableCustomWorkouts()') &&
   journey.includes('host.listOwnedCustomCycleDrafts()') &&
-  journey.includes('host.currentlyApprovedKotlinWorkoutId()?.let { id ->') &&
-  journey.includes('host.recoverWorkout(id)') &&
-  journey.includes('generated.journal.finishedByEventId==null'),
-  'Cold start must route both custom and already-issued unfinished generated workouts to Train, never an unissued or Finished approval');
+  journey.includes('currentUnfinishedGeneratedWorkoutId(host)') &&
+  journey.includes('generatedId!=null'),
+  'Cold start must route both custom and issued unfinished generated workouts to Train');
+assert.ok(journey.includes('private fun currentUnfinishedGeneratedWorkoutId(') &&
+  journey.includes('host.currentlyApprovedKotlinWorkoutId() ?:return null') &&
+  journey.includes('val opened=host.recoverWorkout(id) as? NativeJournalFileResult.Durable') &&
+  journey.includes('opened.journal.snapshot.workoutId==id') &&
+  journey.includes('opened.journal.finishedByEventId==null'),
+  'Generated resume is an owner-verified durable read only, not issuance or a saved UI shortcut');
 assert.ok(journey.includes('Resume your saved workout') &&
-  journey.includes('timePreview?.takeIf {') &&
-  journey.includes('it.alreadyIssued && minimizedGeneratedId==null') &&
-  journey.includes('host.recoverWorkout(\n                                                        issued.workoutId)') &&
-  journey.includes('isCurrentAndUnfinished') &&
-  journey.includes('selectedId=issued.workoutId') &&
+  journey.includes('resumableGeneratedId?.takeIf {') &&
+  journey.includes('minimizedGeneratedId==null') &&
+  journey.includes('currentUnfinishedGeneratedWorkoutId(host)==') &&
+  journey.includes('resumableGeneratedId==issuedId') &&
+  journey.includes('selectedId=issuedId') &&
   journey.includes('The saved workout could not be verified.') &&
-  !journey.includes('host.issueWorkout(issued.workoutId)'),
-  'A cold-restarted generated session must have a prominent, verified Resume action, never auto-issue or reset targets');
+  !journey.includes('host.issueWorkout(issuedId)'),
+  'A cold generated workout must resume independently of time-budget previews, with fresh consent and disk verification');
 for(const required of [
   'KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)',
   'KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)',

@@ -104,6 +104,10 @@ data class CatalogWeekReview(
 }
 
 object CoachExerciseCatalogDomain {
+    /** The active web inventory already exceeds 256 built-in identities.
+     * Keep a bounded, single shared native budget that includes custom
+     * exercises, while separately limiting the *selected* workout options. */
+    const val MAX_CATALOG_ENTRIES=1024
     private val identifier=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,54}$")
     private val zero=BigDecimal.ZERO
     private val maxLoad=BigDecimal("100000")
@@ -124,7 +128,7 @@ object CoachExerciseCatalogDomain {
         require(request.template.sessionIntents.all {
             it.dayIndex in request.template.days.indices
         })
-        require(request.catalog.size in 1..256)
+        require(request.catalog.size in 1..MAX_CATALOG_ENTRIES)
         require(request.chosen.size in 1..32)
         require(request.catalog.map {it.exerciseId}.distinct().size==
             request.catalog.size)

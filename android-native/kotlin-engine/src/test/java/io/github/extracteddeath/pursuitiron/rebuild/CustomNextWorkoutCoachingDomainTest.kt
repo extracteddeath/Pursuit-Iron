@@ -1119,4 +1119,105 @@ class CustomNextWorkoutCoachingDomainTest {
             CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED),
             CustomNextRepAmendmentDomain.propose(snapshot(5),"main",forged))
     }
+    @Test fun V2AndV3NeverSkipMixedOrUnassignedMachineHistoryToEarnProgression() {
+        // One athlete, one logical exercise and training day, two distinct
+        // physical presses. Unknown sets can belong to either station.
+        fun station(order:Long,week:Int,machine:String)=
+            completed(order,week).let {base->
+                base.copy(evidence=base.evidence.copy(visits=
+                    base.evidence.visits.map {visit->
+                        visit.copy(actual=visit.actual?.copy(
+                            machineInstanceId=machine))
+                    }))
+            }
+        val a1=station(1,1,"A")
+        val b2=station(2,2,"B")
+        val a3=station(3,3,"A")
+        val a4=station(4,4,"A")
+        val mixed=b2.copy(evidence=b2.evidence.copy(visits=
+            b2.evidence.visits.mapIndexed {index,visit->
+                visit.copy(actual=visit.actual?.copy(
+                    machineInstanceId=if(index==0)"A" else "B"))
+            }))
+        // The completed workout exists, but both main working sets were
+        // skipped without a physical machine observation.
+        val unrecorded=b2.copy(evidence=b2.evidence.copy(visits=
+            b2.evidence.visits.map {visit->
+                visit.copy(outcome=KotlinJournalSetOutcome.SKIPPED,actual=null)
+            }))
+        val legacy=b2.copy(evidence=b2.evidence.copy(visits=
+            b2.evidence.visits.map {visit->
+                visit.copy(actual=visit.actual?.copy(machineInstanceId=null))
+            }))
+        fun machineReview(
+            sessions:List<CustomCoachingHistoricalSession>,
+            nextWeek:Int,policy:CustomRepForecastPolicy,
+            machine:String="A"
+        )=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(
+                snapshot(nextWeek),"main",sessions,stock(),n(5),
+                CoachReadiness.NORMAL,false,policy,
+                requestedMachineInstanceId=machine))
+        for(policy in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            // Legitimate B sessions do NOT erase two independent A exposures.
+            val bBetween=machineReview(listOf(a1,b2,a3),4,policy)
+            assertEquals(policy.toString(),
+                CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+                bBetween.status)
+            assertEquals(listOf("workout-1-0","workout-3-0"),
+                bBetween.comparedWorkoutIds)
+            assertEquals(n(205),bBetween.loadReviewCandidate)
+
+            for(unknown in listOf(mixed,unrecorded,legacy)) {
+                // Without a fence, these would cherry-pick the two
+                // successful A workouts and offer a phantom 205-lb step.
+                val held=machineReview(listOf(a1,unknown,a3),4,policy)
+                assertEquals("$policy, ${unknown.evidence.visits}",
+                    CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                    held.status)
+                assertTrue(held.nextSetSuggestions.isEmpty())
+                assertNull(held.loadReviewCandidate)
+                assertTrue(held.explanation.contains("mixed or unassigned"))
+                assertFalse(held.mayIssueWorkout)
+                assertFalse(held.mayEditProgram)
+            }
+
+            // A failed/unassigned workout AFTER the latest A is also an
+            // unresolved next-session boundary, not an invitation to revive
+            // the two older successful A workouts.
+            val after=completed(4,4).let {base ->
+                base.copy(evidence=base.evidence.copy(visits=
+                    base.evidence.visits.map {visit ->
+                        visit.copy(outcome=KotlinJournalSetOutcome.SKIPPED,
+                            actual=null)
+                    }))
+            }
+            val newestUnknown=machineReview(listOf(a1,a3,after),5,policy)
+            assertEquals(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
+                newestUnknown.status)
+            assertNull(newestUnknown.loadReviewCandidate)
+            assertTrue(newestUnknown.nextSetSuggestions.isEmpty())
+
+            // Once two fresh, fully labelled A visits follow the ambiguous
+            // one, that older uncertainty cannot suppress A forever.
+            val recovered=machineReview(listOf(a1,mixed,a3,a4),5,policy)
+            assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+                recovered.status)
+            assertEquals(listOf("workout-3-0","workout-4-0"),
+                recovered.comparedWorkoutIds)
+            assertEquals(n(205),recovered.loadReviewCandidate)
+
+            // A later, fully identified B session cannot invalidate A's
+            // two latest authenticated visits or alter A's 200-lb baseline.
+            val newerB=station(5,5,"B")
+            val lateB=machineReview(listOf(a1,a3,a4,newerB),6,policy)
+            assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+                lateB.status)
+            assertEquals(listOf("workout-3-0","workout-4-0"),
+                lateB.comparedWorkoutIds)
+            assertEquals(n(205),lateB.loadReviewCandidate)
+        }
+    }
+
 }

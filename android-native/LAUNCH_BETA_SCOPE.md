@@ -32,6 +32,12 @@ a production-store AAB milestone, or permission to ship incomplete code.
    recovery; a usable export/restore or other tested recovery mechanism is
    required before inviting external testers. No silent data reset, double
    completion or sign-in account mixing.
+   The Kotlin History screen now offers user-selected, owner-verified CSV
+   export of completed generated/custom workouts, original targets, final
+   corrected actuals, and physical machine/gym identity. That is a useful
+   personal record but **not a restorable app backup**: it does not recover
+   unfinished journals, program approval, equipment or app-private ownership.
+   Tested complete recovery remains a separate beta release blocker.
 
 ## Not beta blockers / do not ship as misleading unfinished UI
 

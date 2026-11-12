@@ -63,7 +63,7 @@ class StarterExerciseTrancheTest {
         assertEquals(42,data.size)
         assertEquals(42,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(31,data.map {
+        assertEquals(42,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {

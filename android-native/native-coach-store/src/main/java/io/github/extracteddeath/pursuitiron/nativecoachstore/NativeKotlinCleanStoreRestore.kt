@@ -7,9 +7,9 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.Comparator
 
 /**
@@ -62,7 +62,7 @@ object NativeKotlinCleanStoreRestore {
     private fun writeAndForce(path:Path,contents:ByteArray) {
         FileChannel.open(path,StandardOpenOption.WRITE,
             StandardOpenOption.CREATE_NEW).use {channel->
-            var data=ByteBuffer.wrap(contents)
+            val data=ByteBuffer.wrap(contents)
             while(data.hasRemaining()) channel.write(data)
             channel.force(true)
         }
@@ -103,6 +103,38 @@ object NativeKotlinCleanStoreRestore {
     }
 
     /**
+     * Reverify the exact decrypted bytes AFTER any caller-provided real
+     * store verification. Native History readers may create ephemeral locks,
+     * but they may never replace journal files or inject a new permanent
+     * training record while the restore is being authorized.
+     */
+    private fun exactStagedBytes(
+        stage:Path,
+        files:List<NativeKotlinTrainingSnapshotFile>
+    ):Boolean {
+        val expected=files.associateBy{it.relativePath}
+        if(expected.size!=files.size)return false
+        val seen=mutableSetOf<String>()
+        Files.walk(stage).use {walk->
+            val it=walk.iterator()
+            while(it.hasNext()) {
+                val path=it.next()
+                if(Files.isSymbolicLink(path))return false
+                if(Files.isDirectory(path,noFollow))continue
+                if(!Files.isRegularFile(path,noFollow))return false
+                val relative=stage.relativize(path).toString()
+                    .replace(java.io.File.separatorChar,'/')
+                if(relative==MARKER || relative.endsWith(".lock"))continue
+                val original=expected[relative] ?:return false
+                if(!seen.add(relative) ||
+                    !Files.readAllBytes(path).contentEquals(original.contents))
+                    return false
+            }
+        }
+        return seen.size==expected.size
+    }
+
+    /**
      * Restore only into a MISSING app-private training directory. The
      * independent verifier is REQUIRED; it reads the staging location with
      * the real native decoders and returns false for *any* bad record.
@@ -137,6 +169,9 @@ object NativeKotlinCleanStoreRestore {
         val lock=parent.resolve(".kotlin-coach-v1.restore-gate.lock")
         return synchronized(processMutex) {
             try {
+                if(Files.isSymbolicLink(lock))
+                    return@synchronized NativeKotlinCleanRestoreResult.Rejected(
+                        NativeKotlinCleanRestoreRefusal.UNTRUSTED_STAGING)
                 FileChannel.open(lock,StandardOpenOption.CREATE,
                     StandardOpenOption.WRITE).use {channel->
                     channel.lock().use {
@@ -156,7 +191,7 @@ object NativeKotlinCleanStoreRestore {
                             MARKER_BYTES.toByteArray(Charsets.UTF_8))
                         try {
                             for(file in archive.files) {
-                                val relative=Path.of(file.relativePath)
+                                val relative=Paths.get(file.relativePath)
                                 val path=stage.resolve(relative).normalize()
                                 if(!path.startsWith(stage) || path==stage)
                                     throw IOException("traversal in restored archive")
@@ -179,7 +214,8 @@ object NativeKotlinCleanStoreRestore {
                             val verified=runCatching {
                                 verifyStaging(stage,archive.owner)
                             }.getOrDefault(false)
-                            if(!verified)
+                            if(!verified ||
+                                !exactStagedBytes(stage,archive.files))
                                 return@synchronized NativeKotlinCleanRestoreResult.Rejected(
                                     NativeKotlinCleanRestoreRefusal.INVALID_RESTORED_STORE)
                             if(existing(target))

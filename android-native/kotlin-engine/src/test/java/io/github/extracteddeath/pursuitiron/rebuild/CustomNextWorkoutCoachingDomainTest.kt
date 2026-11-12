@@ -1220,4 +1220,71 @@ class CustomNextWorkoutCoachingDomainTest {
         }
     }
 
+    @Test fun V2AndV3MachineProgressionCannotJumpOverInterveningGymOrProgramRevision() {
+        fun onStation(order:Long,week:Int,id:String)=
+            completed(order,week).let {entry ->
+                entry.copy(evidence=entry.evidence.copy(visits=
+                    entry.evidence.visits.map {visit->
+                        visit.copy(actual=visit.actual?.copy(
+                            machineInstanceId=id))
+                    }))
+            }
+        val a1=onStation(1,1,"A")
+        val b2=onStation(2,2,"B")
+        val a3=onStation(3,3,"A")
+        val a4=onStation(4,4,"A")
+        val changed=listOf(
+            b2.copy(snapshot=b2.snapshot.copy(stamp=
+                b2.snapshot.stamp.copy(gymId="gym-2"))),
+            b2.copy(snapshot=b2.snapshot.copy(stamp=
+                b2.snapshot.stamp.copy(gymCatalogSourceRevision=3))),
+            b2.copy(snapshot=b2.snapshot.copy(phase=TrainingPhase.STRENGTH)),
+            b2.copy(snapshot=b2.snapshot.copy(
+                sessionPurpose=ComposerSessionPurpose.STRENGTH_SKILL)),
+            b2.copy(snapshot=b2.snapshot.copy(
+                split=CustomSplitIdentity.Freeform("PPL"))),
+            b2.copy(snapshot=b2.snapshot.copy(
+                blockPurpose=CustomBlockPurpose.DELOAD))
+        )
+        fun reviewMachine(
+            sessions:List<CustomCoachingHistoricalSession>,
+            next:Int,policy:CustomRepForecastPolicy
+        )=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(snapshot(next),"main",
+                sessions,stock(),n(5),CoachReadiness.NORMAL,false,policy,
+                requestedMachineInstanceId="A"))
+        for(policy in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            val normal=reviewMachine(listOf(a1,b2,a3),4,policy)
+            assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+                normal.status)
+            assertEquals(n(205),normal.loadReviewCandidate)
+            for(intervening in changed) {
+                val refusal=reviewMachine(listOf(a1,intervening,a3),4,policy)
+                assertEquals("$policy: ${intervening.snapshot}",
+                    CustomNextWorkoutCoachingStatus.CHANGED_COACHING_SOURCE,
+                    refusal.status)
+                assertEquals(listOf("workout-1-0","workout-3-0"),
+                    refusal.comparedWorkoutIds)
+                assertTrue(refusal.nextSetSuggestions.isEmpty())
+                assertNull(refusal.loadReviewCandidate)
+                assertTrue(refusal.explanation.contains("source"))
+                assertFalse(refusal.mayIssueWorkout)
+                assertFalse(refusal.mayEditProgram)
+
+                // Historical version drift is not a permanent penalty.
+                // Two new comparable A workouts following the changed
+                // session re-establish the athlete's current A baseline.
+                val fresh=reviewMachine(
+                    listOf(a1,intervening,a3,a4),5,policy)
+                assertEquals("$policy: renewed A sessions",
+                    CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+                    fresh.status)
+                assertEquals(listOf("workout-3-0","workout-4-0"),
+                    fresh.comparedWorkoutIds)
+                assertEquals(n(205),fresh.loadReviewCandidate)
+            }
+        }
+    }
+
 }

@@ -41,11 +41,22 @@ a production-store AAB milestone, or permission to ship incomplete code.
    A versioned, password-encrypted, owner-fenced snapshot of the entire
    app-private Kotlin training directory is now implemented and tested
    against actual completed/corrected journal and History bytes; an
-   isolated test-directory cold replay also succeeds. This is strictly a
-   development-only archive foundation. **No user-facing backup button or
-   app restore exists yet**; no beta may be released until explicit
-   clean-device staging, full receipt/owner validation, atomic restore,
-   rollback, and on-device export/import acceptance succeed.
+   isolated test-directory cold replay also succeeds. A second
+   development-only recovery primitive now decrypts into private staging,
+   verifies exact bytes before and after independent native-reader checks,
+   refuses every existing live athlete directory, and atomically publishes
+   a fully staged store on a genuinely empty install. Its CI tests cold
+   reopen a real finished/corrected workout and verify interrupted staging,
+   tampered input, foreign owners, and no-overwrite behavior.
+
+   **No user-facing backup or restore exists yet.** The staging primitive
+   deliberately requires a caller-provided verifier; the production
+   full-store validator must still check every generated/custom journal,
+   program approval, machine/gym source, owner and pending receipt under
+   the same native authority. Import must run before construction of the
+   active app host, require explicit user consent, survive rollback/power
+   interruption on physical Android devices, and prove safe
+   uninstall/reinstall recovery before the external beta release gate opens.
 
 ## Not beta blockers / do not ship as misleading unfinished UI
 

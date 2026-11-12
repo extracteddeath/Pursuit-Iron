@@ -37,7 +37,11 @@ assert.deepEqual(declared.slice(0,baseline.length),baseline.map(x=>x[0]),
 const appended=['wrist-curl','reverse-wrist-curl',
   'inc-bb-bench','incline_smith','machine_press','leg_press',
   'hack_squat','hip_thrust','cable_lateral_raise',
-  'lat-pulldown','rope-pushdown'];
+  'lat-pulldown','rope-pushdown',
+  'cable_fly','chest_supported_row','neutral_pulldown',
+  'rear_delt_fly','machine_ohp','preacher_curl',
+  'cable_curl','cable_triceps','overhead_cable_triceps',
+  'standing_calf','cable_crunch'];
 assert.deepEqual(declared.slice(baseline.length),appended,
   'Appended reviewed identities must not be lost or silently reordered');
 assert.equal(new Set(declared).size,declared.length);
@@ -62,7 +66,19 @@ for(const [id,family,reps,equipment] of [
   ['hip_thrust','hip_extension',[5,20],['barbell','bench']],
   ['cable_lateral_raise','lateral_raise',[8,35],['cable']],
   ['lat-pulldown','vertical_pull',[8,12],['cable']],
-  ['rope-pushdown','elbow_extension',[10,15],['cable']]
+  ['rope-pushdown','elbow_extension',[10,15],['cable']],
+  // Exact current curated web source definitions; no JSON-only/renamed aliases.
+  ['cable_fly','chest_adduction',[8,30],['cable']],
+  ['chest_supported_row','horizontal_pull',[5,20],['dumbbell','bench']],
+  ['neutral_pulldown','vertical_pull',[5,20],['cable']],
+  ['rear_delt_fly','rear_delt',[8,30],['machine']],
+  ['machine_ohp','vertical_press',[5,20],['machine']],
+  ['preacher_curl','elbow_flexion',[6,25],['machine']],
+  ['cable_curl','elbow_flexion',[8,30],['cable']],
+  ['cable_triceps','elbow_extension',[8,30],['cable']],
+  ['overhead_cable_triceps','elbow_extension',[8,30],['cable']],
+  ['standing_calf','calf',[6,25],['machine']],
+  ['cable_crunch','core',[8,30],['cable']]
 ]) {
   const definition=EXERCISE_MAP.get(id);
   assert.ok(definition,'Missing active web definition '+id);
@@ -88,7 +104,27 @@ for(const fragment of [
   'entry("lat-pulldown","vertical_pull","machine-lat"',
   '"lat-pulldown-machine",LoadBasis.EXERCISE_OVERRIDE',
   'entry("rope-pushdown","elbow_extension","cable-rope"',
-  'direct(TrainingMuscle.TRICEPS),attachmentId="rope"'
+  'direct(TrainingMuscle.TRICEPS),attachmentId="rope"',
+  'entry("cable_fly","chest_adduction","dual-handle"',
+  'direct(TrainingMuscle.CHEST),attachmentId="dual-handles"',
+  'entry("chest_supported_row","chest_supported_row","incline-dumbbell"',
+  'DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("incline-bench"),5..20',
+  'entry("neutral_pulldown","vertical_pull","neutral-cable"',
+  'attachmentId="neutral-grip-bar"',
+  'entry("rear_delt_fly","rear_delt_fly","reverse-pec-deck"',
+  '"reverse-pec-deck-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("machine_ohp","overhead_press","shoulder-machine"',
+  '"shoulder-press-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("preacher_curl","elbow_flexion","preacher-machine"',
+  '"preacher-curl-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("cable_curl","elbow_flexion","cable-straight-bar"',
+  'entry("cable_triceps","elbow_extension","cable-straight-bar"',
+  'direct(TrainingMuscle.BICEPS),attachmentId="straight-bar"',
+  'entry("overhead_cable_triceps","elbow_extension","overhead-cable-rope"',
+  'entry("standing_calf","calf_raise","standing-machine"',
+  '"standing-calf-machine",LoadBasis.EXERCISE_OVERRIDE',
+  'entry("cable_crunch","trunk_flexion","cable-rope"',
+  'direct(TrainingMuscle.ABS),attachmentId="rope"'
 ])assert.ok(source.includes(fragment),'Missing independently authored stock rule '+fragment);
 
 for(const id of ['one_arm_db_row','db_rdl','barbell_row','rdl','conventional_deadlift','db_rear_delt_raise','pullup']) {

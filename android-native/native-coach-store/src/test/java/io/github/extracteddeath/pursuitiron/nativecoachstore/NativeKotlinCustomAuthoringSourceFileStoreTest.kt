@@ -192,7 +192,7 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
 
     @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
-        assertEquals(31,starter.catalog.size)
+        assertEquals(42,starter.catalog.size)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",
@@ -200,7 +200,12 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             starter.catalog.drop(22).take(4).map{it.exerciseId})
         assertEquals(listOf("hack_squat","hip_thrust",
             "cable_lateral_raise","lat-pulldown","rope-pushdown"),
-            starter.catalog.drop(26).map{it.exerciseId})
+            starter.catalog.drop(26).take(5).map{it.exerciseId})
+        assertEquals(listOf("cable_fly","chest_supported_row",
+            "neutral_pulldown","rear_delt_fly","machine_ohp",
+            "preacher_curl","cable_curl","cable_triceps",
+            "overhead_cable_triceps","standing_calf","cable_crunch"),
+            starter.catalog.drop(31).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)

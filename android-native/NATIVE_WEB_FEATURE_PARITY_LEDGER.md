@@ -4,6 +4,36 @@
 
 **Status vocabulary:** **Implemented/source-tested** = exact behavior is in native source, with explicit tests/CI required before release; **Partial** = some native behavior exists but meaningful web capability is missing; **Open** = not verified in current Kotlin rebuild and must not be advertised as available; **Adapt** = web-specific mechanism not appropriate for native Android, preserve the user value by a native equivalent. No status is a release sign-off without real phone/foldable/TalkBack acceptance.
 
+## Measured source coverage checkpoint — November 12, 2026
+
+- Web's effective built-in exercise catalog contains **376 active identities**
+  (39 curated and 363 extended source definitions before web duplicate-name/ID
+  filtering). Kotlin's reviewed-provenance **starter tranche defines 20** of
+  those IDs: **356 active web IDs are absent from this starter tranche**.
+  This is a source-coverage count, **not** proof that 20 exercises have matching
+  training behavior, or that Kotlin has only 20 possible custom exercises.
+- An executable, read-only source inventory now regenerates the exact gaps
+  and missing movement-family distribution in CI:
+  `kotlin-engine/verification/web-native-catalog-parity-audit.mjs --audit
+  --write-report`. Output: `kotlin-engine/reports/web-native-catalog-parity-audit.json`.
+  Unreviewed web muscle metadata must never become native training authority
+  merely to force a 100% count. Independently reconcile movement identities,
+  equipment/attachment variants, achievable loads, muscle credits, allowable
+  rep bands, exercise substitutions, physical Machine A/B and history identity.
+- The objective superiority scorecard previously required 49 paired proof
+  channels across 33 cases. Three new critical engine acceptance scenarios
+  (silent load stability, physical machine isolation, and independent Upper/
+  Push progression) add six proof channels, making the new requirement
+  **55 proof channels across 36 cases**. None of the new scenarios is
+  certified by adding it to the matrix. Re-run the current scorecard in CI;
+  stale recorded claims do not count.
+- **Release verdict: WEB ENGINE PARITY NOT YET VERIFIED; SUPERIORITY NOT
+  PROVEN.** A lean early beta is not an excuse to remove engine functions.
+  Source tests, real stored-workout tests, matched web/Kotlin comparisons
+  and Android-device acceptance must pass for the full supported scope.
+  See `LAUNCH_BETA_SCOPE.md` for updated ordering and the separate
+  user-visible UI scope.
+
 ## Priority 0 — functionality that must survive the rewrite
 
 | Web capability / changelog proof | Current Kotlin result | Missing acceptance requirement |

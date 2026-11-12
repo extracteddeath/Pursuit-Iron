@@ -44,7 +44,9 @@ enum class RepForecastLimitation {
     RIR_ESTIMATE_UNCALIBRATED,
     ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE,
     CHRONIC_FATIGUE_NOT_ESTIMATED,
-    EARLIER_SET_WORK_CHANGED
+    EARLIER_SET_WORK_CHANGED,
+    /** Rep-only preview at original issued loads; gym stock not freshly checked. */
+    CURRENT_EQUIPMENT_NOT_REVERIFIED
 }
 
 data class FatigueRepTargetReview(
@@ -136,12 +138,17 @@ object FatigueAwareRepTargetReviewDomain {
         movementRestricted: Boolean,
         verifiedPerSetLoading: Boolean = false,
         policyVersion: AdaptiveRepPolicyVersion = AdaptiveRepPolicyVersion.TARGET_RIR_V2,
-        targetRirByOrdinal: List<Int?>? = null
+        targetRirByOrdinal: List<Int?>? = null,
+        /** Explicit read-only preview only. Original issued load and recorded
+         * actual must match at every set. Approval/issuance must independently
+         * re-verify equipment. Never use this for Machine A/B station changes. */
+        unchangedIssuedLoadReviewOnly:Boolean=false
     ): FatigueRepTargetReview = assessCore(
         RepFacts(session.targetReps,session.expectedWorkingSets,
             session.observations,session.unit),
         verifiedStock,approvedLoadBasis,readiness,movementRestricted,
-        verifiedPerSetLoading,policyVersion,targetRirByOrdinal)
+        verifiedPerSetLoading,policyVersion,targetRirByOrdinal,
+        unchangedIssuedLoadReviewOnly)
 
     /**
      * The SAME policy and effort estimator for exact unloaded bodyweight.
@@ -157,7 +164,8 @@ object FatigueAwareRepTargetReviewDomain {
         RepFacts(session.targetReps,session.expectedWorkingSets,
             session.observations,null),
         null,null,readiness,movementRestricted,
-        false,AdaptiveRepPolicyVersion.TARGET_RIR_V2,targetRirByOrdinal)
+        false,AdaptiveRepPolicyVersion.TARGET_RIR_V2,targetRirByOrdinal,
+        false)
 
     private fun assessCore(
         facts:RepFacts,
@@ -167,7 +175,8 @@ object FatigueAwareRepTargetReviewDomain {
         movementRestricted:Boolean,
         verifiedPerSetLoading:Boolean,
         policyVersion:AdaptiveRepPolicyVersion,
-        targetRirByOrdinal:List<Int?>?
+        targetRirByOrdinal:List<Int?>?,
+        unchangedIssuedLoadReviewOnly:Boolean
     ):FatigueRepTargetReview {
         val explicitlyUnloaded=facts.physicalUnit==null
         val evidence=DoubleProgressionEvidenceDomain.assess(
@@ -186,11 +195,14 @@ object FatigueAwareRepTargetReviewDomain {
         val rawLoads=setLoads?.distinct().orEmpty()
         val load=if(rawLoads.size==1)rawLoads.single() else null
         val baselineLimitations=if(policyVersion==AdaptiveRepPolicyVersion.TARGET_RIR_V2)
-            setOf(RepForecastLimitation.SINGLE_EXPOSURE,
-                RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED,
-                RepForecastLimitation.ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE,
-                RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
-            else emptySet()
+            buildSet {
+                add(RepForecastLimitation.SINGLE_EXPOSURE)
+                add(RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED)
+                add(RepForecastLimitation.ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE)
+                add(RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
+                if(unchangedIssuedLoadReviewOnly && verifiedStock==null)
+                    add(RepForecastLimitation.CURRENT_EQUIPMENT_NOT_REVERIFIED)
+            } else emptySet()
         fun result(reason:FatigueRepReviewReason,
             candidate:List<Int>?=null,ordinal:Int?=null,
             limitations:Set<RepForecastLimitation> = baselineLimitations)=
@@ -221,15 +233,23 @@ object FatigueAwareRepTargetReviewDomain {
                 return result(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS)
             if(setLoads.any{it.compareTo(zero)==0})
                 return result(FatigueRepReviewReason.ZERO_LOAD_NEEDS_SPECIFIC_POLICY)
-            if(verifiedStock?.basis!=approvedLoadBasis)
-                return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
-            if(setLoads.any{actual ->
-                    val inspected=EquipmentLoadDomain.inspect(
-                        verifiedStock,actual,checkNotNull(facts.physicalUnit))
-                    inspected !is LoadInspection.Confirmed || !inspected.exact ||
-                        inspected.basis!=approvedLoadBasis
-                })
-                return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
+            // Rep-only preview may use authentic original issued loads if
+            // CURRENT stock is unavailable. It cannot infer a new load,
+            // a machine variant or authorize a workout. A supplied but
+            // contradictory stock is NEVER bypassed.
+            if(verifiedStock==null && unchangedIssuedLoadReviewOnly) {
+                // The unchanged issued-vs-recorded check above still applies.
+            } else {
+                if(verifiedStock?.basis!=approvedLoadBasis)
+                    return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
+                if(setLoads.any{actual ->
+                        val inspected=EquipmentLoadDomain.inspect(
+                            verifiedStock,actual,checkNotNull(facts.physicalUnit))
+                        inspected !is LoadInspection.Confirmed || !inspected.exact ||
+                            inspected.basis!=approvedLoadBasis
+                    })
+                    return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
+            }
         }
         if(movementRestricted || readiness==CoachReadiness.LOW ||
             (policyVersion==AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1 &&

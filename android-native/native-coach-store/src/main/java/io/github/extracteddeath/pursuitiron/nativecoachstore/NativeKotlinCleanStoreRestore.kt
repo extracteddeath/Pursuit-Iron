@@ -73,6 +73,24 @@ object NativeKotlinCleanStoreRestore {
         }
     }
 
+    // Sync each nested directory as well as the top-level staging entry.
+    // A durable file payload without durable directory entries is not a
+    // useful several-month backup after sudden device power loss.
+    private fun forceStagedDirectories(stage:Path) {
+        val dirs=mutableListOf<Path>()
+        Files.walk(stage).use {walk->
+            val it=walk.iterator()
+            while(it.hasNext()) {
+                val path=it.next()
+                if(Files.isSymbolicLink(path))
+                    throw IOException("staging link not allowed")
+                if(Files.isDirectory(path,noFollow))dirs.add(path)
+            }
+        }
+        dirs.sortWith(Comparator {a,b->b.nameCount.compareTo(a.nameCount)})
+        dirs.forEach(::forcedDirectory)
+    }
+
     /** Used only to remove staging that this gate created, never app data. */
     private fun purgePrivateStage(stage:Path) {
         if(!existing(stage))return
@@ -225,7 +243,7 @@ object NativeKotlinCleanStoreRestore {
                             // store. Before publication everything is still
                             // private staging, never live app data.
                             Files.delete(stage.resolve(MARKER))
-                            forcedDirectory(stage)
+                            forceStagedDirectories(stage)
                             if(existing(target))
                                 return@synchronized NativeKotlinCleanRestoreResult.Rejected(
                                     NativeKotlinCleanRestoreRefusal.EXISTING_TRAINING_DATA)

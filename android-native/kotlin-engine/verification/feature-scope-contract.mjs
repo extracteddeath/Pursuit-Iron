@@ -64,7 +64,16 @@ for(const term of [
 assert.ok(index.includes('FULL_REPLACEMENT_CONTRACT.md'),
     'Kotlin engine index must explicitly point to the full replacement requirement');
 const app=read('android-native/app/build.gradle.kts');
-const stillJs=app.includes('implementation(project(":engine-runtime"))');
-assert.ok(stillJs,
-    'This isolated research branch should NOT silently switch the app engine. Cutover needs a separately approved integration pass.');
-console.log('PASS scope: '+ids.length+' features, E01–E41 engine requirements, U01–U13 native UX tests, and mandatory Kotlin-only final runtime cutover (currently pending).');
+const main=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
+const beta=read('android-native/LAUNCH_BETA_SCOPE.md');
+assert.ok(app.includes('debugImplementation(project(":engine-runtime"))') &&
+    !app.includes('    implementation(project(":engine-runtime"))') &&
+    app.includes('earlyBetaKotlinSources') &&
+    app.includes('verifyEarlyBetaSourceClasses') &&
+    app.includes('verifyEarlyBetaRuntime') &&
+    app.includes('verifyEarlyBetaAcceptance') &&
+    main.includes('NativeKotlinCandidateJourney(') &&
+    !main.includes('NativePreviewApp(') &&
+    beta.includes('Kotlin-only source'),
+    'Beta must select the ONE Kotlin engine, exclude JS from the release, and remain blocked until real-device/data acceptance');
+console.log('PASS scope: '+ids.length+' long-term features, E01–E41 research requirements, U01–U13 UX contracts, JS-free beta source/classpath and unshipped device acceptance gate.');

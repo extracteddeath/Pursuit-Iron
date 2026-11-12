@@ -49,11 +49,13 @@ class StarterExerciseTrancheTest {
         // old identities used by serialized gym/workout/history data.
         assertEquals(originalIds,data.take(20).map{it.legacyCuratedId})
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
-            data.drop(20).map{it.legacyCuratedId})
-        assertEquals(22,data.size)
-        assertEquals(22,data.map {it.legacyCuratedId}.distinct().size)
+            data.drop(20).take(2).map{it.legacyCuratedId})
+        assertEquals(listOf("inc-bb-bench","incline_smith","machine_press","leg_press"),
+            data.drop(22).map{it.legacyCuratedId})
+        assertEquals(26,data.size)
+        assertEquals(26,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(22,data.map {
+        assertEquals(26,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {
@@ -82,6 +84,99 @@ class StarterExerciseTrancheTest {
         assertEquals(null,required.first {
             it.exerciseId=="bodyweight_crunch"
         }.equipmentId)
+    }
+
+    @Test fun addedPressAndLegMovementsRequireExactPhysicalEquipment() {
+        val ids=setOf("inc-bb-bench","incline_smith","machine_press","leg_press")
+        val added=data.filter{it.legacyCuratedId in ids}
+        assertEquals(4,added.size)
+        assertTrue(added.none {it.mayTransferPreviousLoad})
+        assertEquals(LoadBasis.BARBELL_TOTAL,
+            added.single{it.legacyCuratedId=="inc-bb-bench"}
+                .movement.expectedLoadBasis)
+        assertEquals(LoadBasis.SMITH_TOTAL,
+            added.single{it.legacyCuratedId=="incline_smith"}
+                .movement.expectedLoadBasis)
+        assertTrue(added.filter {it.legacyCuratedId in
+            setOf("machine_press","leg_press")}
+            .all{it.movement.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE})
+        assertEquals(RepBand(6,10),
+            added.single{it.legacyCuratedId=="inc-bb-bench"}.practicalRepBand)
+        assertEquals(RepBand(5,20),
+            added.single{it.legacyCuratedId=="incline_smith"}.practicalRepBand)
+        assertEquals(RepBand(5,25),
+            added.single{it.legacyCuratedId=="machine_press"}.practicalRepBand)
+        assertEquals(RepBand(6,25),
+            added.single{it.legacyCuratedId=="leg_press"}.practicalRepBand)
+        val incline=added.filter{it.legacyCuratedId in
+            setOf("inc-bb-bench","incline_smith")}
+        assertTrue(incline.all{"incline-bench" in it.movement.requiredFacilityIds})
+        assertTrue("rack" in added.single{
+            it.legacyCuratedId=="inc-bb-bench"
+        }.movement.requiredFacilityIds)
+        assertEquals(4,added.map{it.movement.equipmentId}.distinct().size)
+        assertEquals("heavy-bench",added.single{
+            it.legacyCuratedId=="inc-bb-bench"
+        }.movement.recoveryGroupId)
+    }
+
+    @Test fun newVariantDoesNotAcceptUnavailableBenchOrBorrowOtherMachineStock() {
+        val smith=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            listOf(n("45"),n("50"),n("55")))
+        val machine=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("40"),n("50"),n("60")))
+        val gymStock=mapOf(
+            "straight-bar" to availableBar,
+            "incline-smith-station" to smith,
+            "chest-press-machine" to machine,
+            "leg-press-machine" to machine)
+        fun assess(
+            id:String,load:String,stock:Map<String,VerifiedLoadStock> =gymStock,
+            facilities:Set<String> =setOf("incline-bench","rack")
+        )=CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+            template(),listOf(choice(id,n(load))),gym(facilities,stock)))
+        for(id in listOf("inc-bb-bench","incline_smith")) {
+            val withoutIncline=assess(id,"50",facilities=setOf("rack"))
+            assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,
+                withoutIncline.status)
+            assertTrue(withoutIncline.issues.any{
+                it.exerciseId==id && it.kind==CatalogIssueType.FACILITY_UNAVAILABLE
+            })
+        }
+        val missingSmith=assess("incline_smith","50",
+            stock=gymStock-"incline-smith-station")
+        assertTrue(missingSmith.issues.any{
+            it.exerciseId=="incline_smith" &&
+                it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE
+        })
+        val wrongSmithBasis=assess("incline_smith","50",
+            stock=gymStock+("incline-smith-station" to machine))
+        assertTrue(wrongSmithBasis.issues.any{
+            it.exerciseId=="incline_smith" &&
+                it.kind==CatalogIssueType.EQUIPMENT_BASIS_MISMATCH
+        })
+        val impossible=assess("machine_press","55")
+        assertTrue(impossible.issues.any{
+            it.exerciseId=="machine_press" &&
+                it.kind==CatalogIssueType.LOAD_UNVERIFIED
+        })
+        val otherMachineOnly=assess("machine_press","50",
+            stock=gymStock-"chest-press-machine")
+        assertTrue(otherMachineOnly.issues.any{
+            it.exerciseId=="machine_press" &&
+                it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE
+        })
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,
+            assess("leg_press","55").status)
+        assertTrue(assess("leg_press","55").issues.any{
+            it.exerciseId=="leg_press" && it.kind==CatalogIssueType.LOAD_UNVERIFIED
+        })
+        // Passing catalog validation does not bypass whole-week constraints,
+        // history, consent or workout issuance. Nothing silently alters load.
+        val reviewed=assess("machine_press","50")
+        assertTrue(reviewed.issues.isEmpty())
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.mayOverwriteAuthoredProgram)
     }
 
     @Test fun realThreeDayCompoundWeekComposesOnlyWithConfirmedPhysicalGym() {

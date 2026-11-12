@@ -120,7 +120,7 @@ class ReviewedCatalogWaveThreeTest {
                 it.role==MuscleCreditRole.DIRECT
             }.map{it.muscle}.toSet())
         assertEquals(setOf(TrainingMuscle.BICEPS),
-            byId.getValue("db-curl").movement.credits.filter{
+            byId.getValue("spider-curl").movement.credits.filter{
                 it.role==MuscleCreditRole.DIRECT
             }.map{it.muscle}.toSet())
         assertTrue(listOf("bw-lunge","bw-bulgarian","glute-bridge",

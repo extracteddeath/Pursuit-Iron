@@ -97,6 +97,37 @@ class CoachFirstProgramFiveDayStrengthTest {
             ?.daysOutsidePreferredWindow?.isEmpty()==true)
         assertFalse(result.mayIssueWorkout)
         assertFalse(result.maySaveProgram)
+        // Do not stop at a correct preview: the actual four-week authored
+        // cycle must preserve the companion deadlift as a protected exercise
+        // and pass the same native all-week coaching audit.
+        val source=input()
+        val converted=CoachFirstProgramDraftConversionDomain.propose(
+            result,source.setup,source.catalog,
+            "five-day-first-block","ULPPL strength",4)
+        assertEquals(converted.reason,
+            FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
+            converted.status)
+        val block=checkNotNull(converted.cycle).blocks.single()
+        assertEquals(4,block.weeks)
+        val visitsByDay=block.days.flatMap{day->
+            day.slots.map{day.weekday to it}
+        }
+        val companion=visitsByDay.single{
+            it.second.exerciseId=="conventional_deadlift"
+        }
+        assertTrue(companion.second.pinned)
+        assertEquals(2,visitsByDay.count{
+            it.second.exerciseId=="barbell_bench" && it.second.pinned
+        })
+        assertEquals(2,visitsByDay.count{
+            it.second.exerciseId=="back_squat" && it.second.pinned
+        })
+        val auditInputs=checkNotNull(CoachFirstProgramDraftConversionDomain
+            .policyForInitialFullCycleReview(result,source.setup))
+        val audit=CustomCycleCoachAuditDomain.review(
+            checkNotNull(converted.cycle),source.setup,source.catalog,auditInputs)
+        assertEquals(audit.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
         assertEquals(result,CoachFirstProgramStartDomain.review(input()))
     }
 

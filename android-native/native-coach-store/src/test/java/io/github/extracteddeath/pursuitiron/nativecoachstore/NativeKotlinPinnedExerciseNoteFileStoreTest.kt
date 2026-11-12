@@ -171,6 +171,95 @@ class NativeKotlinPinnedExerciseNoteFileStoreTest {
             NativePinnedNoteRefusal.CORRUPT_OR_PENDING),read())
     }
 
+    @Test fun exhaustiveRecoveryInventoryPreservesLegacyAndModernNoteSchemas() {
+        val modern=save(event="note-modern",text="Bench pins at six",
+            setup=mapOf("rack_height" to "6","oldPadSetting" to "3"))
+        assertTrue(modern is NativePinnedNoteWrite.Saved)
+        val legacy=save("paused_bench",event="note-v1",text="One count",
+            setup=mapOf("grip" to "Pinky on ring"))
+        assertTrue(legacy is NativePinnedNoteWrite.Saved)
+        val scan=store().inventoryOwner("owner-a")
+        assertTrue(scan.toString(),scan is NativePinnedNoteInventory.Verified)
+        val notes=(scan as NativePinnedNoteInventory.Verified).notes
+        assertEquals(2,notes.size)
+        assertEquals((read() as NativePinnedNoteRead.Current).note,
+            notes.single{it.exerciseId=="barbell_bench"})
+        assertEquals((read("paused_bench") as NativePinnedNoteRead.Current).note,
+            notes.single{it.exerciseId=="paused_bench"})
+        // An exercise can disappear from a newer catalog without losing
+        // personal setup notes. No workout load is inferred from the note.
+        assertEquals("3",notes.single {it.exerciseId=="barbell_bench"}
+            .setup["oldPadSetting"])
+        active=null
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,
+            store().inventoryOwner("owner-a"))
+    }
+
+    @Test fun exhaustiveRecoveryInventoryRefusesCorruptedForeignOrRenamedNotes() {
+        assertTrue(save() is NativePinnedNoteWrite.Saved)
+        val saved=Files.list(temp.root.toPath()).use {stream->
+            stream.filter{
+                it.fileName.toString().startsWith("pinned-exercise-") &&
+                    it.fileName.toString().endsWith(".bin")
+            }.findFirst().orElseThrow()
+        }
+        val raw=Files.readAllBytes(saved)
+        fun scan()=store().inventoryOwner("owner-a")
+        assertTrue(scan() is NativePinnedNoteInventory.Verified)
+        val corrupted=raw.copyOf()
+        corrupted[corrupted.lastIndex]=(corrupted.last().toInt() xor 1).toByte()
+        Files.write(saved,corrupted)
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,scan())
+        assertArrayEquals(corrupted,Files.readAllBytes(saved))
+        Files.write(saved,raw)
+        val renamed=saved.resolveSibling(
+            "pinned-exercise-"+"b".repeat(64)+".bin")
+        Files.move(saved,renamed)
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,scan())
+        Files.move(renamed,saved)
+        active=NativeKotlinOwnerIdentity("owner-a","other-athlete")
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,scan())
+        active=NativeKotlinOwnerIdentity("owner-a","athlete-a")
+        assertTrue(scan() is NativePinnedNoteInventory.Verified)
+        // A genuine file belonging to a different owner is not ignored.
+        active=NativeKotlinOwnerIdentity("owner-b","athlete-b")
+        val foreignStore=NativeKotlinPinnedExerciseNoteFileStore(
+            temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity)
+        assertTrue(foreignStore.save("owner-b","press",0,"other-owner-1",
+            "Other athlete note",emptyMap()) is NativePinnedNoteWrite.Saved)
+        active=NativeKotlinOwnerIdentity("owner-a","athlete-a")
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,scan())
+    }
+
+    @Test fun exhaustiveRecoveryInventoryRefusesPendingUnrecognizedAndLinkedFiles() {
+        assertTrue(save() is NativePinnedNoteWrite.Saved)
+        val record=Files.list(temp.root.toPath()).use {stream->
+            stream.filter{it.fileName.toString().startsWith("pinned-exercise-")}
+                .findFirst().orElseThrow()
+        }
+        val leftovers=record.resolveSibling(
+            record.fileName.toString().removeSuffix(".bin")+".pending")
+        Files.write(leftovers,byteArrayOf(1,2,3))
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,
+            store().inventoryOwner("owner-a"))
+        Files.delete(leftovers)
+        val unexpected=temp.root.toPath().resolve(
+            "pinned-exercise-"+"c".repeat(64)+".unknown")
+        Files.write(unexpected,byteArrayOf(2))
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,
+            store().inventoryOwner("owner-a"))
+        Files.delete(unexpected)
+        val linked=temp.root.toPath().resolve(
+            "pinned-exercise-"+"d".repeat(64)+".bin")
+        Files.createSymbolicLink(linked,record)
+        assertEquals(NativePinnedNoteInventory.InvalidOrUnrecognized,
+            store().inventoryOwner("owner-a"))
+        Files.delete(linked)
+        assertTrue(store().inventoryOwner("owner-a")
+            is NativePinnedNoteInventory.Verified)
+    }
+
     @Test fun ownerFenceAndPerExerciseCasPermitOnlyOneConcurrentEdit() {
         val executor=Executors.newFixedThreadPool(2)
         val gate=CountDownLatch(1)

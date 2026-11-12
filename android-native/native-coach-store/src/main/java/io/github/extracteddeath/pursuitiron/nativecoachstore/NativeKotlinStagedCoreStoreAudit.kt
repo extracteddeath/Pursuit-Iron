@@ -12,9 +12,9 @@ import java.nio.file.Path
  *
  * This is a milestone toward a full beta restore verifier, NOT the final
  * release gate. Advanced future-block approvals, workout-machine-choice
- * orphans, every retained legacy format and pinned-exercise notes,
- * advanced approvals/signoffs still need explicit inventory coverage before
- * UI import is permitted. Machine choices and coaching opt-out settings now
+ * orphans, every retained legacy format, advanced approvals/signoffs
+ * and remaining independent files still need explicit coverage before UI
+ * import is permitted. Machine choices, pinned notes and coaching settings
  * use their existing native readers with complete physical file scans.
  * No workout, approval, note or training file is ever mutated by this API.
  */
@@ -25,6 +25,7 @@ enum class NativeKotlinStagedCoreRefusal {
     MACHINE_ROSTER_UNVERIFIED,
     COACH_SETTINGS_UNVERIFIED,
     MACHINE_CHOICES_UNVERIFIED,
+    PINNED_NOTES_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
     GENERATED_INVENTORY_UNVERIFIED,
@@ -43,7 +44,8 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val customIssued:Int,
         val customUnfinished:Int,
         val machineChoiceRecords:Int=0,
-        val coachingSettingsRevision:Long=0
+        val coachingSettingsRevision:Long=0,
+        val pinnedExerciseNotes:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -84,6 +86,8 @@ object NativeKotlinStagedCoreStoreAudit {
             val machineRosters=NativeKotlinMachineRosterFileStore(stagedRoot)
             val machineChoices=NativeKotlinWorkoutMachineChoiceFileStore(stagedRoot)
             val coachSettings=NativeKotlinCoachAssistanceSettingsStore(
+                stagedRoot,fence,identity)
+            val pinnedNotes=NativeKotlinPinnedExerciseNoteFileStore(
                 stagedRoot,fence,identity)
             val preflight=NativeKotlinCustomWorkoutPreflight(
                 fence,identity,drafts,sources,signoffs,machineRosters)
@@ -129,6 +133,13 @@ object NativeKotlinStagedCoreStoreAudit {
                 if(settings.settings.athleteId!=expected.athleteId)
                     return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.COACH_SETTINGS_UNVERIFIED)
+                // Pinned notes can outlive old exercise catalogs and may
+                // contain legacy setup keys. Preserve them, but require
+                // every physical note to belong to the signed-in athlete.
+                val notes=pinnedNotes.inventoryOwner(expected.ownerKey)
+                    as? NativePinnedNoteInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.PINNED_NOTES_UNVERIFIED)
                 // Mixed History fully replays every manifest-backed
                 // generated/custom completion and all saved corrections.
                 val verifiedHistory=mixed.read(
@@ -223,7 +234,8 @@ object NativeKotlinStagedCoreStoreAudit {
                     customScan.sessions.size,
                     customScan.sessions.count{it.issued},
                     customScan.outstanding.count{it.issued},
-                    choices.choices.size,settings.settings.revision)
+                    choices.choices.size,settings.settings.revision,
+                    notes.notes.size)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

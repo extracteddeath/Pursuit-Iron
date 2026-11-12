@@ -83,7 +83,7 @@ function selfTest() {
     'entry("bench","family",...)\nentry("wrist-curl","family",...)\nentry("reverse-wrist-curl","family",...)'
   ),['bench','wrist-curl','reverse-wrist-curl'],
   'hyphenated canonical IDs must not vanish from Kotlin starter inventory');
-  const declaredCount=Number(native.match(/require\\(definitions\\.size==(\\d+)\\)/)?.[1]);
+  const declaredCount=Number(native.match(/require\(definitions\.size==(\d+)\)/)?.[1]);
   assert.ok(Number.isInteger(declaredCount) && declaredCount>0,
     'Kotlin starter must declare a checked definition count');
   assert.equal(nativeStarterIds.length,declaredCount,

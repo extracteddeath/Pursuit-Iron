@@ -92,16 +92,22 @@ object NativeKotlinCleanStoreRestore {
     }
 
     /** Used only to remove staging that this gate created, never app data. */
-    private fun purgePrivateStage(stage:Path) {
+    private fun purgePrivateStage(stage:Path,ownedByThisAttempt:Boolean=false) {
         if(!existing(stage))return
         if(Files.isSymbolicLink(stage) ||
             !Files.isDirectory(stage,noFollow))
             throw IOException("unsafe existing staging directory")
         val marker=stage.resolve(MARKER)
-        if(!Files.isRegularFile(marker,noFollow) ||
-            Files.isSymbolicLink(marker) ||
-            Files.readAllBytes(marker).toString(Charsets.UTF_8)!=MARKER_BYTES)
-            throw IOException("unknown staging directory: manual review required")
+        if(existing(marker)) {
+            if(!Files.isRegularFile(marker,noFollow) ||
+                Files.isSymbolicLink(marker) ||
+                Files.readAllBytes(marker).toString(Charsets.UTF_8)!=MARKER_BYTES)
+                throw IOException("unknown staging directory: manual review required")
+        } else if(!ownedByThisAttempt) {
+            // A crash between removing the marker and the atomic rename
+            // requires manual review on the next run. Never infer origin.
+            throw IOException("unmarked staging directory: manual review required")
+        }
         val paths=mutableListOf<Path>()
         Files.walk(stage).use {walk->
             val it=walk.iterator()
@@ -205,6 +211,7 @@ object NativeKotlinCleanStoreRestore {
                             }
                         }
                         Files.createDirectory(stage)
+                        val stagingOwnedByThisAttempt=true
                         writeAndForce(stage.resolve(MARKER),
                             MARKER_BYTES.toByteArray(Charsets.UTF_8))
                         try {
@@ -270,7 +277,11 @@ object NativeKotlinCleanStoreRestore {
                             // left quarantined for manual review instead
                             // of accidentally deleting foreign files.
                             if(existing(stage))runCatching {
-                                purgePrivateStage(stage)
+                                // The marker is deliberately removed just
+                                // before commit; if the atomic rename fails,
+                                // safely clean this attempt's known staging.
+                                // A later process never gets this privilege.
+                                purgePrivateStage(stage,stagingOwnedByThisAttempt)
                             }
                         }
                     }

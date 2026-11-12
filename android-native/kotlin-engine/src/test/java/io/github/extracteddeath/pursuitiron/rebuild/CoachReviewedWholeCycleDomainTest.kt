@@ -146,6 +146,70 @@ class CoachReviewedWholeCycleDomainTest {
         assertFalse(matched.mayIssueWorkout)
     }
 
+    /**
+     * The whole-cycle owner must accept the same bounded catalog the
+     * first-program and catalog composer accept. Extra source identities
+     * are deliberately UNAVAILABLE: this is scale capacity, not a claim
+     * that 376 movements are reviewed or should enter a user's plan.
+     */
+    @Test fun completeCycleAcceptsWebSizedCatalogWithoutSilentMovementSubstitution() {
+        val source=request(totalWeeks=6)
+        val baseline=CoachReviewedWholeCycleDomain.propose(source)
+        assertEquals(ReviewedWholeCycleStatus.OPTIONS_AUDITED,baseline.status)
+        val prototype=source.catalog.first()
+        fun extended(total:Int)=source.catalog+(
+            1..(total-source.catalog.size)).map{index->
+                prototype.copy(
+                    exerciseId="unavailable-catalog-$index",
+                    familyId="unavailable-family-$index",
+                    variantId="provisional",
+                    equipmentId="unavailable-physical-station",
+                    expectedLoadBasis=LoadBasis.EXERCISE_OVERRIDE,
+                    attachmentId=null,
+                    requiredFacilityIds=emptySet(),
+                    recoveryGroupId=null,
+                    minimumRecoveryGroupDayGap=1)
+            }
+        val webSize=extended(376)
+        val withWebInventory=CoachReviewedWholeCycleDomain.propose(
+            source.copy(catalog=webSize))
+        assertEquals("A valid 376-ID inventory must not be discarded.",
+            ReviewedWholeCycleStatus.OPTIONS_AUDITED,
+            withWebInventory.status)
+        assertEquals(baseline.initialReviewOptionId,
+            withWebInventory.initialReviewOptionId)
+        assertEquals(baseline.candidates.map{it.allocations},
+            withWebInventory.candidates.map{it.allocations})
+        assertEquals(baseline.candidates.map{it.status},
+            withWebInventory.candidates.map{it.status})
+        assertTrue(withWebInventory.candidates.all {candidate->
+            candidate.audit?.status==CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                candidate.audit.weeks.size==6
+        })
+        val unavailable=webSize.drop(source.catalog.size)
+            .map{it.exerciseId}.toSet()
+        assertTrue(withWebInventory.candidates.flatMap{candidate->
+            candidate.proposedCycle?.blocks.orEmpty()
+        }.flatMap{block->block.days}.flatMap{day->day.slots}
+            .none{it.exerciseId in unavailable})
+        assertFalse(withWebInventory.mayIssueWorkout)
+        assertFalse(withWebInventory.mayApplyAutomatically)
+        assertFalse(withWebInventory.maySaveProgram)
+
+        // Same exact 1,024-entry shared capacity boundary, no bypass from
+        // the whole-cycle constructor or a silent truncation to 256.
+        assertEquals(ReviewedWholeCycleStatus.INVALID_INPUT,
+            CoachReviewedWholeCycleDomain.propose(source.copy(
+                catalog=extended(
+                    CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES+1))).status)
+        val collision=webSize.toMutableList()
+        collision[collision.lastIndex]=collision[collision.lastIndex].copy(
+            familyId=collision[collision.lastIndex-1].familyId)
+        assertEquals(ReviewedWholeCycleStatus.INVALID_INPUT,
+            CoachReviewedWholeCycleDomain.propose(source.copy(
+                catalog=collision)).status)
+    }
+
     @Test fun eventAndFeasibilityAreExplicitNotInvented() {
         val unsupported=CoachReviewedWholeCycleDomain.propose(
             request(goal=AthleteTrainingGoal.HYPERTROPHY,

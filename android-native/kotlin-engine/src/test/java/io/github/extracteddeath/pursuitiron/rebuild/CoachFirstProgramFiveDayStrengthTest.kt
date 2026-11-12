@@ -46,6 +46,9 @@ class CoachFirstProgramFiveDayStrengthTest {
         "db_curl" to n("20"),
         "db_overhead_triceps" to n("20"),
         "db_calf_raise" to n("30"),
+        // Independently calibrated hinge support, not a second heavy
+        // conventional deadlift or an inferred cross-exercise load.
+        "db_rdl" to n("30"),
         "db_split_squat" to n("30"),
         "db_rear_delt_raise" to n("20")
     )
@@ -61,7 +64,18 @@ class CoachFirstProgramFiveDayStrengthTest {
 
     @Test fun calibratedFiveDayULPPLCanReviewTwoBenchTwoSquatOneDeadliftWithNoLoadTransfer() {
         val result=CoachFirstProgramStartDomain.review(input())
-        assertEquals(result.issues.joinToString(" | "),
+        assertEquals(
+            result.issues.joinToString(" | ")+
+                " | candidate="+result.generation?.candidate?.issues+
+                " | week="+result.generation?.candidate?.catalogReview?.draft?.let{
+                    "primaryMissing="+it.daysWithUnmetPrimary+
+                    "; requiredMissing="+it.missingRequiredVisits+
+                    "; dose="+it.audit.muscles.values.filter {m->
+                        m.gapToMev.signum()>0 || m.missingDirectDays>0 ||
+                            m.excessAboveMrv.signum()>0
+                    }.map{m->m.muscle to m.gapToMev}+
+                    "; time="+it.audit.daysOutsidePreferredWindow
+                },
             FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
             result.status)
         assertEquals(1,result.phasePoliciesChecked)

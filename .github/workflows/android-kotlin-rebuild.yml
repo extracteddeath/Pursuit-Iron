@@ -179,6 +179,9 @@ jobs:
       - name: Compile Android application with isolated Kotlin host, without building an APK
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :app:processDebugMainManifest :app:processReleaseMainManifest --no-daemon --stacktrace
+      - name: Prove beta release Kotlin-only source/classes and JS-free runtime without packaging
+        working-directory: android-native
+        run: gradle :app:compileReleaseKotlin :app:verifyEarlyBetaRuntime :app:verifyEarlyBetaSourceClasses --no-daemon --stacktrace
       - name: Attach incomplete engine comparison scorecard (not release approval)
         if: always()
         uses: actions/upload-artifact@v4

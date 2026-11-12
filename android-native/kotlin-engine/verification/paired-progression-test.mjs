@@ -146,8 +146,24 @@ test('partial matched measurements still cannot certify the complete engine repl
   const completed=(verified.currentNativeTree?verified.recordedPairs:0)+
     (functional.currentNativeTree?functional.recordedPairs:0)-currentWithdrawals;
   assert.equal(audit.completedPairs,completed);
-  assert.equal(audit.requiredPairs,49);
-  assert.equal(audit.missingPairs,49-completed);
+  const matrix=JSON.parse(readFileSync(resolve(root,
+    'android-native/kotlin-engine/verification/engine-superiority-cases.json'),'utf8'));
+  const required=matrix.cases.reduce((count,item)=>count+item.requiredProof.length,0);
+  assert.equal(audit.caseCount,matrix.cases.length);
+  assert.equal(audit.requiredPairs,required);
+  assert.equal(audit.missingPairs,required-completed);
+  for(const id of [
+    'issued-straight-set-load-stability',
+    'physical-machine-a-b-isolation',
+    'same-exercise-separate-day-progression'
+  ]) {
+    const caseDefinition=matrix.cases.find(item=>item.id===id);
+    assert.ok(caseDefinition,'Missing release-blocking scenario '+id);
+    assert.deepEqual(caseDefinition.requiredProof,['headless','device']);
+    for(const proof of caseDefinition.requiredProof)
+      assert.ok(audit.blockers.some(line=>line.startsWith(id+'/'+proof+':')),
+        'Uncertified safety case must remain visible as a blocker');
+  }
   assert.equal(audit.staleRecordedHeadlessPairs,
     (verified.currentNativeTree?0:verified.recordedPairs)+
     (functional.currentNativeTree?0:functional.recordedPairs));

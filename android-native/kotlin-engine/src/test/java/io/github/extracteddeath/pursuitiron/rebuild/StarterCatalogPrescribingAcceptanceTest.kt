@@ -62,7 +62,11 @@ class StarterCatalogPrescribingAcceptanceTest {
             listOf(0,2,4).map{weekday->
                 ComposerDay(weekday,ComposerFocus.FULL_BODY,
                     DeclaredSessionWindow(1,90,null,60))
-            },bounds(covered),emptyList(),4,1)
+            },bounds(covered),emptyList(),4,1,
+            listOf(0,1,2).map{dayIndex->
+                ComposerSessionIntent(dayIndex,
+                    ComposerSessionPurpose.HYPERTROPHY)
+            })
 
     private fun stockFor(ids:List<String>):CatalogGym {
         val movements=ids.map{byId.getValue(it)}

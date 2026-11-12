@@ -180,6 +180,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
             CoachAssistancePolicy(false,false,false))
         assertTrue(coaching.toString(),
             coaching is NativeCoachSettingsWrite.Saved)
+        val pinned=NativeKotlinPinnedExerciseNoteFileStore(
+            d.root,d.fence,identity)
+        val savedNote=pinned.save(owner,firstExercise,0,"first-setup",
+            "Keep the machine seat low",mapOf("seat" to "3","grip" to "Neutral"))
+        assertTrue(savedNote.toString(),savedNote is NativePinnedNoteWrite.Saved)
+        val oldExercise=pinned.save(owner,"retired_press",0,"retired-setup",
+            "Old machine pad reference",mapOf("oldPadSetting" to "7"))
+        assertTrue(oldExercise.toString(),
+            oldExercise is NativePinnedNoteWrite.Saved)
         val expected=NativeKotlinOwnerIdentity(owner,athlete)
         val before=NativeKotlinStagedCoreStoreAudit.inspect(d.root,expected)
         assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
@@ -191,6 +200,11 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(0,active.generatedIssued)
         assertEquals(1,active.machineChoiceRecords)
         assertEquals(1L,active.coachingSettingsRevision)
+        assertEquals(2,active.pinnedExerciseNotes)
+        val originalPinned=(pinned.read(owner,firstExercise)
+            as NativePinnedNoteRead.Current).note
+        val retiredPinned=(pinned.read(owner,"retired_press")
+            as NativePinnedNoteRead.Current).note
         val password="generated-day-one-recovery-password".toCharArray()
         val original=(Disk().journals.open(owner,id)
             as NativeCustomJournalResult.Durable).issued.journal
@@ -211,6 +225,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val restoredRoot=newDevice.resolve("kotlin-coach-v1")
         val after=NativeKotlinStagedCoreStoreAudit.inspect(restoredRoot,expected)
         assertEquals(before,after)
+        val restoredPinned=NativeKotlinPinnedExerciseNoteFileStore(
+            restoredRoot,NativeKotlinApprovalRevisionFence(restoredRoot),
+            NativeKotlinCurrentIdentity{expected})
+        assertEquals(originalPinned,
+            (restoredPinned.read(owner,firstExercise)
+                as NativePinnedNoteRead.Current).note)
+        assertEquals(retiredPinned,
+            (restoredPinned.read(owner,"retired_press")
+                as NativePinnedNoteRead.Current).note)
         val restoredIdentity=NativeKotlinCurrentIdentity{expected}
         val restoredFence=NativeKotlinApprovalRevisionFence(restoredRoot)
         val drafts=NativeCustomCycleDraftFileStore(
@@ -231,6 +254,43 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(original,reopened.issued.journal)
         assertEquals(original,(Disk().journals.open(owner,id)
             as NativeCustomJournalResult.Durable).issued.journal)
+    }
+
+    @Test fun stagedAuditRejectsCorruptOrPendingNotesRatherThanLosingSetupData() {
+        saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val expected=NativeKotlinOwnerIdentity(owner,athlete)
+        val notes=NativeKotlinPinnedExerciseNoteFileStore(
+            temp.root.toPath(),Disk().fence,identity)
+        assertTrue(notes.save(owner,"barbell_bench",0,"setup-1",
+            "Keep old bench setting",mapOf("oldRackHeight" to "6"))
+            is NativePinnedNoteWrite.Saved)
+        val physical=java.nio.file.Files.list(temp.root.toPath()).use {stream->
+            stream.filter{it.fileName.toString().startsWith("pinned-exercise-")}
+                .findFirst().orElseThrow()
+        }
+        val originalBytes=java.nio.file.Files.readAllBytes(physical)
+        val initial=NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected)
+        assertTrue(initial.toString(),initial is NativeKotlinStagedCoreAuditResult.Verified)
+        assertEquals(1,(initial as NativeKotlinStagedCoreAuditResult.Verified)
+            .pinnedExerciseNotes)
+        val damaged=originalBytes.copyOf()
+        damaged[damaged.lastIndex]=(damaged.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(physical,damaged)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.PINNED_NOTES_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        assertArrayEquals(damaged,java.nio.file.Files.readAllBytes(physical))
+        java.nio.file.Files.write(physical,originalBytes)
+        val pending=physical.resolveSibling(
+            physical.fileName.toString().removeSuffix(".bin")+".pending")
+        java.nio.file.Files.write(pending,byteArrayOf(1))
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.PINNED_NOTES_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        java.nio.file.Files.delete(pending)
+        assertTrue(NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected) is NativeKotlinStagedCoreAuditResult.Verified)
     }
 
     @Test fun stagedAuditRejectsOrphanMachineChoiceAndWrongWorkoutGym() {

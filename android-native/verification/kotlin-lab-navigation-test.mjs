@@ -552,8 +552,20 @@ for(const required of [
 ])assert.ok(journey.includes(required),'Missing navigation destination '+required);
 assert.ok(journey.includes('if(!navigationTouched &&') &&
   journey.includes('host.reviewResumableCustomWorkouts()') &&
-  journey.includes('host.listOwnedCustomCycleDrafts()'),
-  'Cold-start routing must be based on verified native state without stealing a manual navigation');
+  journey.includes('host.listOwnedCustomCycleDrafts()') &&
+  journey.includes('host.currentlyApprovedKotlinWorkoutId()?.let { id ->') &&
+  journey.includes('host.recoverWorkout(id)') &&
+  journey.includes('generated.journal.finishedByEventId==null'),
+  'Cold start must route both custom and already-issued unfinished generated workouts to Train, never an unissued or Finished approval');
+assert.ok(journey.includes('Resume your saved workout') &&
+  journey.includes('timePreview?.takeIf {') &&
+  journey.includes('it.alreadyIssued && minimizedGeneratedId==null') &&
+  journey.includes('host.recoverWorkout(\n                                                        issued.workoutId)') &&
+  journey.includes('isCurrentAndUnfinished') &&
+  journey.includes('selectedId=issued.workoutId') &&
+  journey.includes('The saved workout could not be verified.') &&
+  !journey.includes('host.issueWorkout(issued.workoutId)'),
+  'A cold-restarted generated session must have a prominent, verified Resume action, never auto-issue or reset targets');
 for(const required of [
   'KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)',
   'KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)',

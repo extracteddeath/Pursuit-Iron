@@ -207,6 +207,86 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertEquals(setOf("A"),facts.map{it.actual?.machineInstanceId}.toSet())
     }
 
+    @Test fun encryptedArchiveStagesAndAtomicallyRestoresARealCorrectedWorkout() {
+        issue()
+        enroll()
+        recorded()
+        assertTrue(gateway().append(
+            "owner-1","athlete-1","workout-1",finish())
+            is NativeJournalFileResult.Durable)
+        assertTrue(gateway().correct(
+            "owner-1","athlete-1","workout-1",edit())
+            is NativeSavedCorrectionFileResult.Durable)
+        val bytes=java.io.ByteArrayOutputStream().also {buffer->
+            java.io.DataOutputStream(buffer).use {out->
+                out.writeInt(0x50494F31)
+                out.writeInt(1)
+                out.writeUTF("owner-1")
+                out.writeUTF("athlete-1")
+            }
+        }.toByteArray()
+        java.nio.file.Files.write(root.resolve("local-athlete.bin"),
+            bytes+java.security.MessageDigest.getInstance("SHA-256")
+                .digest(bytes))
+        val me=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val manifest=NativeKotlinHistoryManifestFileAuthority(
+            ledger(),{_,_->active})
+        fun sourceValid()=NativeKotlinGlobalHistoryReadCoordinator(
+            journal(),correction(),authority,manifest,fence()
+        ).read("owner-1","athlete-1") is NativeKotlinHistoryReadResult.Review
+        val key="restore-real-corrected-workout-passphrase".toCharArray()
+        val archive=(NativeKotlinEncryptedTrainingSnapshot.capture(
+            root,fence(),me,{me},::sourceValid,key)
+            as NativeKotlinTrainingSnapshotResult.Ready).encrypted
+        val device=temporary.newFolder("new-install").toPath()
+        val destination=device.resolve("kotlin-coach-v1")
+        var inspected=0
+        fun inspectRealStagedFiles(stage:java.nio.file.Path,owner:NativeKotlinOwnerIdentity):Boolean {
+            inspected++
+            if(owner!=me)return false
+            val journal=KotlinNativeJournalFileStore(stage)
+            val opened=journal.openStored(
+                "owner-1","workout-1"){id,source->
+                    id=="owner-1" && source.athleteId=="athlete-1"
+                } as? NativeJournalFileResult.Durable ?:return false
+            if(opened.journal.finishedByEventId!="finish-1" ||
+                opened.journal.revision!=3L)return false
+            val history=NativeKotlinHistoryManifestFileStore(stage)
+            val stored=history.open("owner-1","athlete-1")
+                as? NativeHistoryLedgerResult.Durable ?:return false
+            if(stored.ledger.revision!=3L ||
+                stored.ledger.pending!=null)return false
+            val facts=NativeKotlinGlobalHistoryReadCoordinator(
+                journal,KotlinNativeSavedCorrectionFileStore(stage,journal),
+                authority,NativeKotlinHistoryManifestFileAuthority(
+                    history,{_,_->active}),
+                NativeKotlinApprovalRevisionFence(stage)
+            ).read("owner-1","athlete-1") as? NativeKotlinHistoryReadResult.Review
+                ?:return false
+            return facts.index.lastByExercise.getValue("bench")
+                .workingSets.last().actual?.reps==3
+        }
+        val result=NativeKotlinCleanStoreRestore.restoreToAbsentStore(
+            destination,archive,key,me,::inspectRealStagedFiles)
+        assertTrue(result.toString(),result is NativeKotlinCleanRestoreResult.Committed)
+        assertEquals(1,inspected)
+        assertTrue(java.nio.file.Files.isDirectory(destination))
+        assertFalse(java.nio.file.Files.exists(
+            device.resolve(".kotlin-coach-v1.restore-staging")))
+        assertFalse(java.nio.file.Files.exists(
+            destination.resolve(".restore-in-progress")))
+        assertTrue(inspectRealStagedFiles(destination,me))
+        assertTrue(sourceValid()) // Original app data remains unchanged.
+        val snapshotRevision=ledger().open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable
+        assertEquals(3L,snapshotRevision.ledger.revision)
+        assertEquals(NativeKotlinCleanRestoreResult.Rejected(
+            NativeKotlinCleanRestoreRefusal.EXISTING_TRAINING_DATA),
+            NativeKotlinCleanStoreRestore.restoreToAbsentStore(
+                destination,archive,key,me,::inspectRealStagedFiles))
+        assertEquals(2,inspected)
+    }
+
     @Test fun encryptedSnapshotContainsRealFinishedCorrectedJournalAndLedgerUnchanged() {
         issue()
         enroll()

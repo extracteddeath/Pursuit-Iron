@@ -497,7 +497,14 @@ object CustomNextWorkoutCoachingDomain {
                     // the canonical policy verifies EVERY recorded increment.
                     verifiedPerSetLoading=true,
                     policyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2,
-                    targetRirByOrdinal=goals)
+                    targetRirByOrdinal=goals,
+                    // A same-slot signed, unchanged-load REP preview can
+                    // survive an unavailable current gym read. This NEVER
+                    // earns a load step, bypasses contradictory stock, or
+                    // applies to unverified physical Machine A/B stations.
+                    unchangedIssuedLoadReviewOnly=
+                        request.verifiedStock==null &&
+                        request.requestedMachineInstanceId==null)
             }.getOrElse {
                 return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                     ids,latest.evidence.workoutId,

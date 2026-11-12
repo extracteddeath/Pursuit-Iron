@@ -596,12 +596,26 @@ object CoachFirstProgramStartDomain {
             val skillDaysInDraft=verifiedWeek?.sessions?.filter {
                 it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
             }?.map{it.dayIndex}?.toSet().orEmpty()
+            // In the five-day 2 bench / 2 squat / 1 deadlift offer,
+            // merely finding the deadlift on ANY skill day is insufficient.
+            // It must share a real, audited squat-skill lower session.
+            // Check actual visits, not labels or the authored intent alone.
+            val requiredCompanionDays=if(input.policyVersion==POLICY_VERSION &&
+                athlete.split==ComposerSplit.ULPPL && namedPrimaries!=null) {
+                val namedSquats=selected.filter {
+                    it.exerciseId in namedPrimaries &&
+                        it.familyId=="squat" && it.variantId=="back-barbell"
+                }.map{it.exerciseId}.toSet()
+                verifiedWeek?.visits.orEmpty().filter {
+                    it.exerciseId in namedSquats && it.dayIndex in skillDaysInDraft
+                }.map{it.dayIndex}.toSet()
+            } else skillDaysInDraft
             if(verifiedWeek==null || companionPrimaryIds.any{ id ->
                 verifiedWeek.visits.none{
-                    it.exerciseId==id && it.dayIndex in skillDaysInDraft
+                    it.exerciseId==id && it.dayIndex in requiredCompanionDays
                 }
             }) {
-                issues+="A required companion strength lift was not verified on a real skill day; the program may not omit or relabel it."
+                issues+="A required companion strength lift was not verified alongside its named lower-body skill lift; the program may not omit or relabel it."
                 return output(FirstProgramStartStatus.DRAFT_NEEDS_REVIEW,
                     policy,generated,gaps=gaps)
             }

@@ -38,8 +38,8 @@ class CoachFirstProgramFiveDayStrengthTest {
         declaredRestDays=setOf(2,6)
     ))
     private fun calibrations()=linkedMapOf(
-        "barbell_bench" to n("135"),"back_squat" to n("135"),
-        "conventional_deadlift" to n("135"),
+        "barbell_bench" to n("135"),"back_squat" to n("155"),
+        "conventional_deadlift" to n("185"),
         "incline_db_press" to n("30"),
         "one_arm_db_row" to n("30"),
         "db_lateral_raise" to n("20"),
@@ -111,7 +111,24 @@ class CoachFirstProgramFiveDayStrengthTest {
         assertTrue(week.sessions[deadliftIndex].orderedVisits.any{
             it.exerciseId=="back_squat"
         })
-        assertEquals(n("135"),calibrations().getValue("conventional_deadlift"))
+        // Three independently calibrated barbell skills must keep three
+        // distinct working loads in the actual prescription. Comparing the
+        // fixture to itself would not catch a cross-exercise weight transfer.
+        val expectedLoads=mapOf("barbell_bench" to n("135"),
+            "back_squat" to n("155"),"conventional_deadlift" to n("185"))
+        val prescribed=checkNotNull(result.prescription)
+        for((exerciseId,calibrated) in expectedLoads) {
+            val actual=prescribed.sessions.flatMap {it.exercises}
+                .filter {it.exerciseId==exerciseId}
+            assertTrue("$exerciseId was never prescribed",actual.isNotEmpty())
+            val working=actual.flatMap {it.sets }
+                .filter {it.type==DraftSetType.WORKING}
+            assertTrue("$exerciseId has no working sets",working.isNotEmpty())
+            assertTrue("$exerciseId silently borrowed another load: $working",
+                working.all {
+                    (it.load as? DraftSetLoad.Verified)?.value==calibrated
+                })
+        }
         assertTrue(week.audit.satisfiesDeclaredHardConstraints)
         assertTrue(checkNotNull(result.prescription).finalAudit
             ?.daysOutsidePreferredWindow?.isEmpty()==true)

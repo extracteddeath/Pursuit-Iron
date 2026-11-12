@@ -1,3 +1,5 @@
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -81,4 +83,33 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+// Early-launch beta must ship ONE Kotlin engine. The existing dev/debug app
+// deliberately still hosts the legacy JS runtime during cutover; it is NOT
+// releasable. Fail the release variant before artifact generation while that
+// parallel engine would be packaged. Tests and historical migration tools may
+// remain in the repository; they are not an excuse to ship two runtimes.
+val verifyEarlyBetaRuntime by tasks.registering {
+    group = "verification"
+    description = "Refuse a beta release if legacy JS engine-runtime is packaged"
+    doLast {
+        val components = configurations.getByName("releaseRuntimeClasspath")
+            .incoming.resolutionResult.allComponents
+        val containsLegacyRuntime = components.any { result ->
+            val component = result.id as? ProjectComponentIdentifier
+            component?.projectPath == ":engine-runtime"
+        }
+        check(!containsLegacyRuntime) {
+            "Early beta release blocked: the app still packages :engine-runtime " +
+                "(the legacy JS execution path). Cut MainActivity and its " +
+                "runtime host over to the ONE Kotlin engine, remove the old " +
+                "runtime dependency, then rerun the full native beta gates."
+        }
+    }
+}
+// Source-only/debug CI remains available during migration. This release
+// invariant is evaluated by all ordinary release-build entry points.
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyEarlyBetaRuntime)
 }

@@ -194,7 +194,7 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
         // Saved identities are append-only: the first 42 retain their
         // exact ordinal/source IDs while the seven new variants follow.
-        assertTrue(starter.catalog.size>=76)
+        assertEquals(146,starter.catalog.size)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",
@@ -219,6 +219,24 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             "arnold","pushup","bw-squat","diamond-pushup","pike-pushup",
             "incline-pushup","decline-pushup"),
             starter.catalog.drop(49).take(27).map{it.exerciseId})
+        // The third expansion is append-only; exactly the old 76 IDs keep
+        // their saved order and unrelated machine/angle histories.
+        assertEquals(listOf(
+            "spider-curl","low-incline-db","decline-db-press","db-neutral-press","seated-db-press",
+            "squeeze-press","db-incline-fly","rear-fly","seated-rear-fly","prone-db-rear-fly",
+            "side-lying-raise","seated-db-lat-raise","chest-supported-lat-raise","helms-row","concentration-curl",
+            "incline-hammer","cross-hammer","db-rdl","kroc-row","inc-db-row",
+            "cs-db-row","lying-db-ext","pin-squat","ohp","seated-ohp",
+            "underhand-row","high-bar-squat","low-bar-squat","paused-squat","tempo-squat",
+            "good-morning","yates-row","pendlay-row","floor-press","decline-bench",
+            "seated-incline-curl","incline-machine-press","seated-cable-lat-raise","chest-supported-rear-fly","machine-lat-raise",
+            "machine-curl","machine-ext","belt-squat","machine-hip-thrust","machine-crunch",
+            "nordic","slrdl","single-leg-press","smith-incline","bw-lunge",
+            "bw-bulgarian","glute-bridge","sl-hip-thrust","bw-calf","crunch",
+            "bicycle","oblique-crunch","leg-raise","bench-dip","standing-curl",
+            "inc-cable-fly","high-cable-fly","pendulum-squat","cable-press","v-squat",
+            "wide-pulldown","close-pulldown","one-arm-pulldown","straight-pulldown","cable-woodchop"
+        ),starter.catalog.drop(76).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)

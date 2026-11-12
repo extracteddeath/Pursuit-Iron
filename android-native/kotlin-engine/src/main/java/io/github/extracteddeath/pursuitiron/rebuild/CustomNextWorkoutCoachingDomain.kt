@@ -233,6 +233,8 @@ object CustomNextWorkoutCoachingDomain {
         var assumedForReview=0
         var trendDrops:List<Int> = emptyList()
         var hasComparableReportedTrend=false
+        // Canonical source owns current-policy uncertainty and provenance.
+        var sharedForecastLimitations:Set<RepForecastLimitation> = emptySet()
         fun result(
             status:CustomNextWorkoutCoachingStatus,
             ids:List<String> = emptyList(),latest:String?=null,
@@ -254,6 +256,13 @@ object CustomNextWorkoutCoachingDomain {
                     add(RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
                     if(reps.dropLast(1).any {it.changed})
                         add(RepForecastLimitation.EARLIER_SET_WORK_CHANGED)
+                    addAll(sharedForecastLimitations)
+                    // Only a genuine comparable prior V3 history can
+                    // remove the one-session uncertainty flag.
+                    if(request.repForecastPolicy==
+                        CustomRepForecastPolicy.TARGET_RIR_TREND_V3 &&
+                        hasComparableReportedTrend)
+                        remove(RepForecastLimitation.SINGLE_EXPOSURE)
                 }
             else emptySet(),
             Collections.unmodifiableList(trendDrops.toList()))
@@ -511,6 +520,8 @@ object CustomNextWorkoutCoachingDomain {
                     explanation="The authentic working-set evidence could not be reviewed under the shared target-RIR policy.")
             }
         } else null
+
+        sharedForecastLimitations=currentReview?.forecastLimitations.orEmpty()
 
         // All present and future V2/V3 rep outcomes come from the canonical
         // assessment, including load verification, user edits, rep ceilings,

@@ -142,6 +142,106 @@ class NativeKotlinGeneratedProgramJourneyTest {
         return cycle to inputs
     }
 
+    private fun writeLocalAthleteForRestoreProof() {
+        val bytes=java.io.ByteArrayOutputStream().also {stream->
+            java.io.DataOutputStream(stream).use {out->
+                out.writeInt(0x50494F31)
+                out.writeInt(1)
+                out.writeUTF(owner)
+                out.writeUTF(athlete)
+            }
+        }.toByteArray()
+        java.nio.file.Files.write(temp.root.toPath().resolve("local-athlete.bin"),
+            bytes+java.security.MessageDigest.getInstance("SHA-256")
+                .digest(bytes))
+    }
+
+    @Test fun nativeStagedAuditPreservesAnUnfinishedGeneratedCustomWorkout() {
+        val (cycle,inputs)=saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val day=cycle.blocks.single().days.minBy{it.weekday}
+        val id="restored-unfinished-first-day"
+        val d=Disk()
+        assertTrue(d.prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        assertTrue(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomJournalResult.Durable)
+        val expected=NativeKotlinOwnerIdentity(owner,athlete)
+        val before=NativeKotlinStagedCoreStoreAudit.inspect(d.root,expected)
+        assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
+        val active=before as NativeKotlinStagedCoreAuditResult.Verified
+        assertEquals(0,active.finishedWorkouts)
+        assertEquals(1,active.customPrepared)
+        assertEquals(1,active.customIssued)
+        assertEquals(1,active.customUnfinished)
+        assertEquals(0,active.generatedIssued)
+        val password="generated-day-one-recovery-password".toCharArray()
+        val original=(Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal
+        val archive=NativeKotlinEncryptedTrainingSnapshot.capture(
+            d.root,d.fence,expected,{expected},
+            {Disk().timeline.read(owner,athlete)
+                is NativeKotlinMixedHistoryReadResult.Review},password)
+        assertTrue(archive.toString(),
+            archive is NativeKotlinTrainingSnapshotResult.Ready)
+        val newDevice=temp.newFolder("another-install").toPath()
+        val result=NativeKotlinCleanStoreRestore.restoreToAbsentStore(
+            newDevice.resolve("kotlin-coach-v1"),
+            (archive as NativeKotlinTrainingSnapshotResult.Ready).encrypted,
+            password,expected,{stage,who->
+                NativeKotlinStagedCoreStoreAudit.inspect(stage,who)
+                    is NativeKotlinStagedCoreAuditResult.Verified
+            })
+        assertTrue(result.toString(),
+            result is NativeKotlinCleanRestoreResult.Committed)
+        val restoredRoot=newDevice.resolve("kotlin-coach-v1")
+        val after=NativeKotlinStagedCoreStoreAudit.inspect(restoredRoot,expected)
+        assertEquals(before,after)
+        val restoredIdentity=NativeKotlinCurrentIdentity{expected}
+        val restoredFence=NativeKotlinApprovalRevisionFence(restoredRoot)
+        val drafts=NativeCustomCycleDraftFileStore(
+            restoredRoot,restoredFence,restoredIdentity)
+        val source=NativeKotlinCustomAuthoringSourceFileStore(
+            restoredRoot,restoredFence,restoredIdentity)
+        val approvals=NativeKotlinCustomCycleSignoffFileStore(
+            restoredRoot,restoredFence,restoredIdentity,drafts,source)
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            restoredFence,restoredIdentity,drafts,source,approvals)
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(
+            restoredRoot,restoredFence,restoredIdentity,preflight)
+        val reopened=NativeKotlinCustomWorkoutJournalFileStore(
+            restoredRoot,restoredFence,restoredIdentity,prepared,preflight,
+            NativeKotlinHistoryManifestFileStore(restoredRoot),
+            KotlinNativeJournalFileStore(restoredRoot))
+            .open(owner,id) as NativeCustomJournalResult.Durable
+        assertEquals(original,reopened.issued.journal)
+        assertEquals(original,(Disk().journals.open(owner,id)
+            as NativeCustomJournalResult.Durable).issued.journal)
+    }
+
+    @Test fun stagedAuditRejectsCorruptedUnfinishedCustomJournalWithoutTouchingIt() {
+        val (cycle,inputs)=saveGenerated()
+        writeLocalAthleteForRestoreProof()
+        val id="corrupt-first-day"
+        val day=cycle.blocks.single().days.first()
+        assertTrue(Disk().prepared.prepare(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomPrepareResult.Prepared)
+        assertTrue(Disk().journals.issue(owner,id,cycleId,1,day.weekday,inputs)
+            is NativeCustomJournalResult.Durable)
+        val path=java.nio.file.Files.list(temp.root.toPath()).use {stream->
+            stream.filter{it.fileName.toString().startsWith("issued-custom-")}
+                .findFirst().orElseThrow()
+        }
+        val contents=java.nio.file.Files.readAllBytes(path)
+        contents[contents.lastIndex]=(contents.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(path,contents)
+        val review=NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),NativeKotlinOwnerIdentity(owner,athlete))
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.CUSTOM_INVENTORY_UNVERIFIED),review)
+        assertArrayEquals(contents,java.nio.file.Files.readAllBytes(path))
+    }
+
     @Test fun previousPolicyReproducesTheCompoundOmissionForTheSameRealCatalog() {
         val legacy=CoachFirstProgramStartDomain.review(request().copy(
             policyVersion=CoachFirstProgramStartDomain.LEGACY_POLICY_VERSION))
@@ -513,6 +613,16 @@ class NativeKotlinGeneratedProgramJourneyTest {
             as NativeCustomJournalResult.Durable).issued.journal)
         assertEquals(NativeCustomNextCycleSlot.Next(2,days.first().weekday,
             days.first().label),Disk().next(inputs))
+        writeLocalAthleteForRestoreProof()
+        val recovered=NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),NativeKotlinOwnerIdentity(owner,athlete))
+        assertTrue(recovered.toString(),
+            recovered is NativeKotlinStagedCoreAuditResult.Verified)
+        val complete=recovered as NativeKotlinStagedCoreAuditResult.Verified
+        assertEquals(days.size,complete.finishedWorkouts)
+        assertEquals(days.size,complete.customPrepared)
+        assertEquals(days.size,complete.customIssued)
+        assertEquals(0,complete.customUnfinished)
     }
 
     @Test fun finishedGeneratedWorkoutWithWarmupsProvidesRealV2CoachingEvidence() {

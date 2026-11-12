@@ -288,6 +288,54 @@ class StarterExerciseTrancheTest {
         assertFalse(reviewed.mayOverwriteAuthoredProgram)
     }
 
+    @Test fun sevenSourceVariantsFailClosedOnRealGymEquipmentAndAttachments() {
+        // No global "machine" stack, blanket cable attachment or guessed
+        // per-hand dumbbell weight may satisfy a distinct physical movement.
+        val pec=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("40"),n("50"),n("60")))
+        val cable=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.CABLE_STACK,listOf(n("20"),n("25"),n("30")))
+        val stock=mapOf("dumbbell-rack" to db,
+            "cable-station" to cable,"pec-deck-machine" to pec,
+            "chest-press-machine" to pec)
+        fun check(id:String,weight:String,
+            actual:Map<String,VerifiedLoadStock> =stock,
+            attachments:Set<String> =emptySet(),
+            facilities:Set<String> =setOf("flat-bench","incline-bench"))=
+            CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice(id,n(weight))),
+                CatalogGym(actual,attachments,facilities)))
+        fun issue(id:String,review:CatalogWeekReview,kind:CatalogIssueType)=
+            review.issues.any{it.exerciseId==id && it.kind==kind}
+        for(id in listOf("db-bench","db-fly"))
+            assertTrue("$id wrongly bypassed the actual bench",
+                issue(id,check(id,"25",facilities=emptySet()),
+                    CatalogIssueType.FACILITY_UNAVAILABLE))
+        assertTrue(issue("inc-curl",check("inc-curl","25",
+                facilities=setOf("flat-bench")),
+            CatalogIssueType.FACILITY_UNAVAILABLE))
+        assertTrue(issue("hammer",check("hammer","25",
+                actual=stock-"dumbbell-rack"),
+            CatalogIssueType.EQUIPMENT_UNAVAILABLE))
+        val wrongDb=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("25"),n("30")))
+        assertTrue(issue("db-shoulder",check("db-shoulder","25",
+                actual=stock+("dumbbell-rack" to wrongDb)),
+            CatalogIssueType.EQUIPMENT_BASIS_MISMATCH))
+        assertTrue(issue("face-pull",check("face-pull","25"),
+            CatalogIssueType.ATTACHMENT_UNAVAILABLE))
+        val rope=check("face-pull","25",attachments=setOf("rope"))
+        assertFalse(issue("face-pull",rope,CatalogIssueType.ATTACHMENT_UNAVAILABLE))
+        assertFalse(issue("face-pull",rope,CatalogIssueType.LOAD_UNVERIFIED))
+        assertTrue(issue("pec-deck",check("pec-deck","50",
+                actual=stock-"pec-deck-machine"),
+            CatalogIssueType.EQUIPMENT_UNAVAILABLE))
+        assertTrue(issue("pec-deck",check("pec-deck","55"),
+            CatalogIssueType.LOAD_UNVERIFIED))
+        assertFalse(rope.mayIssueWorkout)
+        assertFalse(rope.mayOverwriteAuthoredProgram)
+    }
+
     @Test fun realThreeDayCompoundWeekComposesOnlyWithConfirmedPhysicalGym() {
         val request=StarterExerciseTranche.forGym(template(),selected(),gym())
         val result=CoachExerciseCatalogDomain.review(request)

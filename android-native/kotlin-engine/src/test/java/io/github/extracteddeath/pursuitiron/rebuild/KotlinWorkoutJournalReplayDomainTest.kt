@@ -118,4 +118,35 @@ class KotlinWorkoutJournalReplayDomainTest {
             (KotlinWorkoutJournalReplayDomain.replay(snapshot,identity,
                 listOf(fake),1) as KotlinJournalReplayResult.Rejected).reason)
     }
+
+    @Test fun manualMachineSpecificLoadCorrectionsNeverLowerIssuedNextSetOnReplay() {
+        // A deliberately edited actual is factual history, not new session
+        // loading authority. It must survive cold replay and corrections
+        // without becoming the next straight-set working target.
+        val issued=initial()
+        val first=KotlinJournalOperation.RecordSet(
+            "machine-a-first",0,"set-1",KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,10,1,"A"))
+        val saved=applied(issued,first)
+        val corrected=applied(saved,KotlinJournalOperation.RecordSet(
+            "machine-a-corrected",1,"set-1",KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("27.5"),LoadUnit.LB,9,2,"A"),
+            correctsEventId="machine-a-first"))
+        assertEquals(KotlinJournalReplayResult.Recovered(corrected),
+            KotlinWorkoutJournalReplayDomain.replay(
+                snapshot,identity,corrected.receipts,corrected.revision))
+        assertEquals(listOf(BigDecimal("30"),BigDecimal("30")),
+            corrected.snapshot.targets.map {
+                (it.load as DraftSetLoad.Verified).value
+            })
+        assertEquals(BigDecimal("27.5"),
+            (corrected.effectiveSets.getValue("set-1").operation
+                as KotlinJournalOperation.RecordSet).performed?.load)
+        assertEquals("A",
+            (corrected.effectiveSets.getValue("set-1").operation
+                as KotlinJournalOperation.RecordSet).performed?.machineInstanceId)
+        assertTrue("set-2" !in corrected.effectiveSets)
+        assertEquals(issued.snapshot,corrected.snapshot)
+    }
+
 }

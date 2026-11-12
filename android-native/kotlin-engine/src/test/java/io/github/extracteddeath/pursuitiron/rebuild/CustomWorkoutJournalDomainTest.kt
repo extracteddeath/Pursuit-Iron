@@ -424,4 +424,32 @@ class CustomWorkoutJournalDomainTest {
             CustomWorkoutJournalRefusal.SWAP_IDENTITY_CONFLICT),
             CustomWorkoutJournalDomain.reduce(restoreOriginal,reused))
     }
+
+    @Test fun machineSpecificManualLoadCorrectionNeverChangesCustomIssuedTarget() {
+        val planned=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("20"))
+        val issued=initial(makeSet(load=planned,amplifier=null))
+        val saved=accept(issued,record("machine-a-first",0,
+            performed=KotlinPerformedSet(
+                BigDecimal("15"),LoadUnit.LB,9,1,"A")))
+        val corrected=accept(saved,record("machine-a-correction",1,
+            performed=KotlinPerformedSet(
+                BigDecimal("17.5"),LoadUnit.LB,10,2,"A"),
+            correction="machine-a-first"))
+        assertEquals(issued.snapshot,corrected.snapshot)
+        assertEquals(issued.originalSnapshot,corrected.originalSnapshot)
+        assertEquals(planned,corrected.snapshot.slots.single()
+            .sets.single().prescription.load)
+        assertEquals(BigDecimal("17.5"),
+            (corrected.effectiveVisits.getValue(key(CustomWorkoutVisitPart.MAIN))
+                .operation as CustomWorkoutJournalOperation.Record).performed?.load)
+        assertEquals("A",
+            (corrected.effectiveVisits.getValue(key(CustomWorkoutVisitPart.MAIN))
+                .operation as CustomWorkoutJournalOperation.Record)
+                .performed?.machineInstanceId)
+        assertEquals(2,corrected.receipts.size)
+        assertEquals("machine-a-first",
+            (corrected.receipts.first().operation as CustomWorkoutJournalOperation.Record).eventId)
+    }
+
 }

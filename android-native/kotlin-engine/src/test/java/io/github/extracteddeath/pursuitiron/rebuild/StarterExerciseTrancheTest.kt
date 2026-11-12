@@ -688,7 +688,9 @@ class StarterExerciseTrancheTest {
             "neutral_pulldown","rear_delt_fly","machine_ohp",
             "preacher_curl","cable_curl","cable_triceps",
             "overhead_cable_triceps","standing_calf","cable_crunch")
-        val entries=data.drop(31)
+        // This historical eleven-ID tranche is a stable prefix, not the
+        // entire tail once further exact web identities are appended.
+        val entries=data.drop(31).take(11)
         assertEquals(newIds,entries.map{it.legacyCuratedId})
         assertTrue(entries.none{it.mayTransferPreviousLoad})
         val byId=entries.associateBy{it.legacyCuratedId}

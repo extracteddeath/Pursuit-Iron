@@ -111,8 +111,14 @@ class StarterProgramReleaseMatrixTest {
             ext.movement.credits)
         assertFalse(flex.mayTransferPreviousLoad)
         assertFalse(ext.mayTransferPreviousLoad)
-        assertTrue(entries.none{it.movement.credits.any{credit->
-            credit.muscle==TrainingMuscle.BRACHIALIS}})
+        // Wrist isolation must not be silently promoted into brachialis
+        // training. A separately source-linked hammer curl MAY train that
+        // distinct muscle; its existence is not a wrist-credit regression.
+        assertTrue(listOf(flex,ext).none{
+            it.movement.credits.any{credit->
+                credit.muscle==TrainingMuscle.BRACHIALIS
+            }
+        })
         // No new weight is invented: these require athlete-specific
         // verified dumbbell stock and explicit starting-load calibration.
         assertEquals(CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,

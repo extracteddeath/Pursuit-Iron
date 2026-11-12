@@ -39,7 +39,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
     // Recheck the complete owner-verified history after Android returns from
     // the document picker; account switches or new corrections fail closed.
     var pendingCsvExport by remember {
-        mutableStateOf<Pair<String,Long>?>(null)
+        // ownerKey, athleteId, approved History revision
+        mutableStateOf<Triple<String,String,Long>?>(null)
     }
     var exporting by remember {mutableStateOf(false)}
     var exportNotice by remember {mutableStateOf<String?>(null)}
@@ -56,19 +57,31 @@ internal fun NativeKotlinCandidateHistoryScreen(
             exporting=true
             scope.launch {
                 exportNotice=withContext(Dispatchers.IO) {
+                    val ownerBefore=runCatching {
+                        host.currentHistoryExportOwner()
+                    }.getOrNull()
                     val reread=runCatching {
                         host.reviewVerifiedKotlinHistory()
                     }.getOrNull()
+                    val ownerAfter=runCatching {
+                        host.currentHistoryExportOwner()
+                    }.getOrNull()
                     val trusted=(reread as?
                         NativeKotlinMixedHistoryReadResult.Review)?.timeline
-                    if(trusted==null ||
-                        trusted.athleteId!=expected.first ||
-                        trusted.manifestRevision!=expected.second) {
+                    if(ownerBefore==null || ownerBefore!=ownerAfter ||
+                        ownerBefore.ownerKey!=expected.first ||
+                        ownerBefore.athleteId!=expected.second ||
+                        trusted==null ||
+                        trusted.athleteId!=expected.second ||
+                        trusted.manifestRevision!=expected.third) {
                         "History changed or could not be verified. Nothing was exported. Delete the empty file and try again."
                     } else when(val csv=
                         NativeKotlinVerifiedHistoryCsvExport.prepare(trusted)) {
                         is NativeKotlinHistoryCsvResult.Ready -> {
+                            // The signed owner cannot silently change while
+                            // we produce a file selected in a prior Activity.
                             val success=runCatching {
+                                check(host.currentHistoryExportOwner()==ownerBefore)
                                 context.contentResolver.openOutputStream(uri,"wt")
                                     ?.use {output->
                                         output.write(csv.csv.toByteArray(Charsets.UTF_8))
@@ -167,16 +180,40 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     if(read.timeline.completions.isNotEmpty()) {
                         OutlinedButton(
                             onClick={
-                                val timeline=read.timeline
-                                pendingCsvExport=timeline.athleteId to
-                                    timeline.manifestRevision
+                                exporting=true
                                 exportNotice=null
-                                csvDocument.launch("Pursuit-Iron-training-history.csv")
+                                scope.launch {
+                                    val current=withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            val first=host.currentHistoryExportOwner()
+                                            val timeline=(host.reviewVerifiedKotlinHistory()
+                                                as? NativeKotlinMixedHistoryReadResult.Review)
+                                                ?.timeline
+                                            val second=host.currentHistoryExportOwner()
+                                            if(first!=null && first==second &&
+                                                timeline!=null &&
+                                                first.athleteId==timeline.athleteId &&
+                                                timeline.athleteId==read.timeline.athleteId &&
+                                                timeline.manifestRevision==
+                                                    read.timeline.manifestRevision)
+                                                Triple(first.ownerKey,first.athleteId,
+                                                    timeline.manifestRevision)
+                                            else null
+                                        }.getOrNull()
+                                    }
+                                    exporting=false
+                                    if(current==null)
+                                        exportNotice="History or athlete changed. Refresh History before exporting."
+                                    else {
+                                        pendingCsvExport=current
+                                        csvDocument.launch("Pursuit-Iron-training-history.csv")
+                                    }
+                                }
                             },
                             enabled=!busy && !exporting,
                             modifier=Modifier.fillMaxWidth()
                         ) {
-                            Text(if(exporting)"Saving history…"
+                            Text(if(exporting)"Preparing history export…"
                                 else "Export completed workouts (CSV)")
                         }
                         Text(

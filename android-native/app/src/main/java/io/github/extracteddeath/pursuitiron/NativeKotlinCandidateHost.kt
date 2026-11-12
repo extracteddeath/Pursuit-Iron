@@ -1012,6 +1012,32 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun currentHistoryExportOwner():NativeKotlinOwnerIdentity? =
         localAthlete.signedInIdentity()
 
+    /**
+     * PRIVATE, deliberately not yet exposed in the beta UI. Captures the
+     * entire Kotlin training directory under its shared owner lock.
+     * Verified History must have no pending Finish/correction transaction.
+     *
+     * The resulting authenticated container is NOT a restore permission:
+     * importing into an existing owner will require a separately proven
+     * atomic staging/rollback transaction and explicit user consent.
+     */
+    fun prepareEncryptedTrainingSnapshot(
+        password:CharArray
+    ):NativeKotlinTrainingSnapshotResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeKotlinTrainingSnapshotResult.Rejected(
+                NativeKotlinTrainingSnapshotRefusal.INVALID_OWNER)
+        return NativeKotlinEncryptedTrainingSnapshot.capture(
+            root,revisionFence,owner,
+            currentOwner={localAthlete.signedInIdentity()},
+            verifyHistory={
+                mixedHistoryReader.read(owner.ownerKey,owner.athleteId) is NativeKotlinMixedHistoryReadResult.Review
+            },
+            password=password)
+    }
+
+
+
     fun reviewVerifiedKotlinHistory():NativeKotlinMixedHistoryReadResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinMixedHistoryReadResult.Rejected(

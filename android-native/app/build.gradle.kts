@@ -10,6 +10,11 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import javax.inject.Inject
 
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.plugin.compose")
+}
+
 /**
  * AGP 9 built-in Kotlin uses whole source directories; it does not support
  * include patterns on AndroidSourceSet.kotlin. Stage ONLY the approved beta
@@ -34,10 +39,6 @@ abstract class StageKotlinBetaSources @Inject constructor(
     }
 }
 
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
-}
 // The one-shot device workflow provides its monotonically increasing run
 // number. Routine source-only checks retain the existing development code.
 val kotlinLabBuildNumber = providers.gradleProperty("kotlinLabBuildNumber")

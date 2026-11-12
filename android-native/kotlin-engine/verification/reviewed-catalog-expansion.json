@@ -850,7 +850,7 @@
       },
       "review": {
         "family": "bench_press",
-        "variant": "incline-dumbbell",
+        "variant": "incline-dumbbell-extended-id",
         "pattern": "HORIZONTAL_PRESS",
         "role": "SECONDARY",
         "focus": "press",
@@ -1263,7 +1263,7 @@
       },
       "review": {
         "family": "elbow_flexion",
-        "variant": "supinated-dumbbell",
+        "variant": "supinated-dumbbell-extended-id",
         "pattern": "ISOLATION",
         "role": "ACCESSORY",
         "focus": "pull",
@@ -1382,7 +1382,7 @@
       },
       "review": {
         "family": "hip_hinge",
-        "variant": "romanian-dumbbell",
+        "variant": "romanian-dumbbell-extended-id",
         "pattern": "HINGE",
         "role": "SECONDARY",
         "focus": "lower",

@@ -138,7 +138,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     LaunchedEffect(journal) { if(journal!=null)noteAnchor=journal }
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
-        enabled=journal!=null && journal.finishedByEventId==null)
+        enabled=referenceMode==WorkoutReferenceMode.LAST && journal!=null)
     val running=presentation!=null && !presentation.finished
     var verifiedFinish by remember(host,workoutId){
         mutableStateOf<NativeComposerFinishHandoffResult?>(null)

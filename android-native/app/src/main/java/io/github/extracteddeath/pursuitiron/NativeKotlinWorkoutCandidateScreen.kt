@@ -478,10 +478,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 // A displayed candidate is informational, never an issued edit.
                 // Until an authenticated program-edit API exists, there is no
                 // approval button that could falsely imply persistence.
+                val issuedBands=exerciseWorkingSets.map { it.target.reps }.distinct()
+                val issuedRirs=exerciseWorkingSets.map { it.target.targetRir }.distinct()
                 val review=if(facts.size==exerciseWorkingSets.size &&
-                    samePhysicalStation && sameLoadUnit && mixedLoads)
+                    samePhysicalStation && sameLoadUnit && mixedLoads &&
+                    issuedBands.size==1 && issuedRirs.size==1 &&
+                    issuedRirs.singleOrNull()!=null)
                     DoubleProgressionLevelingDomain.review(
-                        facts,RepBand(1,100),0,enteredStock)
+                        facts,issuedBands.single(),issuedRirs.single()!!,enteredStock)
                 else LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID)
                 AlertDialog(
                     onDismissRequest={showLevelingReview=false},
@@ -516,6 +520,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                                     Text("No supported leveling candidate: ${candidate.reason}. "+
                                         "Verify inventory and completed sets.")
                             }
+                            if(issuedBands.size!=1 || issuedRirs.size!=1 ||
+                                issuedRirs.singleOrNull()==null)
+                                Text("Leveling requires one consistent issued rep band "+
+                                    "and a verified goal RIR across the working sets.")
                             Text("No change has been applied. A future-program edit "+
                                 "requires explicit approval and durable persistence.")
                         }

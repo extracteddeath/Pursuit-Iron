@@ -308,7 +308,12 @@ internal class NativeKotlinSessionController(
     }
 
     fun clear() {
-        if(closed.get() || pending.get())return
+        if(closed.get())return
+        // Leaving the workout must immediately revoke the previous session,
+        // including an in-flight disk read/write or optional coaching review.
+        // The serialized operation may finish on disk, but its stale callback
+        // cannot repopulate the cleared UI.
+        generation.incrementAndGet()
         latestCoachRequest.incrementAndGet()
         mutable.value=NativeKotlinSessionState()
     }

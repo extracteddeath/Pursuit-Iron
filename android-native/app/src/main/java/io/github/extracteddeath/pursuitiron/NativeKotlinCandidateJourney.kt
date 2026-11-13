@@ -526,7 +526,11 @@ private fun NativeKotlinCandidateTrainEntry(
         // An in-flight journal write is never interrupted or cleared.
         if(customWorkoutId!=null && selectedId!=null &&
             !controller.state.value.busy) {
-            minimizedGeneratedId=selectedId
+            // Finished workouts belong in History, not in the unfinished
+            // Resume list. Keep the shortcut only for an uncompleted journal.
+            minimizedGeneratedId=selectedId.takeIf {
+                controller.state.value.presentation?.finished!=true
+            }
             controller.clear()
             selectedId=null
             onClearGeneratedWorkout()
@@ -535,7 +539,9 @@ private fun NativeKotlinCandidateTrainEntry(
     fun minimizeGeneratedWorkout() {
         val openId=selectedId ?:return
         if(!controller.state.value.busy) {
-            minimizedGeneratedId=openId
+            minimizedGeneratedId=openId.takeIf {
+                controller.state.value.presentation?.finished!=true
+            }
             controller.clear()
             selectedId=null
             onClearGeneratedWorkout()

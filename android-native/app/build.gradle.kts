@@ -166,13 +166,46 @@ val verifyEarlyBetaRuntime by tasks.registering {
     doLast {
         val components = configurations.getByName("releaseRuntimeClasspath")
             .incoming.resolutionResult.allComponents
-        val containsLegacyRuntime = components.any { result ->
-            val component = result.id as? ProjectComponentIdentifier
-            component?.projectPath == ":engine-runtime"
+        val forbiddenProjectPaths = setOf(
+            ":engine-runtime", ":engine-bridge", ":legacy-engine", ":web-engine"
+        )
+        val forbiddenExternalModules = setOf(
+            "org.mozilla:rhino", "org.graalvm.js:js", "org.graalvm.polyglot:js",
+            "com.eclipsesource.j2v8:j2v8", "com.squareup.duktape:duktape-android"
+        )
+        val forbiddenComponents = components.mapNotNull { result ->
+            val project = result.id as? ProjectComponentIdentifier
+            val identity = result.id.displayName
+            when {
+                project?.projectPath in forbiddenProjectPaths -> identity
+                forbiddenExternalModules.any { identity.startsWith(it + ":") ||
+                    identity == it } -> identity
+                else -> null
+            }
         }
-        check(!containsLegacyRuntime) {
-            "Early beta release blocked: :engine-runtime (legacy JavaScript) " +
-                "is still on the app's release classpath."
+        check(forbiddenComponents.isEmpty()) {
+            "Early beta release blocked: forbidden JavaScript runtime dependencies: " +
+                forbiddenComponents.joinToString()
+        }
+        // Guard the staged Kotlin sources, not every historical source in
+        // the repository. Native beta screens must not instantiate a web
+        // execution surface or dynamically evaluate JavaScript.
+        val stagedSources = fileTree(
+            layout.buildDirectory.dir("generated/kotlin-beta-src")
+        ).matching { include("**/*.kt") }.files
+        val forbiddenSourcePatterns = listOf(
+            Regex("""\\b(?:android\\.webkit\\.)?WebView\\s*\\("""),
+            Regex("""\\b(?:evaluateJavascript|loadUrl)\\s*\\("""),
+            Regex("""\\b(?:ScriptEngineManager|JavaScriptEngine)\\s*\\(""")
+        )
+        val violations = stagedSources.flatMap { source ->
+            val body = source.readText()
+            forbiddenSourcePatterns.filter { it.containsMatchIn(body) }
+                .map { source.relativeTo(projectDir).path + " : " + it.pattern }
+        }
+        check(violations.isEmpty()) {
+            "Early beta release blocked: web/JavaScript execution in staged native code: " +
+                violations.joinToString()
         }
         check(rootProject.file("verification/BETA_DEVICE_ACCEPTANCE.md").isFile) {
             "Early beta release blocked: verified Android-device onboarding, " +

@@ -38,6 +38,19 @@ jobs:
           :domain-contract:testDebugUnitTest
           :app:compileDebugKotlin
           --no-daemon --stacktrace
+      - name: Execute real Kotlin generated programs and complete-cycle showcase
+        working-directory: android-native
+        run: >
+          gradle :kotlin-engine:runKotlinOnlyProgramCycleShowcase
+          --no-daemon --stacktrace
+      - name: Preserve generated program and cycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-beta-generated-program-cycle-showcase
+          path: android-native/kotlin-engine/build/reports/kotlin-only-program-cycle-showcase.md
+          if-no-files-found: error
+          retention-days: 30
       - name: Check out frozen web engine for actual matched executions
         uses: actions/checkout@v4
         with:

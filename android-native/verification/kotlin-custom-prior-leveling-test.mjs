@@ -11,12 +11,11 @@ for(const required of [
   'referenceMode==WorkoutReferenceMode.LAST ||',
   'priorLevelingSlotId!=null',
   '"Leveling · review previous workout"',
-  'DoubleProgressionLevelingDomain',
-  '.reviewLastForCurrentWorkout(',
+  'rememberPriorWorkoutLevelingReview(',
   'WorkoutReferenceKey(set.setKey) to',
   'previous=physicalMachineLastReferences(',
   'machineInstanceId=selectedMachineId',
-  'goalRir=requireNotNull(first.targetRir)',
+  'goalRir=first.targetRir?.takeIf{',
   'verifiedStock=stock',
   'unfinished.forEach { set->',
   'currentEditors[levelEditorKey(',
@@ -34,3 +33,6 @@ assert.ok(source.includes('!requiresNewMachineChoice'),
 assert.ok(!source.includes('controller.finish()'),
   'Custom Leveling UI may not bypass the ordinary custom journal finish authority');
 console.log('PASS custom previous-workout Leveling is opt-in, station-safe, and draft-only');
+
+assert.ok(!source.includes('DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout('),
+  'Custom prior-session equipment inspection must run off the Compose UI thread');

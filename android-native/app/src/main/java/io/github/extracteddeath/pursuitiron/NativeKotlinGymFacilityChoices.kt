@@ -62,7 +62,15 @@ internal val kotlinGymFacilityGroups=listOf(
     KotlinGymFacilityGroup("Arm & core machines",listOf(
         "curl-machine" to "Curl",
         "triceps-extension-machine" to "Triceps extension",
-        "crunch-machine" to "Crunch"))
+        "crunch-machine" to "Crunch")),
+    // These physical fixtures are needed by reviewed squat/step and
+    // bodyweight variants; selecting them never invents working load stock.
+    KotlinGymFacilityGroup("Workout accessories",listOf(
+        "squat-box" to "Squat box",
+        "heel-wedge" to "Heel-elevation wedge",
+        "step-platform" to "Step platform",
+        "exercise-sliders" to "Exercise sliders",
+        "ab-wheel" to "Ab wheel"))
 )
 
 internal fun kotlinGymFacilityLabel(id:String):String =

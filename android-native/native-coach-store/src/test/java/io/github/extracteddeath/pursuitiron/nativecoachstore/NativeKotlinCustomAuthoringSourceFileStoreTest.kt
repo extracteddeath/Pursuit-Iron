@@ -195,7 +195,7 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         // Saving a reviewed catalog must preserve the entire current
         // append-only source inventory, not silently truncate to the
         // historical 164-ID snapshot. Older ordinal IDs remain stable.
-        assertTrue(starter.catalog.size>=178)
+        assertTrue(starter.catalog.size>=208)
         assertEquals(StarterExerciseTranche.movements().map{it.exerciseId},
             starter.catalog.map{it.exerciseId})
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
@@ -257,7 +257,19 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             "hanging-raise","hanging-knee","toes-to-bar",
             "russian-twist","v-up","sissy-squat","ghr",
             "reverse-hyper","leg-press-calf","donkey-calf"
-        ),starter.catalog.drop(164).map{it.exerciseId})
+        ),starter.catalog.drop(164).take(14).map{it.exerciseId})
+        // The sixth source-linked wave adds identities without altering
+        // any previously persisted exercise ordinal or machine/history key.
+        assertEquals(listOf(
+            "split-squat","step-up","box-squat","cyclist-squat",
+            "zercher-squat","pistol-squat","hip-thrust","smith-hip-thrust",
+            "frog-pump","stiff-deadlift","slider-curl","drag-curl",
+            "pinwheel-curl","jm-press","pjr-pullover","california-press",
+            "smith-ohp","push-press","z-press","bradford-press","dead-bug",
+            "mountain-climber","ab-wheel","single-cable-curl",
+            "cable-tri-kickback","incline-cable-press","machine-dip",
+            "underhand-pushdown","cable-crossover","single-cable-raise"
+        ),starter.catalog.drop(178).take(30).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)

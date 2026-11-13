@@ -32,7 +32,7 @@ class ReviewedCatalogWaveThreeTest {
     private fun n(v:String)=BigDecimal(v)
 
     @Test fun sourceIDsAndPhysicalVariantsAreStableAndNonTransferring() {
-        assertEquals(178,all.size)
+        assertTrue(all.size>=178)
         assertEquals(70,wave.size)
         assertEquals(addedIds,wave.map {it.legacyCuratedId})
         assertEquals(all.size,byId.size)

@@ -12,7 +12,7 @@ import org.junit.Test
 class ReviewedCatalogWaveFiveTest {
     private fun n(value:String)=BigDecimal(value)
     private val all=StarterExerciseTranche.entries()
-    private val wave=all.drop(164)
+    private val wave=all.drop(164).take(14)
     private val ids=listOf(
         "inv-row","chinup","dips-chest","dips-tri","hanging-raise",
         "hanging-knee","toes-to-bar","russian-twist","v-up",
@@ -34,7 +34,7 @@ class ReviewedCatalogWaveFiveTest {
     )
 
     @Test fun preserveTheExactFourteenWebIdsAndNoBorrowedExerciseHistory() {
-        assertEquals(178,all.size)
+        assertTrue(all.size>=178)
         assertEquals(ids,wave.map{it.legacyCuratedId})
         assertEquals(all.size,all.map{it.legacyCuratedId}.distinct().size)
         assertEquals(all.size,all.map{

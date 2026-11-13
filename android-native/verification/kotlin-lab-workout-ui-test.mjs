@@ -758,3 +758,14 @@ for(const required of [
   'Prior-session Leveling must be cancellation-scoped and avoid UI-thread equipment inspection: '+required);
 assert.ok(!priorLeveling.includes('DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout('),
   'No expensive verified equipment review on the generated Compose UI thread');
+
+const waveSixFixtures=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
+for(const id of ['squat-box','heel-wedge','step-platform','exercise-sliders','ab-wheel']) {
+  assert.ok(waveSixFixtures.includes('"'+id+'" to '),
+    'Workout accessory must be selectable in real Kotlin gym UI: '+id);
+}
+const waveSixLabels=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseLabels.kt');
+for(const id of ['smith-hip-thrust','pinwheel-curl','pjr-pullover','single-cable-raise','cable-crossover']) {
+  assert.ok(waveSixLabels.includes('"'+id+'" to '),
+    'New reviewed physical equipment variants require proper athlete-facing names: '+id);
+}

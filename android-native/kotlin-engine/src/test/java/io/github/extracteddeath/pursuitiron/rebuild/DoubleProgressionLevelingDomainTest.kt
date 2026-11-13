@@ -279,8 +279,8 @@ class DoubleProgressionLevelingDomainTest {
         val candidate=DoubleProgressionLevelingDomain.review(
             facts("2","4"),band,2,unloadedAndTen
         )
-        // These very low old observations are below today's rep floor and
-        // are not accepted merely because the present stock has a zero.
+        // A zero-only verified inventory has no positive working-set
+        // candidate. Never present an unloaded bar/machine as the answer.
         assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
             DoubleProgressionLevelingDomain.review(
                 facts("2","4"),band,2,

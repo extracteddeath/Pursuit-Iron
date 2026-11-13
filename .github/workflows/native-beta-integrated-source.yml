@@ -124,8 +124,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p android-native/build/reports
-          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > android-native/build/reports/native-beta-release-runtime-dependencies.txt
+          mkdir -p build/reports
+          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > build/reports/native-beta-release-runtime-dependencies.txt
           node verification/audit-native-beta-release-dependencies.mjs build/reports/native-beta-release-runtime-dependencies.txt
       - name: Preserve resolved beta runtime dependency evidence
         if: always()

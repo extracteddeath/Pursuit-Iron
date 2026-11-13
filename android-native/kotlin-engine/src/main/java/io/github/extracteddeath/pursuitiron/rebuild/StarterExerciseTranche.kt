@@ -59,7 +59,19 @@ object StarterExerciseTranche {
         "tempo-squat" to ("heavy-squat" to 2),
         "ohp" to ("heavy-vertical-press" to 2),
         "seated-ohp" to ("heavy-vertical-press" to 2),
-        "good-morning" to ("heavy-barbell-hinge" to 2)
+        "good-morning" to ("heavy-barbell-hinge" to 2),
+        // Wave-six barbell/Smith variants share recovery budgets with their
+        // matching heavy pattern; neither shares load history or progression.
+        "box-squat" to ("heavy-squat" to 2),
+        "cyclist-squat" to ("heavy-squat" to 2),
+        "zercher-squat" to ("heavy-squat" to 2),
+        "stiff-deadlift" to ("heavy-barbell-hinge" to 2),
+        "smith-ohp" to ("heavy-vertical-press" to 2),
+        "push-press" to ("heavy-vertical-press" to 2),
+        "z-press" to ("heavy-vertical-press" to 2),
+        "bradford-press" to ("heavy-vertical-press" to 2),
+        "hip-thrust" to ("heavy-hip-thrust" to 2),
+        "smith-hip-thrust" to ("heavy-hip-thrust" to 2)
     )
 
     private fun direct(m:TrainingMuscle)=DeclaredMuscleCredit(

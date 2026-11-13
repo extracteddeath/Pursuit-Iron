@@ -50,6 +50,68 @@ class CustomBlockTransitionLoadDomainTest {
         physical:VerifiedLoadStock?=stock)=CustomBlockTransitionLoadDomain.review(
             CustomBlockBaselineRequest(next,"main",history,physical),readiness,restricted)
 
+    private fun onMachine(day:CustomWorkoutDaySnapshot,machine:String?)=
+        day.copy(slots=day.slots.map{it.copy(machineInstanceId=machine)})
+
+    private fun performedOnMachine(
+        session:CustomCoachingHistoricalSession,machine:String?
+    )=session.copy(evidence=session.evidence.copy(
+        visits=session.evidence.visits.map{
+            it.copy(actual=it.actual?.copy(machineInstanceId=machine))
+        }))
+
+    @Test fun crossBlockAAndBRequireSameIssuedAndActuallyPerformedMachine() {
+        val oldA=onMachine(snapshot(loads=listOf(200,205)),"machine-a")
+        val prior=completed(oldA)
+        val actualA=performedOnMachine(prior,"machine-a")
+        val nextA=onMachine(snapshot(true,listOf(215,215)),"machine-a")
+        val allowed=review(nextA,listOf(actualA))
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,
+            allowed.status)
+        assertEquals(listOf(n(200),n(205)),allowed.sets.map{it.proposedLoad})
+        assertFalse(allowed.mayIssueWorkout)
+        assertFalse(allowed.mayApplyAutomatically)
+
+        val nextB=onMachine(nextA,"machine-b")
+        assertEquals(CustomBlockTransitionLoadStatus.BASELINE_UNAVAILABLE,
+            review(nextB,listOf(actualA)).status)
+        val mismatched=review(nextA,listOf(performedOnMachine(prior,"machine-b")))
+        assertEquals(CustomBlockTransitionLoadStatus.BASELINE_UNAVAILABLE,
+            mismatched.status)
+        assertEquals(CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
+            mismatched.reference.status)
+        assertTrue(mismatched.reference.explanation.contains("physical machine"))
+        assertNull(mismatched.proposedWorkout)
+        assertTrue(mismatched.sets.isEmpty())
+
+        // Even a matching ISSUE-station A without recorded performed-machine
+        // evidence is a legacy unknown, not verified machine A work.
+        val unknown=review(nextA,listOf(prior))
+        assertEquals(CustomBlockTransitionLoadStatus.BASELINE_UNAVAILABLE,
+            unknown.status)
+        assertNull(unknown.proposedWorkout)
+        val legacy=review(nextA,listOf(completed(snapshot())))
+        assertEquals(CustomBlockTransitionLoadStatus.BASELINE_UNAVAILABLE,
+            legacy.status)
+
+        // Exact unchanged recipe is still a read-only context reference
+        // when both the issued and PERFORMED station IDs agree.
+        val sameRecipe=onMachine(snapshot().copy(
+            absoluteWeek=5,weekInBlock=1,blockId="new-block"),"machine-a")
+        val reference=CustomBlockBaselineContinuityDomain.review(
+            CustomBlockBaselineRequest(sameRecipe,"main",
+                listOf(performedOnMachine(completed(oldA),"machine-a")),stock))
+        assertEquals(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
+            reference.status)
+        val validOld=onMachine(snapshot(),"machine-a")
+        val positive=CustomBlockBaselineContinuityDomain.review(
+            CustomBlockBaselineRequest(sameRecipe,"main",
+                listOf(performedOnMachine(completed(validOld),"machine-a")),stock))
+        assertEquals(CustomBlockBaselineStatus.VERIFIED_CONTEXT_ONLY,
+            positive.status)
+        assertFalse(positive.mayApplyProgression)
+    }
+
     @Test fun changedPhaseAndRecipeUsePerSetDemonstratedLoadsWithoutAnEarnedIncrease() {
         val previous=completed(snapshot(loads=listOf(200,205)))
         val original=snapshot(true,listOf(215,215))

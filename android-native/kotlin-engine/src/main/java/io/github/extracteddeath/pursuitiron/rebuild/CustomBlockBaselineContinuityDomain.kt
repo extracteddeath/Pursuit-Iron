@@ -127,9 +127,10 @@ object CustomBlockBaselineContinuityDomain {
             priorSlot.familyId!=nextSlot.familyId ||
             priorSlot.variantId!=nextSlot.variantId ||
             priorSlot.attachmentId!=nextSlot.attachmentId ||
+            priorSlot.machineInstanceId!=nextSlot.machineInstanceId ||
             priorSlot.role!=nextSlot.role)
             return refuse(CustomBlockBaselineStatus.EXERCISE_OR_VARIANT_CHANGED,
-                "The equipment variant, attachment, exercise role or identity changed.")
+                "The physical A/B machine, equipment variant, attachment, exercise role or identity changed; do not transfer this baseline.")
         if(old.stamp.gymId!=next.stamp.gymId ||
             old.stamp.gymCatalogSourceRevision!=next.stamp.gymCatalogSourceRevision ||
             old.stamp.athleteProfileRevision!=next.stamp.athleteProfileRevision)
@@ -199,6 +200,16 @@ object CustomBlockBaselineContinuityDomain {
                 return refuse(
                     CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
                     "The last workout did not finish all exact prescribed working sets.")
+            // A/B performed-set receipts must agree with the approved
+            // physical station; a legacy/unassigned receipt never proves A.
+            // The same logical exercise and stack do not grant transfer.
+            if(KotlinMachineAlternativesDomain.normalizeMachineId(
+                    actual.machineInstanceId)!=
+                KotlinMachineAlternativesDomain.normalizeMachineId(
+                    nextSlot.machineInstanceId))
+                return refuse(
+                    CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
+                    "The last working set was actually performed on a different or unassigned physical machine; establish a separate A/B baseline.")
             val inspected=EquipmentLoadDomain.inspect(stock,issued.value,issued.unit)
             if(stock.basis!=issued.basis || stock.unit!=issued.unit ||
                 inspected !is LoadInspection.Confirmed || !inspected.exact)

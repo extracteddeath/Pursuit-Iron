@@ -222,6 +222,45 @@ class CustomNextWorkoutCoachingDomainTest {
             legacy.nextSetSuggestions.map{it.proposedNextReps})
     }
 
+    @Test fun aBoundMachineWithoutExplicitOverrideNeverUsesLegacyProgression() {
+        fun tagged(session:CustomCoachingHistoricalSession,id:String)=
+            session.copy(evidence=session.evidence.copy(
+                visits=session.evidence.visits.map {
+                    it.copy(actual=it.actual?.copy(machineInstanceId=id))
+                }))
+        val b3=tagged(completed(1,3),"B")
+        val a4=tagged(completed(2,4),"A")
+        val a5=tagged(completed(3,5),"A")
+        val records=listOf(b3,a4,a5)
+        val base=snapshot(6)
+        val boundA=base.copy(slots=base.slots.map {
+            it.copy(machineInstanceId="A")
+        })
+        fun inspect(day:CustomWorkoutDaySnapshot,
+            selected:String?=null)=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(day,"main",records,
+                stock(),n(5),CoachReadiness.NORMAL,false,
+                requestedMachineInstanceId=selected))
+        val autoBound=inspect(boundA)
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            autoBound.status)
+        assertEquals(listOf("workout-4-0","workout-5-0"),
+            autoBound.comparedWorkoutIds)
+        assertEquals(n(205),autoBound.loadReviewCandidate)
+        assertFalse(autoBound.mayIssueWorkout)
+
+        val legacyUnknown=inspect(base)
+        assertEquals(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,
+            legacyUnknown.status)
+        assertNull(legacyUnknown.loadReviewCandidate)
+        // An explicit B choice starts its OWN thread even when the default
+        // physical station on the approved slot is A.
+        val overrideB=inspect(boundA,"B")
+        assertNull(overrideB.loadReviewCandidate)
+        assertNotEquals(listOf("workout-4-0","workout-5-0"),
+            overrideB.comparedWorkoutIds)
+    }
+
     @Test fun differentMachineStacksNeverCreateFalseStrengthDropOrBorrowProgression() {
         fun tagged(session:CustomCoachingHistoricalSession,id:String):
             CustomCoachingHistoricalSession =

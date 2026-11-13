@@ -53,6 +53,47 @@ class CustomSameBlockLoadContinuityDomainTest {
         CustomBlockBaselineRequest(next,"main",history,physical),
         readiness,restricted)
 
+    private fun onMachine(day:CustomWorkoutDaySnapshot,machine:String?)=
+        day.copy(slots=day.slots.map{it.copy(machineInstanceId=machine)})
+
+    private fun performedOnMachine(
+        session:CustomCoachingHistoricalSession,machine:String?
+    )=session.copy(evidence=session.evidence.copy(
+        visits=session.evidence.visits.map{
+            it.copy(actual=it.actual?.copy(machineInstanceId=machine))
+        }))
+
+    @Test fun sameBlockCannotBorrowOtherMachineOrUnknownPerformedSets() {
+        val oldA=onMachine(snapshot(2,listOf(25,30)),"A")
+        val nextA=onMachine(snapshot(3,listOf(40,45)),"A")
+        val observedA=performedOnMachine(completed(oldA),"A")
+        val permitted=review(nextA,listOf(observedA))
+        assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,
+            permitted.status)
+        assertEquals(listOf(n(25),n(30)),permitted.sets.map{it.proposedLoad})
+        assertFalse(permitted.mayApplyAutomatically)
+
+        val onB=review(onMachine(nextA,"B"),listOf(observedA))
+        assertEquals(CustomSameBlockLoadStatus.CHANGED_CONTEXT,onB.status)
+        assertNull(onB.proposedWorkout)
+        assertTrue(onB.explanation.contains("A/B"))
+
+        val actuallyB=review(nextA,listOf(performedOnMachine(
+            completed(oldA),"B")))
+        assertEquals(CustomSameBlockLoadStatus.PREVIOUS_WORKOUT_INCOMPLETE,
+            actuallyB.status)
+        assertTrue(actuallyB.sets.isEmpty())
+        assertNull(actuallyB.proposedWorkout)
+
+        val missingEvidence=review(nextA,listOf(completed(oldA)))
+        assertEquals(CustomSameBlockLoadStatus.PREVIOUS_WORKOUT_INCOMPLETE,
+            missingEvidence.status)
+        assertNull(missingEvidence.proposedWorkout)
+        val legacySlot=review(nextA,listOf(completed(snapshot(2,listOf(25,30)))))
+        assertEquals(CustomSameBlockLoadStatus.CHANGED_CONTEXT,
+            legacySlot.status)
+    }
+
     @Test fun lowerIssuedWeightsAreVisibleButNeverSilentlyIssued() {
         val result=review()
         assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,result.status)

@@ -24,7 +24,7 @@ import java.math.BigDecimal
  * actual RIR. Writes are serialized and executed off Main. Recovery reloads
  * the journal after any write rejection, never erasing a saved receipt.
  *
- * Not selected by the current production-facing MainActivity routes.
+ * Owned by NativeKotlinCandidateJourney, which MainActivity now launches.
  */
 internal data class NativeKotlinSessionState(
     val workoutId:String?=null,
@@ -41,7 +41,11 @@ internal class NativeKotlinSessionController(
 ):AutoCloseable {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private val pending=AtomicBoolean(false)
+    private val closed=AtomicBoolean(false)
     private val latestCoachRequest=AtomicLong(0)
+    // Invalidate callbacks from a previous controller lifecycle, including
+    // completions racing with close() or a newly selected workout.
+    private val generation=AtomicLong(0)
     private val mutable=MutableStateFlow(NativeKotlinSessionState())
     val state:StateFlow<NativeKotlinSessionState> = mutable.asStateFlow()
 
@@ -65,18 +69,51 @@ internal class NativeKotlinSessionController(
 
     private fun run(
         workoutId:String,operation:()->NativeJournalFileResult,
-        recoverOnReject:Boolean=false
+        recoverOnReject:Boolean=false,
+        hideUnverified:Boolean=false
     ) {
-        if(!pending.compareAndSet(false,true))return
-        mutable.value=mutable.value.copy(busy=true,
+        if(closed.get())return
+        if(!pending.compareAndSet(false,true)) {
+            // A new Open/Issue can arrive while the previous workout is still
+            // reading disk. Never let that old result become actionable after
+            // navigation. Do not overlap store transactions: show an explicit
+            // retry state for the requested workout instead.
+            if(hideUnverified) {
+                generation.incrementAndGet()
+                latestCoachRequest.incrementAndGet()
+                mutable.value=NativeKotlinSessionState(
+                    workoutId=workoutId,
+                    unavailableReason=NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+            }
+            return
+        }
+        if(closed.get()) {
+            pending.set(false)
+            return
+        }
+        val requestGeneration=generation.incrementAndGet()
+        // Opening or issuing is an authorization/recovery boundary. Never
+        // display a previous athlete/session's receipts while disk ownership
+        // and approval are being revalidated. In-session writes can keep
+        // their verified presentation visible under the busy lock.
+        mutable.value=if(hideUnverified)
+            NativeKotlinSessionState(workoutId=workoutId,busy=true)
+        else mutable.value.copy(busy=true,
             unavailableReason=null,journalRefusal=null)
+        if(closed.get()) {
+            mutable.value=NativeKotlinSessionState()
+            pending.set(false)
+            return
+        }
         scope.launch {
             try {
                 val result=operation()
+                if(closed.get() || generation.get()!=requestGeneration)return@launch
                 if(result is NativeJournalFileResult.Rejected && recoverOnReject) {
                     // A stale-revision rejection is not data loss. Reload the
                     // authoritative disk state; keep the refusal visible.
                     val current=host.recoverWorkout(workoutId)
+                    if(closed.get() || generation.get()!=requestGeneration)return@launch
                     accepted(workoutId,current,result.journalReason)
                     if(current is NativeJournalFileResult.Durable)
                         mutable.value=mutable.value.copy(
@@ -84,27 +121,51 @@ internal class NativeKotlinSessionController(
                 } else {
                     accepted(workoutId,result)
                 }
+            } catch(cancelled:CancellationException) {
+                throw cancelled
             } catch(_:Exception) {
-                mutable.value=mutable.value.copy(
-                    busy=false,unavailableReason=
-                        NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+                if(generation.get()!=requestGeneration)return@launch
+                // A failed disk read/write leaves the last in-memory journal
+                // unverified. Fail closed: do not allow another set edit or
+                // Finish against a possibly stale revision. The athlete can
+                // explicitly reopen and recover the authoritative receipt.
+                latestCoachRequest.incrementAndGet()
+                mutable.value=NativeKotlinSessionState(
+                    workoutId=workoutId,
+                    unavailableReason=NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
             } finally {
                 pending.set(false)
             }
         }
     }
 
+    private fun validWorkoutId(workoutId:String):Boolean =
+        workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
+
+    /** Invalid selections fail closed, never leaving a previous workout actionable. */
+    private fun rejectInvalidSelection(workoutId:String):Boolean {
+        if(validWorkoutId(workoutId))return false
+        if(closed.get())return true
+        // An invalid selection must revoke the old actionable session even
+        // when an asynchronous disk operation is still running. Its generation
+        // is invalidated so a late completion cannot restore the old athlete's
+        // workout after this refusal. The pending operation remains serialized.
+        generation.incrementAndGet()
+        latestCoachRequest.incrementAndGet()
+        mutable.value=NativeKotlinSessionState(
+            unavailableReason=NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return true
+    }
+
     /** Reading never issues a new workout. */
     fun open(workoutId:String) {
-        if(!workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")))
-            return
-        run(workoutId,{host.recoverWorkout(workoutId)})
+        if(rejectInvalidSelection(workoutId))return
+        run(workoutId,{host.recoverWorkout(workoutId)},hideUnverified=true)
     }
 
     /** Explicit action only; a valid persisted grant is required by store. */
     fun startApproved(workoutId:String) {
-        if(!workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")))
-            return
+        if(rejectInvalidSelection(workoutId))return
         run(workoutId,{
             when(val result=host.issueWorkout(workoutId)) {
                 is NativeKotlinIssueResult.Committed ->
@@ -118,7 +179,7 @@ internal class NativeKotlinSessionController(
                                 ?: NativeJournalFileRefusal.NOT_AUTHORIZED
                         })
             }
-        })
+        },hideUnverified=true)
     }
 
     fun record(
@@ -129,7 +190,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(journal.finishedByEventId!=null ||
+        if(prior.busy || journal.finishedByEventId!=null ||
             journal.snapshot.targets.none{it.setKey==setKey})return
         val existing=journal.effectiveSets[setKey]
         // An edit is a NEW correction event referencing the CURRENT receipt.
@@ -153,7 +214,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(journal.finishedByEventId!=null ||
+        if(prior.busy || journal.finishedByEventId!=null ||
             journal.snapshot.targets.none{it.exerciseId==previousExerciseId} ||
             journal.snapshot.targets.filter{
                 it.exerciseId==previousExerciseId
@@ -170,7 +231,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(journal.finishedByEventId!=null)return
+        if(prior.busy || journal.finishedByEventId!=null)return
         val eventId="undo-"+UUID.randomUUID()
         run(workoutId,{
             host.undoIssuedComposerExerciseSwap(workoutId,eventId,
@@ -188,7 +249,8 @@ internal class NativeKotlinSessionController(
     ) {
         val before=mutable.value
         val current=before.journal ?:return
-        if(before.busy || current.finishedByEventId!=null)return
+        if(closed.get() || before.busy || current.finishedByEventId!=null ||
+            current.snapshot.targets.none{it.setKey==setKey})return
         val workoutId=before.workoutId ?:return
         val observedRevision=current.revision
         val requestId=latestCoachRequest.incrementAndGet()
@@ -209,7 +271,8 @@ internal class NativeKotlinSessionController(
                 null
             }
             val state=mutable.value
-            if(latestCoachRequest.get()==requestId &&
+            if(!closed.get() &&
+                latestCoachRequest.get()==requestId &&
                 state.workoutId==workoutId &&
                 state.journal?.revision==observedRevision &&
                 !state.busy)
@@ -237,7 +300,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(!journal.canProposeFinish)return
+        if(prior.busy || !journal.canProposeFinish)return
         val operation=KotlinJournalOperation.Finish(
             "finish-"+UUID.randomUUID(),journal.revision)
         run(workoutId,{host.recordWorkoutOperation(workoutId,operation)},
@@ -245,12 +308,19 @@ internal class NativeKotlinSessionController(
     }
 
     fun clear() {
-        if(pending.get())return
+        if(closed.get())return
+        // Leaving the workout must immediately revoke the previous session,
+        // including an in-flight disk read/write or optional coaching review.
+        // The serialized operation may finish on disk, but its stale callback
+        // cannot repopulate the cleared UI.
+        generation.incrementAndGet()
         latestCoachRequest.incrementAndGet()
         mutable.value=NativeKotlinSessionState()
     }
 
     override fun close() {
+        if(!closed.compareAndSet(false,true))return
+        generation.incrementAndGet()
         latestCoachRequest.incrementAndGet()
         scope.cancel()
         mutable.value=NativeKotlinSessionState()

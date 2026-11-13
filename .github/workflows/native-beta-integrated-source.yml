@@ -30,6 +30,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
+      - name: Fail fast on Kotlin lifecycle and navigation source contracts
+        run: |
+          node android-native/kotlin-engine/verification/offline-only-test.mjs
+          node android-native/verification/kotlin-lab-navigation-test.mjs
+          node android-native/verification/kotlin-train-resume-test.mjs
+          node android-native/verification/native-beta-lifecycle-invariants-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify integrated Kotlin domains, coach persistence and Compose compilation
         working-directory: android-native
         run: >
@@ -70,13 +77,6 @@ jobs:
             android-native/kotlin-engine/build/reports/paired-functional*.json
           if-no-files-found: warn
           retention-days: 30
-      - name: Verify Kotlin-only ownership, lifecycle navigation and safe resume
-        run: |
-          node android-native/kotlin-engine/verification/offline-only-test.mjs
-          node android-native/verification/kotlin-lab-navigation-test.mjs
-          node android-native/verification/kotlin-train-resume-test.mjs
-          node android-native/verification/native-beta-lifecycle-invariants-test.mjs
-          node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Audit parity and superiority without assuming a pass
         run: |
           node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test

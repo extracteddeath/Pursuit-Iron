@@ -52,4 +52,14 @@ class DoubleProgressionLevelingDomainTest {
         assertFalse(review.mayModifyIssuedWorkout)
     }
 
+    @Test fun invalidBandAndAboveCeilingAreRejectedInsteadOfClamped() {
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.review(
+                facts("100","120"),RepBand(8,5),2,stock))
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.ABOVE_REP_CEILING),
+            DoubleProgressionLevelingDomain.review(
+                listOf(LevelingSetFact(n("100"),9,3),
+                    LevelingSetFact(n("120"),9,3)),band,2,stock))
+    }
+
 }

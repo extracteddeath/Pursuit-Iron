@@ -26,7 +26,6 @@ required(controller,[
   'if(prior.busy || journal.finishedByEventId!=null ||',
   'if(prior.busy || !journal.canProposeFinish)return',
   'journal.finishedByEventId!=null',
-  'if(!journal.canProposeFinish)return',
   'KotlinJournalOperation.Finish(',
   'recoverOnReject=true',
   'if(closed.get() || pending.get())return',

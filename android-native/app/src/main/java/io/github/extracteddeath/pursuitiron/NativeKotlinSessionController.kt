@@ -131,7 +131,11 @@ internal class NativeKotlinSessionController(
     /** Invalid selections fail closed, never leaving a previous workout actionable. */
     private fun rejectInvalidSelection(workoutId:String):Boolean {
         if(validWorkoutId(workoutId))return false
-        if(closed.get() || pending.get())return true
+        if(closed.get())return true
+        // An invalid selection must revoke the old actionable session even
+        // when an asynchronous disk operation is still running. Its generation
+        // is invalidated so a late completion cannot restore the old athlete's
+        // workout after this refusal. The pending operation remains serialized.
         generation.incrementAndGet()
         latestCoachRequest.incrementAndGet()
         mutable.value=NativeKotlinSessionState(

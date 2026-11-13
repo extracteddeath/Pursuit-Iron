@@ -24,7 +24,7 @@ import java.math.BigDecimal
  * actual RIR. Writes are serialized and executed off Main. Recovery reloads
  * the journal after any write rejection, never erasing a saved receipt.
  *
- * Not selected by the current production-facing MainActivity routes.
+ * Owned by NativeKotlinCandidateJourney, which MainActivity now launches.
  */
 internal data class NativeKotlinSessionState(
     val workoutId:String?=null,

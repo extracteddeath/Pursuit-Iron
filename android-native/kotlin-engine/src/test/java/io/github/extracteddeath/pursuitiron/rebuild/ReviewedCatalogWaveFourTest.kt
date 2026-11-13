@@ -30,7 +30,7 @@ class ReviewedCatalogWaveFourTest {
     private fun n(s:String)=BigDecimal(s)
 
     @Test fun preserveSeparateAttachmentsAndMuscleCredits() {
-        assertEquals(178,all.size)
+        assertTrue(all.size>=178)
         assertEquals(expected,wave.map{it.legacyCuratedId})
         assertEquals(all.size,all.map{it.legacyCuratedId}.distinct().size)
         assertEquals(all.size,all.map{

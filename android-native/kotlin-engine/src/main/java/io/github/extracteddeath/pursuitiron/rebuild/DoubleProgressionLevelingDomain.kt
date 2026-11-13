@@ -194,9 +194,12 @@ object DoubleProgressionLevelingDomain {
             .divide(BigDecimal(facts.size), 3, RoundingMode.HALF_UP)
         val inspection = EquipmentLoadDomain.inspect(verifiedStock, mean, verifiedStock.unit)
             as? LoadInspection.Confirmed ?: return reject(LevelingRefusal.UNVERIFIED_STOCK)
-        // A verified equipment inventory may include an unloaded zero. That
-        // is not a usable straight working-set load, even if numerically
-        // closer to the mean of a very light historical session.
+        // A verified inventory may include an unloaded zero. When no
+        // strictly positive load exists AT OR BELOW the historical mean,
+        // don't leap from a previous 3 lb session to a 10 lb machine minimum
+        // just to produce a candidate. Leave the current editor untouched.
+        if (inspection.atOrBelow?.let { it > BigDecimal.ZERO } != true)
+            return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         val choices = listOfNotNull(inspection.atOrBelow, inspection.nextAbove)
             .filter { it > BigDecimal.ZERO }
         // Match current-workout Leveling's midpoint policy: prefer the higher

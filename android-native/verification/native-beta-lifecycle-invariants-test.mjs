@@ -33,7 +33,7 @@ required(controller,[
   'latestCoachRequest.incrementAndGet()',
   'private val generation=AtomicLong(0)',
   'private val closed=AtomicBoolean(false)',
-  'if(closed.get() || !pending.compareAndSet(false,true))return',
+  'if(!pending.compareAndSet(false,true)) {',
   'if(!closed.compareAndSet(false,true))return',
   'val requestGeneration=generation.incrementAndGet()',
   'if(closed.get() || generation.get()!=requestGeneration)return@launch',
@@ -49,6 +49,21 @@ required(controller,[
   'run(workoutId,{host.recoverWorkout(workoutId)},hideUnverified=true)',
   '},hideUnverified=true)'
 ], 'Cold recovery and issuance must not expose unverified previous-session receipts');
+
+// A second Open/Issue while a prior workout is in-flight must revoke old
+// receipts, invalidate the previous callback and require an explicit retry.
+const pendingSelection=controller.slice(
+  controller.indexOf('if(!pending.compareAndSet(false,true)) {'),
+  controller.indexOf('val requestGeneration=generation.incrementAndGet()')
+);
+required(pendingSelection,[
+  'if(hideUnverified) {',
+  'generation.incrementAndGet()',
+  'latestCoachRequest.incrementAndGet()',
+  'NativeKotlinSessionState(',
+  'workoutId=workoutId',
+  'NativeJournalFileRefusal.STORAGE_UNAVAILABLE'
+], 'Concurrent navigation must fail closed rather than expose the old workout');
 
 // Invalid navigation must revoke stale receipts even while disk I/O is in flight.
 // A late callback must not re-enable the previously selected workout.

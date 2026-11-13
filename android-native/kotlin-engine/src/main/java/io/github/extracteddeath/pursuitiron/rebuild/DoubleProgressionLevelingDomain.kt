@@ -111,7 +111,7 @@ object DoubleProgressionLevelingDomain {
                 ?:return refuse(CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK)
         val rounded=listOfNotNull(inspection.atOrBelow,inspection.nextAbove)
             .filter{it>BigDecimal.ZERO}
-            .minWithOrNull(compareBy<BigDecimal>{it.subtract(mean).abs()}.thenBy{it})
+            .minWithOrNull(compareBy<BigDecimal>{it.subtract(mean).abs()}.thenByDescending{it})
                 ?:return refuse(CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD)
         return CurrentWorkoutLevelingReview.Ready(
             mean.stripTrailingZeros(),rounded,averageReps,eligible,working.size)

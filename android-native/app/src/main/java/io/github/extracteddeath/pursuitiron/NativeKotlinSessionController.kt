@@ -84,10 +84,17 @@ internal class NativeKotlinSessionController(
                 } else {
                     accepted(workoutId,result)
                 }
+            } catch(cancelled:CancellationException) {
+                throw cancelled
             } catch(_:Exception) {
-                mutable.value=mutable.value.copy(
-                    busy=false,unavailableReason=
-                        NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+                // A failed disk read/write leaves the last in-memory journal
+                // unverified. Fail closed: do not allow another set edit or
+                // Finish against a possibly stale revision. The athlete can
+                // explicitly reopen and recover the authoritative receipt.
+                latestCoachRequest.incrementAndGet()
+                mutable.value=NativeKotlinSessionState(
+                    workoutId=workoutId,
+                    unavailableReason=NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
             } finally {
                 pending.set(false)
             }

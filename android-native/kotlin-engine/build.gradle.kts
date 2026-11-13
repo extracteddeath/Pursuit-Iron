@@ -46,3 +46,13 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
+
+// Independent native generation showcase: runs Kotlin classes only, with
+// source-controlled fictional inputs and full audited output for inspection.
+tasks.register<JavaExec>("runKotlinOnlyProgramCycleShowcase") {
+    val tests=tasks.named<Test>("testDebugUnitTest")
+    dependsOn("compileDebugUnitTestKotlin","processDebugUnitTestJavaRes")
+    classpath=files(tests.map{it.classpath})
+    mainClass.set("io.github.extracteddeath.pursuitiron.rebuild.KotlinOnlyProgramCycleShowcase")
+    args(layout.buildDirectory.file("reports/kotlin-only-program-cycle-showcase.md").get().asFile.absolutePath)
+}

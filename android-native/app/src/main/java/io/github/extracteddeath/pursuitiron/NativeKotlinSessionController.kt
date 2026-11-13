@@ -86,15 +86,20 @@ internal class NativeKotlinSessionController(
             NativeKotlinSessionState(workoutId=workoutId,busy=true)
         else mutable.value.copy(busy=true,
             unavailableReason=null,journalRefusal=null)
+        if(closed.get()) {
+            mutable.value=NativeKotlinSessionState()
+            pending.set(false)
+            return
+        }
         scope.launch {
             try {
                 val result=operation()
-                if(generation.get()!=requestGeneration)return@launch
+                if(closed.get() || generation.get()!=requestGeneration)return@launch
                 if(result is NativeJournalFileResult.Rejected && recoverOnReject) {
                     // A stale-revision rejection is not data loss. Reload the
                     // authoritative disk state; keep the refusal visible.
                     val current=host.recoverWorkout(workoutId)
-                    if(generation.get()!=requestGeneration)return@launch
+                    if(closed.get() || generation.get()!=requestGeneration)return@launch
                     accepted(workoutId,current,result.journalReason)
                     if(current is NativeJournalFileResult.Durable)
                         mutable.value=mutable.value.copy(

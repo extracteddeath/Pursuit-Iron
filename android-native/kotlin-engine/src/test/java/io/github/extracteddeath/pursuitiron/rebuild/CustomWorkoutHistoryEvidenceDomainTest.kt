@@ -87,6 +87,35 @@ class CustomWorkoutHistoryEvidenceDomainTest {
         assertEquals(CustomWorkoutVisitPart.MAIN,facts.single().part)
     }
 
+    @Test fun forgedMachineIdInColdReplayedReceiptCannotBecomeProgressionHistory() {
+        val start=draft()
+        val first=accept(start,record("machine-main",0,main,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,12,2,"A")))
+        val second=accept(first,record("machine-follow",1,follow,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,6,2,"A")))
+        val finished=accept(second,CustomWorkoutJournalOperation.Finish(
+            "machine-finish",2))
+        val verified=CustomWorkoutHistoryEvidenceDomain.project(finished)
+        assertTrue(verified is CustomHistoryEvidenceResult.Candidate)
+        assertEquals(listOf("A","A"),
+            (verified as CustomHistoryEvidenceResult.Candidate)
+                .evidence.visits.map{it.actual?.machineInstanceId})
+
+        // A forged stored journal cannot claim a machine identity outside
+        // the canonical A/B namespace by changing a durable receipt.
+        val firstReceipt=finished.receipts.first()
+        val record=firstReceipt.operation as CustomWorkoutJournalOperation.Record
+        val forgedReceipt=firstReceipt.copy(operation=record.copy(
+            performed=record.performed?.copy(machineInstanceId="machine bad")))
+        val forged=finished.copy(receipts=listOf(forgedReceipt)+
+            finished.receipts.drop(1))
+        assertEquals(CustomHistoryEvidenceResult.Rejected(
+            CustomHistoryEvidenceRefusal.UNVERIFIED_JOURNAL),
+            CustomWorkoutHistoryEvidenceDomain.project(forged))
+    }
+
     @Test fun uncommittedOrMutatedReceiptsCannotBecomeHistoricalEvidence() {
         val initial=draft()
         assertEquals(CustomHistoryEvidenceResult.Rejected(

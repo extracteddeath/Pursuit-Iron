@@ -425,6 +425,51 @@ class CustomWorkoutJournalDomainTest {
             CustomWorkoutJournalDomain.reduce(restoreOriginal,reused))
     }
 
+    @Test fun malformedMachineIdsCannotBecomeCustomJournalReceiptsOrCorrections() {
+        val target=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("20"))
+        val source=initial(makeSet(load=target,amplifier=null))
+        val invalid=listOf("","A B","bad/slash","..","!".repeat(4),
+            "x".repeat(81),"machine-\u0000one")
+        for((index,station) in invalid.withIndex()) {
+            val decision=CustomWorkoutJournalDomain.reduce(source,
+                record("invalid-machine-$index",0,
+                    performed=KotlinPerformedSet(
+                        BigDecimal("20"),LoadUnit.LB,9,2,station)))
+            assertEquals("Unexpectedly accepted machine ID: $station",
+                CustomWorkoutJournalDecision.Rejected(
+                    CustomWorkoutJournalRefusal.INVALID_ACTUAL),decision)
+        }
+        // The same rule must fence post-finish-correctable receipts; it
+        // cannot be bypassed by changing the machine in a correction.
+        val saved=accept(source,record("valid-machine-1",0,
+            performed=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,
+                9,2,"gym-1:press-A")))
+        assertEquals(CustomWorkoutJournalDecision.Rejected(
+            CustomWorkoutJournalRefusal.INVALID_ACTUAL),
+            CustomWorkoutJournalDomain.reduce(saved,record(
+                "invalid-machine-fix",1,
+                performed=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,
+                    10,2,"invalid machine"),
+                correction="valid-machine-1")))
+        val corrected=accept(saved,record("valid-machine-fix",1,
+            performed=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,
+                10,2,"gym-1:press-B"),correction="valid-machine-1"))
+        assertEquals(target,corrected.snapshot.slots.single().sets.single()
+            .prescription.load)
+        assertEquals("gym-1:press-B",
+            (corrected.effectiveVisits.getValue(key(CustomWorkoutVisitPart.MAIN))
+                .operation as CustomWorkoutJournalOperation.Record)
+                .performed?.machineInstanceId)
+        val legacy=accept(source,record("legacy-machine",0,
+            performed=KotlinPerformedSet(BigDecimal("20"),
+                LoadUnit.LB,9,2,null)))
+        assertNull((legacy.effectiveVisits.getValue(
+            key(CustomWorkoutVisitPart.MAIN)).operation
+            as CustomWorkoutJournalOperation.Record)
+            .performed?.machineInstanceId)
+    }
+
     @Test fun machineSpecificManualLoadCorrectionNeverChangesCustomIssuedTarget() {
         val planned=DraftSetLoad.Verified(
             LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("20"))

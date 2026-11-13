@@ -586,12 +586,50 @@ assert.ok(journey.includes('var navigationTouched by rememberSaveable { mutableS
   journey.includes('currentUnfinishedGeneratedWorkoutId(host)') &&
   journey.includes('generatedId!=null'),
   'Cold start must route both custom and issued unfinished generated workouts to Train');
-assert.ok(journey.includes('private fun currentUnfinishedGeneratedWorkoutId(') &&
+assert.ok(journey.includes('internal fun currentUnfinishedGeneratedWorkoutId(') &&
   journey.includes('host.currentlyApprovedKotlinWorkoutId() ?:return null') &&
   journey.includes('val opened=host.recoverWorkout(id) as? NativeJournalFileResult.Durable') &&
   journey.includes('opened.journal.snapshot.workoutId==id') &&
   journey.includes('opened.journal.finishedByEventId==null'),
   'Generated resume is an owner-verified durable read only, not issuance or a saved UI shortcut');
+// Plan and Train now reuse the EXACT same independently authenticated
+// generated journal resume helper. This helper remains read-only: no
+// issuance or program edit may be needed for a navigation shortcut.
+assert.ok(plan.includes('NativeVerifiedGeneratedWorkoutResumeCard(') &&
+  plan.includes('currentUnfinishedGeneratedWorkoutId(host)') &&
+  plan.includes('onResume(id)') &&
+  plan.includes('onResumeGeneratedWorkout:(String)->Unit') &&
+  journey.includes('onResumeGeneratedWorkout={id->') &&
+  journey.includes('selectedGeneratedWorkoutId=id') &&
+  !plan.includes('host.issueWorkout('),
+  'Plan resume must recheck the current owned unfinished journal and reuse Train navigation, not issue another workout');
+
+// One shared, busy-fenced Minimize path for a generated workout and
+// Android Back. A completed session is not offered as unfinished Resume.
+assert.ok(journey.includes('fun minimizeGeneratedWorkout()') &&
+  journey.includes('BackHandler(enabled=customWorkoutId==null && selectedId!=null)') &&
+  journey.includes('minimizeGeneratedWorkout()') &&
+  journey.includes('onClick=::minimizeGeneratedWorkout') &&
+  journey.includes('if(!controller.state.value.busy)') &&
+  journey.includes('controller.state.value.presentation?.finished!=true') &&
+  journey.includes('workoutScreens.SaveableStateProvider("composer:$selectedId")') &&
+  !journey.includes('onClick={controller.clear()}'),
+  'Generated Back and Minimize must be one busy-fenced route that retains workout-specific drafts and prevents finished resume');
+
+assert.ok(liveWorkout.includes('BackHandler {') &&
+  liveWorkout.includes('if(!busy)onClose()') &&
+  liveWorkout.includes('TextButton(enabled=!busy,onClick=onClose)'),
+  'Custom Android Back and visible Minimize must both respect active journal writes');
+
+const composerWorkout=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+assert.ok(composerWorkout.includes('verifiedFinish)') &&
+  composerWorkout.includes('NativeComposerFinishHandoffResult.Verified') &&
+  composerWorkout.includes('Continue to my training plan') &&
+  composerWorkout.includes('onClick=onReturnToProgram') &&
+  journey.includes('onReturnToProgram={') &&
+  journey.includes('onReturnToProgram()'),
+  'The verified Finish experience must link to Plan, never bypass native History evidence');
+
 assert.ok(journey.includes('Resume your saved workout') &&
   journey.includes('resumableGeneratedId?.takeIf {') &&
   journey.includes('minimizedGeneratedId==null') &&

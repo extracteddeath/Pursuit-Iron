@@ -279,17 +279,15 @@ class DoubleProgressionLevelingDomainTest {
         val candidate=DoubleProgressionLevelingDomain.review(
             facts("2","4"),band,2,unloadedAndTen
         )
-        // A zero-only verified inventory has no positive working-set
-        // candidate. Never present an unloaded bar/machine as the answer.
+        // Neither an unloaded zero nor a giant jump to the next verified
+        // load is a suitable Leveling target for very light old records.
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
+            candidate)
         assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
             DoubleProgressionLevelingDomain.review(
                 facts("2","4"),band,2,
                 VerifiedLoadStock.Totals(
                     LoadUnit.LB,LoadBasis.SMITH_TOTAL,listOf(n("0")))))
-        assertTrue(candidate.toString(),candidate is LevelingReviewResult.Candidate)
-        assertEquals(n("10"),
-            (candidate as LevelingReviewResult.Candidate).proposedStraightSetLoad)
-        assertFalse(candidate.mayModifyIssuedWorkout)
     }
 
 }

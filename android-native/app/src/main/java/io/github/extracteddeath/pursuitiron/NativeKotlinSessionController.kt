@@ -41,6 +41,7 @@ internal class NativeKotlinSessionController(
 ):AutoCloseable {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private val pending=AtomicBoolean(false)
+    private val closed=AtomicBoolean(false)
     private val latestCoachRequest=AtomicLong(0)
     // Invalidate callbacks from a previous controller lifecycle, including
     // completions racing with close() or a newly selected workout.
@@ -71,7 +72,11 @@ internal class NativeKotlinSessionController(
         recoverOnReject:Boolean=false,
         hideUnverified:Boolean=false
     ) {
-        if(!pending.compareAndSet(false,true))return
+        if(closed.get() || !pending.compareAndSet(false,true))return
+        if(closed.get()) {
+            pending.set(false)
+            return
+        }
         val requestGeneration=generation.incrementAndGet()
         // Opening or issuing is an authorization/recovery boundary. Never
         // display a previous athlete/session's receipts while disk ownership
@@ -209,7 +214,7 @@ internal class NativeKotlinSessionController(
     ) {
         val before=mutable.value
         val current=before.journal ?:return
-        if(before.busy || current.finishedByEventId!=null)return
+        if(closed.get() || before.busy || current.finishedByEventId!=null)return
         val workoutId=before.workoutId ?:return
         val observedRevision=current.revision
         val requestId=latestCoachRequest.incrementAndGet()
@@ -266,12 +271,13 @@ internal class NativeKotlinSessionController(
     }
 
     fun clear() {
-        if(pending.get())return
+        if(closed.get() || pending.get())return
         latestCoachRequest.incrementAndGet()
         mutable.value=NativeKotlinSessionState()
     }
 
     override fun close() {
+        if(!closed.compareAndSet(false,true))return
         generation.incrementAndGet()
         latestCoachRequest.incrementAndGet()
         scope.cancel()

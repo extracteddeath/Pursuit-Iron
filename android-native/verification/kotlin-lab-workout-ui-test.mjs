@@ -82,6 +82,7 @@ const sessionRun=controller.slice(
 for(const required of [
   'private val generation=AtomicLong(0)',
   'private val closed=AtomicBoolean(false)',
+  'private val stateGate=Any()',
   'hideUnverified:Boolean=false',
   'if(!pending.compareAndSet(false,true)) {',
   'generation.incrementAndGet()',
@@ -99,6 +100,23 @@ for(const required of [
   'Generated workout must invalidate stale/unverified session state: '+required);
 assert.ok(!sessionRun.includes('busy=false,unavailableReason='),
   'Unknown storage failure must clear journal and presentation, not retain stale editable receipts');
+const acceptedPublication=controller.slice(
+  controller.indexOf('private fun accepted('),
+  controller.indexOf('private fun run('));
+assert.ok(acceptedPublication.includes('synchronized(stateGate)') &&
+  acceptedPublication.includes('generation.get()==requestGeneration') &&
+  acceptedPublication.includes('if(!closed.get() &&'),
+  'Durable recovered journal publication must be atomic with Close and Clear');
+assert.ok(sessionRun.includes('val requestGeneration=synchronized(stateGate)') &&
+  sessionRun.includes('synchronized(stateGate) {') &&
+  sessionRun.includes('accepted(workoutId,current,requestGeneration,'),
+  'Opening, late recoveries and disk-failure state must all pass the same session publication lock');
+const cleanup=controller.slice(controller.indexOf('fun clear()'));
+assert.ok(cleanup.includes('fun clear() {\n        synchronized(stateGate)') &&
+  cleanup.includes('override fun close() {\n        synchronized(stateGate)') &&
+  cleanup.includes('scope.cancel()'),
+  'Clear/Close must atomically invalidate pending journal writes and coaching callbacks');
+
 const saveAndFinish=controller.slice(
   controller.indexOf('fun record('),
   controller.indexOf('fun clear()'));

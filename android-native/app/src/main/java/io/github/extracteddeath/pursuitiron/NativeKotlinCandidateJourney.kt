@@ -46,7 +46,7 @@ private enum class KotlinCandidateDestination(val label:String) {
  * owner-fenced journal recovery, and the unfinished event are checked on
  * every cold start and again before a user-requested resume.
  */
-private fun currentUnfinishedGeneratedWorkoutId(
+internal fun currentUnfinishedGeneratedWorkoutId(
     host:NativeKotlinCandidateHost
 ):String? {
     val id=host.currentlyApprovedKotlinWorkoutId() ?:return null
@@ -353,6 +353,11 @@ internal fun NativeKotlinCandidateJourney(
                                 selectedCustomWorkoutId=id
                                 destination=KotlinCandidateDestination.TRAIN
                             },
+                            onResumeGeneratedWorkout={id->
+                                selectedCustomWorkoutId=null
+                                selectedGeneratedWorkoutId=id
+                                destination=KotlinCandidateDestination.TRAIN
+                            },
                             onOpenHistory={
                                 destination=KotlinCandidateDestination.HISTORY
                             },
@@ -514,6 +519,33 @@ private fun NativeKotlinCandidateTrainEntry(
     LaunchedEffect(generatedWorkoutId) {
         if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)
             selectedId=generatedWorkoutId
+    }
+    LaunchedEffect(customWorkoutId,sessionState.busy) {
+        // Switching into a custom session must not leave a generated logger
+        // behind it that unexpectedly reappears after custom Minimize.
+        // An in-flight journal write is never interrupted or cleared.
+        if(customWorkoutId!=null && selectedId!=null &&
+            !controller.state.value.busy) {
+            minimizedGeneratedId=selectedId
+            controller.clear()
+            selectedId=null
+            onClearGeneratedWorkout()
+        }
+    }
+    fun minimizeGeneratedWorkout() {
+        val openId=selectedId ?:return
+        if(!controller.state.value.busy) {
+            minimizedGeneratedId=openId
+            controller.clear()
+            selectedId=null
+            onClearGeneratedWorkout()
+        }
+    }
+    // Physical Android Back follows the SAME safe Minimize path as the
+    // visible action. Saved receipts are recovered, while unsubmitted
+    // editor drafts remain in the keyed SaveableStateHolder.
+    BackHandler(enabled=customWorkoutId==null && selectedId!=null) {
+        minimizeGeneratedWorkout()
     }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -916,16 +948,8 @@ private fun NativeKotlinCandidateTrainEntry(
                 horizontalArrangement=Arrangement.SpaceBetween) {
                 Text("Workout in progress",
                     style=MaterialTheme.typography.labelLarge)
-                TextButton(enabled=!sessionState.busy,onClick={
-                    // Never discard the active screen while a journal write is
-                    // in flight. This is a UI navigation action, not Finish.
-                    if(!controller.state.value.busy) {
-                        minimizedGeneratedId=selectedId
-                        controller.clear()
-                        selectedId=null
-                        onClearGeneratedWorkout()
-                    }
-                }) { Text("Minimize") }
+                TextButton(enabled=!sessionState.busy,
+                    onClick=::minimizeGeneratedWorkout) { Text("Minimize") }
             }
             Box(Modifier.weight(1f)) {
                 workoutScreens.SaveableStateProvider("composer:$selectedId") {

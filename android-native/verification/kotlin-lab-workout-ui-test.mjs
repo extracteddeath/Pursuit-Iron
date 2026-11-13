@@ -714,10 +714,31 @@ for(const required of [
   'levelWeight=prior.proposedStraightSetLoad',
   'unfinished.forEach { set->',
   'levelVersion++',
-  'Nothing is saved by this review.',
-  'Log each actual as usual.'
+  'PursuitPreviousWorkoutLevelingDialog(',
+  'onApply={',
+  'observed=observed',
+  'onDismiss={showPriorLeveling=false}'
 ]) assert.ok(priorLeveling.includes(required),
   'Prior-session Leveling must be explicit, same-machine and draft-only: '+required);
 assert.ok(priorLeveling.includes(
   'referenceMode==WorkoutReferenceMode.LAST || showPriorLeveling'),
   'Prior-session Leveling must read source-verified Last even when Target is selected');
+
+const m3eLeveling=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
+for(const phrase of [
+  'internal fun PursuitPreviousWorkoutLevelingDialog(',
+  'review:LevelingReviewResult',
+  'observed:List<KotlinPerformedSet>',
+  'Modifier.fillMaxWidth().verticalScroll(rememberScrollState())',
+  'actual.actualRir?.let',
+  'RIR not reported',
+  'candidate.averageObservedLoad.stripTrailingZeros()',
+  'candidate.proposedStraightSetLoad.stripTrailingZeros()',
+  'if(actionable) Button(',
+  'onClick=onApply,enabled=!busy',
+  'Modifier.heightIn(min=48.dp)',
+  '"Keep existing values"',
+  'future workouts do not change.',
+  'Log what you actually perform.'
+]) assert.ok(m3eLeveling.includes(phrase),
+  'The shared M3 Expressive Leveling dialog needs accessible, honest, source-visible UI: '+phrase);

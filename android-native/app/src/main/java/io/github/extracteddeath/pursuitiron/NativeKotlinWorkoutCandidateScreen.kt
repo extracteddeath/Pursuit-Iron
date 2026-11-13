@@ -597,20 +597,17 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         it.target.reps==first.reps &&
                             it.target.targetRir==first.targetRir
                     }
-                    val priorReview=if(sameGoal)
-                        DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
-                            currentSets=workingSets.map { set->
-                                WorkoutReferenceKey(set.target.setKey) to set.target.load
-                            },
-                            previous=physicalMachineLastReferences(
-                                lastReferences,currentMachine),
-                            machineInstanceId=currentMachine,
-                            repBand=first.reps,
-                            goalRir=requireNotNull(first.targetRir),
-                            verifiedStock=levelingStock
-                        )
-                    else LevelingReviewResult.Rejected(
-                        LevelingRefusal.INCOMPLETE_OR_INVALID)
+                    val priorReview=rememberPriorWorkoutLevelingReview(
+                        currentSets=workingSets.map { set->
+                            WorkoutReferenceKey(set.target.setKey) to set.target.load
+                        },
+                        previous=physicalMachineLastReferences(
+                            lastReferences,currentMachine),
+                        machineInstanceId=currentMachine,
+                        repBand=first.reps.takeIf{sameGoal},
+                        goalRir=first.targetRir?.takeIf{sameGoal},
+                        verifiedStock=levelingStock
+                    )
                     val prior=priorReview as? LevelingReviewResult.Candidate
                     val unfinished=workingSets.filterNot{it.isResolved}
                     // The previous observations are only displayed after the

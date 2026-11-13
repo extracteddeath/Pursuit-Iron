@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
 internal enum class WorkoutReferenceMode { TARGET,LAST }
@@ -39,8 +40,18 @@ internal fun rememberWorkoutLastReferences(
     }
     LaunchedEffect(host,workoutId,custom,enabled) {
         result=null
-        if(enabled)result=withContext(Dispatchers.IO) {
-            host.reviewWorkoutLastReferences(workoutId,custom)
+        if(enabled)result=try {
+            withContext(Dispatchers.IO) {
+                host.reviewWorkoutLastReferences(workoutId,custom)
+            }
+        } catch(cancelled:CancellationException) {
+            // A disposed workout must never publish a late previous-session
+            // result or suppress coroutine cancellation.
+            throw cancelled
+        } catch(_:Exception) {
+            // Last/Leveling is optional display evidence, not a journal owner.
+            // Failed storage reads cannot crash or silently edit an active set.
+            WorkoutLastReferenceResult.Unavailable
         }
     }
     return if(enabled)result else null

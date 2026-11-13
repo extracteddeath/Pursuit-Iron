@@ -38,6 +38,25 @@ jobs:
           :domain-contract:testDebugUnitTest
           :app:compileDebugKotlin
           --no-daemon --stacktrace
+      - name: Check out frozen web engine for actual matched executions
+        uses: actions/checkout@v4
+        with:
+          ref: 903b4a78564590d8983e651cbe19d81acd1efb9c
+          path: comparison-legacy
+      - name: Execute matched web and Kotlin progression and equipment probes
+        run: |
+          node android-native/kotlin-engine/verification/run-paired-progression.mjs --legacy-root comparison-legacy --check-current
+          node android-native/kotlin-engine/verification/run-paired-functional.mjs --legacy-root comparison-legacy --check-current
+      - name: Preserve fresh paired raw engine outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-beta-fresh-web-kotlin-pairs
+          path: |
+            android-native/kotlin-engine/build/reports/paired-progression*.json
+            android-native/kotlin-engine/build/reports/paired-functional*.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Verify Kotlin-only ownership, lifecycle navigation and safe resume
         run: |
           node android-native/kotlin-engine/verification/offline-only-test.mjs

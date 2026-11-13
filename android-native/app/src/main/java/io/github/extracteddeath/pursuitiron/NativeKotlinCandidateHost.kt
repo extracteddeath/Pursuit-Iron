@@ -2587,8 +2587,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             revisionFence.withOwnerTransaction(owner.ownerKey) {
                 if(localAthlete.signedInIdentity()!=owner)
                     return@withOwnerTransaction null
-                val stored=trackedWorkout.open(
-                    owner.ownerKey,owner.athleteId,workoutId)
+                val stored=coordinator.open(owner.ownerKey,workoutId)
                     as? NativeJournalFileResult.Durable
                     ?:return@withOwnerTransaction null
                 val journal=stored.journal

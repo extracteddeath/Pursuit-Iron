@@ -51,7 +51,7 @@ required(exceptionHandler,[
   'workoutId=workoutId',
   'NativeJournalFileRefusal.STORAGE_UNAVAILABLE'
 ], 'Unverified storage exception must fail closed and invalidate live coaching');
-assert.doesNotMatch(exceptionHandler,/mutable\\.value=mutable\\.value\\.copy\\(/,
+assert.ok(!exceptionHandler.includes('mutable.value=mutable.value.copy('),
   'Do not retain actionable journal and presentation after an unknown disk failure');
 
 required(workout,[

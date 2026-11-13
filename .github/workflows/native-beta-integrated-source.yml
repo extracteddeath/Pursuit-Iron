@@ -48,6 +48,43 @@ jobs:
         run: |
           node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test
           node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --audit --write-report
+      - name: Publish truthful superiority evidence summary
+        if: always()
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = 'android-native/kotlin-engine/reports/engine-superiority-audit.json';
+          const output = process.env.GITHUB_STEP_SUMMARY;
+          if (!fs.existsSync(path)) {
+            fs.appendFileSync(output, '## Engine evidence audit\\n\\nNo audit report was produced; superiority is unverified.\\n');
+            process.exit(0);
+          }
+          const audit = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const rows = [
+            '## Engine evidence audit',
+            '',
+            '| Field | Measured status |',
+            '| --- | --- |',
+            '| Verdict | ' + String(audit.verdict) + ' |',
+            '| Completed paired proofs | ' + String(audit.completedPairs) + ' / ' + String(audit.requiredPairs) + ' |',
+            '| Missing paired proofs | ' + String(audit.missingPairs) + ' |',
+            '| Demonstrated improvement domains | ' + String((audit.improvedDomains || []).length) + ' |',
+            '| Open blockers | ' + String((audit.blockers || []).length) + ' |',
+            '',
+            'A green source gate is **not** a parity, device-readiness, or superiority certificate.',
+            ''
+          ];
+          fs.appendFileSync(output, rows.join('\\n'));
+          NODE
+      - name: Preserve superiority audit for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-beta-superiority-audit
+          path: android-native/kotlin-engine/reports/engine-superiority-audit.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Enforce absence of legacy runtime on app release classpath
         working-directory: android-native
         shell: bash

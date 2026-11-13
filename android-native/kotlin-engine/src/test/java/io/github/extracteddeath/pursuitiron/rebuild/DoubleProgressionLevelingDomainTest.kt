@@ -249,6 +249,15 @@ class DoubleProgressionLevelingDomainTest {
                 currentKeys(),priorSession(loads,rirFor={
                     if(it==2)1 else 3
                 }),null,band,2,stock))
+        // A verified cable stack with the same numeric weights is not
+        // authority to Level a Smith exercise, even in the same unit.
+        val wrongEquipment=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.CABLE_STACK,
+            listOf("100","105","110","115","120","125","130").map(::n))
+        assertEquals(LevelingReviewResult.Rejected(
+            LevelingRefusal.UNVERIFIED_STOCK),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),priorSession(loads),null,band,2,wrongEquipment))
     }
 
 }

@@ -42,6 +42,9 @@ internal class NativeKotlinSessionController(
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private val pending=AtomicBoolean(false)
     private val latestCoachRequest=AtomicLong(0)
+    // Invalidate callbacks from a previous controller lifecycle, including
+    // completions racing with close() or a newly selected workout.
+    private val generation=AtomicLong(0)
     private val mutable=MutableStateFlow(NativeKotlinSessionState())
     val state:StateFlow<NativeKotlinSessionState> = mutable.asStateFlow()
 
@@ -69,6 +72,7 @@ internal class NativeKotlinSessionController(
         hideUnverified:Boolean=false
     ) {
         if(!pending.compareAndSet(false,true))return
+        val requestGeneration=generation.incrementAndGet()
         // Opening or issuing is an authorization/recovery boundary. Never
         // display a previous athlete/session's receipts while disk ownership
         // and approval are being revalidated. In-session writes can keep
@@ -80,10 +84,12 @@ internal class NativeKotlinSessionController(
         scope.launch {
             try {
                 val result=operation()
+                if(generation.get()!=requestGeneration)return@launch
                 if(result is NativeJournalFileResult.Rejected && recoverOnReject) {
                     // A stale-revision rejection is not data loss. Reload the
                     // authoritative disk state; keep the refusal visible.
                     val current=host.recoverWorkout(workoutId)
+                    if(generation.get()!=requestGeneration)return@launch
                     accepted(workoutId,current,result.journalReason)
                     if(current is NativeJournalFileResult.Durable)
                         mutable.value=mutable.value.copy(
@@ -94,6 +100,7 @@ internal class NativeKotlinSessionController(
             } catch(cancelled:CancellationException) {
                 throw cancelled
             } catch(_:Exception) {
+                if(generation.get()!=requestGeneration)return@launch
                 // A failed disk read/write leaves the last in-memory journal
                 // unverified. Fail closed: do not allow another set edit or
                 // Finish against a possibly stale revision. The athlete can
@@ -265,6 +272,7 @@ internal class NativeKotlinSessionController(
     }
 
     override fun close() {
+        generation.incrementAndGet()
         latestCoachRequest.incrementAndGet()
         scope.cancel()
         mutable.value=NativeKotlinSessionState()

@@ -3524,6 +3524,426 @@
         "attachment": null,
         "note": "Upright dumbbell rows use real per-hand resistance; barbell rows and shoulder raises must not donate history."
       }
+    },
+    {
+      "id": "inv-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "horizontal_row",
+        "variant": "inverted-rack-bodyweight",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.5"
+        ],
+        "attachment": null,
+        "note": "A stable low-bar rack is required. Unweighted inverted rows preserve independent history and use conservative upper-back/lat credits."
+      }
+    },
+    {
+      "id": "chinup",
+      "source": {
+        "movementFamily": "vertical_pull",
+        "equipment": [
+          "pullup"
+        ],
+        "practicalReps": [
+          6,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "vertical_pull",
+        "variant": "underhand-bodyweight",
+        "pattern": "VERTICAL_PULL",
+        "role": "PRIMARY",
+        "focus": "pull",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "pullup-bar"
+        ],
+        "direct": "LATS",
+        "indirect": [
+          "BICEPS:0.5"
+        ],
+        "attachment": null,
+        "note": "Unweighted underhand chin-up needs a real pull-up bar. Assisted or weighted versions cannot borrow its bodyweight performance or exercise identity."
+      }
+    },
+    {
+      "id": "dips-chest",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "dip"
+        ],
+        "practicalReps": [
+          6,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bodyweight-dip",
+        "variant": "forward-leaning-chest",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "dip-station"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.5",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Bodyweight chest dip requires a stable dip station and distinct chest-focused history; added plates and assisted machines are not assumed."
+      }
+    },
+    {
+      "id": "dips-tri",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "dip"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bodyweight-dip",
+        "variant": "upright-triceps",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "dip-station"
+        ],
+        "direct": "TRICEPS",
+        "indirect": [
+          "CHEST:0.25"
+        ],
+        "attachment": null,
+        "note": "Upright bodyweight triceps dip is a separate exercise from chest dips. No loading is transferred between dip styles or machines."
+      }
+    },
+    {
+      "id": "hanging-raise",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "pullup"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "hanging-straight-leg",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "pullup-bar"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Hanging straight-leg raise uses an actual pull-up bar, with no assumed external load or invented hip-flexor volume credit."
+      }
+    },
+    {
+      "id": "hanging-knee",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "pullup"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "hanging-bent-knee",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "pullup-bar"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Hanging bent-knee raises are distinct from straight-leg raises and toes-to-bar. Only counted completed reps are credited."
+      }
+    },
+    {
+      "id": "toes-to-bar",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "pullup"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "strict-toes-to-bar",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "pullup-bar"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Strict bodyweight toes-to-bar requires a verified bar and its own exercise baseline, not transferred hanging-knee performance."
+      }
+    },
+    {
+      "id": "russian-twist",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_rotation",
+        "variant": "seated-unweighted",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Only unweighted repetitions are represented; weighted twists require a separately specified implement and loading convention."
+      }
+    },
+    {
+      "id": "v-up",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "vup-unweighted",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Unweighted V-ups have a separate exercise ID and rep history from other abdominal movements; no fictitious resistance."
+      }
+    },
+    {
+      "id": "sissy-squat",
+      "source": {
+        "movementFamily": "knee_extension",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_extension",
+        "variant": "sissy-bodyweight",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Bodyweight sissy squat is a distinct knee-extension accessory, not evidence for barbell or machine squat progression."
+      }
+    },
+    {
+      "id": "ghr",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          6,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_flexion",
+        "variant": "glute-ham-raise-unweighted",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "glute-ham-developer"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Glute-ham raises require a real GHD station. Counts only bodyweight repetitions; no invented stack or Nordic-curl equivalence."
+      }
+    },
+    {
+      "id": "reverse-hyper",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "reversehyper"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "reverse-hyper-station",
+        "pattern": "HINGE",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "reverse-hyper-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "GLUTES",
+        "indirect": [
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Reverse hyperextension requires its own verified physical machine scale. Never reuse leg-curl, hip-thrust or back-extension loads."
+      }
+    },
+    {
+      "id": "leg-press-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "legpress"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "leg-press-calf-press",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "leg-press-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Calf raises on a leg press use its verified physical station but maintain separate calf-press exercise progression from full leg presses."
+      }
+    },
+    {
+      "id": "donkey-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "calfmachine"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "donkey-calf-machine",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "donkey-calf-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Donkey calf raises require a dedicated calibrated machine. No load transfer from standing or seated calf machines."
+      }
     }
   ]
 }

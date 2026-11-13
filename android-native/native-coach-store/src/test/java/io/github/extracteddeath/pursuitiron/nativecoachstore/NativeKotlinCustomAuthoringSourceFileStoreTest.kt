@@ -192,9 +192,12 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
 
     @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
-        // Saved identities are append-only: the first 42 retain their
-        // exact ordinal/source IDs while the seven new variants follow.
-        assertEquals(164,starter.catalog.size)
+        // Saving a reviewed catalog must preserve the entire current
+        // append-only source inventory, not silently truncate to the
+        // historical 164-ID snapshot. Older ordinal IDs remain stable.
+        assertTrue(starter.catalog.size>=178)
+        assertEquals(StarterExerciseTranche.movements().map{it.exerciseId},
+            starter.catalog.map{it.exerciseId})
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",
@@ -246,7 +249,15 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             "pallof","woodchopper","zottman-curl","tate-press",
             "tricep-kickback","renegade-row","reverse-lunge",
             "curtsy-lunge","db-upright-row"
-        ),starter.catalog.drop(146).map{it.exerciseId})
+        ),starter.catalog.drop(146).take(18).map{it.exerciseId})
+        // The fifth expansion is appended after all older source IDs;
+        // neither existing histories nor machine identities are renumbered.
+        assertEquals(listOf(
+            "inv-row","chinup","dips-chest","dips-tri",
+            "hanging-raise","hanging-knee","toes-to-bar",
+            "russian-twist","v-up","sissy-squat","ghr",
+            "reverse-hyper","leg-press-calf","donkey-calf"
+        ),starter.catalog.drop(164).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)

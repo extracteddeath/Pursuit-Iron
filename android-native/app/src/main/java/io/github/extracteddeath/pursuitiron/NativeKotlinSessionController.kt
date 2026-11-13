@@ -72,7 +72,21 @@ internal class NativeKotlinSessionController(
         recoverOnReject:Boolean=false,
         hideUnverified:Boolean=false
     ) {
-        if(closed.get() || !pending.compareAndSet(false,true))return
+        if(closed.get())return
+        if(!pending.compareAndSet(false,true)) {
+            // A new Open/Issue can arrive while the previous workout is still
+            // reading disk. Never let that old result become actionable after
+            // navigation. Do not overlap store transactions: show an explicit
+            // retry state for the requested workout instead.
+            if(hideUnverified) {
+                generation.incrementAndGet()
+                latestCoachRequest.incrementAndGet()
+                mutable.value=NativeKotlinSessionState(
+                    workoutId=workoutId,
+                    unavailableReason=NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+            }
+            return
+        }
         if(closed.get()) {
             pending.set(false)
             return

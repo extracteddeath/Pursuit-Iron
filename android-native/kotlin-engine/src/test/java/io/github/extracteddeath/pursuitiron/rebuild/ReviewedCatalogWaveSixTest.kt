@@ -113,6 +113,19 @@ class ReviewedCatalogWaveSixTest {
             all.single{it.legacyCuratedId=="drag-curl"}
                 .movement.credits.filter{it.role==MuscleCreditRole.DIRECT}
                 .map{it.muscle}.toSet())
+        for(id in listOf("box-squat","cyclist-squat","zercher-squat")) {
+            val movement=all.single{it.legacyCuratedId==id}.movement
+            assertEquals("heavy-squat",movement.recoveryGroupId)
+            assertEquals(2,movement.minimumRecoveryGroupDayGap)
+        }
+        for(id in listOf("smith-ohp","push-press","z-press","bradford-press")) {
+            assertEquals("heavy-vertical-press",
+                all.single{it.legacyCuratedId==id}.movement.recoveryGroupId)
+        }
+        for(id in listOf("hip-thrust","smith-hip-thrust")) {
+            assertEquals("heavy-hip-thrust",
+                all.single{it.legacyCuratedId==id}.movement.recoveryGroupId)
+        }
     }
 
     @Test fun unweightedMovementsNeverAssumeMachineOrPlateResistance() {

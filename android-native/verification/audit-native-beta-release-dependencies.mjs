@@ -19,6 +19,9 @@ function audit(report) {
     'Missing resolved releaseRuntimeClasspath report');
   assert.ok(!/No dependencies|FAILED to resolve/i.test(report),
     'Release dependency resolution is empty or failed');
+  assert.ok(report.split(/\\r?\\n/).some(line=>
+    /(?:\\+---|\\\\---)\\s+(?:project :|[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+:)/.test(line)),
+    'Resolved release classpath must contain actual Gradle dependency entries');
   const lines=report.split(/\r?\n/);
   const hits=[];
   for(const line of lines) {
@@ -47,6 +50,8 @@ function selfTest() {
     'project :engine-bridge',
     'androidx.javascriptengine:javascriptengine:1.1.1',
     'org.mozilla:rhino:1.7',
+    'org.graalvm.js:js:24.0',
+    'com.eclipsesource.j2v8:j2v8:1.0',
     'org.graalvm.polyglot:js:24.0',
     'com.squareup.duktape:duktape-android:1.0'
   ]) {

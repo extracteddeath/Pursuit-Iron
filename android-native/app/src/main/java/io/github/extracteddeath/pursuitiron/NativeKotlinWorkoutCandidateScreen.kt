@@ -57,8 +57,8 @@ private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {
 /**
  * Complete Kotlin-only Compose workout candidate. Its data and actions come
  * from the native revision-checked session controller, not the existing JS
- * runtime. Deliberately NOT selected from MainActivity yet: the authenticated
- * onboarding/program-approval migration is the next cutover gate.
+ * runtime. Reached through the Kotlin-owned journey selected by MainActivity.
+ * Historical JS data import remains a separate owner-verified migration.
  */
 @Composable
 internal fun NativeKotlinWorkoutCandidateScreen(

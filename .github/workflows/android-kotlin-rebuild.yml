@@ -140,6 +140,7 @@ jobs:
       - name: Verify focused editable Kotlin workout logging
         run: |
           node android-native/verification/kotlin-lab-workout-ui-test.mjs
+          node android-native/verification/kotlin-custom-prior-leveling-test.mjs
           node android-native/verification/kotlin-pinned-exercise-notes-test.mjs
           node android-native/verification/kotlin-pinned-setup-fields-test.mjs
           node android-native/verification/kotlin-custom-session-note-test.mjs

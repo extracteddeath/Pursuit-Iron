@@ -39,7 +39,9 @@ object DoubleProgressionLevelingDomain {
             facts.any { it.load <= BigDecimal.ZERO || it.reps <= 0 ||
                 it.actualRir != null && it.actualRir !in 0..10 })
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
-        if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)\n            return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)\n        if (facts.any { it.reps < repBand.minimum || it.reps > repBand.maximum })
+        if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)
+            return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
+        if (facts.any { it.reps < repBand.minimum || it.reps > repBand.maximum })
             return reject(LevelingRefusal.BELOW_REP_FLOOR)
         if (facts.any { it.actualRir != null && it.actualRir < goalRir })
             return reject(LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE)

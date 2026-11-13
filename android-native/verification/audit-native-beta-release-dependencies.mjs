@@ -30,14 +30,21 @@ function audit(report) {
     // avoiding unrelated explanatory prose.
     const entry=line.match(/(?:\+---|\\---)\s+(.+)$/)?.[1];
     if(!entry)continue;
+    // Gradle may annotate resolved entries with (*) or substitute a
+    // requested coordinate using " -> ". Check both requested and selected
+    // module identities; never silently accept a JS runtime after resolution.
     const identity=entry.trim();
-    for(const project of forbiddenProjects) {
-      if(new RegExp('^project :'+project+'(?:\\s|$)').test(identity))
-        hits.push(identity);
-    }
-    for(const module of forbiddenModules) {
-      if(identity===module || identity.startsWith(module+':'))
-        hits.push(identity);
+    const selected=identity.includes(' -> ') ? identity.split(' -> ').at(-1).trim() : identity;
+    const candidates=[identity,selected];
+    for(const candidate of candidates) {
+      for(const project of forbiddenProjects) {
+        if(new RegExp('^project :'+project+'(?:\\s|$)').test(candidate))
+          hits.push(identity);
+      }
+      for(const module of forbiddenModules) {
+        if(candidate===module || candidate.startsWith(module+':'))
+          hits.push(identity);
+      }
     }
   }
   return [...new Set(hits)];

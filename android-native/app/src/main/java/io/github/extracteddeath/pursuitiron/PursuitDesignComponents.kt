@@ -22,6 +22,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinPerformedSet
+import io.github.extracteddeath.pursuitiron.rebuild.LevelingReviewResult
+import io.github.extracteddeath.pursuitiron.rebuild.LevelingRefusal
 
 /**
  * Shared Material 3 presentation primitives. These contain NO training
@@ -425,4 +428,108 @@ internal fun PursuitResponsiveActionPair(
             }
         }
     }
+}
+
+
+/** One Material 3 Expressive review surface shared by generated and custom plans.
+ * The caller supplies source-verified previous observations and an independent
+ * Kotlin domain decision. This composable owns NO training math, future targets,
+ * coaching state or journal writes. At high font scales the facts scroll while
+ * both confirmation actions retain their 48dp minimum touch target.
+ */
+@Composable
+internal fun PursuitPreviousWorkoutLevelingDialog(
+    review:LevelingReviewResult,
+    historyLoading:Boolean,
+    goalComparable:Boolean,
+    stationValid:Boolean,
+    loadUnit:String,
+    observed:List<KotlinPerformedSet>,
+    unfinishedCount:Int,
+    busy:Boolean,
+    onApply:()->Unit,
+    onDismiss:()->Unit
+) {
+    val candidate=review as? LevelingReviewResult.Candidate
+    val actionable=candidate!=null && !historyLoading &&
+        goalComparable && stationValid && unfinishedCount>0
+    AlertDialog(
+        onDismissRequest=onDismiss,
+        title={Text("Leveling · previous workout")},
+        text={
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)
+            ) {
+                when {
+                    historyLoading ->
+                        Text("Verifying the last completed workout and physical machine…")
+                    !stationValid ->
+                        Text("Select a confirmed, active machine before using previous sets.")
+                    !goalComparable ->
+                        Text("Working sets need the same rep range and target RIR for this review.")
+                    candidate!=null -> {
+                        Text("Your previous actual working sets",
+                            style=MaterialTheme.typography.titleSmall)
+                        observed.forEachIndexed { index,actual->
+                            val actualLoad=actual.load?.stripTrailingZeros()
+                                ?.toPlainString() ?: "—"
+                            val effort=actual.actualRir?.let{ "RIR $it" }
+                                ?: "RIR not reported"
+                            Text("Set ${index+1} · $actualLoad $loadUnit × "+
+                                "${actual.reps} · $effort",
+                                style=MaterialTheme.typography.bodyMedium)
+                        }
+                        HorizontalDivider()
+                        Text("Recorded mean: "+
+                            candidate.averageObservedLoad.stripTrailingZeros()
+                                .toPlainString()+" $loadUnit",
+                            style=MaterialTheme.typography.bodyMedium)
+                        Text("Verified starting point: "+
+                            candidate.proposedStraightSetLoad.stripTrailingZeros()
+                                .toPlainString()+" $loadUnit × "+
+                            candidate.repsPerSet+" · "+
+                            unfinishedCount+" unfinished working set(s)",
+                            style=MaterialTheme.typography.titleMedium)
+                        Text(candidate.note,
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    else -> Text(when((review as LevelingReviewResult.Rejected).reason) {
+                        LevelingRefusal.UNVERIFIED_STOCK ->
+                            "Confirm this gym's machine stack, plates or valid weight increments."
+                        LevelingRefusal.ALREADY_LEVEL ->
+                            "The last workout already used one working weight."
+                        LevelingRefusal.BELOW_REP_FLOOR,
+                        LevelingRefusal.ABOVE_REP_CEILING,
+                        LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE ->
+                            "Previous actual reps or reported RIR do not support Leveling within this goal."
+                        LevelingRefusal.NO_SUPPORTED_CANDIDATE ->
+                            "There is no verified equipment load near that average."
+                        else ->
+                            "No complete, comparable previous set sequence was verified for this workout day and machine."
+                    })
+                }
+                Text("This is an optional unsaved prefill. Your issued sets, "+
+                    "training history, RIR entries and future workouts do not change. "+
+                    "Log what you actually perform.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton={
+            if(actionable) Button(
+                onClick=onApply,enabled=!busy,
+                modifier=Modifier.heightIn(min=48.dp)
+            ) { Text("Prefill unfinished sets") }
+            else TextButton(
+                onClick=onDismiss,modifier=Modifier.heightIn(min=48.dp)
+            ) { Text("Close") }
+        },
+        dismissButton={
+            if(actionable) TextButton(
+                onClick=onDismiss,modifier=Modifier.heightIn(min=48.dp)
+            ) { Text("Keep existing values") }
+        }
+    )
 }

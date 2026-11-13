@@ -30,7 +30,7 @@ required(controller,[
   'if(closed.get() || !pending.compareAndSet(false,true))return',
   'if(!closed.compareAndSet(false,true))return',
   'val requestGeneration=generation.incrementAndGet()',
-  'if(generation.get()!=requestGeneration)return@launch',
+  'if(closed.get() || generation.get()!=requestGeneration)return@launch',
   'generation.incrementAndGet()',
   'if(!closed.get() &&'
 ], 'Native controller must retain durable revision-checked lifecycle guards');

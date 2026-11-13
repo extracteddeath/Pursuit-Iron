@@ -36,7 +36,7 @@ const patterns=new Set(['HORIZONTAL_PRESS','VERTICAL_PRESS','HORIZONTAL_PULL',
 const machineSource=new Set(['machinerow','legcurl','calfmachine','machine',
  'machinepress','machineshoulder','pecdeck','machinelatraise','machinecurl',
  'machineext','beltsquat','hipthrustmachine','machinecrunch',
- 'legext','legpress','hacksquat']);
+ 'legext','legpress','hacksquat','reversehyper']);
 const q=x=>x===null?'null':JSON.stringify(x);
 
 export function renderEntry(row) {
@@ -106,8 +106,16 @@ function validateRows(manifest,web=EXERCISES) {
    if(a.basis===null) {
      assert.equal(a.implement,null,'unweighted cannot have phantom implement '+row.id);
      assert.equal(a.attachment,null);
-     assert.deepEqual(equipment,['bodyweight'],
-       'do not infer unweighted loading from an ambiguous web equipment list');
+     // Current canonical web source uses "pullup" and "dip" for
+    // unweighted bar/station exercises. Accept those ONLY with verified
+    // physical fixture IDs, never a guessed stack or a generic machine.
+    const unweightedSource=equipment.length===1 && (
+      equipment[0]==='bodyweight' ||
+      equipment[0]==='pullup' && a.fixtures.includes('pullup-bar') ||
+      equipment[0]==='dip' && a.fixtures.includes('dip-station')
+    );
+    assert.ok(unweightedSource,
+       'do not infer unweighted loading from an ambiguous web equipment list: '+row.id);
    } else {
      assert.ok(typeof a.implement==='string'&&a.implement.length>4,
        'loaded movement needs physical implement '+row.id);
@@ -180,7 +188,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,164);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,178);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

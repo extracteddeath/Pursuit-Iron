@@ -283,6 +283,10 @@ class DoubleProgressionLevelingDomainTest {
         // load is a suitable Leveling target for very light old records.
         assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
             candidate)
+        assertEquals(CurrentWorkoutLevelingReview.Unavailable(
+            CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD),
+            DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+                current("2","4"),unloadedAndTen))
         assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
             DoubleProgressionLevelingDomain.review(
                 facts("2","4"),band,2,

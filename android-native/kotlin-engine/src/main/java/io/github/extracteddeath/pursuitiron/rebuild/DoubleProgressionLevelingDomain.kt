@@ -6,7 +6,7 @@ import java.math.RoundingMode
 /** Optional double-progression leveling: historical actuals never become issued loads. */
 data class LevelingSetFact(val load: BigDecimal, val reps: Int, val actualRir: Int?)
 enum class LevelingRefusal {
-    INCOMPLETE_OR_INVALID, BELOW_REP_FLOOR, INSUFFICIENT_EFFORT_EVIDENCE,
+    INCOMPLETE_OR_INVALID, BELOW_REP_FLOOR, ABOVE_REP_CEILING, INSUFFICIENT_EFFORT_EVIDENCE,
     UNVERIFIED_STOCK, NO_SUPPORTED_CANDIDATE, ALREADY_LEVEL
 }
 sealed interface LevelingReviewResult {
@@ -41,8 +41,10 @@ object DoubleProgressionLevelingDomain {
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
         if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
-        if (facts.any { it.reps < repBand.minimum || it.reps > repBand.maximum })
+        if (facts.any { it.reps < repBand.minimum })
             return reject(LevelingRefusal.BELOW_REP_FLOOR)
+        if (facts.any { it.reps > repBand.maximum })
+            return reject(LevelingRefusal.ABOVE_REP_CEILING)
         if (facts.any { it.actualRir != null && it.actualRir < goalRir })
             return reject(LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE)
         if (facts.map { it.load.stripTrailingZeros() }.distinct().size == 1)

@@ -966,6 +966,15 @@ private fun NativeKotlinCandidateTrainEntry(
                         minimizedGeneratedId=null
                         selectedId=null
                         onReviewNext(exerciseId)
+                    },
+                    onReturnToProgram={
+                        // Finish has already been verified in native History.
+                        // Plan reopens the real owner-approved saved cycle;
+                        // this navigation makes no progression decision.
+                        controller.clear()
+                        minimizedGeneratedId=null
+                        selectedId=null
+                        onReturnToProgram()
                     })
                 }
             }

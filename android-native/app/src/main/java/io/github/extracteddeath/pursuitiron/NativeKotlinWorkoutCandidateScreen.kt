@@ -454,10 +454,35 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if(showLevelingReview) {
-                val mean=if(loads.isNotEmpty())
-                    loads.reduce(BigDecimal::add).divide(
-                        BigDecimal(loads.size),2,java.math.RoundingMode.HALF_UP)
-                else BigDecimal.ZERO
+                // Explicit stock entry is local to this review. Never infer
+                // machine increments from a recorded weight or unit.
+                var verifiedStockInput by remember(workoutId,selected.target.exerciseId) {
+                    mutableStateOf("")
+                }
+                val enteredStock=remember(verifiedStockInput,completedWorking) {
+                    val values=verifiedStockInput.split(",").map { it.trim() }
+                    val parsed=values.map { runCatching { BigDecimal(it) }.getOrNull() }
+                    val unit=completedWorking.firstOrNull()?.actual?.unit
+                    if(values.size in 2..100 && parsed.all { it!=null } &&
+                        parsed.filterNotNull().all { it>BigDecimal.ZERO } &&
+                        parsed.filterNotNull().distinct().size==values.size &&
+                        unit!=null)
+                        VerifiedLoadStock.Totals(unit,LoadBasis.EXERCISE_OVERRIDE,
+                            parsed.filterNotNull())
+                    else null
+                }
+                val facts=completedWorking.mapNotNull { set ->
+                    val actual=set.actual ?: return@mapNotNull null
+                    actual.load?.let { LevelingSetFact(it,actual.reps,actual.actualRir) }
+                }
+                // A displayed candidate is informational, never an issued edit.
+                // Until an authenticated program-edit API exists, there is no
+                // approval button that could falsely imply persistence.
+                val review=if(facts.size==exerciseWorkingSets.size &&
+                    samePhysicalStation && sameLoadUnit && mixedLoads)
+                    DoubleProgressionLevelingDomain.review(
+                        facts,RepBand(1,100),0,enteredStock)
+                else LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID)
                 AlertDialog(
                     onDismissRequest={showLevelingReview=false},
                     title={Text("Review double-progression leveling")},
@@ -469,11 +494,30 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                                 Text("${actual?.load?.stripTrailingZeros()?.toPlainString()} × "+
                                     "${actual?.reps} · RIR ${actual?.actualRir?.toString() ?: "not reported"}")
                             }
-                            Text("Observed arithmetic mean: ${mean.stripTrailingZeros().toPlainString()}. "+
-                                "This is NOT a verified, feasible straight-set prescription.")
-                            Text("A future change requires verified equipment increments, "+
-                                "rep-range and RIR review, and explicit approval. "+
-                                "This screen does not modify logged sets or future targets.")
+                            OutlinedTextField(
+                                value=verifiedStockInput,
+                                onValueChange={verifiedStockInput=it},
+                                label={Text("Verified available loads (comma-separated)")},
+                                supportingText={Text("Enter actual available machine or implement loads; "+
+                                    "not an estimated increment.")},
+                                singleLine=false
+                            )
+                            when(val candidate=review) {
+                                is LevelingReviewResult.Candidate -> {
+                                    Text("Observed mean: "+
+                                        candidate.averageObservedLoad.toPlainString())
+                                    Text("Available load for review: "+
+                                        candidate.proposedStraightSetLoad.toPlainString()+
+                                        " × ${candidate.repsPerSet} reps, "+
+                                        "${candidate.setCount} sets")
+                                    Text(candidate.note)
+                                }
+                                is LevelingReviewResult.Rejected ->
+                                    Text("No supported leveling candidate: ${candidate.reason}. "+
+                                        "Verify inventory and completed sets.")
+                            }
+                            Text("No change has been applied. A future-program edit "+
+                                "requires explicit approval and durable persistence.")
                         }
                     },
                     confirmButton={

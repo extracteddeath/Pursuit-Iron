@@ -50,6 +50,22 @@ required(controller,[
   '},hideUnverified=true)'
 ], 'Cold recovery and issuance must not expose unverified previous-session receipts');
 
+// Invalid navigation must revoke stale receipts even while disk I/O is in flight.
+// A late callback must not re-enable the previously selected workout.
+const invalidSelection=controller.slice(
+  controller.indexOf('private fun rejectInvalidSelection('),
+  controller.indexOf('/** Reading never issues a new workout. */')
+);
+required(invalidSelection,[
+  'if(closed.get())return true',
+  'generation.incrementAndGet()',
+  'latestCoachRequest.incrementAndGet()',
+  'mutable.value=NativeKotlinSessionState(',
+  'NativeJournalFileRefusal.INVALID_ARGUMENT'
+], 'Invalid workout selection must invalidate pending callbacks and old actionable state');
+assert.ok(!invalidSelection.includes('pending.get()'),
+  'An in-flight storage operation must not preserve the previous actionable workout');
+
 // A failed write/read cannot leave an actionable stale presentation in memory.
 // Cancellation is not a storage failure and must propagate to the coroutine.
 const exceptionHandler=controller.slice(

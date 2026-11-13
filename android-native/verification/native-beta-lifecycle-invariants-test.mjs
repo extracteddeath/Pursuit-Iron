@@ -27,6 +27,9 @@ required(controller,[
   'if(pending.get())return',
   'latestCoachRequest.incrementAndGet()',
   'private val generation=AtomicLong(0)',
+  'private val closed=AtomicBoolean(false)',
+  'if(closed.get() || !pending.compareAndSet(false,true))return',
+  'if(!closed.compareAndSet(false,true))return',
   'val requestGeneration=generation.incrementAndGet()',
   'if(generation.get()!=requestGeneration)return@launch',
   'generation.incrementAndGet()'

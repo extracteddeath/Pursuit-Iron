@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+
+const root='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
+const controller=readFileSync(root+'NativeKotlinSessionController.kt','utf8');
+const workout=readFileSync(root+'NativeKotlinWorkoutCandidateScreen.kt','utf8');
+const journey=readFileSync(root+'NativeKotlinCandidateJourney.kt','utf8');
+const history=readFileSync(root+'NativeKotlinCandidateHistoryScreen.kt','utf8');
+const required=(source,parts,reason)=>{
+  for(const part of parts)assert.ok(source.includes(part),reason+': '+part);
+};
+
+// This is a static wiring regression gate, not a simulated on-device
+// transaction or proof of parity. Durable end-to-end tests remain mandatory.
+required(controller,[
+  'host.recoverWorkout(workoutId)',
+  'host.issueWorkout(workoutId)',
+  'host.recordWorkoutOperation(workoutId,operation)',
+  'expectedJournalRevision=journal.revision',
+  'correctsEventId=existing?.operation?.eventId',
+  'journal.snapshot.targets.none{it.setKey==setKey}',
+  'journal.finishedByEventId!=null',
+  'if(!journal.canProposeFinish)return',
+  'KotlinJournalOperation.Finish(',
+  'recoverOnReject=true',
+  'if(!pending.compareAndSet(false,true))return',
+  'if(pending.get())return',
+  'latestCoachRequest.incrementAndGet()'
+], 'Native controller must retain durable revision-checked lifecycle guards');
+assert.match(controller,/is NativeJournalFileResult.Durable -> NativeKotlinSessionState\([\s\S]*?journal=result.journal/);
+assert.match(controller,/if\(result is NativeJournalFileResult.Rejected && recoverOnReject\)[\s\S]*?host.recoverWorkout\(workoutId\)/);
+assert.doesNotMatch(controller,/WebView|evaluateJavascript|engineBridge/);
+
+required(workout,[
+  'LaunchedEffect(workoutId) { controller.open(workoutId) }',
+  'controller.record(set.target.setKey,outcome,',
+  'controller.finish()',
+  'showFinishConfirm=false',
+  'presentation?.canFinish==true',
+  'host.reviewVerifiedKotlinHistory()',
+  'NativeKotlinFinishedComposerHandoff.inspect(stored,history)',
+  'onViewHistory()',
+  'controller.undoExerciseSwap(swapId)',
+  'rememberSaveableStateHolder()'
+], 'Workout UI must retain durable recording, finish confirmation, verified history and undo');
+required(journey,[
+  'currentUnfinishedGeneratedWorkoutId(host)',
+  'host.currentlyApprovedKotlinWorkoutId()',
+  'host.recoverWorkout(id)',
+  'opened.journal.finishedByEventId==null',
+  'PursuitPrimaryAction("Resume workout"',
+  'selectedId=awaitingWorkoutId',
+  'controller.clear()'
+], 'Cold start and minimized resume must revalidate approved unfinished journal');
+required(history,['host.reviewVerifiedKotlinHistory()'],
+  'History must read owner-verified native facts');
+
+console.log('PASS native beta lifecycle wiring: approved issuance, durable set edits, conflict recovery, minimize/resume, confirmed finish, history and swap undo');

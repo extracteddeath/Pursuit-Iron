@@ -38,6 +38,16 @@ jobs:
           :domain-contract:testDebugUnitTest
           :app:compileDebugKotlin
           --no-daemon --stacktrace
+      - name: Verify Kotlin-only ownership, lifecycle navigation and safe resume
+        run: |
+          node android-native/kotlin-engine/verification/offline-only-test.mjs
+          node android-native/verification/kotlin-lab-navigation-test.mjs
+          node android-native/verification/kotlin-train-resume-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
+      - name: Audit parity and superiority without assuming a pass
+        run: |
+          node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test
+          node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --audit --write-report
       - name: Enforce absence of legacy runtime on app release classpath
         working-directory: android-native
         shell: bash

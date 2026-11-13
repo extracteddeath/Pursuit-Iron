@@ -750,7 +750,10 @@ for(const required of [
   'LaunchedEffect(currentSets,previous,machineInstanceId,repBand,',
   'review=null',
   'withContext(Dispatchers.Default)',
-  'DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout('
+  'DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(',
+  'catch(cancelled:CancellationException)',
+  'throw cancelled',
+  'WorkoutLastReferenceResult.Unavailable'
 ]) assert.ok(priorReviewCoroutine.includes(required),
   'Prior-session Leveling must be cancellation-scoped and avoid UI-thread equipment inspection: '+required);
 assert.ok(!priorLeveling.includes('DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout('),

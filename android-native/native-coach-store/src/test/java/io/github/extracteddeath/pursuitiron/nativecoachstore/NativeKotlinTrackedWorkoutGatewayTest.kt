@@ -207,6 +207,102 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         assertEquals(setOf("A"),facts.map{it.actual?.machineInstanceId}.toSet())
     }
 
+    @Test fun levelingDraftIsNotAReceiptAndRealLoggedSetsRemainIndependent() {
+        // The prior session was an accidental rising pyramid. Leveling is an
+        // optional starting point for today's unsaved editors, not a policy
+        // that subsequently averages, overwrites or signs journal entries.
+        val stock=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            listOf("100","105","110","115","120","125","130").map(::BigDecimal))
+        val review=DoubleProgressionLevelingDomain.review(
+            listOf("100","120","125","130").map {
+                LevelingSetFact(BigDecimal(it),5,3)
+            },RepBand(5,8),2,stock
+        ) as LevelingReviewResult.Candidate
+        assertEquals(BigDecimal("120"),review.proposedStraightSetLoad)
+        assertEquals(5,review.repsPerSet)
+        assertFalse(review.mayModifyIssuedWorkout)
+
+        val target=BigDecimal("120")
+        val targets=(0..3).map {index->
+            KotlinWorkoutTarget(
+                "bench",ComposerRole.PRIMARY,
+                ComposerSessionPurpose.HYPERTROPHY,"level-set-$index",
+                DraftSetType.WORKING,index,
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,target),
+                RepBand(5,8),2,60,120)
+        }
+        val snapshot=KotlinStagedWorkout(source,"grant-level",
+            "leveling-session",0,0,ComposerSessionPurpose.HYPERTROPHY,
+            50,targets)
+        val identity=KotlinStoredWorkoutIdentity(
+            "storage-level","leveling-session",source,1)
+        val first=journal().issue("owner-1",snapshot,identity)
+        assertTrue(first.toString(),first is NativeJournalFileResult.Durable)
+        enroll()
+        fun cold():KotlinWorkoutJournalState {
+            val opened=gateway().open("owner-1","athlete-1","leveling-session")
+            assertTrue(opened.toString(),opened is NativeJournalFileResult.Durable)
+            return (opened as NativeJournalFileResult.Durable).journal
+        }
+        var session=cold()
+        assertEquals(snapshot,session.originalSnapshot)
+        assertTrue(session.effectiveSets.isEmpty()) // Review itself saved nothing.
+
+        // The athlete changes some suggested loads/reps/RIR after tapping
+        // Leveling. Those individual actuals are normal verified receipts,
+        // NOT forced to the optional 120 x 5 prefill or its assumed goal RIR.
+        val observedLoads=listOf("120","125","120","115").map(::BigDecimal)
+        val observedReps=listOf(5,5,6,5)
+        val observedRir=listOf<Int?>(2,1,3,null)
+        for(index in targets.indices) {
+            val saved=gateway().append(
+                "owner-1","athlete-1","leveling-session",
+                KotlinJournalOperation.RecordSet(
+                    "level-actual-$index",session.revision,"level-set-$index",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(
+                        observedLoads[index],LoadUnit.LB,
+                        observedReps[index],observedRir[index])))
+            assertTrue(saved.toString(),saved is NativeJournalFileResult.Durable)
+            session=cold() // Simulates process restart between real sets.
+            assertEquals(snapshot,session.snapshot)
+            assertEquals(List(4){target},session.snapshot.targets.map {
+                (it.load as DraftSetLoad.Verified).value
+            })
+            assertEquals(index+1,session.resolvedSetCount)
+            for(done in 0..index) {
+                val actual=(session.effectiveSets.getValue("level-set-$done")
+                    .operation as KotlinJournalOperation.RecordSet).performed
+                assertEquals(observedLoads[done],actual?.load)
+                assertEquals(observedReps[done],actual?.reps)
+                assertEquals(observedRir[done],actual?.actualRir)
+            }
+        }
+        assertTrue(session.canProposeFinish)
+        val finish=gateway().append(
+            "owner-1","athlete-1","leveling-session",
+            KotlinJournalOperation.Finish("finish-leveling",session.revision))
+        assertTrue(finish.toString(),finish is NativeJournalFileResult.Durable)
+        val finished=cold()
+        assertEquals("finish-leveling",finished.finishedByEventId)
+        assertEquals(snapshot,finished.originalSnapshot)
+        val history=NativeKotlinGlobalHistoryReadCoordinator(
+            journal(),correction(),authority,
+            NativeKotlinHistoryManifestFileAuthority(ledger(),{_,_->active}),
+            fence()
+        ).read("owner-1","athlete-1")
+        assertTrue(history.toString(),history is NativeKotlinHistoryReadResult.Review)
+        val facts=(history as NativeKotlinHistoryReadResult.Review)
+            .index.lastByExercise.getValue("bench").workingSets
+        assertEquals(observedLoads,facts.map{it.actual?.load})
+        assertEquals(observedReps,facts.map{it.actual?.reps})
+        assertEquals(observedRir,facts.map{it.actual?.actualRir})
+        assertEquals(List(4){target},facts.map{
+            (it.issuedLoad as DraftSetLoad.Verified).value
+        })
+    }
+
     @Test fun encryptedArchiveStagesAndAtomicallyRestoresARealCorrectedWorkout() {
         issue()
         enroll()

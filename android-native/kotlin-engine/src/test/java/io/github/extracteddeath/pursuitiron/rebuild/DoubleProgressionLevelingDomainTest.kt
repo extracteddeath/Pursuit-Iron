@@ -260,4 +260,38 @@ class DoubleProgressionLevelingDomainTest {
                 currentKeys(),priorSession(loads),null,band,2,wrongEquipment))
     }
 
+    @Test fun priorWorkoutMidpointMatchesCurrentWebStyleRoundUp() {
+        val previous=DoubleProgressionLevelingDomain.review(
+            facts("115","120"),band,2,stock
+        ) as LevelingReviewResult.Candidate
+        val today=DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+            current("115","120"),stock
+        ) as CurrentWorkoutLevelingReview.Ready
+        assertEquals(n("117.5"),previous.averageObservedLoad)
+        assertEquals(today.roundedLoad,previous.proposedStraightSetLoad)
+        assertEquals(n("120"),previous.proposedStraightSetLoad)
+        assertFalse(previous.mayModifyIssuedWorkout)
+    }
+
+    @Test fun priorWorkoutCannotSuggestZeroOrInventStockWhenMeanIsNearZero() {
+        val unloadedAndTen=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.SMITH_TOTAL,listOf(n("0"),n("10")))
+        val candidate=DoubleProgressionLevelingDomain.review(
+            facts("2","4"),band,2,unloadedAndTen
+        )
+        // Neither an unloaded zero nor a giant jump to the next verified
+        // load is a suitable Leveling target for very light old records.
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
+            candidate)
+        assertEquals(CurrentWorkoutLevelingReview.Unavailable(
+            CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD),
+            DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+                current("2","4"),unloadedAndTen))
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
+            DoubleProgressionLevelingDomain.review(
+                facts("2","4"),band,2,
+                VerifiedLoadStock.Totals(
+                    LoadUnit.LB,LoadBasis.SMITH_TOTAL,listOf(n("0")))))
+    }
+
 }

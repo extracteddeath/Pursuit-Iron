@@ -35,16 +35,16 @@ private fun performed(
     )?.performed
 
 /** One opt-in editor prefill. No issued target, journal receipt or plan changes here. */
-private data class CurrentWorkoutLevelingDraft(
+internal data class CurrentWorkoutLevelingDraft(
     val version:Int,
     val weight:String,
     val reps:Int
 )
 
 /** Draft entries are workout-local and remain editable until a normal set receipt. */
-private data class CurrentWorkoutEditorValue(val weight:String,val reps:String)
+internal data class CurrentWorkoutEditorValue(val weight:String,val reps:String)
 
-private val currentWorkoutEditorSaver=
+internal val currentWorkoutEditorSaver=
     listSaver<SnapshotStateMap<String,CurrentWorkoutEditorValue>,String>(
         save={ values->values.flatMap { (key,entry)->
             listOf(key,entry.weight,entry.reps)
@@ -59,7 +59,7 @@ private val currentWorkoutEditorSaver=
     )
 
 /** Set key and machine ID cannot alias each other's editor drafts. */
-private fun levelEditorKey(setKey:String,machineId:String?):String =
+internal fun levelEditorKey(setKey:String,machineId:String?):String =
     "${setKey.length}:$setKey:${machineId ?: "no-machine"}"
 
 private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {

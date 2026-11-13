@@ -196,10 +196,18 @@ internal fun rememberPriorWorkoutLevelingReview(
                 LevelingRefusal.INCOMPLETE_OR_INVALID)
             return@LaunchedEffect
         }
-        review=withContext(Dispatchers.Default) {
-            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
-                currentSets,previous,machineInstanceId,repBand,goalRir,
-                verifiedStock)
+        review=try {
+            withContext(Dispatchers.Default) {
+                DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                    currentSets,previous,machineInstanceId,repBand,goalRir,
+                    verifiedStock)
+            }
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            // Leveling is optional: an unforeseen inventory/validation
+            // problem must not kill the running workout or touch its journal.
+            LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID)
         }
     }
     return review

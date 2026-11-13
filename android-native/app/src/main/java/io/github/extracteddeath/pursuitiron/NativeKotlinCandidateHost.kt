@@ -2573,6 +2573,160 @@ internal class NativeKotlinCandidateHost(context:Context) {
 
 
     /**
+     * Read-only, CURRENT-workout Leveling inventory for the exact issued
+     * exercise, gym, selected physical station and authorized athlete. This
+     * does not compute progression, change a load or issue any journal write.
+     * No stock is borrowed from a different machine, unverified source or
+     * newly edited gym. Call on Dispatchers.IO, not the Compose main thread.
+     */
+    fun reviewIssuedLevelingStock(
+        workoutId:String,exerciseId:String,selectedMachineId:String?
+    ):VerifiedLoadStock? {
+        val owner=localAthlete.signedInIdentity()?:return null
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction null
+                val stored=coordinator.open(owner.ownerKey,workoutId)
+                    as? NativeJournalFileResult.Durable
+                    ?:return@withOwnerTransaction null
+                val journal=stored.journal
+                if(journal.finishedByEventId!=null ||
+                    journal.snapshot.source.athleteId!=owner.athleteId ||
+                    journal.originalSnapshot.source.gymId!=
+                        journal.snapshot.source.gymId)
+                    return@withOwnerTransaction null
+                val working=journal.snapshot.targets.filter {
+                    it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
+                }
+                if(working.size<2 || working.any {
+                    it.load !is DraftSetLoad.Verified
+                }) return@withOwnerTransaction null
+                val source=gymCoherentAuthority.currentApprovedWorkout(
+                    owner.ownerKey,workoutId)
+                    ?:return@withOwnerTransaction null
+                if(source.athleteId!=owner.athleteId ||
+                    source.approvedSource!=journal.originalSnapshot.source ||
+                    source.approvedSource!=journal.snapshot.source)
+                    return@withOwnerTransaction null
+                val gymId=journal.originalSnapshot.source.gymId
+                val roster=(machineRosters.read(owner.ownerKey)
+                    as? NativeMachineRosterResult.Saved)?.snapshot
+                val rawConfig=roster?.configurations.orEmpty().filter {
+                    it.gymId==gymId && it.exerciseId==exerciseId
+                }
+                if(rawConfig.size>1)return@withOwnerTransaction null
+                if(rawConfig.singleOrNull()?.machines?.isNotEmpty()==true) {
+                    val config=KotlinMachineAlternativesDomain.forGymExercise(
+                        roster?.configurations.orEmpty(),gymId,exerciseId)
+                        ?:return@withOwnerTransaction null
+                    val persisted=(workoutMachineChoices.read(
+                        owner.ownerKey,workoutId,false,gymId)
+                        as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                        ?:return@withOwnerTransaction null
+                    if(persisted.revision<=0 || persisted.ownerId!=owner.ownerKey ||
+                        persisted.gymId!=gymId ||
+                        persisted.machines[exerciseId]!=selectedMachineId ||
+                        !KotlinMachineAlternativesDomain.validInstanceId(selectedMachineId))
+                        return@withOwnerTransaction null
+                    val issued=working.first().load as DraftSetLoad.Verified
+                    KotlinMachineAlternativesDomain.confirmedStack(
+                        config,checkNotNull(selectedMachineId),issued.basis)
+                        ?.takeIf{it.unit==issued.unit}
+                } else {
+                    if(selectedMachineId!=null)
+                        return@withOwnerTransaction null
+                    (source.program.exercises.singleOrNull {
+                        it.exerciseId==exerciseId
+                    }?.equipment as? ComposerEquipment.Verified)?.inventory
+                }
+            }
+        }.getOrNull()
+    }
+
+    /**
+     * Same current-set Leveling stock proof for an ISSUED custom-cycle slot.
+     * The exact source revision, reviewed gym, current workout choice and
+     * physical A/B stack are rechecked under the owner fence. The authored
+     * cycle, all issued prescriptions and journal receipts remain unchanged.
+     */
+    fun reviewIssuedCustomLevelingStock(
+        workoutId:String,slotId:String,selectedMachineId:String?
+    ):VerifiedLoadStock? {
+        val owner=localAthlete.signedInIdentity()?:return null
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction null
+                val journal=(customIssuedStore.open(owner.ownerKey,workoutId)
+                    as? NativeCustomJournalResult.Durable)?.issued?.journal
+                    ?:return@withOwnerTransaction null
+                val snapshot=journal.snapshot
+                val stamp=snapshot.stamp
+                if(journal.finishedByEventId!=null ||
+                    stamp.athleteId!=owner.athleteId ||
+                    stamp.gymId!=journal.originalSnapshot.stamp.gymId)
+                    return@withOwnerTransaction null
+                val slot=snapshot.slots.singleOrNull{it.slotId==slotId}
+                    ?:return@withOwnerTransaction null
+                val working=slot.sets.filter {
+                    it.prescription.type==DraftSetType.WORKING
+                }
+                if(working.size<2 || working.any {
+                    it.prescription.load !is DraftSetLoad.Verified
+                })return@withOwnerTransaction null
+                val source=(authoringSourceStore.read(owner.ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction null
+                val reviewed=source.setup.reviewed
+                    ?:return@withOwnerTransaction null
+                if(source.ownerKey!=owner.ownerKey ||
+                    source.athleteId!=owner.athleteId ||
+                    source.revision!=stamp.gymCatalogSourceRevision ||
+                    !source.setup.mayReviewProgramCandidate ||
+                    reviewed.athleteProfileId!=owner.athleteId ||
+                    reviewed.gym.gymId!=stamp.gymId)
+                    return@withOwnerTransaction null
+                val roster=(machineRosters.read(owner.ownerKey)
+                    as? NativeMachineRosterResult.Saved)?.snapshot
+                val matching=roster?.configurations.orEmpty().filter {
+                    it.gymId==stamp.gymId && it.exerciseId==slot.exerciseId
+                }
+                if(matching.size>1)return@withOwnerTransaction null
+                if(matching.singleOrNull()?.machines?.isNotEmpty()==true) {
+                    val config=KotlinMachineAlternativesDomain.forGymExercise(
+                        roster?.configurations.orEmpty(),stamp.gymId,
+                        slot.exerciseId) ?:return@withOwnerTransaction null
+                    val persisted=(workoutMachineChoices.read(
+                        owner.ownerKey,workoutId,true,stamp.gymId)
+                        as? NativeWorkoutMachineChoiceResult.Saved)?.snapshot
+                        ?:return@withOwnerTransaction null
+                    if(persisted.revision<=0 ||
+                        persisted.ownerId!=owner.ownerKey ||
+                        persisted.gymId!=stamp.gymId ||
+                        persisted.machines[slot.exerciseId]!=selectedMachineId ||
+                        !KotlinMachineAlternativesDomain.validInstanceId(selectedMachineId))
+                        return@withOwnerTransaction null
+                    val issued=working.first().prescription.load
+                        as DraftSetLoad.Verified
+                    KotlinMachineAlternativesDomain.confirmedStack(
+                        config,checkNotNull(selectedMachineId),issued.basis)
+                        ?.takeIf{it.unit==issued.unit}
+                } else {
+                    if(selectedMachineId!=null)
+                        return@withOwnerTransaction null
+                    val movement=source.catalog.singleOrNull {
+                        it.exerciseId==slot.exerciseId
+                    } ?:return@withOwnerTransaction null
+                    val equipmentId=movement.equipmentId
+                        ?:return@withOwnerTransaction null
+                    reviewed.gym.confirmedStock[equipmentId]
+                }
+            }
+        }.getOrNull()
+    }
+
+    /**
      * Premium NEXT-SET coaching using only a reopened native journal and the
      * CURRENT fully coherent owner-verified gym. It never changes a target.
      * This also fails safely when the workout's original gym is no longer

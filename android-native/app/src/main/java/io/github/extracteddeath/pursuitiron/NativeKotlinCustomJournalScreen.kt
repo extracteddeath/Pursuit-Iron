@@ -54,6 +54,16 @@ internal fun NativeKotlinCustomJournalScreen(
     var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     val editorStates=rememberSaveableStateHolder()
+    // One Kotlin Leveling behavior for generated and custom set editors.
+    val currentEditors=rememberSaveable(workoutId,
+        saver=currentWorkoutEditorSaver) {
+        mutableStateMapOf<String,CurrentWorkoutEditorValue>()
+    }
+    var levelSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var levelMachineId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var levelWeight by rememberSaveable(workoutId){mutableStateOf("")}
+    var levelReps by rememberSaveable(workoutId){mutableIntStateOf(0)}
+    var levelVersion by rememberSaveable(workoutId){mutableIntStateOf(0)}
     var referenceMode by rememberWorkoutReferenceMode()
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
@@ -564,6 +574,125 @@ internal fun NativeKotlinCustomJournalScreen(
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)
                     }
+
+                    // Custom program sets are leveled in THIS workout only.
+                    // Main working entries count; warmups and amplifier
+                    // follow-ups are never used or modified.
+                    if(!finished && current.finishedByEventId==null &&
+                        activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP) {
+                        val workingSets=slot.sets.filter {
+                            it.prescription.type==DraftSetType.WORKING
+                        }
+                        val prescribed=workingSets.map{it.prescription.load}
+                        val allVerified=prescribed.size>=2 &&
+                            prescribed.all{it is DraftSetLoad.Verified} &&
+                            prescribed.map{
+                                (it as DraftSetLoad.Verified).unit
+                            }.distinct().size==1 &&
+                            prescribed.map{
+                                (it as DraftSetLoad.Verified).basis
+                            }.distinct().size==1
+                        var stock by remember(host,workoutId,slot.slotId,
+                            selectedMachineId,current.revision) {
+                            mutableStateOf<VerifiedLoadStock?>(null)
+                        }
+                        LaunchedEffect(host,workoutId,slot.slotId,
+                            selectedMachineId,current.revision,
+                            machineChoices.ready,machineChoices.busy) {
+                            stock=null
+                            if(machineChoices.ready && !machineChoices.busy)
+                                stock=withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        host.reviewIssuedCustomLevelingStock(
+                                            workoutId,slot.slotId,selectedMachineId)
+                                    }.getOrNull()
+                                }
+                        }
+                        val currentRows=workingSets.map{set->
+                            val visit=current.effectiveVisits[
+                                CustomWorkoutVisitKey(
+                                    set.setKey,CustomWorkoutVisitPart.MAIN)]
+                                ?.operation as? CustomWorkoutJournalOperation.Record
+                            val actual=visit?.takeIf{
+                                it.outcome==KotlinJournalSetOutcome.COMPLETED
+                            }?.performed
+                            val editor=if(visit==null)currentEditors[
+                                levelEditorKey(set.setKey,selectedMachineId)]
+                                else null
+                            val load=if(visit!=null)actual?.load else
+                                (editor?.weight ?:initialMachineScopedLoad(
+                                    set.prescription.load,null,selectedMachineId))
+                                    .toBigDecimalOrNull()
+                            val reps=if(visit!=null)actual?.reps else
+                                (editor?.reps ?:
+                                    set.prescription.reps.minimum.toString())
+                                    .toIntOrNull()
+                            val verified=set.prescription.load as? DraftSetLoad.Verified
+                            CurrentWorkoutLevelingRow(
+                                set.setKey,load,reps,visit!=null,
+                                verified?.unit ?:LoadUnit.LB,
+                                verified?.basis ?:LoadBasis.EXERCISE_OVERRIDE,
+                                if(visit!=null)actual?.machineInstanceId
+                                else selectedMachineId)
+                        }
+                        var review by remember(workoutId,slot.slotId,
+                            selectedMachineId,currentRows,stock) {
+                            mutableStateOf<CurrentWorkoutLevelingReview?>(null)
+                        }
+                        LaunchedEffect(currentRows,stock,allVerified) {
+                            review=withContext(Dispatchers.Default) {
+                                if(allVerified)
+                                    DoubleProgressionLevelingDomain
+                                        .reviewCurrentWorkout(currentRows,stock)
+                                else CurrentWorkoutLevelingReview.Unavailable(
+                                    CurrentWorkoutLevelingReview.Reason.MIXED_EQUIPMENT)
+                            }
+                        }
+                        val candidate=review as? CurrentWorkoutLevelingReview.Ready
+                        if(candidate!=null) {
+                            val unit=(prescribed.firstOrNull()
+                                as? DraftSetLoad.Verified)
+                                ?.unit?.name?.lowercase().orEmpty()
+                            OutlinedButton(
+                                onClick={
+                                    if(!busy && machineChoices.ready &&
+                                        !machineChoices.busy) {
+                                        levelSlotId=slot.slotId
+                                        levelMachineId=selectedMachineId
+                                        levelWeight=candidate.roundedLoad
+                                            .stripTrailingZeros().toPlainString()
+                                        levelReps=candidate.averageReps
+                                        candidate.eligibleSetKeys.forEach{key->
+                                            currentEditors[levelEditorKey(
+                                                key,selectedMachineId)]=
+                                                CurrentWorkoutEditorValue(
+                                                    levelWeight,levelReps.toString())
+                                        }
+                                        levelVersion++
+                                    }
+                                },
+                                enabled=!busy && machineChoices.ready &&
+                                    !machineChoices.busy,
+                                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                            ) {
+                                Text("Use average load · "+
+                                    "${candidate.roundedLoad.stripTrailingZeros().toPlainString()} "+
+                                    "$unit × ${candidate.averageReps}")
+                            }
+                            Text("Prefills unfinished main working sets only. "+
+                                "Saved sets, RIR, amplifiers and future "+
+                                "programs stay unchanged.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else if(review is CurrentWorkoutLevelingReview.Unavailable &&
+                            (review as CurrentWorkoutLevelingReview.Unavailable).reason==
+                                CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
+                            currentRows.count{row->row.load?.let{it>BigDecimal.ZERO}==true}>=2)
+                            Text("Confirm available weights in My gym "+
+                                "to use Leveling on this machine.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     PursuitCard {
                         if(activeFocus==null)PursuitExerciseHeading(slot.exerciseId,
                             onHistory={historyExerciseId=slot.exerciseId},
@@ -671,6 +800,25 @@ internal fun NativeKotlinCustomJournalScreen(
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 machineInstanceId=mainMachineId,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
+                                levelingDraft=if(observed==null &&
+                                    set.prescription.type==DraftSetType.WORKING &&
+                                    slot.slotId==levelSlotId &&
+                                    mainMachineId==levelMachineId &&
+                                    levelWeight.isNotBlank() && levelReps>0 &&
+                                    (currentEditors[levelEditorKey(
+                                        set.setKey,mainMachineId)]?.weight
+                                        ?:initialMachineScopedLoad(
+                                            set.prescription.load,null,mainMachineId))
+                                        .toBigDecimalOrNull()
+                                        ?.let{it>BigDecimal.ZERO}==true)
+                                    CurrentWorkoutLevelingDraft(
+                                        levelVersion,levelWeight,levelReps)
+                                else null,
+                                onCurrentDraftChanged={weight,reps->
+                                    val key=levelEditorKey(set.setKey,mainMachineId)
+                                    val entry=CurrentWorkoutEditorValue(weight,reps)
+                                    if(currentEditors[key]!=entry)currentEditors[key]=entry
+                                },
                                 position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                     .indexOf(set)+1,
                                 setCount=slot.sets.count{it.prescription.type==set.prescription.type},
@@ -947,7 +1095,9 @@ private fun NativeKotlinCustomVisitEditor(
     setCount:Int,
     initiallyExpanded:Boolean,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
-    onShowPlates:(String,LoadUnit,LoadBasis)->Unit
+    onShowPlates:(String,LoadUnit,LoadBasis)->Unit,
+    levelingDraft:CurrentWorkoutLevelingDraft?=null,
+    onCurrentDraftChanged:(String,String)->Unit={_,_->}
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -994,6 +1144,29 @@ private fun NativeKotlinCustomVisitEditor(
     }
     var actualRir by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved?.performed?.actualRir?.toString().orEmpty())
+    }
+    var appliedLevelVersion by rememberSaveable(
+        set.setKey,part.name,existing?.appliedRevision,machineInstanceId
+    ) {mutableIntStateOf(-1)}
+    LaunchedEffect(levelingDraft?.version,machineInstanceId,existing?.appliedRevision) {
+        val draft=levelingDraft
+        if(part==CustomWorkoutVisitPart.MAIN && saved==null &&
+            prescription.type==DraftSetType.WORKING && draft!=null &&
+            appliedLevelVersion!=draft.version) {
+            actualLoad=draft.weight
+            actualReps=draft.reps.toString()
+            // Preserve entered actual RIR, which Leveling never owns.
+            appliedLevelVersion=draft.version
+        }
+    }
+    LaunchedEffect(set.setKey,part,machineInstanceId,actualLoad,actualReps,
+        saved,levelingDraft?.version,appliedLevelVersion) {
+        val pendingLevel=levelingDraft?.let {
+            saved==null && appliedLevelVersion!=it.version
+        }==true
+        if(part==CustomWorkoutVisitPart.MAIN && saved==null &&
+            prescription.type==DraftSetType.WORKING && !pendingLevel)
+            onCurrentDraftChanged(actualLoad,actualReps)
     }
     val weight=if(verified==null)null else
         runCatching{BigDecimal(actualLoad.trim())}.getOrNull()

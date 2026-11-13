@@ -8,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalView
@@ -31,6 +33,34 @@ private fun performed(
     KotlinWorkoutEntryDomain.parse(target,weight,reps,rir,failed)
         as? KotlinSetEntryResult.Accepted
     )?.performed
+
+/** One opt-in editor prefill. No issued target, journal receipt or plan changes here. */
+internal data class CurrentWorkoutLevelingDraft(
+    val version:Int,
+    val weight:String,
+    val reps:Int
+)
+
+/** Draft entries are workout-local and remain editable until a normal set receipt. */
+internal data class CurrentWorkoutEditorValue(val weight:String,val reps:String)
+
+internal val currentWorkoutEditorSaver=
+    listSaver<SnapshotStateMap<String,CurrentWorkoutEditorValue>,String>(
+        save={ values->values.flatMap { (key,entry)->
+            listOf(key,entry.weight,entry.reps)
+        }},
+        restore={ parts->
+            mutableStateMapOf<String,CurrentWorkoutEditorValue>().apply {
+                parts.chunked(3).filter{it.size==3}.forEach {
+                    this[it[0]]=CurrentWorkoutEditorValue(it[1],it[2])
+                }
+            }
+        }
+    )
+
+/** Set key and machine ID cannot alias each other's editor drafts. */
+internal fun levelEditorKey(setKey:String,machineId:String?):String =
+    "${setKey.length}:$setKey:${machineId ?: "no-machine"}"
 
 private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {
     NativeJournalFileRefusal.SWAP_SOURCE_UNAVAILABLE ->
@@ -143,6 +173,18 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
     }
     var selectedKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    // The draft survives rotation and Focus/All while staying isolated to
+    // this workout and selected physical machine. It is NEVER an approval
+    // for a future program or a saved actual.
+    var levelExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var levelMachineId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var levelWeight by rememberSaveable(workoutId){mutableStateOf("")}
+    var levelReps by rememberSaveable(workoutId){mutableIntStateOf(0)}
+    var levelVersion by rememberSaveable(workoutId){mutableIntStateOf(0)}
+    val currentEditors=rememberSaveable(workoutId,
+        saver=currentWorkoutEditorSaver) {
+        mutableStateMapOf<String,CurrentWorkoutEditorValue>()
+    }
     var showAll by rememberSaveable(workoutId){mutableStateOf(false)}
     var readiness by rememberSaveable(workoutId) {
         mutableStateOf(CoachReadiness.NORMAL)
@@ -189,6 +231,28 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     val currentMachine=selected?.target?.exerciseId?.let{
         workoutMachineChoice(machineChoices.encoded,it,null)
+    }
+    // Equipment is recovered from the CURRENT owner-approved program and
+    // exact selected A/B station. It is never guessed from typed values.
+    val levelingExerciseId=selected?.target?.exerciseId
+    var levelingStock by remember(host,workoutId,levelingExerciseId,
+        currentMachine,presentation?.revision) {
+        mutableStateOf<VerifiedLoadStock?>(null)
+    }
+    LaunchedEffect(host,workoutId,levelingExerciseId,currentMachine,
+        presentation?.revision,machineChoices.ready,machineChoices.busy) {
+        levelingStock=null
+        val exerciseId=levelingExerciseId
+        if(exerciseId!=null && journal!=null &&
+            journal.finishedByEventId==null && machineChoices.ready &&
+            !machineChoices.busy) {
+            levelingStock=withContext(Dispatchers.IO) {
+                runCatching {
+                    host.reviewIssuedLevelingStock(
+                        workoutId,exerciseId,currentMachine)
+                }.getOrNull()
+            }
+        }
     }
     val expectedCoachMachineScope=if(activeMachineConfig?.machines?.isNotEmpty()==true)
         LiveMachineCoachScope.Physical(currentMachine)
@@ -407,81 +471,108 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
-        // Leveling is an explicit inspection of recorded working sets.
-        // Never treat the mean of a pyramid as an approved future load.
-        if(selected!=null && journal!=null) {
-            val exerciseWorkingSets=allSets.filter {
-                it.target.exerciseId==selected.target.exerciseId &&
+        // Web parity: average positive working-set editor entries in this
+        // CURRENT session (including completed factual entries), then fill
+        // ONLY unfinished entries. Issued set targets and future workouts
+        // remain untouched. The journal still owns each actual when logged.
+        if(selected!=null && journal!=null && !presentation.finished) {
+            val exerciseId=selected.target.exerciseId
+            val workingSets=allSets.filter {
+                it.target.exerciseId==exerciseId &&
                     it.target.type==DraftSetType.WORKING
             }
-            val completedWorking=exerciseWorkingSets.filter {
-                it.outcome==KotlinJournalSetOutcome.COMPLETED && it.actual?.load!=null
+            val levelRows=workingSets.map {set->
+                val done=set.isResolved
+                val saved=if(done &&
+                    set.outcome==KotlinJournalSetOutcome.COMPLETED)
+                    set.actual else null
+                val draft=if(done)null else currentEditors[
+                    levelEditorKey(set.target.setKey,currentMachine)]
+                val weight=if(done) saved?.load else
+                    (draft?.weight ?: initialMachineScopedLoad(
+                        set.target.load,null,currentMachine)).toBigDecimalOrNull()
+                val reps=if(done) saved?.reps else
+                    (draft?.reps ?: set.target.reps.minimum.toString())
+                        .toIntOrNull()
+                val issued=set.target.load as? DraftSetLoad.Verified
+                CurrentWorkoutLevelingRow(
+                    setKey=set.target.setKey,load=weight,reps=reps,
+                    completed=done,
+                    unit=issued?.unit ?: LoadUnit.LB,
+                    basis=issued?.basis ?: LoadBasis.EXERCISE_OVERRIDE,
+                    machineInstanceId=if(done) saved?.machineInstanceId
+                        else currentMachine)
             }
-            val loads=completedWorking.mapNotNull { it.actual?.load }
-            val mixedLoads=loads.map { it.stripTrailingZeros() }.distinct().size>1
-            val sameLoadUnit=completedWorking.map { it.actual?.unit }.distinct().size==1
-            // Different physical stations cannot share one leveling baseline.
-            val machineIds=completedWorking.map { it.actual?.machineInstanceId }.distinct()
-            val samePhysicalStation=machineIds.size==1 &&
-                (activeMachineConfig?.machines?.isNotEmpty()!=true ||
-                    machineIds.singleOrNull()!=null)
-            var showLevelingReview by remember(workoutId,selected.target.exerciseId) {
-                mutableStateOf(false)
+            // Leveling is a weighted-load working-set convenience, not a
+            // bodyweight, mixed unit or technique substitution.
+            val loadTypes=workingSets.map{it.target.load}
+            val allVerified=loadTypes.all{it is DraftSetLoad.Verified}
+            // Inspecting verified barbell combinations can be expensive.
+            // Never enumerate plate combinations on Compose's UI thread.
+            var review by remember(workoutId,exerciseId,currentMachine,
+                levelRows,levelingStock) {
+                mutableStateOf<CurrentWorkoutLevelingReview?>(null)
             }
-            if(exerciseWorkingSets.size>=2) {
+            LaunchedEffect(levelRows,levelingStock,allVerified) {
+                review=withContext(Dispatchers.Default) {
+                    if(allVerified && workingSets.size>=2 &&
+                        loadTypes.map{(it as DraftSetLoad.Verified).basis}
+                            .distinct().size==1 &&
+                        loadTypes.map{(it as DraftSetLoad.Verified).unit}
+                            .distinct().size==1)
+                        DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+                            levelRows,levelingStock)
+                    else CurrentWorkoutLevelingReview.Unavailable(
+                        CurrentWorkoutLevelingReview.Reason.MIXED_EQUIPMENT)
+                }
+            }
+            val candidate=review as? CurrentWorkoutLevelingReview.Ready
+            if(candidate!=null) {
+                val unit=(loadTypes.firstOrNull() as? DraftSetLoad.Verified)
+                    ?.unit?.name?.lowercase().orEmpty()
                 OutlinedButton(
-                    onClick={showLevelingReview=true},
-                    enabled=mixedLoads && samePhysicalStation && sameLoadUnit &&
-                        completedWorking.size==exerciseWorkingSets.size && !state.busy
-                ) { Text("Leveling · review pyramid") }
-                if(!sameLoadUnit && completedWorking.size>1)
-                    Text("Leveling requires one consistent weight unit.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                if(!samePhysicalStation && completedWorking.size>1)
-                    Text("Leveling requires sets from the same physical machine. "+
-                        "Machine A/B histories must remain separate.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                if(completedWorking.size!=exerciseWorkingSets.size)
-                    Text("Complete every working set before reviewing Leveling. "+
-                        "Skipped and failed attempts are not usable evidence.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                if(!mixedLoads)
-                    Text("Leveling is available after completing a mixed-load working-set session.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if(showLevelingReview) {
-                val mean=if(loads.isNotEmpty())
-                    loads.reduce(BigDecimal::add).divide(
-                        BigDecimal(loads.size),2,java.math.RoundingMode.HALF_UP)
-                else BigDecimal.ZERO
-                AlertDialog(
-                    onDismissRequest={showLevelingReview=false},
-                    title={Text("Review double-progression leveling")},
-                    text={
-                        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            Text("Recorded working sets (not targets):")
-                            completedWorking.forEach { set ->
-                                val actual=set.actual
-                                Text("${actual?.load?.stripTrailingZeros()?.toPlainString()} × "+
-                                    "${actual?.reps} · RIR ${actual?.actualRir?.toString() ?: "not reported"}")
+                    onClick={
+                        // The visible draft is the complete effect. Do not
+                        // alter a saved workout, approved cycle or target.
+                        if(!state.busy && machineChoices.ready &&
+                            !machineChoices.busy && workingSets.any{!it.isResolved}) {
+                            levelExerciseId=exerciseId
+                            levelMachineId=currentMachine
+                            levelWeight=candidate.roundedLoad
+                                .stripTrailingZeros().toPlainString()
+                            levelReps=candidate.averageReps
+                            // Keep ALL invisible Focus rows in sync now.
+                            // Their saveable editors apply the same explicit
+                            // draft when mounted, never on workout issuance.
+                            candidate.eligibleSetKeys.forEach {key->
+                                currentEditors[levelEditorKey(key,currentMachine)]=
+                                    CurrentWorkoutEditorValue(
+                                        levelWeight,levelReps.toString())
                             }
-                            Text("Observed arithmetic mean: ${mean.stripTrailingZeros().toPlainString()}. "+
-                                "This is NOT a verified, feasible straight-set prescription.")
-                            Text("A future change requires verified equipment increments, "+
-                                "rep-range and RIR review, and explicit approval. "+
-                                "This screen does not modify logged sets or future targets.")
+                            levelVersion++
                         }
                     },
-                    confirmButton={
-                        TextButton(onClick={showLevelingReview=false}) {
-                            Text("Keep existing plan")
-                        }
-                    }
-                )
+                    enabled=!state.busy && machineChoices.ready &&
+                        !machineChoices.busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {
+                    Text("Use average load · "+
+                        "${candidate.roundedLoad.stripTrailingZeros().toPlainString()} "+
+                        "$unit × ${candidate.averageReps}")
+                }
+                Text("Fills ${candidate.eligibleSetKeys.size} unfinished working set(s). "+
+                    "Completed sets, warm-ups, actual RIR and future plans remain unchanged. "+
+                    "Log each actual as usual.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if((review as? CurrentWorkoutLevelingReview.Unavailable)?.reason==
+                CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
+                levelRows.count{row->row.load?.let{it>BigDecimal.ZERO}==true}>=2) {
+                Text("To level loads, confirm the equipment increments or "+
+                    "available stack weights in My gym. Your entered sets "+
+                    "remain editable and nothing has been changed.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -541,6 +632,23 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     state.busy || machineChoices.busy || !machineChoices.ready,
                     machineInstanceId=recordedMachineId,
                     referenceMode=referenceMode,lastReferences=lastReferences,
+                    onCurrentDraftChanged={load,reps->
+                        val key=levelEditorKey(set.target.setKey,recordedMachineId)
+                        val next=CurrentWorkoutEditorValue(load,reps)
+                        if(currentEditors[key]!=next)currentEditors[key]=next
+                    },
+                    levelingDraft=if(!set.isResolved &&
+                        set.target.type==DraftSetType.WORKING &&
+                        set.target.exerciseId==levelExerciseId &&
+                        recordedMachineId==levelMachineId &&
+                        levelWeight.isNotBlank() && levelReps>0 &&
+                        (currentEditors[levelEditorKey(
+                            set.target.setKey,recordedMachineId)]?.weight
+                            ?:initialMachineScopedLoad(
+                                set.target.load,null,recordedMachineId))
+                            .toBigDecimalOrNull()?.let{it>BigDecimal.ZERO}==true)
+                        CurrentWorkoutLevelingDraft(levelVersion,levelWeight,levelReps)
+                    else null,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type}.indexOf(set)+1,
                     setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
@@ -794,6 +902,8 @@ private fun NativeKotlinSetCard(
     machineInstanceId:String?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
+    levelingDraft:CurrentWorkoutLevelingDraft?,
+    onCurrentDraftChanged:(String,String)->Unit,
     position:Int,
     setCount:Int,
     showExerciseHeading:Boolean,
@@ -820,6 +930,36 @@ private fun NativeKotlinSetCard(
     }
     var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
         mutableStateOf(existing?.actualRir?.toString().orEmpty())
+    }
+    var appliedLevelVersion by rememberSaveable(
+        target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId
+    ) {mutableIntStateOf(-1)}
+    // Apply only to the unsaved editor of this exact station and set.
+    // The guard prevents Focus/All toggles from overwriting later typed
+    // actuals. Recording still uses the ordinary journal controller.
+    LaunchedEffect(levelingDraft?.version,machineInstanceId,set.isResolved) {
+        val draft=levelingDraft
+        if(draft!=null && !set.isResolved &&
+            appliedLevelVersion!=draft.version) {
+            weight=draft.weight
+            reps=draft.reps.toString()
+            // Leveling changes only the entered load and reps, not actual RIR.
+            appliedLevelVersion=draft.version
+        }
+    }
+    // Keep nonvisible Focus/All editor drafts available for a deliberate
+    // Leveling tap, including after rotation. Never report completed edits
+    // as new current-session facts until they are saved as corrections.
+    LaunchedEffect(target.setKey,machineInstanceId,weight,reps,
+        set.isResolved,levelingDraft?.version,appliedLevelVersion) {
+        // A newly mounted Focus editor may still contain its initial values
+        // for one frame. Do not overwrite the already accepted Leveling
+        // prefill while its versioned editor effect is being applied.
+        val pendingLevel=levelingDraft?.let {
+            !set.isResolved && appliedLevelVersion!=it.version
+        } == true
+        if(target.type==DraftSetType.WORKING && !set.isResolved &&
+            !pendingLevel)onCurrentDraftChanged(weight,reps)
     }
     val actual=performed(target,weight,reps,effort)
     val failedActual=performed(target,weight,reps,effort,failed=true)

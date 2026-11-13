@@ -59,6 +59,23 @@ sealed interface CurrentWorkoutLevelingReview {
  */
 object DoubleProgressionLevelingDomain {
     /**
+     * Shared, inventory-only rounding for current and prior Leveling. Never
+     * infer a usable working load from an unloaded zero, nor jump above the
+     * lowest confirmed positive load when every historical/current entry is
+     * below the equipment's actual range. Ties round up in both paths.
+     */
+    private fun nearestPositiveWorkingLoad(
+        inspection:LoadInspection.Confirmed,mean:BigDecimal
+    ):BigDecimal? {
+        val atOrBelow=inspection.atOrBelow?.takeIf{it>BigDecimal.ZERO}
+            ?:return null
+        return listOfNotNull(atOrBelow,inspection.nextAbove)
+            .filter{it>BigDecimal.ZERO}
+            .minWithOrNull(compareBy<BigDecimal>{it.subtract(mean).abs()}
+                .thenByDescending{it})
+    }
+
+    /**
      * Web parity: average all positive, entered, same-station WORKING loads
      * and reps from TODAY. Offer the nearest physically verified load. A
      * rising pyramid (not an already-level or descending session) is required.
@@ -109,10 +126,8 @@ object DoubleProgressionLevelingDomain {
             verifiedStock,mean,working.first().unit)
                 as? LoadInspection.Confirmed
                 ?:return refuse(CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK)
-        val rounded=listOfNotNull(inspection.atOrBelow,inspection.nextAbove)
-            .filter{it>BigDecimal.ZERO}
-            .minWithOrNull(compareBy<BigDecimal>{it.subtract(mean).abs()}.thenByDescending{it})
-                ?:return refuse(CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD)
+        val rounded=nearestPositiveWorkingLoad(inspection,mean)
+            ?:return refuse(CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD)
         return CurrentWorkoutLevelingReview.Ready(
             mean.stripTrailingZeros(),rounded,averageReps,eligible,working.size)
     }
@@ -194,20 +209,8 @@ object DoubleProgressionLevelingDomain {
             .divide(BigDecimal(facts.size), 3, RoundingMode.HALF_UP)
         val inspection = EquipmentLoadDomain.inspect(verifiedStock, mean, verifiedStock.unit)
             as? LoadInspection.Confirmed ?: return reject(LevelingRefusal.UNVERIFIED_STOCK)
-        // A verified inventory may include an unloaded zero. When no
-        // strictly positive load exists AT OR BELOW the historical mean,
-        // don't leap from a previous 3 lb session to a 10 lb machine minimum
-        // just to produce a candidate. Leave the current editor untouched.
-        if (inspection.atOrBelow?.let { it > BigDecimal.ZERO } != true)
-            return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
-        val choices = listOfNotNull(inspection.atOrBelow, inspection.nextAbove)
-            .filter { it > BigDecimal.ZERO }
-        // Match current-workout Leveling's midpoint policy: prefer the higher
-        // *verified* value on an exact tie (web-style round-half-up).
-        val closest = choices.minWithOrNull(
-            compareBy<BigDecimal> { it.subtract(mean).abs() }
-                .thenByDescending { it }
-        ) ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
+        val closest = nearestPositiveWorkingLoad(inspection,mean)
+            ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         // Never use the rounded mean as a guarantee: each set's capacity,
         // fatigue, and actual RIR still need the athlete's review.
         val commonReps = facts.minOf { it.reps }

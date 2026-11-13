@@ -172,7 +172,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(journal.finishedByEventId!=null ||
+        if(prior.busy || journal.finishedByEventId!=null ||
             journal.snapshot.targets.none{it.setKey==setKey})return
         val existing=journal.effectiveSets[setKey]
         // An edit is a NEW correction event referencing the CURRENT receipt.
@@ -196,7 +196,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(journal.finishedByEventId!=null ||
+        if(prior.busy || journal.finishedByEventId!=null ||
             journal.snapshot.targets.none{it.exerciseId==previousExerciseId} ||
             journal.snapshot.targets.filter{
                 it.exerciseId==previousExerciseId
@@ -213,7 +213,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(journal.finishedByEventId!=null)return
+        if(prior.busy || journal.finishedByEventId!=null)return
         val eventId="undo-"+UUID.randomUUID()
         run(workoutId,{
             host.undoIssuedComposerExerciseSwap(workoutId,eventId,
@@ -282,7 +282,7 @@ internal class NativeKotlinSessionController(
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(!journal.canProposeFinish)return
+        if(prior.busy || !journal.canProposeFinish)return
         val operation=KotlinJournalOperation.Finish(
             "finish-"+UUID.randomUUID(),journal.revision)
         run(workoutId,{host.recordWorkoutOperation(workoutId,operation)},

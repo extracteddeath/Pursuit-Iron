@@ -31,6 +31,23 @@ assert.match(controller,/is NativeJournalFileResult.Durable -> NativeKotlinSessi
 assert.match(controller,/if\(result is NativeJournalFileResult.Rejected && recoverOnReject\)[\s\S]*?host.recoverWorkout\(workoutId\)/);
 assert.doesNotMatch(controller,/WebView|evaluateJavascript|engineBridge/);
 
+// A failed write/read cannot leave an actionable stale presentation in memory.
+// Cancellation is not a storage failure and must propagate to the coroutine.
+const exceptionHandler=controller.slice(
+  controller.indexOf('} catch(cancelled:CancellationException) {',
+    controller.indexOf('private fun run(')),
+  controller.indexOf('} finally {',controller.indexOf('private fun run('))
+);
+required(exceptionHandler,[
+  'throw cancelled',
+  'latestCoachRequest.incrementAndGet()',
+  'mutable.value=NativeKotlinSessionState(',
+  'workoutId=workoutId',
+  'NativeJournalFileRefusal.STORAGE_UNAVAILABLE'
+], 'Unverified storage exception must fail closed and invalidate live coaching');
+assert.doesNotMatch(exceptionHandler,/mutable\\.value=mutable\\.value\\.copy\\(/,
+  'Do not retain actionable journal and presentation after an unknown disk failure');
+
 required(workout,[
   'LaunchedEffect(workoutId) { controller.open(workoutId) }',
   'controller.record(set.target.setKey,outcome,',

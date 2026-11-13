@@ -1,0 +1,61 @@
+name: Native beta integrated source gate (no APK)
+
+on:
+  pull_request:
+    paths:
+      - 'android-native/**'
+      - '.github/workflows/native-beta-integrated-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-beta-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrated-kotlin-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install Android compile platform
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Verify integrated Kotlin domains, coach persistence and Compose compilation
+        working-directory: android-native
+        run: >
+          gradle :kotlin-engine:testDebugUnitTest
+          :native-coach-store:testDebugUnitTest
+          :domain-contract:testDebugUnitTest
+          :app:compileDebugKotlin
+          --no-daemon --stacktrace
+      - name: Verify Kotlin-only ownership, lifecycle navigation and safe resume
+        run: |
+          node android-native/kotlin-engine/verification/offline-only-test.mjs
+          node android-native/verification/kotlin-lab-navigation-test.mjs
+          node android-native/verification/kotlin-train-resume-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
+      - name: Audit parity and superiority without assuming a pass
+        run: |
+          node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test
+          node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --audit --write-report
+      - name: Enforce absence of legacy runtime on app release classpath
+        working-directory: android-native
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > /tmp/pursuit-native-release-dependencies.txt
+          if grep -E 'project :(engine-runtime|engine-bridge)( |$)' /tmp/pursuit-native-release-dependencies.txt; then
+            echo "::error::Legacy engine module present on release runtime classpath"
+            exit 1
+          fi
+          echo "No legacy engine-runtime or engine-bridge project dependency detected."

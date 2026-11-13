@@ -66,7 +66,7 @@ class ReviewedCatalogWaveSixTest {
     }
 
     private fun review(id:String,includeStock:Boolean,override:BigDecimal?=null):
-        CatalogReviewResult {
+        CatalogWeekReview {
         val movement=all.single{it.legacyCuratedId==id}.movement
         val (suggested,stock)=stockFor(id)
         val gym=CatalogGym(

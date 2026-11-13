@@ -37,6 +37,7 @@ jobs:
           node android-native/verification/kotlin-train-resume-test.mjs
           node android-native/verification/native-beta-lifecycle-invariants-test.mjs
           node android-native/verification/native-beta-dependency-boundary-test.mjs
+          node android-native/verification/audit-native-beta-release-dependencies.mjs --self-test
           node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify integrated Kotlin domains, coach persistence and Compose compilation
         working-directory: android-native

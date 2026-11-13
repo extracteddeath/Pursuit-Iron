@@ -159,7 +159,9 @@ object DoubleProgressionLevelingDomain {
         if (observed.map { it.first.workoutId }.distinct().size != 1 ||
             observed.map { it.first.completionOrder }.distinct().size != 1)
             return invalid()
-        if (verifiedStock != null && verifiedStock.unit != issued.first().unit)
+        if (verifiedStock != null &&
+            (verifiedStock.unit != issued.first().unit ||
+                verifiedStock.basis != issued.first().basis))
             return LevelingReviewResult.Rejected(LevelingRefusal.UNVERIFIED_STOCK)
         return review(observed.map { (_,actual) ->
             LevelingSetFact(requireNotNull(actual.load),actual.reps,actual.actualRir)

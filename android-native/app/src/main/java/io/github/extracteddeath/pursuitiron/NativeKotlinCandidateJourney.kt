@@ -257,7 +257,7 @@ internal fun NativeKotlinCandidateJourney(
     val wide=maxWidth>=600.dp
     Scaffold(
         topBar={
-            if(!activeWorkout)Surface(tonalElevation=1.dp) {
+            if(landingChecked && !activeWorkout)Surface(tonalElevation=1.dp) {
                 Row(Modifier.fillMaxWidth()
                     .padding(horizontal=16.dp,vertical=6.dp),
                     verticalAlignment=Alignment.CenterVertically) {
@@ -303,7 +303,7 @@ internal fun NativeKotlinCandidateJourney(
             }
         },
         bottomBar={
-            if(!wide && !activeWorkout)NavigationBar {
+            if(landingChecked && !wide && !activeWorkout)NavigationBar {
                 primaryDestinations.forEach { page ->
                     NavigationBarItem(
                         selected=candidateTabSelected(destination,page),
@@ -316,7 +316,7 @@ internal fun NativeKotlinCandidateJourney(
         }
     ) { insets ->
         Row(Modifier.fillMaxSize().padding(insets)) {
-            if(wide && !activeWorkout)NavigationRail {
+            if(landingChecked && wide && !activeWorkout)NavigationRail {
                 primaryDestinations.forEach { page ->
                     NavigationRailItem(
                         selected=candidateTabSelected(destination,page),
@@ -327,7 +327,23 @@ internal fun NativeKotlinCandidateJourney(
                 }
             }
             Box(Modifier.weight(1f)) {
-            savedScreens.SaveableStateProvider(destination.name) {
+            if(!landingChecked && !navigationTouched) {
+                // Recover the owned training destination before showing onboarding.
+                Column(
+                    Modifier.fillMaxSize().padding(24.dp),
+                    verticalArrangement=Arrangement.Center,
+                    horizontalAlignment=Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(20.dp))
+                    Text("Opening your training",
+                        style=MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Checking saved workouts and programs",
+                        style=MaterialTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else savedScreens.SaveableStateProvider(destination.name) {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
                         NativeKotlinOnboardingCandidateScreen(gymController,

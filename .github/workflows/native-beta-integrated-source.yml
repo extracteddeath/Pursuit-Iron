@@ -36,6 +36,8 @@ jobs:
           node android-native/verification/kotlin-lab-navigation-test.mjs
           node android-native/verification/kotlin-train-resume-test.mjs
           node android-native/verification/native-beta-lifecycle-invariants-test.mjs
+          node android-native/verification/native-beta-dependency-boundary-test.mjs
+          node android-native/verification/audit-native-beta-release-dependencies.mjs --self-test
           node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify integrated Kotlin domains, coach persistence and Compose compilation
         working-directory: android-native
@@ -123,9 +125,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > /tmp/pursuit-native-release-dependencies.txt
-          if grep -E 'project :(engine-runtime|engine-bridge)( |$)' /tmp/pursuit-native-release-dependencies.txt; then
-            echo "::error::Legacy engine module present on release runtime classpath"
-            exit 1
-          fi
-          echo "No legacy engine-runtime or engine-bridge project dependency detected."
+          mkdir -p build/reports
+          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > build/reports/native-beta-release-runtime-dependencies.txt
+          node verification/audit-native-beta-release-dependencies.mjs build/reports/native-beta-release-runtime-dependencies.txt
+      - name: Preserve resolved beta runtime dependency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-beta-resolved-runtime-dependencies
+          path: android-native/build/reports/native-beta-release-runtime-dependencies.txt
+          if-no-files-found: warn
+          retention-days: 30

@@ -73,6 +73,68 @@ assert.ok(journal.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,') 
   exerciseHistory.includes('RIR not reported'),
   'Custom workout History must open complete correction-aware exercise facts, never invent RIR');
 const controller=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt');
+// Beta reliability: a previous session must NEVER remain actionable after
+// invalid navigation, a failed store write or an asynchronous late callback.
+// These source invariants supplement (not replace) Android-device acceptance.
+const sessionRun=controller.slice(
+  controller.indexOf('private fun run('),
+  controller.indexOf('/** Reading never issues a new workout. */'));
+for(const required of [
+  'private val generation=AtomicLong(0)',
+  'private val closed=AtomicBoolean(false)',
+  'private val stateGate=Any()',
+  'hideUnverified:Boolean=false',
+  'if(!pending.compareAndSet(false,true)) {',
+  'generation.incrementAndGet()',
+  'NativeKotlinSessionState(workoutId=workoutId,busy=true)',
+  'if(closed.get() || generation.get()!=requestGeneration)return@launch',
+  'catch(cancelled:CancellationException)',
+  'throw cancelled',
+  'catch(_:Exception)',
+  'unavailableReason=NativeJournalFileRefusal.STORAGE_UNAVAILABLE',
+  'private fun rejectInvalidSelection(workoutId:String):Boolean',
+  'NativeJournalFileRefusal.INVALID_ARGUMENT',
+  'run(workoutId,{host.recoverWorkout(workoutId)},hideUnverified=true)',
+  '},hideUnverified=true)'
+])assert.ok(controller.includes(required),
+  'Generated workout must invalidate stale/unverified session state: '+required);
+assert.ok(!sessionRun.includes('busy=false,unavailableReason='),
+  'Unknown storage failure must clear journal and presentation, not retain stale editable receipts');
+const acceptedPublication=controller.slice(
+  controller.indexOf('private fun accepted('),
+  controller.indexOf('private fun run('));
+assert.ok(acceptedPublication.includes('synchronized(stateGate)') &&
+  acceptedPublication.includes('generation.get()==requestGeneration') &&
+  acceptedPublication.includes('if(!closed.get() &&'),
+  'Durable recovered journal publication must be atomic with Close and Clear');
+assert.ok(sessionRun.includes('val requestGeneration=synchronized(stateGate)') &&
+  sessionRun.includes('synchronized(stateGate) {') &&
+  sessionRun.includes('accepted(workoutId,current,requestGeneration,'),
+  'Opening, late recoveries and disk-failure state must all pass the same session publication lock');
+const cleanup=controller.slice(controller.indexOf('fun clear()'));
+assert.ok(cleanup.includes('fun clear() {\n        synchronized(stateGate)') &&
+  cleanup.includes('override fun close() {\n        synchronized(stateGate)') &&
+  cleanup.includes('scope.cancel()'),
+  'Clear/Close must atomically invalidate pending journal writes and coaching callbacks');
+
+const saveAndFinish=controller.slice(
+  controller.indexOf('fun record('),
+  controller.indexOf('fun clear()'));
+assert.ok(saveAndFinish.includes('if(prior.busy || journal.finishedByEventId!=null ||') &&
+  saveAndFinish.includes('if(prior.busy || !journal.canProposeFinish)return') &&
+  saveAndFinish.includes('if(!closed.get() &&'),
+  'No set, Finish or late coaching update may bypass busy, closed or journal revision gates');
+const reset=controller.slice(controller.indexOf('fun clear()'),controller.indexOf('override fun close()'));
+assert.ok(reset.includes('generation.incrementAndGet()') &&
+  reset.includes('latestCoachRequest.incrementAndGet()') &&
+  reset.includes('mutable.value=NativeKotlinSessionState()') &&
+  !reset.includes('if(pending.get())return'),
+  'Clearing the logger must suppress in-flight callbacks, not preserve the previous athlete session');
+const failclosedScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+assert.ok(failclosedScreen.includes('Verifying the saved workout and athlete ownership.') &&
+  failclosedScreen.includes('state.unavailableReason==NativeJournalFileRefusal.NOT_ISSUED && !state.busy'),
+  'Unverified workout recovery must never show enabled Start or stale set-entry controls');
+
 const generatedCoach=controller.slice(controller.indexOf('fun reviewNextSet('),
   controller.indexOf('fun saveSessionNote('));
 const customCoachStart=journal.indexOf('LaunchedEffect(host,workoutId,current.revision,');

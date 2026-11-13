@@ -333,10 +333,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             PursuitCard(highlighted=true) {
                 Text("Open a workout issued by the independent Kotlin coach.",
                     style=MaterialTheme.typography.titleMedium)
-                Text(humanStatus(state.unavailableReason).ifBlank{
+                Text(if(state.busy)
+                    "Verifying the saved workout and athlete ownership. Logging and Finish remain unavailable until recovery completes."
+                else humanStatus(state.unavailableReason).ifBlank{
                     "No confirmed native workout has been loaded. Your existing app data is unchanged."
                 })
-                if(state.unavailableReason==NativeJournalFileRefusal.NOT_ISSUED) {
+                if(state.unavailableReason==NativeJournalFileRefusal.NOT_ISSUED && !state.busy) {
                     PursuitPrimaryAction("Start explicitly approved workout",
                         enabled=!state.busy){controller.startApproved(workoutId)}
                 }

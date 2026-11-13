@@ -415,25 +415,37 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     it.target.type==DraftSetType.WORKING
             }
             val completedWorking=exerciseWorkingSets.filter {
-                it.isResolved && it.actual?.load!=null
+                it.outcome==KotlinJournalSetOutcome.COMPLETED && it.actual?.load!=null
             }
             val loads=completedWorking.mapNotNull { it.actual?.load }
             val mixedLoads=loads.map { it.stripTrailingZeros() }.distinct().size>1
+            val sameLoadUnit=completedWorking.map { it.actual?.unit }.distinct().size==1
             // Different physical stations cannot share one leveling baseline.
             val machineIds=completedWorking.map { it.actual?.machineInstanceId }.distinct()
-            val samePhysicalStation=machineIds.size==1
+            val samePhysicalStation=machineIds.size==1 &&
+                (activeMachineConfig?.machines?.isNotEmpty()!=true ||
+                    machineIds.singleOrNull()!=null)
             var showLevelingReview by remember(workoutId,selected.target.exerciseId) {
                 mutableStateOf(false)
             }
             if(exerciseWorkingSets.size>=2) {
                 OutlinedButton(
                     onClick={showLevelingReview=true},
-                    enabled=mixedLoads && samePhysicalStation &&
+                    enabled=mixedLoads && samePhysicalStation && sameLoadUnit &&
                         completedWorking.size==exerciseWorkingSets.size && !state.busy
                 ) { Text("Leveling · review pyramid") }
+                if(!sameLoadUnit && completedWorking.size>1)
+                    Text("Leveling requires one consistent weight unit.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(!samePhysicalStation && completedWorking.size>1)
                     Text("Leveling requires sets from the same physical machine. "+
                         "Machine A/B histories must remain separate.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(completedWorking.size!=exerciseWorkingSets.size)
+                    Text("Complete every working set before reviewing Leveling. "+
+                        "Skipped and failed attempts are not usable evidence.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(!mixedLoads)

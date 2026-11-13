@@ -765,5 +765,5 @@ assert.ok(nativeSwapUi.includes('kotlinExerciseLabel(it.option.exerciseId)') &&
   nativeSwapUi.includes('choices,query,matchingPattern,sharedMusclesOnly,displayLabels') &&
   rankedSwapDomain.includes('displayLabels:Map<String,String> = emptyMap()') &&
   rankedSwapDomain.includes('displayLabels[it.option.exerciseId]') &&
-  nativeSwapUi.includes('Shared direct muscles') || nativeSwapUi.includes('Shared direct'),
+  nativeSwapUi.includes('label={Text("Shared direct muscles")}'),
   'Workout swap search must match visible exercise labels without abandoning engine ranking');

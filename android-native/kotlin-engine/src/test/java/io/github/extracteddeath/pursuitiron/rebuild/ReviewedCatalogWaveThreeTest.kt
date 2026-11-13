@@ -27,12 +27,12 @@ class ReviewedCatalogWaveThreeTest {
         "inc-cable-fly","high-cable-fly","pendulum-squat","cable-press","v-squat",
         "wide-pulldown","close-pulldown","one-arm-pulldown","straight-pulldown","cable-woodchop"
     )
-    private val wave=all.drop(76)
+    private val wave=all.drop(76).take(70)
     private val byId=all.associateBy {it.legacyCuratedId}
     private fun n(v:String)=BigDecimal(v)
 
     @Test fun sourceIDsAndPhysicalVariantsAreStableAndNonTransferring() {
-        assertEquals(146,all.size)
+        assertEquals(164,all.size)
         assertEquals(70,wave.size)
         assertEquals(addedIds,wave.map {it.legacyCuratedId})
         assertEquals(all.size,byId.size)

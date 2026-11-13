@@ -194,7 +194,7 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
         // Saved identities are append-only: the first 42 retain their
         // exact ordinal/source IDs while the seven new variants follow.
-        assertEquals(146,starter.catalog.size)
+        assertEquals(164,starter.catalog.size)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",
@@ -236,7 +236,17 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             "bicycle","oblique-crunch","leg-raise","bench-dip","standing-curl",
             "inc-cable-fly","high-cable-fly","pendulum-squat","cable-press","v-squat",
             "wide-pulldown","close-pulldown","one-arm-pulldown","straight-pulldown","cable-woodchop"
-        ),starter.catalog.drop(76).map{it.exerciseId})
+        ),starter.catalog.drop(76).take(70).map{it.exerciseId})
+        // The fourth expansion must preserve all 146 earlier identities
+        // and carry independently reviewed physical attachments on restore.
+        assertEquals(listOf(
+            "rope-hammer-curl","v-bar-pushdown","straight-bar-pushdown",
+            "dual-rope-pushdown","single-pushdown","cable-rear-fly",
+            "single-cable-rear-fly","cable-front-raise","pull-through",
+            "pallof","woodchopper","zottman-curl","tate-press",
+            "tricep-kickback","renegade-row","reverse-lunge",
+            "curtsy-lunge","db-upright-row"
+        ),starter.catalog.drop(146).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)

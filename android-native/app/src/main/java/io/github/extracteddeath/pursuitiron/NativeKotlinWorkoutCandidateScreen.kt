@@ -419,15 +419,23 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }
             val loads=completedWorking.mapNotNull { it.actual?.load }
             val mixedLoads=loads.map { it.stripTrailingZeros() }.distinct().size>1
+            // Different physical stations cannot share one leveling baseline.
+            val machineIds=completedWorking.map { it.actual?.machineInstanceId }.distinct()
+            val samePhysicalStation=machineIds.size==1
             var showLevelingReview by remember(workoutId,selected.target.exerciseId) {
                 mutableStateOf(false)
             }
             if(exerciseWorkingSets.size>=2) {
                 OutlinedButton(
                     onClick={showLevelingReview=true},
-                    enabled=mixedLoads && completedWorking.size==exerciseWorkingSets.size &&
-                        !state.busy
+                    enabled=mixedLoads && samePhysicalStation &&
+                        completedWorking.size==exerciseWorkingSets.size && !state.busy
                 ) { Text("Leveling · review pyramid") }
+                if(!samePhysicalStation && completedWorking.size>1)
+                    Text("Leveling requires sets from the same physical machine. "+
+                        "Machine A/B histories must remain separate.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(!mixedLoads)
                     Text("Leveling is available after completing a mixed-load working-set session.",
                         style=MaterialTheme.typography.bodySmall,

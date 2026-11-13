@@ -566,7 +566,7 @@ object CustomNextWorkoutCoachingDomain {
                     // applies to unverified physical Machine A/B stations.
                     unchangedIssuedLoadReviewOnly=
                         request.verifiedStock==null &&
-                        request.requestedMachineInstanceId==null)
+                        targetMachine==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)
             }.getOrElse {
                 return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                     ids,latest.evidence.workoutId,

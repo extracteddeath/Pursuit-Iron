@@ -132,6 +132,41 @@ class CustomNextWorkoutCoachingDomainTest {
         assertTrue(custom.nextSetSuggestions.none{it.actualRir==null})
     }
 
+    @Test fun boundPhysicalMachineCannotUseUnverifiedLegacyRepOnlyFallback() {
+        // Two authentic A visits are not independently verified physical
+        // stock. A null live override must retain the approved bound A.
+        fun physicalA(session:CustomCoachingHistoricalSession)=
+            session.copy(evidence=session.evidence.copy(
+                visits=session.evidence.visits.map { fact ->
+                    fact.copy(actual=fact.actual?.copy(machineInstanceId="A"))
+                }))
+        val earlier=physicalA(completed(1,3))
+        val latest=physicalA(completed(2,4,
+            reps=listOf(5,6),rirs=listOf(5,4)))
+        val next=snapshot(5).let {day ->
+            day.copy(slots=day.slots.map {it.copy(machineInstanceId="A")})
+        }
+        fun inspect(verified:VerifiedLoadStock?)=
+            CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(next,"main",
+                    listOf(earlier,latest),verified,n(5),
+                    CoachReadiness.NORMAL,false,
+                    CustomRepForecastPolicy.TARGET_RIR_V2,
+                    requestedMachineInstanceId=null))
+        val unknownStock=inspect(null)
+        assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+            unknownStock.status)
+        assertTrue(unknownStock.nextSetSuggestions.isEmpty())
+        assertNull(unknownStock.loadReviewCandidate)
+        assertFalse(unknownStock.mayIssueWorkout)
+        val independentlyVerified=inspect(stock())
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            independentlyVerified.status)
+        assertEquals(listOf(8,8),
+            independentlyVerified.nextSetSuggestions.map {it.proposedNextReps})
+        assertNull(independentlyVerified.loadReviewCandidate)
+    }
+
     @Test fun targetRirV2UsesCanonicalStockEvidenceNotACustomShortcut() {
         val older=completed(1,3,reps=listOf(5,5))
         val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(5,4))

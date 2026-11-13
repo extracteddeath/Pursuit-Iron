@@ -800,6 +800,25 @@ internal fun NativeKotlinCustomJournalScreen(
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 machineInstanceId=mainMachineId,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
+                                levelingDraft=if(observed==null &&
+                                    set.prescription.type==DraftSetType.WORKING &&
+                                    slot.slotId==levelSlotId &&
+                                    mainMachineId==levelMachineId &&
+                                    levelWeight.isNotBlank() && levelReps>0 &&
+                                    (currentEditors[levelEditorKey(
+                                        set.setKey,mainMachineId)]?.weight
+                                        ?:initialMachineScopedLoad(
+                                            set.prescription.load,null,mainMachineId))
+                                        .toBigDecimalOrNull()
+                                        ?.let{it>BigDecimal.ZERO}==true)
+                                    CurrentWorkoutLevelingDraft(
+                                        levelVersion,levelWeight,levelReps)
+                                else null,
+                                onCurrentDraftChanged={weight,reps->
+                                    val key=levelEditorKey(set.setKey,mainMachineId)
+                                    val entry=CurrentWorkoutEditorValue(weight,reps)
+                                    if(currentEditors[key]!=entry)currentEditors[key]=entry
+                                },
                                 position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                     .indexOf(set)+1,
                                 setCount=slot.sets.count{it.prescription.type==set.prescription.type},
@@ -1076,7 +1095,9 @@ private fun NativeKotlinCustomVisitEditor(
     setCount:Int,
     initiallyExpanded:Boolean,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
-    onShowPlates:(String,LoadUnit,LoadBasis)->Unit
+    onShowPlates:(String,LoadUnit,LoadBasis)->Unit,
+    levelingDraft:CurrentWorkoutLevelingDraft?=null,
+    onCurrentDraftChanged:(String,String)->Unit={_,_->}
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1123,6 +1144,29 @@ private fun NativeKotlinCustomVisitEditor(
     }
     var actualRir by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved?.performed?.actualRir?.toString().orEmpty())
+    }
+    var appliedLevelVersion by rememberSaveable(
+        set.setKey,part.name,existing?.appliedRevision,machineInstanceId
+    ) {mutableIntStateOf(-1)}
+    LaunchedEffect(levelingDraft?.version,machineInstanceId,existing?.appliedRevision) {
+        val draft=levelingDraft
+        if(part==CustomWorkoutVisitPart.MAIN && saved==null &&
+            prescription.type==DraftSetType.WORKING && draft!=null &&
+            appliedLevelVersion!=draft.version) {
+            actualLoad=draft.weight
+            actualReps=draft.reps.toString()
+            // Preserve entered actual RIR, which Leveling never owns.
+            appliedLevelVersion=draft.version
+        }
+    }
+    LaunchedEffect(set.setKey,part,machineInstanceId,actualLoad,actualReps,
+        saved,levelingDraft?.version,appliedLevelVersion) {
+        val pendingLevel=levelingDraft?.let {
+            saved==null && appliedLevelVersion!=it.version
+        }==true
+        if(part==CustomWorkoutVisitPart.MAIN && saved==null &&
+            prescription.type==DraftSetType.WORKING && !pendingLevel)
+            onCurrentDraftChanged(actualLoad,actualReps)
     }
     val weight=if(verified==null)null else
         runCatching{BigDecimal(actualLoad.trim())}.getOrNull()

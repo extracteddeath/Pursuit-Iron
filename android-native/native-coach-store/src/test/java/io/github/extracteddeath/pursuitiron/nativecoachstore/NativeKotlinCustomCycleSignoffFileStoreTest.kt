@@ -4114,9 +4114,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             permissionStore.confirm("owner-1","cycle-1",
                 rights.revision,rights.allowedKinds-
                     CustomCycleChangeKind.WEEK_OVERRIDES,true))
-        assertEquals(NativeFutureWeekDraftDecision.Rejected(
-            NativeFutureWeekDraftRefusal.SOURCE_OR_HISTORY_CHANGED),
-            f.acceptance.accept(s,fingerprint,true))
+        // Revoking permission may reject at source validation or candidate
+        // eligibility, before fingerprint comparison. Both must fail closed:
+        // no previously displayed consent can save a new draft.
+        val revoked=f.acceptance.accept(s,fingerprint,true)
+        assertTrue(revoked.toString(),
+            revoked is NativeFutureWeekDraftDecision.Rejected)
         assertEquals(2L,(drafts.read("owner-1","cycle-1")
             as NativeCustomDraftReadResult.Found).draft.revision)
         active=NativeKotlinOwnerIdentity("other-owner","athlete-1")

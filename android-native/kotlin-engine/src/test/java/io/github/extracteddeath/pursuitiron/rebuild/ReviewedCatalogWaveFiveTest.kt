@@ -99,6 +99,50 @@ class ReviewedCatalogWaveFiveTest {
         }
     }
 
+    @Test fun verifiedFixturesAndStockPermitOnlyReviewedExerciseVariants() {
+        for(id in bodyweight) {
+            val movement=byId.getValue(id).movement
+            val gym=CatalogGym(emptyMap(),emptySet(),
+                movement.requiredFacilityIds)
+            val accepted=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(request,
+                    listOf(CatalogExerciseChoice(id,null,90,120,
+                        2,3,2,1,1,5)),gym))
+            assertTrue(id+": "+accepted.issues,accepted.issues.isEmpty())
+            assertNotNull(id,accepted.composedRequest)
+            // A bodyweight entry never becomes a loaded alternative.
+            val illicit=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(request,
+                    listOf(CatalogExerciseChoice(id,n("50"),90,120,
+                        2,3,2,1,1,5)),gym))
+            assertTrue(id+": "+illicit.issues,illicit.issues.any {
+                it.exerciseId==id &&
+                    it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY
+            })
+        }
+        for(id in machine) {
+            val movement=byId.getValue(id).movement
+            val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
+                LoadBasis.EXERCISE_OVERRIDE,listOf(n("50"),n("100")))
+            val gym=CatalogGym(
+                mapOf(checkNotNull(movement.equipmentId) to stock),emptySet())
+            val valid=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(request,
+                    listOf(CatalogExerciseChoice(id,n("100"),90,120,
+                        2,3,2,1,1,5)),gym))
+            assertTrue(id+": "+valid.issues,valid.issues.isEmpty())
+            assertNotNull(id,valid.composedRequest)
+            val unlisted=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(request,
+                    listOf(CatalogExerciseChoice(id,n("125"),90,120,
+                        2,3,2,1,1,5)),gym))
+            assertTrue(id+": "+unlisted.issues,unlisted.issues.any {
+                it.exerciseId==id &&
+                    it.kind==CatalogIssueType.LOAD_UNVERIFIED
+            })
+        }
+    }
+
     @Test fun dedicatedMachinesRefuseAbsentInventoryAndNeverTransferOtherLifts() {
         assertEquals(setOf("reverse-hyper","leg-press-calf","donkey-calf"),
             machine)

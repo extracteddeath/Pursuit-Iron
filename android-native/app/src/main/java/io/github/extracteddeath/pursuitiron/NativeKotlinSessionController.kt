@@ -65,10 +65,17 @@ internal class NativeKotlinSessionController(
 
     private fun run(
         workoutId:String,operation:()->NativeJournalFileResult,
-        recoverOnReject:Boolean=false
+        recoverOnReject:Boolean=false,
+        hideUnverified:Boolean=false
     ) {
         if(!pending.compareAndSet(false,true))return
-        mutable.value=mutable.value.copy(busy=true,
+        // Opening or issuing is an authorization/recovery boundary. Never
+        // display a previous athlete/session's receipts while disk ownership
+        // and approval are being revalidated. In-session writes can keep
+        // their verified presentation visible under the busy lock.
+        mutable.value=if(hideUnverified)
+            NativeKotlinSessionState(workoutId=workoutId,busy=true)
+        else mutable.value.copy(busy=true,
             unavailableReason=null,journalRefusal=null)
         scope.launch {
             try {
@@ -105,7 +112,7 @@ internal class NativeKotlinSessionController(
     fun open(workoutId:String) {
         if(!workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")))
             return
-        run(workoutId,{host.recoverWorkout(workoutId)})
+        run(workoutId,{host.recoverWorkout(workoutId)},hideUnverified=true)
     }
 
     /** Explicit action only; a valid persisted grant is required by store. */
@@ -125,7 +132,7 @@ internal class NativeKotlinSessionController(
                                 ?: NativeJournalFileRefusal.NOT_AUTHORIZED
                         })
             }
-        })
+        },hideUnverified=true)
     }
 
     fun record(

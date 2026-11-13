@@ -164,6 +164,13 @@ class DoubleProgressionLevelingDomainTest {
             DoubleProgressionLevelingDomain.reviewCurrentWorkout(blank,stock))
     }
 
+    @Test fun halfStepUsesWebsRoundUpNotConservativeRoundDown() {
+        val review=DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+            current("115","120"),stock) as CurrentWorkoutLevelingReview.Ready
+        assertEquals(n("117.5"),review.rawMean)
+        assertEquals(n("120"),review.roundedLoad)
+    }
+
     @Test fun exactEquipmentValuesWinOverArithmeticAverage() {
         val stockWithGaps=VerifiedLoadStock.Totals(
             LoadUnit.LB,LoadBasis.SMITH_TOTAL,

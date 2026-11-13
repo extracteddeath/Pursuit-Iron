@@ -173,7 +173,7 @@ object CustomCycleCoachAuditDomain {
         val options = CustomExerciseAuthoringDomain.picker(setup, catalog)
         // A partially malformed or unreviewed catalog cannot silently pass
         // by returning an empty subset of candidate exercise options.
-        if (catalog.isEmpty() || catalog.size > 256 ||
+        if (catalog.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
             catalog.map { it.exerciseId }.distinct().size != catalog.size ||
             catalog.map { it.familyId to it.variantId }.distinct().size != catalog.size ||
             catalog.any { m ->

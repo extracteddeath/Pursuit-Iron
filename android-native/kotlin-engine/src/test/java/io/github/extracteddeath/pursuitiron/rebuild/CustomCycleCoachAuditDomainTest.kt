@@ -94,6 +94,45 @@ class CustomCycleCoachAuditDomainTest {
         assertFalse(result.mayAlterWorkoutHistory)
     }
 
+    @Test fun fullCycleCoachAuditAccepts376ButNeverUnverifiedOverCapacityCatalog() {
+        val canonical=StarterExerciseTranche.movements()
+        val first=CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES
+        fun synthetic(extra:Int):List<CatalogMovement> {
+            val prototype=canonical.first()
+            return canonical+(1..extra).map {index->
+                prototype.copy(
+                    exerciseId="unavailable-audit-catalog-$index",
+                    familyId="unavailable-audit-family-$index",
+                    variantId="provisional",
+                    equipmentId="absent-physical-station",
+                    expectedLoadBasis=LoadBasis.EXERCISE_OVERRIDE,
+                    requiredFacilityIds=emptySet(),
+                    attachmentId=null,
+                    recoveryGroupId=null,
+                    minimumRecoveryGroupDayGap=1)
+            }
+        }
+        val baseline=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),canonical,inputs())
+        assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
+            baseline.status)
+        val widened=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),synthetic(376-canonical.size),inputs())
+        assertEquals("Valid catalog expansion must not block the same authored cycle: ${widened.issues}",
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,widened.status)
+        assertEquals(baseline.weeks,widened.weeks)
+        assertEquals(baseline.structuralReview?.verifiedDraft,
+            widened.structuralReview?.verifiedDraft)
+        assertFalse(widened.mayPublishApprovedProgram)
+        assertFalse(widened.mayIssueWorkout)
+        val tooLarge=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),synthetic(first+1-canonical.size),inputs())
+        assertTrue(tooLarge.issues.any{
+            it.kind==CustomCoachIssueKind.CATALOG_UNVERIFIED})
+        assertNotEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
+            tooLarge.status)
+    }
+
     @Test fun noAuthoredPolicyOrTimeEvidenceMeansNeverApproved() {
         val result=CustomCycleCoachAuditDomain.review(
             cycle(),setup(),StarterExerciseTranche.movements())

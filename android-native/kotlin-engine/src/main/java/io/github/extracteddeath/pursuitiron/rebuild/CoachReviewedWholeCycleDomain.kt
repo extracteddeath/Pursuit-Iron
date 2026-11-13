@@ -148,7 +148,10 @@ object CoachReviewedWholeCycleDomain {
             request.title.isBlank() || request.title.length>120 ||
             request.totalWeeks !in 1..26 ||
             request.phaseStarts.size>TrainingPhase.entries.size ||
-            request.catalog.isEmpty() || request.catalog.size>256 ||
+            request.catalog.size !in 1..CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES ||
+            request.catalog.map{it.exerciseId}.distinct().size!=request.catalog.size ||
+            request.catalog.map{it.familyId to it.variantId}.distinct().size!=
+                request.catalog.size ||
             request.performanceTestPlanned!=
                 request.performanceTargetExerciseIds.isNotEmpty() ||
             request.performanceTargetExerciseIds.size>4 ||

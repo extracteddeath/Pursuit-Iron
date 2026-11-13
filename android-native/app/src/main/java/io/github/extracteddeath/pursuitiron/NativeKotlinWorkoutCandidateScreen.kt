@@ -96,7 +96,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     workoutId:String,
     host:NativeKotlinCandidateHost,
     onViewHistory:()->Unit={},
-    onReviewNext:(String)->Unit={}
+    onReviewNext:(String)->Unit={},
+    onReturnToProgram:()->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val scope=rememberCoroutineScope()
@@ -754,6 +755,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         style=MaterialTheme.typography.bodySmall)
                     PursuitPrimaryAction("View finished workout in History",
                         enabled=!state.busy){onViewHistory()}
+                    OutlinedButton(
+                        onClick=onReturnToProgram,
+                        enabled=!state.busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Continue to my training plan")}
                     Text("Choose a movement to review with Coach. The current approved program determines whether its progression is eligible.",
                         style=MaterialTheme.typography.bodySmall)
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),

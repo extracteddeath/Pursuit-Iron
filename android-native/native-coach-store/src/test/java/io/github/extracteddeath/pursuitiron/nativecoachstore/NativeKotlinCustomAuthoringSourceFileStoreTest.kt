@@ -194,7 +194,7 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
         // Saved identities are append-only: the first 42 retain their
         // exact ordinal/source IDs while the seven new variants follow.
-        assertEquals(146,starter.catalog.size)
+        assertEquals(164,starter.catalog.size)
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",

@@ -85,7 +85,7 @@ class StarterCatalogPrescribingAcceptanceTest {
     }
 
     @Test fun everyRealCatalogIdentityAcceptsOnlyConfirmedGymMetadata() {
-        assertEquals(146,catalog.size)
+        assertEquals(164,catalog.size)
         val allStock=stockFor(catalog.map{it.exerciseId})
         assertTrue(allStock.confirmedStock.size<=128)
         assertEquals(catalog.size,byId.size)

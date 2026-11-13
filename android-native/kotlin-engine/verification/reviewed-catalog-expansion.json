@@ -3004,6 +3004,526 @@
         "attachment": "single-handle",
         "note": "Cable woodchop requires a real cable station and single handle; no fabricated oblique dose. Independent exercise identity and athlete-verified loading are required; never silently borrow a previous variant's weight."
       }
+    },
+    {
+      "id": "rope-hammer-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "rope-hammer-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "BRACHIALIS",
+        "indirect": [
+          "BICEPS:0.5"
+        ],
+        "attachment": "rope",
+        "note": "Separate rope hammer curls from ordinary cable curls; confirmed rope and stack, brachialis direct credit, no ambiguous forearm credits."
+      }
+    },
+    {
+      "id": "v-bar-pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "v-bar-cable-pushdown",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "v-bar",
+        "note": "A physical V-bar attachment and calibrated cable stack are required; no prior straight-bar or rope weights transfer."
+      }
+    },
+    {
+      "id": "straight-bar-pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "extended-straight-bar-pushdown",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Preserve this distinct web ID with an actual straight bar; a similarly named pushdown must not donate history or loading."
+      }
+    },
+    {
+      "id": "dual-rope-pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "dual-rope-cable-pushdown",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "dual-rope",
+        "note": "A dual-rope attachment must actually be owned and the stack confirmed; no single-rope equivalence is inferred."
+      }
+    },
+    {
+      "id": "single-pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "single-arm-cable-pushdown",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Single-arm pushdown requires its own handle and independently confirmed stack; workouts keep actual A/B station history."
+      }
+    },
+    {
+      "id": "cable-rear-fly",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "rear_delt_fly",
+        "variant": "dual-cable-rear-fly",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "REAR_DELTS",
+        "indirect": [],
+        "attachment": "dual-handles",
+        "note": "Two cable handles are required for this rear-delt fly; neither dumbbell fly nor pec-deck loading can carry across."
+      }
+    },
+    {
+      "id": "single-cable-rear-fly",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "pursuit_m201"
+      },
+      "review": {
+        "family": "rear_delt_fly",
+        "variant": "single-cable-rear-fly",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "REAR_DELTS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "One cable handle supports the unilateral rear-delt fly; do not inherit another cable or machine fly prescription."
+      }
+    },
+    {
+      "id": "cable-front-raise",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "front_delt_raise",
+        "variant": "straight-handle-cable-front",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Front-delt cable raise is implemented with a real straight handle and exact verified stack, without invented deltoid crossover."
+      }
+    },
+    {
+      "id": "pull-through",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "cable-rope-pull-through",
+        "pattern": "HINGE",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": "rope",
+        "note": "Cable pull-through uses a rope and verified stack; omit broad lower-back credit and keep hamstring and glute credits distinct."
+      }
+    },
+    {
+      "id": "pallof",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_anti_rotation",
+        "variant": "pallof-cable-single",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Pallof anti-rotation work requires an actual handle and stack; no unjustified oblique-specific dosage is claimed."
+      }
+    },
+    {
+      "id": "woodchopper",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_rotation",
+        "variant": "low-to-high-cable-chop",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Low-to-high cable chop needs a real single handle and calibrated stack, distinct from other trunk rotation exercise IDs."
+      }
+    },
+    {
+      "id": "zottman-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "zottman-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Zottman curl uses verified per-hand dumbbells; source forearm credit is withheld because flexion and extension are not identified."
+      }
+    },
+    {
+      "id": "tate-press",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "tate-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [
+          "CHEST:0.25"
+        ],
+        "attachment": null,
+        "note": "Tate press requires actual per-hand dumbbells and independent triceps loading; bench weight never becomes its baseline."
+      }
+    },
+    {
+      "id": "tricep-kickback",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "dumbbell-triceps-kickback",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Dumbbell kickback requires calibrated per-hand weight and remains a different exercise from the cable kickback."
+      }
+    },
+    {
+      "id": "renegade-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "horizontal_row",
+        "variant": "renegade-dumbbells",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "ABS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Renegade row needs two real dumbbells and bracing; its verified per-hand load never comes from another rowing variant."
+      }
+    },
+    {
+      "id": "reverse-lunge",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lunge",
+        "variant": "reverse-dumbbell",
+        "pattern": "SQUAT",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": null,
+        "note": "Reverse dumbbell lunges use per-hand loads and separate quad and glute accounting; other lunges cannot transfer weights."
+      }
+    },
+    {
+      "id": "curtsy-lunge",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lunge",
+        "variant": "curtsy-dumbbell",
+        "pattern": "SQUAT",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "GLUTES",
+        "indirect": [
+          "QUADS:0.5"
+        ],
+        "attachment": null,
+        "note": "Curtsy dumbbell lunge requires per-hand verified stock and independent load history, with conservative glute and quad credits."
+      }
+    },
+    {
+      "id": "db-upright-row",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "upright_row",
+        "variant": "upright-dumbbells",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [
+          "UPPER_BACK:0.25"
+        ],
+        "attachment": null,
+        "note": "Upright dumbbell rows use real per-hand resistance; barbell rows and shoulder raises must not donate history."
+      }
     }
   ]
 }

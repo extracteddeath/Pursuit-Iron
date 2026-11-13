@@ -758,3 +758,12 @@ for(const required of [
   'Prior-session Leveling must be cancellation-scoped and avoid UI-thread equipment inspection: '+required);
 assert.ok(!priorLeveling.includes('DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout('),
   'No expensive verified equipment review on the generated Compose UI thread');
+
+const nativeSwapUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinComposerSwapSheet.kt');
+const rankedSwapDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinComposerSwapReviewDomain.kt');
+assert.ok(nativeSwapUi.includes('kotlinExerciseLabel(it.option.exerciseId)') &&
+  nativeSwapUi.includes('choices,query,matchingPattern,sharedMusclesOnly,displayLabels') &&
+  rankedSwapDomain.includes('displayLabels:Map<String,String> = emptyMap()') &&
+  rankedSwapDomain.includes('displayLabels[it.option.exerciseId]') &&
+  nativeSwapUi.includes('Shared direct muscles') || nativeSwapUi.includes('Shared direct'),
+  'Workout swap search must match visible exercise labels without abandoning engine ranking');

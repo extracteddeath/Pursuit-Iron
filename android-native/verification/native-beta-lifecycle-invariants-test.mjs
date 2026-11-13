@@ -30,6 +30,12 @@ required(controller,[
 assert.match(controller,/is NativeJournalFileResult.Durable -> NativeKotlinSessionState\([\s\S]*?journal=result.journal/);
 assert.match(controller,/if\(result is NativeJournalFileResult.Rejected && recoverOnReject\)[\s\S]*?host.recoverWorkout\(workoutId\)/);
 assert.doesNotMatch(controller,/WebView|evaluateJavascript|engineBridge/);
+required(controller,[
+  'hideUnverified:Boolean=false',
+  'NativeKotlinSessionState(workoutId=workoutId,busy=true)',
+  'run(workoutId,{host.recoverWorkout(workoutId)},hideUnverified=true)',
+  '},hideUnverified=true)'
+], 'Cold recovery and issuance must not expose unverified previous-session receipts');
 
 // A failed write/read cannot leave an actionable stale presentation in memory.
 // Cancellation is not a storage failure and must propagate to the coroutine.

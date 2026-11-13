@@ -21,9 +21,12 @@ assert.doesNotMatch(candidate,/if\(generatedWorkoutId!=null\) \{\s*if\(selectedI
 // Minimize only when journal writes are not in progress. Clearing a controller
 // is in-memory only and cannot invent a Finish or delete durable set receipts.
 assert.match(candidate,/val sessionState by controller\.state\.collectAsStateWithLifecycle\(\)/);
-assert.match(candidate,/TextButton\(enabled=!sessionState\.busy,onClick=/);
+assert.match(candidate,/TextButton\(enabled=!sessionState\.busy,\s*onClick=::minimizeGeneratedWorkout/);
+assert.match(candidate,/BackHandler\(enabled=customWorkoutId==null && selectedId!=null\)/);
+assert.match(candidate,/fun minimizeGeneratedWorkout\(\)/);
 assert.match(candidate,/if\(!controller\.state\.value\.busy\) \{/);
-assert.match(candidate,/minimizedGeneratedId=selectedId\s*controller\.clear\(\)/);
+assert.match(candidate,/minimizedGeneratedId=openId\.takeIf\s*\{\s*controller\.state\.value\.presentation\?\.finished!=true\s*\}/);
+assert.match(candidate,/minimizedGeneratedId=openId\.takeIf[\s\S]*?controller\.clear\(\)/);
 assert.match(candidate,/workoutScreens\.SaveableStateProvider\("composer:\$selectedId"\)/);
 const clearBody=controller.slice(controller.indexOf('fun clear()'),controller.indexOf('override fun close()'));
 assert.match(clearBody,/mutable\.value=NativeKotlinSessionState\(\)/);

@@ -307,8 +307,11 @@ object CustomNextWorkoutCoachingDomain {
         // A physical station is a separate load-progression thread, not a
         // different exercise or dose. Never compare A to B (nor unlabelled
         // legacy to A) or silently borrow older evidence across a bad set.
-        val targetMachine=request.requestedMachineInstanceId
-            ?:KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
+        // Default to the APPROVED slot's physical A/B station when no
+        // explicit owner-verified live selection overrides it. Do not
+        // fall back to legacy performance for a machine-bound slot.
+        val targetMachine=KotlinMachineAlternativesDomain.normalizeMachineId(
+            request.requestedMachineInstanceId ?: target.machineInstanceId)
         fun machines(session:CustomCoachingHistoricalSession):Set<String> =
             session.evidence.visits.filter {
                 it.slotId==target.slotId &&

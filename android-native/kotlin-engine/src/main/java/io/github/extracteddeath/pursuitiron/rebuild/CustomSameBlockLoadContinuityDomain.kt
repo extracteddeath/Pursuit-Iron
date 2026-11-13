@@ -108,6 +108,10 @@ object CustomSameBlockLoadContinuityDomain {
                 "Source, block, phase, split or session purpose changed; establish a new baseline.",
                 prior.evidence.workoutId)
         val oldSlot=old.slots.singleOrNull{it.slotId==request.slotId}
+        if(oldSlot!=null && oldSlot.machineInstanceId!=selected.machineInstanceId)
+            return result(CustomSameBlockLoadStatus.CHANGED_CONTEXT,
+                "The physical machine A/B changed; never borrow a different station's load history.",
+                prior.evidence.workoutId)
         if(oldSlot==null || oldSlot.exerciseId!=selected.exerciseId ||
             oldSlot.familyId!=selected.familyId ||
             oldSlot.variantId!=selected.variantId ||
@@ -184,6 +188,13 @@ object CustomSameBlockLoadContinuityDomain {
                 actual.load?.compareTo(lastLoad.value)!=0 || actual.unit!=lastLoad.unit)
                 return result(CustomSameBlockLoadStatus.PREVIOUS_WORKOUT_INCOMPLETE,
                     "The most recent issued set was failed, missed, or not performed as prescribed.",
+                    prior.evidence.workoutId)
+            if(KotlinMachineAlternativesDomain.normalizeMachineId(
+                    actual.machineInstanceId)!=
+                KotlinMachineAlternativesDomain.normalizeMachineId(
+                    selected.machineInstanceId))
+                return result(CustomSameBlockLoadStatus.PREVIOUS_WORKOUT_INCOMPLETE,
+                    "The previous working set was performed on a different or unassigned A/B machine.",
                     prior.evidence.workoutId)
             val effort=ProgressionEffortDomain.forCompletedSet(actual.actualRir,
                 oldSet.prescription.targetRir)

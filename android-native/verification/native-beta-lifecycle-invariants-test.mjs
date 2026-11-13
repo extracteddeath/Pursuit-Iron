@@ -14,6 +14,10 @@ const required=(source,parts,reason)=>{
 // transaction or proof of parity. Durable end-to-end tests remain mandatory.
 required(controller,[
   'host.recoverWorkout(workoutId)',
+  'private fun rejectInvalidSelection(workoutId:String):Boolean',
+  'if(rejectInvalidSelection(workoutId))return',
+  'unavailableReason=NativeJournalFileRefusal.INVALID_ARGUMENT',
+  'current.snapshot.targets.none{it.setKey==setKey}',
   'host.issueWorkout(workoutId)',
   'host.recordWorkoutOperation(workoutId,operation)',
   'expectedJournalRevision=journal.revision',

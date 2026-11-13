@@ -565,9 +565,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     "Log each actual as usual.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-            } else if(review is CurrentWorkoutLevelingReview.Unavailable &&
-                review.reason==CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
-                levelRows.count{it.load!=null && it.load>BigDecimal.ZERO}>=2) {
+            } else if((review as? CurrentWorkoutLevelingReview.Unavailable)?.reason==
+                CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
+                levelRows.count{row->row.load?.let{it>BigDecimal.ZERO}==true}>=2) {
                 Text("To level loads, confirm the equipment increments or "+
                     "available stack weights in My gym. Your entered sets "+
                     "remain editable and nothing has been changed.",

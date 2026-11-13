@@ -19,8 +19,8 @@ function audit(report) {
     'Missing resolved releaseRuntimeClasspath report');
   assert.ok(!/No dependencies|FAILED to resolve/i.test(report),
     'Release dependency resolution is empty or failed');
-  assert.ok(report.split(/\\r?\\n/).some(line=>
-    /(?:\\+---|\\\\---)\\s+(?:project :|[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+:)/.test(line)),
+  assert.ok(report.split(/\r?\n/).some(line=>
+    /(?:\+---|\\---)\s+(?:project :|[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+:)/.test(line)),
     'Resolved release classpath must contain actual Gradle dependency entries');
   const lines=report.split(/\r?\n/);
   const hits=[];
@@ -59,6 +59,8 @@ function selfTest() {
       'Missed forbidden runtime dependency '+item);
   }
   assert.throws(()=>audit('releaseRuntimeClasspath\nNo dependencies'));
+  assert.throws(()=>audit('releaseRuntimeClasspath - Runtime classpath of release.\n'));
+  assert.throws(()=>audit('releaseRuntimeClasspath\n+--- project :kotlin-engine FAILED to resolve'));
   console.log('PASS resolved runtime dependency auditor self-tests');
 }
 if(process.argv.includes('--self-test')) {

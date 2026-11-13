@@ -3944,6 +3944,933 @@
         "attachment": null,
         "note": "Donkey calf raises require a dedicated calibrated machine. No load transfer from standing or seated calf machines."
       }
+    },
+    {
+      "id": "split-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "two-dumbbell-split",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "This variant uses two independently verified dumbbells with per-hand weights and per-leg reps. A single-held dumbbell is not covered."
+      }
+    },
+    {
+      "id": "step-up",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "two-dumbbell-step-up",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "step-platform"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Requires two verified dumbbells and a stable stepping platform. Record the weight per hand and repetitions per side, never an aggregate load."
+      }
+    },
+    {
+      "id": "box-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          5,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "barbell-box",
+        "pattern": "SQUAT",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack",
+          "squat-box"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Verified barbell and squat rack plus a stable squat box are required; box squat has its own exercise and history, separate from back squat."
+      }
+    },
+    {
+      "id": "cyclist-squat",
+      "source": {
+        "movementFamily": "knee_extension",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "heels-elevated-barbell",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack",
+          "heel-wedge"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Requires an actual barbell, rack and secured heel-elevation wedge. The load is total bar weight, not inferred from a goblet squat."
+      }
+    },
+    {
+      "id": "zercher-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "zercher-barbell",
+        "pattern": "SQUAT",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Zercher barbell load is verified independently; no arbitrary full abdominal dose or back-squat load transfer is inferred from broad legacy core metadata."
+      }
+    },
+    {
+      "id": "pistol-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          5,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "unweighted-pistol",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Only unweighted supported or unsupported pistol-squat repetitions are represented; no added plates or dumbbells are silently assumed."
+      }
+    },
+    {
+      "id": "hip-thrust",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "barbell",
+          "bench"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "barbell-hip-thrust",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "GLUTES",
+        "indirect": [
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Barbell hip thrusts use a confirmed bench and actual barbell/plate totals. They never inherit deadlift or differently weighted machine baselines."
+      }
+    },
+    {
+      "id": "smith-hip-thrust",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "smith",
+          "bench"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "smith-hip-thrust-station",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "hip-thrust-smith-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "GLUTES",
+        "indirect": [
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "This Smith hip-thrust station requires its own verified complete load stock; barbell and different Smith-machine histories stay independent."
+      }
+    },
+    {
+      "id": "frog-pump",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "unweighted-frog-pump",
+        "pattern": "HINGE",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "GLUTES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Unweighted frog pumps use repetition counts only; loaded band or dumbbell versions must have separately verified resistance and exercise IDs."
+      }
+    },
+    {
+      "id": "stiff-deadlift",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "stiff-leg-barbell",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Stiff-leg barbell deadlift preserves a separate history from Romanian and conventional pulls. Legacy lower-back or traps credits are not invented."
+      }
+    },
+    {
+      "id": "slider-curl",
+      "source": {
+        "movementFamily": "knee_flexion",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_flexion",
+        "variant": "unweighted-slider",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "exercise-sliders"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [],
+        "attachment": null,
+        "note": "A physical pair of exercise sliders is required; this is only bodyweight knee flexion, never a seated-curl machine load."
+      }
+    },
+    {
+      "id": "drag-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "drag-barbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Barbell drag curls require an independently verified total barbell load; preacher, cable and standard curl histories are not interchangeable."
+      }
+    },
+    {
+      "id": "pinwheel-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "pinwheel-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "BRACHIALIS",
+        "indirect": [
+          "BICEPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Neutral-grip per-hand dumbbell curls provisionally emphasize brachialis with biceps assistance; this does not merge brachialis and biceps volumes."
+      }
+    },
+    {
+      "id": "jm-press",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "barbell",
+          "bench",
+          "rack"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "jm-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack"
+        ],
+        "direct": "TRICEPS",
+        "indirect": [
+          "CHEST:0.25"
+        ],
+        "attachment": null,
+        "note": "JM press requires a verified barbell and stable bench/rack. Triceps are tracked directly; bench-press loading cannot transfer."
+      }
+    },
+    {
+      "id": "pjr-pullover",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "ezbar",
+          "bench"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "pjr-ez-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "ez-curl-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "PJR pullover is defined here as an EZ-curl-bar triceps movement on a bench, with separately verified EZ bar mass and plates."
+      }
+    },
+    {
+      "id": "california-press",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "ezbar",
+          "bench"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "california-ez-bar",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "ez-curl-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "TRICEPS",
+        "indirect": [
+          "CHEST:0.25"
+        ],
+        "attachment": null,
+        "note": "California press uses a confirmed bench and independently verified EZ-curl-bar total; it never borrows JM-press or bench loads."
+      }
+    },
+    {
+      "id": "smith-ohp",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "smith"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "smith-standing",
+        "pattern": "VERTICAL_PRESS",
+        "role": "PRIMARY",
+        "focus": "press",
+        "implement": "shoulder-press-smith-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Smith machine shoulder pressing requires a verified per-station total-weight convention and independent shoulder-press progression history."
+      }
+    },
+    {
+      "id": "push-press",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          4,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "barbell-push-press",
+        "pattern": "VERTICAL_PRESS",
+        "role": "PRIMARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Push press is a technically distinct strength lift, requires barbell and rack, and must not silently inherit strict overhead press history."
+      }
+    },
+    {
+      "id": "z-press",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          5,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "seated-floor-z-press",
+        "pattern": "VERTICAL_PRESS",
+        "role": "PRIMARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.5"
+        ],
+        "attachment": null,
+        "note": "Barbell Z press needs confirmed bar stock and a safe rack; independent logged loads are required even when strict overhead press is trained."
+      }
+    },
+    {
+      "id": "bradford-press",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "bradford-barbell",
+        "pattern": "VERTICAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.5"
+        ],
+        "attachment": null,
+        "note": "Bradford press retains an independent barbell loading baseline and skill identity from strict press and push press variations."
+      }
+    },
+    {
+      "id": "dead-bug",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_anti_extension",
+        "variant": "unweighted-dead-bug",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Bodyweight dead bugs count controlled repetitions per side; generic core in the source is not assumed to credit every trunk or hip muscle."
+      }
+    },
+    {
+      "id": "mountain-climber",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          20,
+          40
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "unweighted-mountain-climber",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Unweighted mountain climbers count alternating knee drives; no machine weight, plate load or time-to-repetition conversion is invented."
+      }
+    },
+    {
+      "id": "ab-wheel",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_anti_extension",
+        "variant": "unweighted-wheel-rollout",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "ab-wheel"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "A real ab wheel is required for this bodyweight rollout. Weighted rollouts and unsupported isometric holds are distinct exercises."
+      }
+    },
+    {
+      "id": "single-cable-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "single-arm-cable-handle",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Single-arm cable curls require an actual cable stack and physical single handle. Recorded loads refer to the selected physical machine."
+      }
+    },
+    {
+      "id": "cable-tri-kickback",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "single-arm-cable-kickback",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Cable triceps kickbacks use the actual cable stack with a verified single handle. Dumbbell kickback loads never migrate."
+      }
+    },
+    {
+      "id": "incline-cable-press",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "incline-dual-cable",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [
+          "incline-bench"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": "dual-handles",
+        "note": "Incline cable presses need an adjustable bench, two confirmed handles and the exact physical cable stack, not an estimated dumbbell load."
+      }
+    },
+    {
+      "id": "machine-dip",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "machinepress"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "chest_dip",
+        "variant": "loaded-chest-dip-machine",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "chest-dip-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.5",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "The dedicated chest dip machine must have its own verified resistance choices. Assisted bodyweight dips and other press machines differ."
+      }
+    },
+    {
+      "id": "underhand-pushdown",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "underhand-straight-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Reverse-grip triceps pushdowns require a verified cable stack and physical straight bar, retaining separate attachment identity."
+      }
+    },
+    {
+      "id": "cable-crossover",
+      "source": {
+        "movementFamily": "chest_adduction",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "chest_adduction",
+        "variant": "dual-handle-crossover",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "CHEST",
+        "indirect": [],
+        "attachment": "dual-handles",
+        "note": "Cable crossovers use two explicit handles at a calibrated cable station; the load is a verified stack setting, not a sum of two sides."
+      }
+    },
+    {
+      "id": "single-cable-raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "single-arm-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Single-arm cable lateral raises need one verified handle and stack. Their progression and muscle credits remain distinct from dumbbell raises."
+      }
     }
   ]
 }

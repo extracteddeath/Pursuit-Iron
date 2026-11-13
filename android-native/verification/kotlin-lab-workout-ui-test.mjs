@@ -112,8 +112,9 @@ assert.ok(reset.includes('generation.incrementAndGet()') &&
   reset.includes('mutable.value=NativeKotlinSessionState()') &&
   !reset.includes('if(pending.get())return'),
   'Clearing the logger must suppress in-flight callbacks, not preserve the previous athlete session');
-assert.ok(composer.includes('Verifying the saved workout and athlete ownership.') &&
-  composer.includes('state.unavailableReason==NativeJournalFileRefusal.NOT_ISSUED && !state.busy'),
+const failclosedScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+assert.ok(failclosedScreen.includes('Verifying the saved workout and athlete ownership.') &&
+  failclosedScreen.includes('state.unavailableReason==NativeJournalFileRefusal.NOT_ISSUED && !state.busy'),
   'Unverified workout recovery must never show enabled Start or stale set-entry controls');
 
 const generatedCoach=controller.slice(controller.indexOf('fun reviewNextSet('),

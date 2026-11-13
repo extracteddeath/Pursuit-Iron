@@ -194,9 +194,9 @@ val verifyEarlyBetaRuntime by tasks.registering {
             layout.buildDirectory.dir("generated/kotlin-beta-src")
         ).matching { include("**/*.kt") }.files
         val forbiddenSourcePatterns = listOf(
-            Regex("""\\b(?:android\\.webkit\\.)?WebView\\s*\\("""),
-            Regex("""\\b(?:evaluateJavascript|loadUrl)\\s*\\("""),
-            Regex("""\\b(?:ScriptEngineManager|JavaScriptEngine)\\s*\\(""")
+            Regex("""\b(?:android\.webkit\.)?WebView\s*\("""),
+            Regex("""\b(?:evaluateJavascript|loadUrl)\s*\("""),
+            Regex("""\b(?:ScriptEngineManager|JavaScriptEngine)\s*\(""")
         )
         val violations = stagedSources.flatMap { source ->
             val body = source.readText()

@@ -249,7 +249,15 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             "pallof","woodchopper","zottman-curl","tate-press",
             "tricep-kickback","renegade-row","reverse-lunge",
             "curtsy-lunge","db-upright-row"
-        ),starter.catalog.drop(146).map{it.exerciseId})
+        ),starter.catalog.drop(146).take(18).map{it.exerciseId})
+        // The fifth expansion is appended after all older source IDs;
+        // neither existing histories nor machine identities are renumbered.
+        assertEquals(listOf(
+            "inv-row","chinup","dips-chest","dips-tri",
+            "hanging-raise","hanging-knee","toes-to-bar",
+            "russian-twist","v-up","sissy-squat","ghr",
+            "reverse-hyper","leg-press-calf","donkey-calf"
+        ),starter.catalog.drop(164).map{it.exerciseId})
         assertEquals(20,starter.catalog.take(20).size)
         val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
         val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)

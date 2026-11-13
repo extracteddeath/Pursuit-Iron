@@ -125,17 +125,29 @@ internal class NativeKotlinSessionController(
         }
     }
 
+    private fun validWorkoutId(workoutId:String):Boolean =
+        workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
+
+    /** Invalid selections fail closed, never leaving a previous workout actionable. */
+    private fun rejectInvalidSelection(workoutId:String):Boolean {
+        if(validWorkoutId(workoutId))return false
+        if(closed.get() || pending.get())return true
+        generation.incrementAndGet()
+        latestCoachRequest.incrementAndGet()
+        mutable.value=NativeKotlinSessionState(
+            unavailableReason=NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return true
+    }
+
     /** Reading never issues a new workout. */
     fun open(workoutId:String) {
-        if(!workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")))
-            return
+        if(rejectInvalidSelection(workoutId))return
         run(workoutId,{host.recoverWorkout(workoutId)},hideUnverified=true)
     }
 
     /** Explicit action only; a valid persisted grant is required by store. */
     fun startApproved(workoutId:String) {
-        if(!workoutId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")))
-            return
+        if(rejectInvalidSelection(workoutId))return
         run(workoutId,{
             when(val result=host.issueWorkout(workoutId)) {
                 is NativeKotlinIssueResult.Committed ->
@@ -219,7 +231,8 @@ internal class NativeKotlinSessionController(
     ) {
         val before=mutable.value
         val current=before.journal ?:return
-        if(closed.get() || before.busy || current.finishedByEventId!=null)return
+        if(closed.get() || before.busy || current.finishedByEventId!=null ||
+            current.snapshot.targets.none{it.setKey==setKey})return
         val workoutId=before.workoutId ?:return
         val observedRevision=current.revision
         val requestId=latestCoachRequest.incrementAndGet()

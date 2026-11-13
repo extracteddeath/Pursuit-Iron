@@ -28,7 +28,6 @@ required(controller,[
   'journal.finishedByEventId!=null',
   'KotlinJournalOperation.Finish(',
   'recoverOnReject=true',
-  'if(closed.get() || pending.get())return',
   'latestCoachRequest.incrementAndGet()',
   'private val generation=AtomicLong(0)',
   'private val closed=AtomicBoolean(false)',
@@ -79,6 +78,21 @@ required(invalidSelection,[
 ], 'Invalid workout selection must invalidate pending callbacks and old actionable state');
 assert.ok(!invalidSelection.includes('pending.get()'),
   'An in-flight storage operation must not preserve the previous actionable workout');
+
+// Leaving a workout while a write is in flight must clear the visible
+// session immediately and suppress its late completion callback.
+const clearSession=controller.slice(
+  controller.indexOf('fun clear() {'),
+  controller.indexOf('override fun close()')
+);
+required(clearSession,[
+  'if(closed.get())return',
+  'generation.incrementAndGet()',
+  'latestCoachRequest.incrementAndGet()',
+  'mutable.value=NativeKotlinSessionState()'
+], 'Clear must invalidate in-flight operations and live coaching');
+assert.ok(!clearSession.includes('pending.get()'),
+  'Leaving a workout must not wait for pending storage to clear its UI');
 
 // A failed write/read cannot leave an actionable stale presentation in memory.
 // Cancellation is not a storage failure and must propagate to the coroutine.

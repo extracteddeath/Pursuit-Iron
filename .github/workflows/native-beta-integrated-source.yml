@@ -33,8 +33,8 @@ jobs:
       - name: Verify integrated Kotlin domains, coach persistence and Compose compilation
         working-directory: android-native
         run: >
-          gradle :kotlin-engine:test
-          :native-coach-store:test
+          gradle :kotlin-engine:testDebugUnitTest
+          :native-coach-store:testDebugUnitTest
           :domain-contract:testDebugUnitTest
           :app:compileDebugKotlin
           --no-daemon --stacktrace
@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > /tmp/pursuit-native-release-dependencies.txt
-          if grep -E '(^|[[:space:]\\+|])([+\\]--- )?project :(engine-runtime|engine-bridge)([[:space:]]|$)' /tmp/pursuit-native-release-dependencies.txt; then
+          if grep -E 'project :(engine-runtime|engine-bridge)( |$)' /tmp/pursuit-native-release-dependencies.txt; then
             echo "::error::Legacy engine module present on release runtime classpath"
             exit 1
           fi

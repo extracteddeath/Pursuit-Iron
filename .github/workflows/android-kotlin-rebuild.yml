@@ -164,6 +164,9 @@ jobs:
       - name: Audit real starter split and phase coverage without granting release approval
         working-directory: android-native
         run: gradle :kotlin-engine:runStarterProgramReleaseProbe --no-daemon --stacktrace
+      - name: Independently generate and print actual Kotlin-only programs and full cycles
+        working-directory: android-native
+        run: gradle :kotlin-engine:runKotlinOnlyProgramCycleShowcase --no-daemon --stacktrace
       - name: Check out frozen web engine for matched progression execution
         uses: actions/checkout@v4
         with:
@@ -183,6 +186,14 @@ jobs:
       - name: Compile Android application with isolated Kotlin host, without building an APK
         working-directory: android-native
         run: gradle :app:compileDebugKotlin :app:processDebugMainManifest :app:processReleaseMainManifest --no-daemon --stacktrace
+      - name: Attach reproducible Kotlin-only generated programs and cycles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-only-program-cycle-showcase
+          path: android-native/kotlin-engine/build/reports/kotlin-only-program-cycle-showcase.md
+          if-no-files-found: warn
+          retention-days: 14
       - name: Attach incomplete engine comparison scorecard (not release approval)
         if: always()
         uses: actions/upload-artifact@v4

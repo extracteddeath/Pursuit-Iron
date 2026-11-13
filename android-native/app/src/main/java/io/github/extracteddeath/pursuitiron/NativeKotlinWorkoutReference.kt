@@ -152,3 +152,44 @@ internal fun PursuitWorkoutSetReference(
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+
+/**
+ * One cancellation-scoped, asynchronous prior-session Leveling review for
+ * BOTH native workout types. Inventory inspection may enumerate many valid
+ * plate combinations: never do that work during Compose composition.
+ *
+ * Key all inputs (including the physical station and exact Previous facts).
+ * A changed key immediately exposes null, not a stale actionable candidate.
+ * No callback here can edit a journal, approved workout, or future load.
+ */
+@Composable
+internal fun rememberPriorWorkoutLevelingReview(
+    currentSets:List<Pair<WorkoutReferenceKey,DraftSetLoad>>,
+    previous:WorkoutLastReferenceResult?,
+    machineInstanceId:String?,
+    repBand:RepBand?,
+    goalRir:Int?,
+    verifiedStock:VerifiedLoadStock?
+):LevelingReviewResult? {
+    var review by remember(currentSets,previous,machineInstanceId,repBand,
+        goalRir,verifiedStock) {
+        mutableStateOf<LevelingReviewResult?>(null)
+    }
+    LaunchedEffect(currentSets,previous,machineInstanceId,repBand,
+        goalRir,verifiedStock) {
+        review=null
+        if(previous==null) return@LaunchedEffect
+        if(repBand==null || goalRir==null) {
+            review=LevelingReviewResult.Rejected(
+                LevelingRefusal.INCOMPLETE_OR_INVALID)
+            return@LaunchedEffect
+        }
+        review=withContext(Dispatchers.Default) {
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentSets,previous,machineInstanceId,repBand,goalRir,
+                verifiedStock)
+        }
+    }
+    return review
+}

@@ -31,7 +31,8 @@ required(controller,[
   'if(!closed.compareAndSet(false,true))return',
   'val requestGeneration=generation.incrementAndGet()',
   'if(generation.get()!=requestGeneration)return@launch',
-  'generation.incrementAndGet()'
+  'generation.incrementAndGet()',
+  'if(!closed.get() &&'
 ], 'Native controller must retain durable revision-checked lifecycle guards');
 assert.match(controller,/is NativeJournalFileResult.Durable -> NativeKotlinSessionState\([\s\S]*?journal=result.journal/);
 assert.match(controller,/if\(result is NativeJournalFileResult.Rejected && recoverOnReject\)[\s\S]*?host.recoverWorkout\(workoutId\)/);

@@ -90,7 +90,7 @@ jobs:
           const path = 'android-native/kotlin-engine/reports/engine-superiority-audit.json';
           const output = process.env.GITHUB_STEP_SUMMARY;
           if (!fs.existsSync(path)) {
-            fs.appendFileSync(output, '## Engine evidence audit\\n\\nNo audit report was produced; superiority is unverified.\\n');
+            fs.appendFileSync(output, '## Engine evidence audit\n\nNo audit report was produced; superiority is unverified.\n');
             process.exit(0);
           }
           const audit = JSON.parse(fs.readFileSync(path, 'utf8'));
@@ -108,7 +108,7 @@ jobs:
             'A green source gate is **not** a parity, device-readiness, or superiority certificate.',
             ''
           ];
-          fs.appendFileSync(output, rows.join('\\n'));
+          fs.appendFileSync(output, rows.join('\n'));
           NODE
       - name: Preserve superiority audit for review
         if: always()

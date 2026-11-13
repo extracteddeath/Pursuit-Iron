@@ -687,7 +687,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         } else if(review is CurrentWorkoutLevelingReview.Unavailable &&
                             (review as CurrentWorkoutLevelingReview.Unavailable).reason==
                                 CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
-                            currentRows.count{it.load!=null && it.load>BigDecimal.ZERO}>=2)
+                            currentRows.count{row->row.load?.let{it>BigDecimal.ZERO}==true}>=2)
                             Text("Confirm available weights in My gym "+
                                 "to use Leveling on this machine.",
                                 style=MaterialTheme.typography.bodySmall,

@@ -407,6 +407,64 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+        // Leveling is an explicit inspection of recorded working sets.
+        // Never treat the mean of a pyramid as an approved future load.
+        if(selected!=null && journal!=null) {
+            val exerciseWorkingSets=allSets.filter {
+                it.target.exerciseId==selected.target.exerciseId &&
+                    it.target.type==DraftSetType.WORKING
+            }
+            val completedWorking=exerciseWorkingSets.filter {
+                it.isResolved && it.actual?.load!=null
+            }
+            val loads=completedWorking.mapNotNull { it.actual?.load }
+            val mixedLoads=loads.map { it.stripTrailingZeros() }.distinct().size>1
+            var showLevelingReview by remember(workoutId,selected.target.exerciseId) {
+                mutableStateOf(false)
+            }
+            if(exerciseWorkingSets.size>=2) {
+                OutlinedButton(
+                    onClick={showLevelingReview=true},
+                    enabled=mixedLoads && completedWorking.size==exerciseWorkingSets.size &&
+                        !state.busy
+                ) { Text("Leveling · review pyramid") }
+                if(!mixedLoads)
+                    Text("Leveling is available after completing a mixed-load working-set session.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if(showLevelingReview) {
+                val mean=if(loads.isNotEmpty())
+                    loads.reduce(BigDecimal::add).divide(
+                        BigDecimal(loads.size),2,java.math.RoundingMode.HALF_UP)
+                else BigDecimal.ZERO
+                AlertDialog(
+                    onDismissRequest={showLevelingReview=false},
+                    title={Text("Review double-progression leveling")},
+                    text={
+                        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Text("Recorded working sets (not targets):")
+                            completedWorking.forEach { set ->
+                                val actual=set.actual
+                                Text("${actual?.load?.stripTrailingZeros()?.toPlainString()} × "+
+                                    "${actual?.reps} · RIR ${actual?.actualRir?.toString() ?: "not reported"}")
+                            }
+                            Text("Observed arithmetic mean: ${mean.stripTrailingZeros().toPlainString()}. "+
+                                "This is NOT a verified, feasible straight-set prescription.")
+                            Text("A future change requires verified equipment increments, "+
+                                "rep-range and RIR review, and explicit approval. "+
+                                "This screen does not modify logged sets or future targets.")
+                        }
+                    },
+                    confirmButton={
+                        TextButton(onClick={showLevelingReview=false}) {
+                            Text("Keep existing plan")
+                        }
+                    }
+                )
+            }
+        }
+
         if(selected!=null && journal!=null)
             NativeKotlinPinnedExerciseControl(
                 host=host,workoutId=workoutId,

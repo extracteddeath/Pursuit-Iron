@@ -192,9 +192,12 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
 
     @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
         val starter=source().copy(catalog=StarterExerciseTranche.movements())
-        // Saved identities are append-only: the first 42 retain their
-        // exact ordinal/source IDs while the seven new variants follow.
-        assertEquals(164,starter.catalog.size)
+        // Saving a reviewed catalog must preserve the entire current
+        // append-only source inventory, not silently truncate to the
+        // historical 164-ID snapshot. Older ordinal IDs remain stable.
+        assertTrue(starter.catalog.size>=178)
+        assertEquals(StarterExerciseTranche.movements().map{it.exerciseId},
+            starter.catalog.map{it.exerciseId})
         assertEquals(listOf("wrist-curl","reverse-wrist-curl"),
             starter.catalog.drop(20).take(2).map{it.exerciseId})
         assertEquals(listOf("inc-bb-bench","incline_smith",

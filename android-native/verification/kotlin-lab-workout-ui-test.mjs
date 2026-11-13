@@ -623,8 +623,12 @@ assert.ok(betaSettings.includes('Share beta feedback') &&
   'Early beta feedback requires an explicit opt-in share, no silent training/medical data upload');
 assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
   betaGradle.includes('releaseRuntimeClasspath') &&
-  betaGradle.includes('component?.projectPath == ":engine-runtime"') &&
-  betaGradle.includes('!containsLegacyRuntime') &&
+  betaGradle.includes('forbiddenProjectPaths') &&
+  betaGradle.includes('":engine-runtime"') &&
+  betaGradle.includes('forbiddenExternalModules') &&
+  betaGradle.includes('forbiddenSourcePatterns') &&
+  betaGradle.includes('forbiddenComponents.isEmpty()') &&
+  betaGradle.includes('violations.isEmpty()') &&
   betaGradle.includes('verification/BETA_DEVICE_ACCEPTANCE.md') &&
   betaGradle.includes('"packageRelease", "assembleRelease"') &&
   betaGradle.includes('"bundleRelease", "packageReleaseBundle"') &&

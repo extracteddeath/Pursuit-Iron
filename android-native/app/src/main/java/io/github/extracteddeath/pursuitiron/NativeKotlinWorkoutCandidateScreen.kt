@@ -507,13 +507,25 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             // bodyweight, mixed unit or technique substitution.
             val loadTypes=workingSets.map{it.target.load}
             val allVerified=loadTypes.all{it is DraftSetLoad.Verified}
-            val review=if(allVerified && workingSets.size>=2 &&
-                loadTypes.map{(it as DraftSetLoad.Verified).basis}.distinct().size==1 &&
-                loadTypes.map{(it as DraftSetLoad.Verified).unit}.distinct().size==1)
-                DoubleProgressionLevelingDomain.reviewCurrentWorkout(
-                    levelRows,levelingStock)
-            else CurrentWorkoutLevelingReview.Unavailable(
-                CurrentWorkoutLevelingReview.Reason.MIXED_EQUIPMENT)
+            // Inspecting verified barbell combinations can be expensive.
+            // Never enumerate plate combinations on Compose's UI thread.
+            var review by remember(workoutId,exerciseId,currentMachine,
+                levelRows,levelingStock) {
+                mutableStateOf<CurrentWorkoutLevelingReview?>(null)
+            }
+            LaunchedEffect(levelRows,levelingStock,allVerified) {
+                review=withContext(Dispatchers.Default) {
+                    if(allVerified && workingSets.size>=2 &&
+                        loadTypes.map{(it as DraftSetLoad.Verified).basis}
+                            .distinct().size==1 &&
+                        loadTypes.map{(it as DraftSetLoad.Verified).unit}
+                            .distinct().size==1)
+                        DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+                            levelRows,levelingStock)
+                    else CurrentWorkoutLevelingReview.Unavailable(
+                        CurrentWorkoutLevelingReview.Reason.MIXED_EQUIPMENT)
+                }
+            }
             val candidate=review as? CurrentWorkoutLevelingReview.Ready
             if(candidate!=null) {
                 val unit=(loadTypes.firstOrNull() as? DraftSetLoad.Verified)
@@ -529,6 +541,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             levelWeight=candidate.roundedLoad
                                 .stripTrailingZeros().toPlainString()
                             levelReps=candidate.averageReps
+                            // Keep ALL invisible Focus rows in sync now.
+                            // Their saveable editors apply the same explicit
+                            // draft when mounted, never on workout issuance.
+                            candidate.eligibleSetKeys.forEach {key->
+                                currentEditors[levelEditorKey(key,currentMachine)]=
+                                    CurrentWorkoutEditorValue(
+                                        levelWeight,levelReps.toString())
+                            }
                             levelVersion++
                         }
                     },
@@ -930,9 +950,16 @@ private fun NativeKotlinSetCard(
     // Keep nonvisible Focus/All editor drafts available for a deliberate
     // Leveling tap, including after rotation. Never report completed edits
     // as new current-session facts until they are saved as corrections.
-    LaunchedEffect(target.setKey,machineInstanceId,weight,reps,set.isResolved) {
-        if(target.type==DraftSetType.WORKING && !set.isResolved)
-            onCurrentDraftChanged(weight,reps)
+    LaunchedEffect(target.setKey,machineInstanceId,weight,reps,
+        set.isResolved,levelingDraft?.version,appliedLevelVersion) {
+        // A newly mounted Focus editor may still contain its initial values
+        // for one frame. Do not overwrite the already accepted Leveling
+        // prefill while its versioned editor effect is being applied.
+        val pendingLevel=levelingDraft?.let {
+            !set.isResolved && appliedLevelVersion!=it.version
+        } == true
+        if(target.type==DraftSetType.WORKING && !set.isResolved &&
+            !pendingLevel)onCurrentDraftChanged(weight,reps)
     }
     val actual=performed(target,weight,reps,effort)
     val failedActual=performed(target,weight,reps,effort,failed=true)

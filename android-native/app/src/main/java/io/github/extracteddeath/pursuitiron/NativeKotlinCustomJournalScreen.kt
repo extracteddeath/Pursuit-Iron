@@ -726,22 +726,22 @@ internal fun NativeKotlinCustomJournalScreen(
                                     set.prescription.reps==first.reps &&
                                         set.prescription.targetRir==first.targetRir
                                 }
-                            val priorReview=if(sameGoal && !requiresNewMachineChoice)
-                                DoubleProgressionLevelingDomain
-                                    .reviewLastForCurrentWorkout(
-                                        currentSets=workingSets.map { set->
-                                            WorkoutReferenceKey(set.setKey) to
-                                                set.prescription.load
-                                        },
-                                        previous=physicalMachineLastReferences(
-                                            lastReferences,selectedMachineId),
-                                        machineInstanceId=selectedMachineId,
-                                        repBand=first.reps,
-                                        goalRir=requireNotNull(first.targetRir),
-                                        verifiedStock=stock
-                                    )
-                            else LevelingReviewResult.Rejected(
-                                LevelingRefusal.INCOMPLETE_OR_INVALID)
+                            val priorReview=rememberPriorWorkoutLevelingReview(
+                                currentSets=workingSets.map { set->
+                                    WorkoutReferenceKey(set.setKey) to
+                                        set.prescription.load
+                                },
+                                previous=physicalMachineLastReferences(
+                                    lastReferences,selectedMachineId),
+                                machineInstanceId=selectedMachineId,
+                                repBand=first.reps.takeIf{
+                                    sameGoal && !requiresNewMachineChoice
+                                },
+                                goalRir=first.targetRir?.takeIf{
+                                    sameGoal && !requiresNewMachineChoice
+                                },
+                                verifiedStock=stock
+                            )
                             val prior=priorReview as? LevelingReviewResult.Candidate
                             val matchingLast=physicalMachineLastReferences(
                                 lastReferences,selectedMachineId)

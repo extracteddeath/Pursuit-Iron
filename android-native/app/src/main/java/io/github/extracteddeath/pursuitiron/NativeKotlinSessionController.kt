@@ -235,7 +235,8 @@ internal class NativeKotlinSessionController(
                 null
             }
             val state=mutable.value
-            if(latestCoachRequest.get()==requestId &&
+            if(!closed.get() &&
+                latestCoachRequest.get()==requestId &&
                 state.workoutId==workoutId &&
                 state.journal?.revision==observedRevision &&
                 !state.busy)

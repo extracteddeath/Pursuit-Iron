@@ -194,9 +194,16 @@ object DoubleProgressionLevelingDomain {
             .divide(BigDecimal(facts.size), 3, RoundingMode.HALF_UP)
         val inspection = EquipmentLoadDomain.inspect(verifiedStock, mean, verifiedStock.unit)
             as? LoadInspection.Confirmed ?: return reject(LevelingRefusal.UNVERIFIED_STOCK)
+        // A verified equipment inventory may include an unloaded zero. That
+        // is not a usable straight working-set load, even if numerically
+        // closer to the mean of a very light historical session.
         val choices = listOfNotNull(inspection.atOrBelow, inspection.nextAbove)
+            .filter { it > BigDecimal.ZERO }
+        // Match current-workout Leveling's midpoint policy: prefer the higher
+        // *verified* value on an exact tie (web-style round-half-up).
         val closest = choices.minWithOrNull(
-            compareBy<BigDecimal> { it.subtract(mean).abs() }.thenBy { it }
+            compareBy<BigDecimal> { it.subtract(mean).abs() }
+                .thenByDescending { it }
         ) ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         // Never use the rounded mean as a guarantee: each set's capacity,
         // fatigue, and actual RIR still need the athlete's review.

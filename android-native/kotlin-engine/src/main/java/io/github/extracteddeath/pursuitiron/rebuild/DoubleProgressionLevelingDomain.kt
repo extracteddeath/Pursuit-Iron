@@ -39,7 +39,7 @@ object DoubleProgressionLevelingDomain {
             facts.any { it.load <= BigDecimal.ZERO || it.reps <= 0 ||
                 it.actualRir != null && it.actualRir !in 0..10 })
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
-        if (facts.any { it.reps < repBand.min })
+        if (facts.any { it.reps < repBand.minimum })
             return reject(LevelingRefusal.BELOW_REP_FLOOR)
         if (facts.any { it.actualRir != null && it.actualRir < goalRir })
             return reject(LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE)
@@ -56,7 +56,7 @@ object DoubleProgressionLevelingDomain {
         ) ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         // Never use the rounded mean as a guarantee: each set's capacity,
         // fatigue, and actual RIR still need the athlete's review.
-        val commonReps = facts.minOf { it.reps }.coerceAtMost(repBand.max)
+        val commonReps = facts.minOf { it.reps }.coerceAtMost(repBand.maximum)
         return LevelingReviewResult.Candidate(
             mean.stripTrailingZeros(), closest, commonReps, facts.size,
             "Optional leveling only. Confirm all-set rep/RIR feasibility and approve a future straight-set edit; no logged or issued load was changed."

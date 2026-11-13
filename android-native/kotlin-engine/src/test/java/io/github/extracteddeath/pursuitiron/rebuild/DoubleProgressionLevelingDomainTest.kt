@@ -183,4 +183,81 @@ class DoubleProgressionLevelingDomainTest {
         assertEquals(n("110"),reviewed.roundedLoad)
     }
 
+    /** The Last action must use a coherent prior session, not a mean of days or machines. */
+    private fun priorSession(
+        loads:List<String>,
+        sessionFor:(Int)->String={"prior-day"},
+        machineFor:(Int)->String?={null},
+        rirFor:(Int)->Int?={3}
+    ):WorkoutLastReferenceResult.Ready = WorkoutLastReferenceResult.Ready(
+        loads.mapIndexed { index,load->
+            WorkoutReferenceKey("working-$index") to WorkoutLastSetReference(
+                workoutId=sessionFor(index),completionOrder=7,
+                outcome=KotlinJournalSetOutcome.COMPLETED,
+                actual=KotlinPerformedSet(n(load),LoadUnit.LB,5,
+                    rirFor(index),machineInstanceId=machineFor(index)),
+                loadBasis=LoadBasis.SMITH_TOTAL
+            )
+        }.toMap()
+    )
+
+    private fun currentKeys() = (0..3).map {
+        WorkoutReferenceKey("working-$it") to
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("120"))
+    }
+
+    @Test fun priorSessionPyramidPrefillsOnlyAnOptionalCurrentEditorStartingPoint() {
+        val result=DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+            currentKeys(),
+            priorSession(listOf("100","120","125","130")),
+            null,band,2,stock
+        ) as LevelingReviewResult.Candidate
+        assertEquals(n("118.75"),result.averageObservedLoad)
+        assertEquals(n("120"),result.proposedStraightSetLoad)
+        assertEquals(5,result.repsPerSet)
+        assertEquals(4,result.setCount)
+        assertFalse(result.mayModifyIssuedWorkout)
+    }
+
+    @Test fun priorLevelingRejectsMixedHistoricalSessionsAndPhysicalMachines() {
+        val loads=listOf("100","120","125","130")
+        val differentDays=priorSession(loads,sessionFor={
+            if(it==3)"older-day" else "prior-day"
+        })
+        assertEquals(LevelingReviewResult.Rejected(
+            LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),differentDays,null,band,2,stock))
+        val machines=priorSession(loads,machineFor={
+            if(it==2)"machine-B" else "machine-A"
+        })
+        assertEquals(LevelingReviewResult.Rejected(
+            LevelingRefusal.INCOMPLETE_OR_INVALID),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),machines,"machine-A",band,2,stock))
+    }
+
+    @Test fun priorLevelingRequiresVerifiedStockAndRespectsLowActualRir() {
+        val loads=listOf("100","120","125","130")
+        assertEquals(LevelingReviewResult.Rejected(
+            LevelingRefusal.UNVERIFIED_STOCK),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),priorSession(loads),null,band,2,null))
+        assertEquals(LevelingReviewResult.Rejected(
+            LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),priorSession(loads,rirFor={
+                    if(it==2)1 else 3
+                }),null,band,2,stock))
+        // A verified cable stack with the same numeric weights is not
+        // authority to Level a Smith exercise, even in the same unit.
+        val wrongEquipment=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.CABLE_STACK,
+            listOf("100","105","110","115","120","125","130").map(::n))
+        assertEquals(LevelingReviewResult.Rejected(
+            LevelingRefusal.UNVERIFIED_STOCK),
+            DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                currentKeys(),priorSession(loads),null,band,2,wrongEquipment))
+    }
+
 }

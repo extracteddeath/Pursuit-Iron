@@ -138,8 +138,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         mutableStateOf<KotlinWorkoutJournalState?>(null)
     }
     LaunchedEffect(journal) { if(journal!=null)noteAnchor=journal }
+    // Request verified Last facts on demand for explicit prior-session Leveling,
+    // even while the workout's ordinary Target/Last display remains Target.
+    var showPriorLeveling by rememberSaveable(workoutId) { mutableStateOf(false) }
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
-        enabled=referenceMode==WorkoutReferenceMode.LAST && journal!=null)
+        enabled=(referenceMode==WorkoutReferenceMode.LAST || showPriorLeveling) &&
+            journal!=null)
     val running=presentation!=null && !presentation.finished
     var verifiedFinish by remember(host,workoutId){
         mutableStateOf<NativeComposerFinishHandoffResult?>(null)
@@ -576,6 +580,113 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     "remain editable and nothing has been changed.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            // Separate from current-session averaging: this reviews the exact
+            // LAST completed workout's pyramid and can only prefill unsaved
+            // editors today. The existing issued prescriptions and progression
+            // engine remain unchanged until actual sets are normally logged.
+            if(workingSets.size>=2 && allVerified && workingSets.any{!it.isResolved}) {
+                OutlinedButton(
+                    onClick={showPriorLeveling=true},
+                    enabled=!state.busy && machineChoices.ready && !machineChoices.busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) { Text("Leveling · review previous workout") }
+                if(showPriorLeveling) {
+                    val first=workingSets.first().target
+                    val sameGoal=first.targetRir!=null && workingSets.all {
+                        it.target.reps==first.reps &&
+                            it.target.targetRir==first.targetRir
+                    }
+                    val priorReview=if(sameGoal)
+                        DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                            currentSets=workingSets.map { set->
+                                WorkoutReferenceKey(set.target.setKey) to set.target.load
+                            },
+                            previous=physicalMachineLastReferences(
+                                lastReferences,currentMachine),
+                            machineInstanceId=currentMachine,
+                            repBand=first.reps,
+                            goalRir=requireNotNull(first.targetRir),
+                            verifiedStock=levelingStock
+                        )
+                    else LevelingReviewResult.Rejected(
+                        LevelingRefusal.INCOMPLETE_OR_INVALID)
+                    val prior=priorReview as? LevelingReviewResult.Candidate
+                    val unfinished=workingSets.filterNot{it.isResolved}
+                    AlertDialog(
+                        onDismissRequest={showPriorLeveling=false},
+                        title={Text("Leveling · previous workout")},
+                        text={
+                            Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                                when {
+                                    lastReferences==null ->
+                                        Text("Reading the verified previous workout…")
+                                    !sameGoal ->
+                                        Text("This exercise needs the same rep range and target RIR across its working sets. No targets were changed.")
+                                    prior!=null -> {
+                                        val unit=(first.load as? DraftSetLoad.Verified)
+                                            ?.unit?.name?.lowercase().orEmpty()
+                                        Text("Previous logged working sets averaged " +
+                                            "${prior.averageObservedLoad.stripTrailingZeros().toPlainString()} $unit.")
+                                        Text("Proposed starting point: " +
+                                            "${prior.proposedStraightSetLoad.stripTrailingZeros().toPlainString()} " +
+                                            "$unit × ${prior.repsPerSet} for ${unfinished.size} unfinished set(s).")
+                                        Text(prior.note)
+                                    }
+                                    else -> Text(when(
+                                        (priorReview as LevelingReviewResult.Rejected).reason
+                                    ) {
+                                        LevelingRefusal.UNVERIFIED_STOCK ->
+                                            "Confirm this gym's equipment increments or machine stack before Leveling."
+                                        LevelingRefusal.ALREADY_LEVEL ->
+                                            "The previous workout already used the same working weight."
+                                        LevelingRefusal.BELOW_REP_FLOOR,
+                                        LevelingRefusal.ABOVE_REP_CEILING,
+                                        LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE ->
+                                            "The previous set reps or reported RIR do not support leveling within this goal."
+                                        else ->
+                                            "No complete, matching prior-session pyramid was verified for this exercise, day, and physical machine."
+                                    })
+                                }
+                                Text("Nothing is saved by this review. After applying, edit and log the actual weight, reps, and RIR as usual.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
+                        confirmButton={
+                            if(prior!=null && lastReferences!=null) Button(
+                                onClick={
+                                    if(!state.busy && machineChoices.ready &&
+                                        !machineChoices.busy && unfinished.isNotEmpty()) {
+                                        levelExerciseId=exerciseId
+                                        levelMachineId=currentMachine
+                                        levelWeight=prior.proposedStraightSetLoad
+                                            .stripTrailingZeros().toPlainString()
+                                        levelReps=prior.repsPerSet
+                                        unfinished.forEach { set->
+                                            currentEditors[levelEditorKey(
+                                                set.target.setKey,currentMachine)]=
+                                                CurrentWorkoutEditorValue(
+                                                    levelWeight,levelReps.toString())
+                                        }
+                                        levelVersion++
+                                        showPriorLeveling=false
+                                    }
+                                },
+                                enabled=!state.busy && machineChoices.ready &&
+                                    !machineChoices.busy && unfinished.isNotEmpty()
+                            ) { Text("Prefill unfinished sets") }
+                            else TextButton(onClick={showPriorLeveling=false}) {
+                                Text("Close")
+                            }
+                        },
+                        dismissButton={
+                            if(prior!=null) TextButton(
+                                onClick={showPriorLeveling=false}
+                            ) { Text("Keep existing values") }
+                        }
+                    )
+                }
             }
         }
 

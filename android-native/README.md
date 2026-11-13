@@ -1,17 +1,29 @@
 # Pursuit Iron — native Android early-launch beta development
 
-**Current destination:** a small, reliable, several-month Android beta, not
-full web parity. See [Launch beta scope](LAUNCH_BETA_SCOPE.md) for the features
-that must work, intentional deferrals, feedback/data recovery requirements and
-one-Kotlin-engine release gate. The code below describes historic development
-milestones and preview-only workflows; it is **not** proof the beta is ready.
-MainActivity now opens the existing Kotlin-owned journey directly;
-the debug Kotlin Lab launcher subclasses it so both use exactly the same
-navigation. No JS engine is initialized at launch. The dormant old JS code
-and `:engine-runtime` dependency are **still on the release classpath**:
-the early-beta release guard remains intentionally blocking until that
-legacy dependency is removed. Old JS workouts are **not silently imported**
-to the Kotlin store, and on-device acceptance is still required.
+**Current destination:** a lean Android beta with **full functional parity**
+between the Kotlin training engine and the active web training engine before
+release. The beta UI can be smaller; supported engine behavior cannot be
+silently dropped. See [Launch beta scope](LAUNCH_BETA_SCOPE.md) for the
+authoritative parity, reliability, device acceptance and release gates.
+
+MainActivity launches the Kotlin-owned journey directly. The beta app's
+declared Gradle dependencies are `:domain-contract`, `:kotlin-engine` and
+`:native-coach-store`; it does **not** directly depend on `:engine-runtime`.
+The legacy `:engine-runtime` module is still included as a separate Gradle
+project for historical preview/comparison tooling. Gradle project inclusion
+alone does not mean the module is on the app's runtime classpath: verify the
+actual `:app:dependencies --configuration releaseRuntimeClasspath` graph
+before changing the module inventory or claiming legacy-free packaging.
+
+Historical JS-backed workout data is not silently imported. No APK or beta
+release is authorized by this document; persisted lifecycle, paired engine
+evidence, signed install/update and physical Android acceptance remain gates.
+
+## Historical development notes
+
+The sections below describe earlier preview and JS-era implementation
+milestones. They are retained for traceability, **not** current release
+instructions or evidence of beta readiness.
 
 This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
 

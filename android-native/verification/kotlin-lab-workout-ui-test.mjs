@@ -702,3 +702,22 @@ assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
   'Early beta release must refuse the legacy JS engine and document single-policy ownership');
 
 console.log('PASS native workout recording and verified Finish-to-History/Coach navigation and safe Last draft');
+
+
+const priorLeveling=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+for(const required of [
+  '"Leveling · review previous workout"',
+  'DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(',
+  'previous=physicalMachineLastReferences(',
+  'currentSets=workingSets.map { set->',
+  'goalRir=requireNotNull(first.targetRir)',
+  'levelWeight=prior.proposedStraightSetLoad',
+  'unfinished.forEach { set->',
+  'levelVersion++',
+  'Nothing is saved by this review.',
+  'Log each actual as usual.'
+]) assert.ok(priorLeveling.includes(required),
+  'Prior-session Leveling must be explicit, same-machine and draft-only: '+required);
+assert.ok(priorLeveling.includes(
+  'referenceMode==WorkoutReferenceMode.LAST || showPriorLeveling'),
+  'Prior-session Leveling must read source-verified Last even when Target is selected');

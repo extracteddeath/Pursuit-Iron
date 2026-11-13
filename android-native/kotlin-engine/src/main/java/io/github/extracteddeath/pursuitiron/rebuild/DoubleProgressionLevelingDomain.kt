@@ -6,7 +6,7 @@ import java.math.RoundingMode
 /** Optional double-progression leveling: historical actuals never become issued loads. */
 data class LevelingSetFact(val load: BigDecimal, val reps: Int, val actualRir: Int?)
 enum class LevelingRefusal {
-    INCOMPLETE_OR_INVALID, BELOW_REP_FLOOR, INSUFFICIENT_EFFORT_EVIDENCE,
+    INCOMPLETE_OR_INVALID, BELOW_REP_FLOOR, ABOVE_REP_CEILING, INSUFFICIENT_EFFORT_EVIDENCE,
     UNVERIFIED_STOCK, NO_SUPPORTED_CANDIDATE, ALREADY_LEVEL
 }
 sealed interface LevelingReviewResult {
@@ -39,8 +39,12 @@ object DoubleProgressionLevelingDomain {
             facts.any { it.load <= BigDecimal.ZERO || it.reps <= 0 ||
                 it.actualRir != null && it.actualRir !in 0..10 })
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
+        if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)
+            return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
         if (facts.any { it.reps < repBand.minimum })
             return reject(LevelingRefusal.BELOW_REP_FLOOR)
+        if (facts.any { it.reps > repBand.maximum })
+            return reject(LevelingRefusal.ABOVE_REP_CEILING)
         if (facts.any { it.actualRir != null && it.actualRir < goalRir })
             return reject(LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE)
         if (facts.map { it.load.stripTrailingZeros() }.distinct().size == 1)
@@ -56,7 +60,7 @@ object DoubleProgressionLevelingDomain {
         ) ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         // Never use the rounded mean as a guarantee: each set's capacity,
         // fatigue, and actual RIR still need the athlete's review.
-        val commonReps = facts.minOf { it.reps }.coerceAtMost(repBand.maximum)
+        val commonReps = facts.minOf { it.reps }
         val missingRir = facts.count { it.actualRir == null }
         val effortNote = if (missingRir == 0) "" else
             " RIR was unreported for $missingRir set(s); their goal RIR is only an assumption, not measured capacity."

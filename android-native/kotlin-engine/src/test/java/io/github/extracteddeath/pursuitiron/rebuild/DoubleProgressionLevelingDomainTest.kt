@@ -52,4 +52,13 @@ class DoubleProgressionLevelingDomainTest {
         assertFalse(review.mayModifyIssuedWorkout)
     }
 
+    @Test fun invalidBandAndAboveCeilingAreRejectedInsteadOfClamped() {
+        // RepBand rejects inverted ranges at construction; the leveling
+        // domain receives only already-valid rep bands.
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.ABOVE_REP_CEILING),
+            DoubleProgressionLevelingDomain.review(
+                listOf(LevelingSetFact(n("100"),9,3),
+                    LevelingSetFact(n("120"),9,3)),band,2,stock))
+    }
+
 }

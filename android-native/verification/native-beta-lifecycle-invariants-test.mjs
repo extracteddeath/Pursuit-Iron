@@ -23,7 +23,6 @@ required(controller,[
   'if(!journal.canProposeFinish)return',
   'KotlinJournalOperation.Finish(',
   'recoverOnReject=true',
-  'if(!pending.compareAndSet(false,true))return',
   'if(pending.get())return',
   'latestCoachRequest.incrementAndGet()',
   'private val generation=AtomicLong(0)',

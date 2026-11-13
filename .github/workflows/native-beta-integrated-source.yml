@@ -124,9 +124,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > /tmp/pursuit-native-release-dependencies.txt
-          if grep -E 'project :(engine-runtime|engine-bridge)( |$)' /tmp/pursuit-native-release-dependencies.txt; then
-            echo "::error::Legacy engine module present on release runtime classpath"
-            exit 1
-          fi
-          echo "No legacy engine-runtime or engine-bridge project dependency detected."
+          mkdir -p android-native/build/reports
+          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > android-native/build/reports/native-beta-release-runtime-dependencies.txt
+          node verification/audit-native-beta-release-dependencies.mjs build/reports/native-beta-release-runtime-dependencies.txt
+      - name: Preserve resolved beta runtime dependency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-beta-resolved-runtime-dependencies
+          path: android-native/build/reports/native-beta-release-runtime-dependencies.txt
+          if-no-files-found: warn
+          retention-days: 30

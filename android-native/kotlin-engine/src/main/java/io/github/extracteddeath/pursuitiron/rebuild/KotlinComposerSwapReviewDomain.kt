@@ -26,12 +26,15 @@ object KotlinComposerSwapRankingDomain {
      * discovery, NOT evidence of equal stimulus or a prescription transfer.
      * Multiple words may match across the name, pattern and credited muscles.
      */
-    private fun matchesSearch(option:ComposerExerciseOption,search:String):Boolean {
+    private fun matchesSearch(
+        option:ComposerExerciseOption,search:String,displayLabel:String?=null
+    ):Boolean {
         val needle=search.trim().take(80).lowercase()
             .replace('_',' ').replace('-',' ')
         if(needle.isBlank()) return true
         fun readable(value:String)=value.lowercase().replace('_',' ').replace('-',' ')
-        val catalogText=(listOf(option.exerciseId,option.pattern.name)+
+        val catalogText=(listOf(option.exerciseId,option.pattern.name,
+            displayLabel.orEmpty())+
             option.credits.filter{it.fractionalSet.signum()>0}
                 .map{it.muscle.name}).joinToString(" ",transform=::readable)
         return needle.split(Regex("\\s+")).all{it in catalogText}
@@ -43,12 +46,13 @@ object KotlinComposerSwapRankingDomain {
         choices:List<KotlinComposerSwapChoice>,
         search:String="",
         samePatternOnly:Boolean=false,
-        sharedMusclesOnly:Boolean=false
+        sharedMusclesOnly:Boolean=false,
+        displayLabels:Map<String,String> = emptyMap()
     ):List<KotlinComposerSwapChoice> =
         Collections.unmodifiableList(choices.filter{
             (!samePatternOnly || it.samePattern) &&
                 (!sharedMusclesOnly || it.sharedReviewedMuscleCount>0) &&
-                matchesSearch(it.option,search)
+                matchesSearch(it.option,search,displayLabels[it.option.exerciseId])
         })
 
     fun rank(
@@ -56,7 +60,8 @@ object KotlinComposerSwapRankingDomain {
         alternatives:List<ComposerExerciseOption>,
         currentExerciseIds:Set<String>,
         dayFocus:ComposerFocus,
-        search:String=""
+        search:String="",
+        displayLabels:Map<String,String> = emptyMap()
     ):List<KotlinComposerSwapChoice> {
         // Only unique, positive, DIRECT reviewed credits establish actual
         // overlap. Secondary/zero-credit mentions are useful for discovery,
@@ -71,7 +76,7 @@ object KotlinComposerSwapRankingDomain {
             it.exerciseId !in currentExerciseIds &&
             dayFocus in it.allowedFocus &&
             it.role==source.role &&
-            matchesSearch(it,search)
+            matchesSearch(it,search,displayLabels[it.exerciseId])
         }.map{candidate->
             val shared=reviewedDirectMuscles(candidate).intersect(baseline).size
             val same=candidate.pattern==source.pattern

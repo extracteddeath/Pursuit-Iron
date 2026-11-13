@@ -39,8 +39,14 @@ internal fun NativeKotlinComposerSwapSheet(
     val rows=remember(fromExerciseId,selectedId) {
         sourceTargets.map {ComposerSwapDraftRow()}.toMutableStateList()
     }
+    // Search the same labels shown to athletes, not only internal IDs.
+    // Equipment, role and original ranking remain engine-owned.
+    val displayLabels=remember(choices){
+        choices.associate{it.option.exerciseId to
+            kotlinExerciseLabel(it.option.exerciseId)}
+    }
     val permitted=KotlinComposerSwapRankingDomain.filterRanked(
-        choices,query,matchingPattern,sharedMusclesOnly)
+        choices,query,matchingPattern,sharedMusclesOnly,displayLabels)
     val approved=selected?.let{choice->
         runCatching {
             sourceTargets.mapIndexed {i,target->

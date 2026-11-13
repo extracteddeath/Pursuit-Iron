@@ -112,6 +112,43 @@ class KotlinComposerSwapReviewDomainTest {
             .filterRanked(ranked))
     }
 
+
+    @Test fun visibleLabelSearchFindsRealDisplayedExerciseNamesWithoutChangingRanking() {
+        val ranked=KotlinComposerSwapRankingDomain.rank(
+            first,listOf(different,same,wrongRole),setOf("db-press"),
+            ComposerFocus.UPPER)
+        val labels=mapOf(
+            "chest-machine" to "Seated Chest Press Machine",
+            "chest-fly" to "Standing Cable Fly"
+        )
+        // The word "seated" is not part of the old internal ID, pattern,
+        // or credited muscle. Athlete-facing search must still find it.
+        assertTrue(KotlinComposerSwapRankingDomain.filterRanked(
+            ranked,"seated").isEmpty())
+        assertEquals(listOf("chest-machine"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"seated chest press",displayLabels=labels)
+                .map{it.option.exerciseId})
+        assertEquals(listOf("chest-fly"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"standing cable",displayLabels=labels)
+                .map{it.option.exerciseId})
+        assertEquals(listOf("chest-machine"),
+            KotlinComposerSwapRankingDomain.filterRanked(
+                ranked,"seated",samePatternOnly=true,displayLabels=labels)
+                .map{it.option.exerciseId})
+        assertTrue(KotlinComposerSwapRankingDomain.filterRanked(
+            ranked,"standing",samePatternOnly=true,displayLabels=labels)
+            .isEmpty())
+        assertEquals(listOf("chest-machine"),
+            KotlinComposerSwapRankingDomain.rank(
+                first,listOf(different,same),setOf("db-press"),
+                ComposerFocus.UPPER,"seated",labels)
+                .map{it.option.exerciseId})
+        assertEquals(ranked,KotlinComposerSwapRankingDomain.filterRanked(
+            ranked,displayLabels=labels))
+    }
+
     @Test fun rankUsesDistinctPositiveDirectCreditsRatherThanDuplicateMentions() {
         val repeated=same.copy(
             exerciseId="repeated-chest",

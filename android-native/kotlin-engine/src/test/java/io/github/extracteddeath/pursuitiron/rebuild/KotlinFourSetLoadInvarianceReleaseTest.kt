@@ -50,7 +50,7 @@ class KotlinFourSetLoadInvarianceReleaseTest {
             snapshot, identity, j.receipts, j.revision, j.finishedByEventId
         )
         assertTrue(result.toString(), result is KotlinJournalReplayResult.Recovered)
-        return (result as KotlinJournalReplayResult.Recovered).state
+        return (result as KotlinJournalReplayResult.Recovered).journal
     }
 
     @Test fun fourSetsNearFailureManualEditAndColdResumeNeverRewriteIssuedLoad() {

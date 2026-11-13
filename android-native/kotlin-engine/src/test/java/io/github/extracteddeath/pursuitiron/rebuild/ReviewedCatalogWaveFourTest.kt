@@ -6,7 +6,7 @@ import org.junit.Test
 /** Source-linked catalog/stock gate; never claims physiology or superiority. */
 class ReviewedCatalogWaveFourTest {
     private val all=StarterExerciseTranche.entries()
-    private val wave=all.drop(146)
+    private val wave=all.drop(146).take(18)
     private val expected=listOf(
         "rope-hammer-curl",
         "v-bar-pushdown",
@@ -30,7 +30,7 @@ class ReviewedCatalogWaveFourTest {
     private fun n(s:String)=BigDecimal(s)
 
     @Test fun preserveSeparateAttachmentsAndMuscleCredits() {
-        assertEquals(164,all.size)
+        assertEquals(178,all.size)
         assertEquals(expected,wave.map{it.legacyCuratedId})
         assertEquals(all.size,all.map{it.legacyCuratedId}.distinct().size)
         assertEquals(all.size,all.map{

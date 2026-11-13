@@ -439,7 +439,7 @@ internal fun PursuitResponsiveActionPair(
  */
 @Composable
 internal fun PursuitPreviousWorkoutLevelingDialog(
-    review:LevelingReviewResult,
+    review:LevelingReviewResult?,
     historyLoading:Boolean,
     goalComparable:Boolean,
     stationValid:Boolean,
@@ -468,6 +468,8 @@ internal fun PursuitPreviousWorkoutLevelingDialog(
                         Text("Select a confirmed, active machine before using previous sets.")
                     !goalComparable ->
                         Text("Working sets need the same rep range and target RIR for this review.")
+                    review==null ->
+                        Text("Reviewing previous performance and verified equipment…")
                     candidate!=null -> {
                         Text("Your previous actual working sets",
                             style=MaterialTheme.typography.titleSmall)

@@ -1,0 +1,51 @@
+name: Native beta integrated source gate (no APK)
+
+on:
+  pull_request:
+    paths:
+      - 'android-native/**'
+      - '.github/workflows/native-beta-integrated-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-beta-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrated-kotlin-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install Android compile platform
+        run: sdkmanager --install "platforms;android-37" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Verify integrated Kotlin domains, coach persistence and Compose compilation
+        working-directory: android-native
+        run: >
+          gradle :kotlin-engine:test
+          :native-coach-store:test
+          :domain-contract:testDebugUnitTest
+          :app:compileDebugKotlin
+          --no-daemon --stacktrace
+      - name: Enforce absence of legacy runtime on app release classpath
+        working-directory: android-native
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:dependencies --configuration releaseRuntimeClasspath --no-daemon > /tmp/pursuit-native-release-dependencies.txt
+          if grep -E '(^|[[:space:]\\+|])([+\\]--- )?project :(engine-runtime|engine-bridge)([[:space:]]|$)' /tmp/pursuit-native-release-dependencies.txt; then
+            echo "::error::Legacy engine module present on release runtime classpath"
+            exit 1
+          fi
+          echo "No legacy engine-runtime or engine-bridge project dependency detected."

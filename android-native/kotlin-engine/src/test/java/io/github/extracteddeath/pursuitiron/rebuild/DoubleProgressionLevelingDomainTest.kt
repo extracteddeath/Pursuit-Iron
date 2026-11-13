@@ -260,4 +260,36 @@ class DoubleProgressionLevelingDomainTest {
                 currentKeys(),priorSession(loads),null,band,2,wrongEquipment))
     }
 
+    @Test fun priorWorkoutMidpointMatchesCurrentWebStyleRoundUp() {
+        val previous=DoubleProgressionLevelingDomain.review(
+            facts("115","120"),band,2,stock
+        ) as LevelingReviewResult.Candidate
+        val today=DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+            current("115","120"),stock
+        ) as CurrentWorkoutLevelingReview.Ready
+        assertEquals(n("117.5"),previous.averageObservedLoad)
+        assertEquals(today.roundedLoad,previous.proposedStraightSetLoad)
+        assertEquals(n("120"),previous.proposedStraightSetLoad)
+        assertFalse(previous.mayModifyIssuedWorkout)
+    }
+
+    @Test fun priorWorkoutCannotSuggestZeroOrInventStockWhenMeanIsNearZero() {
+        val unloadedAndTen=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.SMITH_TOTAL,listOf(n("0"),n("10")))
+        val candidate=DoubleProgressionLevelingDomain.review(
+            facts("2","4"),band,2,unloadedAndTen
+        )
+        // These very low old observations are below today's rep floor and
+        // are not accepted merely because the present stock has a zero.
+        assertEquals(LevelingReviewResult.Rejected(LevelingRefusal.NO_SUPPORTED_CANDIDATE),
+            DoubleProgressionLevelingDomain.review(
+                facts("2","4"),band,2,
+                VerifiedLoadStock.Totals(
+                    LoadUnit.LB,LoadBasis.SMITH_TOTAL,listOf(n("0")))))
+        assertTrue(candidate.toString(),candidate is LevelingReviewResult.Candidate)
+        assertEquals(n("10"),
+            (candidate as LevelingReviewResult.Candidate).proposedStraightSetLoad)
+        assertFalse(candidate.mayModifyIssuedWorkout)
+    }
+
 }

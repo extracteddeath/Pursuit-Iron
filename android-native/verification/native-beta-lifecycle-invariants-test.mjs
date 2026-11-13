@@ -23,6 +23,8 @@ required(controller,[
   'expectedJournalRevision=journal.revision',
   'correctsEventId=existing?.operation?.eventId',
   'journal.snapshot.targets.none{it.setKey==setKey}',
+  'if(prior.busy || journal.finishedByEventId!=null ||',
+  'if(prior.busy || !journal.canProposeFinish)return',
   'journal.finishedByEventId!=null',
   'if(!journal.canProposeFinish)return',
   'KotlinJournalOperation.Finish(',

@@ -9,6 +9,7 @@ const settings=read('android-native/settings.gradle.kts');
 const engine=read('android-native/engine-runtime/build.gradle.kts');
 const scope=read('android-native/LAUNCH_BETA_SCOPE.md');
 const readme=read('android-native/README.md');
+const historical=read('android-native/HISTORICAL_NATIVE_DEVELOPMENT.md');
 
 const dependencies=app.slice(app.indexOf('\ndependencies {'),
   app.indexOf('\n// Beta release has TWO independent gates:'));
@@ -33,7 +34,8 @@ assert.ok(scope.includes('100% functional parity') &&
   scope.includes('No release/100%/superiority claims'),
   'Cleanup must not weaken engine parity or evidence policy');
 assert.ok(readme.includes('Gradle project inclusion') &&
-  readme.includes('Historical development notes'),
+  readme.includes('HISTORICAL_NATIVE_DEVELOPMENT.md') &&
+  historical.includes('Archived for traceability'),
   'README must distinguish historic module inclusion from beta runtime');
 
 console.log('PASS native beta declared dependency boundary; resolved Gradle classpath still requires execution');

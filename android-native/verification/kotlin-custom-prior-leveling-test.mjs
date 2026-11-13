@@ -21,9 +21,10 @@ for(const required of [
   'unfinished.forEach { set->',
   'currentEditors[levelEditorKey(',
   'levelVersion++',
-  '"Prefill unfinished sets"',
-  '"Keep existing values"',
-  'Log the actual sets normally.'
+  'PursuitPreviousWorkoutLevelingDialog(',
+  'onApply={',
+  'observed=observed',
+  'onDismiss={priorLevelingSlotId=null}'
 ]) assert.ok(source.includes(required),
   'Custom prior-session Leveling must be a source-verified draft-only action: '+required);
 assert.ok(source.includes('CustomWorkoutVisitPart.MAIN) !in current.effectiveVisits'),

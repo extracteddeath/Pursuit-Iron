@@ -189,6 +189,13 @@ object CustomWorkoutJournalDomain {
     ):Boolean {
         if(outcome==KotlinJournalSetOutcome.SKIPPED)return performed==null
         val actual=performed ?:return false
+        // Match the same physical machine-ID syntax enforced by the
+        // generated Kotlin workout journal. Legacy null is still valid,
+        // but blank, overlong, or forged IDs cannot become durable custom
+        // receipts or be replayed as A/B progression evidence.
+        if(actual.machineInstanceId!=null &&
+            !KotlinMachineAlternativesDomain.validInstanceId(
+                actual.machineInstanceId))return false
         if(actual.actualRir!=null && actual.actualRir !in 0..10)return false
         if(outcome==KotlinJournalSetOutcome.COMPLETED &&
             actual.reps !in 1..100)return false

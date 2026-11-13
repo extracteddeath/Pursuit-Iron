@@ -43,4 +43,13 @@ class DoubleProgressionLevelingDomainTest {
             DoubleProgressionLevelingDomain.review(
                 facts("120","120","120"),band,2,stock))
     }
+    @Test fun missingRirIsClearlyLabeledAsAssumptionNotMeasuredCapacity() {
+        val review = DoubleProgressionLevelingDomain.review(
+            listOf(LevelingSetFact(n("100"),5,null),
+                LevelingSetFact(n("120"),5,null)),band,2,stock)
+            as LevelingReviewResult.Candidate
+        assertTrue(review.note.contains("RIR was unreported for 2"))
+        assertFalse(review.mayModifyIssuedWorkout)
+    }
+
 }

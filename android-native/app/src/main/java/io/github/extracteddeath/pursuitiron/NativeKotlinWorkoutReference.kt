@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
 internal enum class WorkoutReferenceMode { TARGET,LAST }
@@ -39,8 +40,18 @@ internal fun rememberWorkoutLastReferences(
     }
     LaunchedEffect(host,workoutId,custom,enabled) {
         result=null
-        if(enabled)result=withContext(Dispatchers.IO) {
-            host.reviewWorkoutLastReferences(workoutId,custom)
+        if(enabled)result=try {
+            withContext(Dispatchers.IO) {
+                host.reviewWorkoutLastReferences(workoutId,custom)
+            }
+        } catch(cancelled:CancellationException) {
+            // A disposed workout must never publish a late previous-session
+            // result or suppress coroutine cancellation.
+            throw cancelled
+        } catch(_:Exception) {
+            // Last/Leveling is optional display evidence, not a journal owner.
+            // Failed storage reads cannot crash or silently edit an active set.
+            WorkoutLastReferenceResult.Unavailable
         }
     }
     return if(enabled)result else null
@@ -151,4 +162,53 @@ internal fun PursuitWorkoutSetReference(
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+
+/**
+ * One cancellation-scoped, asynchronous prior-session Leveling review for
+ * BOTH native workout types. Inventory inspection may enumerate many valid
+ * plate combinations: never do that work during Compose composition.
+ *
+ * Key all inputs (including the physical station and exact Previous facts).
+ * A changed key immediately exposes null, not a stale actionable candidate.
+ * No callback here can edit a journal, approved workout, or future load.
+ */
+@Composable
+internal fun rememberPriorWorkoutLevelingReview(
+    currentSets:List<Pair<WorkoutReferenceKey,DraftSetLoad>>,
+    previous:WorkoutLastReferenceResult?,
+    machineInstanceId:String?,
+    repBand:RepBand?,
+    goalRir:Int?,
+    verifiedStock:VerifiedLoadStock?
+):LevelingReviewResult? {
+    var review by remember(currentSets,previous,machineInstanceId,repBand,
+        goalRir,verifiedStock) {
+        mutableStateOf<LevelingReviewResult?>(null)
+    }
+    LaunchedEffect(currentSets,previous,machineInstanceId,repBand,
+        goalRir,verifiedStock) {
+        review=null
+        if(previous==null) return@LaunchedEffect
+        if(repBand==null || goalRir==null) {
+            review=LevelingReviewResult.Rejected(
+                LevelingRefusal.INCOMPLETE_OR_INVALID)
+            return@LaunchedEffect
+        }
+        review=try {
+            withContext(Dispatchers.Default) {
+                DoubleProgressionLevelingDomain.reviewLastForCurrentWorkout(
+                    currentSets,previous,machineInstanceId,repBand,goalRir,
+                    verifiedStock)
+            }
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            // Leveling is optional: an unforeseen inventory/validation
+            // problem must not kill the running workout or touch its journal.
+            LevelingReviewResult.Rejected(LevelingRefusal.INCOMPLETE_OR_INVALID)
+        }
+    }
+    return review
 }

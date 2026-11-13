@@ -726,107 +726,65 @@ internal fun NativeKotlinCustomJournalScreen(
                                     set.prescription.reps==first.reps &&
                                         set.prescription.targetRir==first.targetRir
                                 }
-                            val priorReview=if(sameGoal && !requiresNewMachineChoice)
-                                DoubleProgressionLevelingDomain
-                                    .reviewLastForCurrentWorkout(
-                                        currentSets=workingSets.map { set->
-                                            WorkoutReferenceKey(set.setKey) to
-                                                set.prescription.load
-                                        },
-                                        previous=physicalMachineLastReferences(
-                                            lastReferences,selectedMachineId),
-                                        machineInstanceId=selectedMachineId,
-                                        repBand=first.reps,
-                                        goalRir=requireNotNull(first.targetRir),
-                                        verifiedStock=stock
-                                    )
-                            else LevelingReviewResult.Rejected(
-                                LevelingRefusal.INCOMPLETE_OR_INVALID)
+                            val priorReview=rememberPriorWorkoutLevelingReview(
+                                currentSets=workingSets.map { set->
+                                    WorkoutReferenceKey(set.setKey) to
+                                        set.prescription.load
+                                },
+                                previous=physicalMachineLastReferences(
+                                    lastReferences,selectedMachineId),
+                                machineInstanceId=selectedMachineId,
+                                repBand=first.reps.takeIf{
+                                    sameGoal && !requiresNewMachineChoice
+                                },
+                                goalRir=first.targetRir?.takeIf{
+                                    sameGoal && !requiresNewMachineChoice
+                                },
+                                verifiedStock=stock
+                            )
                             val prior=priorReview as? LevelingReviewResult.Candidate
-                            AlertDialog(
-                                onDismissRequest={priorLevelingSlotId=null},
-                                title={Text("Leveling · previous workout")},
-                                text={
-                                    Column(verticalArrangement=
-                                        Arrangement.spacedBy(8.dp)) {
-                                        when {
-                                            lastReferences==null ->
-                                                Text("Reading verified previous sets…")
-                                            !sameGoal ->
-                                                Text("Working sets need the same rep range and goal RIR for this Leveling review.")
-                                            prior!=null -> {
-                                                val unit=(first.load as?
-                                                    DraftSetLoad.Verified)?.unit
-                                                    ?.name?.lowercase().orEmpty()
-                                                Text("Previous recorded mean: "+
-                                                    prior.averageObservedLoad
-                                                        .stripTrailingZeros()
-                                                        .toPlainString()+" "+unit)
-                                                Text("Optional starting point: "+
-                                                    prior.proposedStraightSetLoad
-                                                        .stripTrailingZeros()
-                                                        .toPlainString()+" "+unit+
-                                                    " × "+prior.repsPerSet+
-                                                    " for "+unfinished.size+
-                                                    " unfinished working set(s).")
-                                                Text(prior.note)
-                                            }
-                                            else -> Text(when(
-                                                (priorReview as
-                                                    LevelingReviewResult.Rejected).reason
-                                            ) {
-                                                LevelingRefusal.UNVERIFIED_STOCK ->
-                                                    "Confirm the equipment and valid weights for this physical station."
-                                                LevelingRefusal.ALREADY_LEVEL ->
-                                                    "The previous workout already used a level working weight."
-                                                LevelingRefusal.BELOW_REP_FLOOR,
-                                                LevelingRefusal.ABOVE_REP_CEILING,
-                                                LevelingRefusal.INSUFFICIENT_EFFORT_EVIDENCE ->
-                                                    "Previous actual reps or RIR do not support Leveling for this goal."
-                                                else ->
-                                                    "A complete previous workout on this exact day, exercise, and machine is unavailable."
-                                            })
+                            val matchingLast=physicalMachineLastReferences(
+                                lastReferences,selectedMachineId)
+                            val observed=if(prior!=null)
+                                workingSets.mapNotNull { set->
+                                    WorkoutLastDraftDomain.reviewedActual(
+                                        matchingLast,
+                                        WorkoutReferenceKey(set.setKey),
+                                        set.prescription.load)
+                                } else emptyList()
+                            PursuitPreviousWorkoutLevelingDialog(
+                                review=priorReview,
+                                historyLoading=lastReferences==null,
+                                goalComparable=sameGoal,
+                                stationValid=machineChoices.ready &&
+                                    !machineChoices.busy &&
+                                    !requiresNewMachineChoice,
+                                loadUnit=(first.load as? DraftSetLoad.Verified)
+                                    ?.unit?.name?.lowercase().orEmpty(),
+                                observed=observed,
+                                unfinishedCount=unfinished.size,
+                                busy=busy,
+                                onDismiss={priorLevelingSlotId=null},
+                                onApply={
+                                    if(prior!=null && !busy &&
+                                        machineChoices.ready &&
+                                        !machineChoices.busy &&
+                                        !requiresNewMachineChoice &&
+                                        unfinished.isNotEmpty()) {
+                                        levelSlotId=slot.slotId
+                                        levelMachineId=selectedMachineId
+                                        levelWeight=prior.proposedStraightSetLoad
+                                            .stripTrailingZeros().toPlainString()
+                                        levelReps=prior.repsPerSet
+                                        unfinished.forEach { set->
+                                            currentEditors[levelEditorKey(
+                                                set.setKey,selectedMachineId)]=
+                                                CurrentWorkoutEditorValue(
+                                                    levelWeight,levelReps.toString())
                                         }
-                                        Text("This review does not change a saved set, issued program, or future workout. Log the actual sets normally.",
-                                            style=MaterialTheme.typography.bodySmall,
-                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        levelVersion++
+                                        priorLevelingSlotId=null
                                     }
-                                },
-                                confirmButton={
-                                    if(prior!=null) Button(
-                                        onClick={
-                                            if(!busy && machineChoices.ready &&
-                                                !machineChoices.busy &&
-                                                !requiresNewMachineChoice &&
-                                                unfinished.isNotEmpty()) {
-                                                levelSlotId=slot.slotId
-                                                levelMachineId=selectedMachineId
-                                                levelWeight=prior
-                                                    .proposedStraightSetLoad
-                                                    .stripTrailingZeros().toPlainString()
-                                                levelReps=prior.repsPerSet
-                                                unfinished.forEach { set->
-                                                    currentEditors[levelEditorKey(
-                                                        set.setKey,selectedMachineId)]=
-                                                        CurrentWorkoutEditorValue(
-                                                            levelWeight,levelReps.toString())
-                                                }
-                                                levelVersion++
-                                                priorLevelingSlotId=null
-                                            }
-                                        },
-                                        enabled=!busy && machineChoices.ready &&
-                                            !machineChoices.busy &&
-                                            !requiresNewMachineChoice
-                                    ) { Text("Prefill unfinished sets") }
-                                    else TextButton(onClick={priorLevelingSlotId=null}) {
-                                        Text("Close")
-                                    }
-                                },
-                                dismissButton={
-                                    if(prior!=null) TextButton(
-                                        onClick={priorLevelingSlotId=null}
-                                    ) { Text("Keep existing values") }
                                 }
                             )
                         }

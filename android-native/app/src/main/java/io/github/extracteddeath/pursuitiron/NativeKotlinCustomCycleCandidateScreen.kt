@@ -60,6 +60,72 @@ private fun splitLabel(split: CustomSplitIdentity): String = when (split) {
 }
 
 /**
+ * Plan's actual return-to-workout path. Only a cold-opened, still issued and
+ * unfinished generated Kotlin journal may show here. A button tap performs a
+ * SECOND owner/approval recheck, so an old UI result is never an entry grant.
+ * No workout is created, issued, recorded or altered by viewing this card.
+ */
+@Composable
+private fun NativeVerifiedGeneratedWorkoutResumeCard(
+    host:NativeKotlinCandidateHost,
+    onResume:(String)->Unit
+) {
+    val scope=rememberCoroutineScope()
+    var verifiedId by remember(host){mutableStateOf<String?>(null)}
+    var checking by remember(host){mutableStateOf(true)}
+    var opening by remember(host){mutableStateOf(false)}
+    var refusal by remember(host){mutableStateOf<String?>(null)}
+    LaunchedEffect(host) {
+        checking=true
+        verifiedId=withContext(Dispatchers.IO) {
+            runCatching{currentUnfinishedGeneratedWorkoutId(host)}.getOrNull()
+        }
+        checking=false
+    }
+    val id=verifiedId
+    if(id!=null)PursuitCard(highlighted=true) {
+        Text("Your active workout",
+            style=MaterialTheme.typography.titleLarge)
+        Text("Your unfinished Kotlin workout is saved. Continue logging "+
+            "with the same approved session and recorded sets.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        PursuitPrimaryAction("Resume generated workout",
+            enabled=!checking && !opening) {
+            if(!opening) {
+                opening=true
+                refusal=null
+                scope.launch {
+                    try {
+                        val reopened=withContext(Dispatchers.IO) {
+                            runCatching {
+                                currentUnfinishedGeneratedWorkoutId(host)
+                            }.getOrNull()
+                        }
+                        if(id==verifiedId && reopened==id)
+                            onResume(id)
+                        else {
+                            verifiedId=null
+                            refusal="That workout is no longer the current "+
+                                "approved unfinished session. Open Train "+
+                                "or review your saved program."
+                        }
+                    } finally {
+                        opening=false
+                    }
+                }
+            }
+        }
+        refusal?.let {
+            Text(it,style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.error)
+        }
+    } else if(refusal!=null)Text(checkNotNull(refusal),
+        style=MaterialTheme.typography.bodySmall,
+        color=MaterialTheme.colorScheme.error)
+}
+
+/**
  * Preview of the genuinely athlete-authored, offline native custom cycle
  * workflow. Uses ONLY NativeKotlinCustomCycleController and its verified
  * durable drafts. This screen is deliberately NOT connected to the legacy
@@ -73,6 +139,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     controller: NativeKotlinCustomCycleController,
     initialCycleId: String? = null,
     onOpenIssuedWorkout:(String)->Unit = {},
+    onResumeGeneratedWorkout:(String)->Unit = {},
     onOpenHistory:()->Unit = {},
     onBuildProgram:()->Unit = {},
     permissionHost:NativeKotlinCandidateHost?=null,
@@ -212,6 +279,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             if (draft == null) "Your programs" else draft.title,
             if(draft==null)"Build a program around the way you train."
             else "${pretty(draft.goal)} · ${draft.blocks.sumOf{it.weeks}} weeks")
+        permissionHost?.let {
+            NativeVerifiedGeneratedWorkoutResumeCard(it,onResumeGeneratedWorkout)
+        }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(draft==null || state.refusal!=null || showProgramEditor)state.message?.let {
             Text(it,style=MaterialTheme.typography.bodySmall,

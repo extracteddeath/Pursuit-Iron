@@ -508,12 +508,15 @@ for(const source of [journal,composer]) {
 assert.ok(journey.includes('workoutScreens.SaveableStateProvider("custom:$customWorkoutId")') &&
   journey.includes('workoutScreens.SaveableStateProvider("composer:$selectedId")') &&
   journey.includes('var minimizedGeneratedId by rememberSaveable') &&
-  journey.includes('minimizedGeneratedId=selectedId') &&
+  journey.includes('minimizedGeneratedId=openId.takeIf') &&
   journey.includes('PursuitPrimaryAction("Resume workout"') &&
   journey.includes('host.currentlyApprovedKotlinWorkoutId()') &&
   journey.includes('if(approved==awaitingWorkoutId)') &&
-  journey.includes('TextButton(enabled=!sessionState.busy,onClick=') &&
+  journey.includes('TextButton(enabled=!sessionState.busy,') &&
+  journey.includes('onClick=::minimizeGeneratedWorkout') &&
+  journey.includes('BackHandler(enabled=customWorkoutId==null && selectedId!=null)') &&
   journey.includes('if(!controller.state.value.busy)') &&
+  journey.includes('controller.state.value.presentation?.finished!=true') &&
   journey.includes('Text("Minimize")') &&
   journey.includes('minimizedGeneratedId=null'),
   'Both workout paths must preserve exact identity, timers and drafts, and generated workouts need an explicit resume shortcut');

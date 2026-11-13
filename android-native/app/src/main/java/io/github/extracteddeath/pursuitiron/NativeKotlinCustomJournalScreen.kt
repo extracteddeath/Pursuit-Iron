@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -83,6 +84,12 @@ internal fun NativeKotlinCustomJournalScreen(
         exerciseSignature=journal?.snapshot?.slots
             ?.map{it.exerciseId}?.distinct()?.joinToString(";").orEmpty())
     var busy by remember(host,workoutId){mutableStateOf(false)}
+    // The system Back gesture and visible Minimize are the same navigation.
+    // Consume Back during an in-flight disk write instead of dropping the
+    // journal screen and risking a stale late callback.
+    BackHandler {
+        if(!busy)onClose()
+    }
     var loading by remember(host,workoutId){mutableStateOf(true)}
     var error by remember(host,workoutId){mutableStateOf<String?>(null)}
     var noteError by remember(host,workoutId){mutableStateOf<String?>(null)}

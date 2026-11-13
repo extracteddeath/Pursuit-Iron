@@ -47,7 +47,7 @@ class ReviewedCatalogWaveSixTest {
         },emptyList(),4,1
     )
 
-    private fun stockFor(id:String):Pair<BigDecimal?,VerifiedLoadStock?>=when {
+    private fun stockFor(id:String): Pair<BigDecimal?, VerifiedLoadStock?> = when {
         id in bodyweight->null to null
         id in cable->n("25") to VerifiedLoadStock.Totals(
             LoadUnit.LB,LoadBasis.CABLE_STACK,listOf(n("20"),n("25"),n("30")))

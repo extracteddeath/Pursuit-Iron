@@ -64,7 +64,9 @@ required(workout,[
   'NativeKotlinFinishedComposerHandoff.inspect(stored,history)',
   'onViewHistory()',
   'controller.undoExerciseSwap(swapId)',
-  'rememberSaveableStateHolder()'
+  'rememberSaveableStateHolder()',
+  'if(state.busy)',
+  'Verifying the saved workout and athlete ownership.'
 ], 'Workout UI must retain durable recording, finish confirmation, verified history and undo');
 required(journey,[
   'currentUnfinishedGeneratedWorkoutId(host)',

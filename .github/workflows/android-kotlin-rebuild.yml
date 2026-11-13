@@ -43,6 +43,7 @@ on:
       - 'android-native/verification/kotlin-lab-navigation-test.mjs'
       - 'android-native/verification/kotlin-lab-workout-ui-test.mjs'
       - 'android-native/verification/kotlin-swap-visible-name-search-test.mjs'
+      - 'android-native/verification/kotlin-reviewed-exercise-labels-test.mjs'
       - 'android-native/verification/kotlin-coach-choice-search-test.mjs'
       - 'android-native/verification/kotlin-custom-exercise-search-paging-test.mjs'
       - 'android-native/verification/kotlin-train-resume-test.mjs'
@@ -142,6 +143,7 @@ jobs:
         run: |
           node android-native/verification/kotlin-lab-workout-ui-test.mjs
           node android-native/verification/kotlin-swap-visible-name-search-test.mjs
+          node android-native/verification/kotlin-reviewed-exercise-labels-test.mjs
           node android-native/verification/kotlin-custom-prior-leveling-test.mjs
           node android-native/verification/kotlin-pinned-exercise-notes-test.mjs
           node android-native/verification/kotlin-pinned-setup-fields-test.mjs

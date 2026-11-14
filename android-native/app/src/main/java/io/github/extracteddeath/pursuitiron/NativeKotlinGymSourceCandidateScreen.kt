@@ -67,6 +67,49 @@ private fun parseIds(text:String):Set<String>? {
         values.all{pattern.matches(it)}) values.toSet() else null
 }
 
+/** Reviewed exercise equipment names for user-visible gym stock selection. */
+internal data class KotlinGymStockChoice(
+    val equipmentId:String,
+    val basis:LoadBasis,
+    val exerciseNames:List<String>
+) {
+    val displayName:String get()=when(equipmentId) {
+        "straight-bar" -> "Barbell and plates"
+        "ez-curl-bar" -> "EZ curl bar and plates"
+        "dumbbell-rack" -> "Dumbbells"
+        "cable-station" -> "Cable station"
+        else -> equipmentId.replace('-', ' ').replace('_',' ')
+            .replaceFirstChar{it.uppercase()}
+    }
+}
+
+/** A name can suggest stock identity, but it can never confirm actual loads. */
+internal fun kotlinGymStockChoices(
+    catalog:List<CatalogMovement>
+):List<KotlinGymStockChoice> =
+    catalog.filter{it.equipmentId!=null && it.expectedLoadBasis!=null}
+        .groupBy{checkNotNull(it.equipmentId)}
+        .mapNotNull{(id,entries)->
+            val bases=entries.mapNotNull{it.expectedLoadBasis}.distinct()
+            if(bases.size!=1)null else KotlinGymStockChoice(id,bases.single(),
+                entries.map{kotlinExerciseLabel(it.exerciseId)}.distinct().sorted())
+        }.sortedWith(compareBy<KotlinGymStockChoice>{it.displayName.lowercase()}
+            .thenBy{it.equipmentId})
+
+/** Labels are presentation only; attachment source IDs remain authoritative. */
+internal fun kotlinGymAttachmentLabel(id:String):String=when(id) {
+    "straight-bar" -> "Straight cable bar"
+    "wide-lat-bar" -> "Wide lat bar"
+    "v-bar" -> "V-bar"
+    "single-handle" -> "Single cable handle"
+    "dual-handles" -> "Dual cable handles"
+    "dual-rope" -> "Dual rope"
+    "rope" -> "Rope"
+    "ankle-cuff" -> "Ankle cuff"
+    else -> id.replace('-', ' ').replace('_',' ')
+        .replaceFirstChar{it.uppercase()}
+}
+
 /**
  * Candidate-only native equipment setup, using Pursuit shared M3 components.
  * The full native onboarding/catalog curator must call the explicit source
@@ -87,6 +130,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     var equipmentEditor by remember {mutableStateOf(false)}
     var removeTarget by remember {mutableStateOf<String?>(null)}
     var equipmentId by rememberSaveable {mutableStateOf("")}
+    var equipmentSearch by rememberSaveable {mutableStateOf("")}
+    var manualEquipmentId by rememberSaveable {mutableStateOf(false)}
+    var showMoreEquipment by rememberSaveable {mutableStateOf(false)}
     var kind by rememberSaveable {
         mutableStateOf(PhysicalStockEditorKind.EXACT_LOADS)
     }
@@ -239,27 +285,114 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     }
 
     if(reviewed!=null && source!=null && equipmentEditor) {
-        val parsed=parseVerifiedStock(reviewed.gym.unit,kind,basis,
-            exact,min,step,max,bar,plates)
+        val verifiedChoices=remember(source.revision) {
+            kotlinGymStockChoices(source.catalog)
+        }
+        val selected=verifiedChoices.firstOrNull{it.equipmentId==equipmentId}
+        val requiredBasis=selected?.basis
+        val usableKinds=PhysicalStockEditorKind.entries.filter {
+            when(requiredBasis) {
+                LoadBasis.BARBELL_TOTAL ->
+                    it==PhysicalStockEditorKind.BARBELL_WITH_PAIRS
+                LoadBasis.DUMBBELL_PER_HAND ->
+                    it==PhysicalStockEditorKind.EXACT_LOADS
+                null -> true
+                else -> it!=PhysicalStockEditorKind.BARBELL_WITH_PAIRS
+            }
+        }
+        val actualBasis=if(kind==PhysicalStockEditorKind.BARBELL_WITH_PAIRS)
+            LoadBasis.BARBELL_TOTAL else basis
+        val basisMatches=requiredBasis==null || requiredBasis==actualBasis
+        val parsed=if(basisMatches)
+            parseVerifiedStock(reviewed.gym.unit,kind,actualBasis,
+                exact,min,step,max,bar,plates) else null
+        val matching=verifiedChoices.filter{choice->
+            equipmentSearch.isBlank() ||
+                choice.displayName.contains(equipmentSearch,ignoreCase=true) ||
+                choice.equipmentId.contains(equipmentSearch,ignoreCase=true) ||
+                choice.exerciseNames.any {
+                    it.contains(equipmentSearch,ignoreCase=true)
+                }
+        }
         AlertDialog(
             onDismissRequest={if(!state.busy)equipmentEditor=false},
             title={Text("Physical equipment profile")},
             text={
                 Column(Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text("Use a stable implement ID, e.g. cable-1. Exact weights and increments must be physically confirmed.",
+                    Text("Find an exercise or machine, then enter only the weights you have physically confirmed.",
                         style=MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(equipmentId,{equipmentId=it.take(80)},
-                        label={Text("Verified equipment ID")},singleLine=true)
+                    if(!manualEquipmentId) {
+                        OutlinedTextField(
+                            equipmentSearch,{equipmentSearch=it.take(80)},
+                            label={Text("Search exercise or equipment")},
+                            singleLine=true,modifier=Modifier.fillMaxWidth())
+                        if(matching.isEmpty()) {
+                            Text("No matching equipment. Try another exercise name or use the advanced editor.",
+                                style=MaterialTheme.typography.bodySmall)
+                        } else {
+                            matching.take(if(showMoreEquipment)24 else 6).forEach { choice ->
+                                OutlinedButton(
+                                    onClick={
+                                        equipmentId=choice.equipmentId
+                                        basis=choice.basis
+                                        kind=when(choice.basis) {
+                                            LoadBasis.BARBELL_TOTAL ->
+                                                PhysicalStockEditorKind.BARBELL_WITH_PAIRS
+                                            LoadBasis.DUMBBELL_PER_HAND ->
+                                                PhysicalStockEditorKind.EXACT_LOADS
+                                            else -> PhysicalStockEditorKind.VERIFIED_STACK
+                                        }
+                                    },
+                                    modifier=Modifier.fillMaxWidth()
+                                ) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Text(choice.displayName)
+                                        Text(choice.exerciseNames.take(2).joinToString(", "),
+                                            style=MaterialTheme.typography.bodySmall)
+                                        if(choice.equipmentId==equipmentId)
+                                            Text("Selected",color=MaterialTheme.colorScheme.primary,
+                                                style=MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                            if(matching.size>6)TextButton(
+                                onClick={showMoreEquipment=!showMoreEquipment}
+                            ) {
+                                Text(if(showMoreEquipment)"Show fewer choices"
+                                    else "Show more matching equipment")
+                            }
+                        }
+                        TextButton(onClick={
+                            manualEquipmentId=true
+                            equipmentId=""
+                            kind=PhysicalStockEditorKind.EXACT_LOADS
+                            basis=LoadBasis.DUMBBELL_PER_HAND
+                        }) {Text("Advanced: enter a unique equipment ID")}
+                    } else {
+                        Text("Use a stable ID for this physical machine; similar names do not mean equal resistance.",
+                            style=MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(equipmentId,{equipmentId=it.take(80)},
+                            label={Text("Physical equipment ID")},singleLine=true)
+                        TextButton(onClick={
+                            manualEquipmentId=false
+                            equipmentId=""
+                        }) {Text("Choose from reviewed exercises")}
+                    }
+                    if(selected!=null && !manualEquipmentId) {
+                        Text("Chosen: ${selected.displayName} · ${selected.basis.name.replace('_',' ').lowercase()}. Actual weights are still required.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        PhysicalStockEditorKind.entries.forEach { candidate ->
+                        usableKinds.forEach { candidate ->
                             FilterChip(selected=kind==candidate,
                                 onClick={kind=candidate},
                                 label={Text(candidate.name.lowercase().replace('_',' '))})
                         }
                     }
-                    if(kind!=PhysicalStockEditorKind.BARBELL_WITH_PAIRS) {
+                    if(kind!=PhysicalStockEditorKind.BARBELL_WITH_PAIRS &&
+                        (manualEquipmentId || selected==null)) {
                         Text("Actual load basis",
                             style=MaterialTheme.typography.labelLarge)
                         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -305,7 +438,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     controller.upsertStock(equipmentId.trim(),stock)
                     equipmentEditor=false
                 }
-            },enabled=!state.busy && parsed!=null &&
+            },enabled=!state.busy && parsed!=null && basisMatches &&
                 equipmentId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$"))) {
                 Text("Save verified stock")
             }},
@@ -321,8 +454,14 @@ internal fun NativeKotlinGymSourceCandidateScreen(
         var attachments by remember(source.revision,editingFixtures) {
             mutableStateOf(reviewed.gym.availableAttachments.sorted().joinToString(", "))
         }
+        var advancedAttachments by remember(editingFixtures) {
+            mutableStateOf(false)
+        }
         val facilityIds=parseIds(facilities)
         val attachmentIds=parseIds(attachments)
+        val offeredAttachments=remember(source.revision) {
+            source.catalog.mapNotNull{it.attachmentId}.distinct().sorted()
+        }
         AlertDialog(
             onDismissRequest={if(!state.busy)editingFixtures=false},
             title={Text("Confirmed gym fixtures and attachments")},
@@ -332,12 +471,41 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     NativeKotlinGroupedFacilityChoices(
                         title="Available facilities",raw=facilities,
                         onChange={facilities=it.take(1200)})
-                    Text("Attachments are separate from facilities; no attachment is inferred.",
+                    Text("Cable attachments you physically have",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Select only attachments you can use. Selecting a grip does not change machine stock or workout targets.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField(attachments,{attachments=it.take(1200)},
-                        label={Text("Confirmed attachment IDs")},
-                        supportingText={Text("Comma-separated; only attachments physically in your gym.")})
+                    offeredAttachments.forEach {id->
+                        val examples=source.catalog.filter{it.attachmentId==id}
+                            .map{kotlinExerciseLabel(it.exerciseId)}.distinct()
+                        Column {
+                            FilterChip(
+                                selected=attachmentIds?.contains(id)==true,
+                                enabled=!state.busy && attachmentIds!=null,
+                                onClick={
+                                    val current=attachmentIds ?:emptySet()
+                                    val next=if(id in current)current-id else current+id
+                                    attachments=next.sorted().joinToString(", ")
+                                },
+                                label={Text(kotlinGymAttachmentLabel(id))})
+                            Text(examples.take(2).joinToString(", "),
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    if(offeredAttachments.isEmpty())
+                        Text("No cable attachments in the current reviewed catalog.",
+                            style=MaterialTheme.typography.bodySmall)
+                    TextButton(onClick={advancedAttachments=!advancedAttachments}) {
+                        Text(if(advancedAttachments)"Hide advanced attachment IDs"
+                            else "Advanced: other physical attachment IDs")
+                    }
+                    if(advancedAttachments || attachmentIds==null) {
+                        OutlinedTextField(attachments,{attachments=it.take(2400)},
+                            label={Text("Confirmed attachment IDs")},
+                            supportingText={Text("Comma-separated technical IDs for special grips. Nothing is assumed or saved until you confirm.")})
+                    }
                 }
             },
             confirmButton={Button(onClick={

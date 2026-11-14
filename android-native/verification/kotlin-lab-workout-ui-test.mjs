@@ -46,7 +46,7 @@ assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
 // machine-scoped reviews after explicit expansion. This prevents the
 // Leveling tools from burying the actual editable set beneath the header.
 for(const [source,label,scope] of [
-  [generated,'generated','priorLevelingScope=null'],
+  [read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt'),'generated','priorLevelingScope=null'],
   [journal,'custom','priorLevelingSlotId=null']
 ]) {
   for(const fragment of [

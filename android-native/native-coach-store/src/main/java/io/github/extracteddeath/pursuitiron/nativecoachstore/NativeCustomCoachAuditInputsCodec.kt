@@ -44,8 +44,7 @@ internal object NativeCustomCoachAuditInputsCodec {
         require(it in 0..maximum)
     }
     private fun DataOutputStream.bounds(rows:List<DeclaredMuscleDoseBounds>) {
-        require(rows.size==TrainingMuscle.entries.size &&
-            rows.map{it.muscle}.toSet()==TrainingMuscle.entries.toSet())
+        require(TrainingMuscleCoverage.isComplete(rows.map{it.muscle}))
         writeInt(rows.size)
         rows.forEach {b->
             word(b.muscle.name);decimal(b.mev);decimal(b.mav);decimal(b.mrv)
@@ -57,8 +56,7 @@ internal object NativeCustomCoachAuditInputsCodec {
         val rows=List(count(TrainingMuscle.entries.size)) {
             DeclaredMuscleDoseBounds(enum(),decimal(),decimal(),decimal(),readInt())
         }
-        require(rows.size==TrainingMuscle.entries.size &&
-            rows.map{it.muscle}.toSet()==TrainingMuscle.entries.toSet() &&
+        require(TrainingMuscleCoverage.isComplete(rows.map{it.muscle}) &&
             rows.all{it.minimumDirectDays in 0..7})
         return Collections.unmodifiableList(rows)
     }

@@ -94,6 +94,66 @@ class CustomCycleCoachAuditDomainTest {
         assertFalse(result.mayAlterWorkoutHistory)
     }
 
+    private fun mixedScopeTransition(expand:Boolean):CustomCoachAudit {
+        val main=StarterExerciseTranche.movements().single {
+            it.exerciseId=="bodyweight_crunch"
+        }.copy(exerciseId="scope-main",familyId="scope-main-family",
+            role=ComposerRole.PRIMARY)
+        fun block(id:String,phase:TrainingPhase,current:Boolean)=CustomTrainingBlock(
+            id,id,phase,CustomBlockPurpose.TRAINING,1,
+            CustomSplitIdentity.Freeform("Scope transition"),
+            listOf(0,2,4).map { day->
+                val mainSets=if(expand && !current)2 else 1
+                CustomTrainingDay(day,"Day $day",
+                    if(phase==TrainingPhase.HYPERTROPHY)
+                        ComposerSessionPurpose.HYPERTROPHY
+                    else ComposerSessionPurpose.STRENGTH_SKILL,
+                    listOf(CustomExerciseSlot("main-$day","scope-main",
+                        ComposerRole.PRIMARY,List(mainSets){authoredSet()}))+
+                        if(current)listOf(CustomExerciseSlot("hip-$day",
+                            "side-lying-abduction",ComposerRole.ACCESSORY,
+                            listOf(authoredSet()))) else emptyList())
+            })
+        fun scopedPolicy(phase:TrainingPhase,current:Boolean):AuthoredGoalProgramPolicy {
+            val rows=(if(current)TrainingMuscleCoverage.current
+                else TrainingMuscleCoverage.legacyV1).map { muscle->
+                DeclaredMuscleDoseBounds(muscle,n("0"),n("0"),n("20"),0)
+            }
+            return policy(rows).copy(phase=phase,
+                minimumPurposeDays=mapOf((if(phase==TrainingPhase.HYPERTROPHY)
+                    ComposerSessionPurpose.HYPERTROPHY
+                    else ComposerSessionPurpose.STRENGTH_SKILL) to 3))
+        }
+        val source=cycle(weeks=1).copy(blocks=listOf(
+            block("scope-before",TrainingPhase.HYPERTROPHY,!expand),
+            block("scope-after",TrainingPhase.STRENGTH,expand)))
+        return CustomCycleCoachAuditDomain.review(source,setup(),
+            StarterExerciseTranche.movements()+main,
+            inputs().copy(policiesByPhase=mapOf(
+                TrainingPhase.HYPERTROPHY to scopedPolicy(TrainingPhase.HYPERTROPHY,!expand),
+                TrainingPhase.STRENGTH to scopedPolicy(TrainingPhase.STRENGTH,expand)),
+                continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                    n("1"),if(expand)n("1") else n("0"))))
+    }
+
+    @Test fun newlyTrackedHipDoseIsNotAFabricatedRiseFromZero() {
+        val result=mixedScopeTransition(expand=true)
+        assertEquals(result.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,result.status)
+        assertEquals(listOf(6,6),result.weeks.map{it.workingSets})
+        assertFalse(result.weeks[0].directSets.containsKey(TrainingMuscle.HIP_ABDUCTORS))
+        assertEquals(n("3"),result.weeks[1].directSets[TrainingMuscle.HIP_ABDUCTORS])
+    }
+
+    @Test fun retiringHipTrackingDoesNotInventADropToZero() {
+        val result=mixedScopeTransition(expand=false)
+        assertEquals(result.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,result.status)
+        assertEquals(listOf(6,3),result.weeks.map{it.workingSets})
+        assertEquals(n("3"),result.weeks[0].directSets[TrainingMuscle.HIP_ABDUCTORS])
+        assertFalse(result.weeks[1].directSets.containsKey(TrainingMuscle.HIP_ABDUCTORS))
+    }
+
     @Test fun fullCycleCoachAuditAccepts376ButNeverUnverifiedOverCapacityCatalog() {
         val canonical=StarterExerciseTranche.movements()
         val first=CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES
@@ -444,13 +504,13 @@ class CustomCycleCoachAuditDomainTest {
         )
     }
 
-    @Test fun explicitCompleteSixteenMusclePolicyCanReachExactCoachAudit() {
+    @Test fun explicitCompleteCurrentMusclePolicyCanReachExactCoachAudit() {
         val result=CustomCoachPolicyAuthoringDomain.inspect(
             cycle(),setup(),completeUserPolicyRequest())
         assertTrue(result.toString(),
             result is CustomCoachPolicyAuthoringResult.Ready)
         val inputs=(result as CustomCoachPolicyAuthoringResult.Ready).inputs
-        assertEquals(16,inputs.policiesByPhase.getValue(
+        assertEquals(TrainingMuscleCoverage.current.size,inputs.policiesByPhase.getValue(
             TrainingPhase.HYPERTROPHY).selectedBounds.size)
         assertEquals(n("3"),inputs.policiesByPhase.getValue(
             TrainingPhase.HYPERTROPHY).selectedBounds.first{
@@ -479,7 +539,7 @@ class CustomCycleCoachAuditDomainTest {
         assertTrue(rejected.toString(),
             rejected is CustomCoachPolicyAuthoringResult.Blocked)
         assertTrue((rejected as CustomCoachPolicyAuthoringResult.Blocked)
-            .missingOrInvalid.any{it.contains("all 16")})
+            .missingOrInvalid.any{it.contains("complete muscle target scope")})
     }
 
     @Test fun invalidMuscleDoseAndUnreviewedOverheadNeverBecomePolicy() {

@@ -183,6 +183,16 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        comparison.newlyTrackedMuscles?.takeIf{it.isNotEmpty()}?.let{muscles->
+            Text("Newly tracked muscles: ${muscles.sortedBy{it.ordinal}.joinToString{namedMuscle(it)}}. Earlier targets did not track these groups.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        comparison.noLongerTrackedMuscles?.takeIf{it.isNotEmpty()}?.let{muscles->
+            Text("No longer tracked: ${muscles.sortedBy{it.ordinal}.joinToString{namedMuscle(it)}}.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         comparison.auditedDirectMuscleChanges?.let{changes->
             if(changes.isNotEmpty()) {
                 HorizontalDivider()

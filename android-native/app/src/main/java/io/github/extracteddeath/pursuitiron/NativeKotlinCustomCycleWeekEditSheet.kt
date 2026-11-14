@@ -53,7 +53,10 @@ internal fun NativeKotlinCustomCycleWeekEditSheet(
         fun duration(value:Long?)=value?.let {"${it}s"} ?: "not fully declared"
         Text("Selected day's full duration: ${duration(before.estimatedSecondsByDay[day])} → ${duration(after.estimatedSecondsByDay[day])}",
             style=MaterialTheme.typography.bodySmall)
-        val changedMuscles=TrainingMuscle.entries.filter {
+        if(before.directSets.keys!=after.directSets.keys)Text(
+            "Muscle tracking coverage changed. Only groups tracked in both versions can be compared.",
+            style=MaterialTheme.typography.bodySmall)
+        val changedMuscles=before.directSets.keys.intersect(after.directSets.keys).filter {
             before.directSets[it]!=after.directSets[it] ||
                 before.totalSetCredits[it]!=after.totalSetCredits[it] ||
                 before.directDays[it]!=after.directDays[it]

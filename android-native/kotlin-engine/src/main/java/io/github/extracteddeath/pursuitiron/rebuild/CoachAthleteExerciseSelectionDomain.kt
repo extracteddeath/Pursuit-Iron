@@ -61,8 +61,7 @@ object CoachAthleteExerciseSelectionDomain {
             policy.trainingDays!=athlete.trainingWeekdays.size)
             return false
         val doses=policy.selectedBounds
-        return doses.size==TrainingMuscle.entries.size &&
-            doses.map {it.muscle}.toSet()==TrainingMuscle.entries.toSet() &&
+        return TrainingMuscleCoverage.isComplete(doses.map{it.muscle}) &&
             doses.all {
                 it.mev>=zero && it.mev<=it.mav && it.mav<=it.mrv &&
                     it.mrv<=maxDose &&
@@ -75,9 +74,11 @@ object CoachAthleteExerciseSelectionDomain {
         athlete:ReviewedAthleteSetup,
         spec:CatalogMovement?,
         choice:CatalogExerciseChoice,
-        focus:Set<ComposerFocus>
+        focus:Set<ComposerFocus>,coveredMuscles:Set<TrainingMuscle>
     ):String? {
         if(spec==null)return "This stable movement ID is absent from the catalog."
+        if(spec.credits.any{it.muscle !in coveredMuscles})
+            return "Review explicit targets for every additional muscle before selecting this exercise."
         if(spec.exerciseId in athlete.excludedExerciseIds)
             return "The athlete explicitly excluded this exercise."
         if(spec.creditStatus!=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
@@ -152,7 +153,7 @@ object CoachAthleteExerciseSelectionDomain {
         }
         if(athlete==null || !validPolicy(athlete,input.policy)) {
             issue(AthleteSelectionProblem.PROFILE_OR_POLICY,"setupOrPolicy",
-                "The policy must match confirmed goal, experience, split, athlete revision and all sixteen muscle bounds.")
+                "The policy must match confirmed goal, experience, split, athlete revision and its complete muscle target scope.")
             return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
         }
         val policy=checkNotNull(input.policy)
@@ -173,7 +174,7 @@ object CoachAthleteExerciseSelectionDomain {
         val eligible=LinkedHashMap<String,CatalogExerciseChoice>()
         for(choice in input.offered.sortedBy {it.exerciseId}) {
             val reason=excludedReason(athlete,catalog[choice.exerciseId],
-                choice,input.usableFocus)
+                choice,input.usableFocus,policy.selectedBounds.map{it.muscle}.toSet())
             if(reason==null)eligible[choice.exerciseId]=choice
             else excluded+=RejectedCatalogChoice(choice.exerciseId,reason)
         }

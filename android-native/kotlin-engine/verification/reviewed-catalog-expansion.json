@@ -7451,6 +7451,237 @@
         "attachment": null,
         "note": "Stir-the-pot requires bodyweight permission and a confirmed stable exercise ball; source-reported circles are counted without inventing an external load."
       }
+    },
+    {
+      "id": "hip-abduction",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "abduction"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_abduction",
+        "variant": "machine-seated",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "hip-abduction-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "HIP_ABDUCTORS",
+        "indirect": [],
+        "attachment": null,
+        "note": "A separately identified hip-abduction machine requires its own confirmed selectable stock. Hip abductor direct credit is tracked independently; overlapping legacy minor glute credit is not duplicated into the existing glute ledger. No machine history or load may transfer."
+      }
+    },
+    {
+      "id": "cable-abduction",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_abduction",
+        "variant": "cable-standing-legacy",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "HIP_ABDUCTORS",
+        "indirect": [],
+        "attachment": "ankle-cuff",
+        "note": "Cable hip abduction needs a confirmed ankle cuff and the exact cable stack. The hip-abductor ledger is distinct from glutes and adductors; overlapping legacy minor glute credit is not duplicated. This source ID retains independent load history."
+      }
+    },
+    {
+      "id": "standing-cable-abduction",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_abduction",
+        "variant": "cable-standing-source-alternate",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "HIP_ABDUCTORS",
+        "indirect": [],
+        "attachment": "ankle-cuff",
+        "note": "The alternate standing-cable source identity remains separately addressable and needs a real ankle cuff and verified cable loads. No equivalence or prior load transfer is assumed from the other cable-abduction source ID; abductor direct credit remains separate."
+      }
+    },
+    {
+      "id": "side-lying-abduction",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_abduction",
+        "variant": "bodyweight-side-lying",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "HIP_ABDUCTORS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Only unweighted side-lying hip-abduction repetitions are represented. Ankle weights and bands are not assumed. Hip abductors earn direct credit without duplicate glute or adductor credit, and bodyweight availability still requires explicit athlete permission."
+      }
+    },
+    {
+      "id": "adduction-machine",
+      "source": {
+        "movementFamily": "hip_adduction",
+        "equipment": [
+          "adduction"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_adduction",
+        "variant": "machine-seated",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "hip-adduction-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "HIP_ADDUCTORS",
+        "indirect": [],
+        "attachment": null,
+        "note": "A separately confirmed hip-adduction machine has independent selectable weights, machine instances and history. Its adductor direct credit cannot satisfy an abductor target or borrow the hip-abduction machine stock. No starting load is guessed."
+      }
+    },
+    {
+      "id": "cable-adduction",
+      "source": {
+        "movementFamily": "hip_adduction",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_adduction",
+        "variant": "cable-standing",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "HIP_ADDUCTORS",
+        "indirect": [],
+        "attachment": "ankle-cuff",
+        "note": "Standing cable hip adduction needs a confirmed ankle cuff and exact cable stock. Direct hip-adductor work is separate from abductor and glute targets; machine-specific history and athlete-entered loads remain independent."
+      }
+    },
+    {
+      "id": "cossack-squat",
+      "source": {
+        "movementFamily": "hip_adduction",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_adduction",
+        "variant": "dumbbell-cossack",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "HIP_ADDUCTORS",
+        "indirect": [
+          "GLUTES:0.25",
+          "QUADS:0.25"
+        ],
+        "attachment": null,
+        "note": "This loaded Cossack variant records the mass of one actual held dumbbell, never a doubled pair or inferred bodyweight. Source adductor direct and provisional quarter glute/quad credits remain explicit. Unweighted and two-implement variants are not silently substituted."
+      }
+    },
+    {
+      "id": "adductor-sumo",
+      "source": {
+        "movementFamily": "hip_adduction",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_adduction",
+        "variant": "dumbbell-wide-sumo",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "HIP_ADDUCTORS",
+        "indirect": [
+          "GLUTES:0.25",
+          "QUADS:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "The wide-stance adductor-focused sumo variant uses one verified held dumbbell, with no load doubling or barbell-history transfer. Adductor direct and source-provisional quarter glute, quad and hamstring credits stay separate; conventional sumo squat is a different identity."
+      }
     }
   ]
 }

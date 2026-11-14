@@ -76,7 +76,7 @@ enum class CatalogIssueType {
     UNKNOWN_EXERCISE, CREDIT_REVIEW_MISSING, ATTACHMENT_UNAVAILABLE,
     EQUIPMENT_UNAVAILABLE, EQUIPMENT_BASIS_MISMATCH, LOAD_UNVERIFIED,
     MISSING_PRIMARY_MOVEMENT, INCOMPATIBLE_EXERCISE_IDENTITY,
-    FACILITY_UNAVAILABLE, RECOVERY_POLICY_CONFLICT
+    FACILITY_UNAVAILABLE, RECOVERY_POLICY_CONFLICT, MUSCLE_TARGETS_UNDECLARED
 }
 
 data class CatalogIssue(
@@ -194,6 +194,12 @@ object CoachExerciseCatalogDomain {
                 issues+=CatalogIssue(choice.exerciseId,CatalogIssueType.UNKNOWN_EXERCISE,
                     "Exercise identity is absent from the supplied catalog.")
                 continue
+            }
+            if(spec.credits.any{credit->
+                request.template.bounds.none{it.muscle==credit.muscle}
+            }) {
+                issues+=CatalogIssue(spec.exerciseId,CatalogIssueType.MUSCLE_TARGETS_UNDECLARED,
+                    "Review explicit dose targets for every muscle used by this exercise before generating a week.")
             }
             if(spec.creditStatus!=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
                 spec.creditReviewReference==null) {

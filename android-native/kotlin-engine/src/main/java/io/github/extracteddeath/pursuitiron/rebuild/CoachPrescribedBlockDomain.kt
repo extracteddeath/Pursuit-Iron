@@ -143,7 +143,7 @@ object CoachPrescribedBlockDomain {
             next.finalAudit==null)
             issues+="The new week has missing or infeasible set-level prescriptions."
         val comparisons=if(before.finalAudit!=null && next.finalAudit!=null)
-            TrainingMuscle.entries.map {muscle->
+            before.finalAudit.muscles.keys.intersect(next.finalAudit.muscles.keys).map {muscle->
                 val b=before.finalAudit.muscles.getValue(muscle).effectiveWorkingSets
                 val n=next.finalAudit.muscles.getValue(muscle).effectiveWorkingSets
                 MuscleDoseComparison(muscle,b,n,n.subtract(b))

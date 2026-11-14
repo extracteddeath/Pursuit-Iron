@@ -104,12 +104,12 @@ object CustomCoachPolicyAuthoringDomain {
                 values:Map<TrainingMuscle,CustomMuscleDoseEntry>,
                 role:String
             ):List<DeclaredMuscleDoseBounds>? {
-                if(values.keys!=TrainingMuscle.entries.toSet()) {
-                    bad("$prefix $role: declare targets for all 16 muscle groups, including explicitly zero-dose muscles.")
+                if(!TrainingMuscleCoverage.isComplete(values.keys)) {
+                    bad("$prefix $role: declare a complete muscle target scope, including explicitly zero-dose muscles.")
                     return null
                 }
                 val parsed=mutableListOf<DeclaredMuscleDoseBounds>()
-                for(muscle in TrainingMuscle.entries) {
+                for(muscle in values.keys.sortedBy{it.ordinal}) {
                     val entry=values[muscle] ?:continue
                     val mev=number(entry.mev)
                     val mav=number(entry.mav)
@@ -121,7 +121,7 @@ object CustomCoachPolicyAuthoringDomain {
                     } else parsed+=DeclaredMuscleDoseBounds(
                         muscle,mev,mav,mrv,minimum)
                 }
-                return if(parsed.size==TrainingMuscle.entries.size)parsed else null
+                return if(parsed.size==values.size)parsed else null
             }
             val baseline=parseBounds(entry.baseline,"baseline")
             val selected=parseBounds(entry.selected,"selected")

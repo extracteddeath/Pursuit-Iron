@@ -26,7 +26,8 @@ const BEGIN='        // BEGIN REVIEWED_WEB_EXPANSION_V2';
 const END='        // END REVIEWED_WEB_EXPANSION_V2';
 const allowedMuscles=new Set(['CHEST','LATS','UPPER_BACK','FRONT_DELTS',
  'SIDE_DELTS','REAR_DELTS','TRICEPS','BICEPS','BRACHIALIS','WRIST_FLEXORS',
- 'WRIST_EXTENSORS','QUADS','HAMSTRINGS','GLUTES','CALVES','ABS']);
+ 'WRIST_EXTENSORS','QUADS','HAMSTRINGS','GLUTES','CALVES','ABS',
+ 'HIP_ABDUCTORS','HIP_ADDUCTORS']);
 const focusTypes=new Set(['press','pull','lower','all']);
 const patterns=new Set(['HORIZONTAL_PRESS','VERTICAL_PRESS','HORIZONTAL_PULL',
  'VERTICAL_PULL','SQUAT','HINGE','ISOLATION','CORE']);
@@ -36,7 +37,8 @@ const patterns=new Set(['HORIZONTAL_PRESS','VERTICAL_PRESS','HORIZONTAL_PULL',
 const machineSource=new Set(['machinerow','legcurl','calfmachine','machine',
  'machinepress','machineshoulder','pecdeck','machinelatraise','machinecurl',
  'machineext','beltsquat','hipthrustmachine','machinecrunch',
- 'legext','legpress','hacksquat','reversehyper','machinepullover','kickback']);
+ 'legext','legpress','hacksquat','reversehyper','machinepullover','kickback',
+ 'abduction','adduction']);
 const q=x=>x===null?'null':JSON.stringify(x);
 
 export function renderEntry(row) {
@@ -192,7 +194,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,293);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,301);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

@@ -84,10 +84,10 @@ class ReviewedCatalogWaveSixTest {
     }
 
     @Test fun preserveExactWebIdentitiesAndUniqueEquipmentVariants() {
-        assertEquals(293,all.size)
+        assertEquals(301,all.size)
         assertEquals(ids,wave.map{it.legacyCuratedId})
-        assertEquals(293,all.map{it.legacyCuratedId}.distinct().size)
-        assertEquals(293,all.map{
+        assertEquals(301,all.map{it.legacyCuratedId}.distinct().size)
+        assertEquals(301,all.map{
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(wave.all{

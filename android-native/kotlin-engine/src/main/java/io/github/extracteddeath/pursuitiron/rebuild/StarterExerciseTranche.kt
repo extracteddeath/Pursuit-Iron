@@ -1940,7 +1940,7 @@ object StarterExerciseTranche {
         entry("trap-bar-deadlift","hip_hinge","trap-hex-bar",
             ComposerPattern.HINGE,ComposerRole.PRIMARY,lower,
             "trap-hex-bar",LoadBasis.BARBELL_TOTAL,emptySet(),4..8,
-            "Trap/hex-bar deadlifting uses the actual confirmed trap bar mass plus symmetric plate pairs. A straight-bar inventory is not a substitute, despite the ambiguous web alternative. Handle height, exercise history and calibration stay independent; no conventional-deadlift strength equivalence is inferred.",
+            "Trap/hex-bar deadlifting uses the actual confirmed trap bar mass plus symmetric plate pairs. A straight-bar inventory is not a substitute, despite the ambiguous web alternative. Handle height is not encoded by this source ID and must be checked when calibrating the actual setup. Exercise history is separate from straight-bar variants; no conventional-deadlift strength equivalence is inferred.",
             direct(TrainingMuscle.SPINAL_ERECTORS),
             indirect(TrainingMuscle.HAMSTRINGS,"0.25"),
             indirect(TrainingMuscle.GLUTES,"0.25"),

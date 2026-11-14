@@ -45,7 +45,36 @@ assert.doesNotMatch(sheet,/searched\.take\(20\)/);
 assert.doesNotMatch(sheet,/Narrow your search for more/);
 
 // A swap does not carry across old prescriptions or secretly accept itself.
-assert.match(sheet,/LaunchedEffect\(exerciseId,replacing\?\.slotId\)/);
-assert.match(sheet,/forms=listOf\(CustomSetFields\(\)\)/);
+assert.doesNotMatch(sheet,/LaunchedEffect\\(exerciseId,replacing\\?\\.slotId\\)/);
+assert.match(sheet,/forms=listOf\\(CustomSetFields\\(\\)\\)/);
 assert.match(sheet,/swapConfirmation=false/);
-console.log('PASS native custom swap: ranked, exact variant filter, full approved catalog paging');
+// Saved state is only unsent input and never a receipt/approval. Recreating
+// the sheet must not run a load-clearing effect against restored fields.
+for(const fragment of [
+ 'listSaver<List<CustomSetFields>,String>',
+ 'field.extraReps,field.extraRest,field.extraWork,field.extraLoad',
+ 'val authorScope=buildString',
+ 'append(replacing?.toString() ?: "none")',
+ 'var search by rememberSaveable(authorScope,initialSearchQuery)',
+ 'var exerciseId by rememberSaveable(authorScope)',
+ 'var note by rememberSaveable(authorScope)',
+ 'var forms by rememberSaveable(authorScope,saver=customSetFieldsSaver)',
+ 'var swapConfirmation by remember(replacing?.slotId)',
+ 'if(exerciseId!=candidate.exerciseId)'
+]) assert.ok(sheet.includes(fragment),'Custom authoring loses a reviewed field: '+fragment);
+const journal=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt',
+ 'utf8');
+for(const fragment of [
+ 'var swapSlotId by rememberSaveable(workoutId)',
+ 'LaunchedEffect(host,workoutId,swapSlotId,journal?.revision)',
+ 'if(swapChoices.isNotEmpty())return@LaunchedEffect',
+ 'host.readCustomAuthoringSource()',
+ 'source.revision==stamp.gymCatalogSourceRevision',
+ 'slot.sets.none { set ->',
+ 'if(slot!=null && swapChoices.isNotEmpty() &&',
+ 'if(recovered!=null)journal=recovered'
+]) assert.ok(journal.includes(fragment),'Restored custom workout swap must reverify: '+fragment);
+assert.ok(!journal.includes('var swapChoices by rememberSaveable('),
+ 'A stale alternative list cannot authorize a replacement');
+console.log('PASS native custom swap: ranked and restorable unsent edits, no stale approvals');

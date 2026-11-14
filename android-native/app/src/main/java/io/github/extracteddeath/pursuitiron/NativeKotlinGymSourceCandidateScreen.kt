@@ -96,6 +96,20 @@ internal fun kotlinGymStockChoices(
         }.sortedWith(compareBy<KotlinGymStockChoice>{it.displayName.lowercase()}
             .thenBy{it.equipmentId})
 
+/** Labels are presentation only; attachment source IDs remain authoritative. */
+internal fun kotlinGymAttachmentLabel(id:String):String=when(id) {
+    "straight-bar" -> "Straight cable bar"
+    "wide-lat-bar" -> "Wide lat bar"
+    "v-bar" -> "V-bar"
+    "single-handle" -> "Single cable handle"
+    "dual-handles" -> "Dual cable handles"
+    "dual-rope" -> "Dual rope"
+    "rope" -> "Rope"
+    "ankle-cuff" -> "Ankle cuff"
+    else -> id.replace('-', ' ').replace('_',' ')
+        .replaceFirstChar{it.uppercase()}
+}
+
 /**
  * Candidate-only native equipment setup, using Pursuit shared M3 components.
  * The full native onboarding/catalog curator must call the explicit source
@@ -440,8 +454,14 @@ internal fun NativeKotlinGymSourceCandidateScreen(
         var attachments by remember(source.revision,editingFixtures) {
             mutableStateOf(reviewed.gym.availableAttachments.sorted().joinToString(", "))
         }
+        var advancedAttachments by remember(editingFixtures) {
+            mutableStateOf(false)
+        }
         val facilityIds=parseIds(facilities)
         val attachmentIds=parseIds(attachments)
+        val offeredAttachments=remember(source.revision) {
+            source.catalog.mapNotNull{it.attachmentId}.distinct().sorted()
+        }
         AlertDialog(
             onDismissRequest={if(!state.busy)editingFixtures=false},
             title={Text("Confirmed gym fixtures and attachments")},
@@ -451,12 +471,41 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     NativeKotlinGroupedFacilityChoices(
                         title="Available facilities",raw=facilities,
                         onChange={facilities=it.take(1200)})
-                    Text("Attachments are separate from facilities; no attachment is inferred.",
+                    Text("Cable attachments you physically have",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Select only attachments you can use. Selecting a grip does not change machine stock or workout targets.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField(attachments,{attachments=it.take(1200)},
-                        label={Text("Confirmed attachment IDs")},
-                        supportingText={Text("Comma-separated; only attachments physically in your gym.")})
+                    offeredAttachments.forEach {id->
+                        val examples=source.catalog.filter{it.attachmentId==id}
+                            .map{kotlinExerciseLabel(it.exerciseId)}.distinct()
+                        Column {
+                            FilterChip(
+                                selected=attachmentIds?.contains(id)==true,
+                                enabled=!state.busy && attachmentIds!=null,
+                                onClick={
+                                    val current=attachmentIds ?:emptySet()
+                                    val next=if(id in current)current-id else current+id
+                                    attachments=next.sorted().joinToString(", ")
+                                },
+                                label={Text(kotlinGymAttachmentLabel(id))})
+                            Text(examples.take(2).joinToString(", "),
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    if(offeredAttachments.isEmpty())
+                        Text("No cable attachments in the current reviewed catalog.",
+                            style=MaterialTheme.typography.bodySmall)
+                    TextButton(onClick={advancedAttachments=!advancedAttachments}) {
+                        Text(if(advancedAttachments)"Hide advanced attachment IDs"
+                            else "Advanced: other physical attachment IDs")
+                    }
+                    if(advancedAttachments || attachmentIds==null) {
+                        OutlinedTextField(attachments,{attachments=it.take(2400)},
+                            label={Text("Confirmed attachment IDs")},
+                            supportingText={Text("Comma-separated technical IDs for special grips. Nothing is assumed or saved until you confirm.")})
+                    }
                 }
             },
             confirmButton={Button(onClick={

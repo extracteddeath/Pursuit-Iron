@@ -563,7 +563,11 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     }
                     matching.take(8).forEach{(id,exerciseNames)->
                         OutlinedButton(
-                            onClick={machineId=id;gymConfirmed=false},
+                            onClick={
+                                if(machineId!=id)machineLoads=""
+                                machineId=id
+                                gymConfirmed=false
+                            },
                             modifier=Modifier.fillMaxWidth()) {
                             Column(Modifier.fillMaxWidth()) {
                                 Text(id.replace('-',' ').replace('_',' ')

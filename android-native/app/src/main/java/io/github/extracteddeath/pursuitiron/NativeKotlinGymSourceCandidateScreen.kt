@@ -106,6 +106,8 @@ internal fun kotlinGymAttachmentLabel(id:String):String=when(id) {
     "dual-rope" -> "Dual rope"
     "rope" -> "Rope"
     "ankle-cuff" -> "Ankle cuff"
+    "wrist-cuff" -> "Wrist cuff"
+    "ez-bar-attachment" -> "EZ-grip cable bar"
     else -> id.replace('-', ' ').replace('_',' ')
         .replaceFirstChar{it.uppercase()}
 }

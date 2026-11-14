@@ -62,8 +62,10 @@ internal class NativeKotlinNavigationState private constructor(
         if(destination.isPrimary)start(destination)
         else openContext(NativeKotlinRoute(destination))
 
-    fun openCoachExercise(exerciseId:String)=openContext(NativeKotlinRoute(
-        KotlinCandidateDestination.COACH,NativeKotlinRouteDetail.COACH_EXERCISE,exerciseId))
+    fun openCoach(exerciseId:String?):NativeKotlinNavigationState =
+        if(exerciseId==null)open(KotlinCandidateDestination.COACH)
+        else openContext(NativeKotlinRoute(KotlinCandidateDestination.COACH,
+            NativeKotlinRouteDetail.COACH_EXERCISE,exerciseId))
 
     fun openProgressExercise(exerciseId:String)=openContext(NativeKotlinRoute(
         KotlinCandidateDestination.PROGRESS,NativeKotlinRouteDetail.PROGRESS_EXERCISE,exerciseId))

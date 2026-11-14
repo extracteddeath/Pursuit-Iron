@@ -383,7 +383,7 @@ internal fun NativeKotlinCandidateJourney(
                             onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
                             onOpenCoach={exerciseId->
                                 navigationTouched=true
-                                navigation=navigation.openCoachExercise(exerciseId)
+                                navigation=navigation.openCoach(exerciseId)
                             },
                             onOpenProgress={
                                 navigate(KotlinCandidateDestination.PROGRESS)
@@ -410,7 +410,7 @@ internal fun NativeKotlinCandidateJourney(
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
                                 navigationTouched=true
-                                navigation=navigation.openCoachExercise(exerciseId)
+                                navigation=navigation.openCoach(exerciseId)
                             },
                             onReturnToProgram={
                                 selectedGeneratedWorkoutId=null

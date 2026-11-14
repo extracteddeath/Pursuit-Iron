@@ -99,11 +99,23 @@ class NativeKotlinNavigationStateTest {
 
     @Test fun coachExerciseReturnsToHistoryAndSurvivesSecondaryScreens() {
         val history=root(KotlinCandidateDestination.HISTORY)
-        val coach=history.openCoachExercise("db_curl")
+        val coach=history.openCoach("db_curl")
         val returned=coach.open(KotlinCandidateDestination.SETTINGS).back()
         assertEquals(coach.snapshot(),returned.snapshot())
         assertEquals("db_curl",returned.current.exerciseId)
         assertEquals(history.snapshot(),returned.back().snapshot())
+    }
+
+    @Test fun historyCoachOverviewWithoutAnExerciseUsesTheOrdinaryCoachRoute() {
+        val history=root(KotlinCandidateDestination.HISTORY)
+        val focused=history.openCoach("db_curl")
+        for(source in listOf(history,focused)) {
+            val overview=source.openCoach(null)
+            assertEquals(root(KotlinCandidateDestination.COACH).snapshot(),overview.snapshot())
+            assertNull(overview.current.exerciseId)
+            assertEquals(NativeKotlinRouteDetail.NONE,overview.current.detail)
+            assertFalse(overview.canGoBack)
+        }
     }
 
     @Test fun ordinaryTabSelectionClearsContextualRequestsAndAncestors() {
@@ -119,10 +131,10 @@ class NativeKotlinNavigationStateTest {
     }
 
     @Test fun repeatedDetailDoesNotCreateDuplicateBackEntries() {
-        val detail=root(KotlinCandidateDestination.HISTORY).openCoachExercise("db_curl")
-        assertSame(detail,detail.openCoachExercise("db_curl"))
+        val detail=root(KotlinCandidateDestination.HISTORY).openCoach("db_curl")
+        assertSame(detail,detail.openCoach("db_curl"))
         assertEquals(detail.snapshot(),detail.open(KotlinCandidateDestination.PROFILE)
-            .openCoachExercise("db_curl").snapshot())
+            .openCoach("db_curl").snapshot())
     }
 
     @Test fun savedNavigationRestoresEveryOriginAndDetailWithoutLosingFields() {
@@ -180,7 +192,7 @@ class NativeKotlinNavigationStateTest {
 
     @Test fun poppedDetailCachesCanBeDiscardedWithoutDroppingTheirAncestorsOrWorkoutState() {
         val overview=root(KotlinCandidateDestination.TRAIN)
-        val coach=overview.openCoachExercise("bench")
+        val coach=overview.openCoach("bench")
         val favorite=coach.open(KotlinCandidateDestination.PROFILE).openProgressExercise("row")
         assertEquals(setOf(coach.current.saveableKey,favorite.current.saveableKey),
             favorite.contextStateKeys)

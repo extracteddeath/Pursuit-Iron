@@ -151,7 +151,7 @@ assert.ok(journey.includes('import androidx.activity.compose.BackHandler') &&
   journey.includes('navigation=navigation.back()') &&
   journey.includes('navigation=navigation.openProgressExercise(exerciseId)') &&
   journey.includes('navigation=navigation.openProgressTrend(exerciseId)') &&
-  journey.includes('navigation=navigation.openCoachExercise(exerciseId)') &&
+  journey.includes('navigation=navigation.openCoach(exerciseId)') &&
   journey.includes('navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_TREND') &&
   journey.includes('navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_EXERCISE') &&
   !journey.includes('profileReturn') && !journey.includes('settingsReturn') &&
@@ -729,7 +729,7 @@ assert.ok(coach.includes('is AdaptiveSetPrescriptionResult.Rejected -> proposed.
   'The athlete must see readable recovery reasons, not a Kotlin rejection DTO');
 const host=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 assert.ok(journey.includes('onOpenCoach={exerciseId->') &&
-  journey.includes('navigation=navigation.openCoachExercise(exerciseId)') &&
+  journey.includes('navigation=navigation.openCoach(exerciseId)') &&
   journey.includes('onReviewNext={exerciseId->') &&
   journey.includes('navigation.current.detail==NativeKotlinRouteDetail.COACH_EXERCISE') &&
   history.includes('onClick={onOpenCoach(exercise)}') &&

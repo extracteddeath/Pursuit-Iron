@@ -16,7 +16,7 @@ for(const phrase of [
   'prescription.reps.minimum',
   'follower?.followUpReps',
   'Blank RIR stays unreported.',
-  'progress={if(mainTotal==0)0f',
+  'progress={visitProgress.fraction}'
   'Text("Log this set")',
   'Text("Minimize")',
   'BringIntoViewRequester()',
@@ -39,6 +39,18 @@ for(const phrase of [
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);
+// A completed main with an unfinished amplifier is not 100% done.
+// Display counting must match the source-required conditional follow-up,
+// not just the main set count, and never become a load-progression source.
+for(const phrase of [
+  'CustomWorkoutVisitFocusDomain.progress(current)',
+  'visitProgress.recordedVisits',
+  'visitProgress.requiredVisits',
+  'visitProgress.recordedMainSets',
+  'visitProgress.requiredFollowUps',
+  'visitProgress.recordedFollowUps',
+  'progress={visitProgress.fraction}'
+])assert.ok(journal.includes(phrase),'Actual custom visit progress must include amplifiers: '+phrase);
 // In custom Focus the selected reviewed entry is distinct from the
 // journal's actual next unlogged visit and must survive rotation. Previous
 // and Next include only real amplifier follow-ups.

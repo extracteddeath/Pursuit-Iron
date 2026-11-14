@@ -558,4 +558,42 @@ class CustomWorkoutJournalDomainTest {
         assertEquals(two,savedA.snapshot)
     }
 
+    @Test fun focusProgressCountsRequiredAmplifierAfterCompletedMainOnly() {
+        val started=initial()
+        val before=CustomWorkoutVisitFocusDomain.progress(started)
+        assertEquals(0,before.recordedVisits)
+        assertEquals(1,before.requiredVisits)
+        assertEquals(0,before.requiredFollowUps)
+        assertEquals(0f,before.fraction,0.0001f)
+
+        val savedMain=accept(started,record("progress-main",0))
+        val pending=CustomWorkoutVisitFocusDomain.progress(savedMain)
+        assertEquals(1,pending.recordedMainSets)
+        assertEquals(1,pending.totalMainSets)
+        assertEquals(1,pending.requiredFollowUps)
+        assertEquals(0,pending.recordedFollowUps)
+        assertEquals(1,pending.recordedVisits)
+        assertEquals(2,pending.requiredVisits)
+        assertEquals(0.5f,pending.fraction,0.0001f)
+        assertEquals(1,savedMain.unresolvedVisitCount)
+
+        val savedFollow=accept(savedMain,record(
+            "progress-follow",1,CustomWorkoutVisitPart.FOLLOW_UP,
+            performed=actual(4)))
+        val done=CustomWorkoutVisitFocusDomain.progress(savedFollow)
+        assertEquals(2,done.recordedVisits)
+        assertEquals(2,done.requiredVisits)
+        assertEquals(1f,done.fraction,0.0001f)
+        assertEquals(0,savedFollow.unresolvedVisitCount)
+
+        val skipped=accept(initial(),record("progress-skipped",0,
+            outcome=KotlinJournalSetOutcome.SKIPPED,performed=null))
+        val skippedProgress=CustomWorkoutVisitFocusDomain.progress(skipped)
+        assertEquals(1,skippedProgress.recordedVisits)
+        assertEquals(1,skippedProgress.requiredVisits)
+        assertEquals(0,skippedProgress.requiredFollowUps)
+        assertEquals(1f,skippedProgress.fraction,0.0001f)
+        assertEquals(0,skipped.unresolvedVisitCount)
+    }
+
 }

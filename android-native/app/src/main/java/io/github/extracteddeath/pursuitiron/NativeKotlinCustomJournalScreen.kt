@@ -450,13 +450,7 @@ internal fun NativeKotlinCustomJournalScreen(
                 val activeFocus=(requestedFocus ?: nextVisit).takeIf {
                     focusOnNext && !finished && current.finishedByEventId==null
                 }
-                val mainTotal=current.snapshot.slots.sumOf{it.sets.size}
-                val mainLogged=current.snapshot.slots.sumOf {slot->
-                    slot.sets.count {set->
-                        CustomWorkoutVisitKey(set.setKey,
-                            CustomWorkoutVisitPart.MAIN) in current.effectiveVisits
-                    }
-                }
+                val visitProgress=CustomWorkoutVisitFocusDomain.progress(current)
                 // Only committed observations can affect advice. A new set,
                 // correction, readiness selection or in-flight write clears
                 // the old projection; canceled callbacks cannot restore it.
@@ -509,11 +503,17 @@ internal fun NativeKotlinCustomJournalScreen(
                     }
                 }
                 PursuitCard(highlighted=true) {
-                    Text("${mainLogged} of ${mainTotal} sets recorded",
+                    Text("${visitProgress.recordedVisits} of ${visitProgress.requiredVisits} entries recorded",
                         style=MaterialTheme.typography.titleLarge)
+                    Text(
+                        "${visitProgress.recordedMainSets} of ${visitProgress.totalMainSets} main sets" +
+                            if(visitProgress.requiredFollowUps>0)
+                                " · ${visitProgress.recordedFollowUps} of ${visitProgress.requiredFollowUps} amplifier follow-ups"
+                            else "",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     LinearProgressIndicator(
-                        progress={if(mainTotal==0)0f else
-                            mainLogged.toFloat()/mainTotal.toFloat()},
+                        progress={visitProgress.fraction},
                         modifier=Modifier.fillMaxWidth())
                     if(!finished && current.finishedByEventId==null) {
                         OutlinedButton(

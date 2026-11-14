@@ -37,8 +37,8 @@ private data class CustomSetFields(
 
 // Only unsaved editor text is Bundle-restored. It never certifies physical
 // stock, source validity, a swap, or an actual workout receipt.
-private val customSetFieldsSaver = listSaver<List<CustomSetFields>,String>(
-    save = { fields -> fields.flatMap { field ->
+private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>,String>(
+    save = { state -> state.value.flatMap { field ->
         listOf(field.type.name,field.weight,field.minimum,field.maximum,
             field.rir,field.seconds,field.rest,field.amplifier?.name.orEmpty(),
             field.extraReps,field.extraRest,field.extraWork,field.extraLoad)
@@ -55,7 +55,7 @@ private val customSetFieldsSaver = listSaver<List<CustomSetFields>,String>(
                 },
                 extraReps=row[8],extraRest=row[9],extraWork=row[10],
                 extraLoad=row[11])
-        }.ifEmpty { listOf(CustomSetFields()) }
+        }.ifEmpty { listOf(CustomSetFields()) }.let { mutableStateOf(it) }
     }
 )
 

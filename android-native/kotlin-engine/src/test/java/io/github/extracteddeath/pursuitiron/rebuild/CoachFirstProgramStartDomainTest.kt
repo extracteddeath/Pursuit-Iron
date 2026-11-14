@@ -217,4 +217,38 @@ class CoachFirstProgramStartDomainTest {
         assertFalse(result.mayIssueWorkout)
     }
 
+    @Test fun canonicallyRegisteredCableStockEnablesRealCableMovementsOnlyWithExactGripAndLoad() {
+        val athlete=checkNotNull(source.reviewed)
+        val stack=VerifiedLoadStock.Stack(LoadUnit.LB,LoadBasis.CABLE_STACK,
+            n("10"),n("5"),n("100"))
+        fun reviewWith(equipmentId:String,attachments:Set<String>,
+            load:BigDecimal?=null):FirstProgramStartReview {
+            val gym=athlete.gym.copy(confirmedStock=mapOf(equipmentId to stack),
+                availableAttachments=attachments)
+            val setup=source.copy(reviewed=athlete.copy(gym=gym))
+            val cable=StarterExerciseTranche.movements()
+                .single{it.exerciseId=="rope-pushdown"}
+            return CoachFirstProgramStartDomain.review(
+                FirstProgramStartRequest(setup,listOf(cable),
+                    load?.let{mapOf(cable.exerciseId to it)} ?:emptyMap(),
+                    emptySet(),TrainingPhase.HYPERTROPHY))
+        }
+
+        val eligible=reviewWith("cable-station",setOf("rope"))
+        assertEquals(FirstProgramStartStatus.CALIBRATION_REQUIRED,eligible.status)
+        assertEquals(listOf("rope-pushdown"),eligible.eligibleMovements.map{
+            it.exerciseId})
+        assertEquals(LoadBasis.CABLE_STACK,eligible.eligibleMovements.single().basis)
+        assertTrue(reviewWith("cable-1",setOf("rope")).eligibleMovements.isEmpty())
+        assertTrue(reviewWith("cable-station",emptySet()).eligibleMovements.isEmpty())
+        val invalid=reviewWith("cable-station",setOf("rope"),n("27"))
+        assertEquals(FirstProgramStartStatus.INVALID_CALIBRATION,invalid.status)
+        assertTrue(invalid.issues.any{it.contains("rounded")})
+        val exact=reviewWith("cable-station",setOf("rope"),n("25"))
+        assertNotEquals(FirstProgramStartStatus.INVALID_CALIBRATION,exact.status)
+        assertTrue(exact.chosenExerciseIds.contains("rope-pushdown"))
+        assertFalse(exact.mayIssueWorkout)
+    }
+
+
 }

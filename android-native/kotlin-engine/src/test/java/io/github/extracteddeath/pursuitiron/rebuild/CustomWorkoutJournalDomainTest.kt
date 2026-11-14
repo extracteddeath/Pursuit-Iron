@@ -497,4 +497,103 @@ class CustomWorkoutJournalDomainTest {
             (corrected.receipts.first().operation as CustomWorkoutJournalOperation.Record).eventId)
     }
 
+    @Test fun focusOrderNeverInventsAmplifiersOrChangesUnresolvedOwnership() {
+        val start=initial()
+        val mainKey=key(CustomWorkoutVisitPart.MAIN)
+        val followKey=key(CustomWorkoutVisitPart.FOLLOW_UP)
+        assertEquals(listOf(mainKey),
+            CustomWorkoutVisitFocusDomain.visibleOrder(start))
+        assertEquals(mainKey,CustomWorkoutJournalDomain.nextUnresolvedVisit(start))
+
+        val savedMain=accept(start,record("focus-main",0))
+        assertEquals(listOf(mainKey,followKey),
+            CustomWorkoutVisitFocusDomain.visibleOrder(savedMain))
+        assertEquals(followKey,
+            CustomWorkoutJournalDomain.nextUnresolvedVisit(savedMain))
+        val savedFollow=accept(savedMain,record(
+            "focus-follow",1,CustomWorkoutVisitPart.FOLLOW_UP,
+            performed=actual(4)))
+        assertEquals(listOf(mainKey,followKey),
+            CustomWorkoutVisitFocusDomain.visibleOrder(savedFollow))
+        assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(savedFollow))
+
+        val skipped=accept(initial(),record("focus-skip",0,
+            outcome=KotlinJournalSetOutcome.SKIPPED,performed=null))
+        assertEquals(listOf(mainKey),
+            CustomWorkoutVisitFocusDomain.visibleOrder(skipped))
+        assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(skipped))
+        assertEquals(start.snapshot,skipped.snapshot)
+    }
+
+    @Test fun focusCanNavigateAllAuthoredMainSetsButOnlyRealFollowups() {
+        val single=snapshot()
+        val primary=single.slots.single().sets.single()
+        val second=primary.copy(
+            setKey="cycle-1:w1:d0:slot-a:s2",ordinalInSlot=2,
+            prescription=makeSet(amplifier=null))
+        val two=single.copy(slots=listOf(
+            single.slots.single().copy(sets=listOf(primary,second))))
+        val start=CustomWorkoutJournalDomain.begin("workout-1",two,hash)
+        val mainA=CustomWorkoutVisitKey(first,CustomWorkoutVisitPart.MAIN)
+        val mainB=CustomWorkoutVisitKey(second.setKey,CustomWorkoutVisitPart.MAIN)
+        val followA=CustomWorkoutVisitKey(first,CustomWorkoutVisitPart.FOLLOW_UP)
+        assertEquals(listOf(mainA,mainB),
+            CustomWorkoutVisitFocusDomain.visibleOrder(start))
+
+        // The owner permits out-of-order set logging; view order must stay
+        // authored rather than reordering a late-resolved first exercise.
+        val savedB=accept(start,CustomWorkoutJournalOperation.Record(
+            "focus-b",0,mainB,KotlinJournalSetOutcome.COMPLETED,actual(10)))
+        assertEquals(listOf(mainA,mainB),
+            CustomWorkoutVisitFocusDomain.visibleOrder(savedB))
+        assertEquals(mainA,CustomWorkoutJournalDomain.nextUnresolvedVisit(savedB))
+        val savedA=accept(savedB,CustomWorkoutJournalOperation.Record(
+            "focus-a",1,mainA,KotlinJournalSetOutcome.COMPLETED,actual(11)))
+        assertEquals(listOf(mainA,followA,mainB),
+            CustomWorkoutVisitFocusDomain.visibleOrder(savedA))
+        assertEquals(followA,CustomWorkoutJournalDomain.nextUnresolvedVisit(savedA))
+        assertFalse(CustomWorkoutVisitFocusDomain.visibleOrder(savedA)
+            .contains(CustomWorkoutVisitKey(second.setKey,
+                CustomWorkoutVisitPart.FOLLOW_UP)))
+        assertEquals(two,savedA.snapshot)
+    }
+
+    @Test fun focusProgressCountsRequiredAmplifierAfterCompletedMainOnly() {
+        val started=initial()
+        val before=CustomWorkoutVisitFocusDomain.progress(started)
+        assertEquals(0,before.recordedVisits)
+        assertEquals(1,before.requiredVisits)
+        assertEquals(0,before.requiredFollowUps)
+        assertEquals(0f,before.fraction,0.0001f)
+
+        val savedMain=accept(started,record("progress-main",0))
+        val pending=CustomWorkoutVisitFocusDomain.progress(savedMain)
+        assertEquals(1,pending.recordedMainSets)
+        assertEquals(1,pending.totalMainSets)
+        assertEquals(1,pending.requiredFollowUps)
+        assertEquals(0,pending.recordedFollowUps)
+        assertEquals(1,pending.recordedVisits)
+        assertEquals(2,pending.requiredVisits)
+        assertEquals(0.5f,pending.fraction,0.0001f)
+        assertEquals(1,savedMain.unresolvedVisitCount)
+
+        val savedFollow=accept(savedMain,record(
+            "progress-follow",1,CustomWorkoutVisitPart.FOLLOW_UP,
+            performed=actual(4)))
+        val done=CustomWorkoutVisitFocusDomain.progress(savedFollow)
+        assertEquals(2,done.recordedVisits)
+        assertEquals(2,done.requiredVisits)
+        assertEquals(1f,done.fraction,0.0001f)
+        assertEquals(0,savedFollow.unresolvedVisitCount)
+
+        val skipped=accept(initial(),record("progress-skipped",0,
+            outcome=KotlinJournalSetOutcome.SKIPPED,performed=null))
+        val skippedProgress=CustomWorkoutVisitFocusDomain.progress(skipped)
+        assertEquals(1,skippedProgress.recordedVisits)
+        assertEquals(1,skippedProgress.requiredVisits)
+        assertEquals(0,skippedProgress.requiredFollowUps)
+        assertEquals(1f,skippedProgress.fraction,0.0001f)
+        assertEquals(0,skipped.unresolvedVisitCount)
+    }
+
 }

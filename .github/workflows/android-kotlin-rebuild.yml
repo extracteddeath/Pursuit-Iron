@@ -137,6 +137,7 @@ jobs:
         run: |
           node android-native/verification/native-original-theme-parity-test.mjs
           node android-native/verification/native-onboarding-interaction-test.mjs
+          node android-native/verification/kotlin-onboarding-canonical-stock-test.mjs
       - name: Verify isolated Kotlin Lab launcher and app navigation
         run: node android-native/verification/kotlin-lab-navigation-test.mjs
       - name: Verify focused editable Kotlin workout logging

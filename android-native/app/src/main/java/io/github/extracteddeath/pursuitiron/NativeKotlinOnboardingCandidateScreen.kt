@@ -65,7 +65,7 @@ private fun onboardingStock(
         if(cable.isNotBlank()) {
             val parts=cable.split(",").map{BigDecimal(it.trim())}
             require(parts.size==3)
-            stock["cable-1"]=VerifiedLoadStock.Stack(
+            stock["cable-station"]=VerifiedLoadStock.Stack(
                 unit,LoadBasis.CABLE_STACK,parts[0],parts[1],parts[2])
         }
         if(barWeight.isNotBlank() || plates.isNotBlank()) {
@@ -186,6 +186,9 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var showPriorities by rememberSaveable {mutableStateOf(false)}
     var showExclusions by rememberSaveable {mutableStateOf(false)}
     var showExtraEquipment by rememberSaveable {mutableStateOf(false)}
+    var showAdvancedAttachments by rememberSaveable {mutableStateOf(false)}
+    var showAdvancedMachineId by rememberSaveable {mutableStateOf(false)}
+    var onboardingMachineSearch by rememberSaveable {mutableStateOf("")}
     var pendingUnit by rememberSaveable {mutableStateOf<String?>(null)}
     var buildAfterSave by remember {mutableStateOf(false)}
     var awaitingConfirmation by rememberSaveable {mutableStateOf(false)}
@@ -211,6 +214,20 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     val confirmedFacilities=commaIds(fixtures)
     val confirmedAttachments=commaIds(attachments)
     val confirmedExclusions=commaIds(excludedIds)
+    val availableReviewedAttachments=remember {
+        StarterExerciseTranche.movements().mapNotNull{it.attachmentId}
+            .distinct().sorted()
+    }
+    val onboardingMachineChoices=remember {
+        StarterExerciseTranche.movements()
+            .filter{it.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE}
+            .filter{it.equipmentId!=null}
+            .groupBy{checkNotNull(it.equipmentId)}
+            .map{(equipment,entries)->
+                equipment to entries.map{kotlinExerciseLabel(it.exerciseId)}
+                    .distinct().sorted()
+            }.sortedBy{it.first}
+    }
     val input=NativeKotlinOnboardingInput(
         profileRevision=profileRevision.trim().takeIf{it.isNotBlank()},
         athleteId=athleteId.trim().takeIf{it.isNotBlank()},
@@ -489,17 +506,110 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                 }
                 if(showExtraEquipment) {
                 OutlinedTextField(cable,{cable=it.take(100);gymConfirmed=false},
-                    label={Text("Cable stack · min, increment, max")},
+                    label={Text("Cable stack · minimum, step, maximum")},
+                    supportingText={Text("Confirmed stack values, e.g. 10, 5, 100. This uses the same physical cable-station stock as the exercise library.")},
                     modifier=Modifier.fillMaxWidth())
-                OutlinedTextField(machineId,{machineId=it.take(63);gymConfirmed=false},
-                    label={Text("Optional machine's stable equipment ID")})
-                OutlinedTextField(machineLoads,{machineLoads=it.take(900);
-                    gymConfirmed=false},
-                    label={Text("That machine's exact logged selectable loads")})
-                OutlinedTextField(attachments,{attachments=it.take(1000);
-                    gymConfirmed=false},
-                    label={Text("Confirmed attachments, comma-separated")},
-                    modifier=Modifier.fillMaxWidth())
+                Text("Cable grips and attachments",style=MaterialTheme.typography.titleMedium)
+                Text("Select only attachments physically available in your gym. Cable machine weights and cable attachments are separate requirements.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                availableReviewedAttachments.forEach{id->
+                    val names=remember(id) {
+                        StarterExerciseTranche.movements()
+                            .filter{it.attachmentId==id}
+                            .map{kotlinExerciseLabel(it.exerciseId)}.distinct().take(2)
+                    }
+                    FilterChip(
+                        selected=confirmedAttachments?.contains(id)==true,
+                        enabled=confirmedAttachments!=null && !sourceState.busy,
+                        onClick={
+                            val next=if(id in confirmedAttachments.orEmpty())
+                                confirmedAttachments.orEmpty()-id
+                                else confirmedAttachments.orEmpty()+id
+                            attachments=next.sorted().joinToString(", ")
+                            gymConfirmed=false
+                        },
+                        label={Text(kotlinGymAttachmentLabel(id))})
+                    Text(names.joinToString(", "),
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                TextButton(onClick={showAdvancedAttachments=!showAdvancedAttachments}) {
+                    Text(if(showAdvancedAttachments)"Hide advanced grip IDs"
+                        else "Advanced: other cable attachment IDs")
+                }
+                if(showAdvancedAttachments || confirmedAttachments==null) {
+                    OutlinedTextField(attachments,{attachments=it.take(1000);
+                        gymConfirmed=false},
+                        label={Text("Confirmed attachment IDs")},
+                        supportingText={Text("Comma-separated only for grips not listed above; no attachments are assumed.")},
+                        modifier=Modifier.fillMaxWidth())
+                }
+                Text("Optional additional machine",style=MaterialTheme.typography.titleMedium)
+                Text("Choose one verified machine here. After saving, use My gym to add more physical machines, each with its own resistance and history.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(!showAdvancedMachineId) {
+                    OutlinedTextField(
+                        onboardingMachineSearch,
+                        {onboardingMachineSearch=it.take(80)},
+                        label={Text("Find a machine or exercise")},
+                        singleLine=true,modifier=Modifier.fillMaxWidth())
+                    val matching=onboardingMachineChoices.filter { (id,exerciseNames)->
+                        id.contains(onboardingMachineSearch,true) ||
+                            exerciseNames.any{
+                                it.contains(onboardingMachineSearch,true)
+                            }
+                    }
+                    matching.take(8).forEach{(id,exerciseNames)->
+                        OutlinedButton(
+                            onClick={
+                                if(machineId!=id)machineLoads=""
+                                machineId=id
+                                gymConfirmed=false
+                            },
+                            modifier=Modifier.fillMaxWidth()) {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(id.replace('-',' ').replace('_',' ')
+                                    .replaceFirstChar{it.uppercase()})
+                                Text(exerciseNames.take(2).joinToString(", "),
+                                    style=MaterialTheme.typography.bodySmall)
+                                if(machineId==id)Text("Selected",
+                                    style=MaterialTheme.typography.labelSmall,
+                                    color=MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    if(onboardingMachineSearch.isNotBlank() && matching.size>8)
+                        Text("Refine the search to see more machines.",
+                            style=MaterialTheme.typography.bodySmall)
+                    if(machineId.isNotBlank()) {
+                        Text("Chosen stock identity: $machineId",
+                            style=MaterialTheme.typography.bodySmall)
+                        TextButton(onClick={
+                            machineId="";machineLoads="";gymConfirmed=false
+                        }) {Text("Clear machine selection")}
+                    }
+                    TextButton(onClick={
+                        showAdvancedMachineId=true
+                        machineId="";machineLoads="";gymConfirmed=false
+                    }) {Text("Advanced: enter a physical machine ID")}
+                } else {
+                    OutlinedTextField(machineId,{machineId=it.take(63);
+                        gymConfirmed=false},
+                        label={Text("Physical machine equipment ID")})
+                    TextButton(onClick={
+                        showAdvancedMachineId=false
+                        machineId="";machineLoads="";gymConfirmed=false
+                    }) {Text("Choose a reviewed machine")}
+                }
+                if(machineId.isNotBlank()) {
+                    OutlinedTextField(machineLoads,{machineLoads=it.take(900);
+                        gymConfirmed=false},
+                        label={Text("Exact available machine loads")},
+                        supportingText={Text("List actual weights for this physical machine, not estimated strength.")},
+                        modifier=Modifier.fillMaxWidth())
+                }
                 }
                 if(chosenUnit!=null && gymInventory==null) Text(
                     "Please correct inventory format. A partial bar/plate pair or invalid weight cannot be saved.",

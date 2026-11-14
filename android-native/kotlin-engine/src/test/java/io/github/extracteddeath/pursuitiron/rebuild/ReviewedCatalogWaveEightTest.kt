@@ -54,7 +54,7 @@ class ReviewedCatalogWaveEightTest {
             DeclaredMuscleDoseBounds(it,BigDecimal.ZERO,n("12"),n("20"),0)
         },emptyList(),4,1
     )
-    private fun stock(id:String):Pair<BigDecimal?,VerifiedLoadStock?>=when {
+    private fun stock(id:String): Pair<BigDecimal?, VerifiedLoadStock?> = when {
         id in bodyweight->null to null
         id in dumbbell->n("25") to VerifiedLoadStock.Totals(
             LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,listOf(n("20"),n("25"),n("30")))

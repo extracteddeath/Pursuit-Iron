@@ -27,7 +27,7 @@ const END='        // END REVIEWED_WEB_EXPANSION_V2';
 const allowedMuscles=new Set(['CHEST','LATS','UPPER_BACK','FRONT_DELTS',
  'SIDE_DELTS','REAR_DELTS','TRICEPS','BICEPS','BRACHIALIS','WRIST_FLEXORS',
  'WRIST_EXTENSORS','QUADS','HAMSTRINGS','GLUTES','CALVES','ABS',
- 'HIP_ABDUCTORS','HIP_ADDUCTORS']);
+ 'HIP_ABDUCTORS','HIP_ADDUCTORS','SPINAL_ERECTORS','TRAPS']);
 const focusTypes=new Set(['press','pull','lower','all']);
 const patterns=new Set(['HORIZONTAL_PRESS','VERTICAL_PRESS','HORIZONTAL_PULL',
  'VERTICAL_PULL','SQUAT','HINGE','ISOLATION','CORE']);
@@ -38,7 +38,7 @@ const machineSource=new Set(['machinerow','legcurl','calfmachine','machine',
  'machinepress','machineshoulder','pecdeck','machinelatraise','machinecurl',
  'machineext','beltsquat','hipthrustmachine','machinecrunch',
  'legext','legpress','hacksquat','reversehyper','machinepullover','kickback',
- 'abduction','adduction']);
+ 'abduction','adduction','machineshrug']);
 const q=x=>x===null?'null':JSON.stringify(x);
 
 export function renderEntry(row) {
@@ -122,7 +122,7 @@ function validateRows(manifest,web=EXERCISES) {
      assert.ok(typeof a.implement==='string'&&a.implement.length>4,
        'loaded movement needs physical implement '+row.id);
      if(a.basis==='BARBELL_TOTAL')assert.ok(
-       a.implement==='straight-bar'||a.implement==='ez-curl-bar',
+       ['straight-bar','ez-curl-bar','trap-hex-bar'].includes(a.implement),
        'no invented barbell mass');
      else if(a.basis==='DUMBBELL_PER_HAND') {
        assert.equal(a.implement,'dumbbell-rack');
@@ -142,9 +142,12 @@ function validateRows(manifest,web=EXERCISES) {
      } else throw Error('invalid or unsupported basis '+row.id);
      if(a.basis!=='CABLE_STACK')assert.equal(a.attachment,null);
      if(a.basis==='BARBELL_TOTAL')assert.ok(
-       equipment.includes('barbell')||equipment.includes('ezbar'));
+       equipment.includes({'straight-bar':'barbell','ez-curl-bar':'ezbar',
+         'trap-hex-bar':'trapbar'}[a.implement]));
      if(a.basis==='BARBELL_TOTAL'&&a.implement==='ez-curl-bar')
        assert.ok(equipment.includes('ezbar'),'EZ bar source absent '+row.id);
+     if(a.basis==='BARBELL_TOTAL'&&a.implement==='trap-hex-bar')
+       assert.ok(equipment.includes('trapbar'),'Trap/hex bar source absent '+row.id);
    }
  }
  return manifest.records.length;
@@ -194,7 +197,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,301);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,318);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

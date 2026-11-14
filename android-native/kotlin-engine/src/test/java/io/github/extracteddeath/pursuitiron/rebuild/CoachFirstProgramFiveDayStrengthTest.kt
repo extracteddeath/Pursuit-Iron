@@ -202,7 +202,7 @@ class CoachFirstProgramFiveDayStrengthTest {
         assertEquals("v6",previous.policy?.revision)
         assertTrue(CoachFirstProgramStartDomain.supportsPolicy(
             CoachFirstProgramStartDomain.V6_POLICY_VERSION))
-        assertEquals("v9",CoachFirstProgramStartDomain.review(input())
+        assertEquals("v10",CoachFirstProgramStartDomain.review(input())
             .policy?.revision)
         val savedV7=CoachFirstProgramStartDomain.review(input(
             version=CoachFirstProgramStartDomain.V7_POLICY_VERSION))

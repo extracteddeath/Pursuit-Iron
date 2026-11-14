@@ -30,6 +30,7 @@ internal val kotlinGymFacilityGroups=listOf(
         "decline-bench" to "Decline bench",
         "preacher-bench" to "Preacher bench",
         "seal-bench" to "Seal row bench",
+        "chest-support" to "Machine chest support",
         "rack" to "Squat rack",
         "pullup-bar" to "Pull-up bar",
         "dip-station" to "Dip station",

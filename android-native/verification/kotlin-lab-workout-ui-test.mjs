@@ -471,10 +471,11 @@ assert.ok(starterVariantRetention.includes('val calibratedPrimaryFamilies=select
   starterVariantRetention.includes('it.familyId in calibratedPrimaryFamilies') &&
   starterVariantRetention.includes('choices[index]=choices[index].copy(requiredVisits=1)') &&
   starterVariantRetention.includes('if(input.policyVersion in setOf(') &&
-  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,V8_POLICY_VERSION,POLICY_VERSION') &&
+  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,V8_POLICY_VERSION,V9_POLICY_VERSION,POLICY_VERSION') &&
   starterVariantRetention.includes('V7_POLICY_VERSION->"v7"') &&
   starterVariantRetention.includes('V8_POLICY_VERSION->"v8"') &&
-  starterVariantRetention.includes('else->"v9"'),
+  starterVariantRetention.includes('V9_POLICY_VERSION->"v9"') &&
+  starterVariantRetention.includes('else->"v10"'),
   'V6/V7 replay and V8 strength/peak policies must retain calibrated related incline presses');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&

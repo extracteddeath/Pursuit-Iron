@@ -18,11 +18,11 @@ class NativeLegacyMuscleCoverageTest {
     private val owner=NativeKotlinOwnerIdentity("owner-1","athlete-1")
     private val identity=NativeKotlinCurrentIdentity{owner}
 
-    private fun restoreFixture():Path {
+    private fun restoreFixture(resource:String,sha:String):Path {
         val root=temp.newFolder("legacy").toPath()
         val text=checkNotNull(javaClass.getResourceAsStream(
-            "/legacy-v8-sixteen-muscle-store.zip.base64")).use{it.readBytes()}
-        assertEquals("b085e12305e59ee848b2e54f46ea5f84c1ee6547b23097b73e2ca1d5cec1d942",
+            "/$resource")).use{it.readBytes()}
+        assertEquals(sha,
             MessageDigest.getInstance("SHA-256").digest(text)
                 .joinToString(""){"%02x".format(it.toInt() and 255)})
         ZipInputStream(ByteArrayInputStream(Base64.getMimeDecoder().decode(text))).use{zip->
@@ -42,7 +42,19 @@ class NativeLegacyMuscleCoverageTest {
     }
 
     @Test fun actualV8StoreColdOpensWithOriginalApprovalsHistoryAndExactBytes() {
-        val root=restoreFixture()
+        assertFrozen("legacy-v8-sixteen-muscle-store.zip.base64",
+            "b085e12305e59ee848b2e54f46ea5f84c1ee6547b23097b73e2ca1d5cec1d942",
+            293,"v8",TrainingMuscleCoverage.legacyV1)
+    }
+
+    @Test fun actualV9StoreColdOpensWithoutSilentlyUpgradingItsEighteenMuscleApproval() {
+        assertFrozen("legacy-v9-eighteen-muscle-store.zip.base64",
+            "5ebc95e852a30ea65758d03f8737f26040e13306180dc8cfd584a2f206a8f9a8",301,"v9",TrainingMuscleCoverage.legacyV2)
+    }
+
+    private fun assertFrozen(resource:String,sha:String,catalogSize:Int,
+        revision:String,scope:List<TrainingMuscle>) {
+        val root=restoreFixture(resource,sha)
         val before=content(root)
         assertEquals(21,before.size)
         val audit=NativeKotlinStagedCoreStoreAudit.inspect(root,owner)
@@ -55,7 +67,7 @@ class NativeLegacyMuscleCoverageTest {
         val drafts=NativeCustomCycleDraftFileStore(root,fence,identity)
         val sources=NativeKotlinCustomAuthoringSourceFileStore(root,fence,identity)
         val source=(sources.read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source
-        assertEquals(293,source.catalog.size)
+        assertEquals(catalogSize,source.catalog.size)
         val program=(drafts.read(owner.ownerKey,"generated-first")
             as NativeCustomDraftReadResult.Found).draft
         val consent=NativeKotlinCustomCycleSignoffFileStore(root,fence,identity,drafts,sources)
@@ -63,8 +75,8 @@ class NativeLegacyMuscleCoverageTest {
         assertTrue(recovered.toString(),recovered is NativeCustomSavedCoachReview.Ready)
         val inputs=(recovered as NativeCustomSavedCoachReview.Ready).inputs
         val policy=inputs.policiesByPhase.getValue(TrainingPhase.HYPERTROPHY)
-        assertEquals("v8",policy.revision)
-        assertEquals(TrainingMuscleCoverage.legacyV1,
+        assertEquals(revision,policy.revision)
+        assertEquals(scope,
             policy.selectedBounds.map{it.muscle})
         val signed=consent.read(owner.ownerKey,"generated-first",inputs)
         assertTrue(signed.toString(),signed is NativeCustomSignoffRead.Found && signed.isCurrent)
@@ -74,7 +86,8 @@ class NativeLegacyMuscleCoverageTest {
     }
 
     @Test fun policyCodecPreservesLegacyAndNewScopesWithoutFillingOrDroppingRows() {
-        for(scope in listOf(TrainingMuscleCoverage.legacyV1,TrainingMuscleCoverage.current)) {
+        for(scope in listOf(TrainingMuscleCoverage.legacyV1,TrainingMuscleCoverage.legacyV2,
+            TrainingMuscleCoverage.current)) {
             val bounds=scope.reversed().map{DeclaredMuscleDoseBounds(it,
                 BigDecimal("0.00"),BigDecimal("3.50"),BigDecimal("12.000"),0)}
             val policy=AuthoredGoalProgramPolicy("explicit","r1","Reviewed exact coverage",

@@ -10,7 +10,7 @@ class ReviewedHipCatalogTest {
         "standing-cable-abduction","side-lying-abduction","adduction-machine",
         "cable-adduction","cossack-squat","adductor-sumo")
     private val all=StarterExerciseTranche.entries()
-    private val added=all.drop(293)
+    private val added=all.drop(293).take(ids.size)
     private val template=ComposerRequest(ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY,
         listOf(0,2,4).map{ComposerDay(it,ComposerFocus.FULL_BODY,
             DeclaredSessionWindow(1,90,null,60))},
@@ -32,7 +32,7 @@ class ReviewedHipCatalogTest {
     }
 
     @Test fun eightSourceIdentitiesUseSeparateHipLedgersAndRemainAppendOnly() {
-        assertEquals(301,all.size)
+        assertTrue(all.size>=301)
         assertEquals(ids,added.map{it.legacyCuratedId})
         assertEquals(all.size,all.map{it.movement.exerciseId}.distinct().size)
         assertEquals(all.size,all.map{it.movement.familyId to it.movement.variantId}.distinct().size)

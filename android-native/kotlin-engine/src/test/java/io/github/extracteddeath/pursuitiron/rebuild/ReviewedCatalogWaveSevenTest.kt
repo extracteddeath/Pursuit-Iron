@@ -61,10 +61,10 @@ class ReviewedCatalogWaveSevenTest {
     }
 
     @Test fun exactSourceIdentityAndNoHistoryTransfer() {
-        assertEquals(301,all.size)
+        assertTrue(all.size>=301)
         assertEquals(ids,wave.map{it.legacyCuratedId})
-        assertEquals(301,all.map{it.legacyCuratedId}.distinct().size)
-        assertEquals(301,all.map {
+        assertEquals(all.size,all.map{it.legacyCuratedId}.distinct().size)
+        assertEquals(all.size,all.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         for(entry in wave) {

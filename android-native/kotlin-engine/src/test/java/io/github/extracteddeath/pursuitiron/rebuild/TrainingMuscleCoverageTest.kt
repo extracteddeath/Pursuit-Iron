@@ -23,7 +23,12 @@ class TrainingMuscleCoverageTest {
         assertEquals(originalNames,TrainingMuscleCoverage.legacyV1.map{it.name})
         assertEquals(originalNames,TrainingMuscle.entries.take(16).map{it.name})
         assertEquals((0..15).toList(),TrainingMuscleCoverage.legacyV1.map{it.ordinal})
-        assertEquals(18,TrainingMuscleCoverage.current.size)
+        assertEquals(18,TrainingMuscleCoverage.legacyV2.size)
+        assertEquals(20,TrainingMuscleCoverage.current.size)
+        assertTrue(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.legacyV2))
+        assertEquals(2,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.legacyV2))
+        assertEquals(3,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current))
+        assertFalse(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.current.dropLast(1)))
         assertTrue(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.legacyV1))
         assertTrue(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.current))
         assertFalse(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.legacyV1.dropLast(1)))
@@ -68,14 +73,15 @@ class TrainingMuscleCoverageTest {
             ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY)
         val old=CoachFirstProgramStartDomain.review(input.copy(
             policyVersion=CoachFirstProgramStartDomain.V8_POLICY_VERSION))
-        val new=CoachFirstProgramStartDomain.review(input)
+        val new=CoachFirstProgramStartDomain.review(input.copy(
+            policyVersion=CoachFirstProgramStartDomain.V9_POLICY_VERSION))
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,old.status)
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,new.status)
         assertEquals("v8",old.policy?.revision)
         assertEquals("v9",new.policy?.revision)
         assertEquals(TrainingMuscleCoverage.legacyV1,
             old.policy?.selectedBounds?.map{it.muscle})
-        assertEquals(TrainingMuscleCoverage.current,
+        assertEquals(TrainingMuscleCoverage.legacyV2,
             new.policy?.selectedBounds?.map{it.muscle})
         assertEquals(old.prescription?.sessions,new.prescription?.sessions)
         assertEquals(old.policy?.selectedBounds,

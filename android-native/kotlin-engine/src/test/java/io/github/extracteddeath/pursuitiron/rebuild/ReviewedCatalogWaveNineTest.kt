@@ -71,7 +71,7 @@ class ReviewedCatalogWaveNineTest {
     }
 
     @Test fun allEighteenExactWebIdsAppendAfterUnmodifiedWaveEight() {
-        assertEquals(281,all.size)
+        assertEquals(293,all.size)
         assertEquals(ids,wave.map{it.legacyCuratedId})
         assertEquals(all.size,all.map{it.legacyCuratedId}.distinct().size)
         assertEquals(all.size,all.map{

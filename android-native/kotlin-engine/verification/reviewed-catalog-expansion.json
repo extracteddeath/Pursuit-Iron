@@ -7075,6 +7075,382 @@
         "attachment": null,
         "note": "Seal barbell row requires a confirmed seal bench plus full barbell plate stock; broad legacy back and traps credits are narrowed without inventing lat dominance."
       }
+    },
+    {
+      "id": "tbar-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "tbar_row",
+        "variant": "landmine-barbell",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "landmine-base",
+          "tbar-handle"
+        ],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "T-bar row requires verified barbell mass, a physical landmine base and secured handle; pivoted resistance is not interchangeable with free-weight rows."
+      }
+    },
+    {
+      "id": "wide-tbar-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "tbar_row",
+        "variant": "wide-landmine-barbell",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "landmine-base",
+          "wide-tbar-handle"
+        ],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Wide-grip T-bar row requires a secure wide handle and landmine base, keeping its load history distinct from both regular T-bar and barbell rowing."
+      }
+    },
+    {
+      "id": "sumo-dl",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          4,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "sumo-barbell",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "GLUTES",
+        "indirect": [
+          "QUADS:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Sumo deadlift uses actual barbell plates and a distinct stance-specific progression; conventional deadlift history and undocumented low-back credit cannot transfer."
+      }
+    },
+    {
+      "id": "rev-grip-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "reverse-straight-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Reverse-grip straight-bar curl uses separately verified barbell weight and never fabricates wrist flexor or extensor credit from generic forearm metadata."
+      }
+    },
+    {
+      "id": "kas-glute-bridge",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "barbell",
+          "bench"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "kas-barbell-bench",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "GLUTES",
+        "indirect": [
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Kas glute bridge requires a physical flat bench and total barbell load; its reduced-range glute progression never inherits a conventional hip thrust baseline."
+      }
+    },
+    {
+      "id": "board-press",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          3,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "board-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack",
+          "press-board"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Board press needs a genuine press board, rack and flat bench with verified plates; its partial range does not transfer bench press history."
+      }
+    },
+    {
+      "id": "barbell-skullover",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "straight-bar-skullover",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Barbell skullover requires a confirmed straight bar and plate pairs; it stays independent from skullcrusher and pullover progressions."
+      }
+    },
+    {
+      "id": "jefferson-curl",
+      "source": {
+        "movementFamily": "knee_flexion",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "dumbbell-jefferson",
+        "pattern": "HINGE",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "Jefferson curl needs a separately confirmed dumbbell; unsupported legacy low-back credits are not invented and full spinal-loading equivalence is not claimed."
+      }
+    },
+    {
+      "id": "bodyweight-doorway-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bodyweight_row",
+        "variant": "secure-doorway",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "secure-doorway-anchor"
+        ],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Bodyweight doorway row requires explicit bodyweight consent and a secure, confirmed doorway anchor; no phantom stack or transferable machine load."
+      }
+    },
+    {
+      "id": "doorway-biceps-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "builtin"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "secure-doorway-bodyweight",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "secure-doorway-anchor"
+        ],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Doorway biceps curl requires a safely anchored doorway and bodyweight permission; it is not a cable-stack or dumbbell load."
+      }
+    },
+    {
+      "id": "viking-press",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "machineshoulder"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "viking-machine",
+        "pattern": "VERTICAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "viking-press-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Viking shoulder press requires an exact confirmed physical Viking station with independent load increments, never a generic machine overhead baseline."
+      }
+    },
+    {
+      "id": "stir-pot",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          10,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_stability",
+        "variant": "stability-ball-stir-pot",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "stability-ball"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Stir-the-pot requires bodyweight permission and a confirmed stable exercise ball; source-reported circles are counted without inventing an external load."
+      }
     }
   ]
 }

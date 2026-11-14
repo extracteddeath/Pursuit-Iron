@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -31,6 +33,30 @@ private data class CustomSetFields(
     /** Explicit total follow-up work time; blank means not yet reviewed. */
     val extraWork: String = "",
     val extraLoad: String = ""
+)
+
+// Only unsaved editor text is Bundle-restored. It never certifies physical
+// stock, source validity, a swap, or an actual workout receipt.
+private val customSetFieldsSaver = listSaver<List<CustomSetFields>,String>(
+    save = { fields -> fields.flatMap { field ->
+        listOf(field.type.name,field.weight,field.minimum,field.maximum,
+            field.rir,field.seconds,field.rest,field.amplifier?.name.orEmpty(),
+            field.extraReps,field.extraRest,field.extraWork,field.extraLoad)
+    } },
+    restore = { serialized ->
+        serialized.chunked(12).filter { it.size==12 }.take(20).map { row ->
+            CustomSetFields(
+                type=DraftSetType.entries.firstOrNull { it.name==row[0] }
+                    ?:DraftSetType.WORKING,
+                weight=row[1],minimum=row[2],maximum=row[3],rir=row[4],
+                seconds=row[5],rest=row[6],
+                amplifier=CustomAmplifierKind.entries.firstOrNull {
+                    it.name==row[7]
+                },
+                extraReps=row[8],extraRest=row[9],extraWork=row[10],
+                extraLoad=row[11])
+        }.ifEmpty { listOf(CustomSetFields()) }
+    }
 )
 
 private fun CustomAuthoredSet.toFields(): CustomSetFields =
@@ -130,20 +156,30 @@ internal fun NativeKotlinCustomExerciseSheet(
     /** Search suggestion only. Never preselects or transfers a load/target. */
     initialSearchQuery:String = ""
 ) {
-    var search by remember(existing?.slotId,replacing?.slotId,
-        initialSearchQuery) { mutableStateOf(initialSearchQuery) }
-    var exerciseId by remember(existing?.slotId,replacing?.slotId) {
+    // The issued/current source identity and *all* authored prescriptions
+    // fence restoration. An amended source must not inherit an old editor.
+    val authorScope=buildString {
+        append(if(workoutOnlySwap) "workout:" else "program:")
+        append(existing?.toString() ?: "new")
+        append("|replacement:")
+        append(replacing?.toString() ?: "none")
+    }
+    var search by rememberSaveable(authorScope,initialSearchQuery) {
+        mutableStateOf(initialSearchQuery)
+    }
+    var exerciseId by rememberSaveable(authorScope) {
         mutableStateOf(existing?.exerciseId.orEmpty())
     }
-    var samePatternOnly by remember(replacing?.slotId) {mutableStateOf(false)}
-    var sharedMusclesOnly by remember(replacing?.slotId) {mutableStateOf(false)}
-    var sameRoleOnly by remember(replacing?.slotId) {mutableStateOf(false)}
-    var sameFamilyOnly by remember(replacing?.slotId) {mutableStateOf(false)}
+    var samePatternOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
+    var sharedMusclesOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
+    var sameRoleOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
+    var sameFamilyOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
+    // Reconfirmation is intentionally required after process recreation.
     var swapConfirmation by remember(replacing?.slotId) {mutableStateOf(false)}
-    var note by remember(existing?.slotId,replacing?.slotId) {
+    var note by rememberSaveable(authorScope) {
         mutableStateOf(existing?.coachNote.orEmpty())
     }
-    var forms by remember(existing?.slotId,replacing?.slotId) {
+    var forms by rememberSaveable(authorScope,saver=customSetFieldsSaver) {
         mutableStateOf(existing?.sets?.map { it.toFields() }
             ?: listOf(CustomSetFields()))
     }
@@ -186,14 +222,8 @@ internal fun NativeKotlinCustomExerciseSheet(
     var visibleCount by remember(search,samePatternOnly,sharedMusclesOnly,
         sameRoleOnly,sameFamilyOnly,replacing?.slotId) { mutableIntStateOf(20) }
     val filtered=searched.take(visibleCount)
-    // Changing the selected replacement must not silently carry even the
-    // NEW draft's typed load, technique or setup note into a different variant.
-    LaunchedEffect(exerciseId,replacing?.slotId) {
-        if(replacing!=null) {
-            forms=listOf(CustomSetFields())
-            note=""
-        }
-    }
+    // A replacement change clears drafts only on a real athlete tap, not
+    // on rotation/restoration (which would destroy saved unsent edits).
     // Any changed target or entered set invalidates previous confirmation.
     LaunchedEffect(exerciseId,forms,note,replacing?.slotId) {
         swapConfirmation=false
@@ -280,7 +310,15 @@ internal fun NativeKotlinCustomExerciseSheet(
                 val candidate=optionRow.choice
                 FilterChip(
                     selected=exerciseId==candidate.exerciseId,
-                    onClick={exerciseId=candidate.exerciseId},
+                    onClick={
+                        if(exerciseId!=candidate.exerciseId) {
+                            exerciseId=candidate.exerciseId
+                            if(replacing!=null) {
+                                forms=listOf(CustomSetFields())
+                                note=""
+                            }
+                        }
+                    },
                     label={Text(kotlinExerciseLabel(candidate.exerciseId)+
                         " · "+candidate.variantId.replace('-', ' ')+
                         (candidate.attachmentId?.let {

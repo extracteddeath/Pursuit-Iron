@@ -37,7 +37,7 @@ class ReviewedCatalogWaveNineTest {
         },emptyList(),4,1
     )
 
-    private fun stock(id:String):Pair<BigDecimal?,VerifiedLoadStock?>=when {
+    private fun stock(id:String): Pair<BigDecimal?, VerifiedLoadStock?> = when {
         id in bodyweight -> null to null
         id in cable -> n("25") to VerifiedLoadStock.Totals(
             LoadUnit.LB,LoadBasis.CABLE_STACK,

@@ -5,6 +5,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,6 +19,25 @@ private data class ComposerSwapDraftRow(
     val weight:String="",val min:String="",val max:String="",
     val targetRir:String=""
 )
+
+// Preserve the entire UNSAVED authoring sheet during rotation and process
+// recreation, but keep it scoped to the current exact issued set targets.
+// A saved Bundle contains only draft strings, never a grant or a journal event.
+private val composerSwapDraftSaver =
+    listSaver<SnapshotStateList<ComposerSwapDraftRow>,String>(
+        save={rows->
+            rows.flatMap{listOf(it.weight,it.min,it.max,it.targetRir)}
+        },
+        restore={saved->
+            saved.chunked(4).map{values->
+                ComposerSwapDraftRow(
+                    weight=values.getOrElse(0){""},
+                    min=values.getOrElse(1){""},
+                    max=values.getOrElse(2){""},
+                    targetRir=values.getOrElse(3){""})
+            }.toMutableStateList()
+        }
+    )
 
 /**
  * Workout-only Composer replacement. Unlike a blind "copy sets" action,
@@ -31,12 +53,32 @@ internal fun NativeKotlinComposerSwapSheet(
     onConfirm:(String,List<KotlinComposerSwapSetIntent>)->Unit,
     onDismiss:()->Unit
 ) {
-    var query by remember(fromExerciseId){mutableStateOf("")}
-    var matchingPattern by remember(fromExerciseId){mutableStateOf(false)}
-    var sharedMusclesOnly by remember(fromExerciseId){mutableStateOf(false)}
-    var selectedId by remember(fromExerciseId){mutableStateOf<String?>(null)}
+    // A previously reviewed swap is only editable for the exact same
+    // issued set identities, load bases and rep/RIR targets. This signature
+    // invalidates any old draft after a new issue or verified source change.
+    val issuedTargetsSignature=remember(sourceTargets) {
+        sourceTargets.joinToString("|"){target->
+            target.setKey+":"+target.exerciseId+":"+target.type+":"+
+                target.load+":"+target.reps+":"+target.targetRir
+        }
+    }
+    var query by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
+        mutableStateOf("")
+    }
+    var matchingPattern by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
+        mutableStateOf(false)
+    }
+    var sharedMusclesOnly by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
+        mutableStateOf(false)
+    }
+    var selectedId by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
+        mutableStateOf<String?>(null)
+    }
     val selected=choices.firstOrNull{it.option.exerciseId==selectedId}
-    val rows=remember(fromExerciseId,selectedId) {
+    val rows=rememberSaveable(
+        fromExerciseId,issuedTargetsSignature,selectedId,
+        saver=composerSwapDraftSaver
+    ) {
         sourceTargets.map {ComposerSwapDraftRow()}.toMutableStateList()
     }
     // Search the same labels shown to athletes, not only internal IDs.
@@ -160,7 +202,7 @@ internal fun NativeKotlinComposerSwapSheet(
                         val gear=selected.option.equipment
                         if(gear is ComposerEquipment.Verified) {
                             OutlinedTextField(row.weight,{
-                                rows[i]=row.copy(weight=it)
+                                rows[i]=row.copy(weight=it.take(24))
                             },label={Text("New weight (${gear.unit.name.lowercase()})")},
                                 keyboardOptions=KeyboardOptions(
                                     keyboardType=KeyboardType.Decimal),
@@ -170,20 +212,20 @@ internal fun NativeKotlinComposerSwapSheet(
                             style=MaterialTheme.typography.labelMedium)
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             OutlinedTextField(row.min,{
-                                rows[i]=row.copy(min=it)
+                                rows[i]=row.copy(min=it.take(3))
                             },label={Text("Min reps")},
                                 keyboardOptions=KeyboardOptions(
                                     keyboardType=KeyboardType.Number),
                                 singleLine=true,modifier=Modifier.weight(1f))
                             OutlinedTextField(row.max,{
-                                rows[i]=row.copy(max=it)
+                                rows[i]=row.copy(max=it.take(3))
                             },label={Text("Max reps")},
                                 keyboardOptions=KeyboardOptions(
                                     keyboardType=KeyboardType.Number),
                                 singleLine=true,modifier=Modifier.weight(1f))
                         }
                         OutlinedTextField(row.targetRir,{
-                            rows[i]=row.copy(targetRir=it)
+                            rows[i]=row.copy(targetRir=it.take(2))
                         },label={Text("Target RIR (optional)")},
                             keyboardOptions=KeyboardOptions(
                                 keyboardType=KeyboardType.Number),

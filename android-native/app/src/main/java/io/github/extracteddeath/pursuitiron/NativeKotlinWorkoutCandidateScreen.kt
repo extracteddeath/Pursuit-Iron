@@ -508,6 +508,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             },
             onInfo=selected?.target?.exerciseId?.let{exerciseId->
                 {infoExerciseId=exerciseId}
+            },
+            onSkip=selected?.takeIf {
+                !it.isResolved && !presentation.finished &&
+                    machineChoices.ready && !machineChoices.busy
+            }?.target?.setKey?.let { key ->
+                {pendingSkip=key}
             }
         )
         if(!presentation.finished) {

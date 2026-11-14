@@ -6940,7 +6940,7 @@
       },
       "review": {
         "family": "elbow_extension",
-        "variant": "overhead-dumbbell",
+        "variant": "overhead-dumbbell-extended-web-id",
         "pattern": "ISOLATION",
         "role": "ACCESSORY",
         "focus": "press",
@@ -6950,7 +6950,7 @@
         "direct": "TRICEPS",
         "indirect": [],
         "attachment": null,
-        "note": "Dumbbell overhead extension uses real per-implement dumbbell weight, never a total of two hands or a previous cable rope or EZ-bar triceps prescription."
+        "note": "Extended web DB overhead triceps entry is a separate stable source ID with verified single dumbbell mass; it represents the same physical technique as the curated version but never transfers history or doubles weight."
       }
     },
     {

@@ -282,8 +282,19 @@ private val kotlinExerciseNames=mapOf(
     "reverse-curl" to "Reverse EZ-Bar Curl",
     "bodyweight-deficit-pushup" to "Deficit Push-Up",
     "cable-kickback" to "Cable Kickback",
-    "seal-row" to "Seal Row"
-
+    "seal-row" to "Seal Row",
+    "tbar-row" to "T-Bar Row",
+    "wide-tbar-row" to "Wide-Grip T-Bar Row",
+    "sumo-dl" to "Sumo Deadlift",
+    "rev-grip-curl" to "Reverse-Grip Barbell Curl",
+    "kas-glute-bridge" to "Kas Glute Bridge",
+    "board-press" to "Board Press",
+    "barbell-skullover" to "Barbell Skullover",
+    "jefferson-curl" to "Jefferson Curl",
+    "bodyweight-doorway-row" to "Bodyweight Doorway Row",
+    "doorway-biceps-curl" to "Doorway Biceps Curl",
+    "viking-press" to "Viking Press",
+    "stir-pot" to "Stir the Pot"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

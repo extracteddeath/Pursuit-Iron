@@ -409,7 +409,7 @@ for(const phrase of [
   'Text("Coaching context"',
   'Text("Injury / discomfort")',
   'if(!compactByDefault || detailsExpanded)',
-  'onClick={onReportConcern}',
+  'onClick=onReportConcern',
   'modifier=Modifier.heightIn(min=48.dp)'
 ])assert.ok(sharedFocus.includes(phrase),'Compact coach context lost its controls: '+phrase);
 assert.ok(composer.includes('compactByDefault=true') &&

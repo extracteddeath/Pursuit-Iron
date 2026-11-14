@@ -159,7 +159,12 @@ internal fun NativeKotlinCustomJournalScreen(
         val active=journal ?:return@LaunchedEffect
         if(swapChoices.isNotEmpty())return@LaunchedEffect
         val slot=active.snapshot.slots.firstOrNull { it.slotId==requested }
-        val eligible=active.finishedByEventId==null && slot!=null &&
+        if(slot==null) {
+            swapSlotId=null
+            error="The saved exercise was replaced. Reopen a current swap review."
+            return@LaunchedEffect
+        }
+        val eligible=active.finishedByEventId==null &&
             slot.supersetGroup==null && slot.sets.none { set ->
                 active.receipts.any { receipt ->
                     (receipt.operation as? CustomWorkoutJournalOperation.Record)

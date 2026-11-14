@@ -48,8 +48,7 @@ import kotlinx.coroutines.withContext
 internal fun NativeKotlinCoachSettingsScreen(
     host:NativeKotlinCandidateHost,
     themeId:String=PursuitThemes.DEFAULT_ID,
-    onOpenAppearance:()->Unit={},
-    onBack:()->Unit
+    onOpenAppearance:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     val context=LocalContext.current
@@ -125,7 +124,6 @@ internal fun NativeKotlinCoachSettingsScreen(
             "Your coaching, your choice",
             "Optional suggestions never control workout logging or your authored program."
         )
-        TextButton(onClick=onBack,enabled=!saving) {Text("Back")}
         PursuitFormSection("Appearance",
             "Choose from the original Pursuit Iron web-app themes. This changes the app's colors, not training data."
         ) {

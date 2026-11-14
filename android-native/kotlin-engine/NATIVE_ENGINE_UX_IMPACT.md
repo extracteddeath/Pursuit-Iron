@@ -1,8 +1,13 @@
 # Pursuit Iron — native UI and UX changes required by the Kotlin engine
 
-**Status:** documented integration contract only; audited 2026-11-03 against Compose foundation c42f90b0. This file changes no native UI, production web app or active training authority.
+**Status:** integration documentation only; audited 2026-11-03 against Compose foundation c42f90b0. This file changes no native UI, production web app or active training authority.
 
 **Principle:** create a materially better Android experience than the web app. Kotlin owns training decisions; native-owned storage owns immutable actual observations; Compose owns fast readable presentation, explicit user choices, and reliable feedback. All 20 original themes must remain available under shared Material 3 Expressive tokens and responsive motion.
+
+The binding product-level review is [Product cohesion and improvement](../PRODUCT_UI_DESIGN_CONTRACT.md#product-cohesion-and-improvement--binding-beta-requirement-2026-11-14).
+Every carried feature needs a deliberate purpose, canonical location, coherent
+interaction and complete task flow, with evidence of improvement over its web
+experience. Functional parity and engine tests do not establish UX completion.
 
 ## Engine-to-screen impact table
 
@@ -65,4 +70,4 @@ Referenced files are **integration locations**, not proof that the listed featur
 | U12 | Test phone and foldable/tablet, all 20 themes, TalkBack, large text, IME and reduced motion |
 | U13 | Paired measured web/native task times and tap counts plus experienced-coach review |
 
-**Branch constraint:** documentation is kept in architecture/kotlin-engine-rebuild; implementing these UI changes later requires reviewed work on architecture/android-compose-foundation. Never auto-merge this branch into production web/main or the other native developer's branch.
+**Branch constraint:** the Kotlin-only engine and its integrated Compose app are developed and reviewed together on `architecture/kotlin-engine-rebuild`. Historical Compose filenames above are integration references, not a requirement to move this work to another native branch. Never auto-merge this branch into production web/main or the other native developer's branch. No APK until the full UI is finished.

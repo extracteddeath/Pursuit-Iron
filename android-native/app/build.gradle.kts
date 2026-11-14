@@ -153,6 +153,7 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
 }
 
 // Beta release has TWO independent gates:

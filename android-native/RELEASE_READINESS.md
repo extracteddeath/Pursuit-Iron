@@ -8,6 +8,12 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Product acceptance requirement (2026-11-14):** every carried feature must
+meet the [product cohesion and improvement contract](PRODUCT_UI_DESIGN_CONTRACT.md#product-cohesion-and-improvement--binding-beta-requirement-2026-11-14).
+Review purpose, deliberate placement, shared behavior, complete task flows and
+evidence of improvement. Feature counts, catalog coverage and green source
+tests do not certify that the app feels coherent or that its UI is finished.
+
 ## What works in the isolated Kotlin core
 
 - Saved athlete/gym setup, explicit movement/load calibration, provisional

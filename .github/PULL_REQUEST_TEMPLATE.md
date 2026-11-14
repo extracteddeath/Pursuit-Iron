@@ -13,3 +13,12 @@
 
 ## Rollback and remaining work
 State unaffected components, tested compatibility and any outstanding device / Play certification. Browser tests are not physical Android certification.
+
+## Native feature experience (when applicable)
+Use the [native design contract](https://github.com/extracteddeath/Pursuit-Iron/blob/architecture/kotlin-engine-rebuild/android-native/PRODUCT_UI_DESIGN_CONTRACT.md#product-cohesion-and-improvement--binding-beta-requirement-2026-11-14).
+Describe the athlete's task, the actual web-flow problem being improved, the
+feature's canonical home and contextual entry points, and the complete return,
+edit/cancel and recovery behavior. Identify shared components and affected
+neighboring screens. Link observed evidence; distinguish source tests from
+visual/device review and leave unverified outcomes open. Routine native work
+must not produce an APK before the full UI is finished.

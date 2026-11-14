@@ -6,6 +6,57 @@ this contract reaches a reviewed, integrated state. Source-only compilation,
 unit tests and screenshots during development are allowed; do **not** trigger
 disposable APK milestones in routine design commits.
 
+## Product cohesion and improvement — binding beta requirement, 2026-11-14
+
+Every feature carried from the web app must be deliberately integrated and
+improved as part of one product. Functional parity is the starting requirement.
+Preserve supported capabilities while improving the athlete's actual task:
+clarity, access, continuity, feedback, accessibility or reliability. Adding a
+feature, matching its old screen, passing tests or increasing catalog coverage
+does not by itself complete its UX. A shared pattern can be the improvement;
+each feature does not need a new widget, menu, option or explanation.
+
+For each carried feature, review these questions before marking it complete:
+
+1. **Purpose:** What athlete task does it serve, and when is it useful? Give
+   the essential action visual priority; reveal advanced controls when useful.
+2. **Placement:** Give the feature one canonical home, with contextual shortcuts
+   that open the same behavior. Explain a new destination before adding it.
+   Avoid competing copies, unrelated overflow actions and dead-end screens.
+3. **Interaction:** Use the same vocabulary, units, components and state rules
+   across Plan, Train, History, Progress and Coach, including both workout
+   loggers and Focus. Returning from a tool preserves the task and entered data.
+4. **Complete flow:** Review first use, ordinary use, edit, cancel, Back,
+   empty/loading/error states, retry and recovery. Distinguish a draft,
+   suggestion, confirmed change and recorded fact through concise feedback.
+5. **Evidence of improvement:** Compare a specific task with the actual web
+   flow. Record the problem, deliberate change and observed result. Use real
+   interaction counts/times when claiming speed; use reviewed screenshots and
+   task walkthroughs for hierarchy, comprehension and accessibility. Leave
+   unobserved outcomes explicitly unverified.
+
+Use these existing homes rather than adding isolated feature screens:
+
+| Athlete task | Canonical home | Contextual access and return |
+| --- | --- | --- |
+| Build, customize or adapt a program/cycle | Plan | Coach and post-workout proposals enter the same exact plan review |
+| Perform and record a session | Train | Plan Start/Resume opens the same authenticated workout |
+| Use Leveling | Train, beside set entry | One optional current-workout adjustment; logged actuals use ordinary progression |
+| Swap an exercise or physical machine | Train for today; Plan for future programming | Same ranked selection and verified equipment rules; explicit change scope |
+| Read Last, full exercise history or correct a result | History, with direct workout access | Shared correction-aware facts; return to the original exercise and unfinished input |
+| Understand performance and Strength Standards | Progress | Profile/History shortcuts retain the selected lift and their return context |
+| Review coaching and proposed adjustments | Coach | Plan/Train entry points retain the proposal's exact scope and consent rules |
+| Change gym, profile or settings | Secondary navigation | Consistent shared Back and tab context; no circular return pointers |
+
+Feature review must cover the whole affected journey and its neighboring
+screens, not only the new control. Shared navigation, interaction and component
+changes should fix every applicable entry point. Preserve differences that
+have a real purpose, such as independent machine histories and distinct
+current-workout versus future-program consent.
+
+This is an acceptance requirement, **not a declaration that these flows have
+passed visual or device review**. The APK gate below remains in force.
+
 ## Design direction / Material baseline
 
 - Modern Material 3 Expressive with pinned Compose `material3:1.5.0-rc01`;
@@ -29,6 +80,19 @@ disposable APK milestones in routine design commits.
   native data or submit explicit, validated actions. No presentation-driven
   fabricated RIR, PR, load, effort, progressions, exercise substitutions or
   history migrations.
+
+## Shared navigation checkpoint — 2026-11-14
+
+The source now uses one saveable route history for Profile, Settings, gym and
+contextual Coach/Progress links. Reopening an existing secondary route returns
+to that route rather than creating a circular Back path. Both phone navigation
+and the rail derive selection from the same task context. A shared, accessible
+Back arrow replaces separate Profile/Settings controls. Exercise requests stay
+with their route when returning through nested screens; a deliberate ordinary
+tab visit opens its overview. Active journal recovery remains independently
+owned. App JVM tests execute these navigation scenarios in source CI alongside
+Compose compilation. Physical navigation, layout and accessibility acceptance
+remain open; this checkpoint does not finish the whole-app design gate.
 
 ## Persistent information architecture
 

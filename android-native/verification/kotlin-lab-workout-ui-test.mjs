@@ -16,7 +16,7 @@ for(const phrase of [
   'prescription.reps.minimum',
   'follower?.followUpReps',
   'Blank RIR stays unreported.',
-  'progress={visitProgress.fraction}'
+  'progress={visitProgress.fraction}',
   'Text("Log this set")',
   'Text("Minimize")',
   'BringIntoViewRequester()',

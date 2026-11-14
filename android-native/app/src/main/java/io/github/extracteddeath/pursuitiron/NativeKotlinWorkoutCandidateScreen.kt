@@ -109,7 +109,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
         }
     }
-    var swapSourceId by remember(workoutId){mutableStateOf<String?>(null)}
+    // Restore the athlete's pending workout-only swap after rotation, but
+    // NEVER restore a previously fetched option as a new source grant.
+    var swapSourceId by rememberSaveable(workoutId){
+        mutableStateOf<String?>(null)
+    }
     var swapChoices by remember(workoutId){
         mutableStateOf<List<KotlinComposerSwapChoice>>(emptyList())
     }
@@ -227,6 +231,36 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 allShown.lastOrNull()?.target?.setKey
         }
         previouslyOpenKeys=stillOpen
+    }
+    // Source options are intentionally not Bundle-saveable. After an activity
+    // recreation the selected exercise remains, but every replacement option
+    // must be recomputed against the freshly reopened workout and gym before
+    // an unsaved set editor can be confirmed.
+    LaunchedEffect(host,workoutId,swapSourceId,journal?.revision) {
+        val source=swapSourceId ?:return@LaunchedEffect
+        val issued=journal ?:return@LaunchedEffect
+        if(swapChoices.isNotEmpty() || swapLoading ||
+            issued.snapshot.targets.none{it.exerciseId==source} ||
+            issued.finishedByEventId!=null)return@LaunchedEffect
+        swapLoading=true
+        try {
+            val verified=withContext(Dispatchers.IO) {
+                runCatching {
+                    host.reviewComposerWorkoutSwapChoices(workoutId,source)
+                }.getOrDefault(emptyList())
+            }
+            if(swapSourceId==source) {
+                if(verified.isEmpty()) {
+                    swapSourceId=null
+                    swapError="Saved swap review is no longer eligible. "+
+                        "Reopen alternatives for this unstarted exercise."
+                } else {
+                    swapChoices=verified
+                }
+            }
+        } finally {
+            swapLoading=false
+        }
     }
     fun reviewSwap(exerciseId:String) {
         if(state.busy || swapLoading)return

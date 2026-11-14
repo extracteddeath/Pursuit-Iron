@@ -165,4 +165,27 @@ class NativeKotlinNavigationStateTest {
             listOf("native-navigation-v1","PROFILE","NONE",null)))
             assertNull(NativeKotlinNavigationState.restore(saved))
     }
+
+    @Test fun overviewAndNestedExerciseScreensHaveIndependentStableUiStateKeys() {
+        val overview=root(KotlinCandidateDestination.PROGRESS)
+        val trend=overview.openProgressTrend("row")
+        val favorite=trend.open(KotlinCandidateDestination.PROFILE).openProgressExercise("bench")
+        assertEquals("PROGRESS",overview.current.saveableKey)
+        assertEquals(3,setOf(overview.current.saveableKey,trend.current.saveableKey,
+            favorite.current.saveableKey).size)
+        assertEquals(trend.current.saveableKey,favorite.back().back().current.saveableKey)
+        assertEquals(favorite.current.saveableKey,
+            checkNotNull(NativeKotlinNavigationState.restore(favorite.snapshot())).current.saveableKey)
+    }
+
+    @Test fun poppedDetailCachesCanBeDiscardedWithoutDroppingTheirAncestorsOrWorkoutState() {
+        val overview=root(KotlinCandidateDestination.TRAIN)
+        val coach=overview.openCoachExercise("bench")
+        val favorite=coach.open(KotlinCandidateDestination.PROFILE).openProgressExercise("row")
+        assertEquals(setOf(coach.current.saveableKey,favorite.current.saveableKey),
+            favorite.contextStateKeys)
+        assertEquals(setOf(coach.current.saveableKey),favorite.back().contextStateKeys)
+        assertEquals(emptySet<String>(),favorite.open(KotlinCandidateDestination.TRAIN).contextStateKeys)
+        assertEquals("TRAIN",overview.current.saveableKey)
+    }
 }

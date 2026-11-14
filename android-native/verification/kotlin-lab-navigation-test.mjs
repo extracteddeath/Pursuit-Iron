@@ -167,6 +167,8 @@ assert.ok(journey.includes('KotlinCandidateDestination.PROFILE') &&
   navigation.includes('fun snapshot():List<String>') &&
   navigation.includes('fun restore(saved:Any?)') &&
   journey.includes('stateSaver=Saver<NativeKotlinNavigationState,Any>') &&
+  journey.includes('SaveableStateProvider(navigation.current.saveableKey)') &&
+  journey.includes('(previousContextKeys-retained).forEach{savedScreens.removeState(it)}') &&
   !profile.includes('onBack'),
   'Profile is secondary; shared Back and selected-tab context must restore consistently on phone and rail');
 assert.ok(build.includes('testImplementation("junit:junit:4.13.2")') &&

@@ -87,9 +87,10 @@ The source now uses one saveable route history for Profile, Settings, gym and
 contextual Coach/Progress links. Reopening an existing secondary route returns
 to that route rather than creating a circular Back path. Both phone navigation
 and the rail derive selection from the same task context. A shared, accessible
-Back arrow replaces separate Profile/Settings controls. Exercise requests stay
+Back arrow replaces separate Profile/Settings controls. Exercise requests and their saved UI state stay
 with their route when returning through nested screens; a deliberate ordinary
-tab visit opens its overview. Active journal recovery remains independently
+tab visit opens its overview. Popped detail caches are discarded while ordinary
+tab and workout draft keys remain stable. Active journal recovery remains independently
 owned. App JVM tests execute these navigation scenarios in source CI alongside
 Compose compilation. Physical navigation, layout and accessibility acceptance
 remain open; this checkpoint does not finish the whole-app design gate.

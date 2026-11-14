@@ -24,6 +24,11 @@ internal data class NativeKotlinRoute(
     val detail:NativeKotlinRouteDetail=NativeKotlinRouteDetail.NONE,
     val exerciseId:String?=null
 ) {
+    // Ordinary screen keys preserve their existing saved drafts. Contextual
+    // screens keep independent UI state for each kind of exercise request.
+    val saveableKey:String get()=if(detail==NativeKotlinRouteDetail.NONE)destination.name
+        else "${destination.name}:${detail.name}:$exerciseId"
+
     init {
         require(if(detail==NativeKotlinRouteDetail.NONE)exerciseId==null
             else !exerciseId.isNullOrBlank() && exerciseId.length<=512)
@@ -48,6 +53,8 @@ internal class NativeKotlinNavigationState private constructor(
 ) {
     val current:NativeKotlinRoute get()=routes.last()
     val canGoBack:Boolean get()=routes.size>1
+    val contextStateKeys:Set<String> get()=routes
+        .filter{it.detail!=NativeKotlinRouteDetail.NONE}.map{it.saveableKey}.toSet()
     val selectedPrimary:KotlinCandidateDestination? get()=
         routes.asReversed().firstNotNullOfOrNull {it.destination.primaryHome}
 

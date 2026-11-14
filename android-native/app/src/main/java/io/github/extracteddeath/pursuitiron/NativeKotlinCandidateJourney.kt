@@ -119,6 +119,14 @@ internal fun NativeKotlinCandidateJourney(
         mutableStateOf<String?>(null)
     }
     val savedScreens=rememberSaveableStateHolder()
+    var previousContextKeys by remember {mutableStateOf(navigation.contextStateKeys)}
+    LaunchedEffect(navigation) {
+        // Retain ancestor details for Back, and discard only popped detail
+        // UI caches. Ordinary screens and workout drafts keep their keys.
+        val retained=navigation.contextStateKeys
+        (previousContextKeys-retained).forEach{savedScreens.removeState(it)}
+        previousContextKeys=retained
+    }
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
     }
@@ -283,7 +291,7 @@ internal fun NativeKotlinCandidateJourney(
                 }
             }
             Box(Modifier.weight(1f)) {
-            savedScreens.SaveableStateProvider(destination.name) {
+            savedScreens.SaveableStateProvider(navigation.current.saveableKey) {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
                         NativeKotlinOnboardingCandidateScreen(gymController,

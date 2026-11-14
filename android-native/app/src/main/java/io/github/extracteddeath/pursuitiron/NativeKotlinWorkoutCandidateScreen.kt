@@ -812,6 +812,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 NativeKotlinSetCard(set,presentation.finished,
                     state.busy || machineChoices.busy || !machineChoices.ready,
+                    saveError=state.journalRefusal?.let {
+                        "The correction was not saved. Review the saved set and retry."
+                    } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     onCurrentDraftChanged={load,reps->
@@ -1103,6 +1106,7 @@ private fun NativeKotlinSetCard(
     set:KotlinWorkoutSetPresentation,
     finished:Boolean,
     busy:Boolean,
+    saveError:String?,
     machineInstanceId:String?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
@@ -1129,7 +1133,7 @@ private fun NativeKotlinSetCard(
         mutableStateOf(initialMachineScopedLoad(target.load,existing,machineInstanceId))
     }
     var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
-        mutableStateOf(existing?.reps?.takeIf{it>0}?.toString()
+        mutableStateOf(existing?.reps?.toString()
             ?:target.reps.minimum.toString())
     }
     var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
@@ -1170,26 +1174,16 @@ private fun NativeKotlinSetCard(
     val verifiedLoad=target.load as? DraftSetLoad.Verified
     val entry=KotlinWorkoutEntryDomain.parse(target,weight,reps,effort)
     val working=target.type==DraftSetType.WORKING
-    PursuitCard(highlighted=!set.isResolved && !finished) {
-        if(showExerciseHeading)PursuitExerciseHeading(target.exerciseId,
-            onHistory=onHistory,onInfo=onInfo)
-        Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
-            style=MaterialTheme.typography.labelLarge)
-        PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
-            physicalMachineLastReferences(lastReferences,machineInstanceId),
-            WorkoutReferenceKey(target.setKey))
-        if(set.isResolved) {
-            Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
-                (existing?.let{" · ${it.reps} reps"+
-                    (it.load?.let{amount->" at ${amount.stripTrailingZeros().toPlainString()}"}?:"")+
-                    (it.actualRir?.let{rir->" · ${rir} actual RIR"}?: " · actual RIR unknown")
-                } ?: "")+
-                (existing?.machineInstanceId?.let{" · machine $it"} ?: ""),
-                color=MaterialTheme.colorScheme.primary,
-                style=MaterialTheme.typography.bodyMedium)
-        }
-        if(finished) return@PursuitCard
-        Text("Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
+    // A correction is a separate explicit review, not a second always-open
+    // logger. Close only when its exact durable receipt changes; a refused
+    // write keeps the typed draft available for retry.
+    var correcting by rememberSaveable(
+        target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId
+    ) {mutableStateOf(false)}
+    val entryFields:@Composable ()->Unit={
+        Text(if(set.isResolved)
+            "Review the values you recorded. Blank RIR stays unreported."
+        else "Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         // Reuse the same keyboard and 48dp rep/RIR stepper controls as
@@ -1219,6 +1213,7 @@ private fun NativeKotlinSetCard(
             onReps={reps=it},
             onRir={effort=it},
             showLoad=verifiedLoad!=null,
+            allowFailedAttempt=existing?.reps==0,
             showFieldHelp=false
         )
         if(verifiedLoad?.basis==LoadBasis.BARBELL_TOTAL) {
@@ -1248,4 +1243,50 @@ private fun NativeKotlinSetCard(
                 enabled=!busy && failedActual!=null){Text("Failed attempt")}
         }
     }
+    PursuitCard(highlighted=!set.isResolved && !finished) {
+        if(showExerciseHeading)PursuitExerciseHeading(target.exerciseId,
+            onHistory=onHistory,onInfo=onInfo)
+        Text("${if(working)"Set" else "Warm-up"} $position of $setCount",
+            style=MaterialTheme.typography.labelLarge)
+        PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
+            physicalMachineLastReferences(lastReferences,machineInstanceId),
+            WorkoutReferenceKey(target.setKey))
+        if(set.isResolved) {
+            Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
+                (existing?.let{" · ${it.reps} reps"+
+                    (it.load?.let{amount->" at ${amount.stripTrailingZeros().toPlainString()}"}?:"")+
+                    (it.actualRir?.let{rir->" · ${rir} actual RIR"}?: " · actual RIR unknown")
+                } ?: "")+
+                (existing?.machineInstanceId?.let{" · machine $it"} ?: ""),
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                style=MaterialTheme.typography.bodyMedium)
+        }
+        if(finished) return@PursuitCard
+        if(set.isResolved) {
+            OutlinedButton(
+                onClick={correcting=true},enabled=!busy,
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) {Text("Edit saved set")}
+        } else entryFields()
+
+    }
+    if(correcting && set.isResolved && !finished) {
+        NativeSetEditSheet(busy=busy,onDismiss={correcting=false}) {
+            PursuitSectionHeading("Edit saved set",kotlinExerciseLabel(target.exerciseId))
+            Text("Saved values change only after you confirm the correction.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            saveError?.let {Text(it,color=MaterialTheme.colorScheme.error,
+                style=MaterialTheme.typography.bodySmall)}
+            PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
+                physicalMachineLastReferences(lastReferences,machineInstanceId),
+                WorkoutReferenceKey(target.setKey))
+            entryFields()
+            TextButton(enabled=!busy,onClick={correcting=false},
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                Text("Keep saved set")
+            }
+        }
+    }
+
 }

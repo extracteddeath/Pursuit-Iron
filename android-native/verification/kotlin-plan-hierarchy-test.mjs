@@ -84,6 +84,9 @@ assert.match(screen,/NativeKotlinSavedProgramList\(state\.savedDrafts,state\.sav
 assert.match(screen,/NativeKotlinProgramPickerSheet\(picker,draft\?\.cycleId/);
 assert.match(screen,/onDismiss=controller::dismissProgramPicker/);
 assert.match(screen,/onOpen=controller::openSavedProgram/);
+assert.match(screen,/LaunchedEffect\(draft\?\.cycleId,showProgramEditor\)/);
+assert.match(screen,/offeredInitialPolicyEditor by rememberSaveable\(draft\?\.cycleId\)/);
+assert.match(screen,/if\(draft!=null && !busy && !offeredInitialPolicyEditor\)/);
 assert.match(picker,/NativeKotlinSavedProgramList\(state\.programs,state\.owner/);
 assert.match(picker,/NativeEditSheet\(busy=false,onDismiss=onDismiss\)/);
 assert.match(picker,/Text\("Cancel"\)/);

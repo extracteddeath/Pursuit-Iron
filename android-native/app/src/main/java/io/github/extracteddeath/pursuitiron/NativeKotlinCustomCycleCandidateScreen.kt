@@ -168,7 +168,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         })
     }
     val pageScroll=rememberScrollState()
-    LaunchedEffect(showProgramEditor) {
+    LaunchedEffect(draft?.cycleId,showProgramEditor) {
         // Same page, distinct tasks: the full editor should start at its top
         // even when the athlete selected a deep day in the prior outline.
         pageScroll.scrollTo(0)
@@ -192,8 +192,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     val currentSelection=state.nextCycleSlot?.takeIf{
         state.nextSlotCycleRevision==draft?.revision && policyReady && signed
     }
+    var offeredInitialPolicyEditor by rememberSaveable(draft?.cycleId){mutableStateOf(false)}
     LaunchedEffect(draft?.cycleId,busy,policyReady) {
-        if(draft!=null && !busy && !policyReady)showProgramEditor=true
+        // Offer missing rules once when opening a program. A read-only browse
+        // or Cancel must not reopen an editor the athlete deliberately closed.
+        if(draft!=null && !busy && !offeredInitialPolicyEditor) {
+            offeredInitialPolicyEditor=true
+            if(!policyReady)showProgramEditor=true
+        }
     }
     LaunchedEffect(initialCycleId) {
         if (!initialCycleId.isNullOrBlank()) controller.open(initialCycleId)

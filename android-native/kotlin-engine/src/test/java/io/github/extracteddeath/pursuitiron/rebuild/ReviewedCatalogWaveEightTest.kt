@@ -88,10 +88,10 @@ class ReviewedCatalogWaveEightTest {
     }
 
     @Test fun exactWebIdentityAndNoCrossVariantLoadTransfer() {
-        assertEquals(263,all.size)
+        assertEquals(281,all.size)
         assertEquals(ids,wave.map{it.legacyCuratedId})
-        assertEquals(263,all.map{it.legacyCuratedId}.distinct().size)
-        assertEquals(263,all.map{
+        assertEquals(281,all.map{it.legacyCuratedId}.distinct().size)
+        assertEquals(281,all.map{
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         for(e in wave) {

@@ -160,6 +160,10 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  const declarations=[...source.matchAll(/\bentry\("([a-z0-9_-]+)"/g)].map(x=>x[1]);
  assert.equal(new Set(declarations).size,declarations.length,
    'native starter contains conflicting exercise IDs');
+ const variants=[...source.matchAll(/\bentry\("([^"]+)","([^"]+)","([^"]+)"/g)]
+   .map(x=>x[2]+'|'+x[3]);
+ assert.equal(new Set(variants).size,variants.length,
+   'preserved curated and reviewed extensions must have unique physical family/variant keys');
  assert.deepEqual(declarations.slice(49),manifest.records.map(x=>x.id),
    'new source IDs must append after the preserved first 49');
  assert.ok(source.includes('require(definitions.size=='+(49+count)+')'),
@@ -188,13 +192,18 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,263);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,281);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);
  const forged=structuredClone(m);
  forged.records[0].review.basis=null;
  assert.throws(()=>validateReviewedCatalogExpansion(forged,src),/unweighted cannot/);
+ const prefixCollision=src.replace(
+   'entry("db_overhead_triceps","elbow_extension","overhead-dumbbell"',
+   'entry("db_overhead_triceps","elbow_extension","overhead-dumbbell-extended-web-id"');
+ assert.throws(()=>validateReviewedCatalogExpansion(m,prefixCollision),
+   /unique physical family\/variant/);
  const altered=src.replace('BEGIN REVIEWED_WEB_EXPANSION_V2',
    'BEGIN REVIEWED_WEB_EXPANSION_TAMPER');
  assert.throws(()=>validateReviewedCatalogExpansion(m,altered),/generated start/);

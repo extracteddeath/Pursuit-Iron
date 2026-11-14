@@ -316,6 +316,13 @@ internal class NativeKotlinCustomCycleController(
     }
 
     /** Browsing never replaces Plan, clears its feedback, or discards Undo. */
+    fun refreshSavedPrograms()=enter {
+        if(current.value.draft==null) {
+            val entry=host.reviewSavedPrograms()
+            applySavedProgramList(entry.read,entry.owner)
+        }
+    }
+
     fun findSavedPrograms() {
         if(!scope.isActive)return
         val token=pickerSession.begin{pickerCurrent.value=NativeKotlinProgramPickerState(it)}

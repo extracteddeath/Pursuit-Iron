@@ -78,6 +78,7 @@ const screen=readFileSync(app+'NativeKotlinCustomCycleCandidateScreen.kt','utf8'
 const picker=readFileSync(app+'NativeKotlinProgramPickerScreen.kt','utf8');
 const session=readFileSync(app+'NativeKotlinProgramPicker.kt','utf8');
 assert.match(screen,/if\(draft!=null\)OutlinedButton\(onClick=controller::findSavedPrograms/);
+assert.match(screen,/onClick = \{controller\.refreshSavedPrograms\(\)\}/);
 assert.doesNotMatch(screen,/Text\("Other programs"\)/);
 assert.match(screen,/NativeKotlinSavedProgramList\(state\.savedDrafts,state\.savedProgramsOwner/);
 assert.match(screen,/NativeKotlinProgramPickerSheet\(picker,draft\?\.cycleId/);
@@ -93,6 +94,7 @@ assert.doesNotMatch(picker,/saved\.revision\}/);
 assert.match(controller,/val programPicker:StateFlow<NativeKotlinProgramPickerState\?>/);
 assert.match(controller,/run\(preserveFeedback=true\)/);
 assert.match(controller,/val entry=host\.reviewSavedPrograms\(\)/);
+assert.match(controller,/fun refreshSavedPrograms\(\)=enter\s*\{\s*if\(current\.value\.draft==null\)/);
 assert.match(controller,/val prepared=prepareRead\(entry\.cycleId,read,entry\.source\)/);
 assert.match(controller,/host\.publishProgramViewIfOwned\(selection\.owner\)/);
 assert.match(controller,/pickerSession\.claim\(token\)\s*\{[\s\S]*?applyPreparedRead\(prepared\)/);

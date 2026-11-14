@@ -311,7 +311,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 Text("Open a verified program by name. Your edits, blocks and exercise choices are preserved.",
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
-                    onClick = {controller.findSavedPrograms()},
+                    onClick = {controller.refreshSavedPrograms()},
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
                 ) {Text("Refresh saved programs")}

@@ -658,6 +658,25 @@ internal fun NativeKotlinCustomJournalScreen(
                     // follow-ups are never used or modified.
                     if(!finished && current.finishedByEventId==null &&
                         activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP) {
+                        val numberOfWorkingSets=slot.sets.count {
+                            it.prescription.type==DraftSetType.WORKING
+                        }
+                        if(numberOfWorkingSets>=2) {
+                            var levelingExpanded by rememberSaveable(
+                                workoutId,slot.slotId
+                            ) {mutableStateOf(false)}
+                            OutlinedButton(
+                                onClick={
+                                    levelingExpanded=!levelingExpanded
+                                    if(!levelingExpanded)priorLevelingSlotId=null
+                                },
+                                enabled=!busy,
+                                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                            ) {
+                                Text(if(levelingExpanded)"Hide Leveling options"
+                                    else "Leveling · adjust current sets")
+                            }
+                            if(levelingExpanded) {
                         val workingSets=slot.sets.filter {
                             it.prescription.type==DraftSetType.WORKING
                         }
@@ -852,6 +871,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                     }
                                 }
                             )
+                        }
+                            }
                         }
                     }
                     PursuitCard {

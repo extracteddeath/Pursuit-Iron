@@ -42,6 +42,22 @@ for(const phrase of [
 assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
   'Finished sessions must still expose recorded sets for review');
 
+// Leveling remains fully functional but only runs its more expensive
+// machine-scoped reviews after explicit expansion. This prevents the
+// Leveling tools from burying the actual editable set beneath the header.
+for(const [source,label,scope] of [
+  [composer,'generated','priorLevelingScope=null'],
+  [journal,'custom','priorLevelingSlotId=null']
+]) {
+  for(const fragment of [
+    'val numberOfWorkingSets=', 'if(numberOfWorkingSets>=2) {',
+    'var levelingExpanded by rememberSaveable(',
+    'Text(if(levelingExpanded)"Hide Leveling options"',
+    '"Leveling · adjust current sets"', 'if(levelingExpanded) {',
+    'DoubleProgressionLevelingDomain',scope
+  ])assert.ok(source.includes(fragment),
+    label+' workout has lost optional Leveling visibility or safe source scope: '+fragment);
+}
 // One shared M3E hero action reaches the same durable owner as the set editor.
 // No shortcut can skip a different selected set or an amplifier after the
 // journal advances; a positive confirmation is always required.

@@ -559,6 +559,26 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         // remain untouched. The journal still owns each actual when logged.
         if(selected!=null && journal!=null && !presentation.finished) {
             val exerciseId=selected.target.exerciseId
+            val numberOfWorkingSets=allSets.count {
+                it.target.exerciseId==exerciseId &&
+                    it.target.type==DraftSetType.WORKING
+            }
+            if(numberOfWorkingSets>=2) {
+                var levelingExpanded by rememberSaveable(workoutId,exerciseId) {
+                    mutableStateOf(false)
+                }
+                OutlinedButton(
+                    onClick={
+                        levelingExpanded=!levelingExpanded
+                        if(!levelingExpanded)priorLevelingScope=null
+                    },
+                    enabled=!state.busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {
+                    Text(if(levelingExpanded)"Hide Leveling options"
+                        else "Leveling · adjust current sets")
+                }
+                if(levelingExpanded) {
             val workingSets=allSets.filter {
                 it.target.exerciseId==exerciseId &&
                     it.target.type==DraftSetType.WORKING
@@ -726,6 +746,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             }
                         }
                     )
+                }
+            }
                 }
             }
         }

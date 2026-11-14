@@ -611,6 +611,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         movementRestricted=movementRestricted,
                         onMovementRestrictedChange={movementRestricted=it},
                         enabled=!busy,
+                        compactByDefault=true,
                         onReportConcern={
                             // Real notes remain a separate, explicit journal
                             // save; changing coach context never edits sets.

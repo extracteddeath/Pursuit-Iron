@@ -39,4 +39,31 @@ assert.match(test,/@Test fun noteSurvivesColdReopenAndCarriesAcrossWorkoutsByExa
 assert.match(test,/@Test fun ownerFenceAndPerExerciseCasPermitOnlyOneConcurrentEdit/);
 assert.match(test,/@Test fun wrongOwnerAndCorruptOrPendingBytesFailClosed/);
 assert.doesNotMatch(store,/KotlinJournalOperation\.RecordSet|CustomWorkoutJournalOperation\.Record/);
-console.log('PASS pinned exercise note authorization, durable CAS, no target writes and shared workout controls');
+
+// The compact Focus toolbar must enter the existing owner-verified note
+// sheet for exactly the selected exercise/slot. Duplicate custom exercise
+// IDs in separate slots cannot open two sheets from one toolbar tap.
+const tools=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutTools.kt');
+for(const label of ['View warm-up targets','Swap exercise','Session note',
+    'Pinned exercise note and setup']) assert.ok(tools.includes('"'+label+'"'));
+assert.match(tools,/TooltipBox\(/);
+assert.match(tools,/state=rememberTooltipState\(\)/);
+assert.match(tools,/Icon\(icon,contentDescription=label\)/);
+assert.match(tools,/Modifier\.size\(48\.dp\)/);
+assert.match(tools,/horizontalScroll\(rememberScrollState\(\)\)/);
+assert.doesNotMatch(tools,/\.record\(|\.save\(|\.finish\(|NativeKotlinCandidateHost/,
+    'presentation tools must not create a second journal or note owner');
+assert.match(generated,/NativeKotlinWorkoutTools\(/);
+assert.match(generated,/externalOpen=pinnedExerciseId==selected\.target\.exerciseId/);
+assert.match(generated,/showEditAction=showAll \|\| presentation\.finished/);
+assert.match(generated,/toolTargets\.none\{it\.setKey in journal\.effectiveSets\}/);
+assert.match(custom,/NativeKotlinWorkoutTools\(/);
+assert.match(custom,/pinnedSlotId=slot\.slotId/);
+assert.match(custom,/externalOpen=pinnedSlotId==slot\.slotId/);
+assert.match(custom,/showEditAction=activeFocus==null \|\| finished/);
+assert.match(sheet,/val editorOpen=opened \|\| externalOpen/);
+assert.match(sheet,/if\(editorOpen\)NativeKotlinPinnedExerciseNoteSheet\(/);
+assert.match(sheet,/custom,editorOpen\)/,
+    'closing either note entry point must refresh the saved inline preview');
+assert.match(sheet,/custom=custom,onDismiss=\{opened=false;onExternalDismiss\(\)\}/);
+console.log('PASS owner-verified pinned notes, scoped Focus tools, durable CAS and shared sheet');

@@ -34,4 +34,31 @@ assert.match(onboarding,/gymConfirmed=false/g,
     'a changed physical inventory must invalidate prior confirmation');
 assert.match(gymEditor,/internal fun kotlinGymAttachmentLabel/,
     'human-readable onboarding attachment labels share the gym editor');
-console.log('PASS onboarding cable stock ID matches Kotlin catalog and gym choices remain explicit');
+
+// The runtime catalog can grow independently of the setup screen. Every
+// required reviewed fixture must remain selectable by its normal name in
+// BOTH onboarding and the saved gym editor, without knowing internal IDs.
+const facilities=readFileSync(join(root,
+    'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt'),'utf8');
+const named=[...facilities.matchAll(/"([a-z0-9-]+)" to "([^"\n]+)"/g)]
+    .map(([,id,label])=>({id,label}));
+assert.equal(named.length,new Set(named.map(x=>x.id)).size,
+    'a physical fixture ID must have one unambiguous named choice');
+const available=new Set(named.map(x=>x.id));
+const manifest=JSON.parse(readFileSync(join(root,
+    'android-native/kotlin-engine/verification/reviewed-catalog-expansion.json'),'utf8'));
+const required=new Set(manifest.records.flatMap(x=>x.review.fixtures));
+// Include the original stable prefix, whose declarations predate the
+// reviewed manifest. Focus enums and non-fixture sets do not match here.
+const prefix=catalog.split('// BEGIN REVIEWED_WEB_EXPANSION_V2')[0];
+for(const match of prefix.matchAll(/(?:LoadBasis\.[A-Z_]+|null),setOf\(([^)]*)\)/g))
+    for(const id of match[1].matchAll(/"([^"\n]+)"/g))required.add(id[1]);
+assert.ok(required.size>15,'fixture coverage must inspect the actual reviewed catalog');
+for(const id of required) assert.ok(available.has(id),
+    'Reviewed exercises require a named physical fixture choice: '+id);
+assert.match(onboarding,/NativeKotlinGroupedFacilityChoices\(/);
+assert.match(gymEditor,/NativeKotlinGroupedFacilityChoices\(/);
+assert.match(facilities,/if\(checked\)selected\+id else selected-id/,
+    'named choices must preserve all other saved/advanced IDs');
+assert.match(facilities,/Additional saved IDs are preserved/);
+console.log(`PASS exact cable stock and all ${required.size} reviewed fixture names in onboarding and gym editing`);

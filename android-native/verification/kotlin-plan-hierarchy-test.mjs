@@ -35,4 +35,40 @@ assert.match(overview,/slot\.sets\.forEachIndexed/);
 assert.match(overview,/onEditDay\(block\.blockId,day\.weekday\)/);
 assert.match(overview,/onEditExercise\(block\.blockId,day\.weekday,slot\.slotId\)/);
 assert.match(overview,/Your workout preview includes any changes for its specific week/);
+
+// Returning to Plan is a read of the selected native program, not another
+// picker reset. Fresh policy checks still run; only a validated Undo survives.
+const app='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
+const controller=readFileSync(app+'NativeKotlinCustomCycleController.kt','utf8');
+const host=readFileSync(app+'NativeKotlinCandidateHost.kt','utf8');
+const entry=readFileSync(app+'NativeKotlinPlanEntryReview.kt','utf8');
+const requests=readFileSync(app+'NativeKotlinPlanEntryRequests.kt','utf8');
+assert.match(controller,/host\.reviewPlanEntry\(current\.value\.draft,openedSource,/);
+assert.match(controller,/applyRead\(entry\.cycleId,entry\.read,entry\.source\)/);
+assert.match(controller,/recoverSavedCoachPolicy\(entry\.cycleId\)/);
+assert.match(controller,/selectNextSessionIfReviewed\(\)/);
+assert.match(controller,/entry\.retainedUndo\?\.let\s*\{[\s\S]*?lastUndo=it[\s\S]*?copy\(canUndo=true\)/);
+assert.match(controller,/if\(entry\.undoUnavailable\)/);
+assert.match(controller,/The previous Undo is no longer valid for the current program and training setup/);
+assert.match(host,/fun reviewPlanEntry\([\s\S]*?revisionFence\.withOwnerTransaction\(owner\.ownerKey\)/);
+assert.match(host,/NativeKotlinPlanEntryReview\.review\(localAthlete/);
+assert.match(entry,/source==visibleSource/);
+assert.match(entry,/visibleDraft==found/);
+assert.match(entry,/CustomCycleBuilderDomain\.undo\(found,it\)/);
+assert.match(entry,/identity\.signedInIdentity\(\)/);
+
+// Navigation read requests wait behind an in-flight action; ordinary edits
+// retain their original duplicate-write guard. Return never displaces an
+// explicit newly-created or selected program waiting to be opened.
+assert.match(controller,/if \(!pending\.compareAndSet\(false, true\)\) return/);
+assert.match(controller,/if\(scope\.isActive && planEntries\.hasPending\)drainPlanEntries\(\)/);
+assert.match(controller,/fun open\(cycleId: String\) = enter/);
+assert.match(controller,/fun openSavedTraining\(\) = enter\(explicit=false\)/);
+assert.match(controller,/fun openSavedFirstProgramForReview\([\s\S]*?\)=enter/);
+assert.match(controller,/planEntries\.clear\(\)/);
+assert.match(controller,/reopenAfterConfirmedFutureWeekSave\(cycleId:String\)=afterSaved\(cycleId\)/);
+assert.match(requests,/previous\?\.selected!=null/);
+assert.match(requests,/queued\.selected\?\.let\{return it\}/);
+assert.match(requests,/if\(refresh\.currentCycle\(\)==refresh\.cycleId\)refresh\.action\(\) else queued\.resumed\?\.invoke\(\)/);
+assert.match(requests,/pending\.getAndSet\(null\)/);
 console.log('PASS native Plan full program, optional current-block focus, week hierarchy, next-day indicators and retained editors');

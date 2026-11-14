@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 
 /**
  * Candidate-only Compose state holder. All disk operations run on IO;
@@ -91,9 +92,11 @@ internal class NativeKotlinCustomCycleController(
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val pending = AtomicBoolean(false)
+    private val planEntries = NativeKotlinPlanEntryRequests()
     private val current = MutableStateFlow(NativeKotlinCustomCycleState())
     val state: StateFlow<NativeKotlinCustomCycleState> = current.asStateFlow()
     private var lastUndo: CustomCycleDraftReceipt? = null
+    private var openedSource: NativeCustomAuthoringSnapshot? = null
     private var auditedInputs: CustomCoachAuditInputs? = null
     private data class PendingWeekEdit(
         val source: NativeCustomAuthoringSnapshot,
@@ -115,20 +118,39 @@ internal class NativeKotlinCustomCycleController(
             } finally {
                 current.value = current.value.copy(busy = false)
                 pending.set(false)
+                if(scope.isActive && planEntries.hasPending)drainPlanEntries()
             }
         }
     }
 
-    private fun applyRead(cycleId: String, result: NativeCustomDraftReadResult) {
+    private fun enter(explicit:Boolean=true,action:()->Unit) {
+        if(!scope.isActive)return
+        if(explicit)planEntries.select(action) else planEntries.resume(action)
+        drainPlanEntries()
+    }
+
+    private fun drainPlanEntries() = run {planEntries.takeNext()?.invoke()}
+
+    private fun afterSaved(cycleId:String,action:()->Unit) {
+        if(!scope.isActive)return
+        planEntries.refreshSaved(cycleId,{current.value.draft?.cycleId},action)
+        drainPlanEntries()
+    }
+
+    private fun applyRead(
+        cycleId:String,result:NativeCustomDraftReadResult,
+        latest:NativeCustomAuthoringSnapshot?=
+            runCatching {authoringSource.snapshot()}.getOrNull()
+    ) {
         lastUndo = null
         auditedInputs = null
         pendingWeekEdit = null
-        val latest = runCatching { authoringSource.snapshot() }.getOrNull()
         val assistance=(runCatching{host.readCoachAssistance()}
             .getOrNull() as? NativeCoachSettingsRead.Current)
             ?.settings?.policy
         val found = (result as? NativeCustomDraftReadResult.Found)?.draft
         val source = latest?.takeIf { it.athleteId == found?.athleteId }
+        openedSource=source
         val choices = if (source == null) emptyList() else
             CustomExerciseAuthoringDomain.picker(source.setup,source.catalog)
         current.value = when (result) {
@@ -200,7 +222,7 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
-    fun open(cycleId: String) = run {
+    fun open(cycleId: String) = enter {
         applyRead(cycleId, host.readCustomCycleDraft(cycleId))
         recoverSavedCoachPolicy(cycleId)
         selectNextSessionIfReviewed()
@@ -212,7 +234,7 @@ internal class NativeKotlinCustomCycleController(
      * audit. A changed source revision discards it. A successful audit does
      * NOT sign the new draft: explicit new athlete consent remains required.
      */
-    fun reopenAfterConfirmedFutureWeekSave(cycleId:String)=run {
+    fun reopenAfterConfirmedFutureWeekSave(cycleId:String)=afterSaved(cycleId) {
         val previous=current.value.takeIf{it.draft?.cycleId==cycleId}
         val previousInputs=previous?.reviewedCoachInputs
         val previousSourceRevision=previous?.auditSourceRevision
@@ -227,27 +249,31 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
-    /** Re-enter training from setup or Finish using the owned program census.
-     * A single saved program is unambiguous; multiple programs require a choice.
-     * Listing/reopening is read-only and never grants consent or starts training. */
-    fun openSavedTraining() = run {
-        when(val listed=host.listOwnedCustomCycleDrafts()) {
-            is NativeCustomDraftListResult.Ready -> {
-                val selected=listed.drafts.singleOrNull()
-                if(selected==null) {
-                    applySavedProgramList(listed)
-                } else {
-                    applyRead(selected.cycleId,
-                        host.readCustomCycleDraft(selected.cycleId))
-                    recoverSavedCoachPolicy(selected.cycleId)
-                    selectNextSessionIfReviewed()
+    /** Return to the selected task, freshly recheck data and reviews, and
+     * retain a still-valid Undo. Cold entry still asks when several programs
+     * exist. A return during an in-flight operation runs after that operation. */
+    fun openSavedTraining() = enter(explicit=false) {
+        when(val entry=host.reviewPlanEntry(current.value.draft,openedSource,
+            lastUndo.takeIf{current.value.canUndo})) {
+            is NativeKotlinPlanEntry.Selected -> {
+                applyRead(entry.cycleId,entry.read,entry.source)
+                recoverSavedCoachPolicy(entry.cycleId)
+                selectNextSessionIfReviewed()
+                entry.retainedUndo?.let {
+                    lastUndo=it
+                    current.value=current.value.copy(canUndo=true)
                 }
+                if(entry.undoUnavailable)current.value=current.value.copy(message=
+                    listOfNotNull(current.value.message,
+                        "The previous Undo is no longer valid for the current program and training setup.")
+                        .joinToString("\n"))
             }
-            is NativeCustomDraftListResult.Rejected ->applySavedProgramList(listed)
+            is NativeKotlinPlanEntry.Programs ->applySavedProgramList(entry.read)
         }
     }
 
     private fun applySavedProgramList(listed:NativeCustomDraftListResult) {
+        openedSource=null
         lastUndo=null
         auditedInputs=null
         pendingWeekEdit=null
@@ -256,7 +282,7 @@ internal class NativeKotlinCustomCycleController(
                 NativeKotlinCustomCycleState(busy=true,
                     savedDrafts=listed.drafts,savedDraftsLoaded=true,
                     message=if(listed.drafts.isEmpty())
-                        "Your setup is ready. Build your first program to continue."
+                        "Build your first program to continue."
                     else "Choose the saved program you want to continue.")
             is NativeCustomDraftListResult.Rejected ->
                 NativeKotlinCustomCycleState(busy=true,
@@ -266,7 +292,7 @@ internal class NativeKotlinCustomCycleController(
     }
 
     /** Owner-verified, read-only program picker. IDs stay internal to navigation. */
-    fun findSavedPrograms() = run {
+    fun findSavedPrograms() = enter {
         applySavedProgramList(host.listOwnedCustomCycleDrafts())
     }
 
@@ -548,9 +574,9 @@ internal class NativeKotlinCustomCycleController(
      */
     fun openSavedFirstProgramForReview(
         cycleId:String,inputs:CustomCoachAuditInputs
-    )=run {
+    )=enter {
         applyRead(cycleId,host.readCustomCycleDraft(cycleId))
-        if(current.value.draft?.cycleId!=cycleId)return@run
+        if(current.value.draft?.cycleId!=cycleId)return@enter
         when(val recovered=host.recoverSavedFirstProgramReview(cycleId)) {
             is NativeRecoveredFirstProgramReview.Ready ->
                 if(recovered.inputs==inputs) {
@@ -1538,7 +1564,9 @@ internal class NativeKotlinCustomCycleController(
     }
 
     override fun close() {
+        planEntries.clear()
         scope.cancel()
         lastUndo = null
+        openedSource = null
     }
 }

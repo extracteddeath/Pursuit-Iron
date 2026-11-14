@@ -53,6 +53,12 @@ internal fun NativeKotlinCustomJournalScreen(
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
     var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
+    // Custom Focus supports reviewing past and future main/follow-up visits
+    // without changing the journal's next unresolved visit or coaching.
+    // Only serializable values survive Activity recreation. A swapped/removed
+    // set key can never be promoted into a valid active focus.
+    var reviewSetKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var reviewPart by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     val editorStates=rememberSaveableStateHolder()
     // One Kotlin Leveling behavior for generated and custom set editors.
@@ -228,6 +234,13 @@ internal fun NativeKotlinCustomJournalScreen(
             }
             if(result is NativeCustomJournalResult.Durable) {
                 journal=result.issued.journal;error=null
+                // Follow the next unlogged visit after a manually focused
+                // entry was actually saved. Rejected disk writes retain
+                // both the selected visit and the editable draft.
+                if(reviewSetKey==visit.setKey && reviewPart==visit.part.name) {
+                    reviewSetKey=null
+                    reviewPart=null
+                }
             } else {
                 error="Your set could not be saved. The last saved version has been reloaded; check it before trying again."
                 val recovery=withContext(Dispatchers.IO){
@@ -425,7 +438,16 @@ internal fun NativeKotlinCustomJournalScreen(
                 // Focus is presentation-only: it changes neither the owned
                 // journal nor the active prescription. Show every entry when
                 // no unresolved visit remains so Finish can be reviewed.
-                val activeFocus=nextVisit.takeIf {
+                val availableVisits=CustomWorkoutVisitFocusDomain.visibleOrder(current)
+                val requestedPart=CustomWorkoutVisitPart.entries.firstOrNull {
+                    it.name==reviewPart
+                }
+                val requestedFocus=reviewSetKey?.let{key->
+                    requestedPart?.let{part->
+                        CustomWorkoutVisitKey(key,part)
+                    }
+                }?.takeIf{it in availableVisits}
+                val activeFocus=(requestedFocus ?: nextVisit).takeIf {
                     focusOnNext && !finished && current.finishedByEventId==null
                 }
                 val mainTotal=current.snapshot.slots.sumOf{it.sets.size}
@@ -561,7 +583,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         onClick={refresh()}){Text("Refresh saved workout")}
                 }
                 if(!finished && current.finishedByEventId==null) {
-                    val upcoming=nextVisit?.let {visit->
+                    val upcoming=activeFocus?.let {visit->
                         current.snapshot.slots.firstOrNull {slot->
                             slot.sets.any{it.setKey==visit.setKey}
                         }?.let{slot->slot to slot.sets.first{it.setKey==visit.setKey}}
@@ -578,7 +600,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         }+1
                         val label=if(set.prescription.type==DraftSetType.WARMUP)
                             "Warm-up" else "Set"
-                        if(nextVisit?.part==CustomWorkoutVisitPart.FOLLOW_UP)
+                        if(activeFocus?.part==CustomWorkoutVisitPart.FOLLOW_UP)
                             "Amplifier follow-up · $label $number of ${sameType.size}"
                         else
                             "$label $number of ${sameType.size}"
@@ -589,20 +611,68 @@ internal fun NativeKotlinCustomJournalScreen(
                         },
                         setDetail=focusDetail,
                         focusOnNext=focusOnNext,
-                        onFocusChange={focusOnNext=it},
+                        onFocusChange={
+                            focusOnNext=it
+                            if(it) {
+                                reviewSetKey=null
+                                reviewPart=null
+                            }
+                        },
                         enabled=!busy,
+                        heading=if(requestedFocus!=null) "REVIEW SET" else "UP NEXT",
                         onHistory=upcoming?.first?.exerciseId?.let{exerciseId->
                             {historyExerciseId=exerciseId}
                         },
                         onInfo=upcoming?.first?.slotId?.let{slotId->
                             {infoSlotId=slotId}
                         },
-                        onSkip=nextVisit?.takeIf {
-                            machineChoices.ready && !machineChoices.busy
+                        onSkip=activeFocus?.takeIf {
+                            it==nextVisit && machineChoices.ready &&
+                                !machineChoices.busy
                         }?.let { visit ->
                             {pendingQuickSkip=visit}
                         }
                     )
+                    // Review recorded work, then return to the actual next
+                    // visit with one tap. A pending amplifier follow-up is
+                    // navigable only after its main was completed.
+                    val visitIndex=availableVisits.indexOf(activeFocus)
+                    if(visitIndex>=0) {
+                        Row(
+                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                            verticalAlignment=Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                enabled=!busy && visitIndex>0,
+                                modifier=Modifier.heightIn(min=48.dp),
+                                onClick={
+                                    val previous=availableVisits[visitIndex-1]
+                                    reviewSetKey=previous.setKey
+                                    reviewPart=previous.part.name
+                                }
+                            ) {Text("Previous set")}
+                            OutlinedButton(
+                                enabled=!busy && visitIndex<availableVisits.lastIndex,
+                                modifier=Modifier.heightIn(min=48.dp),
+                                onClick={
+                                    val following=availableVisits[visitIndex+1]
+                                    reviewSetKey=following.setKey
+                                    reviewPart=following.part.name
+                                }
+                            ) {Text("Next set")}
+                            if(requestedFocus!=null && nextVisit!=null) {
+                                TextButton(
+                                    enabled=!busy,
+                                    modifier=Modifier.heightIn(min=48.dp),
+                                    onClick={
+                                        reviewSetKey=null
+                                        reviewPart=null
+                                    }
+                                ) {Text("Jump to next unlogged")}
+                            }
+                        }
+                    }
                 }
                 if(!finished && current.finishedByEventId==null) {
                     PursuitWorkoutReadinessPanel(
@@ -1004,7 +1074,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                     .indexOf(set)+1,
                                 setCount=slot.sets.count{it.prescription.type==set.prescription.type},
-                                initiallyExpanded=nextVisit==mainKey,
+                                initiallyExpanded=activeFocus==mainKey,
                                 onRecord={outcome,actual->
                                     // An edited SKIP had no physical station.
                                     // A completed/failed correction must use an
@@ -1047,7 +1117,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                         .indexOf(set)+1,
                                     setCount=slot.sets.count{it.prescription.type==set.prescription.type},
-                                    initiallyExpanded=nextVisit==CustomWorkoutVisitKey(
+                                    initiallyExpanded=activeFocus==CustomWorkoutVisitKey(
                                         set.setKey,CustomWorkoutVisitPart.FOLLOW_UP),
                                     onRecord={outcome,actual->
                                         record(set.setKey,

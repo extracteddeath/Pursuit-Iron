@@ -9,8 +9,8 @@ const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 
 for(const phrase of [
   'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',
-  'initiallyExpanded=nextVisit==mainKey',
-  'initiallyExpanded=nextVisit==CustomWorkoutVisitKey(',
+  'initiallyExpanded=activeFocus==mainKey',
+  'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
   'mutableStateOf(saved==null && initiallyExpanded)',
   'initialMachineScopedLoad(target,saved?.performed,machineInstanceId)',
   'prescription.reps.minimum',
@@ -30,7 +30,7 @@ for(const phrase of [
 for(const phrase of [
   'var focusOnNext by rememberSaveable(workoutId)',
   'val editorStates=rememberSaveableStateHolder()',
-  'activeFocus=nextVisit.takeIf',
+  'val activeFocus=(requestedFocus ?: nextVisit).takeIf',
   'val focusDetail=upcoming?.let',
   'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
@@ -39,6 +39,41 @@ for(const phrase of [
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);
+// In custom Focus the selected reviewed entry is distinct from the
+// journal's actual next unlogged visit and must survive rotation. Previous
+// and Next include only real amplifier follow-ups.
+const focusDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutVisitFocusDomain.kt');
+for(const fragment of [
+  'CustomWorkoutVisitFocusDomain.visibleOrder(current)',
+  'var reviewSetKey by rememberSaveable(workoutId)',
+  'var reviewPart by rememberSaveable(workoutId)',
+  'it.name==reviewPart',
+  'it in availableVisits',
+  'val activeFocus=(requestedFocus ?: nextVisit).takeIf',
+  'val upcoming=activeFocus?.let {visit->',
+  'if(activeFocus?.part==CustomWorkoutVisitPart.FOLLOW_UP)',
+  'onSkip=activeFocus?.takeIf {',
+  'it==nextVisit && machineChoices.ready',
+  'availableVisits.indexOf(activeFocus)',
+  'Text("Previous set")','Text("Next set")',
+  'Text("Jump to next unlogged")',
+  'reviewSetKey=previous.setKey',
+  'reviewPart=following.part.name',
+  'initiallyExpanded=activeFocus==mainKey',
+  'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
+  'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name)'
+])assert.ok(journal.includes(fragment),
+  'Custom Focus must not steal or skip another visit: '+fragment);
+for(const fragment of [
+  'fun visibleOrder(journal:CustomWorkoutJournalDraft)',
+  'journal.snapshot.slots',
+  'saved?.outcome==KotlinJournalSetOutcome.COMPLETED',
+  'set.prescription.amplifier!=null',
+  'CustomWorkoutVisitPart.FOLLOW_UP'
+])assert.ok(focusDomain.includes(fragment),
+  'Read-only focus order must preserve main/amplifier causality: '+fragment);
+assert.match(journal,/onSkip=activeFocus\?\.takeIf \{\s*it==nextVisit/);
+assert.match(journal,/onFocusChange=\{[\s\S]*?reviewSetKey=null\s*reviewPart=null/);
 assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
   'Finished sessions must still expose recorded sets for review');
 

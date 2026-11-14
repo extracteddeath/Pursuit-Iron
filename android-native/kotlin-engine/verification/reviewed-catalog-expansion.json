@@ -7682,6 +7682,515 @@
         "attachment": null,
         "note": "The wide-stance adductor-focused sumo variant uses one verified held dumbbell, with no load doubling or barbell-history transfer. Adductor direct and source-provisional quarter glute, quad and hamstring credits stay separate; conventional sumo squat is a different identity."
       }
+    },
+    {
+      "id": "deadlift",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          4,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "conventional-extended-barbell",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "SPINAL_ERECTORS",
+        "indirect": [
+          "HAMSTRINGS:0.5",
+          "GLUTES:0.5",
+          "TRAPS:0.25"
+        ],
+        "attachment": null,
+        "note": "The extended-source conventional deadlift has its own stable identity and calibrated barbell load. Source spinal-erector, hamstring, glute and trapezius credits are explicit; no weight or history transfers from the separate curated conventional deadlift."
+      }
+    },
+    {
+      "id": "snatch-deadlift",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          4,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "snatch-grip-barbell",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "SPINAL_ERECTORS",
+        "indirect": [
+          "HAMSTRINGS:0.25",
+          "GLUTES:0.25",
+          "TRAPS:0.25"
+        ],
+        "attachment": null,
+        "note": "The snatch-grip deadlift requires a separately calibrated straight bar and symmetric plates. Its wide-grip identity and source-provisional spinal-erector, hamstring, glute and trapezius credits remain separate from conventional deadlifting."
+      }
+    },
+    {
+      "id": "paused-deadlift",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          3,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "paused-barbell",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "SPINAL_ERECTORS",
+        "indirect": [
+          "TRAPS:0.25"
+        ],
+        "attachment": null,
+        "note": "The paused deadlift has an independent baseline and requires verified straight-bar stock. Only the explicitly sourced spinal-erector and minor trapezius credits are declared; missing glute or hamstring coefficients are not invented."
+      }
+    },
+    {
+      "id": "rack-pull",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          4,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "rack-pull-barbell",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "SPINAL_ERECTORS",
+        "indirect": [
+          "HAMSTRINGS:0.25",
+          "GLUTES:0.25",
+          "TRAPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Rack pulls require a confirmed rack and separately verified straight-bar loading. The partial-range variant retains its own baseline and source-provisional credits; it cannot inherit a floor-deadlift load or certify a conventional deadlift standard."
+      }
+    },
+    {
+      "id": "trap-bar-deadlift",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "trapbar"
+        ],
+        "practicalReps": [
+          4,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "trap-hex-bar",
+        "pattern": "HINGE",
+        "role": "PRIMARY",
+        "focus": "lower",
+        "implement": "trap-hex-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "SPINAL_ERECTORS",
+        "indirect": [
+          "HAMSTRINGS:0.25",
+          "GLUTES:0.25",
+          "QUADS:0.25",
+          "TRAPS:0.25"
+        ],
+        "attachment": null,
+        "note": "Trap/hex-bar deadlifting uses the actual confirmed trap bar mass plus symmetric plate pairs. A straight-bar inventory is not a substitute, despite the ambiguous web alternative. Handle height, exercise history and calibration stay independent; no conventional-deadlift strength equivalence is inferred."
+      }
+    },
+    {
+      "id": "bb-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "straight-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Straight-bar shrugs record the confirmed bar plus symmetric plate pairs. Direct trapezius work has its own muscle ledger and does not become a full upper-back or lat set; the chosen load is independently calibrated."
+      }
+    },
+    {
+      "id": "db-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Dumbbell shrugs record the mass of each held dumbbell, never the sum of both hands. Trapezius direct credit remains separate from upper-back and lat accounting, with no borrowed barbell baseline."
+      }
+    },
+    {
+      "id": "cable-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "cable-straight-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Cable shrugs require the confirmed cable station and a physical straight-bar cable attachment. The entered stack setting and trapezius credit remain independent of barbell loading and other cable attachments."
+      }
+    },
+    {
+      "id": "smith-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "smith"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "smith",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "smith-shrug-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Smith shrugs require the exact station and athlete-confirmed achievable total loads, including its actual counterbalanced bar convention. No standard free-bar mass, stack interval or previous free-weight shrug load is assumed."
+      }
+    },
+    {
+      "id": "machine-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "machineshrug"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "machine",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "shrug-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Machine shrugs require a separately identified shrug machine and confirmed achievable displayed loads. The dedicated station, trapezius credit and any physical A/B machine histories remain independent of other machine or free-weight exercises."
+      }
+    },
+    {
+      "id": "behind-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "behind-back-barbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Behind-the-back shrugs require a confirmed rack and straight-bar stock. The changed grip and position form a distinct exercise baseline; source trapezius credit is not duplicated into upper-back or wrist muscle targets."
+      }
+    },
+    {
+      "id": "kelso-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "machineshrug"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_retraction",
+        "variant": "supported-machine-kelso",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "kelso-shrug-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "chest-support"
+        ],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "This source machine Kelso shrug needs an explicitly confirmed chest support and scapular-retraction setup, plus its exact machine loads. Trapezius is a whole-muscle provisional credit, not an assertion of upper-trapezius-only work or a generic upper-back double count."
+      }
+    },
+    {
+      "id": "trap-bar-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "trapbar"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "trap-hex-bar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "trap-hex-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Trap/hex-bar shrugs use the real verified trap bar mass and available symmetric plate pairs. They share physical stock with that bar but never share deadlift or straight-bar shrug calibration, progression or history."
+      }
+    },
+    {
+      "id": "power-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "power-barbell",
+        "pattern": "ISOLATION",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Power shrugs require a deliberately calibrated straight-bar load and retain their explosive variant identity. Source trapezius credit is explicit; the ambiguous generic-back coefficient is quarantined rather than duplicated as lats or upper-back work."
+      }
+    },
+    {
+      "id": "incline-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "dumbbell",
+          "inclinebench"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "incline-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "incline-bench"
+        ],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Incline dumbbell shrugs require a confirmed incline bench and verified per-hand dumbbell mass. Position-specific trapezius work retains its own baseline rather than inheriting standing dumbbell shrug loading."
+      }
+    },
+    {
+      "id": "cable-face-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "face-level-cable-rope",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": "rope",
+        "note": "This face-level cable shrug variant explicitly requires a verified rope attachment and the exact station stack. The declared trapezius credit and athlete-calibrated setting cannot transfer from face pulls or straight-bar cable shrugs."
+      }
+    },
+    {
+      "id": "db-incline-shrug",
+      "source": {
+        "movementFamily": "shrug",
+        "equipment": [
+          "dumbbell",
+          "inclinebench"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_elevation",
+        "variant": "incline-bench-dumbbell-extended",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "incline-bench"
+        ],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "The second active-web incline bench dumbbell shrug retains its exact source identity and separate per-hand calibration. An incline bench is required; ambiguous generic-back credit is quarantined and no automatic alias or history merge is performed."
+      }
     }
   ]
 }

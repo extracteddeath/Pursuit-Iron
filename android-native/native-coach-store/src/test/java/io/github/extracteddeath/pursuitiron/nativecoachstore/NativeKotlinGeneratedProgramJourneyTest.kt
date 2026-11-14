@@ -53,9 +53,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
     private val catalog=StarterExerciseTranche.movements()
     private fun request(split:ComposerSplit=ComposerSplit.UPPER_LOWER,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
-        includeHipMachines:Boolean=false):FirstProgramStartRequest {
+        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false):FirstProgramStartRequest {
         val input=FirstProgramStartRequest(setup(split,phase),catalog,loads,
             bodyweight,phase,nonSetSecondsPerDay=900)
+        if(includeTrapBar) {
+            val profile=checkNotNull(input.setup.reviewed)
+            return input.copy(setup=input.setup.copy(reviewed=profile.copy(
+                sessionTimeBucket=SessionTimeBucket.SIXTY_TO_NINETY,maxBarbellExercisesPerDay=3,
+                gym=profile.gym.copy(confirmedStock=profile.gym.confirmedStock+mapOf(
+                    "trap-hex-bar" to VerifiedLoadStock.Barbell(LoadUnit.LB,n("55"),mapOf(n("45") to 1)))))),
+                startingLoads=loads+mapOf("trap-bar-deadlift" to n("145"),"db-shrug" to n("30")))
+        }
         if(!includeHipMachines)return input
         val profile=checkNotNull(input.setup.reviewed)
         val stocks=listOf("hip-abduction-machine","hip-adduction-machine")
@@ -108,9 +116,9 @@ class NativeKotlinGeneratedProgramJourneyTest {
         policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION,
         split:ComposerSplit=ComposerSplit.UPPER_LOWER,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
-        includeHipMachines:Boolean=false
+        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request(split,phase,includeHipMachines).copy(policyVersion=policyVersion)
+        val input=request(split,phase,includeHipMachines,includeTrapBar).copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -650,6 +658,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(expected,issued.snapshot)
     }
 
+    @Test fun generatedTrapBarProgramLogsEverySetFinishesAndColdReplaysWithTheCorrectBarMass() {
+        completeGeneratedWeek(ComposerSplit.FULL_BODY,includeTrapBar=true)
+    }
+
     @Test fun generatedFourDayProgramCompletesAllSetsAndColdReturnsToNextWeek() {
         completeGeneratedWeek(ComposerSplit.UPPER_LOWER)
     }
@@ -707,15 +719,23 @@ class NativeKotlinGeneratedProgramJourneyTest {
 
     private fun completeGeneratedWeek(split:ComposerSplit,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
-        includeHipMachines:Boolean=false) {
+        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false) {
         val (cycle,inputs)=saveGenerated(split=split,phase=phase,
-            includeHipMachines=includeHipMachines)
+            includeHipMachines=includeHipMachines,includeTrapBar=includeTrapBar)
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
         assertEquals(weekdays(split).sorted(),days.map{it.weekday})
         assertTrue(days.all{it.slots.size>=3})
         val selected=days.flatMap{it.slots}.map{it.exerciseId}.toSet()
         assertTrue(selected.containsAll(setOf("barbell_bench","back_squat",
             "one_arm_db_row","db_rdl")))
+        if(includeTrapBar) {
+            assertTrue(selected.containsAll(setOf("trap-bar-deadlift","db-shrug")))
+            assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase
+                .getValue(phase).selectedBounds.map{it.muscle})
+            for(slot in days.flatMap{it.slots}.filter{it.exerciseId=="trap-bar-deadlift"})
+                for(set in slot.sets.filter{it.type==DraftSetType.WORKING})
+                    assertEquals(DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.BARBELL_TOTAL,n("145")),set.load)
+        }
         if(includeHipMachines) {
             assertTrue(selected.containsAll(setOf("hip-abduction","adduction-machine")))
             assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase
@@ -818,7 +838,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             temp.root.toPath(),Disk().fence,identity).read(owner,cycleId)
             as NativeFirstProgramSeedRead.Found).seed
         assertEquals(phase,seed.phase)
-        val replayInput=request(split,seed.phase,includeHipMachines).copy(
+        val replayInput=request(split,seed.phase,includeHipMachines,includeTrapBar).copy(
             startingLoads=seed.startingLoads,
             selectedBodyweightExerciseIds=seed.bodyweightExercises,
             nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion)

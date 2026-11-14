@@ -72,8 +72,8 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
                 fields["$key:id"]=policy.policyId
                 fields["$key:revision"]=policy.revision
                 fields["$key:rationale"]=policy.rationale
-                fields["$key:muscleScope"]=if(policy.selectedBounds.map{it.muscle}.toSet()==
-                    TrainingMuscleCoverage.legacyV1.toSet())"v1" else "v2"
+                fields["$key:muscleScope"]="v${TrainingMuscleCoverage.versionOf(
+                    policy.selectedBounds.map{it.muscle})}"
                 listOf("baseline" to policy.baselineBounds,
                     "selected" to policy.selectedBounds).forEach {(side,bounds)->
                     bounds.forEach {b->
@@ -134,9 +134,13 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         val saved=reviewedInputs?.policiesByPhase?.get(phase)?.selectedBounds
             ?.map{it.muscle}?.toSet()
         val marker=fields["${phase.name}:muscleScope"]
-        return if(marker=="v1" || marker==null &&
-            saved==TrainingMuscleCoverage.legacyV1.toSet())
-            TrainingMuscleCoverage.legacyV1 else TrainingMuscleCoverage.current
+        val version=marker?.removePrefix("v")?.toIntOrNull()
+            ?:saved?.let{TrainingMuscleCoverage.versionOf(it)}
+        return when(version) {
+            1 -> TrainingMuscleCoverage.legacyV1
+            2 -> TrainingMuscleCoverage.legacyV2
+            else -> TrainingMuscleCoverage.current
+        }
     }
     val visibleMuscles=muscleScope(selectedPhase)
     LaunchedEffect(selectedPhase,visibleMuscles) {
@@ -251,12 +255,12 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     HorizontalDivider()
     Text("Direct muscle targets · ${visibleMuscles.size} groups",
         style=MaterialTheme.typography.titleMedium)
-    if(visibleMuscles==TrainingMuscleCoverage.legacyV1) {
-        Text("This saved policy retains its original muscle coverage. Adding hip targets requires your own reviewed values.",
+    if(visibleMuscles!=TrainingMuscleCoverage.current) {
+        Text("This saved policy retains its original muscle coverage. Adding current muscle targets requires your own reviewed values.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedButton(enabled=!busy,onClick={put("$phaseKey:muscleScope","v2")},
-            modifier=Modifier.heightIn(min=48.dp)) {Text("Add hip muscle targets")}
+        OutlinedButton(enabled=!busy,onClick={put("$phaseKey:muscleScope","v3")},
+            modifier=Modifier.heightIn(min=48.dp)) {Text("Add current muscle targets")}
     }
     Text("Enter a complete baseline and selected MEV/MAV/MRV for each group, including an explicitly entered 0 when that is your reviewed target. Direct-frequency days are separate from set volume. Focused and reduced muscles require a real authored change from baseline.",
         style=MaterialTheme.typography.bodySmall)

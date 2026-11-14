@@ -15,12 +15,21 @@ const catalog=readFileSync(join(root,
     'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StarterExerciseTranche.kt'),'utf8');
 const gymEditor=readFileSync(join(root,
     'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt'),'utf8');
+const stockInput=readFileSync(join(root,
+    'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPhysicalStockDraft.kt'),'utf8');
 
 assert.match(catalog,/"cable-station",LoadBasis\.CABLE_STACK/);
-assert.match(onboarding,/stock\["cable-station"\]=VerifiedLoadStock\.Stack\(/,
+assert.match(stockInput,/stock\["cable-station"\]=VerifiedLoadStock\.Stack\(/,
     'onboarding must save a cable under the ID consumed by the actual Kotlin catalog');
 assert.doesNotMatch(onboarding,/stock\["cable-1"\]/,
     'a disconnected standalone cable ID would make all exercises unavailable');
+assert.doesNotMatch(stockInput,/stock\["cable-1"\]/);
+assert.match(onboarding,/var barEquipmentId by rememberSaveable/);
+assert.match(onboarding,/NativeSetupChoice\("Bar type",barChoices/);
+assert.match(onboarding,/if\(barEquipmentId!=chosen\.equipmentId\)[\s\S]*?barWeight="";plates="";gymConfirmed=false/);
+assert.match(onboarding,/savedMachines,nonMachineEquipmentIds,barEquipmentId\)/);
+assert.match(stockInput,/stock\[barEquipmentId\]=checkNotNull\(parseVerifiedStock/);
+assert.match(stockInput,/it\.equipmentId==barEquipmentId && it\.expectedLoadBasis==LoadBasis\.BARBELL_TOTAL/);
 assert.match(onboarding,/availableReviewedAttachments=remember/);
 assert.match(onboarding,/selected=confirmedAttachments\?\.contains\(id\)==true/,
     'cable grip chips must reflect the saved, explicit attachment IDs');

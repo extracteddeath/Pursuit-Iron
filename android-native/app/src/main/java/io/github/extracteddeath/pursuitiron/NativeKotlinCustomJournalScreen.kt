@@ -76,7 +76,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var plateRequest by remember(workoutId){
         mutableStateOf<NativeCustomPlateRequest?>(null)
     }
-    var swapSlotId by remember(workoutId){mutableStateOf<String?>(null)}
+    var swapSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var undoSwapConfirmEventId by remember(workoutId){mutableStateOf<String?>(null)}
     var swapChoices by remember(workoutId) {
         mutableStateOf<List<CustomExercisePickerOption>>(emptyList())
@@ -151,6 +151,50 @@ internal fun NativeKotlinCustomJournalScreen(
         }
     }
     LaunchedEffect(host,workoutId){refresh()}
+
+    // Reopening a live custom swap after rotation must fetch a NEW source
+    // review. Never save an earlier picker list as if it were authorization.
+    LaunchedEffect(host,workoutId,swapSlotId,journal?.revision) {
+        val requested=swapSlotId ?:return@LaunchedEffect
+        val active=journal ?:return@LaunchedEffect
+        if(swapChoices.isNotEmpty())return@LaunchedEffect
+        val slot=active.snapshot.slots.firstOrNull { it.slotId==requested }
+        val eligible=active.finishedByEventId==null && slot!=null &&
+            slot.supersetGroup==null && slot.sets.none { set ->
+                active.receipts.any { receipt ->
+                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                        ?.visit?.setKey==set.setKey
+                }
+            }
+        if(!eligible) {
+            swapSlotId=null
+            error="The saved exercise changed or already has recorded work. Reopen a current swap review."
+            return@LaunchedEffect
+        }
+        val source=withContext(Dispatchers.IO) {
+            (runCatching { host.readCustomAuthoringSource() }.getOrNull()
+                as? NativeAuthoringSourceRead.Found)?.source
+        }
+        val reviewed=source?.setup?.reviewed
+        val stamp=active.originalSnapshot.stamp
+        val ready=source!=null && reviewed!=null &&
+            source.athleteId==stamp.athleteId &&
+            source.revision==stamp.gymCatalogSourceRevision &&
+            reviewed.athleteProfileId==stamp.athleteId &&
+            reviewed.profileRevision==stamp.athleteProfileRevision &&
+            reviewed.gym.gymId==stamp.gymId
+        val alternatives=if(ready)checkNotNull(source).let {
+            CustomExerciseAuthoringDomain.picker(it.setup,it.catalog)
+        } else emptyList()
+        if(swapSlotId==requested && journal?.revision==active.revision) {
+            if(alternatives.any { it.exerciseId!=slot.exerciseId }) {
+                swapChoices=alternatives
+            } else {
+                swapSlotId=null
+                error="The gym or exercise source changed. Reopen alternatives to review current choices."
+            }
+        }
+    }
 
     fun record(
         setKey:String,part:CustomWorkoutVisitPart,
@@ -286,11 +330,16 @@ internal fun NativeKotlinCustomJournalScreen(
                 val restored=withContext(Dispatchers.IO){
                     runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
                 }
-                journal=(restored as? NativeCustomJournalResult.Durable)
+                val recovered=(restored as? NativeCustomJournalResult.Durable)
                     ?.issued?.journal
+                if(recovered!=null)journal=recovered
             }
-            swapSlotId=null
-            swapChoices=emptyList()
+            if(result is NativeCustomJournalResult.Durable ||
+                (result as? NativeCustomJournalResult.Rejected)?.reason==
+                    NativeCustomJournalRefusal.SWAP_SOURCE_UNAVAILABLE) {
+                swapSlotId=null
+                swapChoices=emptyList()
+            }
             busy=false
         }
     }
@@ -1044,7 +1093,8 @@ internal fun NativeKotlinCustomJournalScreen(
     swapSlotId?.let {slotId ->
         val snap=journal?.snapshot
         val slot=snap?.slots?.firstOrNull {it.slotId==slotId}
-        if(slot!=null && journal?.finishedByEventId==null) {
+        if(slot!=null && swapChoices.isNotEmpty() &&
+            journal?.finishedByEventId==null) {
             val origin=CustomExerciseSlot(
                 slotId=slot.slotId,exerciseId=slot.exerciseId,
                 role=slot.role,

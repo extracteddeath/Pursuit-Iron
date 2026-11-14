@@ -137,6 +137,9 @@ class ReviewedCatalogWaveNineTest {
                 it.muscle==TrainingMuscle.WRIST_FLEXORS
         }})
         assertNotEquals(
+            all.single{it.legacyCuratedId=="db_overhead_triceps"}.movement.variantId,
+            wave.single{it.legacyCuratedId=="db-oh-ext"}.movement.variantId)
+        assertNotEquals(
             wave.single{it.legacyCuratedId=="db-pullover"}.movement.variantId,
             wave.single{it.legacyCuratedId=="floor-db-pullover"}.movement.variantId)
     }

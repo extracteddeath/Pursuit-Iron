@@ -25,12 +25,14 @@ internal data class NativeKotlinCustomCycleState(
     val cycleId: String? = null,
     val busy: Boolean = false,
     val message: String? = null,
+    val programSelectionNotice:String? = null,
     val refusal: NativeCustomDraftRefusal? = null,
     val canUndo: Boolean = false,
     val authoringRefusal: CustomAuthoringRefusal? = null,
     val availableChoices: List<CustomExercisePickerOption> = emptyList(),
     val savedDrafts: List<NativeCustomDraftSummary> = emptyList(),
     val savedDraftsLoaded:Boolean = false,
+    val savedProgramsOwner:NativeKotlinOwnerIdentity? = null,
     val sourceRevision: Long? = null,
     /** Read on current native owner open; never default coaching to on. */
     val coachingSuggestionsEnabled:Boolean = false,
@@ -95,6 +97,9 @@ internal class NativeKotlinCustomCycleController(
     private val planEntries = NativeKotlinPlanEntryRequests()
     private val current = MutableStateFlow(NativeKotlinCustomCycleState())
     val state: StateFlow<NativeKotlinCustomCycleState> = current.asStateFlow()
+    private val pickerSession=NativeKotlinProgramPickerSession()
+    private val pickerCurrent=MutableStateFlow<NativeKotlinProgramPickerState?>(null)
+    val programPicker:StateFlow<NativeKotlinProgramPickerState?> = pickerCurrent.asStateFlow()
     private var lastUndo: CustomCycleDraftReceipt? = null
     private var openedSource: NativeCustomAuthoringSnapshot? = null
     private var auditedInputs: CustomCoachAuditInputs? = null
@@ -105,10 +110,11 @@ internal class NativeKotlinCustomCycleController(
     )
     private var pendingWeekEdit: PendingWeekEdit? = null
 
-    private fun run(action: () -> Unit) {
+    private fun run(preserveFeedback:Boolean=false,action: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
-        current.value = current.value.copy(busy = true, refusal = null,
-            authoringRefusal = null, message = null)
+        current.value = if(preserveFeedback)current.value.copy(busy=true)
+            else current.value.copy(busy = true, refusal = null,
+                authoringRefusal = null, message = null)
         scope.launch {
             try {
                 action()
@@ -129,7 +135,7 @@ internal class NativeKotlinCustomCycleController(
         drainPlanEntries()
     }
 
-    private fun drainPlanEntries() = run {planEntries.takeNext()?.invoke()}
+    private fun drainPlanEntries() = run(preserveFeedback=true) {planEntries.takeNext()?.invoke()}
 
     private fun afterSaved(cycleId:String,action:()->Unit) {
         if(!scope.isActive)return
@@ -142,18 +148,25 @@ internal class NativeKotlinCustomCycleController(
         latest:NativeCustomAuthoringSnapshot?=
             runCatching {authoringSource.snapshot()}.getOrNull()
     ) {
-        lastUndo = null
-        auditedInputs = null
-        pendingWeekEdit = null
+        applyPreparedRead(prepareRead(cycleId,result,latest))
+    }
+
+    private data class PreparedProgramRead(
+        val state:NativeKotlinCustomCycleState,
+        val source:NativeCustomAuthoringSnapshot?
+    )
+
+    /** All native reads finish before a picker session can claim this view. */
+    private fun prepareRead(cycleId:String,result:NativeCustomDraftReadResult,
+        latest:NativeCustomAuthoringSnapshot?):PreparedProgramRead {
         val assistance=(runCatching{host.readCoachAssistance()}
             .getOrNull() as? NativeCoachSettingsRead.Current)
             ?.settings?.policy
         val found = (result as? NativeCustomDraftReadResult.Found)?.draft
         val source = latest?.takeIf { it.athleteId == found?.athleteId }
-        openedSource=source
         val choices = if (source == null) emptyList() else
             CustomExerciseAuthoringDomain.picker(source.setup,source.catalog)
-        current.value = when (result) {
+        val view = when (result) {
             is NativeCustomDraftReadResult.Found ->
                 NativeKotlinCustomCycleState(
                     draft = result.draft,
@@ -177,6 +190,16 @@ internal class NativeKotlinCustomCycleController(
                     refusal = result.reason,
                     message = "Saved draft could not be verified. Nothing was overwritten.")
         }.copy(busy=pending.get())
+        return PreparedProgramRead(view,source)
+    }
+
+    /** Memory-only publication, also used inside the owner/session claim. */
+    private fun applyPreparedRead(prepared:PreparedProgramRead) {
+        lastUndo=null
+        auditedInputs=null
+        pendingWeekEdit=null
+        openedSource=prepared.source
+        current.value=prepared.state
     }
 
     /** Prefer an exact signed review, including custom rules. An unsigned
@@ -268,11 +291,12 @@ internal class NativeKotlinCustomCycleController(
                         "The previous Undo is no longer valid for the current program and training setup.")
                         .joinToString("\n"))
             }
-            is NativeKotlinPlanEntry.Programs ->applySavedProgramList(entry.read)
+            is NativeKotlinPlanEntry.Programs ->applySavedProgramList(entry.read,entry.owner)
         }
     }
 
-    private fun applySavedProgramList(listed:NativeCustomDraftListResult) {
+    private fun applySavedProgramList(listed:NativeCustomDraftListResult,
+        owner:NativeKotlinOwnerIdentity?=null) {
         openedSource=null
         lastUndo=null
         auditedInputs=null
@@ -280,7 +304,7 @@ internal class NativeKotlinCustomCycleController(
         current.value=when(listed) {
             is NativeCustomDraftListResult.Ready ->
                 NativeKotlinCustomCycleState(busy=true,
-                    savedDrafts=listed.drafts,savedDraftsLoaded=true,
+                    savedDrafts=listed.drafts,savedDraftsLoaded=true,savedProgramsOwner=owner,
                     message=if(listed.drafts.isEmpty())
                         "Build your first program to continue."
                     else "Choose the saved program you want to continue.")
@@ -291,9 +315,108 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
-    /** Owner-verified, read-only program picker. IDs stay internal to navigation. */
-    fun findSavedPrograms() = enter {
-        applySavedProgramList(host.listOwnedCustomCycleDrafts())
+    /** Browsing never replaces Plan, clears its feedback, or discards Undo. */
+    fun refreshSavedPrograms()=enter {
+        if(current.value.draft==null) {
+            val entry=host.reviewSavedPrograms()
+            applySavedProgramList(entry.read,entry.owner)
+        }
+    }
+
+    fun findSavedPrograms() {
+        if(!scope.isActive)return
+        val token=pickerSession.begin{pickerCurrent.value=NativeKotlinProgramPickerState(it)}
+        enter {
+            try {
+                val entry=host.reviewSavedPrograms()
+                pickerSession.publish(token) {
+                    when(val listed=entry.read) {
+                        is NativeCustomDraftListResult.Ready ->pickerCurrent.value=
+                            NativeKotlinProgramPickerState(token,false,entry.owner,listed.drafts)
+                        is NativeCustomDraftListResult.Rejected -> {
+                            if(listed.reason==NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                                applySavedProgramList(listed)
+                            pickerCurrent.value=NativeKotlinProgramPickerState(token,
+                                busy=false,failure=listed.reason)
+                        }
+                    }
+                }
+            } catch(_:Exception) {
+                pickerFailure(token,NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+            }
+        }
+    }
+
+    fun dismissProgramPicker()=pickerSession.dismiss{pickerCurrent.value=null}
+
+    private fun pickerFailure(token:Long,reason:NativeCustomDraftRefusal) {
+        pickerSession.publish(token) {
+            if(reason==NativeCustomDraftRefusal.NOT_AUTHORIZED) {
+                applySavedProgramList(NativeCustomDraftListResult.Rejected(reason))
+                pickerCurrent.value=NativeKotlinProgramPickerState(token,busy=false,failure=reason)
+            } else pickerCurrent.value=pickerCurrent.value?.copy(busy=false,opening=null,failure=reason)
+        }
+    }
+
+    /** The list supplies a locator, never cached draft contents or an approval. */
+    fun openSavedProgram(selection:NativeKotlinProgramSelection) {
+        if(!scope.isActive)return
+        val picker=pickerCurrent.value
+        if(picker!=null && (picker.busy || picker.owner!=selection.owner ||
+                picker.programs.none{it.cycleId==selection.cycleId && it.revision==selection.listedRevision}))return
+        if(picker==null && (current.value.savedProgramsOwner!=selection.owner ||
+                current.value.savedDrafts.none{it.cycleId==selection.cycleId &&
+                    it.revision==selection.listedRevision}))return
+        val token=if(picker==null)pickerSession.begin {
+            pickerCurrent.value=NativeKotlinProgramPickerState(it,true,selection.owner,
+                current.value.savedDrafts,selection.cycleId)
+        } else picker.token.also { active->pickerSession.publish(active) {
+            pickerCurrent.value=picker.copy(busy=true,opening=selection.cycleId,failure=null)
+        }}
+        enter {
+            try {
+                var stillCurrent=false
+                pickerSession.publish(token){stillCurrent=true}
+                if(stillCurrent) {
+                    val entry=host.reviewPlanEntry(current.value.draft,openedSource,
+                        lastUndo.takeIf{current.value.canUndo},selection)
+                    when(entry) {
+                        is NativeKotlinPlanEntry.Programs ->pickerFailure(token,
+                            (entry.read as? NativeCustomDraftListResult.Rejected)?.reason
+                                ?:NativeCustomDraftRefusal.INVALID_DRAFT)
+                        is NativeKotlinPlanEntry.Selected ->when(val read=entry.read) {
+                            is NativeCustomDraftReadResult.Found -> {
+                                val prepared=prepareRead(entry.cycleId,read,entry.source)
+                                val accepted=host.publishProgramViewIfOwned(selection.owner) {
+                                    pickerSession.claim(token) {
+                                        applyPreparedRead(prepared)
+                                        pickerCurrent.value=null
+                                    }
+                                }
+                                if(accepted) {
+                                    recoverSavedCoachPolicy(entry.cycleId)
+                                    selectNextSessionIfReviewed()
+                                    entry.retainedUndo?.let {
+                                        lastUndo=it
+                                        current.value=current.value.copy(canUndo=true)
+                                    }
+                                    val notice=when {
+                                        entry.selectionUpdated -> "This program changed while you were browsing. The latest saved version is open; review it before training."
+                                        entry.undoUnavailable -> "This program or its training setup changed. The previous Undo is no longer available."
+                                        else -> null
+                                    }
+                                    current.value=current.value.copy(programSelectionNotice=notice)
+                                } else pickerFailure(token,NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                            }
+                            is NativeCustomDraftReadResult.Rejected ->pickerFailure(token,read.reason)
+                            else ->pickerFailure(token,NativeCustomDraftRefusal.INVALID_DRAFT)
+                        }
+                    }
+                }
+            } catch(_:Exception) {
+                pickerFailure(token,NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+            }
+        }
     }
 
     /** Re-open the verified disk state and CURRENT gym/catalog when returning
@@ -1564,6 +1687,7 @@ internal class NativeKotlinCustomCycleController(
     }
 
     override fun close() {
+        dismissProgramPicker()
         planEntries.clear()
         scope.cancel()
         lastUndo = null

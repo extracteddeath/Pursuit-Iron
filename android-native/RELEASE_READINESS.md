@@ -14,6 +14,15 @@ Review purpose, deliberate placement, shared behavior, complete task flows and
 evidence of improvement. Feature counts, catalog coverage and green source
 tests do not certify that the app feels coherent or that its UI is finished.
 
+**Saved-program checkpoint (2026-11-14):** Plan has a visible Programs chooser
+with the same searchable list on cold entry, real goal/week/day/block details,
+current-program indication and complete pagination. Browsing/Cancel preserve
+the editor and Undo. Explicit selections require a fresh owner-checked native
+read, reject stale athlete bindings, preserve the current Plan on read failure,
+and suppress cancelled/superseded results. These are source/JVM guarantees;
+physical device, accessibility, visual and motion acceptance remain pending.
+The APK/AAB freeze remains in force.
+
 ## What works in the isolated Kotlin core
 
 - Saved athlete/gym setup, explicit movement/load calibration, provisional

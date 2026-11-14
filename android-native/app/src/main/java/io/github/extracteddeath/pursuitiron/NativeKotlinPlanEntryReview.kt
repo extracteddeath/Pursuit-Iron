@@ -3,6 +3,13 @@ package io.github.extracteddeath.pursuitiron
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 
+/** A read locator bound to the athlete who saw the list, never a save grant. */
+internal data class NativeKotlinProgramSelection(
+    val owner:NativeKotlinOwnerIdentity,
+    val cycleId:String,
+    val listedRevision:Long
+)
+
 /** Read-only entry projection. No approval, workout issuance or save grant. */
 internal sealed interface NativeKotlinPlanEntry {
     data class Selected(
@@ -10,9 +17,11 @@ internal sealed interface NativeKotlinPlanEntry {
         val read:NativeCustomDraftReadResult,
         val source:NativeCustomAuthoringSnapshot?,
         val retainedUndo:CustomCycleDraftReceipt?,
-        val undoUnavailable:Boolean=false
+        val undoUnavailable:Boolean=false,
+        val selectionUpdated:Boolean=false
     ):NativeKotlinPlanEntry
-    data class Programs(val read:NativeCustomDraftListResult):NativeKotlinPlanEntry
+    data class Programs(val read:NativeCustomDraftListResult,
+        val owner:NativeKotlinOwnerIdentity?=null):NativeKotlinPlanEntry
 }
 
 /**
@@ -23,6 +32,20 @@ internal sealed interface NativeKotlinPlanEntry {
  * builder must still accept that receipt. Pending reviews are never retained.
  */
 internal object NativeKotlinPlanEntryReview {
+    private fun unauthorized()=NativeKotlinPlanEntry.Programs(
+        NativeCustomDraftListResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED))
+
+    /** Browse without replacing the open task or reading/mutating its policies. */
+    fun programs(identity:NativeKotlinCurrentIdentity,
+        listDrafts:()->NativeCustomDraftListResult):NativeKotlinPlanEntry.Programs {
+        val owner=runCatching{identity.signedInIdentity()}.getOrNull() ?:return unauthorized()
+        val listed=listDrafts()
+        return if(runCatching{identity.signedInIdentity()}.getOrNull()==owner)
+            NativeKotlinPlanEntry.Programs(listed,
+                owner.takeIf{listed is NativeCustomDraftListResult.Ready})
+        else unauthorized()
+    }
+
     fun review(
         identity:NativeKotlinCurrentIdentity,
         visibleDraft:CustomTrainingCycle?,
@@ -30,12 +53,12 @@ internal object NativeKotlinPlanEntryReview {
         undo:CustomCycleDraftReceipt?,
         readSource:()->NativeAuthoringSourceRead,
         readDraft:(String)->NativeCustomDraftReadResult,
-        listDrafts:()->NativeCustomDraftListResult
+        listDrafts:()->NativeCustomDraftListResult,
+        selection:NativeKotlinProgramSelection?=null
     ):NativeKotlinPlanEntry {
-        fun unauthorized()=NativeKotlinPlanEntry.Programs(
-            NativeCustomDraftListResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED))
         val owner=runCatching{identity.signedInIdentity()}.getOrNull() ?:return unauthorized()
-        val reviewed=forOwner(owner,visibleDraft,visibleSource,undo,readSource,readDraft,listDrafts)
+        if(selection!=null && selection.owner!=owner)return unauthorized()
+        val reviewed=forOwner(owner,visibleDraft,visibleSource,undo,readSource,readDraft,listDrafts,selection)
         return if(runCatching{identity.signedInIdentity()}.getOrNull()==owner)reviewed
             else unauthorized()
     }
@@ -47,7 +70,8 @@ internal object NativeKotlinPlanEntryReview {
         undo:CustomCycleDraftReceipt?,
         readSource:()->NativeAuthoringSourceRead,
         readDraft:(String)->NativeCustomDraftReadResult,
-        listDrafts:()->NativeCustomDraftListResult
+        listDrafts:()->NativeCustomDraftListResult,
+        selection:NativeKotlinProgramSelection?
     ):NativeKotlinPlanEntry {
         val sourceRead=readSource()
         if(sourceRead is NativeAuthoringSourceRead.Rejected &&
@@ -58,13 +82,13 @@ internal object NativeKotlinPlanEntryReview {
             it.ownerKey==owner.ownerKey && it.athleteId==owner.athleteId &&
                 it.setup.reviewed?.athleteProfileId==owner.athleteId && it.revision>0
         }
-        val selected=visibleDraft?.takeIf {
+        val selected=selection?.cycleId ?: visibleDraft?.takeIf {
             it.athleteId==owner.athleteId && visibleSource?.ownerKey==owner.ownerKey &&
                 visibleSource.athleteId==owner.athleteId
         }?.cycleId
         val cycleId=selected ?: when(val census=listDrafts()) {
             is NativeCustomDraftListResult.Ready -> census.drafts.singleOrNull()?.cycleId
-                ?:return NativeKotlinPlanEntry.Programs(census)
+                ?:return NativeKotlinPlanEntry.Programs(census,owner)
             is NativeCustomDraftListResult.Rejected ->return NativeKotlinPlanEntry.Programs(census)
         }
         val read=readDraft(cycleId)
@@ -78,6 +102,9 @@ internal object NativeKotlinPlanEntryReview {
                     is CustomCycleBuilderResult.Proposed)
         }
         return NativeKotlinPlanEntry.Selected(cycleId,read,source,retained,
-            undoUnavailable=undo!=null && retained==null)
+            undoUnavailable=undo!=null && retained==null &&
+                (selection==null || visibleDraft?.cycleId==cycleId),
+            selectionUpdated=selection!=null && found!=null &&
+                found.revision!=selection.listedRevision)
     }
 }

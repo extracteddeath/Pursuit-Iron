@@ -2061,10 +2061,30 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /** One coherent, read-only return to Plan under the existing owner fence. */
+    fun reviewSavedPrograms():NativeKotlinPlanEntry.Programs {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeKotlinPlanEntry.Programs(NativeCustomDraftListResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED))
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            if(localAthlete.signedInIdentity()!=owner)return@withOwnerTransaction NativeKotlinPlanEntry.Programs(
+                NativeCustomDraftListResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED))
+            NativeKotlinPlanEntryReview.programs(localAthlete) {
+                customDraftStore.listOwned(owner.ownerKey)
+            }
+        }
+    }
+
+    /** The callback only publishes an already-read view; it performs no I/O. */
+    fun publishProgramViewIfOwned(owner:NativeKotlinOwnerIdentity,publish:()->Boolean):Boolean =
+        revisionFence.withOwnerTransaction(owner.ownerKey) {
+            if(localAthlete.signedInIdentity()!=owner)false else publish()
+        }
+
     fun reviewPlanEntry(
         visibleDraft:CustomTrainingCycle?,
         visibleSource:NativeCustomAuthoringSnapshot?,
-        undo:CustomCycleDraftReceipt?
+        undo:CustomCycleDraftReceipt?,
+        selection:NativeKotlinProgramSelection?=null
     ):NativeKotlinPlanEntry {
         fun unauthorized()=NativeKotlinPlanEntry.Programs(
             NativeCustomDraftListResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED))
@@ -2074,7 +2094,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             val reviewed=NativeKotlinPlanEntryReview.review(localAthlete,visibleDraft,visibleSource,undo,
                 readSource={authoringSourceStore.read(owner.ownerKey)},
                 readDraft={customDraftStore.read(owner.ownerKey,it)},
-                listDrafts={customDraftStore.listOwned(owner.ownerKey)})
+                listDrafts={customDraftStore.listOwned(owner.ownerKey)},selection=selection)
             if(localAthlete.signedInIdentity()==owner)reviewed else unauthorized()
         }
     }

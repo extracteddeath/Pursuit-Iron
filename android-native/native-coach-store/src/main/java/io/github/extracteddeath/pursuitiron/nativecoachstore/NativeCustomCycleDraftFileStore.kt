@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.CustomTrainingCycle
+import io.github.extracteddeath.pursuitiron.rebuild.AthleteTrainingGoal
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -37,7 +38,12 @@ data class NativeCustomDraftSummary(
     val cycleId:String,
     val title:String,
     val blocks:Int,
-    val revision:Long
+    val revision:Long,
+    /** Derived from the verified draft; these fields do not change its format. */
+    val goal:AthleteTrainingGoal?=null,
+    val weeks:Int?=null,
+    val minimumDays:Int?=null,
+    val maximumDays:Int?=null
 )
 sealed interface NativeCustomDraftListResult {
     data class Ready(val drafts:List<NativeCustomDraftSummary>):
@@ -279,7 +285,9 @@ class NativeCustomCycleDraftFileStore(
                     saved.draft?.let {draft->
                         drafts+=NativeCustomDraftSummary(
                             draft.cycleId,draft.title,draft.blocks.size,
-                            draft.revision)
+                            draft.revision,draft.goal,draft.blocks.sumOf{it.weeks},
+                            draft.blocks.minOfOrNull{it.days.size} ?: 0,
+                            draft.blocks.maxOfOrNull{it.days.size} ?: 0)
                     }
                 }
                 if(active(ownerKey)!=owner)
@@ -287,7 +295,7 @@ class NativeCustomCycleDraftFileStore(
                 else NativeCustomDraftListResult.Ready(
                     java.util.Collections.unmodifiableList(
                         drafts.sortedWith(compareBy<NativeCustomDraftSummary>{
-                            it.title.lowercase()
+                            it.title.lowercase(java.util.Locale.ROOT)
                         }.thenBy {it.cycleId})))
             }
         }catch(_:Exception) {

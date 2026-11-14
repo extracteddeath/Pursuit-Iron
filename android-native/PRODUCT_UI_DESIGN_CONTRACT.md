@@ -121,6 +121,26 @@ create/edit/return/Undo, including advanced sets, notes, week overrides,
 source changes, corruption and owner changes. Source checks and JVM tests are
 not a physical navigation or visual sign-off. No APK/AAB from this checkpoint.
 
+## Saved-program discovery — 2026-11-14
+
+Programs are accessible directly below the Plan heading. The saved-program
+chooser and cold Plan entry share one searchable list, current-program
+semantics and Material destination row. Real goal, authored weeks, day range
+and block counts replace internal revision numbers in normal browsing.
+Search covers the complete verified census before paging; Show more keeps
+every record reachable. Empty, no-match, loading and failed reads have
+separate recovery actions. Cancel remains available while a read is pending.
+
+The actual web `ProgramSwitcherSheet` in `modules/App.js` separates closing
+from picking and searches saved names. Native browsing now preserves the open
+editor, feedback and Undo. Choosing rereads the selected program under its
+listed athlete's ownership; a changed record opens its latest version with
+notice, while a deleted or unverifiable selection keeps the current Plan.
+A cancelled or superseded read cannot publish a late selection. Opening is
+read-only and does not activate a program or issue a workout. Source contracts
+and real native-file JVM tests cover this behavior; phone, large-font, TalkBack
+and visual/motion acceptance remain open. No APK/AAB from this checkpoint.
+
 ## Persistent information architecture
 
 At most five top-level destinations:

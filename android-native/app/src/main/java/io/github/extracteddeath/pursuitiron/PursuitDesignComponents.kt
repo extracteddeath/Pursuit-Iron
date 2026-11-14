@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
@@ -394,13 +395,20 @@ internal fun PursuitScreenContent(
 @Composable
 internal fun PursuitDestinationRow(
     title:String,description:String,onClick:()->Unit,
+    enabled:Boolean=true,selected:Boolean?=null,
     icon:@Composable ()->Unit
 ) {
+    val container=if(selected==true)MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerLow
+    val content=if(selected==true)MaterialTheme.colorScheme.onSecondaryContainer
+        else MaterialTheme.colorScheme.onSurface
     Surface(
         onClick=onClick,
-        modifier=Modifier.fillMaxWidth().heightIn(min=64.dp),
+        enabled=enabled,
+        modifier=Modifier.fillMaxWidth().heightIn(min=64.dp).semantics{selected?.let{this.selected=it}},
         shape=MaterialTheme.shapes.large,
-        color=MaterialTheme.colorScheme.surfaceContainerLow
+        color=container,
+        contentColor=content
     ) {
         ListItem(
             headlineContent={Text(title,style=MaterialTheme.typography.titleMedium)},
@@ -412,7 +420,9 @@ internal fun PursuitDestinationRow(
                     contentDescription=null)
             },
             colors=ListItemDefaults.colors(
-                containerColor=MaterialTheme.colorScheme.surfaceContainerLow)
+                containerColor=container,headlineColor=content,
+                supportingColor=if(selected==true)content else MaterialTheme.colorScheme.onSurfaceVariant,
+                leadingIconColor=content,trailingIconColor=content)
         )
     }
 }

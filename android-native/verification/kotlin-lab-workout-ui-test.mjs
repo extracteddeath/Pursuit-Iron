@@ -116,7 +116,7 @@ for(const phrase of [
 ])assert.ok(generated.includes(phrase),'Generated quick skip must reuse confirmation: '+phrase);
 for(const phrase of [
   'var pendingQuickSkip by remember(workoutId)',
-  'onSkip=nextVisit?.takeIf {',
+  'onSkip=activeFocus?.takeIf {',
   '{pendingQuickSkip=visit}',
   'val quickSkip=pendingQuickSkip',
   'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',

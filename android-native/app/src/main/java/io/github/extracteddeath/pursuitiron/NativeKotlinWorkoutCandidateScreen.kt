@@ -492,13 +492,19 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             "${if(target.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $number of ${typeSets.size}"
         }
         PursuitWorkoutFocusHeader(
-            exerciseLabel=selected?.target?.exerciseId?.let(::kotlinExerciseLabel),
-            setDetail=focusDetail,
+            exerciseLabel=if(showAll)null
+                else selected?.target?.exerciseId?.let(::kotlinExerciseLabel),
+            setDetail=if(showAll)null else focusDetail,
             focusOnNext=!showAll,
-            onFocusChange={showAll=!it},
+            onFocusChange={focus->
+                showAll=!focus
+                if(focus)
+                    selectedKey=presentation.firstUnresolvedSetKey ?:selectedKey
+            },
             enabled=!state.busy,
             heading=when {
                 presentation.finished -> "WORKOUT REVIEW"
+                showAll -> "ALL SETS"
                 selected?.target?.setKey==presentation.firstUnresolvedSetKey ->
                     "UP NEXT"
                 else -> "SELECTED SET"
@@ -510,7 +516,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 {infoExerciseId=exerciseId}
             },
             onSkip=selected?.takeIf {
-                !it.isResolved && !presentation.finished &&
+                !it.isResolved && !presentation.finished && !showAll &&
                     machineChoices.ready && !machineChoices.busy
             }?.target?.setKey?.let { key ->
                 {pendingSkip=key}
@@ -853,12 +859,29 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             }
         }
         if(!showAll && selected!=null) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                verticalAlignment=Alignment.CenterVertically
+            ) {
                 val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
-                OutlinedButton(onClick={selectedKey=allSets[index-1].target.setKey},
-                    enabled=index>0) {Text("Previous set")}
-                OutlinedButton(onClick={selectedKey=allSets[index+1].target.setKey},
-                    enabled=index in 0 until allSets.lastIndex) {Text("Next set")}
+                OutlinedButton(
+                    onClick={selectedKey=allSets[index-1].target.setKey},
+                    enabled=index>0,modifier=Modifier.heightIn(min=48.dp)
+                ) {Text("Previous set")}
+                OutlinedButton(
+                    onClick={selectedKey=allSets[index+1].target.setKey},
+                    enabled=index in 0 until allSets.lastIndex,
+                    modifier=Modifier.heightIn(min=48.dp)
+                ) {Text("Next set")}
+                val nextUnlogged=presentation.firstUnresolvedSetKey
+                if(nextUnlogged!=null && nextUnlogged!=selected.target.setKey) {
+                    TextButton(
+                        onClick={selectedKey=nextUnlogged},
+                        enabled=!state.busy,
+                        modifier=Modifier.heightIn(min=48.dp)
+                    ) {Text("Jump to next unlogged")}
+                }
             }
         }
 

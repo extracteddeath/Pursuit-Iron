@@ -264,7 +264,26 @@ private val kotlinExerciseNames=mapOf(
     "cable-wrist-curl" to "Cable Wrist Curl",
     "behind-wrist-curl" to "Behind-Back Wrist Curl",
     "upright-row" to "Upright Row",
-    "ez-oh-ext" to "EZ-Bar Overhead Extension"
+    "ez-oh-ext" to "EZ-Bar Overhead Extension",
+    "db-hip-thrust" to "Dumbbell Hip Thrust",
+    "db-pullover" to "Dumbbell Pullover",
+    "floor-db-pullover" to "Floor Dumbbell Pullover",
+    "bent-db-pullover" to "Bent-Over Dumbbell Pullover",
+    "single-calf" to "Single-Leg Calf Raise",
+    "bstance-hip-thrust" to "B-Stance Hip Thrust",
+    "waiter-curl" to "Waiter Curl",
+    "heels-up-goblet" to "Heels-Elevated Goblet Squat",
+    "sumo-squat" to "Sumo Squat",
+    "step-through-lunge" to "Step-Through Lunge",
+    "db-good-morning" to "Dumbbell Good Morning",
+    "db-weighted-crunch" to "Incline Dumbbell Weighted Crunch",
+    "goblet" to "Goblet Squat",
+    "db-oh-ext" to "DB Overhead Extension",
+    "reverse-curl" to "Reverse EZ-Bar Curl",
+    "bodyweight-deficit-pushup" to "Deficit Push-Up",
+    "cable-kickback" to "Cable Kickback",
+    "seal-row" to "Seal Row"
+
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

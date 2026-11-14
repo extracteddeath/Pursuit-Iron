@@ -100,6 +100,11 @@ internal fun NativeKotlinCustomJournalScreen(
     var noteError by remember(host,workoutId){mutableStateOf<String?>(null)}
     var finished by remember(host,workoutId){mutableStateOf(false)}
     var finishConfirm by remember(host,workoutId){mutableStateOf(false)}
+    // An explicit current-visit action only. It never authorizes a stored
+    // skip, and cannot move to another visit while a confirmation is open.
+    var pendingQuickSkip by remember(workoutId) {
+        mutableStateOf<CustomWorkoutVisitKey?>(null)
+    }
     var verifiedFinishedInHistory by remember(host,workoutId){
         mutableStateOf(false)
     }
@@ -591,6 +596,11 @@ internal fun NativeKotlinCustomJournalScreen(
                         },
                         onInfo=upcoming?.first?.slotId?.let{slotId->
                             {infoSlotId=slotId}
+                        },
+                        onSkip=nextVisit?.takeIf {
+                            machineChoices.ready && !machineChoices.busy
+                        }?.let { visit ->
+                            {pendingQuickSkip=visit}
                         }
                     )
                 }
@@ -1188,6 +1198,41 @@ internal fun NativeKotlinCustomJournalScreen(
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})
+    }
+    val quickSkip=pendingQuickSkip
+    if(quickSkip!=null) {
+        // Confirm against the newest owned journal, not the set that was
+        // displayed when the sheet opened. A late save cannot turn this
+        // shortcut into a correction or skip a different amplifier visit.
+        val stillNext=journal?.let {
+            CustomWorkoutJournalDomain.nextUnresolvedVisit(it)
+        }==quickSkip
+        val canSkip=stillNext && !busy && !finished &&
+            journal?.finishedByEventId==null &&
+            machineChoices.ready && !machineChoices.busy
+        AlertDialog(
+            onDismissRequest={pendingQuickSkip=null},
+            title={Text("Skip the next entry?")},
+            text={Text(if(stillNext)
+                "Skipping records an explicit outcome for this ${if(quickSkip.part==CustomWorkoutVisitPart.FOLLOW_UP) "amplifier follow-up" else "set"}. You can correct it before Finish."
+            else "The saved workout advanced while this confirmation was open. Dismiss and review the new next entry; no set was changed.")},
+            confirmButton={
+                Button(enabled=canSkip,onClick={
+                    // Recheck after the dialog's composition as well.
+                    val latest=journal?.let {
+                        CustomWorkoutJournalDomain.nextUnresolvedVisit(it)
+                    }
+                    pendingQuickSkip=null
+                    if(latest==quickSkip && !busy && !finished &&
+                        machineChoices.ready && !machineChoices.busy)
+                        record(quickSkip.setKey,quickSkip.part,
+                            KotlinJournalSetOutcome.SKIPPED,null)
+                }) {Text("Confirm skip")}
+            },
+            dismissButton={
+                TextButton(onClick={pendingQuickSkip=null}) {Text("Keep training")}
+            }
+        )
     }
     val selected=journal
     if(finishConfirm&&selected!=null) {

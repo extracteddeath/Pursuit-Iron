@@ -288,9 +288,12 @@ object CustomCycleCoachAuditDomain {
             for (weekNumber in 1..structural.totalWeeks) {
                 val week=CustomTrainingCycleDomain.week(structural,weekNumber)
                     ?:continue
-                val byMuscle=TrainingMuscle.entries.associateWith{zero}.toMutableMap()
-                val direct=TrainingMuscle.entries.associateWith{zero}.toMutableMap()
-                val directDayCount=TrainingMuscle.entries.associateWith{0}.toMutableMap()
+                val declared=blockPolicies[week.blockId]?.selectedBounds?.map{it.muscle}
+                val scope=declared?.takeIf{TrainingMuscleCoverage.isComplete(it)}
+                    ?:TrainingMuscleCoverage.current
+                val byMuscle=scope.associateWith{zero}.toMutableMap()
+                val direct=scope.associateWith{zero}.toMutableMap()
+                val directDayCount=scope.associateWith{0}.toMutableMap()
                 var working=0
                 val known=linkedMapOf<Int,Long>()
                 val estimated=linkedMapOf<Int,Long?>()
@@ -302,6 +305,12 @@ object CustomCycleCoachAuditDomain {
                         val workingSets=slot.sets.count {it.type==DraftSetType.WORKING}
                         working+=workingSets
                         for (credit in indices[slot.exerciseId]?.credits.orEmpty()) {
+                            if(credit.muscle !in byMuscle) {
+                                add(CustomCoachIssueKind.GOAL_POLICY_UNRESOLVED,
+                                    "week.$weekNumber.${credit.muscle.name}",
+                                    "This exercise uses a muscle outside the saved target scope. Review explicit targets for the added muscle before approving the workout.")
+                                continue
+                            }
                             val volume=credit.fractionalSet
                                 .multiply(BigDecimal(workingSets))
                             byMuscle[credit.muscle]=checkNotNull(byMuscle[credit.muscle])

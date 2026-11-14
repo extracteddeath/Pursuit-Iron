@@ -99,12 +99,11 @@ object CustomCoachPolicyEvidenceDomain {
                 return no(CustomCoachEvidenceRefusal.INCOMPLETE_WEEKLY_MEASUREMENTS)
             nextWeek++
         }
-        val allMuscles=TrainingMuscle.entries.toSet()
         if(weeks.any { week ->
                 week.workingSets<0 ||
-                week.directSets.keys!=allMuscles ||
-                week.totalSetCredits.keys!=allMuscles ||
-                week.directDays.keys!=allMuscles ||
+                !TrainingMuscleCoverage.isComplete(week.directSets.keys) ||
+                week.totalSetCredits.keys!=week.directSets.keys ||
+                week.directDays.keys!=week.directSets.keys ||
                 week.directSets.values.any{it<zero} ||
                 week.totalSetCredits.values.any{it<zero} ||
                 week.directDays.values.any{it !in 0..7} ||
@@ -120,7 +119,11 @@ object CustomCoachPolicyEvidenceDomain {
         val byPhase=linkedMapOf<TrainingPhase,CustomObservedPhaseWorkload>()
         for((phase,group) in training.groupBy{it.phase}) {
             val muscles=linkedMapOf<TrainingMuscle,CustomObservedMuscleRange>()
-            for(muscle in TrainingMuscle.entries) {
+            // A newly tracked muscle has no earlier zero-dose observation.
+            // Report only coverage measured in EVERY week of this phase;
+            // later policy authoring still requires explicit added targets.
+            val shared=group.map{it.directSets.keys}.reduce{a,b->a.intersect(b)}
+            for(muscle in shared.sortedBy{it.ordinal}) {
                 val credits=group.map{it.totalSetCredits.getValue(muscle)}
                 val direct=group.map{it.directSets.getValue(muscle)}
                 val weekdays=group.map{it.directDays.getValue(muscle)}

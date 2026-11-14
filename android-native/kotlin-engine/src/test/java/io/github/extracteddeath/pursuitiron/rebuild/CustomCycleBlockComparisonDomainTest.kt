@@ -110,6 +110,21 @@ class CustomCycleBlockComparisonDomainTest {
             muscleChanges.getValue(TrainingMuscle.WRIST_EXTENSORS).delta)
     }
 
+    @Test fun newlyTrackedHipWorkDoesNotFabricateAnEarlierZeroBaseline() {
+        val c=cycle()
+        val original=audit(c)
+        val changed=original.copy(weeks=original.weeks.map{week->
+            if(week.absoluteWeek==3)week.copy(directSets=week.directSets+
+                (TrainingMuscle.HIP_ADDUCTORS to BigDecimal("4"))) else week
+        })
+        val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(c,"strength",changed))
+        assertEquals(setOf(TrainingMuscle.HIP_ADDUCTORS),result.newlyTrackedMuscles)
+        assertEquals(emptySet<TrainingMuscle>(),result.noLongerTrackedMuscles)
+        assertTrue(checkNotNull(result.auditedDirectMuscleChanges).none{
+            it.muscle==TrainingMuscle.HIP_ADDUCTORS})
+        assertFalse(result.mayApproveProgram)
+    }
+
     @Test fun rejectsStaleIncompleteOrMismatchedAuditMeasurements() {
         val c=cycle()
         val original=audit(c)

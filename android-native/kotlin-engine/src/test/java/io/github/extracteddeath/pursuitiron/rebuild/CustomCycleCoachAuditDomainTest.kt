@@ -444,13 +444,13 @@ class CustomCycleCoachAuditDomainTest {
         )
     }
 
-    @Test fun explicitCompleteSixteenMusclePolicyCanReachExactCoachAudit() {
+    @Test fun explicitCompleteCurrentMusclePolicyCanReachExactCoachAudit() {
         val result=CustomCoachPolicyAuthoringDomain.inspect(
             cycle(),setup(),completeUserPolicyRequest())
         assertTrue(result.toString(),
             result is CustomCoachPolicyAuthoringResult.Ready)
         val inputs=(result as CustomCoachPolicyAuthoringResult.Ready).inputs
-        assertEquals(16,inputs.policiesByPhase.getValue(
+        assertEquals(TrainingMuscleCoverage.current.size,inputs.policiesByPhase.getValue(
             TrainingPhase.HYPERTROPHY).selectedBounds.size)
         assertEquals(n("3"),inputs.policiesByPhase.getValue(
             TrainingPhase.HYPERTROPHY).selectedBounds.first{
@@ -479,7 +479,7 @@ class CustomCycleCoachAuditDomainTest {
         assertTrue(rejected.toString(),
             rejected is CustomCoachPolicyAuthoringResult.Blocked)
         assertTrue((rejected as CustomCoachPolicyAuthoringResult.Blocked)
-            .missingOrInvalid.any{it.contains("all 16")})
+            .missingOrInvalid.any{it.contains("complete muscle target scope")})
     }
 
     @Test fun invalidMuscleDoseAndUnreviewedOverheadNeverBecomePolicy() {

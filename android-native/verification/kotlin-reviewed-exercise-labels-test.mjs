@@ -26,4 +26,4 @@ for(const [id,label] of mappings.map(m=>[m[1],m[2]])) {
 }
 assert.ok(labels.includes('internal fun kotlinExerciseLabel(id:String)'),
   'fallback remains available only for truly unreviewed or custom identities');
-console.log('PASS complete source-matched display labels for 208 reviewed Kotlin exercise IDs');
+console.log(`PASS complete source-matched display labels for ${ids.length} reviewed Kotlin exercise IDs`);

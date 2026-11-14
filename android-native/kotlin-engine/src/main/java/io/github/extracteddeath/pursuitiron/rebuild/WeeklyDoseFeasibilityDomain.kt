@@ -43,7 +43,7 @@ data class DeclaredTrainingWeek(
     val days: Int,
     val windows: List<DeclaredSessionWindow>,
     val exposures: List<PlannedWorkingExposure>,
-    /** All 16 muscle groups, even zero-dose exemptions, must be explicit. */
+    /** One complete versioned muscle scope, including explicit zero-dose exemptions. */
     val bounds: List<DeclaredMuscleDoseBounds>
 )
 
@@ -105,8 +105,7 @@ object WeeklyDoseFeasibilityDomain {
     fun audit(week: DeclaredTrainingWeek): WeeklyDoseFeasibilityReport {
         require(week.days in 3..6)
         require(week.windows.size==week.days)
-        require(week.bounds.size==TrainingMuscle.entries.size)
-        require(week.bounds.map {it.muscle}.toSet()==TrainingMuscle.entries.toSet())
+        require(TrainingMuscleCoverage.isComplete(week.bounds.map{it.muscle}))
         require(week.bounds.all {
             validDose(it.mev) && validDose(it.mav) && validDose(it.mrv) &&
                 it.mev<=it.mav && it.mav<=it.mrv &&
@@ -136,8 +135,11 @@ object WeeklyDoseFeasibilityDomain {
         })
 
         val boundsByMuscle=week.bounds.associateBy {it.muscle}
+        require(week.exposures.all{set->
+            set.credits.all{it.muscle in boundsByMuscle}
+        }) {"Every exposed muscle needs an explicitly reviewed dose target"}
         val muscleFindings=LinkedHashMap<TrainingMuscle,WeeklyMuscleDoseFinding>()
-        for(muscle in TrainingMuscle.entries) {
+        for(muscle in week.bounds.map{it.muscle}.sortedBy{it.ordinal}) {
             val bounds=checkNotNull(boundsByMuscle[muscle])
             var direct=zero
             var indirect=zero

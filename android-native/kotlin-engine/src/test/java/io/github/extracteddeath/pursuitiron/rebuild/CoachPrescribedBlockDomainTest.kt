@@ -108,7 +108,7 @@ class CoachPrescribedBlockDomainTest {
             r.proposed.status)
         assertTrue(r.doseComparisons.all {it.change<=BigDecimal.ZERO})
         assertTrue(r.doseComparisons.any {it.change<BigDecimal.ZERO})
-        assertEquals(16,r.doseComparisons.size)
+        assertEquals(TrainingMuscleCoverage.current.size,r.doseComparisons.size)
         assertTrue(r.unresolvedReasons.isEmpty())
         assertFalse(r.mayIssueWorkout)
         assertFalse(r.mayApplyAutomatically)

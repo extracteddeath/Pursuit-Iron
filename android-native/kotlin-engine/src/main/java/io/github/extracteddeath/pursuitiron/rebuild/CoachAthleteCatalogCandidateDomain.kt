@@ -99,10 +99,9 @@ object CoachAthleteCatalogCandidateDomain {
             intentDays.distinct().size!=intentDays.size)
             add("intents",AthleteCandidateIssueKind.POLICY_UNRESOLVED,
                 "Every selected weekday needs one explicit training-day purpose.")
-        if(request.bounds.size!=TrainingMuscle.entries.size ||
-            request.bounds.map {it.muscle}.toSet()!=TrainingMuscle.entries.toSet())
+        if(!TrainingMuscleCoverage.isComplete(request.bounds.map{it.muscle}))
             add("bounds",AthleteCandidateIssueKind.POLICY_UNRESOLVED,
-                "All sixteen phase-specific muscle dose targets must be supplied.")
+                "Supply the complete reviewed phase-specific muscle target scope.")
         if(request.maximumExercisesPerDay !in 1..12 ||
             request.preferredPatternsPerDay !in 1..4)
             add("preferences",AthleteCandidateIssueKind.POLICY_UNRESOLVED,
@@ -114,6 +113,10 @@ object CoachAthleteCatalogCandidateDomain {
                 add("choices",AthleteCandidateIssueKind.EXCLUDED_EXERCISE,
                     "A selected exercise is explicitly excluded by the athlete.")
             val movement=movementById[choice.exerciseId] ?:continue
+            if(movement.credits.any{credit->
+                request.bounds.none{it.muscle==credit.muscle}
+            })add("bounds",AthleteCandidateIssueKind.POLICY_UNRESOLVED,
+                "Review explicit targets for the additional muscles used by this selected exercise.")
             if(!profile.allowBodyweight && movement.equipmentId==null)
                 add("choices",AthleteCandidateIssueKind.BODYWEIGHT_DISABLED,
                     "The athlete disabled unweighted bodyweight movements.")

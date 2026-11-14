@@ -294,7 +294,15 @@ private val kotlinExerciseNames=mapOf(
     "bodyweight-doorway-row" to "Bodyweight Doorway Row",
     "doorway-biceps-curl" to "Doorway Biceps Curl",
     "viking-press" to "Viking Press",
-    "stir-pot" to "Stir the Pot"
+    "stir-pot" to "Stir the Pot",
+    "hip-abduction" to "Hip Abduction Machine",
+    "cable-abduction" to "Cable Hip Abduction",
+    "standing-cable-abduction" to "Standing Cable Hip Abduction",
+    "side-lying-abduction" to "Side-Lying Hip Abduction",
+    "adduction-machine" to "Hip Adduction Machine",
+    "cable-adduction" to "Cable Hip Adduction",
+    "cossack-squat" to "Cossack Squat",
+    "adductor-sumo" to "Wide-Stance Sumo Squat"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

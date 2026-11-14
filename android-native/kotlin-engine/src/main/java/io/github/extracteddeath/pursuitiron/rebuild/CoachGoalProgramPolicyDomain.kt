@@ -49,8 +49,7 @@ object CoachGoalProgramPolicyDomain {
     private val cap=BigDecimal("200")
 
     private fun valid(b:List<DeclaredMuscleDoseBounds>,days:Int)=
-        b.size==TrainingMuscle.entries.size &&
-            b.map {it.muscle}.toSet()==TrainingMuscle.entries.toSet() &&
+        TrainingMuscleCoverage.isComplete(b.map{it.muscle}) &&
             b.all {
                 it.mev>=zero && it.mev<=it.mav && it.mav<=it.mrv &&
                     it.mrv<=cap && it.minimumDirectDays in 0..days &&
@@ -102,11 +101,17 @@ object CoachGoalProgramPolicyDomain {
         if(!valid(policy.baselineBounds,count) ||
             !valid(policy.selectedBounds,count) ||
             !valid(proposedBounds,count) ||
+            policy.baselineBounds.map{it.muscle}.toSet()!=
+                policy.selectedBounds.map{it.muscle}.toSet() ||
+            proposedBounds.map{it.muscle}.toSet()!=
+                policy.selectedBounds.map{it.muscle}.toSet() ||
+            !(policy.selectedBounds.map{it.muscle}.toSet()
+                .containsAll(athlete.focusedMuscles+athlete.reducedMuscles)) ||
             policy.selectedBounds.associateBy {it.muscle}.any { (muscle,selected) ->
                 !doseEqual(selected,proposedBounds.first {it.muscle==muscle})
             })
             fail("goalPolicy.dose",GoalPolicyIssueKind.INVALID_DOSE,
-                "All sixteen proposed muscle dose and direct-frequency targets must match an authored policy.")
+                "The complete muscle scope, dose and direct-frequency targets must match the reviewed policy, including every focused or reduced muscle.")
         else {
             val previous=policy.baselineBounds.associateBy {it.muscle}
             val selected=policy.selectedBounds.associateBy {it.muscle}

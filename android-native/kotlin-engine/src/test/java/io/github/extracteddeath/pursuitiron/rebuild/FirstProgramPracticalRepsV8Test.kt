@@ -18,7 +18,8 @@ class FirstProgramPracticalRepsV8Test {
         return original.copy(
             startingLoads=original.startingLoads-"back_squat",
             selectedBodyweightExerciseIds=setOf("bw-squat"),
-            nonSetSecondsPerDay=900)
+            nonSetSecondsPerDay=900,
+            policyVersion=CoachFirstProgramStartDomain.V8_POLICY_VERSION)
     }
 
     @Test fun selectedHighRepSquatReachesActualPrescribedWorkingSets() {

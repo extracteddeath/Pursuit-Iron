@@ -72,6 +72,7 @@ internal object NativeFutureBlockContextCodec {
         writeUTF(p.goal.name);writeUTF(p.experience.name)
         writeUTF(p.split.name);writeUTF(p.phase.name);writeInt(p.trainingDays)
         fun bounds(list:List<DeclaredMuscleDoseBounds>) {
+            require(TrainingMuscleCoverage.isComplete(list.map{it.muscle}))
             writeInt(list.size)
             // Preserve authored dose-bound ordering on cold restoration.
             list.forEach {
@@ -105,14 +106,14 @@ internal object NativeFutureBlockContextCodec {
         val phase=safeEnum<TrainingPhase>();val days=readInt()
         fun bounds():List<DeclaredMuscleDoseBounds> {
             val count=readInt()
-            if(count!=TrainingMuscle.entries.size)
+            if(count !in 1..TrainingMuscle.entries.size)
                 throw IOException("Wrong muscle coverage")
             return (0 until count).map {
                 DeclaredMuscleDoseBounds(safeEnum<TrainingMuscle>(),
                     decimal(),decimal(),decimal(),readInt())
             }.also{
-                if(it.map{v->v.muscle}.distinct().size!=count)
-                    throw IOException("Duplicate muscle")
+                if(!TrainingMuscleCoverage.isComplete(it.map{v->v.muscle}))
+                    throw IOException("Incomplete or duplicate muscle coverage")
             }
         }
         val baseline=bounds();val selected=bounds()

@@ -59,14 +59,24 @@ data class CustomCycleBlockComparison(
     val auditedDirectMuscleChanges:List<CustomBlockMuscleChange>? get() {
         val earlier=prior.firstAuditedWeekDirectSets ?:return null
         val later=next.firstAuditedWeekDirectSets ?:return null
-        return TrainingMuscle.entries.mapNotNull{muscle->
-            val before=earlier[muscle] ?:BigDecimal.ZERO
-            val after=later[muscle] ?:BigDecimal.ZERO
+        return earlier.keys.intersect(later.keys).mapNotNull{muscle->
+            val before=earlier.getValue(muscle)
+            val after=later.getValue(muscle)
             if(before.compareTo(after)==0)null else
                 CustomBlockMuscleChange(muscle,before,after)
         }.sortedWith(compareByDescending<CustomBlockMuscleChange>{
             it.delta.abs()
         }.thenBy{it.muscle.name})
+    }
+    val newlyTrackedMuscles:Set<TrainingMuscle>? get() {
+        val earlier=prior.firstAuditedWeekDirectSets ?:return null
+        val later=next.firstAuditedWeekDirectSets ?:return null
+        return later.keys-earlier.keys
+    }
+    val noLongerTrackedMuscles:Set<TrainingMuscle>? get() {
+        val earlier=prior.firstAuditedWeekDirectSets ?:return null
+        val later=next.firstAuditedWeekDirectSets ?:return null
+        return earlier.keys-later.keys
     }
     val baseWorkingSetDelta:Int get()=
         next.baseWorkingSets-prior.baseWorkingSets

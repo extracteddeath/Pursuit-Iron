@@ -140,8 +140,12 @@ object CoachBlockCandidateDomain {
             (after>=before ||
                 after>checkNotNull(request.maxDeloadWorkingSets)))
             issues+="The deload candidate must have fewer working sets and satisfy the explicitly authored deload maximum."
+        val beforeScope=original.audit.muscles.keys
+        val nextScope=next.audit.muscles.keys
+        if(beforeScope!=nextScope)
+            issues+="Review the same complete muscle target scope for both the baseline and proposed week."
         if(request.kind==BlockCandidateKind.RECOVERY_DELOAD &&
-            TrainingMuscle.entries.any {muscle ->
+            beforeScope.intersect(nextScope).any {muscle ->
                 next.audit.muscles.getValue(muscle).effectiveWorkingSets>
                     original.audit.muscles.getValue(muscle).effectiveWorkingSets
             })issues+="A deload cannot silently increase a muscle's working-set dose."

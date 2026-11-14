@@ -1856,12 +1856,57 @@ object StarterExerciseTranche {
             ComposerPattern.CORE,ComposerRole.ACCESSORY,all,
             null,null,setOf("stability-ball"),10..20,
             "Stir-the-pot requires bodyweight permission and a confirmed stable exercise ball; source-reported circles are counted without inventing an external load.",
-            direct(TrainingMuscle.ABS))
+            direct(TrainingMuscle.ABS)),
+        entry("hip-abduction","hip_abduction","machine-seated",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            "hip-abduction-machine",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
+            "A separately identified hip-abduction machine requires its own confirmed selectable stock. Hip abductor direct credit is tracked independently; overlapping legacy minor glute credit is not duplicated into the existing glute ledger. No machine history or load may transfer.",
+            direct(TrainingMuscle.HIP_ABDUCTORS)),
+        entry("cable-abduction","hip_abduction","cable-standing-legacy",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
+            "Cable hip abduction needs a confirmed ankle cuff and the exact cable stack. The hip-abductor ledger is distinct from glutes and adductors; overlapping legacy minor glute credit is not duplicated. This source ID retains independent load history.",
+            direct(TrainingMuscle.HIP_ABDUCTORS),attachmentId="ankle-cuff"),
+        entry("standing-cable-abduction","hip_abduction","cable-standing-source-alternate",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
+            "The alternate standing-cable source identity remains separately addressable and needs a real ankle cuff and verified cable loads. No equivalence or prior load transfer is assumed from the other cable-abduction source ID; abductor direct credit remains separate.",
+            direct(TrainingMuscle.HIP_ABDUCTORS),attachmentId="ankle-cuff"),
+        entry("side-lying-abduction","hip_abduction","bodyweight-side-lying",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            null,null,emptySet(),15..25,
+            "Only unweighted side-lying hip-abduction repetitions are represented. Ankle weights and bands are not assumed. Hip abductors earn direct credit without duplicate glute or adductor credit, and bodyweight availability still requires explicit athlete permission.",
+            direct(TrainingMuscle.HIP_ABDUCTORS)),
+        entry("adduction-machine","hip_adduction","machine-seated",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            "hip-adduction-machine",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
+            "A separately confirmed hip-adduction machine has independent selectable weights, machine instances and history. Its adductor direct credit cannot satisfy an abductor target or borrow the hip-abduction machine stock. No starting load is guessed.",
+            direct(TrainingMuscle.HIP_ADDUCTORS)),
+        entry("cable-adduction","hip_adduction","cable-standing",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
+            "Standing cable hip adduction needs a confirmed ankle cuff and exact cable stock. Direct hip-adductor work is separate from abductor and glute targets; machine-specific history and athlete-entered loads remain independent.",
+            direct(TrainingMuscle.HIP_ADDUCTORS),attachmentId="ankle-cuff"),
+        entry("cossack-squat","hip_adduction","dumbbell-cossack",
+            ComposerPattern.SQUAT,ComposerRole.SECONDARY,lower,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),10..15,
+            "This loaded Cossack variant records the mass of one actual held dumbbell, never a doubled pair or inferred bodyweight. Source adductor direct and provisional quarter glute/quad credits remain explicit. Unweighted and two-implement variants are not silently substituted.",
+            direct(TrainingMuscle.HIP_ADDUCTORS),
+            indirect(TrainingMuscle.GLUTES,"0.25"),
+            indirect(TrainingMuscle.QUADS,"0.25")),
+        entry("adductor-sumo","hip_adduction","dumbbell-wide-sumo",
+            ComposerPattern.SQUAT,ComposerRole.SECONDARY,lower,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),10..15,
+            "The wide-stance adductor-focused sumo variant uses one verified held dumbbell, with no load doubling or barbell-history transfer. Adductor direct and source-provisional quarter glute, quad and hamstring credits stay separate; conventional sumo squat is a different identity.",
+            direct(TrainingMuscle.HIP_ADDUCTORS),
+            indirect(TrainingMuscle.GLUTES,"0.25"),
+            indirect(TrainingMuscle.QUADS,"0.25"),
+            indirect(TrainingMuscle.HAMSTRINGS,"0.25"))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==293)
+        require(definitions.size==301)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

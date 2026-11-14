@@ -504,7 +504,9 @@ assert.ok(comparisonDomain.includes('object CustomCycleBlockComparisonDomain') &
   comparisonDomain.includes('slot.sets.count{it.type==DraftSetType.WORKING}') &&
   comparisonDomain.includes('weekOverrideCount') &&
   comparisonDomain.includes('auditedDirectMuscleChanges:List<CustomBlockMuscleChange>?') &&
-  comparisonDomain.includes('TrainingMuscle.entries.mapNotNull') &&
+  comparisonDomain.includes('earlier.keys.intersect(later.keys).mapNotNull') &&
+  comparisonDomain.includes('newlyTrackedMuscles:Set<TrainingMuscle>?') &&
+  comparisonDomain.includes('noLongerTrackedMuscles:Set<TrainingMuscle>?') &&
   comparisonDomain.includes('firstAuditedWeekDirectSets') &&
   blockComparison.includes('Audited direct muscle sets') &&
   blockComparison.includes('namedMuscle(change.muscle)') &&

@@ -268,6 +268,8 @@ class StarterProgramReleaseMatrixTest {
         assertEquals("first-program-reference-v7",
             CoachFirstProgramStartDomain.V7_POLICY_VERSION)
         assertEquals("first-program-reference-v8",
+            CoachFirstProgramStartDomain.V8_POLICY_VERSION)
+        assertEquals("first-program-reference-v9",
             CoachFirstProgramStartDomain.POLICY_VERSION)
         for(split in ComposerSplit.entries)
             for(phase in TrainingPhase.entries) {
@@ -356,9 +358,11 @@ class StarterProgramReleaseMatrixTest {
         assertEquals(listOf(64L,73L,73L),oldWeek.audit.sessions.map{it.roundedMinutes})
         val current=CoachFirstProgramStartDomain.review(input)
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,current.status)
-        assertEquals(old.policy?.selectedBounds,current.policy?.selectedBounds)
+        assertEquals(old.policy?.selectedBounds,current.policy?.selectedBounds?.filter{
+            it.muscle.introducedIn==1})
         assertEquals(old.policy?.primaryLiftMinimumDays,current.policy?.primaryLiftMinimumDays)
-        assertEquals(old.unsupportedMuscles,current.unsupportedMuscles)
+        assertEquals(old.unsupportedMuscles,current.unsupportedMuscles.filter{
+            it.introducedIn==1}.toSet())
         assertEquals(listOf(56L,56L,57L),current.prescription?.sessions?.map{it.estimatedMinutes})
         assertEquals(old,CoachFirstProgramStartDomain.review(input.copy(
             policyVersion=CoachFirstProgramStartDomain.TIMED_POLICY_VERSION)))

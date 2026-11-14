@@ -97,6 +97,27 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun originalAndExpandedMuscleScopesRoundtripWithoutWeakeningCoverageChecks() {
+        val original=approval()
+        for(scope in listOf(TrainingMuscleCoverage.legacyV1,TrainingMuscleCoverage.current)) {
+            val withScope=original.copy(program=original.program.copy(
+                bounds=original.program.bounds.filter{it.muscle in scope}))
+            val bytes=NativeKotlinApprovalCodec.encode(withScope)
+            val decoded=NativeKotlinApprovalCodec.decode(bytes)
+            assertEquals(withScope,decoded)
+            assertArrayEquals(bytes,NativeKotlinApprovalCodec.encode(decoded))
+        }
+        val incomplete=original.copy(program=original.program.copy(
+            bounds=original.program.bounds.filter{it.muscle!=TrainingMuscle.HIP_ADDUCTORS}))
+        assertTrue(runCatching{NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(incomplete))}.isFailure)
+        val legacy=original.copy(program=original.program.copy(
+            bounds=original.program.bounds.filter{it.muscle.introducedIn==1}))
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            authority().publish("owner-1",0,legacy))
+        assertEquals(legacy,authority().currentOwnedApproval("owner-1"))
+    }
+
     @Test fun shorterSessionApprovalIsExplicitDurableAndDoesNotRewriteLegacyBytes() {
         val base=approval()
         val previous=NativeKotlinApprovalCodec.encode(base)
@@ -150,7 +171,11 @@ class NativeKotlinApprovalFileAuthorityTest {
     }
 
     @Test fun timedProgramColdReopensWithTheExactWarmupAndRestModel() {
-        val original=approval()
+        // This pinned v6 hash is an actual original sixteen-row approval.
+        // New eighteen-row approvals are covered separately above.
+        val raw=approval()
+        val original=raw.copy(program=raw.program.copy(
+            bounds=raw.program.bounds.filter{it.muscle.introducedIn==1}))
         val timed=original.copy(program=original.program.copy(visitTimings=
             CoachSessionPrescriptionDomain.timingsForPolicies(original.policies)))
         val bytes=NativeKotlinApprovalCodec.encode(timed)

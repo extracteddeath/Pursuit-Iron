@@ -8,11 +8,33 @@ import java.util.Collections
  * physiological volume threshold. Exercise credit coefficients must
  * eventually come from an independently vetted movement catalog.
  */
-enum class TrainingMuscle {
+enum class TrainingMuscle(val introducedIn:Int=1) {
     CHEST, LATS, UPPER_BACK, FRONT_DELTS, SIDE_DELTS, REAR_DELTS,
     TRICEPS, BICEPS, BRACHIALIS,
     WRIST_FLEXORS, WRIST_EXTENSORS,
-    QUADS, HAMSTRINGS, GLUTES, CALVES, ABS
+    QUADS, HAMSTRINGS, GLUTES, CALVES, ABS,
+    HIP_ABDUCTORS(2), HIP_ADDUCTORS(2)
+}
+
+/**
+ * Saved policies keep their exact declared coverage. A complete v1 policy
+ * still has the original 16 rows; new policies explicitly track both hip
+ * groups as well. Never fill absent rows with invented zeroes, accept a
+ * partial original scope, or silently upgrade a signed policy.
+ */
+object TrainingMuscleCoverage {
+    val legacyV1:List<TrainingMuscle> = Collections.unmodifiableList(
+        TrainingMuscle.entries.filter{it.introducedIn==1})
+    val current:List<TrainingMuscle> = Collections.unmodifiableList(
+        TrainingMuscle.entries.toList())
+    private val legacySet=legacyV1.toSet()
+    private val currentSet=current.toSet()
+
+    fun isComplete(muscles:Collection<TrainingMuscle>):Boolean {
+        val distinct=muscles.toSet()
+        return distinct.size==muscles.size &&
+            (distinct==legacySet || distinct==currentSet)
+    }
 }
 enum class MuscleCreditRole { DIRECT, INDIRECT }
 enum class ExposureSetKind { WARMUP, WORKING, EXTENSION }

@@ -149,7 +149,7 @@ internal object NativeKotlinApprovalCodec {
         if(allowedFocus.distinct().size!=allowedFocus.size)
             throw IOException("duplicate allowed focus")
         val equipment=equipment()
-        val credits=items(16){
+        val credits=items(TrainingMuscle.entries.size){
             DeclaredMuscleCredit(readEnum<TrainingMuscle>(),
                 readEnum<MuscleCreditRole>(),decimal())
         }
@@ -196,10 +196,12 @@ internal object NativeKotlinApprovalCodec {
                 DeclaredSessionWindow(readInt(),optionalInt(),
                     optionalInt(),readInt()))
         }
-        val bounds=items(16){
+        val bounds=items(TrainingMuscle.entries.size){
             DeclaredMuscleDoseBounds(readEnum<TrainingMuscle>(),decimal(),
                 decimal(),decimal(),readInt())
         }
+        if(!TrainingMuscleCoverage.isComplete(bounds.map{it.muscle}))
+            throw IOException("Incomplete or duplicate muscle target coverage")
         val exercises=items(32){exercise()}
         val maxDifferent=readInt()
         val preferred=readInt()

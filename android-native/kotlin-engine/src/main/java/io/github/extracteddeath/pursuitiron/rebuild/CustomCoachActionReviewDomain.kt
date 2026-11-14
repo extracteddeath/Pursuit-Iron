@@ -183,7 +183,7 @@ object CustomCoachActionReviewDomain {
                     "A complete phase coaching policy is required" to listOf(
                         option(CustomCoachActionKind.REVIEW_COACH_POLICY,
                             "Review phase-specific MEV, MAV, MRV and frequency",
-                            "Use actual athlete and exercise evidence, not the number of sets already scheduled, to choose and justify all 16 muscle targets."))
+                            "Use actual athlete and exercise evidence, not the number of sets already scheduled, to choose and justify the complete muscle target scope."))
                 CustomCoachIssueKind.CONTINUITY_POLICY_MISSING,
                 CustomCoachIssueKind.CONTINUITY_POLICY_INVALID ->
                     "A reviewed week-to-week continuity policy is required" to listOf(

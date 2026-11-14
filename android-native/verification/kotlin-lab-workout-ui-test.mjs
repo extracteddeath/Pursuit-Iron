@@ -717,11 +717,11 @@ for(const required of [
   'PursuitPreviousWorkoutLevelingDialog(',
   'onApply={',
   'observed=observed',
-  'onDismiss={showPriorLeveling=false}'
+  'onDismiss={priorLevelingScope=null}'
 ]) assert.ok(priorLeveling.includes(required),
   'Prior-session Leveling must be explicit, same-machine and draft-only: '+required);
 assert.ok(priorLeveling.includes(
-  'referenceMode==WorkoutReferenceMode.LAST || showPriorLeveling'),
+  'referenceMode==WorkoutReferenceMode.LAST ||\n            priorLevelingScope!=null'),
   'Prior-session Leveling must read source-verified Last even when Target is selected');
 
 const m3eLeveling=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');

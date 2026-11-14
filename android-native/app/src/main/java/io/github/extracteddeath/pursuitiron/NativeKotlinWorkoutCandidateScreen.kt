@@ -140,9 +140,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     LaunchedEffect(journal) { if(journal!=null)noteAnchor=journal }
     // Request verified Last facts on demand for explicit prior-session Leveling,
     // even while the workout's ordinary Target/Last display remains Target.
-    var showPriorLeveling by rememberSaveable(workoutId) { mutableStateOf(false) }
+    // A previous-workout Leveling review is valid ONLY for the exercise and
+    // exact physical machine selected when the athlete opened it.
+    var priorLevelingScope by rememberSaveable(workoutId) {
+        mutableStateOf<String?>(null)
+    }
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
-        enabled=(referenceMode==WorkoutReferenceMode.LAST || showPriorLeveling) &&
+        enabled=(referenceMode==WorkoutReferenceMode.LAST ||
+            priorLevelingScope!=null) &&
             journal!=null)
     val running=presentation!=null && !presentation.finished
     var verifiedFinish by remember(host,workoutId){
@@ -197,10 +202,31 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var movementRestricted by rememberSaveable(workoutId) {
         mutableStateOf(false)
     }
+    // Only move Focus when its selected set was actually resolved, removed
+    // by a verified swap, or when recovering a stale cold-start selection.
+    // A saved note, new coach review or unrelated journal revision cannot
+    // forcibly move the athlete away from the set they were editing.
+    var previouslyOpenKeys by remember(workoutId) {
+        mutableStateOf<Set<String>?>(null)
+    }
     LaunchedEffect(presentation?.revision) {
-        if(presentation!=null)
-            selectedKey=presentation.firstUnresolvedSetKey ?:
-                presentation.exercises.lastOrNull()?.sets?.lastOrNull()?.target?.setKey
+        val shown=presentation ?:return@LaunchedEffect
+        val allShown=shown.exercises.flatMap{it.sets}
+        val available=allShown.map{it.target.setKey}.toSet()
+        val stillOpen=allShown.filterNot{it.isResolved}
+            .map{it.target.setKey}.toSet()
+        val current=selectedKey
+        val changedToResolved=current!=null &&
+            previouslyOpenKeys?.contains(current)==true &&
+            current !in stillOpen
+        val coldStale=current!=null && previouslyOpenKeys==null &&
+            current !in stillOpen && stillOpen.isNotEmpty()
+        if(current==null || current !in available ||
+            changedToResolved || coldStale) {
+            selectedKey=shown.firstUnresolvedSetKey ?:
+                allShown.lastOrNull()?.target?.setKey
+        }
+        previouslyOpenKeys=stillOpen
     }
     fun reviewSwap(exerciseId:String) {
         if(state.busy || swapLoading)return
@@ -236,6 +262,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     val currentMachine=selected?.target?.exerciseId?.let{
         workoutMachineChoice(machineChoices.encoded,it,null)
+    }
+    val currentLevelingScope=selected?.target?.exerciseId?.let {
+        it+"|"+(currentMachine ?: "unassigned")
+    }
+    LaunchedEffect(workoutId,currentLevelingScope) {
+        if(priorLevelingScope!=null &&
+            priorLevelingScope!=currentLevelingScope)
+            priorLevelingScope=null
     }
     // Equipment is recovered from the CURRENT owner-approved program and
     // exact selected A/B station. It is never guessed from typed values.
@@ -587,11 +621,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             // engine remain unchanged until actual sets are normally logged.
             if(workingSets.size>=2 && allVerified && workingSets.any{!it.isResolved}) {
                 OutlinedButton(
-                    onClick={showPriorLeveling=true},
+                    onClick={priorLevelingScope=currentLevelingScope},
                     enabled=!state.busy && machineChoices.ready && !machineChoices.busy,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
                 ) { Text("Leveling · review previous workout") }
-                if(showPriorLeveling) {
+                if(priorLevelingScope==currentLevelingScope &&
+                    currentLevelingScope!=null) {
                     val first=workingSets.first().target
                     val sameGoal=first.targetRir!=null && workingSets.all {
                         it.target.reps==first.reps &&
@@ -629,7 +664,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             ?.unit?.name?.lowercase().orEmpty(),
                         observed=observed,unfinishedCount=unfinished.size,
                         busy=state.busy,
-                        onDismiss={showPriorLeveling=false},
+                        onDismiss={priorLevelingScope=null},
                         onApply={
                             // Only an explicit athlete tap changes unsaved drafts.
                             if(prior!=null && !state.busy && machineChoices.ready &&
@@ -646,7 +681,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                                             levelWeight,levelReps.toString())
                                 }
                                 levelVersion++
-                                showPriorLeveling=false
+                                priorLevelingScope=null
                             }
                         }
                     )

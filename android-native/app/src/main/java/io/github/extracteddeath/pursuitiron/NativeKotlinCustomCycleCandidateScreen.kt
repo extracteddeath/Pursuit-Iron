@@ -147,6 +147,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     onProgramSwapReviewDismiss:()->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
+    val programPicker by controller.programPicker.collectAsStateWithLifecycle()
     val draft = state.draft
     val busy = state.busy
     val calibrationLocked=state.calibrationReceipt!=null ||
@@ -274,15 +275,29 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         if(state.weekEditReview!=null)weekExerciseEditor=null
     }
 
+    programPicker?.let { picker ->
+        key(picker.token) {
+            NativeKotlinProgramPickerSheet(picker,draft?.cycleId,
+                onDismiss=controller::dismissProgramPicker,
+                onRefresh=controller::findSavedPrograms,onOpen=controller::openSavedProgram)
+        }
+    }
+
     PursuitScreenContent(scrollState=pageScroll) {
         PageHeading("YOUR TRAINING PLAN",
             if (draft == null) "Your programs" else draft.title,
             if(draft==null)"Build a program around the way you train."
             else "${pretty(draft.goal)} · ${draft.blocks.sumOf{it.weeks}} weeks")
+        if(draft!=null)OutlinedButton(onClick=controller::findSavedPrograms,
+            enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Programs")}
         permissionHost?.let {
             NativeVerifiedGeneratedWorkoutResumeCard(it,onResumeGeneratedWorkout)
         }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        state.programSelectionNotice?.let {
+            Text(it,style=MaterialTheme.typography.bodyMedium,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(draft==null || state.refusal!=null || showProgramEditor)state.message?.let {
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=if(state.refusal==null)MaterialTheme.colorScheme.onSurfaceVariant
@@ -300,23 +315,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
                 ) {Text("Refresh saved programs")}
-                if(state.savedDraftsLoaded && state.savedDrafts.isEmpty()) {
-                    Text("No saved custom programs for this athlete yet.",
-                        style=MaterialTheme.typography.bodySmall)
-                }
-                state.savedDrafts.forEach { saved ->
-                    OutlinedButton(
-                        onClick={controller.open(saved.cycleId)},
-                        enabled=!busy,
-                        modifier=Modifier.fillMaxWidth()
-                    ) {
-                        Column(Modifier.fillMaxWidth()) {
-                            Text(saved.title,style=MaterialTheme.typography.titleSmall)
-                            Text("${saved.blocks} blocks · saved revision ${saved.revision}",
-                                style=MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
+                NativeKotlinSavedProgramList(state.savedDrafts,state.savedProgramsOwner,
+                    currentCycleId=null,busy=busy,loaded=state.savedDraftsLoaded,
+                    onOpen=controller::openSavedProgram)
                 TextButton(onClick={showAdvancedId=!showAdvancedId},
                     enabled=!busy) {
                     Text(if(showAdvancedId)"Hide program ID entry"
@@ -613,8 +614,6 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         enabled = !busy && state.canUndo) { Text("Undo last edit") }
                     OutlinedButton(onClick = { controller.open(draft.cycleId) },
                         enabled = !busy) { Text("Reload") }
-                    OutlinedButton(onClick = { controller.findSavedPrograms() },
-                        enabled = !busy) { Text("Other programs") }
                 }
             }
             draft.blocks.forEachIndexed { index, block ->

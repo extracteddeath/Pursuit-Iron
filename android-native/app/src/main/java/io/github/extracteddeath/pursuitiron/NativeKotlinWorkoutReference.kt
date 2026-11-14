@@ -15,6 +15,12 @@ import kotlinx.coroutines.withContext
 
 internal enum class WorkoutReferenceMode { TARGET,LAST }
 
+/** Immutable invalidation keys only. The host still cold-verifies all facts. */
+internal sealed interface WorkoutLastReferenceInput {
+    data class Generated(val snapshot:KotlinStagedWorkout):WorkoutLastReferenceInput
+    data class Custom(val snapshot:CustomWorkoutDaySnapshot):WorkoutLastReferenceInput
+}
+
 /** A display preference only; never a write to a journal or a prescription. */
 @Composable
 internal fun rememberWorkoutReferenceMode():MutableState<WorkoutReferenceMode> {
@@ -34,14 +40,20 @@ internal fun rememberWorkoutReferenceMode():MutableState<WorkoutReferenceMode> {
 
 @Composable
 internal fun rememberWorkoutLastReferences(
-    host:NativeKotlinCandidateHost,workoutId:String,custom:Boolean,enabled:Boolean
+    host:NativeKotlinCandidateHost,workoutId:String,custom:Boolean,enabled:Boolean,
+    source:WorkoutLastReferenceInput?,refreshVersion:Int=0
 ):WorkoutLastReferenceResult? {
-    var result by remember(host,workoutId,custom){
+    // Reset synchronously when a swap/undo changes the issued snapshot or
+    // an explicit retry begins. An old Ready result must not be actionable
+    // for one frame while the new source effect waits to run. Ordinary set
+    // and note receipts keep this immutable snapshot and need no reread of
+    // the athlete's complete history.
+    var result by remember(host,workoutId,custom,enabled,source,refreshVersion){
         mutableStateOf<WorkoutLastReferenceResult?>(null)
     }
-    LaunchedEffect(host,workoutId,custom,enabled) {
+    LaunchedEffect(host,workoutId,custom,enabled,source,refreshVersion) {
         result=null
-        if(enabled)result=try {
+        if(enabled && source!=null)result=try {
             withContext(Dispatchers.IO) {
                 host.reviewWorkoutLastReferences(workoutId,custom)
             }
@@ -61,7 +73,8 @@ internal fun rememberWorkoutLastReferences(
 /** Target/Last is display-only and never substitutes a history observation. */
 @Composable
 internal fun PursuitWorkoutReferencePicker(
-    mode:WorkoutReferenceMode,onChange:(WorkoutReferenceMode)->Unit
+    mode:WorkoutReferenceMode,onChange:(WorkoutReferenceMode)->Unit,
+    onRetry:(()->Unit)?=null
 ) {
     val choices:@Composable (Modifier)->Unit={modifier->
         SingleChoiceSegmentedButtonRow(modifier=modifier) {
@@ -94,6 +107,9 @@ internal fun PursuitWorkoutReferencePicker(
             }
         }
     }
+    if(mode==WorkoutReferenceMode.LAST && onRetry!=null)TextButton(
+        onClick=onRetry,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+    ) {Text("Retry Last")}
 }
 
 /**

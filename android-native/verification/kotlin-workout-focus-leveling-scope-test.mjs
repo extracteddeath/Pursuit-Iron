@@ -35,4 +35,26 @@ assert.match(screen,/if\(priorLevelingScope==currentLevelingScope/,
 assert.match(screen,/onDismiss=\{priorLevelingScope=null\}/);
 assert.doesNotMatch(screen,/var showPriorLeveling by rememberSaveable/,
   'a global Leveling Boolean cannot bind review to one physical machine');
-console.log('PASS workout Focus follows saved outcomes, while Leveling is machine scoped');
+const reference=readFileSync(join(root,
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt'),'utf8');
+const custom=readFileSync(join(root,
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt'),'utf8');
+// Swapping or undoing while Last is already selected must invalidate the
+// cached result immediately. Ordinary set/note receipts must not scan the
+// athlete's full history again. The supplied snapshot is only an effect key;
+// the host still verifies all current source and historical facts itself.
+assert.match(reference,/remember\(host,workoutId,custom,enabled,source,refreshVersion\)/);
+assert.match(reference,/LaunchedEffect\(host,workoutId,custom,enabled,source,refreshVersion\)/);
+assert.match(reference,/if\(enabled && source!=null\)result=try/);
+assert.match(reference,/host\.reviewWorkoutLastReferences\(workoutId,custom\)/);
+assert.match(reference,/catch\(cancelled:CancellationException\)/);
+assert.match(reference,/throw cancelled/);
+assert.match(screen,/source=journal\?\.snapshot\?\.let\{WorkoutLastReferenceInput\.Generated\(it\)\}/);
+assert.match(custom,/source=current\?\.snapshot\?\.let\{WorkoutLastReferenceInput\.Custom\(it\)\}/);
+for(const source of [screen,custom]) {
+  assert.match(source,/refreshVersion=lastReferenceRefresh/);
+  assert.match(source,/onRetry=if\(lastReferences==WorkoutLastReferenceResult\.Unavailable/);
+  assert.match(source,/\{lastReferenceRefresh\+\+\}/);
+}
+assert.match(reference,/Text\("Retry Last"\)/);
+console.log('PASS Focus, machine-scoped Leveling and source-keyed retryable Last references');

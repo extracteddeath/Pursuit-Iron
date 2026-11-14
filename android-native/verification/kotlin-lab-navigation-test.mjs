@@ -12,6 +12,7 @@ const debug=read('android-native/app/src/debug/AndroidManifest.xml');
 const release=read('android-native/app/src/release/AndroidManifest.xml');
 const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
+const navigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationState.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 const csvExport=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinVerifiedHistoryCsvExport.kt');
 assert.ok(csvExport.includes('fun prepare(history:NativeKotlinMixedHistoryTimeline)') &&
@@ -119,7 +120,7 @@ assert.ok(journey.includes('Scaffold(') && journey.includes('NavigationBar {') &
 assert.ok(journey.includes('KotlinCandidateDestination.PROGRESS') &&
   journey.includes('NativeKotlinStrengthStandardsScreen(host,') &&
   journey.includes('NavigationRail {') &&
-  journey.includes('candidateTabSelected(destination,page)') &&
+  journey.includes('candidateTabSelected(navigation,page)') &&
   journey.includes('if(!activeWorkout)Surface('),
   'App must have accessible Progress and adaptive Material navigation without workout chrome');
 assert.ok(targetLast.includes('SingleChoiceSegmentedButtonRow') &&
@@ -146,22 +147,34 @@ assert.ok(history.includes('var exerciseSearch by rememberSaveable') &&
   history.includes('No matching saved exercises.'),
   'History needs a saved, correction-aware searchable exercise drilldown');
 assert.ok(journey.includes('import androidx.activity.compose.BackHandler') &&
-  journey.includes('BackHandler(enabled=destination==KotlinCandidateDestination.PROFILE') &&
-  journey.includes('KotlinCandidateDestination.SETTINGS -> destination=settingsReturn') &&
-  journey.includes('progressRequestedExerciseId=null') &&
-  journey.includes('progressReturn=KotlinCandidateDestination.PROFILE') &&
-  journey.includes('progressReturn=KotlinCandidateDestination.HISTORY') &&
-  journey.includes('destination=progressReturn') &&
-  journey.includes('progressRequestedTrendExerciseId=null') &&
-  !journey.includes('BackHandler(enabled=activeWorkout'),
-  'Android Back must honor Profile/Settings and pinned lift origin without interfering with Train');
+  journey.includes('BackHandler(enabled=!activeWorkout && navigation.canGoBack)') &&
+  journey.includes('navigation=navigation.back()') &&
+  journey.includes('navigation=navigation.openProgressExercise(exerciseId)') &&
+  journey.includes('navigation=navigation.openProgressTrend(exerciseId)') &&
+  journey.includes('navigation=navigation.openCoach(exerciseId)') &&
+  journey.includes('navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_TREND') &&
+  journey.includes('navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_EXERCISE') &&
+  !journey.includes('profileReturn') && !journey.includes('settingsReturn') &&
+  !journey.includes('progressReturn'),
+  'Back and contextual exercise links must use one navigation history without intercepting an active journal');
 assert.ok(journey.includes('KotlinCandidateDestination.PROFILE') &&
   journey.includes('NativeKotlinProfileScreen(host,themeId,') &&
   journey.includes('contentDescription="Open athlete profile"') &&
-  journey.includes('profileReturn=destination') &&
-  journey.includes('settingsReturn=destination') &&
-  journey.includes('onBack={destination=settingsReturn}'),
-  'Profile must be reachable without using a sixth bottom tab and Settings Back must preserve its origin');
+  journey.includes('contentDescription="Back to previous screen"') &&
+  journey.includes('Icons.AutoMirrored.Filled.ArrowBack') &&
+  journey.includes('navigation=navigation.open(to)') &&
+  journey.includes('navigation.selectedPrimary==page') &&
+  navigation.includes('fun snapshot():List<String>') &&
+  navigation.includes('fun restore(saved:Any?)') &&
+  journey.includes('stateSaver=Saver<NativeKotlinNavigationState,Any>') &&
+  journey.includes('SaveableStateProvider(navigation.current.saveableKey)') &&
+  journey.includes('(previousContextKeys-retained).forEach{savedScreens.removeState(it)}') &&
+  !profile.includes('onBack'),
+  'Profile is secondary; shared Back and selected-tab context must restore consistently on phone and rail');
+assert.ok(build.includes('testImplementation("junit:junit:4.13.2")') &&
+  read('.github/workflows/android-kotlin-rebuild.yml').includes('gradle :app:testDebugUnitTest :app:compileDebugKotlin') &&
+  fs.existsSync('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationStateTest.kt'),
+  'Real app navigation behavior must execute in JVM CI alongside Compose compilation without an APK');
 assert.ok(profile.includes('host.reviewActiveAthleteSetup()') &&
   profile.includes('host.reviewVerifiedKotlinHistory()') &&
   profile.includes('KotlinHistoryPerformanceSummaryDomain.fromCustom') &&
@@ -223,7 +236,7 @@ assert.ok(exerciseFavorites.includes('NativeKotlinMixedHistoryTimeline') &&
   profile.includes('NativeExerciseFavorites.read(') &&
   profile.includes('timeline?.athleteId==athleteId') &&
   profile.includes('onProgressLift(exerciseId)') &&
-  journey.includes('progressRequestedExerciseId=exerciseId') &&
+  journey.includes('navigation=navigation.openProgressExercise(exerciseId)') &&
   standards.includes('exercise in availableMovements'),
   'General exercise favorites must be verified, ordered, athlete-scoped and history-only');
 
@@ -255,8 +268,8 @@ assert.ok(history.includes('onOpenExerciseTrend:(String)->Unit={}') &&
   history.includes('onClick={onOpenExerciseTrend(exercise)}') &&
   history.includes('Text("Trend: ${kotlinExerciseLabel(exercise)}")') &&
   journey.includes('onOpenExerciseTrend={exerciseId->') &&
-  journey.includes('progressRequestedTrendExerciseId=exerciseId') &&
-  journey.includes('preferredTrendExerciseId=progressRequestedTrendExerciseId') &&
+  journey.includes('navigation=navigation.openProgressTrend(exerciseId)') &&
+  journey.includes('navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_TREND') &&
   standards.includes('preferredTrendExerciseId:String?=null') &&
   standards.includes('exercise in availableMovements') &&
   standards.includes('performanceExerciseId=exercise'),
@@ -411,7 +424,7 @@ assert.ok(standards.includes('NativeStrengthFavorites.read(favoritePreferences,v
   profile.includes('NativeStrengthFavorites.read(favoritePreferences,athleteId)') &&
   profile.includes('onProgressLift(liftId)') &&
   journey.includes('onProgressLift={exerciseId->') &&
-  journey.includes('preferredExerciseId=progressRequestedExerciseId'),
+  journey.includes('navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_EXERCISE'),
   'Favorite strength charts must round-trip through verified Progress, Profile and History');
 assert.ok(trend.includes('.sortedBy {it.completionOrder}') &&
   trend.includes('val recent=samples.sortedBy{it.completionOrder}.takeLast(20)') &&
@@ -716,9 +729,9 @@ assert.ok(coach.includes('is AdaptiveSetPrescriptionResult.Rejected -> proposed.
   'The athlete must see readable recovery reasons, not a Kotlin rejection DTO');
 const host=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 assert.ok(journey.includes('onOpenCoach={exerciseId->') &&
-  journey.includes('coachRequestedExerciseId=exerciseId') &&
+  journey.includes('navigation=navigation.openCoach(exerciseId)') &&
   journey.includes('onReviewNext={exerciseId->') &&
-  journey.includes('preferredExerciseId=coachRequestedExerciseId') &&
+  journey.includes('navigation.current.detail==NativeKotlinRouteDetail.COACH_EXERCISE') &&
   history.includes('onClick={onOpenCoach(exercise)}') &&
   history.includes('Review next workout with Coach'),
   'History and Finish must carry explicit source-backed exercise focus to Coach');

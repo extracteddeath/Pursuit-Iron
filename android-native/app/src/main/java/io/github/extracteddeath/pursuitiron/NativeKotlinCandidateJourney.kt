@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
@@ -30,16 +32,6 @@ import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/**
- * Kotlin-owned onboarding, program, training and history journey.
- * The normal beta launcher and isolated debug lab now share this one UI.
- * Signed source/receipt stores, not Compose state, own training decisions.
- */
-private enum class KotlinCandidateDestination(val label:String) {
-    ONBOARD("My setup"),GYM("My gym"),STARTER("Build first"),PROGRAM("My program"),
-    COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),PROGRESS("Progress"),PROFILE("Profile"),SETTINGS("Settings"),TRAIN("Train")
-}
 
 /**
  * UI-only durable resume locator, NEVER a workout issuer. Current approval,
@@ -73,13 +65,8 @@ private fun candidateTabLabel(page:KotlinCandidateDestination):String=when(page)
 }
 
 private fun candidateTabSelected(
-    destination:KotlinCandidateDestination,page:KotlinCandidateDestination
-):Boolean = destination==page ||
-    page==KotlinCandidateDestination.PROGRAM &&
-        destination in listOf(KotlinCandidateDestination.STARTER,
-            KotlinCandidateDestination.FUTURE) ||
-    page==KotlinCandidateDestination.COACH &&
-        destination==KotlinCandidateDestination.SETTINGS
+    navigation:NativeKotlinNavigationState,page:KotlinCandidateDestination
+):Boolean = navigation.selectedPrimary==page
 
 @Composable
 private fun CandidateTabIcon(page:KotlinCandidateDestination) {
@@ -96,6 +83,11 @@ private fun CandidateTabIcon(page:KotlinCandidateDestination) {
     }
 }
 
+/**
+ * Kotlin-owned onboarding, program, training and history journey.
+ * The normal beta launcher and isolated debug lab now share this one UI.
+ * Signed source/receipt stores, not Compose state, own training decisions.
+ */
 @Composable
 internal fun NativeKotlinCandidateJourney(
     themeId:String=PursuitThemes.DEFAULT_ID,
@@ -115,28 +107,26 @@ internal fun NativeKotlinCandidateJourney(
             sessionController.close()
         }
     }
-    var destination by rememberSaveable {
-        mutableStateOf(KotlinCandidateDestination.ONBOARD)
-    }
+    var navigation by rememberSaveable(stateSaver=Saver<NativeKotlinNavigationState,Any>(
+        save={ArrayList(it.snapshot())},
+        restore={NativeKotlinNavigationState.restore(it)}
+    )) {mutableStateOf(NativeKotlinNavigationState.start())}
+    val destination=navigation.current.destination
     var selectedCustomWorkoutId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
     var selectedGeneratedWorkoutId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
-    var coachRequestedExerciseId by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    var progressRequestedExerciseId by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    var progressRequestedTrendExerciseId by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    var progressReturn by rememberSaveable {
-        mutableStateOf(KotlinCandidateDestination.HISTORY)
-    }
     val savedScreens=rememberSaveableStateHolder()
+    var previousContextKeys by remember {mutableStateOf(navigation.contextStateKeys)}
+    LaunchedEffect(navigation) {
+        // Retain ancestor details for Back, and discard only popped detail
+        // UI caches. Ordinary screens and workout drafts keep their keys.
+        val retained=navigation.contextStateKeys
+        (previousContextKeys-retained).forEach{savedScreens.removeState(it)}
+        previousContextKeys=retained
+    }
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
     }
@@ -185,7 +175,7 @@ internal fun NativeKotlinCandidateJourney(
             // restored workout currently open in the saved Android state.
             if(!navigationTouched &&
                 destination==KotlinCandidateDestination.ONBOARD)
-                destination=initial
+                navigation=NativeKotlinNavigationState.start(initial)
             landingChecked=true
         }
     }
@@ -204,55 +194,22 @@ internal fun NativeKotlinCandidateJourney(
     var moreExpanded by remember { mutableStateOf(false) }
     var appearanceExpanded by remember { mutableStateOf(false) }
     var trainScreenExpanded by remember { mutableStateOf(false) }
-    var profileReturn by rememberSaveable {
-        mutableStateOf(KotlinCandidateDestination.PROGRAM)
-    }
-    var settingsReturn by rememberSaveable {
-        mutableStateOf(KotlinCandidateDestination.COACH)
-    }
     fun navigate(to:KotlinCandidateDestination) {
         navigationTouched=true
-        if(to==KotlinCandidateDestination.PROFILE &&
-            destination!=KotlinCandidateDestination.PROFILE)
-            profileReturn=destination
-        if(to==KotlinCandidateDestination.SETTINGS &&
-            destination!=KotlinCandidateDestination.SETTINGS)
-            settingsReturn=destination
-        if(to==KotlinCandidateDestination.COACH)
-            coachRequestedExerciseId=null // ordinary tab, not a saved-set handoff
-        if(to==KotlinCandidateDestination.PROGRESS) {
-            progressRequestedExerciseId=null // ordinary tab, not a pinned lift
-            progressRequestedTrendExerciseId=null
-        }
-        destination=to
+        navigation=navigation.open(to)
     }
-    // Physical Back follows the visible detail route, not the app launcher.
-    // Never intercept an active workout: its independent save/minimize and
-    // durable-journal recovery controls remain the only workout owners.
-    BackHandler(enabled=destination==KotlinCandidateDestination.PROFILE ||
-        destination==KotlinCandidateDestination.SETTINGS ||
-        (destination==KotlinCandidateDestination.PROGRESS &&
-            (progressRequestedExerciseId!=null ||
-                progressRequestedTrendExerciseId!=null))) {
-        when(destination) {
-            KotlinCandidateDestination.PROFILE -> destination=profileReturn
-            KotlinCandidateDestination.SETTINGS -> destination=settingsReturn
-            KotlinCandidateDestination.PROGRESS -> {
-                progressRequestedExerciseId=null
-                progressRequestedTrendExerciseId=null
-                destination=progressReturn
-            }
-            else -> Unit
-        }
+    // The shell never intercepts an active journal's save/minimize/recovery.
+    val activeWorkout=destination==KotlinCandidateDestination.TRAIN &&
+        (selectedCustomWorkoutId!=null || selectedGeneratedWorkoutId!=null ||
+            trainScreenExpanded)
+    BackHandler(enabled=!activeWorkout && navigation.canGoBack) {
+        navigation=navigation.back()
     }
     // Five ordinary destinations stay within a thumb's reach. Setup,
     // generator, gym, and future-block tools remain in the explicit menu.
     // This is a real Compose navigation shell, not a new session owner.
     // Adaptive Material navigation: bottom destinations on phones,
     // accessible rail on tablet/foldable widths; no global chrome over sets.
-    val activeWorkout=destination==KotlinCandidateDestination.TRAIN &&
-        (selectedCustomWorkoutId!=null || selectedGeneratedWorkoutId!=null ||
-            trainScreenExpanded)
     BoxWithConstraints(Modifier.fillMaxSize()) {
     val wide=maxWidth>=600.dp
     Scaffold(
@@ -261,6 +218,13 @@ internal fun NativeKotlinCandidateJourney(
                 Row(Modifier.fillMaxWidth()
                     .padding(horizontal=16.dp,vertical=6.dp),
                     verticalAlignment=Alignment.CenterVertically) {
+                    if(navigation.canGoBack) {
+                        IconButton(onClick={navigation=navigation.back()},
+                            modifier=Modifier.size(48.dp)) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription="Back to previous screen")
+                        }
+                    }
                     Column(Modifier.weight(1f)) {
                         Text("Pursuit Iron",style=MaterialTheme.typography.titleMedium)
                         Text(destination.label,
@@ -306,7 +270,7 @@ internal fun NativeKotlinCandidateJourney(
             if(!wide && !activeWorkout)NavigationBar {
                 primaryDestinations.forEach { page ->
                     NavigationBarItem(
-                        selected=candidateTabSelected(destination,page),
+                        selected=candidateTabSelected(navigation,page),
                         onClick={navigate(page)},
                         icon={CandidateTabIcon(page)},
                         label={Text(candidateTabLabel(page))}
@@ -319,7 +283,7 @@ internal fun NativeKotlinCandidateJourney(
             if(wide && !activeWorkout)NavigationRail {
                 primaryDestinations.forEach { page ->
                     NavigationRailItem(
-                        selected=candidateTabSelected(destination,page),
+                        selected=candidateTabSelected(navigation,page),
                         onClick={navigate(page)},
                         icon={CandidateTabIcon(page)},
                         label={Text(candidateTabLabel(page))}
@@ -327,12 +291,12 @@ internal fun NativeKotlinCandidateJourney(
                 }
             }
             Box(Modifier.weight(1f)) {
-            savedScreens.SaveableStateProvider(destination.name) {
+            savedScreens.SaveableStateProvider(navigation.current.saveableKey) {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
                         NativeKotlinOnboardingCandidateScreen(gymController,
-                            onContinue={destination=KotlinCandidateDestination.PROGRAM},
-                            onBuildProgram={destination=KotlinCandidateDestination.STARTER})
+                            onContinue={navigate(KotlinCandidateDestination.PROGRAM)},
+                            onBuildProgram={navigate(KotlinCandidateDestination.STARTER)})
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.STARTER ->
@@ -340,7 +304,7 @@ internal fun NativeKotlinCandidateJourney(
                             starterController,
                             onOpenSavedProgram={cycleId,reviewInputs->
                                 pendingFirstProgramAudit=cycleId to reviewInputs
-                                destination=KotlinCandidateDestination.PROGRAM
+                                navigate(KotlinCandidateDestination.PROGRAM)
                             })
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController,
@@ -351,21 +315,23 @@ internal fun NativeKotlinCandidateJourney(
                             onOpenIssuedWorkout={id->
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=id
-                                destination=KotlinCandidateDestination.TRAIN
+                                navigate(KotlinCandidateDestination.TRAIN)
                             },
                             onResumeGeneratedWorkout={id->
                                 selectedCustomWorkoutId=null
                                 selectedGeneratedWorkoutId=id
-                                destination=KotlinCandidateDestination.TRAIN
+                                navigate(KotlinCandidateDestination.TRAIN)
                             },
                             onOpenHistory={
-                                destination=KotlinCandidateDestination.HISTORY
+                                navigate(KotlinCandidateDestination.HISTORY)
                             },
-                            onBuildProgram={destination=KotlinCandidateDestination.STARTER},
+                            onBuildProgram={navigate(KotlinCandidateDestination.STARTER)},
                             permissionHost=host)
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
-                            preferredExerciseId=coachRequestedExerciseId,
+                            preferredExerciseId=navigation.current.exerciseId.takeIf {
+                                navigation.current.detail==NativeKotlinRouteDetail.COACH_EXERCISE
+                            },
                             onOpenSettings={navigate(KotlinCandidateDestination.SETTINGS)},
                             onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
                             onOpenFuture={navigate(KotlinCandidateDestination.FUTURE)},
@@ -373,24 +339,22 @@ internal fun NativeKotlinCandidateJourney(
                             onOpenTrain={id->
                                 selectedGeneratedWorkoutId=id
                                 selectedCustomWorkoutId=null
-                                destination=KotlinCandidateDestination.TRAIN
+                                navigate(KotlinCandidateDestination.TRAIN)
                             })
                     KotlinCandidateDestination.FUTURE ->
                         NativeKotlinFutureWeekCoachScreen(host,cycleController,
-                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
+                            onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
                             onOpenIssuedWorkout={id->
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=id
-                                destination=KotlinCandidateDestination.TRAIN
+                                navigate(KotlinCandidateDestination.TRAIN)
                             })
                     KotlinCandidateDestination.SETTINGS ->
                         NativeKotlinCoachSettingsScreen(host,
                             themeId=themeId,
-                            onOpenAppearance={appearanceExpanded=true},
-                            onBack={destination=settingsReturn})
+                            onOpenAppearance={appearanceExpanded=true})
                     KotlinCandidateDestination.PROFILE ->
                         NativeKotlinProfileScreen(host,themeId,
-                            onBack={destination=profileReturn},
                             onPlan={navigate(KotlinCandidateDestination.PROGRAM)},
                             onProgress={navigate(KotlinCandidateDestination.PROGRESS)},
                             onProgressLift={exerciseId->
@@ -399,10 +363,8 @@ internal fun NativeKotlinCandidateJourney(
                                 // Progress independently verifies general
                                 // exercise IDs against the current owner history.
                                 if(exerciseId.isNotBlank()) {
-                                    progressRequestedExerciseId=exerciseId
-                                    progressRequestedTrendExerciseId=null
-                                    progressReturn=KotlinCandidateDestination.PROFILE
-                                    destination=KotlinCandidateDestination.PROGRESS
+                                    navigationTouched=true
+                                    navigation=navigation.openProgressExercise(exerciseId)
                                 }
                             },
                             onGym={navigate(KotlinCandidateDestination.GYM)},
@@ -410,25 +372,25 @@ internal fun NativeKotlinCandidateJourney(
                             onAppearance={appearanceExpanded=true})
                     KotlinCandidateDestination.PROGRESS ->
                         NativeKotlinStrengthStandardsScreen(host,
-                            preferredExerciseId=progressRequestedExerciseId,
-                            preferredTrendExerciseId=progressRequestedTrendExerciseId)
+                            preferredExerciseId=navigation.current.exerciseId.takeIf {
+                                navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_EXERCISE
+                            },
+                            preferredTrendExerciseId=navigation.current.exerciseId.takeIf {
+                                navigation.current.detail==NativeKotlinRouteDetail.PROGRESS_TREND
+                            })
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
-                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
+                            onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
                             onOpenCoach={exerciseId->
-                                coachRequestedExerciseId=exerciseId
-                                destination=KotlinCandidateDestination.COACH
+                                navigationTouched=true
+                                navigation=navigation.openCoach(exerciseId)
                             },
                             onOpenProgress={
-                                progressRequestedExerciseId=null
-                                progressRequestedTrendExerciseId=null
-                                destination=KotlinCandidateDestination.PROGRESS
+                                navigate(KotlinCandidateDestination.PROGRESS)
                             },
                             onOpenExerciseTrend={exerciseId->
-                                progressRequestedExerciseId=null
-                                progressRequestedTrendExerciseId=exerciseId
-                                progressReturn=KotlinCandidateDestination.HISTORY
-                                destination=KotlinCandidateDestination.PROGRESS
+                                navigationTouched=true
+                                navigation=navigation.openProgressTrend(exerciseId)
                             })
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,
@@ -442,24 +404,24 @@ internal fun NativeKotlinCandidateJourney(
                             onViewFinishedHistory={
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
-                                destination=KotlinCandidateDestination.HISTORY
+                                navigate(KotlinCandidateDestination.HISTORY)
                             },
                             onReviewNext={exerciseId->
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
-                                coachRequestedExerciseId=exerciseId
-                                destination=KotlinCandidateDestination.COACH
+                                navigationTouched=true
+                                navigation=navigation.openCoach(exerciseId)
                             },
                             onReturnToProgram={
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
-                                destination=KotlinCandidateDestination.PROGRAM
+                                navigate(KotlinCandidateDestination.PROGRAM)
                             },
                             onReviewSwapInProgram={request->
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
                                 pendingProgramSwapReview=request
-                                destination=KotlinCandidateDestination.PROGRAM
+                                navigate(KotlinCandidateDestination.PROGRAM)
                             })
                 }
             }

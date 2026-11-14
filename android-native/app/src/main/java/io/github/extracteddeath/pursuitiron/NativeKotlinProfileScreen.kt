@@ -2,7 +2,6 @@ package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Person
@@ -57,7 +56,6 @@ private fun verifiedWorkingCount(timeline:NativeKotlinMixedHistoryTimeline):Int 
 internal fun NativeKotlinProfileScreen(
     host:NativeKotlinCandidateHost,
     themeId:String,
-    onBack:()->Unit,
     onPlan:()->Unit,
     onProgress:()->Unit,
     onProgressLift:(String)->Unit,
@@ -132,12 +130,7 @@ internal fun NativeKotlinProfileScreen(
     val working=timeline?.let{verifiedWorkingCount(it).toString()}?:"—"
     val days=current?.trainingWeekdays?.size?.toString()?:"—"
     PursuitScreenContent {
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick=onBack) {
-                Icon(Icons.Filled.ArrowBack,contentDescription="Back to previous screen")
-            }
-            Text("Your profile",style=MaterialTheme.typography.headlineSmall)
-        }
+        Text("Your profile",style=MaterialTheme.typography.headlineSmall)
         PursuitCard(highlighted=true) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.md)) {

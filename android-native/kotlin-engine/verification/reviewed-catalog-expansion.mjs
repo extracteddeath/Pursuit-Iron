@@ -160,6 +160,10 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  const declarations=[...source.matchAll(/\bentry\("([a-z0-9_-]+)"/g)].map(x=>x[1]);
  assert.equal(new Set(declarations).size,declarations.length,
    'native starter contains conflicting exercise IDs');
+ const variants=[...source.matchAll(/\\bentry\\("([^"]+)","([^"]+)","([^"]+)"/g)]
+   .map(x=>x[2]+'|'+x[3]);
+ assert.equal(new Set(variants).size,variants.length,
+   'preserved curated and reviewed extensions must have unique physical family/variant keys');
  assert.deepEqual(declarations.slice(49),manifest.records.map(x=>x.id),
    'new source IDs must append after the preserved first 49');
  assert.ok(source.includes('require(definitions.size=='+(49+count)+')'),

@@ -408,17 +408,17 @@ object CustomCycleCoachAuditDomain {
             .zipWithNext()
         val rises=trainingPairs.any { (earlier,later) ->
             later.workingSets > earlier.workingSets ||
-                TrainingMuscle.entries.any { muscle ->
-                    (later.directSets[muscle] ?: zero) >
-                        (earlier.directSets[muscle] ?: zero)
+                earlier.directSets.keys.intersect(later.directSets.keys).any { muscle ->
+                    later.directSets.getValue(muscle) >
+                        earlier.directSets.getValue(muscle)
                 }
         }
         val requiresContinuity=trainingPairs.any { (earlier,later) ->
             earlier.blockId != later.blockId ||
                 earlier.workingSets != later.workingSets ||
-                TrainingMuscle.entries.any { muscle ->
-                    (earlier.directSets[muscle] ?: zero) !=
-                        (later.directSets[muscle] ?: zero)
+                earlier.directSets.keys.intersect(later.directSets.keys).any { muscle ->
+                    earlier.directSets.getValue(muscle) !=
+                        later.directSets.getValue(muscle)
                 }
         }
         val missingContinuity=requiresContinuity &&
@@ -463,9 +463,11 @@ object CustomCycleCoachAuditDomain {
                                 "week.${later.absoluteWeek}.block.${later.blockId}",
                                 "Week ${later.absoluteWeek} ramps from ${earlier.workingSets} to ${later.workingSets} working sets beyond the explicitly reviewed workload increase.")
                     }
-                    for (muscle in TrainingMuscle.entries) {
-                        val before = earlier.directSets[muscle] ?: zero
-                        val after = later.directSets[muscle] ?: zero
+                    // A newly tracked or retired group has no measured
+                    // counterpart. It is not a zero-volume training week.
+                    for (muscle in earlier.directSets.keys.intersect(later.directSets.keys)) {
+                        val before = earlier.directSets.getValue(muscle)
+                        val after = later.directSets.getValue(muscle)
                         if (before > zero && after < before &&
                             before.subtract(after) > before.multiply(directLimit))
                             add(CustomCoachIssueKind.DIRECT_MUSCLE_DROP,

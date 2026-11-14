@@ -340,6 +340,46 @@ class TrainingBlockRecoveryContinuityTest {
         assertEquals(repaired,autoRepair(source))
     }
 
+    @Test fun strengthRepairDoesNotRecreateMusclesAbsentFromTheSavedTargetScope() {
+        val hip=fixture.movements.last().copy(exerciseId="hip",
+            familyId="hip",credits=listOf(DeclaredMuscleCredit(
+                TrainingMuscle.HIP_ABDUCTORS,MuscleCreditRole.DIRECT,n("1"))))
+        val source=cycle().let { original->original.copy(blocks=original.blocks.map {block->
+            if(block.blockId!="block-1")block else block.copy(days=block.days.map {day->
+                if(day.weekday!=0)day else day.copy(slots=day.slots+
+                    CustomExerciseSlot("prior-hip","hip",hip.role,
+                        listOf(day.slots.first().sets.first().copy(
+                            activeSeconds=30,restSeconds=30))))
+            })
+        }) }
+        val original=coaching(CustomCoachVolumeContinuityPolicy(n("0.25"),n("0.25")))
+        val hyper=original.policiesByPhase.getValue(TrainingPhase.HYPERTROPHY)
+        val hyperRows=hyper.selectedBounds.map {row->
+            if(row.muscle!=TrainingMuscle.HIP_ABDUCTORS)row else row.copy(
+                mev=n("1"),mav=n("1"),mrv=n("2"),minimumDirectDays=1)
+        }
+        val strength=original.policiesByPhase.getValue(TrainingPhase.STRENGTH)
+        val oldRows=strength.selectedBounds.filter{it.muscle.introducedIn==1}
+        val inputs=original.copy(policiesByPhase=mapOf(
+            TrainingPhase.HYPERTROPHY to hyper.copy(
+                baselineBounds=hyperRows,selectedBounds=hyperRows),
+            TrainingPhase.STRENGTH to strength.copy(
+                baselineBounds=oldRows,selectedBounds=oldRows)))
+        val repaired=AdaptiveStrengthVolumeRepairDomain.propose(
+            AdaptiveStrengthVolumeRepairRequest(AdaptiveCycleOptionRequest(
+                source,"strength",fixture.athlete(),fixture.movements+hip,
+                inputs,CustomCycleCoachPermissions(adaptSetCount=true),emptyList()),
+                maximumWorkingSetsPerSlot=3))
+        assertEquals(repaired.explanation,
+            AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,repaired.status)
+        val audit=checkNotNull(repaired.comparison.evaluated.single().coachingAudit)
+        assertEquals(listOf(31,9,24),audit.weeks.map{it.workingSets})
+        assertEquals(n("1"),audit.weeks.first().directSets[TrainingMuscle.HIP_ABDUCTORS])
+        assertFalse(audit.weeks.last().directSets.containsKey(TrainingMuscle.HIP_ABDUCTORS))
+        assertFalse(checkNotNull(repaired.proposedOption).proposedCycle.blocks.last()
+            .days.flatMap{it.slots}.any{it.exerciseId=="hip"})
+    }
+
     private fun repeatedStrength(weeks:Int)=cycle().let {source->
         source.copy(blocks=source.blocks.map {block->
             if(block.blockId=="strength")block.copy(weeks=weeks)

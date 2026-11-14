@@ -52,9 +52,20 @@ class NativeKotlinGeneratedProgramJourneyTest {
         longTrainingDays=emptySet(),declaredRestDays=(0..6).toSet()-weekdays(split)))
     private val catalog=StarterExerciseTranche.movements()
     private fun request(split:ComposerSplit=ComposerSplit.UPPER_LOWER,
-        phase:TrainingPhase=TrainingPhase.HYPERTROPHY)=FirstProgramStartRequest(
-        setup(split,phase),catalog,loads,bodyweight,phase,
-        nonSetSecondsPerDay=900)
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
+        includeHipMachines:Boolean=false):FirstProgramStartRequest {
+        val input=FirstProgramStartRequest(setup(split,phase),catalog,loads,
+            bodyweight,phase,nonSetSecondsPerDay=900)
+        if(!includeHipMachines)return input
+        val profile=checkNotNull(input.setup.reviewed)
+        val stocks=listOf("hip-abduction-machine","hip-adduction-machine")
+            .associateWith {VerifiedLoadStock.Totals(LoadUnit.LB,
+                LoadBasis.EXERCISE_OVERRIDE,listOf(n("15"),n("20"),n("25")))}
+        return input.copy(setup=input.setup.copy(reviewed=profile.copy(
+            gym=profile.gym.copy(confirmedStock=profile.gym.confirmedStock+stocks))),
+            startingLoads=loads+mapOf("hip-abduction" to n("20"),
+                "adduction-machine" to n("20")))
+    }
 
     private inner class Disk {
         val root=temp.root.toPath()
@@ -96,9 +107,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
     private fun saveGenerated(
         policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION,
         split:ComposerSplit=ComposerSplit.UPPER_LOWER,
-        phase:TrainingPhase=TrainingPhase.HYPERTROPHY
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
+        includeHipMachines:Boolean=false
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request(split,phase).copy(policyVersion=policyVersion)
+        val input=request(split,phase,includeHipMachines).copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -125,7 +137,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             NativeKotlinFirstProgramSeedFileStore(disk.root,disk.fence,identity)
                 .create(owner,NativeFirstProgramSeed(
                     cycleId,cycle.title,4,1,input.policyVersion,
-                    phase,loads,bodyweight,emptyList(),900)))
+                    phase,input.startingLoads,input.selectedBodyweightExerciseIds,emptyList(),900)))
         assertTrue(disk.consent.confirm(owner,cycleId,1,1,0,inputs,true)
             is NativeCustomSignoffWrite.Committed)
         val enrollment=NativeKotlinHistoryEnrollmentCoordinator(
@@ -642,6 +654,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         completeGeneratedWeek(ComposerSplit.UPPER_LOWER)
     }
 
+    @Test fun hipMachineWeekCompletesAndColdRestoresExactTargetsHistoryAndSeed() {
+        completeGeneratedWeek(ComposerSplit.UPPER_LOWER,includeHipMachines=true)
+    }
+
     @Test fun savedV3TimedProgramRetainsItsExactCycleAndTargetsAfterNewPoliciesArrive() {
         verifySavedTimedProgram(CoachFirstProgramStartDomain.TIMED_POLICY_VERSION)
     }
@@ -690,14 +706,30 @@ class NativeKotlinGeneratedProgramJourneyTest {
     }
 
     private fun completeGeneratedWeek(split:ComposerSplit,
-        phase:TrainingPhase=TrainingPhase.HYPERTROPHY) {
-        val (cycle,inputs)=saveGenerated(split=split,phase=phase)
+        phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
+        includeHipMachines:Boolean=false) {
+        val (cycle,inputs)=saveGenerated(split=split,phase=phase,
+            includeHipMachines=includeHipMachines)
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
         assertEquals(weekdays(split).sorted(),days.map{it.weekday})
         assertTrue(days.all{it.slots.size>=3})
         val selected=days.flatMap{it.slots}.map{it.exerciseId}.toSet()
         assertTrue(selected.containsAll(setOf("barbell_bench","back_squat",
             "one_arm_db_row","db_rdl")))
+        if(includeHipMachines) {
+            assertTrue(selected.containsAll(setOf("hip-abduction","adduction-machine")))
+            assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase
+                .getValue(phase).selectedBounds.map{it.muscle})
+            for(slot in days.flatMap{it.slots}.filter {
+                it.exerciseId in setOf("hip-abduction","adduction-machine")
+            }) for(set in slot.sets.filter{it.type==DraftSetType.WORKING}) {
+                assertEquals(DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.EXERCISE_OVERRIDE,n("20")),set.load)
+                // Source practicality (12–20) intersects the authored
+                // hypertrophy accessory prescription (10–15).
+                assertEquals(RepBand(12,15),set.reps)
+            }
+        }
         assertTrue(days.flatMap{it.slots}.flatMap{it.sets}
             .any{it.type==DraftSetType.WARMUP})
         val completed=mutableListOf<String>()
@@ -786,12 +818,15 @@ class NativeKotlinGeneratedProgramJourneyTest {
             temp.root.toPath(),Disk().fence,identity).read(owner,cycleId)
             as NativeFirstProgramSeedRead.Found).seed
         assertEquals(phase,seed.phase)
-        val regenerated=CoachFirstProgramStartDomain.review(request(split,seed.phase).copy(
+        val replayInput=request(split,seed.phase,includeHipMachines).copy(
             startingLoads=seed.startingLoads,
             selectedBodyweightExerciseIds=seed.bodyweightExercises,
-            nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion))
+            nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion)
+        val regenerated=CoachFirstProgramStartDomain.review(replayInput)
         assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
-            regenerated,setup(split,seed.phase),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+            regenerated,replayInput.setup,catalog,cycleId,seed.title,seed.blockWeeks).cycle)
+        if(includeHipMachines)for(id in listOf("hip-abduction","adduction-machine"))
+            assertEquals(n("20"),seed.startingLoads[id])
         // Editing the first finished workout cannot reorder newer results
         // or rewind next-session selection. Preserve the issued original.
         val firstId=completed.first()

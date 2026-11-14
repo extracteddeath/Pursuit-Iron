@@ -138,10 +138,13 @@ object AdaptiveStrengthVolumeRepairDomain {
                 "Training continuity limits are not reviewed.")
         val totalFloor=BigDecimal(previous.workingSets)
             .multiply(one.subtract(dropTotal))
-        val directFloor=TrainingMuscle.entries.associateWith {muscle->
-            (previous.directSets[muscle] ?:zero)
-                .multiply(one.subtract(dropDirect))
-        }
+        // Preserve measured continuity only for groups tracked in both
+        // phase policies; absent targets are not measured zeroes.
+        val directFloor=previous.directSets.keys.intersect(target.directSets.keys)
+            .associateWith {muscle->
+                previous.directSets.getValue(muscle)
+                    .multiply(one.subtract(dropDirect))
+            }
         val policyBounds=policy.selectedBounds.associateBy {it.muscle}
         val catalog=input.review.catalog.associateBy {it.exerciseId}
         val maxMinutes=listOfNotNull(
@@ -156,9 +159,8 @@ object AdaptiveStrengthVolumeRepairDomain {
         var added=0
         val activeGaps:()->Boolean={
             BigDecimal(working)<totalFloor ||
-                TrainingMuscle.entries.any {muscle->
-                    (direct[muscle] ?:zero) <
-                        checkNotNull(directFloor[muscle])
+                directFloor.any {(muscle,floor)->
+                    direct.getValue(muscle) < floor
                 }
         }
         while(activeGaps() && added<MAX_ADDING_STEPS) {
@@ -189,7 +191,7 @@ object AdaptiveStrengthVolumeRepairDomain {
                     }
                     if(credit.role==MuscleCreditRole.DIRECT) {
                         val gap=positive(
-                            checkNotNull(directFloor[muscle])
+                            (directFloor[muscle] ?:zero)
                                 .subtract(direct[muscle] ?:zero))
                         gain=gain.add(gap.min(credit.fractionalSet))
                     }

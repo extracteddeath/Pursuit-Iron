@@ -5475,6 +5475,1055 @@
         "attachment": null,
         "note": "Dumbbell floor press uses actual weight per hand and a separate floor-press exercise identity, with no bench or barbell assumed."
       }
+    },
+    {
+      "id": "spoto-press",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          3,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "spoto-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Spoto press is a distinct paused barbell variation; only rack and flat bench verified total bar load may be prescribed."
+      }
+    },
+    {
+      "id": "larsen-press",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          4,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "larsen-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Larsen press retains a dedicated exercise identity and barbell setup; its prior loads never replace flat-bench prescriptions."
+      }
+    },
+    {
+      "id": "pin-bench",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          3,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "pin-press-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Pin bench press requires a usable rack and flat bench; pin-height specificity is not inferred from ordinary bench history."
+      }
+    },
+    {
+      "id": "pause-bench",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          3,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "three-second-pause-barbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "flat-bench",
+          "rack"
+        ],
+        "direct": "CHEST",
+        "indirect": [
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Three-second paused bench is not interchangeable with a shorter pause and retains its own barbell performance baseline."
+      }
+    },
+    {
+      "id": "pin-press-ohp",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "barbell",
+          "rack"
+        ],
+        "practicalReps": [
+          4,
+          8
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "overhead_press",
+        "variant": "pin-press-overhead-barbell",
+        "pattern": "VERTICAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "rack"
+        ],
+        "direct": "FRONT_DELTS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Overhead pin press must use rack-supported verified straight-bar weight, not a free-standing shoulder press baseline."
+      }
+    },
+    {
+      "id": "deficit-barbell-deadlift",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          4,
+          6
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "deficit-straight-barbell",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "step-platform"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": null,
+        "note": "Deficit deadlift needs a stable raised platform and full barbell stock; unmodeled spinal and trap credits remain excluded."
+      }
+    },
+    {
+      "id": "jefferson-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          6,
+          10
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "squat",
+        "variant": "jefferson-straight-barbell",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.5",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Jefferson squat has its own verified barbell total and squat exposure; it does not inherit conventional back-squat loading."
+      }
+    },
+    {
+      "id": "db-deficit-lunge",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lunge",
+        "variant": "deficit-reverse-dumbbell",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "step-platform"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Deficit reverse lunge needs a stable step platform and explicit per-hand dumbbell weights, never standard lunge history."
+      }
+    },
+    {
+      "id": "db-deficit-step-up",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "dumbbell",
+          "bench"
+        ],
+        "practicalReps": [
+          10,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "step_up",
+        "variant": "deficit-step-up-dumbbell",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "flat-bench",
+          "step-platform"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Deficit dumbbell step-up uses a verified step and bench with per-hand loading; it is distinct from ordinary step-ups."
+      }
+    },
+    {
+      "id": "deficit-db-rdl",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "deficit-romanian-dumbbell",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [
+          "step-platform"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": null,
+        "note": "Deficit Romanian dumbbell deadlift requires a stable raised stance and per-hand stock; spinal credits are not invented."
+      }
+    },
+    {
+      "id": "smith-reverse-lunge",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "smith"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lunge",
+        "variant": "reverse-smith-station",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "reverse-lunge-smith-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [
+          "smith-machine"
+        ],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Smith reverse lunge must use that exact physical Smith station and total load, not a free barbell or dumbbell baseline."
+      }
+    },
+    {
+      "id": "bodyweight-reverse-nordic",
+      "source": {
+        "movementFamily": "knee_extension",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_extension",
+        "variant": "reverse-nordic-unweighted",
+        "pattern": "SQUAT",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Reverse Nordic is a controlled bodyweight quadriceps movement; no gym weights or assisted load are inferred."
+      }
+    },
+    {
+      "id": "db-lu-raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "lu-raise-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Lu lateral raise uses separately confirmed per-hand dumbbells; it is not equivalent to a standard lateral raise."
+      }
+    },
+    {
+      "id": "db-6-way-raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          10,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "six-way-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Six-way dumbbell raise has an independent per-hand load baseline due to its longer combined shoulder movement."
+      }
+    },
+    {
+      "id": "single-db-lat-raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "pursuit_m201"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "single-arm-extended-dumbbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Single-arm dumbbell lateral raise tracks the lifted dumbbell per hand and does not borrow bilateral set loads."
+      }
+    },
+    {
+      "id": "cable-behind-back-lateral",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "behind-body-single-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Behind-the-back cable lateral raises require a single verified handle and exact stack resistance separate from front-of-body raises."
+      }
+    },
+    {
+      "id": "cuff-cable-lat-raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "pursuit_m201"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "wrist-cuff-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "wrist-cuff",
+        "note": "Cuff cable raise requires a real wrist cuff and verified cable stack; grip changes do not authorize load-history transfer."
+      }
+    },
+    {
+      "id": "cable-rear-delt-row",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "rear_delt",
+        "variant": "standing-cable-rear-delt-row",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "REAR_DELTS",
+        "indirect": [
+          "UPPER_BACK:0.25"
+        ],
+        "attachment": "rope",
+        "note": "Cable rear-delt row uses an explicitly confirmed rope station and independent rear-delt loading, not a standard row target."
+      }
+    },
+    {
+      "id": "cable-behind-back-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "behind-body-single-cable-curl",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Behind-body cable biceps curl requires a verified single handle; no brachialis credit or arbitrary curl weight is assumed."
+      }
+    },
+    {
+      "id": "cable-cross-body-extension",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "cross-body-single-cable-triceps",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Cross-body triceps extension uses an independently verified single cable handle rather than a pushdown's stack history."
+      }
+    },
+    {
+      "id": "bw-single-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "single-leg-bodyweight-extended",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Single-leg bodyweight calf raise needs an explicit athlete ability choice; no machine or added dumbbell load is inferred."
+      }
+    },
+    {
+      "id": "dragon-flag",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          5,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "dragon-flag-bodyweight",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "flat-bench"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Dragon flag requires a stable bench anchor and is purely bodyweight in the reviewed Kotlin inventory; no added resistance."
+      }
+    },
+    {
+      "id": "situp",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "full-situp-bodyweight",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "A full bodyweight sit-up is a distinct controlled-repetition movement, never a substitute for loaded cable crunch history."
+      }
+    },
+    {
+      "id": "leaning-lat-raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "leaning-single-cable",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Leaning cable lateral raise needs an actual handle, verified stack and a separate baseline from ordinary single-cable raises."
+      }
+    },
+    {
+      "id": "cable-side-bend",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "side-bend-single-cable",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": "single-handle",
+        "note": "Loaded cable side bend requires a confirmed handle and cable stack; oblique work is represented conservatively as ABS."
+      }
+    },
+    {
+      "id": "hanging-oblique",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "pullup"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "hanging-oblique-bodyweight",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "pullup-bar"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Hanging oblique raise requires an actual pull-up bar and controlled bodyweight repetitions, with no plate assumption."
+      }
+    },
+    {
+      "id": "ez-cable-curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "ez-cable-grip",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": "ez-bar-attachment",
+        "note": "EZ-grip cable curl needs an actual attachment and confirmed stack, distinct from an EZ curl barbell's performance history."
+      }
+    },
+    {
+      "id": "single-lying-curl",
+      "source": {
+        "movementFamily": "knee_flexion",
+        "equipment": [
+          "legcurl"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "knee_flexion",
+        "variant": "single-leg-lying-machine",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "single-leg-lying-curl-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "leg-curl"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Single-leg lying curl requires its own calibrated physical machine resistance, not the bilateral leg-curl scale."
+      }
+    },
+    {
+      "id": "smith-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "smith"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "standing-smith-station",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "standing-calf-smith-station",
+        "basis": "SMITH_TOTAL",
+        "fixtures": [
+          "smith-machine"
+        ],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Smith calf raises use the exact total loading on a verified Smith station, distinct from the squat's strength history."
+      }
+    },
+    {
+      "id": "windshield-wiper",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "pullup"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "hanging-windshield-wiper",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "pullup-bar"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Hanging windshield wipers require a secure pull-up bar and controlled bodyweight repetitions, not assumed weights."
+      }
+    },
+    {
+      "id": "single-leg-press-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "legpress"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "single-leg-press-machine",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "leg-press-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "leg-press"
+        ],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Single-leg leg-press calf raise uses the physical leg-press machine's verified stock but its own isolated calf progression."
+      }
+    },
+    {
+      "id": "cable-wrist-curl",
+      "source": {
+        "movementFamily": "wrist_flexion",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "wrist_flexion",
+        "variant": "straight-bar-cable-wrist",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "WRIST_FLEXORS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Cable wrist flexion is counted solely toward wrist flexors and requires a real straight grip and verified stack."
+      }
+    },
+    {
+      "id": "behind-wrist-curl",
+      "source": {
+        "movementFamily": "wrist_flexion",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          15,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "wrist_flexion",
+        "variant": "behind-back-straight-barbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "WRIST_FLEXORS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Behind-back barbell wrist curl uses exact total bar weight and credits wrist flexion separately from extension."
+      }
+    },
+    {
+      "id": "upright-row",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "barbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "upright-straight-barbell",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "straight-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Straight-bar upright row needs a genuine barbell load; legacy trap credit is not fabricated as a modeled deltoid."
+      }
+    },
+    {
+      "id": "ez-oh-ext",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "ezbar"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "ez-overhead-triceps",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "ez-curl-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Overhead EZ curl bar triceps extension uses explicit EZ bar mass and plates rather than borrowing any dumbbell extension load."
+      }
     }
   ]
 }

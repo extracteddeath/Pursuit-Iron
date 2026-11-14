@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
@@ -107,8 +107,8 @@ internal fun NativeKotlinCandidateJourney(
             sessionController.close()
         }
     }
-    var navigation by rememberSaveable(stateSaver=listSaver(
-        save={state:NativeKotlinNavigationState->state.snapshot()},
+    var navigation by rememberSaveable(stateSaver=Saver<NativeKotlinNavigationState,Any>(
+        save={ArrayList(it.snapshot())},
         restore={NativeKotlinNavigationState.restore(it)}
     )) {mutableStateOf(NativeKotlinNavigationState.start())}
     val destination=navigation.current.destination

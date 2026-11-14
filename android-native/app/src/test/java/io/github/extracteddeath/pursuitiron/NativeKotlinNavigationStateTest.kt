@@ -158,4 +158,11 @@ class NativeKotlinNavigationStateTest {
         assertTrue(runCatching{NativeKotlinRoute(KotlinCandidateDestination.PROGRESS,
             exerciseId="bench")}.isFailure)
     }
+
+    @Test fun oldEnumOrWrongTypedSavedBundlesCannotCrashNavigationRecovery() {
+        for(saved in listOf(KotlinCandidateDestination.PROFILE,"old-settings",42,
+            listOf("native-navigation-v1","PROFILE",12,""),
+            listOf("native-navigation-v1","PROFILE","NONE",null)))
+            assertNull(NativeKotlinNavigationState.restore(saved))
+    }
 }

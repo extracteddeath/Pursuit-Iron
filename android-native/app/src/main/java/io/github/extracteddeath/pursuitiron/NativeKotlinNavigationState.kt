@@ -84,11 +84,15 @@ internal class NativeKotlinNavigationState private constructor(
         fun start(destination:KotlinCandidateDestination=KotlinCandidateDestination.ONBOARD)=
             NativeKotlinNavigationState(listOf(NativeKotlinRoute(destination)))
 
-        fun restore(saved:List<String>):NativeKotlinNavigationState? {
-            if(saved.size !in 4..193 || saved.first()!=VERSION ||
-                (saved.size-1)%3!=0)return null
+        fun restore(saved:Any?):NativeKotlinNavigationState? {
+            // Old versions saved one enum here. An incompatible UI bundle
+            // must safely reinitialize, not crash before durable recovery.
+            if(saved !is List<*> || saved.size !in 4..193 ||
+                saved.any{it !is String})return null
+            val fields=saved.filterIsInstance<String>()
+            if(fields.first()!=VERSION || (fields.size-1)%3!=0)return null
             return runCatching {
-                val routes=saved.drop(1).chunked(3).map {row->NativeKotlinRoute(
+                val routes=fields.drop(1).chunked(3).map {row->NativeKotlinRoute(
                     KotlinCandidateDestination.valueOf(row[0]),
                     NativeKotlinRouteDetail.valueOf(row[1]),row[2].takeIf{it.isNotEmpty()})}
                 require(routes.distinct().size==routes.size)

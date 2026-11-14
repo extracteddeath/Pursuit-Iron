@@ -503,9 +503,11 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt');
 assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   sharedFocus.includes('contentDescription="Exercise details"') &&
-  sharedFocus.includes('val stacked=maxWidth<380.dp || LocalDensity.current.fontScale>=1.35f') &&
-  sharedFocus.includes('historyAction(Modifier.weight(1f))') &&
+  sharedFocus.includes('val stacked=maxWidth<520.dp ||') &&
+  sharedFocus.includes('LocalDensity.current.fontScale>=1.30f') &&
+  sharedFocus.includes('val hasActions=exerciseLabel!=null &&') &&
   sharedFocus.includes('historyAction(Modifier)') &&
+  sharedFocus.includes('skipAction(Modifier)') &&
   journal.includes('onInfo={infoSlotId=slot.slotId}') &&
   journal.includes('journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}') &&
   journal.includes('sets=customWorkoutInfoSets(slot.sets)') &&

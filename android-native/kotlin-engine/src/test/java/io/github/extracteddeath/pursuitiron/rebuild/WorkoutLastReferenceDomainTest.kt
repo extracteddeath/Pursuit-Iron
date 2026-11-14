@@ -103,6 +103,33 @@ class WorkoutLastReferenceDomainTest {
             session(custom(exercise="paused_bench"),2)))).isEmpty())
     }
 
+    @Test fun currentWorkoutSwapAndUndoNeedReferencesForTheCurrentSnapshot() {
+        val next=custom(3)
+        val history=listOf(session())
+        val original=sets(result(next,history))
+        assertEquals(3,original.size)
+        // A live swap owns a fresh slot and set keys. References fetched
+        // for this source are deliberately empty rather than borrowing the
+        // original exercise's weights or earlier successful sets.
+        val replacement=custom(3,exercise="paused_bench",slots=listOf("swap-bench"))
+        assertTrue(sets(result(replacement,history)).isEmpty())
+        // Undo restores the original source and its comparable Last facts.
+        // Caching the empty replacement result would hide these valid facts.
+        assertEquals(original,sets(result(next,history)))
+
+        val generated=composerSnapshot()
+        val before=sets(WorkoutLastReferenceDomain.composer(
+            generated,listOf(composerSession(1))))
+        assertEquals(1,before.size)
+        val swapped=generated.copy(targets=generated.targets.map {
+            it.copy(exerciseId="paused_bench",setKey="swap-working-1")
+        })
+        assertTrue(sets(WorkoutLastReferenceDomain.composer(
+            swapped,listOf(composerSession(1)))).isEmpty())
+        assertEquals(before,sets(WorkoutLastReferenceDomain.composer(
+            generated,listOf(composerSession(1)))))
+    }
+
     @Test fun warmupChangesDoNotShiftWorkingSetReferencePositions() {
         val next=custom(3,warmup=false)
         val references=sets(result(next))

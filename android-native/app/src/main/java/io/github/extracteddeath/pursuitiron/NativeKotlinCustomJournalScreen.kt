@@ -412,9 +412,12 @@ internal fun NativeKotlinCustomJournalScreen(
         onSave={saveSessionNote(it)},
         onDismiss={showSessionNote=false;noteError=null}
     )
+    var lastReferenceRefresh by remember(workoutId){mutableIntStateOf(0)}
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
         enabled=(referenceMode==WorkoutReferenceMode.LAST ||
-            priorLevelingSlotId!=null) && current!=null)
+            priorLevelingSlotId!=null) && current!=null,
+        source=current?.snapshot?.let{WorkoutLastReferenceInput.Custom(it)},
+        refreshVersion=lastReferenceRefresh)
     val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(workoutScroll)
@@ -718,7 +721,9 @@ internal fun NativeKotlinCustomJournalScreen(
                     )
                 }
                 if(!verifiedFinishedInHistory || showFinishedSets) {
-                PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+                PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it},
+                    onRetry=if(lastReferences==WorkoutLastReferenceResult.Unavailable &&
+                        !busy) ({lastReferenceRefresh++}) else null)
                 current.snapshot.slots.filter {slot->
                     activeFocus==null ||
                         slot.sets.any{it.setKey==activeFocus.setKey}

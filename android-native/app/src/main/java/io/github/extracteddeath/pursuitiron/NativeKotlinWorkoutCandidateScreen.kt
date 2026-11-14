@@ -149,10 +149,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var priorLevelingScope by rememberSaveable(workoutId) {
         mutableStateOf<String?>(null)
     }
+    var lastReferenceRefresh by remember(workoutId){mutableIntStateOf(0)}
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
         enabled=(referenceMode==WorkoutReferenceMode.LAST ||
             priorLevelingScope!=null) &&
-            journal!=null)
+            journal!=null,
+        source=journal?.snapshot?.let{WorkoutLastReferenceInput.Generated(it)},
+        refreshVersion=lastReferenceRefresh)
     val running=presentation!=null && !presentation.finished
     var verifiedFinish by remember(host,workoutId){
         mutableStateOf<NativeComposerFinishHandoffResult?>(null)
@@ -578,7 +581,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it})
+        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it},
+            onRetry=if(lastReferences==WorkoutLastReferenceResult.Unavailable &&
+                !state.busy) ({lastReferenceRefresh++}) else null)
         // Web parity: average positive working-set editor entries in this
         // CURRENT session (including completed factual entries), then fill
         // ONLY unfinished entries. Issued set targets and future workouts

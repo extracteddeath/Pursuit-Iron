@@ -1,30 +1,45 @@
 # Pursuit Iron — native Android early-launch beta development
 
-**Current destination:** a small, reliable, several-month Android beta, not
-full web parity. See [Launch beta scope](LAUNCH_BETA_SCOPE.md) for the features
-that must work, intentional deferrals, feedback/data recovery requirements and
-one-Kotlin-engine release gate. The code below describes historic development
-milestones and preview-only workflows; it is **not** proof the beta is ready.
-MainActivity now opens the existing Kotlin-owned journey directly;
-the debug Kotlin Lab launcher subclasses it so both use exactly the same
-navigation. No JS engine is initialized at launch. The dormant old JS code
-and `:engine-runtime` dependency are **still on the release classpath**:
-the early-beta release guard remains intentionally blocking until that
-legacy dependency is removed. Old JS workouts are **not silently imported**
-to the Kotlin store, and on-device acceptance is still required.
+**Current destination:** the Kotlin-only, several-month Android beta on
+`architecture/kotlin-engine-rebuild`. Full functional web-engine parity is
+required before claiming superiority or inviting beta testers. See
+[Launch beta scope](LAUNCH_BETA_SCOPE.md) for the acceptance contract. The
+catalog inventory alone does not establish behavior parity.
 
-This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
+`MainActivity` and the debug Kotlin Lab launcher share
+`NativeKotlinCandidateJourney`. The app's staged source allowlist and direct
+dependencies use the independent `:kotlin-engine` and `:native-coach-store`;
+`:engine-runtime` is excluded from the app dependency graph. A release guard
+checks the resolved runtime and source boundary. Historical JS preview code
+remains in the repository for comparison, outside the selected beta source.
+Web history is not silently imported into the Kotlin store.
+
+Generated and custom workouts use their existing durable journal owners for
+set recording, correction, Finish and recovery. Optional Leveling fills only
+unsaved current-workout fields; normal submitted weight/reps follow the usual
+journal and coaching rules. It never writes future prescriptions. Target/Last,
+exercise history, notes, machine identities and workout-only swaps retain
+their source and owner checks.
+
+Routine acceptance runs the **Android Compose foundation contracts** and
+**Independent Kotlin engine rules — tests only** workflows. The latter runs
+Kotlin engine and native persistence tests, matched web/Kotlin comparisons,
+program/cycle probes, source contracts and Android Compose compilation. It
+does not assemble an APK. Passing these checks does not certify device UX,
+complete engine parity, full backup/restore or engine superiority.
 
 ## APK freeze until the full workout journey is finished
 
 **No new native Android APKs will be built for the remainder of the
-architecture, onboarding, workout runtime, persistence and completion work.**
+architecture, onboarding, workout runtime, persistence and completion work,
+and until the full application UI is finished.**
 Both installable-preview and instrumentation-device workflows are explicitly
 job-disabled; even manual dispatch cannot generate an APK. Routine verification
 is limited to Kotlin/Compose compilation, JVM tests, canonical engine
 regression suites and Java instrumentation-source compilation.
 
-Unblock APK production only in a deliberate later change, after the same
+Unblock APK production only in a deliberate later change after the full UI
+is finished, and after the same
 native revision has end-to-end evidence for: onboarding -> program creation ->
 verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
@@ -39,7 +54,13 @@ freeze remains active.
 The instructions below describe how **older previously produced** artifacts
 could be installed. They do not authorize new builds before the release gate.
 
-## M4 tester APK and next-build gate
+## Historical preview development record
+
+The sections below retain the earlier JavaScript-backed preview's milestones,
+installation notes and architecture. They are historical context, not the
+current Kotlin beta runtime, build instructions or release authorization.
+
+### M4 tester APK and next-build gate
 
 The onboarding-to-Train proof APK was built successfully from commit
 `9c4df320` and can be retrieved from its

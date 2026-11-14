@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
@@ -57,16 +58,13 @@ internal fun rememberWorkoutLastReferences(
     return if(enabled)result else null
 }
 
+/** Target/Last is display-only and never substitutes a history observation. */
 @Composable
 internal fun PursuitWorkoutReferencePicker(
     mode:WorkoutReferenceMode,onChange:(WorkoutReferenceMode)->Unit
 ) {
-    Row(Modifier.fillMaxWidth(),
-        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
-        verticalAlignment=Alignment.CenterVertically) {
-        Text("Reference",modifier=Modifier.weight(1f),
-            style=MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow {
+    val choices:@Composable (Modifier)->Unit={modifier->
+        SingleChoiceSegmentedButtonRow(modifier=modifier) {
             WorkoutReferenceMode.entries.forEachIndexed { index,choice ->
                 SegmentedButton(
                     selected=mode==choice,
@@ -75,6 +73,24 @@ internal fun PursuitWorkoutReferencePicker(
                 ) {
                     Text(if(choice==WorkoutReferenceMode.TARGET)"Target" else "Last")
                 }
+            }
+        }
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stacked=maxWidth<360.dp || LocalDensity.current.fontScale>=1.30f
+        if(stacked) {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                Text("Reference",style=MaterialTheme.typography.labelLarge)
+                choices(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                verticalAlignment=Alignment.CenterVertically) {
+                Text("Reference",modifier=Modifier.weight(1f),
+                    style=MaterialTheme.typography.labelLarge)
+                choices(Modifier)
             }
         }
     }

@@ -523,6 +523,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 movementRestricted=movementRestricted,
                 onMovementRestrictedChange={movementRestricted=it},
                 enabled=!state.busy,
+                compactByDefault=true,
                 onReportConcern=if(journal!=null) ({
                     // Restrict optional advice immediately; never auto-record
                     // a set, alter a prescription or claim an injury note

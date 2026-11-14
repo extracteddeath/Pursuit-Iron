@@ -399,6 +399,32 @@ for(const phrase of [
   'modifier=Modifier.heightIn(min=48.dp)',
   'horizontalScroll(rememberScrollState())'
 ])assert.ok(sharedFocus.includes(phrase),'Missing shared workout focus behavior: '+phrase);
+// Compact default avoids burying the next editable set below coach inputs.
+// The safety shortcut remains one tap even while details are collapsed;
+// changing the summary cannot mutate actual sets or planned weights.
+for(const phrase of [
+  'compactByDefault:Boolean=false',
+  'var detailsExpanded by rememberSaveable(compactByDefault)',
+  'mutableStateOf(!compactByDefault)',
+  'Text("Coaching context"',
+  'Text("Injury / discomfort")',
+  'if(!compactByDefault || detailsExpanded)',
+  'onClick=onReportConcern',
+  'modifier=Modifier.heightIn(min=48.dp)'
+])assert.ok(sharedFocus.includes(phrase),'Compact coach context lost its controls: '+phrase);
+assert.ok(composer.includes('compactByDefault=true') &&
+  journal.includes('compactByDefault=true'),
+  'Both Kotlin workout types must prioritize visible set logging');
+const referenceLayout=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutReference.kt');
+for(const phrase of [
+  'internal fun PursuitWorkoutReferencePicker(',
+  'BoxWithConstraints(Modifier.fillMaxWidth())',
+  'val stacked=maxWidth<360.dp || LocalDensity.current.fontScale>=1.30f',
+  'choices(Modifier.fillMaxWidth())',
+  'WorkoutReferenceMode.entries.forEachIndexed',
+  'selected=mode==choice',
+  'onClick={onChange(choice)}'
+])assert.ok(referenceLayout.includes(phrase),'Target/Last cannot truncate at 200% font: '+phrase);
 assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
   sharedFocus.includes('onReadinessChange(option)') &&
   sharedFocus.includes('onMovementRestrictedChange') &&

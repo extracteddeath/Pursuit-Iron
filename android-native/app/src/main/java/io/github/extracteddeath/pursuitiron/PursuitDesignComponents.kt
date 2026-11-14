@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -123,67 +125,105 @@ internal fun PursuitWorkoutReadinessPanel(
     showReadiness:Boolean=true,
     restrictionLabel:String="Movement restricted",
     /** UI-only handoff into the current owner's existing durable note editor. */
-    onReportConcern:(()->Unit)?=null
+    onReportConcern:(()->Unit)?=null,
+    /** Keep the current set closer to the top; all coach inputs stay accessible. */
+    compactByDefault:Boolean=false
 ) {
+    // Only the visibility of advisory inputs is saved. Readiness/restrictions
+    // remain athlete-owned parent state and never mutate a set or program.
+    var detailsExpanded by rememberSaveable(compactByDefault) {
+        mutableStateOf(!compactByDefault)
+    }
     Column(
         Modifier.fillMaxWidth(),
         verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
     ) {
-        if(showReadiness) {
-        Text("How are you feeling?",style=MaterialTheme.typography.titleSmall)
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
-        ) {
-            CoachReadiness.entries.forEach { option ->
-                FilterChip(
-                    selected=readiness==option,
-                    onClick={onReadinessChange(option)},
+        if(compactByDefault) {
+            Text("Coaching context",style=MaterialTheme.typography.titleSmall)
+            Text(
+                (if(showReadiness) "Readiness · "+
+                    readiness.name.lowercase().replaceFirstChar{it.uppercase()}+
+                    " · " else "") +
+                    (if(movementRestricted)restrictionLabel else "Unrestricted"),
+                style=MaterialTheme.typography.bodySmall,
+                color=if(movementRestricted)MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            // An injury remains ONE tap even when readiness fields are
+            // collapsed. No auto skip, weight change or unsaved note claim.
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                verticalAlignment=Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick={detailsExpanded=!detailsExpanded},
                     enabled=enabled,
-                    modifier=Modifier.heightIn(min=48.dp),
-                    label={Text(option.name.lowercase().replaceFirstChar{
-                        it.uppercase()
-                    })}
-                )
+                    modifier=Modifier.heightIn(min=48.dp)
+                ) {Text(if(detailsExpanded)"Done" else "Edit readiness")}
+                if(onReportConcern!=null) TextButton(
+                    onClick=onReportConcern,
+                    enabled=enabled,
+                    modifier=Modifier.heightIn(min=48.dp)
+                ) {Text("Injury / discomfort")}
             }
         }
-        }
-        Row(
-            Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(
-                value=movementRestricted,enabled=enabled,role=Role.Checkbox,
-                onValueChange=onMovementRestrictedChange
-            ),
-            verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
-        ) {
-            // One large labeled touch/keyboard target. The nested indicator
-            // is display-only so a tap cannot toggle the value twice.
-            Checkbox(
-                checked=movementRestricted,
-                onCheckedChange=null,
-                enabled=enabled
-            )
-            Column(Modifier.weight(1f)) {
-                Text(restrictionLabel,
-                    style=MaterialTheme.typography.bodyMedium)
-                if(movementRestricted) Text(
-                    "Review a safer adjustment or alternative. Nothing changes until you approve it.",
+        if(!compactByDefault || detailsExpanded) {
+            if(showReadiness) {
+                Text("How are you feeling?",
+                    style=MaterialTheme.typography.titleSmall)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+                ) {
+                    CoachReadiness.entries.forEach { option ->
+                        FilterChip(
+                            selected=readiness==option,
+                            onClick={onReadinessChange(option)},
+                            enabled=enabled,
+                            modifier=Modifier.heightIn(min=48.dp),
+                            label={Text(option.name.lowercase().replaceFirstChar{
+                                it.uppercase()
+                            })}
+                        )
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(
+                    value=movementRestricted,enabled=enabled,role=Role.Checkbox,
+                    onValueChange=onMovementRestrictedChange
+                ),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+            ) {
+                // One labeled accessible touch target, not two nested toggles.
+                Checkbox(
+                    checked=movementRestricted,
+                    onCheckedChange=null,
+                    enabled=enabled
+                )
+                Column(Modifier.weight(1f)) {
+                    Text(restrictionLabel,style=MaterialTheme.typography.bodyMedium)
+                    if(movementRestricted) Text(
+                        "Review a safer adjustment or alternative. Nothing changes until you approve it.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if(onReportConcern!=null) {
+                if(!compactByDefault) OutlinedButton(
+                    onClick=onReportConcern,
+                    enabled=enabled,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Injury or discomfort · add a note")}
+                Text(
+                    "This marks the movement as restricted for optional coaching and opens the saved session note. You still choose Skip or Swap for any unfinished sets; nothing is changed automatically.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-        if(onReportConcern!=null) {
-            OutlinedButton(
-                onClick=onReportConcern,
-                enabled=enabled,
-                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
-            ) {Text("Injury or discomfort · add a note")}
-            Text(
-                "This marks the movement as restricted for optional coaching and opens the saved session note. You still choose Skip or Swap for any unfinished sets; nothing is changed automatically.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

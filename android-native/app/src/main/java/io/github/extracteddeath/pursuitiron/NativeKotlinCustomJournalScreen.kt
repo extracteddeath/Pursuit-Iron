@@ -620,7 +620,11 @@ internal fun NativeKotlinCustomJournalScreen(
                             }
                         },
                         enabled=!busy,
-                        heading=if(requestedFocus!=null) "REVIEW SET" else "UP NEXT",
+                        heading=when {
+                            !focusOnNext -> "ALL SETS"
+                            requestedFocus!=null -> "REVIEW SET"
+                            else -> "UP NEXT"
+                        },
                         onHistory=upcoming?.first?.exerciseId?.let{exerciseId->
                             {historyExerciseId=exerciseId}
                         },

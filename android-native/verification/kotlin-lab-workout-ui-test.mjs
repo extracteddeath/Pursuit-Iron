@@ -51,6 +51,31 @@ for(const phrase of [
   'visitProgress.recordedFollowUps',
   'progress={visitProgress.fraction}'
 ])assert.ok(journal.includes(phrase),'Actual custom visit progress must include amplifiers: '+phrase);
+// Focus/All must announce truthful scope. A user deliberately reviewing
+// a previous set should be able to return directly to the journal's next
+// unresolved set without affecting source load or receipt ownership.
+const generatedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+const m3focus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
+for(const fragment of [
+  'exerciseLabel ?: if(focusOnNext)',
+  '"All entries recorded · review Finish"',
+  '"All sets · choose a set"'
+])assert.ok(m3focus.includes(fragment),'Shared focus cannot mislabel All sets: '+fragment);
+for(const fragment of [
+  'showAll -> "ALL SETS"',
+  'setDetail=if(showAll)null else focusDetail',
+  'onFocusChange={focus->',
+  'selectedKey=presentation.firstUnresolvedSetKey ?:selectedKey',
+  '!it.isResolved && !presentation.finished && !showAll',
+  'Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())',
+  'val nextUnlogged=presentation.firstUnresolvedSetKey',
+  'onClick={selectedKey=nextUnlogged}',
+  'Text("Jump to next unlogged")'
+])assert.ok(generatedFocus.includes(fragment),
+  'Generated Focus/All must be accurate, accessible and recovery aware: '+fragment);
+assert.ok(journal.includes('!focusOnNext -> "ALL SETS"') &&
+  journal.includes('requestedFocus!=null -> "REVIEW SET"'),
+  'Custom focus header must reflect All sets and explicit set review');
 // In custom Focus the selected reviewed entry is distinct from the
 // journal's actual next unlogged visit and must survive rotation. Previous
 // and Next include only real amplifier follow-ups.

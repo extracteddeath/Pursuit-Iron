@@ -256,7 +256,9 @@ internal fun PursuitWorkoutFocusHeader(
         val titleContent:@Composable (Modifier)->Unit={modifier->
             Column(modifier,
                 verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
-                Text(exerciseLabel ?: "All entries recorded · review Finish",
+                Text(exerciseLabel ?: if(focusOnNext)
+                    "All entries recorded · review Finish"
+                else "All sets · choose a set",
                     style=MaterialTheme.typography.titleLarge)
                 if(!setDetail.isNullOrBlank())
                     Text(setDetail,style=MaterialTheme.typography.bodySmall,

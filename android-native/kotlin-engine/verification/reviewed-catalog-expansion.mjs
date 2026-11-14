@@ -36,7 +36,7 @@ const patterns=new Set(['HORIZONTAL_PRESS','VERTICAL_PRESS','HORIZONTAL_PULL',
 const machineSource=new Set(['machinerow','legcurl','calfmachine','machine',
  'machinepress','machineshoulder','pecdeck','machinelatraise','machinecurl',
  'machineext','beltsquat','hipthrustmachine','machinecrunch',
- 'legext','legpress','hacksquat','reversehyper']);
+ 'legext','legpress','hacksquat','reversehyper','machinepullover','kickback']);
 const q=x=>x===null?'null':JSON.stringify(x);
 
 export function renderEntry(row) {
@@ -188,7 +188,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,208);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,228);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

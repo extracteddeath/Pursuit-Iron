@@ -209,7 +209,27 @@ private val kotlinExerciseNames=mapOf(
     "ghr" to "Glute-Ham Raise",
     "reverse-hyper" to "Reverse Hyperextension",
     "leg-press-calf" to "Leg Press Calf Raise",
-    "donkey-calf" to "Donkey Calf Raise"
+    "donkey-calf" to "Donkey Calf Raise",
+    "underhand-pulldown" to "Underhand-Grip Lat Pulldown",
+    "single-cable-row" to "Single-Arm Cable Row",
+    "close-cable-row" to "Close-Grip Seated Cable Row",
+    "wide-cable-row" to "Wide-Grip Seated Cable Row",
+    "underhand-cable-row" to "Underhand Seated Cable Row",
+    "rope-cable-row" to "Rope Seated Cable Row",
+    "dual-cable-row" to "Dual-Handle Seated Cable Row",
+    "wide-machine-row" to "Wide-Grip Machine Row",
+    "neutral-machine-row" to "Neutral-Grip Machine Row",
+    "t-bar-chest-supported" to "Chest-Supported T-Bar Row",
+    "cable-pullover" to "Cable Lat Pullover",
+    "machine-pullover" to "Machine Pullover",
+    "cable-upright-row" to "Cable Upright Row",
+    "cable-y-raise" to "Cable Y-Raise",
+    "cable-rdl" to "Cable Romanian Deadlift",
+    "glute-kickback-machine" to "Glute Kickback Machine",
+    "hack-calf" to "Hack Squat Calf Raise",
+    "reverse-crunch" to "Reverse Crunch",
+    "cable-reverse-crunch" to "Cable Reverse Crunch",
+    "db-floor-press" to "Dumbbell Floor Press"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

@@ -4871,6 +4871,610 @@
         "attachment": "single-handle",
         "note": "Single-arm cable lateral raises need one verified handle and stack. Their progression and muscle credits remain distinct from dumbbell raises."
       }
+    },
+    {
+      "id": "underhand-pulldown",
+      "source": {
+        "movementFamily": "vertical_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "vertical_pull",
+        "variant": "underhand-cable",
+        "pattern": "VERTICAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "LATS",
+        "indirect": [
+          "BICEPS:0.5",
+          "UPPER_BACK:0.25"
+        ],
+        "attachment": "straight-bar",
+        "note": "Reverse-grip pulldown uses a real cable station and straight bar; lat and biceps credit is provisional and no generic trap credit is invented."
+      }
+    },
+    {
+      "id": "single-cable-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "seated_cable_row",
+        "variant": "single-arm-handle",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "single-handle",
+        "note": "Single-arm cable rows require a verified single-handle attachment and exact stack. Each exercise keeps independent history and loading."
+      }
+    },
+    {
+      "id": "close-cable-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "seated_cable_row",
+        "variant": "close-v-grip",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.5",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "v-bar",
+        "note": "Close neutral cable rows require an actual close V-bar and verified stack; do not transfer weight from wide or rope rows."
+      }
+    },
+    {
+      "id": "wide-cable-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "seated_cable_row",
+        "variant": "wide-bar",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "wide-lat-bar",
+        "note": "Wide-grip cable row needs a wide bar and confirmed stack; source broad-back and trap metadata is not double counted."
+      }
+    },
+    {
+      "id": "underhand-cable-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "seated_cable_row",
+        "variant": "underhand-straight-bar",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.5",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "straight-bar",
+        "note": "Supinated straight-bar cable row is distinct from pulldown and close-grip row; retain its own load and grip identity."
+      }
+    },
+    {
+      "id": "rope-cable-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "seated_cable_row",
+        "variant": "rope",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "rope",
+        "note": "Rope seated row needs a real rope and known cable stack; it never reuses V-bar or dual-handle weights silently."
+      }
+    },
+    {
+      "id": "dual-cable-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "seated_cable_row",
+        "variant": "dual-handles",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": "dual-handles",
+        "note": "Dual-handle cable rows use the recorded station stack convention, not a guessed sum of two arms or another machine."
+      }
+    },
+    {
+      "id": "wide-machine-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "machinerow"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "machine_row",
+        "variant": "wide-grip-machine",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "wide-row-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Wide-grip machine row requires its own calibrated physical station; generic machine presence cannot lend another row's load."
+      }
+    },
+    {
+      "id": "neutral-machine-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "machinerow"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "machine_row",
+        "variant": "neutral-grip-machine",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "neutral-row-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Neutral-grip row must use verified resistance for its own selected machine, independent of a wide-grip row or cable."
+      }
+    },
+    {
+      "id": "t-bar-chest-supported",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "machinerow"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "machine_row",
+        "variant": "chest-supported-t-bar",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "chest-t-bar-row-station",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "LATS:0.5",
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Chest-supported T-bar row is mapped to a verified dedicated machine, never an assumed straight-bar or landmine plate total."
+      }
+    },
+    {
+      "id": "cable-pullover",
+      "source": {
+        "movementFamily": "shoulder_extension",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "shoulder_extension",
+        "variant": "cable-lat-pullover",
+        "pattern": "VERTICAL_PULL",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "LATS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Cable lat pullover needs a verified straight-bar attachment and exact stack. No unsupported triceps credit is borrowed."
+      }
+    },
+    {
+      "id": "machine-pullover",
+      "source": {
+        "movementFamily": "shoulder_extension",
+        "equipment": [
+          "machinepullover"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "shoulder_extension",
+        "variant": "machine-lat-pullover",
+        "pattern": "VERTICAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "pullover-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "LATS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Dedicated machine pullover requires an independently verified machine load; it does not inherit cable or dumbbell history."
+      }
+    },
+    {
+      "id": "cable-upright-row",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "cable-upright",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "straight-bar",
+        "note": "Cable upright row is an independently loaded shoulder movement. Source trap credit is quarantined, not reassigned."
+      }
+    },
+    {
+      "id": "cable-y-raise",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "cable-y",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "attachment": "dual-handles",
+        "note": "Cable Y-raise requires two verified handles and station-specific stack settings, without borrowing overhead-press loads."
+      }
+    },
+    {
+      "id": "cable-rdl",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "cable-romanian",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.5"
+        ],
+        "attachment": "straight-bar",
+        "note": "Cable Romanian deadlift needs a physical straight bar and verified stack; back and trap source tokens are not invented as lat dose."
+      }
+    },
+    {
+      "id": "glute-kickback-machine",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "kickback"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "dedicated-kickback-machine",
+        "pattern": "HINGE",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "glute-kickback-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "GLUTES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Glute kickback uses a dedicated independently calibrated physical machine; there is no automatic cable or hip-thrust load transfer."
+      }
+    },
+    {
+      "id": "hack-calf",
+      "source": {
+        "movementFamily": "calf",
+        "equipment": [
+          "hacksquat"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "calf_raise",
+        "variant": "hack-machine-calf",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "hack-calf-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "CALVES",
+        "indirect": [],
+        "attachment": null,
+        "note": "Hack machine calf raise requires verified exact station resistance; its calf-only performance is independent of full hack squats."
+      }
+    },
+    {
+      "id": "reverse-crunch",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "reverse-bodyweight",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Reverse crunch is an unweighted controlled-repetition movement; neither added load nor invented machine resistance is implied."
+      }
+    },
+    {
+      "id": "cable-reverse-crunch",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "reverse-cable",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": "rope",
+        "note": "Cable reverse crunch requires a real rope and verified stack setting. Bodyweight reverse crunch history cannot lend its loading."
+      }
+    },
+    {
+      "id": "db-floor-press",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "dumbbell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "bench_press",
+        "variant": "floor-dumbbell",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "dumbbell-rack",
+        "basis": "DUMBBELL_PER_HAND",
+        "fixtures": [],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Dumbbell floor press uses actual weight per hand and a separate floor-press exercise identity, with no bench or barbell assumed."
+      }
     }
   ]
 }

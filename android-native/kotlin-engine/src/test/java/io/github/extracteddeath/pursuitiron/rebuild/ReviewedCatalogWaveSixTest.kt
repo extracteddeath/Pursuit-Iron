@@ -12,7 +12,7 @@ import org.junit.Test
 class ReviewedCatalogWaveSixTest {
     private fun n(s:String)=BigDecimal(s)
     private val all=StarterExerciseTranche.entries()
-    private val wave=all.drop(178)
+    private val wave=all.drop(178).take(30)
     private val ids=listOf(
         "split-squat","step-up","box-squat","cyclist-squat",
         "zercher-squat","pistol-squat","hip-thrust","smith-hip-thrust",
@@ -84,10 +84,10 @@ class ReviewedCatalogWaveSixTest {
     }
 
     @Test fun preserveExactWebIdentitiesAndUniqueEquipmentVariants() {
-        assertEquals(208,all.size)
+        assertEquals(228,all.size)
         assertEquals(ids,wave.map{it.legacyCuratedId})
-        assertEquals(208,all.map{it.legacyCuratedId}.distinct().size)
-        assertEquals(208,all.map{
+        assertEquals(228,all.map{it.legacyCuratedId}.distinct().size)
+        assertEquals(228,all.map{
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(wave.all{

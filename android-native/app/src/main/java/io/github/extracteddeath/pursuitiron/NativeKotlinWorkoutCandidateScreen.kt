@@ -182,6 +182,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 
     var showFinishConfirm by rememberSaveable(workoutId){mutableStateOf(false)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
+    var pinnedExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var pendingSkip by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var pendingFail by remember(workoutId) {
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
@@ -446,7 +447,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             progress={if(allSets.isEmpty())0f else
                 presentation.resolvedCount.toFloat()/allSets.size},
             modifier=Modifier.fillMaxWidth())
-        if(journal!=null && journal.finishedByEventId==null) {
+        if(journal!=null && journal.finishedByEventId==null &&
+            (showAll || selected==null)) {
             OutlinedButton(
                 onClick={showSessionNote=true},
                 enabled=!state.busy,
@@ -455,7 +457,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 Text(if(journal.sessionNote.isBlank())
                     "Add session note" else "Edit saved session note")
             }
-        } else if(journal?.sessionNote?.isNotBlank()==true) {
+        } else if(journal?.finishedByEventId!=null &&
+            journal.sessionNote.isNotBlank()) {
             PursuitCard {
                 PursuitSectionHeading("Saved session note",
                     "Recorded with this finished workout · read-only")
@@ -522,6 +525,23 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 {pendingSkip=key}
             }
         )
+        if(!showAll && !presentation.finished && journal!=null) {
+            val toolExercise=selected?.target?.exerciseId
+            val toolTargets=journal.snapshot.targets.filter{it.exerciseId==toolExercise}
+            NativeKotlinWorkoutTools(
+                enabled=!state.busy && !swapLoading,
+                onSessionNote={showSessionNote=true},
+                onPinnedNote=toolExercise?.let {exerciseId->
+                    {pinnedExerciseId=exerciseId}
+                },
+                onSwap=toolExercise?.takeIf {
+                    toolTargets.none{it.setKey in journal.effectiveSets}
+                }?.let {exerciseId->{reviewSwap(exerciseId)}},
+                onWarmup=toolExercise?.takeIf {
+                    toolTargets.any{it.type==DraftSetType.WARMUP}
+                }?.let {exerciseId->{infoExerciseId=exerciseId}}
+            )
+        }
         if(!presentation.finished) {
             PursuitWorkoutReadinessPanel(
                 readiness=readiness,
@@ -762,7 +782,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             NativeKotlinPinnedExerciseControl(
                 host=host,workoutId=workoutId,
                 exerciseId=selected.target.exerciseId,custom=false,
-                enabled=!state.busy && !presentation.finished
+                enabled=!state.busy && !presentation.finished,
+                showEditAction=showAll || presentation.finished,
+                externalOpen=pinnedExerciseId==selected.target.exerciseId,
+                onExternalDismiss={pinnedExerciseId=null}
             )
         NativeKotlinWorkoutMachineSelector(activeMachineConfig,currentMachine,
             enabled=!state.busy && !presentation.finished &&
@@ -907,7 +930,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             ?.swapEventId==event.eventId
                     }
                 }
-            PursuitCard {
+            if(showAll || touched || swapReceipt!=null || swapError!=null)PursuitCard {
                 Text("Exercise options",
                     style=MaterialTheme.typography.titleMedium)
                 Text("Swap only this workout. The future program, "+
@@ -915,7 +938,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     style=MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
+                    if(showAll || touched)OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
                         enabled=!state.busy && !swapLoading && !touched,
                         modifier=Modifier.weight(1f)) {
                         Text(if(swapLoading)"Reviewing…" else "Swap exercise")

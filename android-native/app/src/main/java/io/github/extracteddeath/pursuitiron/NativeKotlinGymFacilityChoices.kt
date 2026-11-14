@@ -29,6 +29,7 @@ internal val kotlinGymFacilityGroups=listOf(
         "incline-bench" to "Incline bench",
         "decline-bench" to "Decline bench",
         "preacher-bench" to "Preacher bench",
+        "seal-bench" to "Seal row bench",
         "rack" to "Squat rack",
         "pullup-bar" to "Pull-up bar",
         "dip-station" to "Dip station",
@@ -70,7 +71,16 @@ internal val kotlinGymFacilityGroups=listOf(
         "heel-wedge" to "Heel-elevation wedge",
         "step-platform" to "Step platform",
         "exercise-sliders" to "Exercise sliders",
-        "ab-wheel" to "Ab wheel"))
+        "ab-wheel" to "Ab wheel",
+        "landmine-base" to "Landmine base / anchor",
+        "tbar-handle" to "T-bar row handle",
+        "wide-tbar-handle" to "Wide T-bar row handle",
+        "safety-pins" to "Rack safety pins",
+        "press-board" to "Bench press board",
+        "nordic-anchor" to "Nordic curl anchor",
+        "pushup-handles" to "Push-up handles",
+        "secure-doorway-anchor" to "Secure doorway exercise anchor",
+        "stability-ball" to "Stability ball"))
 )
 
 internal fun kotlinGymFacilityLabel(id:String):String =

@@ -22,18 +22,22 @@ import kotlinx.coroutines.withContext
 internal fun NativeKotlinPinnedExerciseControl(
     host:NativeKotlinCandidateHost,
     workoutId:String,exerciseId:String,custom:Boolean,
-    enabled:Boolean
+    enabled:Boolean,
+    showEditAction:Boolean=true,
+    externalOpen:Boolean=false,
+    onExternalDismiss:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var opened by rememberSaveable(workoutId,exerciseId){mutableStateOf(false)}
+    val editorOpen=opened || externalOpen
     var loaded by remember(host,workoutId,exerciseId,custom) {
         mutableStateOf<NativePinnedNoteRead?>(null)
     }
     var previewFields by remember(host,workoutId,exerciseId,custom) {
         mutableStateOf<List<NativePinnedSetupField>>(emptyList())
     }
-    LaunchedEffect(host,workoutId,exerciseId,custom,opened) {
-        if(opened)return@LaunchedEffect
+    LaunchedEffect(host,workoutId,exerciseId,custom,editorOpen) {
+        if(editorOpen)return@LaunchedEffect
         val response=withContext(Dispatchers.IO){
             runCatching {
                 host.readPinnedExerciseNote(workoutId,exerciseId,custom)
@@ -72,7 +76,7 @@ internal fun NativeKotlinPinnedExerciseControl(
             Text("Exercise setup unavailable; saved data was not reset.",
                 color=MaterialTheme.colorScheme.error,
                 style=MaterialTheme.typography.bodySmall)
-        OutlinedButton(
+        if(showEditAction)OutlinedButton(
             onClick={opened=true},
             enabled=enabled && saved!=null,
             modifier=Modifier.heightIn(min=48.dp)
@@ -81,9 +85,9 @@ internal fun NativeKotlinPinnedExerciseControl(
                 else "Pin note & setup")
         }
     }
-    if(opened)NativeKotlinPinnedExerciseNoteSheet(
+    if(editorOpen)NativeKotlinPinnedExerciseNoteSheet(
         host=host,workoutId=workoutId,exerciseId=exerciseId,
-        custom=custom,onDismiss={opened=false}
+        custom=custom,onDismiss={opened=false;onExternalDismiss()}
     )
 }
 

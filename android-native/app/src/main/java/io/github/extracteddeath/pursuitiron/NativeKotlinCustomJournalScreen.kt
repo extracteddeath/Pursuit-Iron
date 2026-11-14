@@ -61,6 +61,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var reviewSetKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var reviewPart by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
+    var pinnedSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     val editorStates=rememberSaveableStateHolder()
     // One Kotlin Leveling behavior for generated and custom set editors.
     val currentEditors=rememberSaveable(workoutId,
@@ -516,7 +517,7 @@ internal fun NativeKotlinCustomJournalScreen(
                     LinearProgressIndicator(
                         progress={visitProgress.fraction},
                         modifier=Modifier.fillMaxWidth())
-                    if(!finished && current.finishedByEventId==null) {
+                    if(!finished && current.finishedByEventId==null && !focusOnNext) {
                         OutlinedButton(
                             onClick={noteError=null;showSessionNote=true},
                             enabled=!busy,
@@ -525,7 +526,8 @@ internal fun NativeKotlinCustomJournalScreen(
                             Text(if(current.sessionNote.isBlank())
                                 "Add session note" else "Edit saved session note")
                         }
-                    } else if(current.sessionNote.isNotBlank()) {
+                    } else if((finished || current.finishedByEventId!=null) &&
+                        current.sessionNote.isNotBlank()) {
                         Text("Saved session note",
                             style=MaterialTheme.typography.labelLarge,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -637,6 +639,24 @@ internal fun NativeKotlinCustomJournalScreen(
                         }?.let { visit ->
                             {pendingQuickSkip=visit}
                         }
+                    )
+                    if(focusOnNext)NativeKotlinWorkoutTools(
+                        enabled=!busy,
+                        onSessionNote={noteError=null;showSessionNote=true},
+                        onPinnedNote=upcoming?.first?.let {slot->
+                            {pinnedSlotId=slot.slotId}
+                        },
+                        onSwap=upcoming?.first?.takeIf {slot->
+                            slot.supersetGroup==null && slot.sets.none {set->
+                                current.receipts.any {receipt->
+                                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                                        ?.visit?.setKey==set.setKey
+                                }
+                            }
+                        }?.let {slot->{reviewSwap(slot)}},
+                        onWarmup=upcoming?.first?.takeIf {slot->
+                            slot.sets.any{it.prescription.type==DraftSetType.WARMUP}
+                        }?.let {slot->{infoSlotId=slot.slotId}}
                     )
                     // Review recorded work, then return to the actual next
                     // visit with one tap. A pending amplifier follow-up is
@@ -959,7 +979,10 @@ internal fun NativeKotlinCustomJournalScreen(
                             host=host,workoutId=workoutId,
                             exerciseId=slot.exerciseId,custom=true,
                             enabled=!busy && !finished &&
-                                current.finishedByEventId==null
+                                current.finishedByEventId==null,
+                            showEditAction=activeFocus==null || finished,
+                            externalOpen=pinnedSlotId==slot.slotId,
+                            onExternalDismiss={pinnedSlotId=null}
                         )
                         if(!finished && current.finishedByEventId==null) {
                             val hasRecordedWork=slot.sets.any{set ->
@@ -968,7 +991,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                         ?.visit?.setKey==set.setKey
                                 }
                             }
-                            OutlinedButton(
+                            if(activeFocus==null)OutlinedButton(
                                 enabled=!busy && slot.supersetGroup==null &&
                                     !hasRecordedWork,
                                 modifier=Modifier.heightIn(min=48.dp),

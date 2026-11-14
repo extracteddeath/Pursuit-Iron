@@ -83,4 +83,43 @@ class KotlinWorkoutEntryDomainTest {
         assertTrue(KotlinWorkoutJournalDomain.reduce(journal,op)
             is KotlinJournalDecision.Proposed)
     }
+
+    @Test fun generatedAndCustomMainOrAmplifierEditorsShareExactEntryPolicy() {
+        // A custom follow-up supplies its own load (which may differ from
+        // its main set) without constructing a synthetic generated target.
+        for(load in listOf(verified.load,body.load,
+            DraftSetLoad.Verified(LoadUnit.KG,LoadBasis.CABLE_STACK,BigDecimal("22.5")))) {
+            val target=verified.copy(load=load)
+            for((weight,reps,rir) in listOf(
+                Triple("22.5","8",""),Triple("0","10","0"),
+                Triple("22.5","0",""),Triple("22.5","101",""),
+                Triple("22.5","8","11"),Triple("1e2","8","2"),
+                Triple("22.5001","8","2"),Triple("","8","2"),
+                Triple("22.5","","2"),Triple("00.5","8","2"))) {
+                for(failed in listOf(false,true)) assertEquals(
+                    "$load: $weight / $reps / $rir, failed=$failed",
+                    KotlinWorkoutEntryDomain.parse(target,weight,reps,rir,failed),
+                    KotlinWorkoutEntryDomain.parse(load,weight,reps,rir,failed))
+            }
+        }
+    }
+
+    @Test fun reviewingAFailedSetCannotPromoteItsFactualZeroToSuccessfulWork() {
+        val failed=(KotlinWorkoutEntryDomain.parse(
+            verified.load,"205","0","",failed=true) as KotlinSetEntryResult.Accepted)
+            .performed
+        assertEquals(0,failed.reps)
+        // Opening the correction with the actual recorded zero leaves
+        // Complete disabled until the athlete explicitly changes reps.
+        assertEquals(KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_REPS),
+            KotlinWorkoutEntryDomain.parse(verified.load,
+                failed.load!!.toPlainString(),failed.reps.toString(),""))
+        assertNull(failed.actualRir)
+        val corrected=(KotlinWorkoutEntryDomain.parse(verified.load,
+            "205","3","") as KotlinSetEntryResult.Accepted).performed
+        assertEquals(3,corrected.reps)
+        assertEquals(BigDecimal("205"),corrected.load)
+        assertNull(corrected.actualRir)
+        assertEquals(BigDecimal("225"),(verified.load as DraftSetLoad.Verified).value)
+    }
 }

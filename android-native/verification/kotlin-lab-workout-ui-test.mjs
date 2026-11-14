@@ -173,14 +173,38 @@ assert.ok(journal.includes('var actualLoad by rememberSaveable(') &&
   journal.includes('set.setKey,part.name,existing?.appliedRevision,machineInstanceId') &&
   journal.includes('var actualReps by rememberSaveable(set.setKey,part.name,existing?.appliedRevision)'),
   'Uncommitted edit fields must survive configuration changes and remain machine-scoped');
-assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*KotlinPerformedSet\(weight,verified\?\.unit/,
+assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*actual\)/,
   'Actual set writing must require an explicit Complete action');
+assert.ok(journal.includes('KotlinWorkoutEntryDomain.parse(target,actualLoad,actualReps,actualRir)') &&
+  journal.includes('val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed') &&
+  journal.includes('Button(enabled=!locked && actual!=null,'),
+  'Custom actuals must use the same bounded Kotlin parser as generated entries');
 assert.ok(journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED') &&
   journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT') &&
   journal.includes('if(pending!=null && !locked) AlertDialog(') &&
-  journal.includes('KotlinPerformedSet(weight,verified?.unit,0,null)') &&
+  journal.includes('target,actualLoad,actualReps,actualRir,failed=true)') &&
+  journal.includes('onRecord(KotlinJournalSetOutcome.FAILED_ATTEMPT,\n                                failedActual)') &&
   journal.includes('"Confirm skip" else "Log failed attempt"'),
   'Custom skipped/failed visits must require confirmation before a journal write');
+// Saved rows stay compact and correction is an explicit sheet in both
+// workout types. A changed receipt, not a tap or an unacknowledged write,
+// resets the saveable correction UI. Runtime parser/reducer tests verify
+// the failed-zero and actual-value behavior independently of this wiring.
+assert.ok(generatedFocus.includes('existing?.reps?.toString()') &&
+  !generatedFocus.includes('existing?.reps?.takeIf{it>0}') &&
+  generatedFocus.includes('allowFailedAttempt=existing?.reps==0'),
+  'A failed attempt must keep its recorded zero on opening a correction');
+for(const [source,condition,sheet] of [
+  [generatedFocus,'if(correcting && set.isResolved && !finished)',
+    'NativeSetEditSheet(busy=busy,onDismiss={correcting=false})'],
+  [journal,'if(saved!=null && editing)',
+    'NativeSetEditSheet(busy=saving,onDismiss={editing=false})']
+]) {
+  assert.ok(source.includes(condition) && source.includes(sheet) &&
+    source.includes('saveError?.let {Text(it,color=MaterialTheme.colorScheme.error,') &&
+    source.includes('Saved values change only after you confirm the correction.'),
+    'Corrections must show errors in the sheet and retain draft fields on a rejected save');
+}
 assert.ok(journey.includes('if(!wide && !activeWorkout)NavigationBar {') &&
   journey.includes('if(wide && !activeWorkout)NavigationRail {') &&
   journey.includes('onActiveWorkoutChanged={trainScreenExpanded=it}'),
@@ -591,9 +615,9 @@ assert.ok(journal.includes('NativeSetValueFields(') &&
   journal.includes('onLoad={actualLoad=it}') &&
   journal.includes('onReps={actualReps=it}') &&
   journal.includes('onRir={actualRir=it}') &&
-  journal.includes('loadError=actualLoad.isNotBlank()&&weight==null') &&
-  journal.includes('rirError=!effortValid') &&
-  journal.includes('KotlinPerformedSet(weight,verified?.unit,') &&
+  journal.includes('loadError=actualLoad.isNotBlank() && invalid in setOf(') &&
+  journal.includes('rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR') &&
+  journal.includes('val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed') &&
   journal.includes('pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT'),
   'Custom workout must share bodyweight-aware stepper fields while retaining explicit complete, skip, failed and corrected history outcomes');
 assert.ok(composer.includes('NativeSetValueFields(') &&

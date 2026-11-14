@@ -1055,6 +1055,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
+                                saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
                                 levelingDraft=if(observed==null &&
@@ -1112,6 +1113,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
+                                    saving=busy,saveError=error,
                                     machineInstanceId=if(follower!=null)
                                         (follower.operation as?
                                             CustomWorkoutJournalOperation.Record)
@@ -1381,6 +1383,8 @@ private fun NativeKotlinCustomVisitEditor(
     part:CustomWorkoutVisitPart,
     existing:CustomWorkoutJournalReceipt?,
     locked:Boolean,
+    saving:Boolean,
+    saveError:String?,
     machineInstanceId:String?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
@@ -1461,53 +1465,15 @@ private fun NativeKotlinCustomVisitEditor(
             prescription.type==DraftSetType.WORKING && !pendingLevel)
             onCurrentDraftChanged(actualLoad,actualReps)
     }
-    val weight=if(verified==null)null else
-        runCatching{BigDecimal(actualLoad.trim())}.getOrNull()
-            ?.takeIf{it>=BigDecimal.ZERO&&it<=BigDecimal("100000")&&
-                it.stripTrailingZeros().scale()<=3}
-    val reps=actualReps.trim().toIntOrNull()?.takeIf{it in 1..100}
-    val effort=if(actualRir.isBlank())null else
-        actualRir.trim().toIntOrNull()?.takeIf{it in 0..10}
-    val effortValid=actualRir.isBlank()||effort!=null
-    val loadValid=verified==null||weight!=null
-    Column(Modifier.fillMaxWidth().bringIntoViewRequester(reveal),
-        verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        HorizontalDivider()
-        val label=if(part==CustomWorkoutVisitPart.MAIN)
-            "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
-        else "Amplifier · ${follower?.kind?.name?.replace('_',' ')}"
-        Text(label,style=MaterialTheme.typography.titleMedium)
-        if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null)
-            Text(
-                "Planned follow-up: ${follower.followUpReps} reps · " +
-                    (follower.followUpActiveSeconds?.let{
-                        "$it s additional active work"
-                    }?:"additional active work time not authored") +
-                    " · ${follower.followUpRestSeconds}s intra-set rest",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        if(editing || initiallyExpanded) {
-            val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-                follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
-            else prescription.reps
-            PursuitWorkoutSetReference(referenceMode,target,referenceReps,
-                if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
-                physicalMachineLastReferences(lastReferences,machineInstanceId),WorkoutReferenceKey(set.setKey,
-                    part==CustomWorkoutVisitPart.FOLLOW_UP))
-        }
-        if(saved!=null&&!editing){
-            Text("Recorded: ${saved.outcome.name.replace('_',' ').lowercase()}" +
-                (saved.performed?.let{" · ${it.reps} reps" +
-                    (it.load?.let{load->" at $load"} ?: "")+
-                    (it.actualRir?.let{rir->" · $rir RIR"} ?: "")} ?: ""),
-                style=MaterialTheme.typography.bodyMedium)
-            TextButton(enabled=!locked,onClick={editing=true}) {
-                Text("Correct recorded visit")}
-        } else if(!locked){
-            if(!editing) {
-                OutlinedButton(onClick={editing=true}){Text("Log this set")}
-            } else {
+    // Generated and custom main/amplifier entries share one Kotlin parser.
+    // Invalid input cannot bypass the common precision, format or RIR bounds.
+    val entry=KotlinWorkoutEntryDomain.parse(target,actualLoad,actualReps,actualRir)
+    val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed
+    val failedEntry=KotlinWorkoutEntryDomain.parse(
+        target,actualLoad,actualReps,actualRir,failed=true)
+    val failedActual=(failedEntry as? KotlinSetEntryResult.Accepted)?.performed
+    val invalid=(entry as? KotlinSetEntryResult.Rejected)?.reason
+    val entryFields:@Composable ()->Unit={
             Text("Edit the values to match your set. Blank RIR stays unreported.",
                 style=MaterialTheme.typography.bodySmall)
             if(saved==null) PursuitUseLastCompletedSet(
@@ -1533,36 +1499,38 @@ private fun NativeKotlinCustomVisitEditor(
                 onReps={actualReps=it},
                 onRir={actualRir=it},
                 showLoad=verified!=null,
-                loadError=actualLoad.isNotBlank()&&weight==null,
-                repsError=actualReps.isNotBlank()&&reps==null,
-                rirError=!effortValid,
+                loadError=actualLoad.isNotBlank() && invalid in setOf(
+                    KotlinSetEntryRefusal.MISSING_WEIGHT,KotlinSetEntryRefusal.INVALID_WEIGHT),
+                repsError=actualReps.isNotBlank() && invalid in setOf(
+                    KotlinSetEntryRefusal.MISSING_REPS,KotlinSetEntryRefusal.INVALID_REPS),
+                rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR,
+                allowFailedAttempt=saved?.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT,
                 showFieldHelp=false
             )
             if(verified?.basis==LoadBasis.BARBELL_TOTAL) {
                 OutlinedButton(
                     onClick={onShowPlates(actualLoad,verified.unit,verified.basis)},
-                    enabled=!locked && weight!=null,
+                    enabled=!locked && failedActual!=null,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
                 ) {
                     Text("View plates for entered barbell weight")
                 }
             }
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->
-                Button(enabled=loadValid&&reps!=null&&effortValid,
+                Button(enabled=!locked && actual!=null,
                     modifier=buttonModifier,
                     onClick={
                         onRecord(KotlinJournalSetOutcome.COMPLETED,
-                            KotlinPerformedSet(weight,verified?.unit,
-                                checkNotNull(reps),effort))
-                    }){Text("Complete")}
+                            actual)
+                    }){Text(if(saved!=null)"Save correction" else "Complete")}
             }
             val skipButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(modifier=buttonModifier,onClick={
+                OutlinedButton(enabled=!locked,modifier=buttonModifier,onClick={
                     pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
                 }){Text("Skip")}
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
-                OutlinedButton(enabled=loadValid,modifier=buttonModifier,
+                OutlinedButton(enabled=!locked && failedActual!=null,modifier=buttonModifier,
                     onClick={pendingExceptionalOutcome=KotlinJournalSetOutcome.FAILED_ATTEMPT}) {
                     Text("Failed")
                 }
@@ -1587,10 +1555,74 @@ private fun NativeKotlinCustomVisitEditor(
                     }
                 }
             }
-            TextButton(onClick={editing=false}) {
+            TextButton(enabled=!saving,onClick={editing=false}) {
                 Text(if(saved!=null)"Cancel correction" else "Collapse set")
             }
+    }
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(reveal),
+        verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        HorizontalDivider()
+        val label=if(part==CustomWorkoutVisitPart.MAIN)
+            "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
+        else "Amplifier · ${follower?.kind?.name?.replace('_',' ')}"
+        Text(label,style=MaterialTheme.typography.titleMedium)
+        if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null)
+            Text(
+                "Planned follow-up: ${follower.followUpReps} reps · " +
+                    (follower.followUpActiveSeconds?.let{
+                        "$it s additional active work"
+                    }?:"additional active work time not authored") +
+                    " · ${follower.followUpRestSeconds}s intra-set rest",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        if(saved==null && (editing || initiallyExpanded)) {
+            val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+                follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
+            else prescription.reps
+            PursuitWorkoutSetReference(referenceMode,target,referenceReps,
+                if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
+                physicalMachineLastReferences(lastReferences,machineInstanceId),WorkoutReferenceKey(set.setKey,
+                    part==CustomWorkoutVisitPart.FOLLOW_UP))
+        }
+        if(saved!=null){
+            Text("Recorded: ${saved.outcome.name.replace('_',' ').lowercase()}" +
+                (saved.performed?.let{" · ${it.reps} reps" +
+                    (it.load?.let{load->" at $load"} ?: "")+
+                    (it.actualRir?.let{rir->" · $rir RIR"} ?: "")} ?: ""),
+                style=MaterialTheme.typography.bodyMedium)
+            TextButton(enabled=!locked,onClick={editing=true},
+                modifier=Modifier.heightIn(min=48.dp)) {
+                Text("Edit saved set")}
+        } else if(!locked){
+            if(!editing) {
+                OutlinedButton(onClick={editing=true}){Text("Log this set")}
+            } else {
+            entryFields()
             }
+        }
+    }
+    // Completed/skipped/failed visits remain compact. Correction uses the
+    // same explicit Material sheet as generated sets, retaining drafts if
+    // persistence rejects the write and closing only for a new receipt.
+    if(saved!=null && editing) {
+        NativeSetEditSheet(busy=saving,onDismiss={editing=false}) {
+            PursuitSectionHeading("Edit saved set",
+                if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+                    "Amplifier follow-up" else "Set $position of $setCount")
+            Text("Saved values change only after you confirm the correction.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            saveError?.let {Text(it,color=MaterialTheme.colorScheme.error,
+                style=MaterialTheme.typography.bodySmall)}
+            val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+                follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
+            else prescription.reps
+            PursuitWorkoutSetReference(referenceMode,target,referenceReps,
+                if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir,
+                physicalMachineLastReferences(lastReferences,machineInstanceId),
+                WorkoutReferenceKey(set.setKey,part==CustomWorkoutVisitPart.FOLLOW_UP))
+            entryFields()
         }
     }
     val pending=pendingExceptionalOutcome
@@ -1603,7 +1635,7 @@ private fun NativeKotlinCustomVisitEditor(
         else
             "A failed attempt records zero completed reps at your entered attempted load. It does not count as successful work or earned progression.")},
         confirmButton={
-            Button(enabled=pending==KotlinJournalSetOutcome.SKIPPED||loadValid,
+            Button(enabled=!locked && (pending==KotlinJournalSetOutcome.SKIPPED||failedActual!=null),
                 onClick={
                     pendingExceptionalOutcome=null
                     when(pending) {
@@ -1611,7 +1643,7 @@ private fun NativeKotlinCustomVisitEditor(
                             onRecord(KotlinJournalSetOutcome.SKIPPED,null)
                         KotlinJournalSetOutcome.FAILED_ATTEMPT->
                             onRecord(KotlinJournalSetOutcome.FAILED_ATTEMPT,
-                                KotlinPerformedSet(weight,verified?.unit,0,null))
+                                failedActual)
                         else -> Unit
                     }
                 }){Text(if(pending==KotlinJournalSetOutcome.SKIPPED)

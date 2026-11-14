@@ -29,6 +29,15 @@ object KotlinWorkoutEntryDomain {
         repsText:String,
         actualRirText:String,
         failed:Boolean=false
+    ):KotlinSetEntryResult = parse(target.load,weightText,repsText,actualRirText,failed)
+
+    /** Custom main/follow-up visits use the same bounded actual-entry policy. */
+    fun parse(
+        load:DraftSetLoad,
+        weightText:String,
+        repsText:String,
+        actualRirText:String,
+        failed:Boolean=false
     ):KotlinSetEntryResult {
         val reps=if(failed)0 else {
             val raw=repsText.trim()
@@ -49,7 +58,7 @@ object KotlinWorkoutEntryDomain {
                 return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_RIR)
             value
         }
-        return when(val planned=target.load) {
+        return when(val planned=load) {
             DraftSetLoad.ExplicitBodyweight ->
                 KotlinSetEntryResult.Accepted(KotlinPerformedSet(
                     null,null,reps,rir))

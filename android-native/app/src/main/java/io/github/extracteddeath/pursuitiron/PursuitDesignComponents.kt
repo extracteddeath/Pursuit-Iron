@@ -206,7 +206,9 @@ internal fun PursuitWorkoutFocusHeader(
     enabled:Boolean=true,
     heading:String="UP NEXT",
     onHistory:(()->Unit)?=null,
-    onInfo:(()->Unit)?=null
+    onInfo:(()->Unit)?=null,
+    /** Opens the owner's confirmation, never records a skip directly. */
+    onSkip:(()->Unit)?=null
 ) {
     PursuitCard(highlighted=focusOnNext) {
         Text(heading,style=MaterialTheme.typography.labelSmall,
@@ -219,6 +221,15 @@ internal fun PursuitWorkoutFocusHeader(
                 if(!setDetail.isNullOrBlank())
                     Text(setDetail,style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        val skipAction:@Composable (Modifier)->Unit={modifier->
+            if(exerciseLabel!=null && onSkip!=null) {
+                OutlinedButton(
+                    onClick=onSkip,enabled=enabled,
+                    contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),
+                    modifier=modifier.heightIn(min=48.dp)
+                ) {Text("Skip")}
             }
         }
         val historyAction:@Composable (Modifier)->Unit={modifier->
@@ -247,18 +258,21 @@ internal fun PursuitWorkoutFocusHeader(
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val stacked=maxWidth<380.dp ||
-                LocalDensity.current.fontScale>=1.35f
+            // Even a long lift name has its own full-width line on a phone.
+            // All three actions remain accessible at 200% font size.
+            val stacked=maxWidth<520.dp ||
+                LocalDensity.current.fontScale>=1.30f
             val hasActions=exerciseLabel!=null &&
-                (onHistory!=null || onInfo!=null)
+                (onSkip!=null || onHistory!=null || onInfo!=null)
             if(stacked && hasActions) {
                 Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                     titleContent(Modifier.fillMaxWidth())
-                    Row(Modifier.fillMaxWidth(),
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
                         verticalAlignment=Alignment.CenterVertically) {
+                        skipAction(Modifier)
+                        historyAction(Modifier)
                         infoAction()
-                        historyAction(Modifier.weight(1f))
                     }
                 }
             } else if(hasActions) {
@@ -266,8 +280,9 @@ internal fun PursuitWorkoutFocusHeader(
                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
                     verticalAlignment=Alignment.CenterVertically) {
                     titleContent(Modifier.weight(1f))
-                    infoAction()
+                    skipAction(Modifier)
                     historyAction(Modifier)
+                    infoAction()
                 }
             } else titleContent(Modifier.fillMaxWidth())
         }

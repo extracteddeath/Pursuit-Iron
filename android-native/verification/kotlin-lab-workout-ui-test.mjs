@@ -42,6 +42,43 @@ for(const phrase of [
 assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
   'Finished sessions must still expose recorded sets for review');
 
+// One shared M3E hero action reaches the same durable owner as the set editor.
+// No shortcut can skip a different selected set or an amplifier after the
+// journal advances; a positive confirmation is always required.
+const header=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
+const generated=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+for(const phrase of [
+  'onSkip:(()->Unit)?=null',
+  'val skipAction:@Composable (Modifier)->Unit=',
+  'val stacked=maxWidth<520.dp',
+  'Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())',
+  'skipAction(Modifier)',
+  'historyAction(Modifier)',
+  'infoAction()'
+])assert.ok(header.includes(phrase),'Focus header lacks responsive Skip/History/Info: '+phrase);
+for(const phrase of [
+  'onSkip=selected?.takeIf {',
+  '!it.isResolved && !presentation.finished',
+  '{pendingSkip=key}',
+  'val skip=allSets.firstOrNull{it.target.setKey==pendingSkip}',
+  'controller.record(skip.target.setKey,KotlinJournalSetOutcome.SKIPPED,null)'
+])assert.ok(generated.includes(phrase),'Generated quick skip must reuse confirmation: '+phrase);
+for(const phrase of [
+  'var pendingQuickSkip by remember(workoutId)',
+  'onSkip=nextVisit?.takeIf {',
+  '{pendingQuickSkip=visit}',
+  'val quickSkip=pendingQuickSkip',
+  'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',
+  'val canSkip=stillNext && !busy && !finished',
+  'if(latest==quickSkip && !busy && !finished',
+  'record(quickSkip.setKey,quickSkip.part,',
+  'KotlinJournalSetOutcome.SKIPPED,null)',
+  'Text("Keep training")'
+])assert.ok(journal.includes(phrase),'Custom next-set shortcut must be revision-checked: '+phrase);
+assert.ok(!header.includes('onClick=onSkip,enabled=enabled,modifier=Modifier.fillMaxWidth()'),
+  'All actions must retain their own accessible 48dp touch targets');
+
+
 assert.match(journal,/var actualRir by rememberSaveable\(set.setKey,part.name,existing\?\.appliedRevision\) \{\s*mutableStateOf\(saved\?\.performed\?\.actualRir\?\.toString\(\)\.orEmpty\(\)\)/,
   'Unknown actual RIR must remain unreported, never copied from the target');
 assert.ok(journal.includes('var actualLoad by rememberSaveable(') &&
@@ -466,9 +503,11 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt');
 assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   sharedFocus.includes('contentDescription="Exercise details"') &&
-  sharedFocus.includes('val stacked=maxWidth<380.dp || LocalDensity.current.fontScale>=1.35f') &&
-  sharedFocus.includes('historyAction(Modifier.weight(1f))') &&
+  sharedFocus.includes('val stacked=maxWidth<520.dp ||') &&
+  sharedFocus.includes('LocalDensity.current.fontScale>=1.30f') &&
+  sharedFocus.includes('val hasActions=exerciseLabel!=null &&') &&
   sharedFocus.includes('historyAction(Modifier)') &&
+  sharedFocus.includes('skipAction(Modifier)') &&
   journal.includes('onInfo={infoSlotId=slot.slotId}') &&
   journal.includes('journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}') &&
   journal.includes('sets=customWorkoutInfoSets(slot.sets)') &&

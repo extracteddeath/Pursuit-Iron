@@ -46,7 +46,7 @@ assert.match(journal,/if\(!verifiedFinishedInHistory \|\| showFinishedSets\)/,
 // machine-scoped reviews after explicit expansion. This prevents the
 // Leveling tools from burying the actual editable set beneath the header.
 for(const [source,label,scope] of [
-  [composer,'generated','priorLevelingScope=null'],
+  [generated,'generated','priorLevelingScope=null'],
   [journal,'custom','priorLevelingSlotId=null']
 ]) {
   for(const fragment of [

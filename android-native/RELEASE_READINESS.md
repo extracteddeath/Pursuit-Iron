@@ -1,6 +1,6 @@
 # Pursuit Iron Kotlin release status
 
-As of 2026-11-08. Active branch: `architecture/kotlin-engine-rebuild`.
+As of 2026-11-14. Active branch: `architecture/kotlin-engine-rebuild`.
 
 **Production verdict: NOT READY.** There is a source-tested native training
 core, but substantial engine, feature, data and device acceptance work remains.
@@ -24,6 +24,17 @@ physical device, accessibility, visual and motion acceptance remain pending.
 The APK/AAB freeze remains in force.
 
 ## What works in the isolated Kotlin core
+
+The trap/hex-bar checkpoint adds 17 reviewed source identities and independent
+spinal-erector/trapezius accounting. Actual bar mass and paired plates flow
+through onboarding, saved gym stock, program generation, cycle conversion,
+workout logging/corrections, completion and cold recovery. Missing equipment,
+unsupported old muscle scopes and copied straight-bar weights fail closed.
+Current source coverage is 318/376; the remaining 58 identities, full functional
+parity, comparative coaching evidence and device/UI acceptance are still open.
+Signed v8/v9 training is recovered from independently captured native fixtures
+without filling new muscle rows, rewriting approvals or changing file bytes.
+No APK/AAB is built or released by this source checkpoint.
 
 - Saved athlete/gym setup, explicit movement/load calibration, provisional
   first-program generation, whole-cycle review and custom program authoring.

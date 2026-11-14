@@ -143,6 +143,21 @@ and visual/motion acceptance remain open. No APK/AAB from this checkpoint.
 
 ## Persistent information architecture
 
+The verified bar flow uses one physical-stock parser in onboarding and Gym.
+Athletes explicitly choose straight, EZ or trap/hex bar and enter its actual
+mass and symmetric plate pairs. Switching bar type clears provisional inputs
+and confirmation; a facility checkbox alone never invents load stock. Extra
+bars can be added in Gym under their own implement identities. Calibration,
+workout targets and plate views use that exact stock without borrowing another
+bar's mass or exercise history. Kilograms and pounds remain explicit.
+
+New program policy v10 exposes 20 separate muscle groups, including spinal
+erectors and trapezius. Saved 16- and 18-group policies retain their exact
+scope in the editor. Adding current targets is an explicit action and requires
+complete athlete-reviewed values; blank new rows never become guessed zeroes
+or a renewed approval. This is source/JVM evidence, not device or visual
+acceptance, science certification or completion of the full UI.
+
 At most five top-level destinations:
 
 1. **Plan** — next workout first, concise cycle phase, entire program outline,

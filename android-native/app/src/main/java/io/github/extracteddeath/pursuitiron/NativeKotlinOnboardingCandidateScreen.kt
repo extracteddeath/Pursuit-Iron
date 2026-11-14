@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
-import java.math.BigDecimal
 import java.util.UUID
 import java.time.ZoneId
 
@@ -34,72 +33,6 @@ private fun commaIds(raw:String):Set<String>? {
         it.all{kotlinId.matches(it)}
     }?.toSet()
 }
-private fun exactPhysicalLoads(raw:String):List<BigDecimal> {
-    val values=raw.split(",").map{BigDecimal(it.trim())}
-    require(values.isNotEmpty() && values.size<=250 &&
-        values.all{it>=BigDecimal.ZERO} &&
-        values.map{it.stripTrailingZeros()}.distinct().size==values.size)
-    return values
-}
-private fun platePairs(raw:String):Map<BigDecimal,Int> {
-    val pairs=raw.split(",").map {
-        val parts=it.trim().split(Regex("[xX]"))
-        require(parts.size==2)
-        BigDecimal(parts[0].trim()) to parts[1].trim().toInt()
-    }
-    require(pairs.isNotEmpty() && pairs.size<=12 &&
-        pairs.all{it.first>BigDecimal.ZERO && it.second in 1..24} &&
-        pairs.map{it.first.stripTrailingZeros()}.distinct().size==pairs.size)
-    return pairs.toMap()
-}
-private fun onboardingStock(
-    unit:LoadUnit?,
-    db:String,cable:String,barWeight:String,plates:String,
-    machineId:String,machineLoads:String,
-    savedMachines:String,nonMachineEquipmentIds:Set<String>
-):Map<String,VerifiedLoadStock>? {
-    if(unit==null) return null
-    return runCatching {
-        val stock=linkedMapOf<String,VerifiedLoadStock>()
-        if(db.isNotBlank())stock["dumbbell-rack"]=VerifiedLoadStock.Totals(
-            unit,LoadBasis.DUMBBELL_PER_HAND,exactPhysicalLoads(db))
-        if(cable.isNotBlank()) {
-            val parts=cable.split(",").map{BigDecimal(it.trim())}
-            require(parts.size==3)
-            stock["cable-station"]=VerifiedLoadStock.Stack(
-                unit,LoadBasis.CABLE_STACK,parts[0],parts[1],parts[2])
-        }
-        if(barWeight.isNotBlank() || plates.isNotBlank()) {
-            require(barWeight.isNotBlank() && plates.isNotBlank())
-            stock["straight-bar"]=VerifiedLoadStock.Barbell(
-                unit,BigDecimal(barWeight.trim()),platePairs(plates))
-        }
-        // Every already reviewed physical machine keeps its own implement ID.
-        // A machine may never shadow the barbell, cable, dumbbell or Smith
-        // equipment identities already loaded by the source catalog.
-        val machines=OnboardingMachineStockDomain.verifiedStock(
-            savedMachines,unit,nonMachineEquipmentIds)
-            ?:error("Invalid saved machine list")
-        machines.forEach{(id,verified)->
-            require(id !in stock)
-            stock[id]=verified
-        }
-        if(machineId.isNotBlank() || machineLoads.isNotBlank()) {
-            require(kotlinId.matches(machineId) &&
-                machineId !in nonMachineEquipmentIds &&
-                machineId !in stock && machineLoads.isNotBlank())
-            val trial=OnboardingMachineStockDomain.add(
-                savedMachines,machineId,machineLoads,nonMachineEquipmentIds)
-                ?:error("Machine ID or loads are not independently verifiable")
-            val appended=OnboardingMachineStockDomain.verifiedStock(
-                trial,unit,nonMachineEquipmentIds)
-                ?:error("Unverifiable machine inventory")
-            stock[machineId]=checkNotNull(appended[machineId])
-        }
-        stock.toMap()
-    }.getOrNull()
-}
-
 @Composable
 private fun <T> NativeSetupChoice(
     title:String,options:List<T>,selected:T?,
@@ -193,6 +126,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var attachments by rememberSaveable {mutableStateOf("")}
     var dumbbells by rememberSaveable {mutableStateOf("")}
     var cable by rememberSaveable {mutableStateOf("")}
+    var barEquipmentId by rememberSaveable{mutableStateOf("straight-bar")}
     var barWeight by rememberSaveable {mutableStateOf("")}
     var plates by rememberSaveable {mutableStateOf("")}
     var machineId by rememberSaveable {mutableStateOf("")}
@@ -236,7 +170,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     }
     val gymInventory=onboardingStock(chosenUnit,dumbbells,cable,
         barWeight,plates,machineId,machineLoads,
-        savedMachines,nonMachineEquipmentIds)
+        savedMachines,nonMachineEquipmentIds,barEquipmentId)
     val stagedMachines=OnboardingMachineStockDomain.parse(savedMachines)
     val machineToAdd=OnboardingMachineStockDomain.add(
         savedMachines,machineId,machineLoads,nonMachineEquipmentIds)
@@ -522,8 +456,21 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     label={Text("Available dumbbells · per hand")},
                     supportingText={Text("Exact ${unit.lowercase().ifBlank{"weight"}} values, separated by commas")},
                     modifier=Modifier.fillMaxWidth())
+                val barChoices=remember{ kotlinGymStockChoices(StarterExerciseTranche.movements())
+                    .filter{it.basis==LoadBasis.BARBELL_TOTAL} }
+                NativeSetupChoice("Bar type",barChoices,
+                    barChoices.firstOrNull{it.equipmentId==barEquipmentId},
+                    caption={it.displayName},onChange={chosen->
+                        if(barEquipmentId!=chosen.equipmentId) {
+                            barEquipmentId=chosen.equipmentId
+                            barWeight="";plates="";gymConfirmed=false
+                        }
+                    })
+                Text("Confirm this bar's empty weight and available plate pairs. Other bars can be added in Gym.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(barWeight,{barWeight=it.take(30);gymConfirmed=false},
-                    label={Text("Empty barbell weight")},modifier=Modifier.fillMaxWidth())
+                    label={Text("Empty bar weight")},modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(plates,{plates=it.take(500);gymConfirmed=false},
                     label={Text("Available plate pairs")},
                     supportingText={Text("Weight × matching pairs, e.g. 2.5x2, 5x1")},

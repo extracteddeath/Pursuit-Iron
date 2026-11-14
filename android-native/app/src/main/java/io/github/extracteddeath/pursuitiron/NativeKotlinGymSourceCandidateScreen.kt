@@ -13,88 +13,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 
-private enum class PhysicalStockEditorKind {
-    EXACT_LOADS, VERIFIED_STACK, BARBELL_WITH_PAIRS
-}
-
-private fun exactLoadList(text:String):List<BigDecimal>? =
-    runCatching {
-        val values=text.split(",").map{BigDecimal(it.trim())}
-        values.takeIf {it.isNotEmpty() &&
-            values.size<=250 && values.all{it>BigDecimal.ZERO}}
-    }.getOrNull()
-
-private fun barbellPairs(text:String):Map<BigDecimal,Int>? =
-    runCatching {
-        val parts=text.split(",").map { raw ->
-            val pair=raw.trim().split(Regex("[xX]"))
-            require(pair.size==2)
-            BigDecimal(pair[0].trim()) to pair[1].trim().toInt()
-        }
-        require(parts.isNotEmpty() && parts.size<=12 &&
-            parts.map{it.first.stripTrailingZeros()}.distinct().size==parts.size)
-        require(parts.all { it.first>BigDecimal.ZERO && it.second in 1..24 })
-        parts.toMap()
-    }.getOrNull()
-
-/** Never adds an invented implement, load, bar weight or stack interval. */
-private fun parseVerifiedStock(
-    unit:LoadUnit,kind:PhysicalStockEditorKind,basis:LoadBasis,
-    weights:String,minimum:String,increment:String,maximum:String,
-    barWeight:String,platePairs:String
-):VerifiedLoadStock? = runCatching {
-    when(kind) {
-        PhysicalStockEditorKind.EXACT_LOADS -> {
-            require(basis!=LoadBasis.BARBELL_TOTAL)
-            VerifiedLoadStock.Totals(unit,basis,requireNotNull(exactLoadList(weights)))
-        }
-        PhysicalStockEditorKind.VERIFIED_STACK -> {
-            require(basis in listOf(LoadBasis.CABLE_STACK,
-                LoadBasis.MACHINE_STACK,LoadBasis.EXERCISE_OVERRIDE))
-            VerifiedLoadStock.Stack(unit,basis,BigDecimal(minimum.trim()),
-                BigDecimal(increment.trim()),BigDecimal(maximum.trim()))
-        }
-        PhysicalStockEditorKind.BARBELL_WITH_PAIRS ->
-            VerifiedLoadStock.Barbell(unit,BigDecimal(barWeight.trim()),
-                requireNotNull(barbellPairs(platePairs)))
-    }
-}.getOrNull()
-
 private fun parseIds(text:String):Set<String>? {
     val values=text.split(",").map{it.trim()}.filter{it.isNotBlank()}
     val pattern=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     return if(values.size<=128 && values.distinct().size==values.size &&
         values.all{pattern.matches(it)}) values.toSet() else null
 }
-
-/** Reviewed exercise equipment names for user-visible gym stock selection. */
-internal data class KotlinGymStockChoice(
-    val equipmentId:String,
-    val basis:LoadBasis,
-    val exerciseNames:List<String>
-) {
-    val displayName:String get()=when(equipmentId) {
-        "straight-bar" -> "Barbell and plates"
-        "ez-curl-bar" -> "EZ curl bar and plates"
-        "dumbbell-rack" -> "Dumbbells"
-        "cable-station" -> "Cable station"
-        else -> equipmentId.replace('-', ' ').replace('_',' ')
-            .replaceFirstChar{it.uppercase()}
-    }
-}
-
-/** A name can suggest stock identity, but it can never confirm actual loads. */
-internal fun kotlinGymStockChoices(
-    catalog:List<CatalogMovement>
-):List<KotlinGymStockChoice> =
-    catalog.filter{it.equipmentId!=null && it.expectedLoadBasis!=null}
-        .groupBy{checkNotNull(it.equipmentId)}
-        .mapNotNull{(id,entries)->
-            val bases=entries.mapNotNull{it.expectedLoadBasis}.distinct()
-            if(bases.size!=1)null else KotlinGymStockChoice(id,bases.single(),
-                entries.map{kotlinExerciseLabel(it.exerciseId)}.distinct().sorted())
-        }.sortedWith(compareBy<KotlinGymStockChoice>{it.displayName.lowercase()}
-            .thenBy{it.equipmentId})
 
 /** Labels are presentation only; attachment source IDs remain authoritative. */
 internal fun kotlinGymAttachmentLabel(id:String):String=when(id) {

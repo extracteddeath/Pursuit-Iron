@@ -6,6 +6,19 @@
 
 ## Live web baseline reconciliation — Build 1011
 
+Current source checkpoint, November 14: **318 of 376 exact active web IDs**
+are in the reviewed, engineering-provisional Kotlin catalog; **58 remain
+absent**. The 17 appended deadlift/shrug identities use explicit physical
+stock and independent load baselines, plus separate spinal-erector and
+trapezius ledgers. A trap/hex bar requires its own confirmed mass and plate
+pairs; straight-bar stock is not a substitute. Onboarding and Gym share this
+stock input, and new program policy v10 declares all 20 muscle groups.
+Saved v9 policies retain exactly 18 rows, and v1–v8 retain 16. Independently
+captured v8 and v9 native stores test byte-preserving cold recovery of their
+original approvals and completed training. Historical counts below describe
+earlier checkpoints, not current coverage. None of these source counts proves
+complete engine parity, science validation or comparative coaching superiority.
+
 On November 12, 2026, the latest publicly deployed-source reference is
 `main` commit `12e2bd37258c56255c687cc6abed78d1921f6c07`.
 `main/CHANGELOG.md` has **Build 1011** at its top; the Kotlin feature branch

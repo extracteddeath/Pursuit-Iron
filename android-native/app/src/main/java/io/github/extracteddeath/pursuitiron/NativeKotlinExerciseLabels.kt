@@ -302,7 +302,24 @@ private val kotlinExerciseNames=mapOf(
     "adduction-machine" to "Hip Adduction Machine",
     "cable-adduction" to "Cable Hip Adduction",
     "cossack-squat" to "Cossack Squat",
-    "adductor-sumo" to "Wide-Stance Sumo Squat"
+    "adductor-sumo" to "Wide-Stance Sumo Squat",
+    "deadlift" to "Deadlift",
+    "snatch-deadlift" to "Snatch-Grip Deadlift",
+    "paused-deadlift" to "Paused Deadlift",
+    "rack-pull" to "Rack Pull",
+    "trap-bar-deadlift" to "Trap Bar Deadlift",
+    "bb-shrug" to "Barbell Shrug",
+    "db-shrug" to "Dumbbell Shrug",
+    "cable-shrug" to "Cable Shrug",
+    "smith-shrug" to "Smith Machine Shrug",
+    "machine-shrug" to "Machine Shrug",
+    "behind-shrug" to "Behind-the-Back Shrug",
+    "kelso-shrug" to "Kelso Shrug",
+    "trap-bar-shrug" to "Trap Bar Shrug",
+    "power-shrug" to "Power Shrug",
+    "incline-shrug" to "Incline Dumbbell Shrug",
+    "cable-face-shrug" to "Cable Face Shrug",
+    "db-incline-shrug" to "Incline Bench Dumbbell Shrug"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

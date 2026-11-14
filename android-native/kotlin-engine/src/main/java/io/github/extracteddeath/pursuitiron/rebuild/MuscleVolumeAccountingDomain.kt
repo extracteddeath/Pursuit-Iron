@@ -13,28 +13,32 @@ enum class TrainingMuscle(val introducedIn:Int=1) {
     TRICEPS, BICEPS, BRACHIALIS,
     WRIST_FLEXORS, WRIST_EXTENSORS,
     QUADS, HAMSTRINGS, GLUTES, CALVES, ABS,
-    HIP_ABDUCTORS(2), HIP_ADDUCTORS(2)
+    HIP_ABDUCTORS(2), HIP_ADDUCTORS(2),
+    SPINAL_ERECTORS(3), TRAPS(3)
 }
 
 /**
  * Saved policies keep their exact declared coverage. A complete v1 policy
- * still has the original 16 rows; new policies explicitly track both hip
- * groups as well. Never fill absent rows with invented zeroes, accept a
+ * still has the original 16 rows; v2 keeps its exact 18 hip-inclusive rows.
+ * Current policies also track spinal erectors and trapezius separately.
+ * Never fill absent rows with invented zeroes, accept a
  * partial original scope, or silently upgrade a signed policy.
  */
 object TrainingMuscleCoverage {
     val legacyV1:List<TrainingMuscle> = Collections.unmodifiableList(
         TrainingMuscle.entries.filter{it.introducedIn==1})
+    val legacyV2:List<TrainingMuscle> = Collections.unmodifiableList(
+        TrainingMuscle.entries.filter{it.introducedIn<=2})
     val current:List<TrainingMuscle> = Collections.unmodifiableList(
         TrainingMuscle.entries.toList())
-    private val legacySet=legacyV1.toSet()
-    private val currentSet=current.toSet()
+    private val scopes=listOf(legacyV1,legacyV2,current).map{it.toSet()}
 
-    fun isComplete(muscles:Collection<TrainingMuscle>):Boolean {
+    fun versionOf(muscles:Collection<TrainingMuscle>):Int? {
         val distinct=muscles.toSet()
-        return distinct.size==muscles.size &&
-            (distinct==legacySet || distinct==currentSet)
+        if(distinct.size!=muscles.size)return null
+        return scopes.indexOf(distinct).takeIf{it>=0}?.plus(1)
     }
+    fun isComplete(muscles:Collection<TrainingMuscle>):Boolean=versionOf(muscles)!=null
 }
 enum class MuscleCreditRole { DIRECT, INDIRECT }
 enum class ExposureSetKind { WARMUP, WORKING, EXTENSION }

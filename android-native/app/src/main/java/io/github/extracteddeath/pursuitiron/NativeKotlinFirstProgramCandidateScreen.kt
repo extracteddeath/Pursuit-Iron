@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -219,6 +220,201 @@ internal class NativeKotlinFirstProgramController(
 private fun prettyFirstProgram(value:String)=value.lowercase().replace('_',' ')
     .replaceFirstChar{it.uppercase()}
 
+
+/**
+ * A real first-program selection surface: only explicit athlete calibrations
+ * enter the Kotlin coach. Physical stock is consulted for immediate feedback,
+ * never to guess a working weight or silently round a user's entry.
+ */
+@Composable
+internal fun NativeFirstProgramCalibrationPanel(
+    state:NativeFirstProgramState,
+    onLoadChanged:(String,String)->Unit,
+    onBodyweightChanged:(String)->Unit,
+    onReview:()->Unit
+) {
+    val source=state.source
+    val reviewed=source?.setup?.reviewed
+    val movementById=remember(source?.revision) {
+        source?.catalog?.associateBy{it.exerciseId}.orEmpty()
+    }
+    val selectedIds=state.enteredLoads.keys+state.selectedBodyweightIds
+    val invalidIds=state.enteredLoads.filter{(id,raw)->
+        val option=state.eligibleMovements.firstOrNull{it.exerciseId==id}
+        val movement=movementById[id]
+        val stock=movement?.equipmentId?.let{reviewed?.gym?.confirmedStock?.get(it)}
+        val parsed=runCatching{BigDecimal(raw.trim())}.getOrNull()
+        val inspection=if(option!=null && parsed!=null)
+            EquipmentLoadDomain.inspect(stock,parsed,option.unit) else null
+        parsed==null || parsed<=BigDecimal.ZERO ||
+            inspection !is LoadInspection.Confirmed || !inspection.exact ||
+            inspection.basis!=option?.basis
+    }.keys
+    var query by rememberSaveable(source?.athleteId,source?.revision) {
+        mutableStateOf("")
+    }
+    var selectedOnly by rememberSaveable(source?.athleteId,source?.revision) {
+        mutableStateOf(false)
+    }
+    var expandedCategory by rememberSaveable(source?.athleteId,source?.revision) {
+        mutableStateOf<String?>(null)
+    }
+    val canChooseMore=selectedIds.size<32
+    val canReview=!state.busy && source!=null &&
+        selectedIds.size in 1..32 && invalidIds.isEmpty()
+    val options=state.eligibleMovements.filter{option->
+        (!selectedOnly || option.exerciseId in selectedIds) &&
+            (query.isBlank() ||
+                kotlinExerciseLabel(option.exerciseId).contains(query,true) ||
+                option.exerciseId.contains(query,true) ||
+                movementById[option.exerciseId]?.familyId
+                    ?.replace('_',' ')?.contains(query,true)==true)
+    }
+    val grouped=options.groupBy{movementById[it.exerciseId]?.pattern?.name
+        ?: "OTHER"}
+    PursuitCard {
+        PursuitSectionHeading(
+            "Choose your exercises and starting loads",
+            "Calibrate only movements you can perform. The Kotlin engine builds the week from these choices and the confirmed gym.")
+        Text("${selectedIds.size} of 32 exercises chosen · ${state.eligibleMovements.size} available in this gym",
+            style=MaterialTheme.typography.bodyMedium)
+        if(invalidIds.isNotEmpty())
+            Text("${invalidIds.size} selected weights need correction before review.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.error)
+        Text("Use a weight you can realistically lift for the prescribed reps. A weight existing in your gym does not prove it is appropriate for you.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(
+            value=query,
+            onValueChange={query=it.take(100)},
+            singleLine=true,modifier=Modifier.fillMaxWidth(),
+            label={Text("Search exercise name or pattern")})
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+            FilterChip(selected=!selectedOnly,onClick={selectedOnly=false},
+                label={Text("All available")})
+            FilterChip(selected=selectedOnly,onClick={selectedOnly=true},
+                label={Text("My selected (${selectedIds.size})")})
+        }
+        Button(onClick=onReview,
+            enabled=canReview,
+            modifier=Modifier.fillMaxWidth()) {
+            Text("Review my proposed first week")
+        }
+        if(selectedIds.isEmpty())
+            Text("Choose a few exercises to begin. Include a push, a pull, lower-body movements and the accessories you need; the coach checks weekly coverage.",
+                style=MaterialTheme.typography.bodyMedium)
+        if(selectedIds.size>=32)
+            Text("32 exercises is the current maximum for one first-program review. Remove one to choose another.",
+                style=MaterialTheme.typography.bodySmall)
+        if(grouped.isEmpty())
+            Text(if(selectedOnly)"No exercises selected yet. Switch to All available to add some."
+                else "No matching eligible exercises. Check the search or gym inventory.",
+                style=MaterialTheme.typography.bodySmall)
+        for((category,entries) in grouped) {
+            val expanded=category==expandedCategory
+            val displayed=if(expanded || query.isNotBlank() || selectedOnly)
+                entries else {
+                val first=entries.take(4)
+                first+entries.drop(4).filter{it.exerciseId in selectedIds}
+            }
+            val totalSelected=entries.count{it.exerciseId in selectedIds}
+            HorizontalDivider()
+            Text(prettyFirstProgram(category)+
+                " · ${totalSelected} selected / ${entries.size} available",
+                style=MaterialTheme.typography.titleMedium)
+            displayed.forEach{option->
+                val id=option.exerciseId
+                val movement=movementById[id]
+                val stock=movement?.equipmentId?.let {
+                    reviewed?.gym?.confirmedStock?.get(it)
+                }
+                val raw=state.enteredLoads[id].orEmpty()
+                val typed=runCatching{BigDecimal(raw.trim())}.getOrNull()
+                val inspection=if(typed!=null)
+                    EquipmentLoadDomain.inspect(stock,typed,option.unit)
+                    else null
+                val exact=typed!=null && typed>BigDecimal.ZERO &&
+                    inspection is LoadInspection.Confirmed &&
+                    inspection.exact && inspection.basis==option.basis
+                Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                    Text(kotlinExerciseLabel(id),
+                        style=MaterialTheme.typography.titleSmall)
+                    if(option.needsWeightCalibration) {
+                        OutlinedTextField(
+                            value=raw,
+                            onValueChange={onLoadChanged(id,it)},
+                            enabled=!state.busy && (id in selectedIds || canChooseMore),
+                            singleLine=true,
+                            label={Text("First working load (${option.unit.name.lowercase()}; ${prettyFirstProgram(option.basis?.name ?: "unknown basis")})")},
+                            supportingText={
+                                when {
+                                    raw.isBlank() ->
+                                        Text("Enter your real first-session load; do not assume the lightest weight.")
+                                    exact ->
+                                        Text("Exact verified gym load. This does not guarantee achievable reps.")
+                                    typed==null ->
+                                        Text("Enter a valid number.",color=MaterialTheme.colorScheme.error)
+                                    typed<=BigDecimal.ZERO ->
+                                        Text("Working load must be greater than zero.",
+                                            color=MaterialTheme.colorScheme.error)
+                                    inspection is LoadInspection.Confirmed -> {
+                                        Text("This load is not in your verified equipment inventory.",
+                                            color=MaterialTheme.colorScheme.error)
+                                    }
+                                    else -> Text("Equipment or units could not be verified.",
+                                        color=MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            isError=raw.isNotBlank()&&!exact,
+                            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                            modifier=Modifier.fillMaxWidth())
+                        if(raw.isNotBlank() && !exact &&
+                            inspection is LoadInspection.Confirmed) {
+                            val choices=listOfNotNull(
+                                inspection.atOrBelow,inspection.nextAbove)
+                                .distinct().filter{it>BigDecimal.ZERO}
+                            choices.forEach{choice->
+                                TextButton(
+                                    enabled=!state.busy,
+                                    onClick={onLoadChanged(id,choice.toPlainString())}
+                                ) {
+                                    Text("Use confirmed ${choice.toPlainString()} ${option.unit.name.lowercase()} instead")
+                                }
+                            }
+                        }
+                    } else {
+                        Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+                            Checkbox(
+                                checked=id in state.selectedBodyweightIds,
+                                enabled=!state.busy && (id in selectedIds || canChooseMore),
+                                onCheckedChange={onBodyweightChanged(id)})
+                            Text("I can perform this bodyweight movement",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            if(query.isBlank() && !selectedOnly && entries.size>displayed.size) {
+                TextButton(onClick={expandedCategory=category}) {
+                    Text("Show all ${entries.size} ${prettyFirstProgram(category).lowercase()} exercises")
+                }
+            }
+            if(expanded && entries.size>4 && query.isBlank() && !selectedOnly)
+                TextButton(onClick={expandedCategory=null}) {
+                    Text("Show fewer ${prettyFirstProgram(category).lowercase()} exercises")
+                }
+        }
+        if(grouped.isNotEmpty()) {
+            Button(onClick=onReview,enabled=canReview,
+                modifier=Modifier.fillMaxWidth()) {
+                Text("Review my proposed first week")
+            }
+        }
+    }
+}
+
 @Composable
 internal fun NativeKotlinFirstProgramCandidateScreen(
     controller:NativeKotlinFirstProgramController,
@@ -315,46 +511,12 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     }
                 }
             }
-            PursuitCard {
-                Text("Select and calibrate exercises",
-                    style=MaterialTheme.typography.titleLarge)
-                Text("Enter an attainable first-session weight for each movement you want. Use the displayed loading basis; for dumbbells the value is per hand. Leave unused exercises blank. The coach will not choose the lightest gym weight as your working weight.",
-                    style=MaterialTheme.typography.bodySmall)
-                val options=state.eligibleMovements
-                if(options.isEmpty())Text(
-                    "No eligible curated movements are available yet. Check your gym inventory, facilities and bodyweight preferences.",
-                    style=MaterialTheme.typography.bodySmall)
-                options.forEach { option ->
-                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Text(kotlinExerciseLabel(option.exerciseId),
-                            style=MaterialTheme.typography.titleSmall)
-                        if(option.needsWeightCalibration) {
-                            OutlinedTextField(
-                                value=state.enteredLoads[option.exerciseId].orEmpty(),
-                                onValueChange={controller.enterLoad(option.exerciseId,it)},
-                                singleLine=true,enabled=!state.busy,
-                                label={Text("Starting load (${option.unit.name.lowercase()}; ${prettyFirstProgram(option.basis?.name ?: "unknown basis")})")},
-                                keyboardOptions=KeyboardOptions(
-                                    keyboardType=KeyboardType.Decimal),
-                                modifier=Modifier.fillMaxWidth())
-                        } else {
-                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                Checkbox(checked=option.exerciseId in
-                                    state.selectedBodyweightIds,
-                                    enabled=!state.busy,
-                                    onCheckedChange={controller.toggleBodyweight(option.exerciseId)})
-                                Text("I can perform this bodyweight movement",
-                                    style=MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                    HorizontalDivider()
-                }
-                Button(onClick=controller::preview,enabled=!state.busy,
-                    modifier=Modifier.fillMaxWidth()) {
-                    Text("Review my proposed first week")
-                }
-            }
+            NativeFirstProgramCalibrationPanel(
+                state=state,
+                onLoadChanged=controller::enterLoad,
+                onBodyweightChanged=controller::toggleBodyweight,
+                onReview=controller::preview
+            )
             state.preview?.let {review ->
                 PursuitCard(highlighted=true) {
                     Text("First-program review",style=MaterialTheme.typography.titleLarge)

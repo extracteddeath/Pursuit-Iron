@@ -55,7 +55,8 @@ private fun platePairs(raw:String):Map<BigDecimal,Int> {
 private fun onboardingStock(
     unit:LoadUnit?,
     db:String,cable:String,barWeight:String,plates:String,
-    machineId:String,machineLoads:String
+    machineId:String,machineLoads:String,
+    savedMachines:String,nonMachineEquipmentIds:Set<String>
 ):Map<String,VerifiedLoadStock>? {
     if(unit==null) return null
     return runCatching {
@@ -73,11 +74,27 @@ private fun onboardingStock(
             stock["straight-bar"]=VerifiedLoadStock.Barbell(
                 unit,BigDecimal(barWeight.trim()),platePairs(plates))
         }
+        // Every already reviewed physical machine keeps its own implement ID.
+        // A machine may never shadow the barbell, cable, dumbbell or Smith
+        // equipment identities already loaded by the source catalog.
+        val machines=OnboardingMachineStockDomain.verifiedStock(
+            savedMachines,unit,nonMachineEquipmentIds)
+            ?:error("Invalid saved machine list")
+        machines.forEach{(id,verified)->
+            require(id !in stock)
+            stock[id]=verified
+        }
         if(machineId.isNotBlank() || machineLoads.isNotBlank()) {
-            require(kotlinId.matches(machineId) && machineLoads.isNotBlank())
-            stock[machineId]=VerifiedLoadStock.Totals(
-                unit,LoadBasis.EXERCISE_OVERRIDE,
-                exactPhysicalLoads(machineLoads))
+            require(kotlinId.matches(machineId) &&
+                machineId !in nonMachineEquipmentIds &&
+                machineId !in stock && machineLoads.isNotBlank())
+            val trial=OnboardingMachineStockDomain.add(
+                savedMachines,machineId,machineLoads,nonMachineEquipmentIds)
+                ?:error("Machine ID or loads are not independently verifiable")
+            val appended=OnboardingMachineStockDomain.verifiedStock(
+                trial,unit,nonMachineEquipmentIds)
+                ?:error("Unverifiable machine inventory")
+            stock[machineId]=checkNotNull(appended[machineId])
         }
         stock.toMap()
     }.getOrNull()
@@ -180,6 +197,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var plates by rememberSaveable {mutableStateOf("")}
     var machineId by rememberSaveable {mutableStateOf("")}
     var machineLoads by rememberSaveable {mutableStateOf("")}
+    var savedMachines by rememberSaveable {mutableStateOf("")}
     var gymConfirmed by rememberSaveable {mutableStateOf(false)}
     var showIdentity by rememberSaveable {mutableStateOf(false)}
     var showSchedule by rememberSaveable {mutableStateOf(false)}
@@ -209,8 +227,19 @@ internal fun NativeKotlinOnboardingCandidateScreen(
         return next.sortedBy{it.ordinal}.joinToString(","){it.name}
     }
     val chosenUnit=LoadUnit.entries.firstOrNull{it.name==unit}
+    val nonMachineEquipmentIds=remember {
+        StarterExerciseTranche.movements().mapNotNull{movement->
+            movement.equipmentId?.takeIf{
+                movement.expectedLoadBasis!=LoadBasis.EXERCISE_OVERRIDE
+            }
+        }.toSet()
+    }
     val gymInventory=onboardingStock(chosenUnit,dumbbells,cable,
-        barWeight,plates,machineId,machineLoads)
+        barWeight,plates,machineId,machineLoads,
+        savedMachines,nonMachineEquipmentIds)
+    val stagedMachines=OnboardingMachineStockDomain.parse(savedMachines)
+    val machineToAdd=OnboardingMachineStockDomain.add(
+        savedMachines,machineId,machineLoads,nonMachineEquipmentIds)
     val confirmedFacilities=commaIds(fixtures)
     val confirmedAttachments=commaIds(attachments)
     val confirmedExclusions=commaIds(excludedIds)
@@ -266,6 +295,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
         if(unit.isNotBlank() && unit!=next) {
             dumbbells="";cable="";barWeight="";plates=""
             machineId="";machineLoads=""
+            savedMachines=""
         }
         unit=next;gymConfirmed=false
     }
@@ -465,7 +495,8 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     // Switching units always clears the ENTIRE provisional
                     // inventory; these numbers must never be converted.
                     if(unit!=it.name) {
-                        if(unit.isNotBlank() && listOf(dumbbells,cable,barWeight,plates,machineLoads)
+                        if(unit.isNotBlank() && listOf(dumbbells,cable,barWeight,
+                                    plates,machineLoads,savedMachines)
                                 .any{raw->raw.isNotBlank()})pendingUnit=it.name
                         else changeUnit(it.name)
                     }
@@ -545,8 +576,8 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                         supportingText={Text("Comma-separated only for grips not listed above; no attachments are assumed.")},
                         modifier=Modifier.fillMaxWidth())
                 }
-                Text("Optional additional machine",style=MaterialTheme.typography.titleMedium)
-                Text("Choose one verified machine here. After saving, use My gym to add more physical machines, each with its own resistance and history.",
+                Text("Physical machine stock",style=MaterialTheme.typography.titleMedium)
+                Text("Add several distinct machine equipment IDs before saving. For two physical A/B stations of the same exercise, use the machine roster in My gym; their histories stay independent.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(!showAdvancedMachineId) {
@@ -609,6 +640,79 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                         label={Text("Exact available machine loads")},
                         supportingText={Text("List actual weights for this physical machine, not estimated strength.")},
                         modifier=Modifier.fillMaxWidth())
+                    OutlinedButton(
+                        onClick={
+                            val accepted=machineToAdd
+                            if(accepted!=null) {
+                                savedMachines=accepted
+                                machineId=""
+                                machineLoads=""
+                                gymConfirmed=false
+                            }
+                        },
+                        enabled=!sourceState.busy && machineToAdd!=null,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Add machine to gym inventory")
+                    }
+                    if(machineToAdd==null)Text(
+                        "Use a new, distinct machine ID and exact positive selectable weights. A machine cannot overwrite an existing stock ID.",
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                if(stagedMachines==null) {
+                    Text("Added machine inventory could not be verified. Clear it and re-enter the physical machines.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                    TextButton(onClick={savedMachines="";gymConfirmed=false}) {
+                        Text("Clear unverified added machines")
+                    }
+                } else if(stagedMachines.isNotEmpty()) {
+                    HorizontalDivider()
+                    Text("Added machines · ${stagedMachines.size} of ${OnboardingMachineStockDomain.MAX_MACHINES}",
+                        style=MaterialTheme.typography.titleSmall)
+                    stagedMachines.forEach { machine ->
+                        Column(Modifier.fillMaxWidth(),
+                            verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                            Text(machine.equipmentId.replace('-',' ')
+                                .replace('_',' ').replaceFirstChar{it.uppercase()},
+                                style=MaterialTheme.typography.bodyLarge)
+                            Text("${machine.exactLoads.size} exact selectable weights · ${unit.lowercase()}",
+                                style=MaterialTheme.typography.bodySmall)
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                TextButton(
+                                    onClick={
+                                        val remaining=OnboardingMachineStockDomain
+                                            .remove(savedMachines,machine.equipmentId)
+                                        if(remaining!=null) {
+                                            savedMachines=remaining
+                                            machineId=machine.equipmentId
+                                            machineLoads=machine.exactLoads
+                                                .joinToString(","){it.toPlainString()}
+                                            showAdvancedMachineId=
+                                                onboardingMachineChoices.none{
+                                                    it.first==machine.equipmentId
+                                                }
+                                            gymConfirmed=false
+                                        }
+                                    },
+                                    enabled=!sourceState.busy && machineId.isBlank()) {
+                                    Text("Edit weights")
+                                }
+                                TextButton(onClick={
+                                    val remaining=OnboardingMachineStockDomain
+                                        .remove(savedMachines,machine.equipmentId)
+                                    if(remaining!=null) {
+                                        savedMachines=remaining
+                                        gymConfirmed=false
+                                    }
+                                },enabled=!sourceState.busy) {
+                                    Text("Remove")
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+                    }
                 }
                 }
                 if(chosenUnit!=null && gymInventory==null) Text(

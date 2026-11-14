@@ -2060,6 +2060,25 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customDraftStore.listOwned(owner.ownerKey)
     }
 
+    /** One coherent, read-only return to Plan under the existing owner fence. */
+    fun reviewPlanEntry(
+        visibleDraft:CustomTrainingCycle?,
+        visibleSource:NativeCustomAuthoringSnapshot?,
+        undo:CustomCycleDraftReceipt?
+    ):NativeKotlinPlanEntry {
+        fun unauthorized()=NativeKotlinPlanEntry.Programs(
+            NativeCustomDraftListResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED))
+        val owner=localAthlete.signedInIdentity() ?:return unauthorized()
+        return revisionFence.withOwnerTransaction(owner.ownerKey) {
+            if(localAthlete.signedInIdentity()!=owner)return@withOwnerTransaction unauthorized()
+            val reviewed=NativeKotlinPlanEntryReview.review(localAthlete,visibleDraft,visibleSource,undo,
+                readSource={authoringSourceStore.read(owner.ownerKey)},
+                readDraft={customDraftStore.read(owner.ownerKey,it)},
+                listDrafts={customDraftStore.listOwned(owner.ownerKey)})
+            if(localAthlete.signedInIdentity()==owner)reviewed else unauthorized()
+        }
+    }
+
     fun readCustomAuthoringSource():NativeAuthoringSourceRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAuthoringSourceRead.Rejected(

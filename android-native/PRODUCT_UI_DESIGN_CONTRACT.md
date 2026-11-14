@@ -95,6 +95,32 @@ owned. App JVM tests execute these navigation scenarios in source CI alongside
 Compose compilation. Physical navigation, layout and accessibility acceptance
 remain open; this checkpoint does not finish the whole-app design gate.
 
+## Plan task continuity — 2026-11-14
+
+Returning to Plan now reopens the verified selected program before considering
+the program census. A routine visit to Profile, Settings, gym or History no
+longer replaces a selected second program with a picker or unconditionally
+erases its last saved edit's Undo. Current program/source records are reread
+together under the native owner fence. Coaching rules, assistance settings,
+consent and next-session projections are freshly checked; pending reviews are
+not reused as approvals. A changed program, source or owner invalidates Undo.
+
+Read requests wait behind an in-flight edit without enqueuing another save.
+An explicit program selection or newly generated program handoff takes priority
+over a passive return. Post-save refresh is bound to the still-selected
+program; a late acknowledgment cannot take over another program or swallow
+its pending return. Cold entry still asks when several programs exist;
+neither a prior in-memory Undo nor a preferred program is fabricated.
+
+The actual web baseline keeps `programSaveUndo` in `modules/App.js` and checks
+saved/draft/working content in `canUndoProgramSave` in
+`modules/training-domain/analytics.js`. This native pass restores that task
+continuity and binds retained Undo to exact native ownership, full source
+context and canonical builder receipts. Tests use real native files for
+create/edit/return/Undo, including advanced sets, notes, week overrides,
+source changes, corruption and owner changes. Source checks and JVM tests are
+not a physical navigation or visual sign-off. No APK/AAB from this checkpoint.
+
 ## Persistent information architecture
 
 At most five top-level destinations:

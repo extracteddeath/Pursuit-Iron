@@ -91,6 +91,7 @@ fun TodayScreen(vm: AppViewModel) {
     var historyId by remember { mutableStateOf<String?>(null) }
     var review by remember { mutableStateOf<JSONObject?>(null) }
     var changesOpen by remember { mutableStateOf(false) }
+    var blockReviewOpen by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(h) { review = vm.sessionReview() }
     val next = h.o("next")
     val full = StaggeredGridItemSpan.FullLine
@@ -159,6 +160,7 @@ fun TodayScreen(vm: AppViewModel) {
 
         // The design keeps the backup reminder in You → Settings.
         if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { Rise { WhatsNewCard(vm) }}
+        h.o("blockEnd")?.takeIf { h.o("live") == null }?.let { b -> item(span = full) { Rise { BlockEndCard(vm, b) { blockReviewOpen = true } }} }
         if (next != null) item(span = full) { Rise { TodayWeekCard(vm, h, showBlock = h.o("live") == null) }}
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { Rise { TrainingMaxPrompt(vm) }}
         h.o("reentry")?.takeIf { next != null && h.o("live") == null && it.optLong("lastDate") != vm.prefs.reentrySkippedFor }?.let { r ->
@@ -206,6 +208,7 @@ fun TodayScreen(vm: AppViewModel) {
     }
 
     if (altOpen) FresherDaySheet(vm, h) { altOpen = false }
+    if (blockReviewOpen) h.o("blockEnd")?.let { b -> BlockReviewSheet(vm, b.s("cycleId").ifBlank { b.s("programId") }, b.i("blockIndex")) { blockReviewOpen = false } }
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
     if (changesOpen) review?.let { r -> PlanChangesSheet(vm, r, onUpdated = { review = it }) { changesOpen = false } }
 }

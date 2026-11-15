@@ -271,3 +271,31 @@ fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
         }
     }
 }
+
+/** The block just ran its last week: the review and the next block are the next step, not week 1 again in silence. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun BlockEndCard(vm: AppViewModel, b: JSONObject, onReview: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val weeks = b.i("weeks")
+    val inCycle = b.s("cycleId").isNotEmpty()
+    Surface(color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(PiIcons.Trophy, null, Modifier.size(22.dp))
+                Text("Block complete", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp))
+            }
+            Text("All $weeks weeks of ${b.s("name")} are done · ${b.i("sessions")} of ${b.i("planned")} sessions logged. " +
+                (if (inCycle && b.b("nextBlockInCycle")) "Review what moved, then start the next block of ${b.s("cycleName")}." else "Review what moved and build the next block from it."),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(onClick = onReview, color = cs.onSecondaryContainer, contentColor = cs.secondaryContainer, shape = pill(), modifier = Modifier.height(48.dp)) {
+                    Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) { Text("Review block", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp)) }
+                }
+                Surface(onClick = { vm.dismissBlockEnd(b.s("programId")) }, color = Color.Transparent, contentColor = cs.onSecondaryContainer, shape = pill(), modifier = Modifier.height(48.dp)) {
+                    Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Run it again", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold)) }
+                }
+            }
+        }
+    }
+}

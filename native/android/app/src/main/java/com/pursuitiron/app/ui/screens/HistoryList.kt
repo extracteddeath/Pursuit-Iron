@@ -26,6 +26,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,6 +60,9 @@ fun HistoryList(vm: AppViewModel, day: Triple<Int, Int, Int>? = null, onOpen: (S
     var prog by rememberSaveable { mutableStateOf("all") }
     var by by rememberSaveable { mutableStateOf("cycle") }
     var d by remember { mutableStateOf<JSONObject?>(null) }
+    // This list lives inside the tab's scrolling column, so every row is composed at once. With years of training
+    // that was hundreds of rows on open; it now composes a page at a time and a filter starts again at one page.
+    var limit by remember(q, days, prog, by, day) { mutableIntStateOf(HISTORY_PAGE) }
     LaunchedEffect(q, days, prog, by, vm.history.size) { delay(if (q.isNotEmpty()) 180 else 0); d = vm.historyGroups(q, days, prog, by) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Find a workout — lift, day or note") },
@@ -84,18 +88,25 @@ fun HistoryList(vm: AppViewModel, day: Triple<Int, Int, Int>? = null, onOpen: (S
         }
         val u = x.s("unit", "kg")
         val onDay = { r: JSONObject -> day == null || java.util.Calendar.getInstance().apply { timeInMillis = r.optLong("date") }.let { c -> c.get(java.util.Calendar.YEAR) == day.first && c.get(java.util.Calendar.MONTH) == day.second && c.get(java.util.Calendar.DAY_OF_MONTH) == day.third } }
-        x.list("groups").map { g -> g to g.list("items").filter(onDay) }.filter { it.second.isNotEmpty() }.forEach { (g, items) ->
+        var budget = limit
+        val all = x.list("groups").map { g -> g to g.list("items").filter(onDay) }.filter { it.second.isNotEmpty() }
+        val total = all.sumOf { it.second.size }
+        all.map { (g, items) -> val take = items.take(budget); budget -= take.size; Triple(g, items, take) }.filter { it.third.isNotEmpty() }.forEach { (g, items, shown) ->
             Row(Modifier.fillMaxWidth().padding(top = 6.dp, start = 4.dp), verticalAlignment = Alignment.Bottom) {
                 Kicker(g.s("label"), modifier = Modifier.weight(1f))
                 Text("${if (day != null) items.size else g.i("count")} session${if ((if (day != null) items.size else g.i("count")) == 1) "" else "s"}" + (g.i("volume").takeIf { it > 0 }?.let { " · ${fmt1(it / 1000.0)} ${volUnit(u)}" } ?: ""),
                     style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             }
             Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                items.forEach { r -> HistoryRow(r) { onOpen(r.s("id")) } }
+                shown.forEach { r -> HistoryRow(r) { onOpen(r.s("id")) } }
             }
+        }
+        if (total > limit) TextButton(onClick = { limit += HISTORY_PAGE }, modifier = Modifier.fillMaxWidth()) {
+            Text("Show ${minOf(HISTORY_PAGE, total - limit)} more · ${total - limit} older")
         }
     }
 }
+private const val HISTORY_PAGE = 40
 
 
 /* The design's month calendar on History: Monday first, trained days filled, today ringed, tap a trained

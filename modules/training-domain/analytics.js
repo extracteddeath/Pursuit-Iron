@@ -1,6 +1,6 @@
 // Canonical analytics domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
-import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
+import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise, setShellSessionClock } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
@@ -1083,6 +1083,8 @@ function estimateMinutesFor(program, day, weekIndex, pace, rows = null) {
 function estimateMinutes(program, day, weekIndex, rows = null) {
     return Math.round(daySeconds(program, day, weekIndex, budgetIncludesTransitions(program), rows) / 60);
 }
+// Generation checks every finished plan against this clock: it is the number the lifter is shown.
+setShellSessionClock((program, day, weekIndex) => daySeconds(program, day, weekIndex, budgetIncludesTransitions(program)) / 60);
 
 const STRETCH_FOCUS_E2 = new Set([
     // chest — deep stretch under load
@@ -2743,9 +2745,51 @@ function lifterModelKey(history, perf, program) {
     return JSON.stringify([history, perf, program]);
 }
 
+/* ⚠ THE CONTENT KEY WAS RECOMPUTED FOR EVERY LIFT. `dayScopedTrends` is reached once per lift through
+   plateauOfLift, and each call serialised the whole history to check its cache — 22 full serialisations
+   for one Today screen, plus a normalise-and-sort each time. Measured in the native core: home() 263 ms
+   and a logged set 42 ms at 800 sessions, growing linearly with history.
+   The key stays a CONTENT fingerprint (identity alone would serve a stale index to a caller that mutates
+   history in place — the reason it is content). What changes is how often it is computed: once per input
+   object per synchronous turn. The memo is dropped at the next microtask and after 250 ms regardless, so
+   the only case it cannot see is an in-place mutation between two reads inside one synchronous call —
+   which no caller does (both shells replace arrays on write). */
+let _turnMemo = null;
+function turnMemo() {
+    const t = Date.now();
+    if (_turnMemo && Math.abs(t - _turnMemo.at) < 250) return _turnMemo;
+    _turnMemo = { at: t, keys: new WeakMap(), canon: new WeakMap() };
+    const mine = _turnMemo;
+    try { Promise.resolve().then(() => { if (_turnMemo === mine) _turnMemo = null; }); } catch { /* no microtasks: the 250 ms bound still holds */ }
+    return _turnMemo;
+}
+function contentKeyOf(x) {
+    if (x == null || typeof x !== "object") return JSON.stringify(x === undefined ? null : x);
+    const m = turnMemo().keys;
+    let k = m.get(x);
+    if (k === undefined) { k = JSON.stringify(x); m.set(x, k); }
+    return k;
+}
+function canonicalHistoryMemo(history) {
+    if (!history || typeof history !== "object") return canonicalHistoryNewest(history);
+    const m = turnMemo().canon;
+    let hs = m.get(history);
+    if (!hs) { hs = canonicalHistoryNewest(history); m.set(history, hs); }
+    return hs;
+}
+/* Same string lifterModelKey(canonicalHistoryNewest(history), perf, program) produces. Only the HISTORY part is
+   memoised — it is the one that grows without bound. perf and the program are small and are serialised fresh on
+   every call, because a caller may correct them in place (m225: a program's unit fixed in place must reach coaching
+   at once, within the same turn). */
+function lifterModelKeyMemo(history, perf, program) {
+    const hk = contentKeyOf(canonicalHistoryMemo(history));
+    if (arguments.length <= 1) return `[${hk}]`;
+    return `[${hk},${JSON.stringify(perf === undefined ? null : perf)},${JSON.stringify(program === undefined ? null : program)}]`;
+}
+
 function buildLifterModel(history, perf, program) {
-    const hs = canonicalHistoryNewest(history);
-    const key = lifterModelKey(hs, perf, program);
+    const key = lifterModelKeyMemo(history, perf, program);
+    const hs = canonicalHistoryMemo(history);
     const cacheAge = Date.now() - (_lmCache.val?.builtAt ?? 0);
     if (_lmCache.key === key && _lmCache.val && cacheAge >= 0 && cacheAge < 60000)
         return _lmCache.val;
@@ -3795,20 +3839,36 @@ function blockRetro(history, opts = {}) {
         const state = ser.length < 3 ? "thin" : (deltaPct >= 1.5 ? "progressed" : deltaPct <= -1.5 ? "regressed" : "flat");
         return { id, name: ex.name, part: ex.part, sessions: ser.length, deltaPct: r1(deltaPct), slopePctWk: r2(slopePctWk(ser)), state };
     });
-    // Per-muscle: direct working sets/wk in the window, paired with the muscle's aggregate e1RM trend
-    const setsByPart = {};
+    /* Per-muscle working sets/wk in the window, paired with the muscle's aggregate e1RM trend.
+       ⚠ ONE OWNER WITH THE PLAN. This counted DIRECT sets only and judged them against the raw population
+       landmarks, while the Plan tab (weeklyVolume + landmarkFor(part, experience, program)) counts a row's
+       fractional credit to the muscles it also trains and uses the program's own landmarks. Measured on one
+       finished block: Plan said all 11 muscles "in range" every week; this review called 6 "under MEV" and
+       told the lifter to add volume (upper back 2.1 direct sets/wk against MEV 8, where the plan counts 4.4
+       against MEV 3). With the program in hand both now count and judge the same way. */
+    const setsByPart = {}, directParts = new Set();
     for (const h of win)
         for (const [id, p] of Object.entries(h.perf || {})) {
             const ex = EX_BY_ID[id];
             if (!ex || !p.sets)
                 continue;
             const n = p.sets.filter(s => isWorkSet(s)).length;
-            if (n)
-                setsByPart[ex.part] = (setsByPart[ex.part] || 0) + n;
+            if (!n)
+                continue;
+            setsByPart[ex.part] = (setsByPart[ex.part] || 0) + n;
+            directParts.add(ex.part);
+            if (opts.program)
+                secondaryOf(ex).forEach(([part, f]) => { setsByPart[part] = (setsByPart[part] || 0) + n * f; });
         }
-    const muscles = Object.keys(setsByPart).map(part => {
+    const exp = opts.program?.config?.experience || "intermediate";
+    // A muscle only reached through another lift's credit (traps from rows, lower back from hinges) is helper work
+    // the program never set out to dose — the Plan shows it as "not targeted", so the review doesn't judge it either.
+    const muscles = Object.keys(setsByPart).filter(part => directParts.has(part)).map(part => {
         const avgWk = setsByPart[part] / spanWeeks;
-        const L = landmarkFor(part), mav = personalMav(history, part), gmav = mavFor(part);
+        const L = opts.program ? landmarkFor(part, exp, opts.program) : landmarkFor(part);
+        // The lifter's own MAV when their history says something; otherwise the program's (not the population's).
+        const pm = personalMav(history, part), gmav = opts.program ? mavFor(part, opts.program) : mavFor(part);
+        const mav = opts.program && Math.abs(pm - mavFor(part)) < 0.05 ? gmav : pm;
         const partLifts = lifts.filter(l => l.part === part && l.sessions >= 3);
         const prog = partLifts.length ? median(partLifts.map(l => l.deltaPct)) : null;
         const trend = prog == null ? "unknown" : (prog >= 1.5 ? "progressed" : prog <= -1.5 ? "regressed" : "flat");
@@ -3844,12 +3904,12 @@ const MIN_DAY_SESSIONS = 3;
 let _dstCache = { key: null, val: null };
 
 function dayScopedTrends(history) {
-    const hs = canonicalHistoryNewest(history);
+    const hs = canonicalHistoryMemo(history);
     // Content fingerprint, not array identity: identity alone would serve a stale index to any caller
     // that mutates history in place. EXERCISES.length is folded in because exerciseTrends() drops ids
     // missing from EX_BY_ID — a custom exercise registered after the first call would otherwise stay
-    // invisible to every later one.
-    const key = `${lifterModelKey(hs)}:${EXERCISES.length}`;
+    // invisible to every later one. (Computed once per turn — see turnMemo.)
+    const key = `${lifterModelKeyMemo(history)}:${EXERCISES.length}`;
     if (_dstCache.key === key && _dstCache.val)
         return _dstCache.val;
     const dayIds = [...new Set(hs.filter(h => h && h.dayId).map(h => h.dayId))];
@@ -5387,7 +5447,7 @@ function blockReview(history, cycle, i, program = null) {
     const weeks = program ? weeksOf(program) : null;
     const deloadEntry = program ? (h => h.weekIndex != null && ((program.config?.deload || program.config?.endless) && h.weekIndex > weeks
         || isSchemeDeloadWeek(program.config?.percentScheme, h.weekIndex, weeks))) : null;
-    const r = blockRetro(hs, { sinceDate: from - 1, untilDate: to + 1, trendExclude: deloadEntry });
+    const r = blockRetro(hs, { sinceDate: from - 1, untilDate: to + 1, trendExclude: deloadEntry, program });
     return { ...r, block: meta, from, to };
 }
 

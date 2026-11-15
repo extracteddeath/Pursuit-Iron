@@ -150,7 +150,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                                 Column(Modifier.weight(1f)) {
                                     Text(n.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
                                     Text(n.s("reason").ifBlank { if (delta > 0) "+${fmtNum(delta)} $u" else if (delta < 0) "${fmtNum(delta)} $u" else "Hold the load, build reps" },
-                                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) // the whole reason: cut at two lines it hid the instruction ("re-enter the prescribed…")
                                 }
                                 Text("${fmtNum(n.d("weight").takeIf { it > 0 } ?: n.d("from"))} $u", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                                     color = if (delta > 0) cs.primary else cs.onSurface)

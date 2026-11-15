@@ -1,0 +1,131 @@
+// Spare session time and whole movement patterns in a new plan (volume-repair fillSessionsTowardBand,
+// extendSessionsTowardBand, ensureMovementPatterns; called from finalizeGeneratedShellVolume).
+// Every expectation is measured against the same request built with `sessionFill: false` (the plan as the
+// realizer generated it), with limits computed here from that control and the engine's own targets.
+import assert from 'node:assert/strict';
+import { EXERCISES, EX_BY_ID, GYM_PRESETS, estimateMinutes, auditProgramWeek } from '../modules/engine-api.js';
+import { generateNextProgramForShell, nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
+import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
+
+const BAND = { s40: [20, 40], s60: [40, 60], s90: [60, 90] };
+const STRENGTH = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
+const KITS = { full: GYM_PRESETS[0].equipment, dumbbell: ['dumbbell', 'bench', 'pullup'] };
+const SPLIT = { 2: 'full_body', 3: 'full_body', 4: 'upper_lower', 5: 'ulppl' };
+const configs = [];
+for (const session of ['s60', 's90']) for (const [kit, equipment] of Object.entries(KITS)) for (const goal of ['hypertrophy', 'both'])
+    for (const experience of ['beginner', 'intermediate']) for (const days of [3, 4, 5])
+        configs.push({ name: `${session} ${kit} ${goal} ${experience} ${days}d`, unit: 'kg', goal, experience, days, weeks: 4, session, equipment, split: SPLIT[days] });
+const build = (config, sessionFill) => { try { return generateNextProgramForShell({ config, legacyExercises: EXERCISES, seed: 7, makeId: () => 'b1013', sessionFill }).program; } catch { return null; } };
+const weeksOf = program => Array.from({ length: program.weeks }, (_, i) => i + 1);
+const shown = (program, week) => program.days.map(day => estimateMinutes(program, day, week));
+const underDays = program => shown(program, 1).filter(minutes => minutes < BAND[program.config.session][0]).length;
+const cellsByLift = program => { const out = {}; program.days.forEach(day => day.exercises.forEach((id, slot) => { out[`${day.id}|${id}`] = program.nextWeekPrescriptions[`${day.id}:${slot}`]; })); return out; };
+
+const controls = configs.map(config => build(config, false)), filled = configs.map(config => build(config));
+
+// 0. Armed: the control really has short days, and the fill really ran.
+const underBefore = controls.reduce((n, p) => n + (p ? underDays(p) : 0), 0);
+const touched = filled.filter(p => p?.nextEngine.sessionFill?.sets.length || p?.nextEngine.sessionFill?.added.length).length;
+assert.ok(underBefore >= 30, `0 fixture armed: ${underBefore} control days under their band (need 30+)`);
+assert.ok(touched >= 12, `0 fixture armed: the fill changed ${touched} plans (need 12+)`);
+assert.ok(filled.some(p => p?.nextEngine.sessionFill?.added.length) && filled.some(p => p?.nextEngine.sessionFill?.sets.length), '0 both steps ran: an added lift and added sets');
+
+// 1. Fewer short days, never more, and a refusal is never created or cured by the fill.
+let underAfter = 0;
+filled.forEach((program, i) => {
+    assert.equal(!!program, !!controls[i], configs[i].name + ' builds exactly when the control does');
+    if (!program) return;
+    const before = underDays(controls[i]), after = underDays(program); underAfter += after;
+    assert.ok(after <= before, `${configs[i].name}: ${after} short days, control ${before}`);
+    shown(program, 1).forEach((minutes, di) => assert.ok(minutes >= shown(controls[i], 1)[di] - 1, configs[i].name + ': no day made shorter'));
+});
+assert.ok(underAfter * 3 <= underBefore * 2, `1 short days ${underBefore} -> ${underAfter}: at least a third closed`);
+console.log(`PASS 1 days under their band in week one: ${underBefore} -> ${underAfter} across ${configs.length} requests.`);
+
+// 2. The limits, from the control and the engine's targets, on every plan the fill changed.
+let checkedRegions = 0, checkedLifts = 0;
+filled.forEach((program, i) => {
+    const fill = program?.nextEngine.sessionFill; if (!fill || !(fill.sets.length || fill.added.length)) return;
+    const name = configs[i].name, control = controls[i], [, max] = BAND[program.config.session];
+    const after = auditShellVolume(program, EXERCISES), before = auditShellVolume(control, EXERCISES);
+    assert.deepEqual(after.issues.length <= before.issues.length, true, name + ': no new dose issue');
+    for (const t of after.targets) after.weeks.forEach((week, wi) => {
+        const now = week.regions[t.region], was = before.weeks[wi].regions[t.region];
+        assert.ok(now <= Math.max(t.mrv, was) + 1e-6, `${name}: ${t.region} week ${wi + 1} ${now} over its ceiling ${t.mrv}`);
+        if (wi === 0 && !fill.added.some(a => a.reason === 'movement_pattern')) {
+            assert.ok(now <= Math.max(t.mrv / 1.2, was) + 1e-6, `${name}: ${t.region} starts over its modeled upper dose`);
+            assert.ok(now <= Math.max(was * 4 / 3, was + 2) + 1e-6, `${name}: ${t.region} grew more than a third (${was} -> ${now})`);
+        }
+        checkedRegions++;
+    });
+    const mine = cellsByLift(program), theirs = cellsByLift(control);
+    for (const [lift, weeks] of Object.entries(mine)) for (const week of weeksOf(program)) {
+        const cell = weeks[week], was = theirs[lift]?.[week];
+        assert.ok(cell.sets <= Math.max(5, was?.sets ?? 0), `${name}: ${lift} has ${cell.sets} sets`);
+        // (With a lift added, the dose reconcile reruns on the new week and may trim a set elsewhere to hold a ceiling.)
+        if (was && !fill.added.length) assert.ok(cell.sets >= was.sets, `${name}: ${lift} lost a set to the fill`);
+        if (STRENGTH.has(cell.role)) assert.deepEqual(cell, was, `${name}: strength work ${lift} is untouched`);
+        if (week === 1 && was && cell.sets > was.sets) assert.ok(cell.sets <= 4, `${name}: ${lift} filled past four first-week sets`);
+        if (was) assert.deepEqual({ ...cell, sets: 0 }, { ...was, sets: 0 }, `${name}: only set counts change on ${lift}`);
+        checkedLifts++;
+    }
+    for (const week of weeksOf(program)) shown(program, week).forEach((minutes, di) =>
+        assert.ok(minutes <= Math.max(max, shown(control, week)[di]), `${name}: day ${di + 1} week ${week} shows ${minutes} past ${max}`));
+    for (const added of fill.added) assert.ok(program.days.find(d => d.id === added.dayId).exercises.some(id => EX_BY_ID[id].name === added.exercise), name + ': the recorded lift is in the plan');
+    const recorded = new Set(fill.added.map(a => a.exercise));
+    for (const lift of Object.keys(mine)) if (!theirs[lift]) assert.ok(recorded.has(EX_BY_ID[lift.split('|')[1]].name), `${name}: ${lift} is new and not recorded`);
+    const replaced = new Set(fill.added.map(a => a.replaced).filter(Boolean));
+    for (const lift of Object.keys(theirs)) assert.ok(mine[lift] || replaced.has(EX_BY_ID[lift.split('|')[1]].name), `${name}: ${lift} was dropped`);
+});
+console.log(`PASS 2 limits hold: ${checkedRegions} region-weeks under their ceilings and growth bound, ${checkedLifts} lift-weeks never past five by the fill, strength work identical.`);
+
+// 3. Plans the fill must leave alone are the control, cell for cell.
+const alone = [
+    { name: 'minimalist', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', days: 4, weeks: 4, session: 's90', equipment: KITS.full, split: 'upper_lower', volumeApproach: 'minimalist' },
+    { name: '5/3/1', unit: 'kg', goal: 'strength', experience: 'intermediate', days: 4, weeks: 4, session: 's90', equipment: KITS.full, split: 'five_three_one', percentScheme: '531' },
+    { name: '20 minutes', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', days: 4, weeks: 4, session: 's20', equipment: KITS.full, split: 'upper_lower' }
+];
+let left = 0;
+for (const config of alone) {
+    const a = build(config), b = build(config, false);
+    assert.equal(!!a, !!b, config.name);
+    if (!a) continue;
+    assert.deepEqual(a.nextWeekPrescriptions, b.nextWeekPrescriptions, config.name + ': left as generated');
+    assert.deepEqual(a.days.map(d => d.exercises), b.days.map(d => d.exercises), config.name + ': roster left as generated');
+    left++;
+}
+assert.ok(left >= 2, '3 fixture armed');
+console.log(`PASS 3 ${left} minimalist, named-strength and no-floor plans are the plan as generated.`);
+
+// 4. A week with no pulling: the control reproduces it, the plan has it, and the app's own week audit agrees.
+const noPull = { name: 'two-day strength', unit: 'kg', goal: 'strength', experience: 'beginner', days: 2, weeks: 4, session: 's40', equipment: KITS.full, split: 'upper_lower' };
+const pulling = program => { const r = auditShellVolume(program, EXERCISES).weeks[0].regions; return r.lats + r.upper_back + r.biceps; };
+const absent = program => auditProgramWeek(program, 1, {}).filter(f => f.rule === 'pattern-absent').length;
+const bare = build(noPull, false), fixed = build(noPull);
+assert.ok(bare && fixed, '4 fixture builds');
+assert.ok(pulling(bare) < .5 && absent(bare) >= 1, `4 control reproduces the defect: ${pulling(bare)} pulling sets, ${absent(bare)} pattern-absent finding`);
+assert.ok(pulling(fixed) >= 2 && absent(fixed) === 0, `4 the plan pulls: ${pulling(fixed)} sets, ${absent(fixed)} pattern-absent`);
+assert.equal(fixed.nextEngine.sessionFill.added[0].reason, 'movement_pattern');
+shown(fixed, 1).forEach(minutes => assert.ok(minutes <= 40, '4 the added lift fits the session'));
+// The same request on a barbell kit has no time for another lift beside four sets of bench: the pull takes the
+// place of the one accessory, and that is recorded.
+const swapped = build({ ...noPull, name: 'two-day strength, barbell', experience: 'advanced', equipment: ['barbell', 'bench', 'ezbar', 'pullup'] });
+assert.ok(swapped && pulling(swapped) >= 2 && absent(swapped) === 0, '4 the barbell plan pulls too');
+assert.ok(swapped.nextEngine.sessionFill.added[0].replaced, '4 the lift that made room is recorded');
+console.log(`PASS 4 two-day strength plan: pulling ${pulling(bare)} -> ${pulling(fixed)} sets (${fixed.nextEngine.sessionFill.added[0].exercise}).`);
+
+// 5. The engine source of an extended plan still projects to the cells the lifter runs: an added lift must not
+//    turn week-one effort into the block's base (which would shift RIR again on every later projection).
+let projected = 0;
+for (const program of [...filled, fixed]) {
+    if (!program?.nextEngine.sessionFill?.added.length) continue;
+    const raw = nextProgramToShellProgram(program.nextEngine.program, program.config, EXERCISES, () => program.id);
+    for (const [key, weeks] of Object.entries(raw.nextWeekPrescriptions)) for (const [week, cell] of Object.entries(weeks)) {
+        const live = program.nextWeekPrescriptions[key][week];
+        for (const field of ['reps', 'rir', 'rest', 'role']) assert.equal(live[field], cell[field], `5 ${key} week ${week} ${field}`);
+    }
+    projected++;
+}
+assert.ok(projected >= 3, '5 fixture armed: plans with an added lift');
+console.log(`PASS 5 ${projected} extended plans re-project to the same reps, effort and rest.`);
+console.log('PASS B1013 session fill.');

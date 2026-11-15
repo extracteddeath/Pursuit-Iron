@@ -105,13 +105,21 @@ private val WZ = object {
 }
 
 private val SESS = listOf("s20" to "Up to 20 minutes", "s40" to "20 to 40 minutes", "s60" to "40 to 60 minutes", "s90" to "60 to 90 minutes", "s120" to "90 to 120 minutes", "s120p" to "Over 120 minutes")
-private val PRESETS = listOf(
-    "Full gym" to listOf("barbell", "dumbbell", "bench", "cable", "machine", "smith", "ezbar", "pullup", "dip", "kettlebell", "bands"),
-    "Barbell + rack" to listOf("barbell", "bench", "ezbar", "pullup"),
-    "Dumbbells + bench" to listOf("dumbbell", "bench", "pullup"),
-    "Dumbbells only" to listOf("dumbbell"),
-    "Bodyweight" to emptyList(),
+/* Gym presets come from the core (records.js GYM_PRESETS), the same owner as the web wizard and the Gyms sheet.
+   A private copy here once called 11 kinds of equipment a "Full gym" and kept 72 lifts (leg press, leg curl,
+   pec deck, incline bench…) out of every first program. This fallback is only for a core that predates `presets`. */
+private val FALLBACK_PRESETS = listOf(
+    "Commercial gym" to listOf("barbell", "dumbbell", "bench", "cable", "machine", "smith", "ezbar", "pullup", "dip", "kettlebell", "bands",
+        "legpress", "hacksquat", "legext", "legcurl", "pecdeck", "machinerow", "assisted", "calfmachine", "abduction", "reversehyper", "ghd",
+        "preacher", "machinepress", "machineshoulder", "machinelatraise", "machinecurl", "machineext", "beltsquat", "hipthrustmachine",
+        "kickback", "machinecrunch", "machineshrug", "machinepullover", "adduction", "trapbar", "safetybar", "landmine", "inclinebench", "declinebench"),
+    "Garage gym" to listOf("barbell", "dumbbell", "bench", "ezbar", "pullup", "bands", "preacher"),
+    "Home gym" to listOf("dumbbell", "bench", "bands", "pullup"),
+    "Minimal kit" to listOf("bands", "pullup"),
+    "Bodyweight only" to emptyList(),
 )
+private fun presetsOf(opts: JSONObject?): List<Pair<String, List<String>>> =
+    opts.list("presets").map { it.s("name") to it.strings("equipment") }.takeIf { it.isNotEmpty() } ?: FALLBACK_PRESETS
 private val EXP = listOf(Triple("none", "New to lifting", "Brand new to lifting"), Triple("beginner", "Beginner", "< 1 year training"), Triple("intermediate", "Intermediate", "1–3 years training"), Triple("advanced", "Advanced", "3+ years, dialled-in"))
 private val GOALS = mapOf("hypertrophy" to "Hypertrophy", "strength" to "Strength", "both" to "Strength & Size")
 private val SESS_SHORT = mapOf("s20" to "≤20 min", "s40" to "20–40", "s60" to "40–60", "s90" to "60–90", "s120" to "90–120", "s120p" to "120+")
@@ -147,7 +155,8 @@ private fun WzFold(title: String, summary: String, content: @Composable () -> Un
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, onPick: (String) -> Unit, onTop: (String?) -> Unit, goalLabel: String, cyc: Boolean) {
+private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, onPick: (String) -> Unit, onTop: (String?) -> Unit, goalLabel: String, cyc: Boolean,
+                         onAdjust: (session: String?, days: Int?) -> Unit = { _, _ -> }) {
     val cs = MaterialTheme.colorScheme
     val cfgKey = config.toString()
     var plan by remember(cfgKey) { mutableStateOf<JSONObject?>(null) }
@@ -172,13 +181,16 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
         @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
         androidx.compose.material3.LinearWavyProgressIndicator(progress = { if (total == 0) 0f else done / total.toFloat() }, modifier = Modifier.fillMaxWidth())
     }
-    if (ranked.isEmpty()) {
+    if (ranked.isEmpty() && scoring) {
         Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
             @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
             androidx.compose.material3.ContainedLoadingIndicator(Modifier.size(56.dp))
         }
         return
     }
+    // Every split was built and none passed the engine's audit (Strength in 20 minutes: a full-body strength day
+    // with real rest doesn't fit). This used to spin forever; now it says why and offers the nearest setups that build.
+    if (ranked.isEmpty()) { NoSplitFits(vm, config, onAdjust); return }
     val top = ranked.first()
     val hero = ranked.firstOrNull { it.s("id") == chosen } ?: top
     val heroRank = ranked.indexOf(hero) + 1
@@ -294,7 +306,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val full = vm.setupFull
     val activeGym = vm.gyms?.let { g -> g.list("gyms").firstOrNull { it.s("id") == g.s("activeGymId") } }
-    val gymEquip = activeGym?.optJSONArray("equipment")?.let { a -> (0 until a.length()).map { a.optString(it) } }?.filter { it != "bodyweight" } ?: PRESETS[0].second
+    val gymEquip = activeGym?.optJSONArray("equipment")?.let { a -> (0 until a.length()).map { a.optString(it) } }?.filter { it != "bodyweight" } ?: presetsOf(opts)[0].second
     // A recovered cycle setup (not for the guided setup or a template pick, which start fresh)
     val d0 = remember { if (full || vm.setupMode == "template") null else vm.prefs.setupDraft?.let { runCatching { JSONObject(it) }.getOrNull() } }
     // Answers
@@ -311,7 +323,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     var days by remember { mutableIntStateOf(d0.i("days", 4)) }
     var split by remember { mutableStateOf(d0.s("split").ifBlank { null }) }
     var session by remember { mutableStateOf(d0.s("session", "s60")) }
-    var equip by remember { mutableStateOf(if (full) PRESETS[0].second.toSet() else gymEquip.toSet()) }
+    var equip by remember { mutableStateOf(if (full) presetsOf(opts)[0].second.toSet() else gymEquip.toSet()) }
     var noRack by remember { mutableStateOf(d0.b("noRack")) }
     var noBodyweight by remember { mutableStateOf(d0.b("noBodyweight")) }
     var noSupersets by remember { mutableStateOf(d0.b("noSupersets")) }
@@ -539,7 +551,8 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         val n = opts.list("splits").count { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == days } } ?: true }
                         Text("$n splits fit $days days. All of them get built and ranked for you at the end.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
-                    "split" -> RankedSplits(vm, rankConfig(), chosenSplit, { split = it }, { rankTop = it }, GOALS[goal] ?: "", cyc)
+                    "split" -> RankedSplits(vm, rankConfig(), chosenSplit, { split = it }, { rankTop = it }, GOALS[goal] ?: "", cyc,
+                        onAdjust = { ses, d -> if (ses != null) session = ses; if (d != null) days = d; split = null })
                     "session" -> {
                         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             SESS.forEach { (id, l) ->
@@ -762,7 +775,7 @@ private fun WzCheckRow(label: String, sub: String?, on: Boolean, shape: RoundedC
 private fun EquipmentStep(opts: JSONObject?, equip: Set<String>, onEquip: (Set<String>) -> Unit, noRack: Boolean, onNoRack: (Boolean) -> Unit, noBw: Boolean, onNoBw: (Boolean) -> Unit) {
     val cs = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().fadingHScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        PRESETS.forEach { (l, ids) ->
+        presetsOf(opts).forEach { (l, ids) ->
             val on = ids.toSet() == equip
             Box(Modifier.height(38.dp).clip(CircleShape).background(if (on) cs.primary else cs.surfaceContainerLow).clickable { onEquip(ids.toSet()) }
                 .semantics { role = Role.Button; selected = on }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
@@ -831,4 +844,29 @@ private fun BuildOwnDialog(onClose: () -> Unit, onBuild: (String, Int) -> Unit) 
         },
         confirmButton = { androidx.compose.material3.Button(onClick = { onBuild(name.trim().ifBlank { "My program" }, days) }) { Text("Start building") } },
         dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text("Cancel") } })
+}
+
+
+/** No split builds for these answers: the engine's reason in plain words, and one tap to the nearest setup that does. */
+@Composable
+private fun NoSplitFits(vm: AppViewModel, config: JSONObject, onAdjust: (String?, Int?) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val cfgKey = config.toString()
+    var alts by remember(cfgKey) { mutableStateOf<List<JSONObject>?>(null) }
+    LaunchedEffect(cfgKey) { alts = vm.rankAlternatives(config)?.list("alternatives") ?: emptyList() }
+    val ses = SESS_SHORT[config.optString("session")] ?: ""
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.errorContainer).padding(18.dp).semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Nothing fits $ses min", style = MaterialTheme.typography.titleMedium, color = cs.onErrorContainer)
+        Text("Every split was built and checked. With ${config.optInt("days")} days at $ses min, none covers your main lifts with the rest they need between sets, so none is offered.",
+            style = MaterialTheme.typography.bodyMedium, color = cs.onErrorContainer)
+        val a = alts
+        if (a == null) Text("Finding a setup that fits…", style = MaterialTheme.typography.labelLarge, color = cs.onErrorContainer)
+        else if (a.isEmpty()) Text("Try a longer session or another training day.", style = MaterialTheme.typography.labelLarge, color = cs.onErrorContainer)
+        else a.forEach { x ->
+            val label = if (x.s("kind") == "session") "Use ${SESS_SHORT[x.s("session")] ?: x.s("label")} min sessions" else "Train ${x.i("days")} days a week"
+            androidx.compose.material3.Button(onClick = { if (x.s("kind") == "session") onAdjust(x.s("session"), null) else onAdjust(null, x.i("days")) },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = cs.onErrorContainer, contentColor = cs.errorContainer)) { Text(label) }
+        }
+    }
 }

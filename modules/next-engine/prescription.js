@@ -190,7 +190,9 @@ export function normalizeRequest(request) {
         const day = token(raw.day);
         if (!VALID_DAYS.has(day))
             throw new Error(`Unsupported training day: ${raw.day ?? 'missing'}.`);
-        if (!Number.isFinite(raw.maxMinutes) || raw.maxMinutes < 20)
+        // The lifter's shortest choice is 20 minutes. A day's INTERNAL budget can sit below that once the
+        // displayed clock has refereed the plan (app-shell-adapter generateNextProgramForShell), never below 12.
+        if (!Number.isFinite(raw.maxMinutes) || raw.maxMinutes < 12)
             throw new Error('Each training day needs a valid time limit of at least 20 minutes.');
         if (raw.minMinutes !== undefined && (!Number.isFinite(raw.minMinutes) || raw.minMinutes < 0 || raw.minMinutes > raw.maxMinutes))
             throw new Error('Session minimum minutes must be a valid lower bound no greater than the session maximum.');

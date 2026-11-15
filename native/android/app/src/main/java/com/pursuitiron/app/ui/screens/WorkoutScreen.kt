@@ -764,7 +764,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
             }
             if (!set.b("done") && !set.b("sub")) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 val kind = if (set.b("warm")) "warmup" else set.s("type", "standard")
-                com.pursuitiron.app.ui.common.Segmented(listOf("standard" to "Standard", "warmup" to "Warm-up", "failure" to "To failure"),
+                com.pursuitiron.app.ui.common.Segmented(listOf("standard" to "Working", "warmup" to "Warm-up", "failure" to "To failure"),
                     kind, { k -> vm.act("setType", "ei" to ei, "si" to si, "kind" to k) }, height = 40.dp)
                 Text(when (kind) {
                     "warmup" -> "Warm-ups don’t count toward volume, records or the next load."

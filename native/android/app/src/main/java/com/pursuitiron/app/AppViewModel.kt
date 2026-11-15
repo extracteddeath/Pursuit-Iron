@@ -98,9 +98,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val c = Core.start(app)
                 core = c
                 runtime = c.runtime
-                refreshAll()
+                // First paint needs only what Today and a resumed workout read; the other tabs' data follows.
+                // Thirteen calls in a row used to stand between launch and the first screen.
+                refreshCritical()
                 if (session?.b("active") == true) screen = Screen.Workout
                 ready = true
+                refreshRest()
                 refreshHealth()
                 publishWidget()
                 com.pursuitiron.app.data.Reminders.save(app, settings?.o("reminders"))
@@ -168,20 +171,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (session?.b("active") == true) resume() else start()
     }
 
-    private suspend fun refreshAll() {
+    private suspend fun refreshAll() { refreshCritical(); refreshRest() }
+    private suspend fun refreshCritical() {
         settings = obj("settings")
         haptics.enabled = settings?.b("haptics", true) != false
         haptics.strong = prefs.grip
         home = obj("home")
         session = obj("session")
+        setup = obj("setupOptions")
+        gyms = obj("gyms")
+    }
+    private suspend fun refreshRest() {
         plan = obj("plan")
         progress = obj("progress", progressArgs())
         body = obj("body")
         history = arr(call("historyList"))
         library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart, "equip" to libEquip)))
-        setup = obj("setupOptions")
         profile = obj("profile")
-        gyms = obj("gyms")
         cycles = obj("cyclesView")
         if (templates == null) templates = obj("templates")
     }
@@ -438,6 +444,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** The prototype's ranked splits on the real engine: which splits to build and score, then each one's score. */
     suspend fun rankSplitsPlan(config: JSONObject): JSONObject? = obj("rankSplitsPlan", jsonOf("config" to config))
     suspend fun rankSplit(config: JSONObject, id: String): JSONObject? = obj("rankSplit", jsonOf("config" to config, "id" to id))
+    suspend fun rankAlternatives(config: JSONObject): JSONObject? = obj("rankAlternatives", jsonOf("config" to config))
+    suspend fun selfTest(): JSONObject? = obj("selfTest")
 
     fun createProgram(config: JSONObject) = launchCore {
         val r = working("Building your program") { obj("createProgram", jsonOf("config" to config)) } ?: return@launchCore
@@ -496,6 +504,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** B892: the share card's rows for what the profile layout says to show. */
     suspend fun profileCard(): JSONObject? = prefs.profileLayout.let { l -> obj("profileCard", jsonOf("share" to JSONArray(l.share), "favorites" to JSONArray(l.favorites))) }
     suspend fun reviewBlock(id: String, index: Int): JSONObject? = obj("reviewBlock", jsonOf("id" to id, "index" to index))
+    /** "Run it again" on Today's block-complete card: the block repeats from week 1 and the card stays away until its next final week. */
+    fun dismissBlockEnd(programId: String) = launchCore { call("dismissBlockEnd", jsonOf("programId" to programId)); home = obj("home") }
     fun advanceCycle(id: String, after: () -> Unit = {}) = launchCore {
         val r = working("Preparing your next block") { obj("advanceCycle", jsonOf("id" to id)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The next block couldn't be prepared. Nothing changed.")); return@launchCore }

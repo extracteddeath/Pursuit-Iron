@@ -176,7 +176,10 @@ that visit's authored duration. Unequal counts finish solo; skipped/failed
 visits and corrections do not become completed work or restart rest.
 The original snapshot, loads, reps, set keys and history receipts stay intact.
 Cold native issuance/logging/retry/Finish tests cover a full authored pair
-with an amplifier. Automatic pairing suggestions remain separate work.
+with an amplifier. Plan now creates, edits and unlinks full superset groups
+through an owner/source/revision-checked, undoable draft save. Original sets
+and week overrides remain exact; previously issued workouts stay unchanged.
+Automatic pairing suggestions remain separate work.
 Notifications and physical
 background/restart, keyboard and accessibility acceptance remain open.
 

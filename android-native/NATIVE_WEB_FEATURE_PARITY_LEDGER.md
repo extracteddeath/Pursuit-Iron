@@ -414,6 +414,24 @@ TalkBack and device acceptance remain open; no APK/AAB is authorized.
 
 ## Authored superset rounds — 2026-11-14
 
+**Partner ideas — 2026-11-15:** selecting one movement in Plan's group editor
+now reveals ranked same-day partner ideas underneath that movement. The read-only
+Kotlin sorter uses only the reviewed picker, accessory roles/isolation or core
+patterns, distinct direct credits, disclosed shared supporting credits, working
+set counts and original day positions. Other groups and protected/unresolved
+movements are excluded. Show more preserves the full eligible universe.
+The coaching and superset off switches suppress ideas independently.
+
+Choosing a partner changes only the pending selection. Explicit Save, native
+owner/source/revision checks, full review and approval are still separate.
+A real native-source fixture ranks bodyweight core/calves, verifies that reading
+ideas leaves the saved program untouched, then saves, approves, issues, logs
+and cold-reopens the alternating main/amplifier visits through verified History.
+This closes bounded Plan discovery; creating/changing groups during an issued
+workout, automatic generated pairing and physiological fatigue/time-savings
+predictions remain separate work.
+Actual Android interaction and full beta acceptance remain open. No APK/AAB.
+
 Plan now exposes Create/Edit superset within each expanded day. The native
 sheet selects 2–3 current movements, replaces an entire group's membership
 or unlinks all members atomically. Group edits preserve slots, exact

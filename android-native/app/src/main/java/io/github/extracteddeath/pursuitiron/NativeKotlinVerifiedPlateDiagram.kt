@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.rebuild.LoadBasis
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinVerifiedPlateLayout
 import java.math.BigDecimal
 
@@ -34,6 +35,7 @@ private fun plateAmount(weight: BigDecimal): String =
 @Composable
 internal fun NativeKotlinVerifiedPlateDiagram(layout: KotlinVerifiedPlateLayout) {
     val unit=layout.unit.name.lowercase()
+    val barKind=if(layout.basis==LoadBasis.SMITH_TOTAL)"Smith bar" else "barbell"
     val totalPerSide=layout.perSide.sumOf { it.countPerSide }
     val shownTypes=layout.perSide.flatMapIndexed { index,pair ->
         List(pair.countPerSide) { index }
@@ -68,7 +70,7 @@ internal fun NativeKotlinVerifiedPlateDiagram(layout: KotlinVerifiedPlateLayout)
                 Modifier.fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
                     .clearAndSetSemantics {
-                        contentDescription="Schematic barbell, left and right mirrored. $explanation"
+                        contentDescription="Schematic $barKind, left and right mirrored. $explanation"
                     },
                 horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs),
                 verticalAlignment=Alignment.CenterVertically

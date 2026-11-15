@@ -668,7 +668,7 @@ const verifiedPlateDomain=read('android-native/kotlin-engine/src/main/java/io/gi
 assert.ok(journal.includes('NativeKotlinCustomPlateSheet(host,request,') &&
   journal.includes('current.originalSnapshot.stamp') &&
   journal.includes('onShowPlates={load,unit,basis->') &&
-  journal.includes('verified?.basis==LoadBasis.BARBELL_TOTAL') &&
+  journal.includes('verified!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verified.basis)') &&
   journal.includes('onClick={onShowPlates(actualLoad,verified.unit,verified.basis)}') &&
   customPlate.includes('host.readCustomAuthoringSource()') &&
   customPlate.includes('source.revision!=stamp.gymCatalogSourceRevision') &&
@@ -676,17 +676,17 @@ assert.ok(journal.includes('NativeKotlinCustomPlateSheet(host,request,') &&
   customPlate.includes('reviewed.gym.gymId!=stamp.gymId') &&
   customPlate.includes('CustomExerciseAuthoringDomain.picker(') &&
   customPlate.includes('stock=option.availability.stock') &&
-  customPlate.includes('as? VerifiedLoadStock.Barbell') &&
+  customPlate.includes('as? VerifiedLoadStock.PairedBar') &&
   customPlate.includes('KotlinVerifiedPlateLayoutDomain.inspect(') &&
   customPlate.includes('NativeEditSheet(busy=false,onDismiss=onDismiss)') &&
   verifiedPlateDomain.includes('EquipmentLoadDomain.inspect(bar,entered,unit)') &&
   verifiedPlateDomain.includes('private const val MAX_STATES=100_000') &&
   !customPlate.includes('controller.record('),
-  'Plate viewer may only display exact current owner-matched custom barbell stock and must not log or change workout loads');
+  'Plate viewer may only display exact current owner-matched custom physical bar/Smith stock and must not log or change workout loads');
 const workoutHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 assert.ok(composer.includes('NativeKotlinComposerPlateSheet(host,workoutId,request,') &&
   composer.includes('onShowPlates={load,unit->') &&
-  composer.includes('verifiedLoad?.basis==LoadBasis.BARBELL_TOTAL') &&
+  composer.includes('verifiedLoad!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verifiedLoad.basis)') &&
   composer.includes('onClick={onShowPlates(weight,verifiedLoad.unit)}') &&
   customPlate.includes('internal fun NativeKotlinComposerPlateSheet(') &&
   customPlate.includes('host.reviewComposerPlateLayout(') &&
@@ -696,9 +696,9 @@ assert.ok(composer.includes('NativeKotlinComposerPlateSheet(host,workoutId,reque
   workoutHost.includes('approval.approvedSource!=journal.originalSnapshot.source') &&
   workoutHost.includes('sourceExercise.equipment as?') &&
   workoutHost.includes('stock=equipment.inventory as?') &&
-  workoutHost.includes('VerifiedLoadStock.Barbell') &&
+  workoutHost.includes('VerifiedLoadStock.PairedBar') &&
   workoutHost.includes('KotlinVerifiedPlateLayoutDomain.inspect(stock,entered,unit)'),
-  'Generated workout plates must use source-coherent owner approval, exact barbell inventory and the same read-only sheet');
+  'Generated workout plates must use source-coherent owner approval, exact physical bar/Smith inventory and the same read-only sheet');
 // Both independently verified workout routes must present the SAME source-backed
 // physical plate geometry, with responsive overflow and a complete readable count.
 const visualPlates=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinVerifiedPlateDiagram.kt');

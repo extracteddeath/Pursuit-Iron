@@ -71,6 +71,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     var max by rememberSaveable {mutableStateOf("")}
     var bar by rememberSaveable {mutableStateOf("")}
     var plates by rememberSaveable {mutableStateOf("")}
+    fun clearStockFields() {
+        exact="";min="";step="";max="";bar="";plates=""
+    }
 
     PursuitScreenContent {
         PageHeading("YOUR GYM",
@@ -151,8 +154,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                             "${stock.basis.name.lowercase().replace('_',' ')} · " +
                             "${stock.minimum.toPlainString()} to ${stock.maximum.toPlainString()}" +
                             " in ${stock.increment.toPlainString()} ${stock.unit} steps"
-                        is VerifiedLoadStock.Barbell ->
-                            "Bar ${stock.barWeight.toPlainString()} ${stock.unit} · " +
+                        is VerifiedLoadStock.PairedBar ->
+                            "${if(stock.basis==LoadBasis.SMITH_TOTAL)"Smith empty-bar resistance" else "Bar"} ${stock.barWeight.toPlainString()} ${stock.unit} · " +
                             stock.pairedPlates.entries.joinToString(", ") {
                                 "${it.key.toPlainString()} × ${it.value} pairs"
                             }
@@ -220,14 +223,20 @@ internal fun NativeKotlinGymSourceCandidateScreen(
             when(requiredBasis) {
                 LoadBasis.BARBELL_TOTAL ->
                     it==PhysicalStockEditorKind.BARBELL_WITH_PAIRS
+                LoadBasis.SMITH_TOTAL -> it in listOf(
+                    PhysicalStockEditorKind.SMITH_WITH_PAIRS,PhysicalStockEditorKind.EXACT_LOADS)
                 LoadBasis.DUMBBELL_PER_HAND ->
                     it==PhysicalStockEditorKind.EXACT_LOADS
                 null -> true
-                else -> it!=PhysicalStockEditorKind.BARBELL_WITH_PAIRS
+                else -> it !in listOf(PhysicalStockEditorKind.BARBELL_WITH_PAIRS,
+                    PhysicalStockEditorKind.SMITH_WITH_PAIRS)
             }
         }
-        val actualBasis=if(kind==PhysicalStockEditorKind.BARBELL_WITH_PAIRS)
-            LoadBasis.BARBELL_TOTAL else basis
+        val actualBasis=when(kind) {
+            PhysicalStockEditorKind.BARBELL_WITH_PAIRS -> LoadBasis.BARBELL_TOTAL
+            PhysicalStockEditorKind.SMITH_WITH_PAIRS -> LoadBasis.SMITH_TOTAL
+            else -> basis
+        }
         val basisMatches=requiredBasis==null || requiredBasis==actualBasis
         val parsed=if(basisMatches)
             parseVerifiedStock(reviewed.gym.unit,kind,actualBasis,
@@ -260,11 +269,14 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                             matching.take(if(showMoreEquipment)24 else 6).forEach { choice ->
                                 OutlinedButton(
                                     onClick={
+                                        if(equipmentId!=choice.equipmentId)clearStockFields()
                                         equipmentId=choice.equipmentId
                                         basis=choice.basis
                                         kind=when(choice.basis) {
                                             LoadBasis.BARBELL_TOTAL ->
                                                 PhysicalStockEditorKind.BARBELL_WITH_PAIRS
+                                            LoadBasis.SMITH_TOTAL ->
+                                                PhysicalStockEditorKind.SMITH_WITH_PAIRS
                                             LoadBasis.DUMBBELL_PER_HAND ->
                                                 PhysicalStockEditorKind.EXACT_LOADS
                                             else -> PhysicalStockEditorKind.VERIFIED_STACK
@@ -291,6 +303,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                         }
                         TextButton(onClick={
                             manualEquipmentId=true
+                            clearStockFields()
                             equipmentId=""
                             kind=PhysicalStockEditorKind.EXACT_LOADS
                             basis=LoadBasis.DUMBBELL_PER_HAND
@@ -298,10 +311,14 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     } else {
                         Text("Use a stable ID for this physical machine; similar names do not mean equal resistance.",
                             style=MaterialTheme.typography.bodySmall)
-                        OutlinedTextField(equipmentId,{equipmentId=it.take(80)},
+                        OutlinedTextField(equipmentId,{
+                            if(equipmentId!=it.take(80))clearStockFields()
+                            equipmentId=it.take(80)
+                        },
                             label={Text("Physical equipment ID")},singleLine=true)
                         TextButton(onClick={
                             manualEquipmentId=false
+                            clearStockFields()
                             equipmentId=""
                         }) {Text("Choose from reviewed exercises")}
                     }
@@ -313,11 +330,17 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                         horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         usableKinds.forEach { candidate ->
                             FilterChip(selected=kind==candidate,
-                                onClick={kind=candidate},
-                                label={Text(candidate.name.lowercase().replace('_',' '))})
+                                onClick={if(kind!=candidate)clearStockFields();kind=candidate},
+                                label={Text(when(candidate) {
+                                    PhysicalStockEditorKind.EXACT_LOADS -> "Exact totals"
+                                    PhysicalStockEditorKind.VERIFIED_STACK -> "Stack increments"
+                                    PhysicalStockEditorKind.BARBELL_WITH_PAIRS -> "Bar and plate pairs"
+                                    PhysicalStockEditorKind.SMITH_WITH_PAIRS -> "Smith and plate pairs"
+                                })})
                         }
                     }
-                    if(kind!=PhysicalStockEditorKind.BARBELL_WITH_PAIRS &&
+                    if(kind !in listOf(PhysicalStockEditorKind.BARBELL_WITH_PAIRS,
+                            PhysicalStockEditorKind.SMITH_WITH_PAIRS) &&
                         (manualEquipmentId || selected==null)) {
                         Text("Actual load basis",
                             style=MaterialTheme.typography.labelLarge)
@@ -331,7 +354,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                     LoadBasis.EXERCISE_OVERRIDE)
                             }.forEach { selection ->
                                 FilterChip(selected=basis==selection,
-                                    onClick={basis=selection},
+                                    onClick={if(basis!=selection)clearStockFields();basis=selection},
                                     label={Text(selection.name.replace('_',' ').lowercase())})
                             }
                         }
@@ -349,9 +372,13 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                             OutlinedTextField(max,{max=it.take(20)},
                                 label={Text("Exact maximum load")})
                         }
-                        PhysicalStockEditorKind.BARBELL_WITH_PAIRS -> {
+                        PhysicalStockEditorKind.BARBELL_WITH_PAIRS,
+                        PhysicalStockEditorKind.SMITH_WITH_PAIRS -> {
+                            val smith=kind==PhysicalStockEditorKind.SMITH_WITH_PAIRS
+                            if(smith)Text("Use this machine's confirmed empty-bar resistance, including its counterbalance. Zero is allowed when confirmed. A free bar's weight is not a substitute.",
+                                style=MaterialTheme.typography.bodySmall)
                             OutlinedTextField(bar,{bar=it.take(20)},
-                                label={Text("Verified empty bar weight")})
+                                label={Text(if(smith)"Confirmed empty-bar resistance" else "Verified empty bar weight")})
                             OutlinedTextField(plates,{plates=it.take(900)},
                                 label={Text("Plate pairs: 2.5x1, 5x2, 25x1")})
                         }

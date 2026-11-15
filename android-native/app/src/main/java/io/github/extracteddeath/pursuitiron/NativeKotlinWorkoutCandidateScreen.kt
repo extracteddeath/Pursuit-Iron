@@ -1244,7 +1244,7 @@ private fun NativeKotlinSetCard(
             allowFailedAttempt=existing?.reps==0,
             showFieldHelp=false
         )
-        if(verifiedLoad?.basis==LoadBasis.BARBELL_TOTAL) {
+        if(verifiedLoad!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verifiedLoad.basis)) {
             val amount=weight.toBigDecimalOrNull()
             OutlinedButton(
                 onClick={onShowPlates(weight,verifiedLoad.unit)},
@@ -1252,7 +1252,7 @@ private fun NativeKotlinSetCard(
                     amount>=BigDecimal.ZERO && amount<=BigDecimal("100000") &&
                     amount.stripTrailingZeros().scale()<=3,
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
-            ) {Text("View plates for entered barbell weight")}
+            ) {Text("View plates for entered weight")}
         }
         if(entry is KotlinSetEntryResult.Rejected &&
             (reps.isNotBlank() || (verifiedLoad!=null && weight.isBlank()) ||

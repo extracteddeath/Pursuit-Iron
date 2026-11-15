@@ -2915,8 +2915,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val journal=saved.journal
         if(journal.snapshot.targets.none{
             it.exerciseId==exerciseId &&
-                (it.load as? DraftSetLoad.Verified)?.basis==
-                    LoadBasis.BARBELL_TOTAL
+                KotlinVerifiedPlateLayoutDomain.supportsBasis(
+                    (it.load as? DraftSetLoad.Verified)?.basis)
         })return null
         val approval=gymCoherentAuthority.currentApprovedWorkout(
             owner.ownerKey,workoutId) ?:return null
@@ -2929,9 +2929,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val equipment=sourceExercise.equipment as?
             ComposerEquipment.Verified ?:return null
         val stock=equipment.inventory as?
-            VerifiedLoadStock.Barbell ?:return null
+            VerifiedLoadStock.PairedBar ?:return null
         if(equipment.unit!=unit || stock.unit!=unit ||
-            stock.basis!=LoadBasis.BARBELL_TOTAL)
+            journal.snapshot.targets.none{it.exerciseId==exerciseId &&
+                (it.load as? DraftSetLoad.Verified)?.basis==stock.basis})
             return null
         return KotlinVerifiedPlateLayoutDomain.inspect(stock,entered,unit)
     }

@@ -29,7 +29,14 @@ assert.match(onboarding,/NativeSetupChoice\("Bar type",barChoices/);
 assert.match(onboarding,/if\(barEquipmentId!=chosen\.equipmentId\)[\s\S]*?barWeight="";plates="";gymConfirmed=false/);
 assert.match(onboarding,/savedMachines,nonMachineEquipmentIds,barEquipmentId\)/);
 assert.match(stockInput,/stock\[barEquipmentId\]=checkNotNull\(parseVerifiedStock/);
-assert.match(stockInput,/it\.equipmentId==barEquipmentId && it\.expectedLoadBasis==LoadBasis\.BARBELL_TOTAL/);
+assert.match(stockInput,/it\.equipmentId==barEquipmentId/);
+assert.match(stockInput,/require\(KotlinVerifiedPlateLayoutDomain\.supportsBasis\(basis\)\)/);
+assert.match(stockInput,/PhysicalStockEditorKind\.SMITH_WITH_PAIRS/);
+assert.match(onboarding,/KotlinVerifiedPlateLayoutDomain\.supportsBasis\(it\.basis\)/);
+assert.match(onboarding,/val smithBar=barChoices\.firstOrNull/);
+assert.match(gymEditor,/if\(equipmentId!=choice\.equipmentId\)clearStockFields\(\)/,
+    'switching physical Smith/free-bar identities must discard the other stock inputs');
+assert.match(gymEditor,/if\(kind!=candidate\)clearStockFields\(\)/);
 assert.match(onboarding,/availableReviewedAttachments=remember/);
 assert.match(onboarding,/selected=confirmedAttachments\?\.contains\(id\)==true/,
     'cable grip chips must reflect the saved, explicit attachment IDs');

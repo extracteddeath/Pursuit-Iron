@@ -7,7 +7,7 @@ private val physicalStockId=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")
 
 /** Shared physical-stock input used by the gym editor. No load inference. */
 internal enum class PhysicalStockEditorKind {
-    EXACT_LOADS, VERIFIED_STACK, BARBELL_WITH_PAIRS
+    EXACT_LOADS, VERIFIED_STACK, BARBELL_WITH_PAIRS, SMITH_WITH_PAIRS
 }
 
 private fun exactLoadList(text:String):List<BigDecimal>? =
@@ -26,7 +26,8 @@ private fun barbellPairs(text:String):Map<BigDecimal,Int>? =
         }
         require(parts.isNotEmpty() && parts.size<=12 &&
             parts.map{it.first.stripTrailingZeros()}.distinct().size==parts.size)
-        require(parts.all { it.first>BigDecimal.ZERO && it.second in 1..24 })
+        require(parts.all { it.first>BigDecimal.ZERO && it.first<=BigDecimal("100000") &&
+            it.first.stripTrailingZeros().scale()<=3 && it.second in 1..24 })
         parts.toMap()
     }.getOrNull()
 
@@ -54,6 +55,19 @@ internal fun parseVerifiedStock(
                 mass.stripTrailingZeros().scale()<=3)
             VerifiedLoadStock.Barbell(unit,mass,requireNotNull(barbellPairs(platePairs)))
         }
+        PhysicalStockEditorKind.SMITH_WITH_PAIRS -> {
+            require(basis==LoadBasis.SMITH_TOTAL)
+            val resistance=BigDecimal(barWeight.trim())
+            require(resistance>=BigDecimal.ZERO && resistance<=BigDecimal("100000") &&
+                resistance.stripTrailingZeros().scale()<=3)
+            VerifiedLoadStock.Smith(unit,resistance,requireNotNull(barbellPairs(platePairs)))
+        }
+    }.also { stock ->
+        // Cheap form validation only. The owner-fenced native save performs
+        // complete bounded attainability checks off the UI thread.
+        if(stock is VerifiedLoadStock.PairedBar)require(stock.barWeight+
+            stock.pairedPlates.entries.fold(BigDecimal.ZERO){sum,(weight,pairs)->
+                sum+weight*BigDecimal(2*pairs)}<=BigDecimal("100000"))
     }
 }.getOrNull()
 
@@ -67,6 +81,7 @@ internal data class KotlinGymStockChoice(
         "straight-bar" -> "Barbell and plates"
         "ez-curl-bar" -> "EZ curl bar and plates"
         "trap-hex-bar" -> "Trap/hex bar and plates"
+        "smith-machine" -> "Smith machine and plates"
         "dumbbell-rack" -> "Dumbbells"
         "cable-station" -> "Cable station"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
@@ -115,10 +130,13 @@ internal fun onboardingStock(
         }
         if(barWeight.isNotBlank() || plates.isNotBlank()) {
             require(barWeight.isNotBlank() && plates.isNotBlank())
-            require(StarterExerciseTranche.movements().any{
-                it.equipmentId==barEquipmentId && it.expectedLoadBasis==LoadBasis.BARBELL_TOTAL})
+            val basis=StarterExerciseTranche.movements().filter{
+                it.equipmentId==barEquipmentId}.mapNotNull{it.expectedLoadBasis}.distinct().single()
+            require(KotlinVerifiedPlateLayoutDomain.supportsBasis(basis))
+            val kind=if(basis==LoadBasis.SMITH_TOTAL)PhysicalStockEditorKind.SMITH_WITH_PAIRS
+                else PhysicalStockEditorKind.BARBELL_WITH_PAIRS
             stock[barEquipmentId]=checkNotNull(parseVerifiedStock(unit,
-                PhysicalStockEditorKind.BARBELL_WITH_PAIRS,LoadBasis.BARBELL_TOTAL,
+                kind,basis,
                 "","","","",barWeight,plates))
         }
         // Every already reviewed physical machine keeps its own implement ID.

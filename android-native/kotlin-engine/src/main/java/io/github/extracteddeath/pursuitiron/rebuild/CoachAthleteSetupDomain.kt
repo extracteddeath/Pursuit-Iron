@@ -132,6 +132,9 @@ object CoachAthleteSetupDomain {
         is VerifiedLoadStock.Barbell ->
             stock.copy(barWeight=normalized(stock.barWeight),
                 pairedPlates=frozenMap(stock.pairedPlates.mapKeys {normalized(it.key)}))
+        is VerifiedLoadStock.Smith ->
+            stock.copy(barWeight=normalized(stock.barWeight),
+                pairedPlates=frozenMap(stock.pairedPlates.mapKeys {normalized(it.key)}))
     }
 
     fun review(draft:AthleteSetupDraft):AthleteSetupReview {

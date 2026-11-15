@@ -1562,13 +1562,13 @@ private fun NativeKotlinCustomVisitEditor(
                 allowFailedAttempt=saved?.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT,
                 showFieldHelp=false
             )
-            if(verified?.basis==LoadBasis.BARBELL_TOTAL) {
+            if(verified!=null && KotlinVerifiedPlateLayoutDomain.supportsBasis(verified.basis)) {
                 OutlinedButton(
                     onClick={onShowPlates(actualLoad,verified.unit,verified.basis)},
                     enabled=!locked && failedActual!=null,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
                 ) {
-                    Text("View plates for entered barbell weight")
+                    Text("View plates for entered weight")
                 }
             }
             val completeButton:@Composable (Modifier)->Unit={buttonModifier->

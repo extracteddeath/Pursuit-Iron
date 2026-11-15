@@ -21,6 +21,12 @@ sealed interface VerifiedLoadStock {
     val unit: LoadUnit
     val basis: LoadBasis
 
+    /** Shared arithmetic only; each concrete implement keeps its load basis. */
+    sealed interface PairedBar : VerifiedLoadStock {
+        val barWeight: BigDecimal
+        val pairedPlates: Map<BigDecimal, Int>
+    }
+
     /** Exact, explicitly confirmed implement or stack values. */
     data class Totals(
         override val unit: LoadUnit,
@@ -33,10 +39,24 @@ sealed interface VerifiedLoadStock {
     /** Bar weight plus exactly symmetric pairs. Counts are pairs, not plates. */
     data class Barbell(
         override val unit: LoadUnit,
-        val barWeight: BigDecimal,
-        val pairedPlates: Map<BigDecimal, Int>
-    ) : VerifiedLoadStock {
+        override val barWeight: BigDecimal,
+        override val pairedPlates: Map<BigDecimal, Int>
+    ) : PairedBar {
         override val basis = LoadBasis.BARBELL_TOTAL
+    }
+
+    /**
+     * Confirmed empty-bar resistance plus symmetric physical plate pairs.
+     * Counterbalanced resistance may be zero. It is never inferred from a
+     * free bar's mass or from an old list of Smith totals, and does not claim
+     * force equivalence to another Smith machine or a free-weight exercise.
+     */
+    data class Smith(
+        override val unit: LoadUnit,
+        override val barWeight: BigDecimal,
+        override val pairedPlates: Map<BigDecimal, Int>
+    ) : PairedBar {
+        override val basis = LoadBasis.SMITH_TOTAL
     }
 
     /** Confirmed machine/cable increments, never estimated from unit alone. */
@@ -139,7 +159,7 @@ object EquipmentLoadDomain {
                     add(stock.minimum.add(stock.increment.multiply(BigDecimal(step))))
             }
         }
-        is VerifiedLoadStock.Barbell -> {
+        is VerifiedLoadStock.PairedBar -> {
             require(validLoad(stock.barWeight) && stock.pairedPlates.size in 1..MAX_DISTINCT_PLATES)
             val entries = stock.pairedPlates.entries.toList()
             require(entries.all { validStep(it.key) && it.value in 1..MAX_PAIRS_PER_SIZE })

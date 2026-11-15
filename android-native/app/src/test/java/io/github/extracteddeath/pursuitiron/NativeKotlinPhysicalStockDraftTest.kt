@@ -106,4 +106,65 @@ internal class NativeKotlinPhysicalStockDraftTest:NativeKotlinProgramFilesFixtur
         assertEquals("Snatch-Grip Deadlift",kotlinExerciseLabel(movement.exerciseId))
         assertEquals("snatch-deadlift",movement.exerciseId)
     }
+    private fun smith(resistance:String="15",pairs:String="45x1, 5x1",unit:LoadUnit=LoadUnit.LB,
+        basis:LoadBasis=LoadBasis.SMITH_TOTAL)=parseVerifiedStock(unit,
+        PhysicalStockEditorKind.SMITH_WITH_PAIRS,basis,"","","","",resistance,pairs)
+
+    @Test fun smithEditorRequiresItsOwnCounterbalanceAndAllowsAnExplicitZero() {
+        val stock=checkNotNull(smith()) as VerifiedLoadStock.Smith
+        assertEquals(n("15"),stock.barWeight)
+        assertEquals(LoadBasis.SMITH_TOTAL,stock.basis)
+        assertNotNull(KotlinVerifiedPlateLayoutDomain.inspect(stock,n("105"),LoadUnit.LB))
+        assertEquals(n("0"),(checkNotNull(smith("0")) as VerifiedLoadStock.Smith).barWeight)
+        for(raw in listOf("","unknown","-1","15.0001","100001"))assertNull(raw,smith(raw))
+        assertNull(smith(basis=LoadBasis.BARBELL_TOTAL))
+        assertNull(smith(pairs="45x1,45.0x1"))
+        assertNull(smith(pairs="45x25"))
+        assertNull(smith("99999","5x1"))
+    }
+
+    @Test fun onboardingSelectsEachReviewedSmithStationWithoutBorrowingAnotherBarOrStation() {
+        val catalog=StarterExerciseTranche.movements()
+        val reserved=catalog.mapNotNull{it.equipmentId}.toSet()
+        val choices=kotlinGymStockChoices(catalog).filter{it.basis==LoadBasis.SMITH_TOTAL}
+        assertTrue(choices.size>=6)
+        for(choice in choices) {
+            val stock=checkNotNull(onboardingStock(LoadUnit.LB,"","","15","45x1,5x1",
+                "","","",reserved,choice.equipmentId))
+            assertEquals(setOf(choice.equipmentId),stock.keys)
+            assertEquals(smith(),stock.getValue(choice.equipmentId))
+            assertFalse(stock.containsKey("straight-bar"))
+            assertFalse(stock.containsKey("trap-hex-bar"))
+        }
+        assertNull(onboardingStock(LoadUnit.LB,"","","15","45x1","","","",reserved,"unknown-smith"))
+        assertNull(onboardingStock(LoadUnit.LB,"","","","45x1","","","",reserved,"flat-smith-station"))
+    }
+
+    @Test fun smithHardwareIsNotConvertedToAGymWithAnotherUnit() {
+        val kg=checkNotNull(smith("6.8","1.25x2",LoadUnit.KG)) as VerifiedLoadStock.Smith
+        assertEquals(LoadUnit.KG,kg.unit)
+        assertNotNull(KotlinVerifiedPlateLayoutDomain.inspect(kg,n("11.8"),LoadUnit.KG))
+        assertNull(KotlinVerifiedPlateLayoutDomain.inspect(kg,n("11.8"),LoadUnit.LB))
+    }
+
+    @Test fun sourceRoundTripKeepsSmithFreeAndTrapBarMassesAndReadOnlyLayoutsIndependent() {
+        val original=source()
+        val athlete=checkNotNull(original.setup.reviewed)
+        val physical=mapOf("flat-smith-station" to checkNotNull(smith()),
+            "straight-bar" to checkNotNull(bar("45")),"trap-hex-bar" to checkNotNull(bar("55")))
+        val snapshot=original.copy(setup=original.setup.copy(reviewed=athlete.copy(
+            gym=athlete.gym.copy(confirmedStock=athlete.gym.confirmedStock+physical))))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources().publish("owner-1",0,snapshot))
+        val before=hashes()
+        val restored=(sources().read("owner-1") as NativeAuthoringSourceRead.Found).source
+        assertEquals(snapshot,restored)
+        val stocks=checkNotNull(restored.setup.reviewed).gym.confirmedStock
+        for((id,total) in listOf("flat-smith-station" to "105","straight-bar" to "135","trap-hex-bar" to "145")) {
+            val layout=checkNotNull(KotlinVerifiedPlateLayoutDomain.inspect(stocks.getValue(id),n(total),LoadUnit.LB))
+            assertEquals(total,layout.total.toPlainString())
+            assertEquals(if(id=="flat-smith-station")LoadBasis.SMITH_TOTAL else LoadBasis.BARBELL_TOTAL,layout.basis)
+        }
+        assertEquals(before,hashes())
+    }
+
 }

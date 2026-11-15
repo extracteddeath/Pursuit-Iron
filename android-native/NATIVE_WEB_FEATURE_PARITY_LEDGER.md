@@ -470,3 +470,21 @@ between every visit → retry → verified Finish/History journey cover this
 bounded behavior. Automatic pairing/suggestions, full feature parity,
 independent training-quality comparisons and actual device acceptance
 remain open. No APK/AAB is generated or released.
+
+## Kettlebell equipment and loading — 2026-11-15
+
+The exact active-web kb-swing and kb-gorilla-row identities now reach
+native setup, program generation, every converted cycle week, authored
+workout logging and verified History/CSV. A distinct KETTLEBELL_EACH basis
+means the mass of one bell. Single-bell and matching-pair inventory are
+separately athlete-confirmed; neither dumbbells nor one bell confirm a pair.
+The source-matched catalog is 320/376, with 56 identities still missing.
+
+Shared units cover calibration, Target/Last, Info, review and recorded stock.
+Tests preserve exact source rep bands, discrete masses and units; a real
+native-file journey records actuals above and below the original targets
+without changing them, retries and cold-opens each set, then verifies Finish,
+History and export. Existing frozen formats/approval bytes remain checked.
+Optional onboarding fields share the existing weights section and Gym editor.
+Physical-device UI/accessibility, full catalog/engine parity and superiority
+remain open. No APK/AAB build or release.

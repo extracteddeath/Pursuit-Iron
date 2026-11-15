@@ -27,7 +27,16 @@ assert.doesNotMatch(stockInput,/stock\["cable-1"\]/);
 assert.match(onboarding,/var barEquipmentId by rememberSaveable/);
 assert.match(onboarding,/NativeSetupChoice\("Bar type",barChoices/);
 assert.match(onboarding,/if\(barEquipmentId!=chosen\.equipmentId\)[\s\S]*?barWeight="";plates="";gymConfirmed=false/);
-assert.match(onboarding,/savedMachines,nonMachineEquipmentIds,barEquipmentId\)/);
+assert.match(onboarding,/savedMachines,nonMachineEquipmentIds,barEquipmentId,kettlebells,kettlebellPairs\)/);
+for(const name of ['kettlebells','kettlebellPairs']) {
+    assert.ok(onboarding.includes('var '+name+' by rememberSaveable'));
+    assert.ok(onboarding.includes(name+'=""'), 'unit changes clear each bell convention');
+}
+for(const id of ['single-kettlebell','matched-kettlebell-pair'])
+    assert.ok(stockInput.includes('stock["'+id+'"]'), 'explicit bell stock remains separate');
+assert.ok(stockInput.includes('LoadBasis.KETTLEBELL_EACH'));
+assert.match(gymEditor,/LoadBasis\.DUMBBELL_PER_HAND,LoadBasis\.KETTLEBELL_EACH ->/,
+    'discrete bells use exact masses, never an assumed stack increment');
 assert.match(stockInput,/stock\[barEquipmentId\]=checkNotNull\(parseVerifiedStock/);
 assert.match(stockInput,/it\.equipmentId==barEquipmentId/);
 assert.match(stockInput,/require\(KotlinVerifiedPlateLayoutDomain\.supportsBasis\(basis\)\)/);

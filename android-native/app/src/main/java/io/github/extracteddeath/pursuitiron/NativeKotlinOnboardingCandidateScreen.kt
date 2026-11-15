@@ -125,6 +125,8 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var fixtures by rememberSaveable {mutableStateOf("")}
     var attachments by rememberSaveable {mutableStateOf("")}
     var dumbbells by rememberSaveable {mutableStateOf("")}
+    var kettlebells by rememberSaveable {mutableStateOf("")}
+    var kettlebellPairs by rememberSaveable {mutableStateOf("")}
     var cable by rememberSaveable {mutableStateOf("")}
     var barEquipmentId by rememberSaveable{mutableStateOf("straight-bar")}
     var barWeight by rememberSaveable {mutableStateOf("")}
@@ -138,6 +140,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var showPriorities by rememberSaveable {mutableStateOf(false)}
     var showExclusions by rememberSaveable {mutableStateOf(false)}
     var showExtraEquipment by rememberSaveable {mutableStateOf(false)}
+    var showKettlebells by rememberSaveable {mutableStateOf(false)}
     var showAdvancedAttachments by rememberSaveable {mutableStateOf(false)}
     var showAdvancedMachineId by rememberSaveable {mutableStateOf(false)}
     var onboardingMachineSearch by rememberSaveable {mutableStateOf("")}
@@ -170,7 +173,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     }
     val gymInventory=onboardingStock(chosenUnit,dumbbells,cable,
         barWeight,plates,machineId,machineLoads,
-        savedMachines,nonMachineEquipmentIds,barEquipmentId)
+        savedMachines,nonMachineEquipmentIds,barEquipmentId,kettlebells,kettlebellPairs)
     val stagedMachines=OnboardingMachineStockDomain.parse(savedMachines)
     val machineToAdd=OnboardingMachineStockDomain.add(
         savedMachines,machineId,machineLoads,nonMachineEquipmentIds)
@@ -227,7 +230,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     val existing=sourceState.source
     fun changeUnit(next:String) {
         if(unit.isNotBlank() && unit!=next) {
-            dumbbells="";cable="";barWeight="";plates=""
+            dumbbells="";kettlebells="";kettlebellPairs="";cable="";barWeight="";plates=""
             machineId="";machineLoads=""
             savedMachines=""
         }
@@ -429,7 +432,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     // Switching units always clears the ENTIRE provisional
                     // inventory; these numbers must never be converted.
                     if(unit!=it.name) {
-                        if(unit.isNotBlank() && listOf(dumbbells,cable,barWeight,
+                        if(unit.isNotBlank() && listOf(dumbbells,kettlebells,kettlebellPairs,cable,barWeight,
                                     plates,machineLoads,savedMachines)
                                 .any{raw->raw.isNotBlank()})pendingUnit=it.name
                         else changeUnit(it.name)
@@ -456,6 +459,16 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     label={Text("Available dumbbells · per hand")},
                     supportingText={Text("Exact ${unit.lowercase().ifBlank{"weight"}} values, separated by commas")},
                     modifier=Modifier.fillMaxWidth())
+                if(showKettlebells || kettlebells.isNotBlank() || kettlebellPairs.isNotBlank()) {
+                    OutlinedTextField(kettlebells,{kettlebells=it.take(900);gymConfirmed=false},
+                        label={Text("Available single kettlebells")},
+                        supportingText={Text("Exact weights of one bell, separated by commas")},
+                        modifier=Modifier.fillMaxWidth())
+                    OutlinedTextField(kettlebellPairs,{kettlebellPairs=it.take(900);gymConfirmed=false},
+                        label={Text("Available matching kettlebell pairs")},
+                        supportingText={Text("Weight of each bell in a matching pair. A single bell does not confirm a pair.")},
+                        modifier=Modifier.fillMaxWidth())
+                } else TextButton(onClick={showKettlebells=true}) {Text("Add kettlebells")}
                 val barChoices=remember{ kotlinGymStockChoices(StarterExerciseTranche.movements())
                     .filter{KotlinVerifiedPlateLayoutDomain.supportsBasis(it.basis)} }
                 NativeSetupChoice("Bar type",barChoices,

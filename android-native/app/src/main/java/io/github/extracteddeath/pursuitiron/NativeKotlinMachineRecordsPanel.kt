@@ -55,7 +55,7 @@ internal fun NativeKotlinMachineRecordsPanel(
                 it.gymId==key.gymId && it.exerciseId==key.exerciseId
             }?.machines?.singleOrNull{it.id==key.machineInstanceId}?.label
                 ?: "Machine ${key.machineInstanceId}"
-            val basis=key.basis.name.lowercase().replace('_',' ')
+            val basis=kotlinLoadBasisLabel(key.basis)
             val unit=key.unit.name.lowercase()
             val bestSingle=singlesByMachine[key]
             PursuitCard {

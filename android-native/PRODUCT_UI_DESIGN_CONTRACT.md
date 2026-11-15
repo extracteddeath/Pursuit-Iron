@@ -141,6 +141,27 @@ read-only and does not activate a program or issue a workout. Source contracts
 and real native-file JVM tests cover this behavior; phone, large-font, TalkBack
 and visual/motion acceptance remain open. No APK/AAB from this checkpoint.
 
+## Verified kettlebell setup and physical units — 2026-11-15
+
+The existing onboarding weights section reveals optional single-bell and
+matching-pair fields through Add kettlebells. A matching-pair entry states the
+mass of **each** bell and explicitly confirms two matching bells; selecting a
+single bell does not populate it. Changing units clears both provisional
+lists and requires renewed gym confirmation. The Gym editor uses the same
+reviewed equipment identities and discrete exact weights, with no stack or
+plate shortcuts. Switching physical equipment clears the previous inputs.
+
+One shared physical-unit presentation now serves initial calibration, Target/
+Last, workout Info, coaching review and recorded equipment facts. Both a
+two-handed swing and a matched-pair row display **per kettlebell**, without
+doubling the entered mass or reusing dumbbell loading. Gorilla-row repetitions
+are per arm in the reviewed definition. The actual web catalog offers
+kettlebells with dumbbell equipment alternatives; native keeps explicit
+bell-specific stock and calibration rather than treating those inventories
+as interchangeable. Program/cycle and native-file task tests verify this
+bounded behavior; no measured task-speed, visual, motion or device improvement
+is asserted. Full app-wide design approval remains open.
+
 ## Persistent information architecture
 
 ### Authored superset execution

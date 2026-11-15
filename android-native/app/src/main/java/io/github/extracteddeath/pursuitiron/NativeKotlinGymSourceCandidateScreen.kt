@@ -147,11 +147,11 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(when(stock) {
                         is VerifiedLoadStock.Totals ->
-                            "${stock.basis.name.lowercase().replace('_',' ')} · " +
+                            "${kotlinLoadBasisLabel(stock.basis)} · " +
                             stock.loads.joinToString(", ") {it.toPlainString()} +
                             " ${stock.unit}"
                         is VerifiedLoadStock.Stack ->
-                            "${stock.basis.name.lowercase().replace('_',' ')} · " +
+                            "${kotlinLoadBasisLabel(stock.basis)} · " +
                             "${stock.minimum.toPlainString()} to ${stock.maximum.toPlainString()}" +
                             " in ${stock.increment.toPlainString()} ${stock.unit} steps"
                         is VerifiedLoadStock.PairedBar ->
@@ -225,7 +225,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     it==PhysicalStockEditorKind.BARBELL_WITH_PAIRS
                 LoadBasis.SMITH_TOTAL -> it in listOf(
                     PhysicalStockEditorKind.SMITH_WITH_PAIRS,PhysicalStockEditorKind.EXACT_LOADS)
-                LoadBasis.DUMBBELL_PER_HAND ->
+                LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH ->
                     it==PhysicalStockEditorKind.EXACT_LOADS
                 null -> true
                 else -> it !in listOf(PhysicalStockEditorKind.BARBELL_WITH_PAIRS,
@@ -277,7 +277,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                                 PhysicalStockEditorKind.BARBELL_WITH_PAIRS
                                             LoadBasis.SMITH_TOTAL ->
                                                 PhysicalStockEditorKind.SMITH_WITH_PAIRS
-                                            LoadBasis.DUMBBELL_PER_HAND ->
+                                            LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH ->
                                                 PhysicalStockEditorKind.EXACT_LOADS
                                             else -> PhysicalStockEditorKind.VERIFIED_STACK
                                         }
@@ -323,7 +323,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                         }) {Text("Choose from reviewed exercises")}
                     }
                     if(selected!=null && !manualEquipmentId) {
-                        Text("Chosen: ${selected.displayName} · ${selected.basis.name.replace('_',' ').lowercase()}. Actual weights are still required.",
+                        Text("Chosen: ${selected.displayName} · ${kotlinLoadBasisLabel(selected.basis)}. Actual weights are still required.",
                             style=MaterialTheme.typography.bodySmall)
                     }
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -355,14 +355,19 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                             }.forEach { selection ->
                                 FilterChip(selected=basis==selection,
                                     onClick={if(basis!=selection)clearStockFields();basis=selection},
-                                    label={Text(selection.name.replace('_',' ').lowercase())})
+                                    label={Text(kotlinLoadBasisLabel(selection))})
                             }
                         }
                     }
                     when(kind) {
                         PhysicalStockEditorKind.EXACT_LOADS ->
                             OutlinedTextField(exact,{exact=it.take(900)},
-                                label={Text("Exact ${reviewed.gym.unit} loads, comma-separated")},
+                                label={Text("Exact ${reviewed.gym.unit} loads${kotlinLoadBasisSuffix(actualBasis)}, comma-separated")},
+                                supportingText=if(actualBasis==LoadBasis.KETTLEBELL_EACH) {
+                                    { Text(if(equipmentId=="matched-kettlebell-pair")
+                                        "Enter each bell's weight only when two matching bells are available."
+                                        else "Enter the weight of one bell, including a two-handed swing.") }
+                                } else null,
                                 modifier=Modifier.fillMaxWidth())
                         PhysicalStockEditorKind.VERIFIED_STACK -> {
                             OutlinedTextField(min,{min=it.take(20)},

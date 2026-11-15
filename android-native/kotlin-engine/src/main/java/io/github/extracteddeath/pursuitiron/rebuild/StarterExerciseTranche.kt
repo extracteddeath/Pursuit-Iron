@@ -2005,12 +2005,27 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
             DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("incline-bench"),12..15,
             "The second active-web incline bench dumbbell shrug retains its exact source identity and separate per-hand calibration. An incline bench is required; ambiguous generic-back credit is quarantined and no automatic alias or history merge is performed.",
-            direct(TrainingMuscle.TRAPS))
+            direct(TrainingMuscle.TRAPS)),
+        entry("kb-swing","hip_hinge","kettlebell-swing",
+            ComposerPattern.HINGE,ComposerRole.SECONDARY,lower,
+            "single-kettlebell",LoadBasis.KETTLEBELL_EACH,emptySet(),12..20,
+            "Two-handed swing with one verified kettlebell; log the mass of that one bell. Single-bell stock never proves a matched pair; practical reps retain the source band. Muscle credits remain provisional and no dumbbell load or history transfers.",
+            direct(TrainingMuscle.HAMSTRINGS),
+            indirect(TrainingMuscle.GLUTES,"0.25"),
+            indirect(TrainingMuscle.SPINAL_ERECTORS,"0.25")),
+        entry("kb-gorilla-row","horizontal_pull","kettlebell-gorilla-row",
+            ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
+            "matched-kettlebell-pair",LoadBasis.KETTLEBELL_EACH,emptySet(),8..12,
+            "Alternating gorilla row with an explicitly confirmed matched pair; log the mass of each bell and repetitions per arm. Single bells or a dumbbell rack do not verify this pair, and no related row load or history transfers. Muscle credits remain provisional.",
+            direct(TrainingMuscle.UPPER_BACK),
+            indirect(TrainingMuscle.BICEPS,"0.25"),
+            indirect(TrainingMuscle.TRAPS,"0.25"),
+            indirect(TrainingMuscle.REAR_DELTS,"0.25"))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==318)
+        require(definitions.size==320)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

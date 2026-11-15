@@ -346,7 +346,7 @@ internal fun NativeFirstProgramCalibrationPanel(
                             onValueChange={onLoadChanged(id,it)},
                             enabled=!state.busy && (id in selectedIds || canChooseMore),
                             singleLine=true,
-                            label={Text("First working load (${option.unit.name.lowercase()}; ${prettyFirstProgram(option.basis?.name ?: "unknown basis")})")},
+                            label={Text("First working load (${option.unit.name.lowercase()}; ${kotlinLoadBasisLabel(option.basis)})")},
                             supportingText={
                                 when {
                                     raw.isBlank() ->

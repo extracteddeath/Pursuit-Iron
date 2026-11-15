@@ -707,8 +707,7 @@ internal fun NativeKotlinCustomDayCoachingSummary(
                 style=MaterialTheme.typography.bodySmall)
             baseline.priorWorkingSets.forEach {set->
                 val effort=set.actualRir?.let{"$it RIR"} ?: "RIR unreported"
-                val basis=if(reviewed.verifiedStock?.basis==LoadBasis.DUMBBELL_PER_HAND)
-                    " per hand" else ""
+                val basis=kotlinLoadBasisSuffix(reviewed.verifiedStock?.basis)
                 Text("Set ${set.ordinal}: ${set.priorLoad.stripTrailingZeros().toPlainString()} ${set.loadUnit.name.lowercase()}$basis × ${set.performedReps} · $effort",
                     style=MaterialTheme.typography.bodyMedium)
             }
@@ -720,7 +719,7 @@ internal fun NativeKotlinCustomDayCoachingSummary(
                 style=MaterialTheme.typography.titleMedium)
             Text(transition.explanation,style=MaterialTheme.typography.bodySmall)
             transition.sets.forEach {set->
-                val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                val basis=kotlinLoadBasisSuffix(set.basis)
                 val authored=set.authoredLoad.stripTrailingZeros().toPlainString()
                 val proposed=set.proposedLoad.stripTrailingZeros().toPlainString()
                 Text("Set ${set.ordinal}: $authored → $proposed ${set.unit.name.lowercase()}$basis · start with ${set.startingReps} reps · goal ${set.targetRir} RIR",
@@ -744,7 +743,7 @@ internal fun NativeKotlinCustomDayCoachingSummary(
             Text(review.explanation,style=MaterialTheme.typography.bodySmall)
             review.startingSets.forEach {set->
                 val goal=set.goalRir?.let{" · goal $it RIR"} ?: ""
-                val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                val basis=kotlinLoadBasisSuffix(set.basis)
                 Text("Set ${set.ordinal}: keep ${set.load.stripTrailingZeros().toPlainString()} ${set.unit.name.lowercase()}$basis · ${set.reps.minimum}–${set.reps.maximum} reps$goal",
                     style=MaterialTheme.typography.bodyMedium)
             }

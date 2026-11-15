@@ -319,7 +319,9 @@ private val kotlinExerciseNames=mapOf(
     "power-shrug" to "Power Shrug",
     "incline-shrug" to "Incline Dumbbell Shrug",
     "cable-face-shrug" to "Cable Face Shrug",
-    "db-incline-shrug" to "Incline Bench Dumbbell Shrug"
+    "db-incline-shrug" to "Incline Bench Dumbbell Shrug",
+    "kb-swing" to "Kettlebell Swing",
+    "kb-gorilla-row" to "Kettlebell Gorilla Row"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

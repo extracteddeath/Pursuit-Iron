@@ -143,6 +143,33 @@ and visual/motion acceptance remain open. No APK/AAB from this checkpoint.
 
 ## Persistent information architecture
 
+### Authored superset execution
+
+The custom workout's Up next cursor, Previous/Next Focus review and rest
+projection share one pure Kotlin execution policy. A valid authored group
+has two or three movements. Warm-ups stay together for each member before
+the working rounds; working sets then alternate in source slot order.
+Unequal counts finish the remaining sets solo. No issued slot, set key,
+load, rep range, RIR, amplifier or receipt is rewritten by this navigation.
+
+Focus shows the current round, ordered movement names and concise rest
+guidance. All sets keeps the linked movement names visible. An amplifier
+must be explicitly logged or skipped after its completed main, using its
+own short pause before changing movement. Even out-of-order logging
+returns to the most recently triggered pending follow-up. Round rest
+starts only from a new completed visit that resolves the whole round,
+using that closing visit's authored rest. A mid-round completion clears
+the old countdown. Corrections, notes, skipped and failed observations
+do not masquerade as new completed work. No final post-workout rest is
+created. Fresh mounts keep the existing recovered-receipt timer baseline.
+
+Native file tests cover issue, alternating main/amplifier logs, cold reopen,
+exact retry and verified Finish-to-History with all actual RIR still unknown
+when not recorded. This is connected source and integration evidence;
+real phone/foldable, keyboard, TalkBack, timer and motion acceptance remain
+open. Automatic partner suggestions and generated pairing are separate
+unfinished parity work. The APK/AAB freeze remains in force.
+
 History now groups completed workouts by their recorded Finish month in the
 device time zone and labels undated training separately. It never derives an
 old date from session order, a program week, a correction, a file timestamp or

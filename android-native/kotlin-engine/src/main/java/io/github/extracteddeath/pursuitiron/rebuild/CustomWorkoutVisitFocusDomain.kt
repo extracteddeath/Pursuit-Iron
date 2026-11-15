@@ -41,7 +41,8 @@ object CustomWorkoutVisitFocusDomain {
 
     fun visibleOrder(journal:CustomWorkoutJournalDraft):List<CustomWorkoutVisitKey> =
         buildList {
-            for(slot in journal.snapshot.slots) for(set in slot.sets) {
+            for(step in CustomWorkoutExecutionDomain.orderedSets(journal.snapshot)) {
+                val set=step.set
                 val main=CustomWorkoutVisitKey(
                     set.setKey,CustomWorkoutVisitPart.MAIN)
                 add(main)

@@ -73,12 +73,16 @@ object KotlinWorkoutRestDomain {
         }
         val slot=journal.snapshot.slots.getOrNull(index)
         val target=slot?.sets?.firstOrNull{it.setKey==operation?.visit?.setKey}
+        val execution=CustomWorkoutExecutionDomain.orderedSets(journal.snapshot)
+        val round=execution.firstOrNull{it.set.setKey==target?.setKey}?.round
         // A completed main precedes the amplifier's SHORT intra-set rest.
         // Its completed follow-up precedes the parent's ordinary between-set
         // rest. Never substitute one duration for the other or add them.
-        val after=if(operation?.visit?.part==CustomWorkoutVisitPart.MAIN &&
-            target?.prescription?.amplifier!=null)
-            target.prescription.amplifier.followUpRestSeconds
+        val beforeFollowUp=operation?.visit?.part==CustomWorkoutVisitPart.MAIN &&
+            target?.prescription?.amplifier!=null
+        val after=if(beforeFollowUp)
+            target?.prescription?.amplifier?.followUpRestSeconds
+        else if(round!=null && !CustomWorkoutExecutionDomain.roundIsResolved(journal,round))0
         else target?.prescription?.restSeconds
         val cue=if(remaining && operation!=null && target!=null &&
             operation.outcome==KotlinJournalSetOutcome.COMPLETED &&
@@ -86,15 +90,18 @@ object KotlinWorkoutRestDomain {
             // workout event, even when note receipts followed it.
             receipt.appliedRevision<=journal.revision &&
             journal.effectiveVisits[operation.visit]==receipt &&
-            slot.supersetGroup==null && after!=null && after in 0..3600) {
+            after!=null && after in 0..3600 &&
+            // Invalid group metadata retains the previous manual-only policy.
+            (slot.supersetGroup==null || round!=null ||
+                target.prescription.type==DraftSetType.WARMUP)) {
             KotlinWorkoutRestCue(operation.eventId,checkNotNull(after),index)
         } else null
-        // Supersets have no implied paired-round completion protocol yet.
-        // Their pinned manual rest remains available; no individual visit
-        // falsely starts an automatic round break.
+        // A zero cue clears the preceding pause between movements. Only the
+        // completed visit that resolves the round starts its own authored
+        // between-set rest. Skips/failures/corrections remain non-work cues.
         return KotlinWorkoutRestPresentation(receipt?.operation?.eventId,
             if(remaining)seconds(manual) else 0,cue,remaining,
-            selectedSlot?.supersetGroup!=null &&
+            execution.firstOrNull{it.set.setKey==selected?.setKey}?.round!=null &&
                 selectedVisit?.part!=CustomWorkoutVisitPart.FOLLOW_UP)
     }
 }

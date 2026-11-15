@@ -197,16 +197,16 @@ class KotlinWorkoutRestDomainTest {
             as CustomWorkoutJournalDecision.Proposed).draft)
     }
 
-    @Test fun supersetVisitDoesNotPretendThatAnEntireRoundIsComplete() {
+    @Test fun supersetKeepsAmplifierPauseAndClearsItBeforeThePartner() {
         var j=custom(CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,4,15),
             superset="pair")
         assertTrue(rest(j).manualIsSuperset)
         assertEquals(90,rest(j).manualRestSeconds)
         j=record(j)
-        assertNull(rest(j).automaticCue)
+        assertEquals(15,rest(j).automaticCue?.seconds)
         assertEquals(15,rest(j).manualRestSeconds)
         j=record(j,part=CustomWorkoutVisitPart.FOLLOW_UP)
-        assertNull(rest(j).automaticCue)
+        assertEquals(0,rest(j).automaticCue?.seconds)
         assertEquals(90,rest(j).manualRestSeconds)
     }
 

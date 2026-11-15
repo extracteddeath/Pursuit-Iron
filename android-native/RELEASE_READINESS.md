@@ -168,8 +168,16 @@ A fresh timer mount baselines recovered receipts so an old receipt cannot
 restart rest; elapsed/wall-clock checks still reject invalid restored clocks.
 Custom workouts now keep the screen awake while active and restore the previous
 view setting when closed. The timer does not write measured rest into history
-or feed assumed rest into fatigue calculations. Superset rest is explicitly
-manual until a paired-round protocol exists. Notifications and physical
+or feed assumed rest into fatigue calculations. Authored 2–3-movement
+supersets now share one alternating execution order with Focus and round rest:
+warm up each member, alternate working sets, finish triggered amplifiers
+before switching, and rest after the round's closing completed visit using
+that visit's authored duration. Unequal counts finish solo; skipped/failed
+visits and corrections do not become completed work or restart rest.
+The original snapshot, loads, reps, set keys and history receipts stay intact.
+Cold native issuance/logging/retry/Finish tests cover a full authored pair
+with an amplifier. Automatic pairing suggestions remain separate work.
+Notifications and physical
 background/restart, keyboard and accessibility acceptance remain open.
 
 ## Remaining production release gates
@@ -179,7 +187,7 @@ background/restart, keyboard and accessibility acceptance remain open.
 | Complete program generation | The declared twelve-case placement matrix passes. Broaden goal/experience/split/day/gym/time coverage; finish catalog/attachments and all separately tracked muscle channels; independently review phase-specific dose, practice frequency, recovery, peak/taper behavior and actual program quality. |
 | Progressions and personalized fatigue | All advertised progression methods must work through actual next workouts. Validate individual target-RIR predictions, intra-workout effects, accumulated fatigue, plateaus and deload response against later performance. The current arithmetic estimates and V3 reported-effort hold do not establish that accuracy. |
 | Adaptive cycles | Complete goal-appropriate hypertrophy/strength/peak and powerbuilding options, permitted split/day/exercise changes, stable history mappings, preserved custom techniques, full prospective audits and understandable end-to-end acceptance. Existing bounded proposal/consent paths are partial evidence. |
-| Full app feature parity | Basic receipt-driven rest is now connected; paired-superset rest, notification/device acceptance and remaining Kotlin-path tools still need closure: Last/Target, complete Focus, notes, plate/bar controls, substitutions, supersets, restrictions and shorter sessions; finish real-data PR/charts/standards, bodyweight, milestones and profile/preferences. Existing legacy/native components are not automatically functional Kotlin Lab features. |
+| Full app feature parity | Ordinary and authored superset-round rest are source-connected; notification/device acceptance and remaining Kotlin-path tools still need closure: Last/Target, complete Focus, notes, plate/bar controls, substitutions, supersets, restrictions and shorter sessions; finish real-data PR/charts/standards, bodyweight, milestones and profile/preferences. Existing legacy/native components are not automatically functional Kotlin Lab features. |
 | Data recovery and migration | Verified rebuilt-app export/restore, conflicts/Undo, interrupted import, existing web history/settings reconciliation and active legacy-session closeout; preserve exact targets, actuals, IDs and PR eligibility. Native journal durability does not substitute for complete user backup/restore. |
 | Android acceptance | Test the installable build on phone and foldable: complete offline journey, keyboard, large fonts/TalkBack, original themes, timing/awake behavior, background/process death, corrections, recovery and signed updates retaining data. Source checks are not physical-device acceptance. |
 | Demonstrated improvement | Fresh matched comparisons of complete programs, cycles, progressions and user experience; independent expected outcomes and individual forecast calibration. Historical parity and the withdrawn one-set benchmark do not prove overall superiority. |

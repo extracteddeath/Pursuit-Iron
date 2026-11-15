@@ -411,3 +411,28 @@ inferred. Pure Kotlin fixtures cover Gregorian/leap/calendar boundaries,
 time zones, duplicate DST hours, both workout routes, query intersections,
 stale restored selection and long histories. Actual Android visual,
 TalkBack and device acceptance remain open; no APK/AAB is authorized.
+
+## Authored superset rounds — 2026-11-14
+
+Custom Kotlin workouts now execute existing authored 2–3-movement supersets
+as alternating working rounds. Warm-ups prepare each member first; unequal
+counts continue solo. One shared Kotlin projection owns next unresolved
+visit, Focus review order and round-rest eligibility, preserving the exact
+snapshot and all set/load/rep/effort identities. The workout screen shows
+the round and actual partner names rather than leaving a grouping flag inert.
+
+Amplifier follow-ups remain independently recorded observations with their
+own short pauses. A completed main cannot skip its pending follow-up by
+advancing to the partner, including after out-of-order logging or cold
+reopen. Mid-round completions clear a prior pause; only the completed visit
+that resolves a whole round starts its own authored between-set rest.
+Notes, corrections, skips/failures and exact retries do not start a new
+completed-work rest. The final required visit has no post-workout timer.
+
+The web reference is the actual `toggleDone` interleaving flow in
+`modules/App.js`; execution remains independently Kotlin-only. Domain
+fixtures and a real signed custom source → approval → issue → log/reopen
+between every visit → retry → verified Finish/History journey cover this
+bounded behavior. Automatic pairing/suggestions, full feature parity,
+independent training-quality comparisons and actual device acceptance
+remain open. No APK/AAB is generated or released.

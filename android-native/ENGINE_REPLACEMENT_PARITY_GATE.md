@@ -58,6 +58,18 @@ program. This document is the acceptance contract for future engineering passes.
 
 ## No-regression fixtures (must remain green)
 
+Authored custom supersets now have integrated native-file evidence for
+alternating rounds, paired/triplet/unequal counts, explicit amplifier
+follow-ups and round-end rest. `CustomWorkoutExecutionDomainTest` and
+`NativeKotlinCustomHistoryTransactionTest` cover shared Focus/next order,
+stable original prescriptions, cold reopen, retries and complete History.
+The actual web `toggleDone` flow in `modules/App.js` supplies the behavior
+reference: alternate linked working sets, preserve per-movement warm-ups,
+finish uneven members solo and rest after a round. Native separately keeps
+an amplifier's pause and required observation before switching. This closes
+the prior manual-only authored-round gap at source/integration level, not
+automatic pairing or physical-device acceptance. No APK/AAB from this pass.
+
 - **200×3, 205×3, 210×2, 215×2, target 5–8:** never
   prescribe 215 for all four next sets. A 215×2 near-failure repeat is
   not an increase signal. Evidence unit tests already assert these facts.

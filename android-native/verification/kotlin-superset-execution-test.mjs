@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const engine='android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/';
+const app='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
+const read=p=>readFileSync(p,'utf8');
+const execution=read(engine+'CustomWorkoutExecutionDomain.kt');
+const journal=read(engine+'CustomWorkoutJournalDomain.kt');
+const focus=read(engine+'CustomWorkoutVisitFocusDomain.kt');
+const rest=read(engine+'KotlinWorkoutRestDomain.kt');
+const screen=read(app+'NativeKotlinCustomJournalScreen.kt');
+const timer=read(app+'NativeKotlinWorkoutRestTimer.kt');
+
+assert.match(journal,/CustomWorkoutExecutionDomain\.nextUnresolvedVisit\(journal\)/);
+assert.match(focus,/CustomWorkoutExecutionDomain\.orderedSets\(journal\.snapshot\)/);
+assert.match(rest,/CustomWorkoutExecutionDomain\.orderedSets\(journal\.snapshot\)/);
+assert.match(rest,/CustomWorkoutExecutionDomain\.roundIsResolved\(journal,round\)/);
+assert.match(rest,/target\?\.prescription\?\.amplifier\?\.followUpRestSeconds/);
+assert.match(rest,/operation\.correctsEventId==null/);
+assert.match(rest,/operation\.outcome==KotlinJournalSetOutcome\.COMPLETED/);
+assert.match(screen,/CustomWorkoutExecutionDomain\.orderedSets\(current\.snapshot\)/);
+assert.match(screen,/Superset · round \$\{focusedRound\.number\} of \$\{focusedRound\.total\}/);
+assert.match(screen,/Complete any amplifier follow-up before switching/);
+assert.match(screen,/This round has one movement\. Use its normal rest/);
+assert.match(screen,/warm up each movement first/);
+assert.match(timer,/Superset · automatic rest after the complete round/);
+assert.doesNotMatch(execution,/System\.|Date\(|currentTimeMillis|java\.io|java\.nio|\.write\(|\.reduce\(|\.copy\(snapshot=/);
+assert.doesNotMatch(execution,/\.load\s*=|\.reps\s*=|\.restSeconds\s*=/);
+console.log('PASS one Kotlin superset execution policy connects next visit, Focus, authored round rest and workout guidance');

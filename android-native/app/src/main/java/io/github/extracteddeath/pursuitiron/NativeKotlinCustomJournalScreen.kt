@@ -444,6 +444,9 @@ internal fun NativeKotlinCustomJournalScreen(
                 // journal nor the active prescription. Show every entry when
                 // no unresolved visit remains so Finish can be reviewed.
                 val availableVisits=CustomWorkoutVisitFocusDomain.visibleOrder(current)
+                val executionSteps=remember(current.snapshot) {
+                    CustomWorkoutExecutionDomain.orderedSets(current.snapshot)
+                }
                 val requestedPart=CustomWorkoutVisitPart.entries.firstOrNull {
                     it.name==reviewPart
                 }
@@ -643,6 +646,22 @@ internal fun NativeKotlinCustomJournalScreen(
                             {pendingQuickSkip=visit}
                         }
                     )
+                    val focusedRound=executionSteps.firstOrNull {
+                        it.set.setKey==activeFocus?.setKey
+                    }?.round
+                    if(focusedRound!=null) {
+                        Text("Superset · round ${focusedRound.number} of ${focusedRound.total}",
+                            style=MaterialTheme.typography.labelLarge,
+                            color=MaterialTheme.colorScheme.primary)
+                        Text(executionSteps.filter{it.round==focusedRound}.mapIndexed{index,step->
+                            "${index+1}. ${kotlinExerciseLabel(current.snapshot.slots[step.slotIndex].exerciseId)}"
+                        }.joinToString(" · "),style=MaterialTheme.typography.bodySmall)
+                        Text(if(focusedRound.setKeys.size==1)
+                            "This round has one movement. Use its normal rest."
+                            else "Alternate movements, then rest. Complete any amplifier follow-up before switching.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     if(focusOnNext)NativeKotlinWorkoutTools(
                         enabled=!busy,
                         onSessionNote={noteError=null;showSessionNote=true},
@@ -980,6 +999,14 @@ internal fun NativeKotlinCustomJournalScreen(
                             onHistory={historyExerciseId=slot.exerciseId},
                             subtitle="Working sets and saved exercise history",
                             onInfo={infoSlotId=slot.slotId})
+                        val partners=current.snapshot.slots.filter {
+                            slot.supersetGroup!=null && it.supersetGroup==slot.supersetGroup
+                        }
+                        if(activeFocus==null && partners.size in 2..3)Text(
+                            "Superset · "+partners.joinToString(" · "){kotlinExerciseLabel(it.exerciseId)}+
+                                ". Alternate working sets; warm up each movement first.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                         NativeKotlinPinnedExerciseControl(
                             host=host,workoutId=workoutId,
                             exerciseId=slot.exerciseId,custom=true,

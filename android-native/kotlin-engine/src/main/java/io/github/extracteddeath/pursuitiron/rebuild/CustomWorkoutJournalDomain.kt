@@ -148,22 +148,9 @@ object CustomWorkoutJournalDomain {
             it=='\u0000' || (it.code<32 && it!='\n' && it!='\r' && it!='\t')
         }
 
-    /** Ordered presentation of the next required observation. An authored
-     * follow-up becomes required only after its main is actually completed. */
-    fun nextUnresolvedVisit(journal:CustomWorkoutJournalDraft):CustomWorkoutVisitKey? {
-        if(journal.finishedByEventId!=null)return null
-        for(slot in journal.snapshot.slots)for(set in slot.sets) {
-            val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
-            val recorded=journal.effectiveVisits[main]?.operation
-                as? CustomWorkoutJournalOperation.Record ?:return main
-            if(recorded.outcome==KotlinJournalSetOutcome.COMPLETED &&
-                set.prescription.amplifier!=null) {
-                val follow=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)
-                if(follow !in journal.effectiveVisits)return follow
-            }
-        }
-        return null
-    }
+    /** One execution policy also owns Focus order and superset round rest. */
+    fun nextUnresolvedVisit(journal:CustomWorkoutJournalDraft):CustomWorkoutVisitKey? =
+        CustomWorkoutExecutionDomain.nextUnresolvedVisit(journal)
 
     fun begin(
         workoutId:String,

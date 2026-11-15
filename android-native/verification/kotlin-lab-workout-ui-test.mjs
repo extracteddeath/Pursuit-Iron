@@ -103,7 +103,7 @@ for(const fragment of [
   'Custom Focus must not steal or skip another visit: '+fragment);
 for(const fragment of [
   'fun visibleOrder(journal:CustomWorkoutJournalDraft)',
-  'journal.snapshot.slots',
+  'CustomWorkoutExecutionDomain.orderedSets(journal.snapshot)',
   'saved?.outcome==KotlinJournalSetOutcome.COMPLETED',
   'set.prescription.amplifier!=null',
   'CustomWorkoutVisitPart.FOLLOW_UP'

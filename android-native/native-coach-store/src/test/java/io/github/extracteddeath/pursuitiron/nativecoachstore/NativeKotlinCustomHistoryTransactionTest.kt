@@ -9,6 +9,7 @@ import org.junit.rules.TemporaryFolder
 
 class NativeKotlinCustomHistoryTransactionTest {
     @get:Rule val temp=TemporaryFolder()
+    private var supersetFixture=false
     private var current:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
     private val identity=NativeKotlinCurrentIdentity {current}
@@ -81,7 +82,7 @@ class NativeKotlinCustomHistoryTransactionTest {
         hardSessionLimit=HardSessionLimit.Minutes(60),
         gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
             emptySet(),emptySet()),
-        allowBodyweight=true,allowSupersets=false,
+        allowBodyweight=true,allowSupersets=supersetFixture,
         allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
         excludedExerciseIds=emptySet(),lockedTrainingDays=emptySet(),
@@ -104,16 +105,22 @@ class NativeKotlinCustomHistoryTransactionTest {
                     ComposerSessionPurpose.HYPERTROPHY,
                     listOf(CustomExerciseSlot("slot-$day",
                         "bodyweight_crunch",ComposerRole.ACCESSORY,
-                        listOf(set(10)),pinned=true,
-                        coachNote="My exact prescription")))
+                        if(supersetFixture)listOf(set(10),set(10)) else listOf(set(10)),
+                        supersetGroup=if(supersetFixture)"pair" else null,pinned=true,
+                        coachNote="My exact prescription"))+
+                        if(supersetFixture)listOf(CustomExerciseSlot("partner-$day",
+                            "bodyweight_crunch",ComposerRole.ACCESSORY,listOf(set(10),set(10)),
+                            supersetGroup="pair")) else emptyList())
             }
         )),mapOf("base" to listOf(
-            CustomWeekSlotOverride(2,0,"slot-0",listOf(set(16))))))
+            CustomWeekSlotOverride(2,0,"slot-0",if(supersetFixture)listOf(
+                set(16).copy(amplifier=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+                    followUpActiveSeconds=15)),set(16)) else listOf(set(16))))))
     private fun bounds()=TrainingMuscle.entries.map { muscle ->
         DeclaredMuscleDoseBounds(muscle,
-            if(muscle==TrainingMuscle.ABS)n("3") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)n("4") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)n("5") else BigDecimal.ZERO,
+            if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"12" else "3") else BigDecimal.ZERO,
+            if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"16" else "4") else BigDecimal.ZERO,
+            if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"20" else "5") else BigDecimal.ZERO,
             if(muscle==TrainingMuscle.ABS)3 else 0)
     }
     private fun input()=CustomCoachAuditInputs(
@@ -162,6 +169,53 @@ class NativeKotlinCustomHistoryTransactionTest {
     }
     private fun finish()=CustomWorkoutJournalOperation.Finish(
         "finish-1",1)
+
+    @Test fun authoredSupersetAlternatesThroughColdRecoveryAndSavesEveryMainAndAmplifierFact() {
+        supersetFixture=true
+        ready()
+        fun cold()=(NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),fence,identity,
+            prepared,preflight,history,composerJournal).open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        var journal=cold()
+        val original=journal.originalSnapshot
+        val mainA="cycle-1:w2:d0:slot-0:s1"
+        val mainB="cycle-1:w2:d0:partner-0:s1"
+        val secondA="cycle-1:w2:d0:slot-0:s2"
+        val secondB="cycle-1:w2:d0:partner-0:s2"
+        val visits=listOf(CustomWorkoutVisitKey(mainA,CustomWorkoutVisitPart.MAIN),
+            CustomWorkoutVisitKey(mainA,CustomWorkoutVisitPart.FOLLOW_UP),
+            CustomWorkoutVisitKey(mainB,CustomWorkoutVisitPart.MAIN),
+            CustomWorkoutVisitKey(secondA,CustomWorkoutVisitPart.MAIN),
+            CustomWorkoutVisitKey(secondB,CustomWorkoutVisitPart.MAIN))
+        val pauses=listOf(20,0,75,0,null)
+        visits.forEachIndexed {index,visit->
+            assertEquals(visit,CustomWorkoutJournalDomain.nextUnresolvedVisit(journal))
+            val operation=CustomWorkoutJournalOperation.Record("round-$index",journal.revision,
+                visit,KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(null,null,
+                    if(visit.part==CustomWorkoutVisitPart.FOLLOW_UP)4 else 16,null))
+            val durable=issued.record("owner-1","workout-2",operation) as NativeCustomJournalResult.Durable
+            journal=cold()
+            assertEquals(durable.issued.journal,journal)
+            assertEquals(original,journal.snapshot)
+            assertEquals(original,journal.originalSnapshot)
+            val next=CustomWorkoutJournalDomain.nextUnresolvedVisit(journal)
+            assertEquals(pauses[index],KotlinWorkoutRestDomain.inspect(journal,next).automaticCue?.seconds)
+            val retry=issued.record("owner-1","workout-2",operation) as NativeCustomJournalResult.Durable
+            assertTrue(retry.replayed)
+            assertEquals(journal,retry.issued.journal)
+        }
+        assertEquals(5,journal.effectiveVisits.size)
+        assertEquals(5,CustomWorkoutVisitFocusDomain.progress(journal).recordedVisits)
+        val finish=CustomWorkoutJournalOperation.Finish("finish-rounds",journal.revision)
+        val complete=transactions.complete("owner-1","athlete-1","workout-2",finish)
+            as NativeCustomFinishResult.Committed
+        assertEquals(5,complete.evidence.visits.size)
+        assertTrue(complete.evidence.visits.all{it.actual?.actualRir==null})
+        assertEquals(4,complete.evidence.visits.count{it.part==CustomWorkoutVisitPart.MAIN})
+        assertEquals(1,complete.evidence.visits.count{it.part==CustomWorkoutVisitPart.FOLLOW_UP})
+        assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(cold()))
+        assertEquals(complete.copy(replayed=true),transactions.complete("owner-1","athlete-1","workout-2",finish))
+    }
 
     @Test fun customCompletionRecordsTimeOnceAndColdRetryKeepsTheOriginalObservation() {
         logged()

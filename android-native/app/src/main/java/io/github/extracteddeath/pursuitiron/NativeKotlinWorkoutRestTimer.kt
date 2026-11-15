@@ -18,7 +18,7 @@ internal fun NativeKotlinWorkoutRestTimer(
     // there is no artificial post-workout rest or timer on a finished workout.
     if(!rest.hasRemainingWork)return
     if(rest.manualIsSuperset && rest.manualRestSeconds>0)Text(
-        "Superset · start rest when your round is complete",
+        "Superset · automatic rest after the complete round",
         style=MaterialTheme.typography.labelSmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)
     NativeRestTimer(workoutId,rest.manualRestSeconds,enabled,

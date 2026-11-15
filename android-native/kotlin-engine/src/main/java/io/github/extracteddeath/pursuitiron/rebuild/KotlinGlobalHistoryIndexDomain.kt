@@ -20,8 +20,17 @@ data class KotlinHistoryManifestEntry(
     val finishEventId: String,
     val originalJournalRevision: Long,
     /** A deleted or missing correction file must NOT silently return zero. */
-    val savedCorrectionRevision: Long
-)
+    val savedCorrectionRevision: Long,
+    /** Native Finish observation; absent for older/undated training. */
+    val completedAtEpochMillis:Long?=null
+) {
+    init {require(KotlinHistoryCompletionTime.valid(completedAtEpochMillis))}
+}
+
+object KotlinHistoryCompletionTime {
+    const val MAX_EPOCH_MILLIS=253402300799999L
+    fun valid(value:Long?):Boolean=value==null || value in 0..MAX_EPOCH_MILLIS
+}
 
 data class KotlinGlobalHistoryRead(
     val athleteId: String,
@@ -239,6 +248,8 @@ object KotlinGlobalHistoryIndexDomain {
     ): String {
         val raw = ByteArrayOutputStream()
         DataOutputStream(raw).use { out ->
+            val dated=read.manifest.any{it.completedAtEpochMillis!=null}
+            if(dated)out.writeInt(0x48445433)
             out.writeUTF(read.athleteId)
             out.writeLong(read.manifestRevision)
             for ((index, history) in histories.withIndex()) {
@@ -251,6 +262,10 @@ object KotlinGlobalHistoryIndexDomain {
                 out.writeUTF(manifest.finishEventId)
                 out.writeLong(manifest.originalJournalRevision)
                 out.writeLong(manifest.savedCorrectionRevision)
+                if(dated) {
+                    out.writeBoolean(manifest.completedAtEpochMillis!=null)
+                    manifest.completedAtEpochMillis?.let{out.writeLong(it)}
+                }
                 out.writeUTF(history.source.programId)
                 out.writeLong(history.source.programRevision)
                 out.writeUTF(history.source.gymId)
@@ -338,7 +353,8 @@ object KotlinGlobalHistoryIndexDomain {
             read.manifest.size > MAX_SESSIONS ||
             read.manifest.size != read.completedWorkouts.size ||
             read.manifest.any {
-                it.completionOrder !in 1..MAX_REVISION ||
+                !KotlinHistoryCompletionTime.valid(it.completedAtEpochMillis) ||
+                    it.completionOrder !in 1..MAX_REVISION ||
                     it.originalJournalRevision < 1 ||
                     it.savedCorrectionRevision < 0 ||
                     !id.matches(it.workoutId) ||

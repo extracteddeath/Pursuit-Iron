@@ -100,7 +100,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customIssuedStore,authoringSourceStore,
         coachSettings,machineRosters,workoutMachineChoices)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
-        historyStore,customIssuedStore,revisionFence,localAthlete)
+        historyStore,customIssuedStore,revisionFence,localAthlete,NativeHistoryCompletionClock.System)
     private val customSavedCorrections=NativeKotlinCustomSavedCorrectionFileStore(
         root,revisionFence,localAthlete,customIssuedStore,historyStore)
     private val customCorrectionTransactions=
@@ -189,7 +189,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 authoringSourceStore)
         },futureActivationHandoff)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
-        historyStore,journalStore,correctionStore,approvalStore,revisionFence)
+        historyStore,journalStore,correctionStore,approvalStore,revisionFence,NativeHistoryCompletionClock.System)
     private val trackedWorkout=NativeKotlinTrackedWorkoutGateway(
         coordinator,historyTransactions,historyStore,correctionStore,
         gymCoherentAuthority,revisionFence)

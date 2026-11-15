@@ -57,19 +57,22 @@ object NativeKotlinVerifiedHistoryCsvExport {
         val ids=mutableSetOf<String>()
         var expectedOrder=1L
         var rows=0
-        val csv=StringBuilder(columns.joinToString(","){cell(it)}).append('\n')
+        val dated=history.completions.any{it.manifest.completedAtEpochMillis!=null}
+        val header=columns+if(dated)listOf("completed_at_utc") else emptyList()
+        val format=if(dated)"pursuit-iron-history-v2" else VERSION
+        val csv=StringBuilder(header.joinToString(","){cell(it)}).append('\n')
 
         fun add(
             order:Long,kind:String,workoutId:String,gymId:String,
             exerciseId:String,slotId:String,setKey:String,part:String,type:DraftSetType,
             outcome:KotlinJournalSetOutcome,prescription:DraftSetLoad,
             reps:RepBand,rir:Int?,actual:KotlinPerformedSet?,
-            amplifier:String=""
+            amplifier:String="",completedAtEpochMillis:Long?=null
         ):Boolean {
             if(rows>=MAX_ROWS)return false
             val (targetLoad,targetUnit,targetBasis)=load(prescription)
             val fields=listOf(
-                VERSION,order.toString(),kind,workoutId,gymId,
+                format,order.toString(),kind,workoutId,gymId,
                 exerciseId,slotId,
                 setKey,part,type.name,outcome.name,
                 targetLoad,targetUnit,targetBasis,reps.minimum.toString(),
@@ -79,7 +82,9 @@ object NativeKotlinVerifiedHistoryCsvExport {
                 actual?.actualRir?.toString().orEmpty(),
                 actual?.machineInstanceId.orEmpty(),amplifier
             )
-            csv.append(fields.joinToString(","){cell(it)}).append('\n')
+            val values=fields+if(dated)listOf(completedAtEpochMillis?.let{
+                java.time.Instant.ofEpochMilli(it).toString()}.orEmpty()) else emptyList()
+            csv.append(values.joinToString(","){cell(it)}).append('\n')
             rows++
             return csv.length<=MAX_CHARS
         }
@@ -101,7 +106,8 @@ object NativeKotlinVerifiedHistoryCsvExport {
                     for(set in fact.sets)if(!add(
                         manifest.completionOrder,"GENERATED",manifest.workoutId,
                         fact.source.gymId,set.exerciseId,"",set.setKey,"MAIN",set.type,set.outcome,
-                        set.issuedLoad,set.issuedReps,set.issuedRir,set.actual))
+                        set.issuedLoad,set.issuedReps,set.issuedRir,set.actual,
+                        completedAtEpochMillis=manifest.completedAtEpochMillis))
                         return NativeKotlinHistoryCsvResult.TooLarge
                 }
                 is NativeKotlinMixedHistoryCompletion.Custom -> {
@@ -119,7 +125,7 @@ object NativeKotlinVerifiedHistoryCsvExport {
                         visit.part.name,visit.setType,visit.outcome,
                         visit.prescribedLoad,visit.prescribedReps,
                         visit.prescribedRir,visit.actual,
-                        visit.amplifierKind?.name.orEmpty()))
+                        visit.amplifierKind?.name.orEmpty(),manifest.completedAtEpochMillis))
                         return NativeKotlinHistoryCsvResult.TooLarge
                 }
             }

@@ -224,13 +224,15 @@ object NativeSegmentedHistoryWritePlanDomain {
                 return denied(NativeSegmentedWriteRefusal.UNVERIFIED_RECEIPT)
             when (intent) {
                 is NativeHistoryWriteIntent.Finish ->
-                    if (resolved.finishEventId != intent.operation.eventId ||
+                    if (resolved.completedAtEpochMillis!=intent.completedAtEpochMillis ||
+                        resolved.finishEventId != intent.operation.eventId ||
                         resolved.originalJournalRevision !=
                             intent.operation.expectedJournalRevision + 1 ||
                         resolved.storedReceiptId.startsWith("custom-"))
                         return denied(NativeSegmentedWriteRefusal.UNVERIFIED_RECEIPT)
                 is NativeHistoryWriteIntent.CustomFinish ->
-                    if (resolved.finishEventId != intent.operation.eventId ||
+                    if (resolved.completedAtEpochMillis!=intent.completedAtEpochMillis ||
+                        resolved.finishEventId != intent.operation.eventId ||
                         resolved.originalJournalRevision !=
                             intent.operation.expectedRevision + 1 ||
                         !resolved.storedReceiptId.startsWith("custom-v2-"))

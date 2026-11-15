@@ -68,6 +68,20 @@ class NativeKotlinVerifiedHistoryCsvExportTest {
         vararg entries:NativeKotlinMixedHistoryCompletion
     )=NativeKotlinMixedHistoryTimeline("athlete-1",5,entries.toList())
 
+    @Test fun recordedCompletionTimesExportAsUtcWhileOlderRowsStayBlank() {
+        val original=generated()
+        val instant=java.time.Instant.parse("2026-11-01T00:30:00Z")
+        val dated=original.copy(manifest=original.manifest.copy(completedAtEpochMillis=instant.toEpochMilli()))
+        val export=NativeKotlinVerifiedHistoryCsvExport.prepare(timeline(dated,custom())) as NativeKotlinHistoryCsvResult.Ready
+        val rows=export.csv.trimEnd().lines()
+        assertTrue(rows.first().endsWith("\"completed_at_utc\""))
+        assertTrue(rows[1].startsWith("\"pursuit-iron-history-v2\""))
+        assertTrue(rows[1].endsWith("\"2026-11-01T00:30:00Z\""))
+        assertTrue(rows[2].endsWith("\"2026-11-01T00:30:00Z\""))
+        assertTrue(rows.drop(3).all{it.endsWith("\"\"")})
+        assertNull(original.manifest.completedAtEpochMillis)
+    }
+
     @Test fun exportsBothJournalKindsWithUnchangedTargetsAndCorrectedActuals() {
         val result=NativeKotlinVerifiedHistoryCsvExport.prepare(
             timeline(generated(),custom()))

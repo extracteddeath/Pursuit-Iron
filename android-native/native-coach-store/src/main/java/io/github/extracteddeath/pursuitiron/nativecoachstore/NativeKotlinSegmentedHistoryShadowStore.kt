@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinHistoryManifestEntry
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinHistoryCompletionTime
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinHistoryCapacityPolicy
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -160,20 +161,23 @@ class NativeKotlinSegmentedHistoryShadowStore(
         return DataInputStream(ByteArrayInputStream(payload))
     }
 
-    private fun DataOutputStream.writeEntry(e: KotlinHistoryManifestEntry) {
+    private fun DataOutputStream.writeEntry(e: KotlinHistoryManifestEntry,dated:Boolean=false) {
         writeLong(e.completionOrder)
         writeUTF(e.workoutId)
         writeUTF(e.storedReceiptId)
         writeUTF(e.finishEventId)
         writeLong(e.originalJournalRevision)
         writeLong(e.savedCorrectionRevision)
+        if(dated) {writeBoolean(e.completedAtEpochMillis!=null);e.completedAtEpochMillis?.let{writeLong(it)}}
     }
 
-    private fun DataInputStream.readEntry() = KotlinHistoryManifestEntry(
-        readLong(), readUTF(), readUTF(), readUTF(), readLong(), readLong())
+    private fun DataInputStream.readEntry(dated:Boolean) = KotlinHistoryManifestEntry(
+        readLong(), readUTF(), readUTF(), readUTF(), readLong(), readLong(),
+        if(dated && readBoolean())readLong() else null)
 
     private fun validEntry(e: KotlinHistoryManifestEntry) =
-        e.completionOrder in 1..MAX_REVISION &&
+        KotlinHistoryCompletionTime.valid(e.completedAtEpochMillis) &&
+            e.completionOrder in 1..MAX_REVISION &&
             e.originalJournalRevision in 1..MAX_REVISION &&
             e.savedCorrectionRevision in 0..MAX_REVISION &&
             id.matches(e.workoutId) && id.matches(e.storedReceiptId) &&
@@ -182,11 +186,13 @@ class NativeKotlinSegmentedHistoryShadowStore(
     private fun sourceFingerprint(ledger: NativeHistoryLedger): String {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { data ->
+            val dated=ledger.completions.any{it.completedAtEpochMillis!=null}
+            if(dated)data.writeInt(0x48445433)
             data.writeUTF(ledger.ownerKey)
             data.writeUTF(ledger.athleteId)
             data.writeLong(ledger.revision)
             data.writeInt(ledger.completions.size)
-            ledger.completions.forEach { data.writeEntry(it) }
+            ledger.completions.forEach { data.writeEntry(it,dated) }
         }
         return hash(output.toByteArray())
     }
@@ -197,13 +203,14 @@ class NativeKotlinSegmentedHistoryShadowStore(
     ): ByteArray {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { data ->
+            val dated=entries.any{it.completedAtEpochMillis!=null}
             data.writeInt(SEGMENT_MAGIC)
-            data.writeInt(VERSION)
+            data.writeInt(if(dated)2 else VERSION)
             data.writeUTF(owner)
             data.writeUTF(athlete)
             data.writeLong(first)
             data.writeInt(entries.size)
-            entries.forEach { data.writeEntry(it) }
+            entries.forEach { data.writeEntry(it,dated) }
         }
         return wrap(output.toByteArray(), MAX_SEGMENT_BYTES)
     }
@@ -215,11 +222,12 @@ class NativeKotlinSegmentedHistoryShadowStore(
         val bytes = readBounded(path, MAX_SEGMENT_BYTES)
         if (hash(bytes) != ref.sha) throw IOException("segment identity mismatch")
         val data = unwrap(bytes, MAX_SEGMENT_BYTES)
-        if (data.readInt() != SEGMENT_MAGIC || data.readInt() != VERSION ||
-            data.readUTF() != owner || data.readUTF() != athlete ||
+        if(data.readInt()!=SEGMENT_MAGIC)throw IOException("segment magic mismatch")
+        val format=data.readInt()
+        if (format !in 1..2 || data.readUTF() != owner || data.readUTF() != athlete ||
             data.readLong() != ref.firstOrdinal ||
             data.readInt() != ref.count) throw IOException("segment scope mismatch")
-        val entries = (0 until ref.count).map { data.readEntry() }
+        val entries = (0 until ref.count).map { data.readEntry(format>=2) }
         if (data.available() != 0 ||
             entries.withIndex().any { (index, e) ->
                 !validEntry(e) || e.completionOrder != ref.firstOrdinal + index

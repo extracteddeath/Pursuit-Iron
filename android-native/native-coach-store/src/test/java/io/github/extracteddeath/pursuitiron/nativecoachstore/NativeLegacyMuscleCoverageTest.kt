@@ -57,6 +57,8 @@ class NativeLegacyMuscleCoverageTest {
         val root=restoreFixture(resource,sha)
         val before=content(root)
         assertEquals(21,before.size)
+        assertTrue((NativeKotlinHistoryManifestFileStore(root).open(owner.ownerKey,owner.athleteId)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.all{it.completedAtEpochMillis==null})
         val audit=NativeKotlinStagedCoreStoreAudit.inspect(root,owner)
         assertTrue(audit.toString(),audit is NativeKotlinStagedCoreAuditResult.Verified)
         val verified=audit as NativeKotlinStagedCoreAuditResult.Verified

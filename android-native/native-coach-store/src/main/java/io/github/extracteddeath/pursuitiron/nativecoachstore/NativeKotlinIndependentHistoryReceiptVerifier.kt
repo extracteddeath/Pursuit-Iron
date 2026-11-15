@@ -55,7 +55,8 @@ class NativeKotlinIndependentHistoryReceiptVerifier(
         }.getOrDefault(false)
 
     private fun validEntry(e: KotlinHistoryManifestEntry) =
-        e.completionOrder in 1..MAX_REVISION &&
+        KotlinHistoryCompletionTime.valid(e.completedAtEpochMillis) &&
+            e.completionOrder in 1..MAX_REVISION &&
             e.originalJournalRevision in 1..MAX_REVISION &&
             e.savedCorrectionRevision in 0..MAX_REVISION &&
             id.matches(e.workoutId) && id.matches(e.storedReceiptId) &&
@@ -123,7 +124,8 @@ class NativeKotlinIndependentHistoryReceiptVerifier(
             return deny(NativeIndependentReceiptRefusal.CORRECTION_MISMATCH)
         if (isFinish) {
             val finish = (intent as NativeHistoryWriteIntent.Finish).operation
-            if (finish.eventId != entry.finishEventId ||
+            if (intent.completedAtEpochMillis!=entry.completedAtEpochMillis ||
+                finish.eventId != entry.finishEventId ||
                 finish.expectedJournalRevision + 1 != original.revision ||
                 entry.savedCorrectionRevision != 0L)
                 return deny(NativeIndependentReceiptRefusal.FINISH_MISMATCH)
@@ -176,7 +178,8 @@ class NativeKotlinIndependentHistoryReceiptVerifier(
             return deny(NativeIndependentReceiptRefusal.CORRECTION_MISMATCH)
         if (isFinish) {
             val finish = (intent as NativeHistoryWriteIntent.CustomFinish).operation
-            if (finish.eventId != entry.finishEventId ||
+            if (intent.completedAtEpochMillis!=entry.completedAtEpochMillis ||
+                finish.eventId != entry.finishEventId ||
                 finish.expectedRevision + 1 != journal.revision ||
                 entry.savedCorrectionRevision != 0L)
                 return deny(NativeIndependentReceiptRefusal.FINISH_MISMATCH)

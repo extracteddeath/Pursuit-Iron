@@ -666,6 +666,22 @@ class NativeKotlinGeneratedProgramJourneyTest {
         completeGeneratedWeek(ComposerSplit.UPPER_LOWER)
     }
 
+    @Test fun generatedWholeWeekKeepsRecordedCompletionDatesThroughCorrectionsAndColdHistory() {
+        val first=java.time.Instant.parse("2026-10-31T23:50:00Z").toEpochMilli()
+        var reads=0
+        completeGeneratedWeek(ComposerSplit.UPPER_LOWER,
+            completionClock=NativeHistoryCompletionClock{first+86400000L*reads++})
+        assertEquals(4,reads)
+        val ledger=(Disk().history.open(owner,athlete) as NativeHistoryLedgerResult.Durable).ledger
+        val expected=(0..3).map{first+86400000L*it}
+        assertEquals(expected,ledger.completions.map{it.completedAtEpochMillis})
+        val timeline=(Disk().timeline.read(owner,athlete) as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(expected,timeline.completions.map{it.manifest.completedAtEpochMillis})
+        val csv=NativeKotlinVerifiedHistoryCsvExport.prepare(timeline) as NativeKotlinHistoryCsvResult.Ready
+        assertTrue(csv.csv.lines().first().contains("completed_at_utc"))
+        assertTrue(csv.csv.contains("2026-10-31T23:50:00Z"))
+    }
+
     @Test fun hipMachineWeekCompletesAndColdRestoresExactTargetsHistoryAndSeed() {
         completeGeneratedWeek(ComposerSplit.UPPER_LOWER,includeHipMachines=true)
     }
@@ -719,7 +735,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
 
     private fun completeGeneratedWeek(split:ComposerSplit,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
-        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false) {
+        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
+        completionClock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated) {
         val (cycle,inputs)=saveGenerated(split=split,phase=phase,
             includeHipMachines=includeHipMachines,includeTrapBar=includeTrapBar)
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
@@ -813,7 +830,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
             fun finishAgain():NativeCustomFinishResult {
                 val d=Disk()
                 return NativeKotlinCustomHistoryTransaction(d.history,d.journals,
-                    d.fence,identity).complete(owner,athlete,id,finish)
+                    d.fence,identity,completionClock).complete(owner,athlete,id,finish)
             }
             assertTrue(finishAgain() is NativeCustomFinishResult.Committed)
             assertTrue(finishAgain() is NativeCustomFinishResult.Committed)

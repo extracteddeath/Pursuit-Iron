@@ -143,6 +143,22 @@ and visual/motion acceptance remain open. No APK/AAB from this checkpoint.
 
 ## Persistent information architecture
 
+History now groups completed workouts by their recorded Finish month in the
+device time zone and labels undated training separately. It never derives an
+old date from session order, a program week, a correction, a file timestamp or
+the current day. Both active native Finish owners explicitly provide the
+device clock; the observation is durably bound before the journal changes.
+Retries/recovery reuse it, and set corrections retain it. A missing/invalid
+clock can save an undated workout. Calendar grids and device acceptance remain
+separate unfinished work.
+
+Exercise search retains every matching session and exposes more exercise
+drilldowns without the previous eight-result cutoff. Dates are displayed
+through the same Material section/card hierarchy for both workout routes.
+CSV keeps its original v1 shape for wholly undated history; exports containing
+recorded times use v2 with an appended UTC column and blank older dates. No
+private session notes, reconstructed dates or backup/restore claims are added.
+
 The verified bar flow uses one physical-stock parser in onboarding and Gym.
 Athletes explicitly choose straight, EZ or trap/hex bar and enter its actual
 mass and symmetric plate pairs. Switching bar type clears provisional inputs

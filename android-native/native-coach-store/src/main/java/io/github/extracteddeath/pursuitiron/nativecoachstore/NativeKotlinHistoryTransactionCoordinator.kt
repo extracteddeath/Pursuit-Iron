@@ -41,7 +41,8 @@ class NativeKotlinHistoryTransactionCoordinator(
     private val journalStore: KotlinNativeJournalFileStore,
     private val correctionStore: KotlinNativeSavedCorrectionFileStore,
     private val workoutAuthority: NativeKotlinWorkoutAuthority,
-    private val ownerFence: NativeKotlinApprovalRevisionFence
+    private val ownerFence: NativeKotlinApprovalRevisionFence,
+    private val completionClock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated
 ) {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -130,7 +131,7 @@ class NativeKotlinHistoryTransactionCoordinator(
             // original journal is present, as required for this operation.
             return@fenced denied(NativeHistoryTransactionRefusal.HISTORY_RECEIPT_MISMATCH)
         }
-        val intent = NativeHistoryWriteIntent.Finish(workoutId, operation)
+        val intent = NativeHistoryWriteIntent.Finish(workoutId, operation,completionClock.observe())
         val prepared = ledgerStore.prepare(
             owner, athlete, base.ledger.revision, intent)
         if (prepared !is NativeHistoryLedgerResult.Durable)
@@ -229,7 +230,7 @@ class NativeKotlinHistoryTransactionCoordinator(
                 KotlinHistoryManifestEntry(
                     prepared.completions.size.toLong() + 1,
                     intent.workoutId, result.storedIdentity.storageReceiptId,
-                    intent.operation.eventId, result.revision, 0
+                    intent.operation.eventId, result.revision, 0,intent.completedAtEpochMillis
                 )
             }
             is NativeHistoryWriteIntent.CustomCorrect -> {

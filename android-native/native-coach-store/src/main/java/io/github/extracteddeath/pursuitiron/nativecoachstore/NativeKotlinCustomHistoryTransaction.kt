@@ -67,7 +67,8 @@ class NativeKotlinCustomHistoryTransaction(
     private val history:NativeKotlinHistoryManifestFileStore,
     private val custom:NativeKotlinCustomWorkoutJournalFileStore,
     private val fence:NativeKotlinApprovalRevisionFence,
-    private val identity:NativeKotlinCurrentIdentity
+    private val identity:NativeKotlinCurrentIdentity,
+    private val completionClock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private fun authorize(owner:String,athlete:String):Boolean =
@@ -126,7 +127,7 @@ class NativeKotlinCustomHistoryTransaction(
             ledger.completions.size.toLong()+1,
             intent.workoutId,
             NativeCustomFinishReceipt.compute(owner,athlete,journal),
-            intent.operation.eventId,journal.revision,0)
+            intent.operation.eventId,journal.revision,0,intent.completedAtEpochMillis)
         val saved=history.finalize(owner,athlete,intent,entry)
         if(saved !is NativeHistoryLedgerResult.Durable)
             return NativeCustomFinishResult.Rejected(
@@ -185,7 +186,7 @@ class NativeKotlinCustomHistoryTransaction(
                 !is CustomWorkoutJournalDecision.Proposed)
             return@fenced NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.FINISH_NOT_READY)
-        val intent=NativeHistoryWriteIntent.CustomFinish(workoutId,operation)
+        val intent=NativeHistoryWriteIntent.CustomFinish(workoutId,operation,completionClock.observe())
         val prepared=history.prepare(owner,athlete,recovered.revision,intent)
         if(prepared !is NativeHistoryLedgerResult.Durable)
             return@fenced NativeCustomFinishResult.Rejected(

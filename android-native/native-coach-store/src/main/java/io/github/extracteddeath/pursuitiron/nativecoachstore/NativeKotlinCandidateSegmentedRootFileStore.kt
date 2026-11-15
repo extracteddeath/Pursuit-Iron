@@ -124,14 +124,16 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         }.getOrElse { deny(NativeCandidateHistoryRootRefusal.STORAGE_UNAVAILABLE) }
     }
 
-    private fun DataOutputStream.entry(value: KotlinHistoryManifestEntry) {
+    private fun DataOutputStream.entry(value: KotlinHistoryManifestEntry,dated:Boolean=false) {
         writeLong(value.completionOrder)
         writeUTF(value.workoutId); writeUTF(value.storedReceiptId)
         writeUTF(value.finishEventId); writeLong(value.originalJournalRevision)
         writeLong(value.savedCorrectionRevision)
+        if(dated) {writeBoolean(value.completedAtEpochMillis!=null);value.completedAtEpochMillis?.let{writeLong(it)}}
     }
-    private fun DataInputStream.entry() = KotlinHistoryManifestEntry(
-        readLong(), readUTF(), readUTF(), readUTF(), readLong(), readLong())
+    private fun DataInputStream.entry(dated:Boolean) = KotlinHistoryManifestEntry(
+        readLong(), readUTF(), readUTF(), readUTF(), readLong(), readLong(),
+        if(dated && readBoolean())readLong() else null)
 
     private fun wrap(body: ByteArray, max: Int): ByteArray {
         if (body.size > max - 36) throw IOException("oversized object")
@@ -180,10 +182,11 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
             }) throw IOException("invalid shard")
         val out = ByteArrayOutputStream()
         DataOutputStream(out).use { d ->
-            d.writeInt(SHARD_MAGIC); d.writeInt(VERSION)
+            val dated=entries.any{it.completedAtEpochMillis!=null}
+            d.writeInt(SHARD_MAGIC); d.writeInt(if(dated)2 else VERSION)
             d.writeUTF(owner); d.writeUTF(athlete)
             d.writeLong(first); d.writeInt(entries.size)
-            entries.forEach { d.entry(it) }
+            entries.forEach { d.entry(it,dated) }
         }
         return wrap(out.toByteArray(), MAX_SHARD_BYTES)
     }
@@ -192,11 +195,12 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         val bytes = readFile(shardFile(owner, athlete, ref.sha), MAX_SHARD_BYTES)
         if (hash(bytes) != ref.sha) throw IOException("shard identity")
         val d = unwrap(bytes, MAX_SHARD_BYTES)
-        if (d.readInt() != SHARD_MAGIC || d.readInt() != VERSION ||
-            d.readUTF() != owner || d.readUTF() != athlete ||
+        if(d.readInt()!=SHARD_MAGIC)throw IOException("shard magic mismatch")
+        val format=d.readInt()
+        if (format !in 1..2 || d.readUTF() != owner || d.readUTF() != athlete ||
             d.readLong() != ref.first || d.readInt() != ref.size)
             throw IOException("wrong shard")
-        val entries = (0 until ref.size).map { d.entry() }
+        val entries = (0 until ref.size).map { d.entry(format>=2) }
         if (d.available() != 0 || entries.withIndex().any { (i,e) ->
                 !validEntry(e) || e.completionOrder != ref.first + i
             }) throw IOException("invalid shard chronology")
@@ -431,13 +435,16 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         val out = ByteArrayOutputStream()
         DataOutputStream(out).use { d ->
             d.writeInt(2) // versioned fingerprint schema
+            val dated=patch.completions.any{it.completedAtEpochMillis!=null} ||
+                patch.consumedIntent.recordedCompletionTime!=null
+            if(dated)d.writeInt(0x48445433)
             d.writeUTF(patch.priorRootDigest)
             d.writeLong(patch.expectedHeadRevision)
             d.writeLong(patch.nextHeadRevision)
             d.writeLong(patch.nextCompletionCount)
             d.writeLong(patch.replaceSegmentFirstOrdinal)
             d.writeInt(patch.completions.size)
-            patch.completions.forEach { d.entry(it) }
+            patch.completions.forEach { d.entry(it,dated) }
             val intent = patch.consumedIntent
             d.writeUTF(intent.workoutId)
             when (intent) {
@@ -445,11 +452,13 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
                     d.writeByte(1)
                     d.writeUTF(intent.operation.eventId)
                     d.writeLong(intent.operation.expectedJournalRevision)
+                    if(dated) {d.writeBoolean(intent.completedAtEpochMillis!=null);intent.completedAtEpochMillis?.let{d.writeLong(it)}}
                 }
                 is NativeHistoryWriteIntent.CustomFinish -> {
                     d.writeByte(2)
                     d.writeUTF(intent.operation.eventId)
                     d.writeLong(intent.operation.expectedRevision)
+                    if(dated) {d.writeBoolean(intent.completedAtEpochMillis!=null);intent.completedAtEpochMillis?.let{d.writeLong(it)}}
                 }
                 is NativeHistoryWriteIntent.Correct -> {
                     d.writeByte(3)

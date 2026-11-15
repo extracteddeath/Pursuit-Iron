@@ -829,9 +829,12 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.NOT_AUTHORIZED)
                 val ledger=history.open(ownerKey,current.athleteId)
-                if(ledger !is NativeHistoryLedgerResult.Durable ||
-                    ledger.ledger.pending!=NativeHistoryWriteIntent.CustomFinish(
-                        workoutId,operation))
+                val intended=(ledger as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
+                    as? NativeHistoryWriteIntent.CustomFinish
+                // The ledger owns completion metadata. Journal authorization
+                // still binds the exact owner, workout, event and revision.
+                if(intended==null || intended.workoutId!=workoutId ||
+                    intended.operation!=operation)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.HISTORY_NOT_READY)
                 val previous=read(ownerKey,workoutId,current)

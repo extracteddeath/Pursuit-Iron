@@ -112,13 +112,15 @@ class NativeKotlinSegmentedRedoFileStore(
     private fun hash(body: ByteArray) =
         MessageDigest.getInstance("SHA-256").digest(body)
 
-    private fun DataOutputStream.entry(e: KotlinHistoryManifestEntry) {
+    private fun DataOutputStream.entry(e: KotlinHistoryManifestEntry,dated:Boolean=false) {
         writeLong(e.completionOrder); writeUTF(e.workoutId)
         writeUTF(e.storedReceiptId); writeUTF(e.finishEventId)
         writeLong(e.originalJournalRevision); writeLong(e.savedCorrectionRevision)
+        if(dated) {writeBoolean(e.completedAtEpochMillis!=null);e.completedAtEpochMillis?.let{writeLong(it)}}
     }
-    private fun DataInputStream.entry() = KotlinHistoryManifestEntry(
-        readLong(), readUTF(), readUTF(), readUTF(), readLong(), readLong())
+    private fun DataInputStream.entry(dated:Boolean) = KotlinHistoryManifestEntry(
+        readLong(), readUTF(), readUTF(), readUTF(), readLong(), readLong(),
+        if(dated && readBoolean())readLong() else null)
 
     private fun DataOutputStream.performed(p: KotlinPerformedSet?) {
         writeBoolean(p != null)
@@ -144,12 +146,13 @@ class NativeKotlinSegmentedRedoFileStore(
         return KotlinPerformedSet(load, unit, reps, rir)
     }
 
-    private fun DataOutputStream.intent(value: NativeHistoryWriteIntent) {
+    private fun DataOutputStream.intent(value: NativeHistoryWriteIntent,dated:Boolean=false) {
         when (value) {
             is NativeHistoryWriteIntent.Finish -> {
                 writeByte(1); writeUTF(value.workoutId)
                 writeUTF(value.operation.eventId)
                 writeLong(value.operation.expectedJournalRevision)
+                if(dated) {writeBoolean(value.completedAtEpochMillis!=null);value.completedAtEpochMillis?.let{writeLong(it)}}
             }
             is NativeHistoryWriteIntent.Correct -> {
                 writeByte(2); writeUTF(value.workoutId)
@@ -162,6 +165,7 @@ class NativeKotlinSegmentedRedoFileStore(
                 writeByte(3); writeUTF(value.workoutId)
                 writeUTF(value.operation.eventId)
                 writeLong(value.operation.expectedRevision)
+                if(dated) {writeBoolean(value.completedAtEpochMillis!=null);value.completedAtEpochMillis?.let{writeLong(it)}}
             }
             is NativeHistoryWriteIntent.CustomCorrect -> {
                 writeByte(4); writeUTF(value.workoutId)
@@ -173,18 +177,20 @@ class NativeKotlinSegmentedRedoFileStore(
             }
         }
     }
-    private fun DataInputStream.intent(): NativeHistoryWriteIntent {
+    private fun DataInputStream.intent(dated:Boolean): NativeHistoryWriteIntent {
         val kind = readUnsignedByte()
         val workout = readUTF()
         return when (kind) {
             1 -> NativeHistoryWriteIntent.Finish(
-                workout, KotlinJournalOperation.Finish(readUTF(), readLong()))
+                workout, KotlinJournalOperation.Finish(readUTF(), readLong()),
+                if(dated && readBoolean())readLong() else null)
             2 -> NativeHistoryWriteIntent.Correct(
                 workout, KotlinSavedSetCorrection(
                     readUTF(), readLong(), readUTF(), readUTF(),
                     KotlinJournalSetOutcome.valueOf(readUTF()), performed()))
             3 -> NativeHistoryWriteIntent.CustomFinish(
-                workout, CustomWorkoutJournalOperation.Finish(readUTF(), readLong()))
+                workout, CustomWorkoutJournalOperation.Finish(readUTF(), readLong()),
+                if(dated && readBoolean())readLong() else null)
             4 -> NativeHistoryWriteIntent.CustomCorrect(
                 workout, CustomSavedVisitCorrection(
                     readUTF(), readLong(),
@@ -199,14 +205,18 @@ class NativeKotlinSegmentedRedoFileStore(
     private fun encode(record: NativeSegmentedRedoRecord): ByteArray {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { d ->
-            d.writeInt(MAGIC); d.writeInt(VERSION)
+            val dated=record.intent.recordedCompletionTime!=null ||
+                record.target?.completedAtEpochMillis!=null ||
+                record.stagedPatch?.completions?.any{it.completedAtEpochMillis!=null}==true ||
+                record.stagedPatch?.consumedIntent?.recordedCompletionTime!=null
+            d.writeInt(MAGIC); d.writeInt(if(dated)2 else VERSION)
             d.writeUTF(record.base.ownerKey); d.writeUTF(record.base.athleteId)
             d.writeLong(record.base.revision)
             d.writeLong(record.base.completionCount)
             d.writeUTF(record.base.rootDigest)
-            d.intent(record.intent)
+            d.intent(record.intent,dated)
             d.writeBoolean(record.target != null)
-            if (record.target != null) d.entry(record.target)
+            if (record.target != null) d.entry(record.target,dated)
             d.writeBoolean(record.stagedPatch != null)
             record.stagedPatch?.let { patch ->
                 d.writeUTF(patch.priorRootDigest)
@@ -215,8 +225,8 @@ class NativeKotlinSegmentedRedoFileStore(
                 d.writeLong(patch.nextCompletionCount)
                 d.writeLong(patch.replaceSegmentFirstOrdinal)
                 d.writeInt(patch.completions.size)
-                patch.completions.forEach { item -> d.entry(item) }
-                d.intent(patch.consumedIntent)
+                patch.completions.forEach { item -> d.entry(item,dated) }
+                d.intent(patch.consumedIntent,dated)
             }
         }
         val bytes = output.toByteArray()
@@ -241,12 +251,14 @@ class NativeKotlinSegmentedRedoFileStore(
         if (!MessageDigest.isEqual(hash(body), checksum))
             throw IOException("redo checksum mismatch")
         val d = DataInputStream(ByteArrayInputStream(body))
-        if (d.readInt() != MAGIC || d.readInt() != VERSION)
+        if(d.readInt()!=MAGIC)throw IOException("redo magic mismatch")
+        val format=d.readInt()
+        if (format !in 1..2)
             throw IOException("unsupported redo")
         val base = NativeSegmentedWriteHead(d.readUTF(), d.readUTF(),
             d.readLong(), d.readLong(), d.readUTF())
-        val intent = d.intent()
-        val target = if (d.readBoolean()) d.entry() else null
+        val intent = d.intent(format>=2)
+        val target = if (d.readBoolean()) d.entry(format>=2) else null
         val staged = if (d.readBoolean()) {
             val priorDigest = d.readUTF()
             val expected = d.readLong()
@@ -256,8 +268,8 @@ class NativeKotlinSegmentedRedoFileStore(
             val count = d.readInt()
             if (count !in 1..NativeSegmentedHistoryWritePlanDomain.SEGMENT_SIZE)
                 throw IOException("invalid patch count")
-            val entries = (0 until count).map { d.entry() }
-            val consumed = d.intent()
+            val entries = (0 until count).map { d.entry(format>=2) }
+            val consumed = d.intent(format>=2)
             NativeSegmentedWritePatch(priorDigest, expected, next, nextCount,
                 first, Collections.unmodifiableList(entries), consumed)
         } else null

@@ -37,7 +37,8 @@ sealed interface NativeHistoryWriteIntent {
 
     data class Finish(
         override val workoutId: String,
-        val operation: KotlinJournalOperation.Finish
+        val operation: KotlinJournalOperation.Finish,
+        val completedAtEpochMillis:Long?=null
     ) : NativeHistoryWriteIntent
 
     data class Correct(
@@ -48,7 +49,8 @@ sealed interface NativeHistoryWriteIntent {
     /** Separate lossless custom journal; not a ComposerRequest workout. */
     data class CustomFinish(
         override val workoutId: String,
-        val operation: CustomWorkoutJournalOperation.Finish
+        val operation: CustomWorkoutJournalOperation.Finish,
+        val completedAtEpochMillis:Long?=null
     ) : NativeHistoryWriteIntent
 
     /** Durable post-Finish correction of one factual custom visit. */
@@ -87,7 +89,7 @@ sealed interface NativeHistoryLedgerResult {
 private object NativeHistoryLedgerBinary {
     private const val MAGIC = 0x50494831 // PIH1
     private const val LEGACY_VERSION = 1
-    private const val VERSION = 2
+    private const val VERSION = 3
     const val MAX_SESSIONS = KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
     private const val MAX_BYTES = KotlinHistoryCapacityPolicy.MAX_LEDGER_BYTES
     private val validId = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -102,12 +104,19 @@ private object NativeHistoryLedgerBinary {
 
     fun validId(text: String): Boolean = validId.matches(text)
 
+    private fun DataOutputStream.time(value:Long?) {
+        writeBoolean(value!=null)
+        if(value!=null)writeLong(value)
+    }
+    private fun DataInputStream.time():Long?=if(readBoolean())readLong() else null
+
     fun check(state: NativeHistoryLedger) {
         require(validId(state.ownerKey) && validId(state.athleteId))
         require(state.revision in 1..MAX_REV)
         require(state.completions.size <= MAX_SESSIONS)
         require(state.completions.all { entry ->
-            entry.completionOrder in 1..MAX_REV &&
+            KotlinHistoryCompletionTime.valid(entry.completedAtEpochMillis) &&
+                entry.completionOrder in 1..MAX_REV &&
                 entry.originalJournalRevision >= 1 &&
                 entry.savedCorrectionRevision >= 0 &&
                 listOf(entry.workoutId, entry.storedReceiptId,
@@ -122,12 +131,14 @@ private object NativeHistoryLedgerBinary {
         when (val intent = state.pending) {
             null -> Unit
             is NativeHistoryWriteIntent.Finish -> require(
+                KotlinHistoryCompletionTime.valid(intent.completedAtEpochMillis) &&
                 validId(intent.workoutId) &&
                     validId(intent.operation.eventId) &&
                     intent.operation.expectedJournalRevision >= 0 &&
                     state.completions.none { it.workoutId == intent.workoutId }
             )
             is NativeHistoryWriteIntent.CustomFinish -> require(
+                KotlinHistoryCompletionTime.valid(intent.completedAtEpochMillis) &&
                 validId(intent.workoutId) &&
                     validId(intent.operation.eventId) &&
                     intent.operation.expectedRevision >= 0 &&
@@ -186,9 +197,13 @@ private object NativeHistoryLedgerBinary {
 
     fun encode(state: NativeHistoryLedger): ByteArray {
         check(state)
+        val dated=state.completions.any{it.completedAtEpochMillis!=null} ||
+            (state.pending as? NativeHistoryWriteIntent.Finish)?.completedAtEpochMillis!=null ||
+            (state.pending as? NativeHistoryWriteIntent.CustomFinish)?.completedAtEpochMillis!=null
+        val format=if(dated)VERSION else 2
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
-            out.writeInt(MAGIC); out.writeInt(VERSION)
+            out.writeInt(MAGIC); out.writeInt(format)
             out.writeUTF(state.ownerKey); out.writeUTF(state.athleteId)
             out.writeLong(state.revision)
             out.writeInt(state.completions.size)
@@ -199,6 +214,7 @@ private object NativeHistoryLedgerBinary {
                 out.writeUTF(entry.finishEventId)
                 out.writeLong(entry.originalJournalRevision)
                 out.writeLong(entry.savedCorrectionRevision)
+                if(dated)out.time(entry.completedAtEpochMillis)
             }
             when (val intent = state.pending) {
                 null -> out.writeByte(0)
@@ -207,12 +223,14 @@ private object NativeHistoryLedgerBinary {
                     out.writeUTF(intent.workoutId)
                     out.writeUTF(intent.operation.eventId)
                     out.writeLong(intent.operation.expectedJournalRevision)
+                    if(dated)out.time(intent.completedAtEpochMillis)
                 }
                 is NativeHistoryWriteIntent.CustomFinish -> {
                     out.writeByte(3)
                     out.writeUTF(intent.workoutId)
                     out.writeUTF(intent.operation.eventId)
                     out.writeLong(intent.operation.expectedRevision)
+                    if(dated)out.time(intent.completedAtEpochMillis)
                 }
                 is NativeHistoryWriteIntent.Correct -> {
                     out.writeByte(2)
@@ -265,7 +283,7 @@ private object NativeHistoryLedgerBinary {
             return DataInputStream(ByteArrayInputStream(bytes)).use { data ->
                 if (data.readInt() != MAGIC) throw IOException("unsupported ledger magic")
                 val format = data.readInt()
-                if (format != LEGACY_VERSION && format != VERSION)
+                if (format !in LEGACY_VERSION..VERSION)
                     throw IOException("unsupported ledger version")
                 val owner = data.readUTF()
                 val athlete = data.readUTF()
@@ -278,14 +296,16 @@ private object NativeHistoryLedgerBinary {
                 val entries = (0 until count).map {
                     KotlinHistoryManifestEntry(
                         data.readLong(), data.readUTF(), data.readUTF(),
-                        data.readUTF(), data.readLong(), data.readLong()
+                        data.readUTF(), data.readLong(), data.readLong(),
+                        if(format>=3)data.time() else null
                     )
                 }
                 val pending = when (data.readUnsignedByte()) {
                     0 -> null
                     1 -> NativeHistoryWriteIntent.Finish(
                         data.readUTF(),
-                        KotlinJournalOperation.Finish(data.readUTF(), data.readLong())
+                        KotlinJournalOperation.Finish(data.readUTF(), data.readLong()),
+                        if(format>=3)data.time() else null
                     )
                     2 -> {
                         val workout = data.readUTF()
@@ -304,7 +324,8 @@ private object NativeHistoryLedgerBinary {
                     3 -> NativeHistoryWriteIntent.CustomFinish(
                         data.readUTF(),
                         CustomWorkoutJournalOperation.Finish(
-                            data.readUTF(),data.readLong())
+                            data.readUTF(),data.readLong()),
+                        if(format>=3)data.time() else null
                     )
                     4 -> {
                         val workout = data.readUTF()
@@ -519,7 +540,8 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                 val ordinal = old.completions.size.toLong() + 1
                 if (resolved.completionOrder != ordinal ||
                     resolved.workoutId != intent.workoutId ||
-                    resolved.finishEventId != intent.operation.eventId)
+                    resolved.finishEventId != intent.operation.eventId ||
+                    resolved.completedAtEpochMillis!=intent.completedAtEpochMillis)
                     return@transition NativeHistoryLedgerResult.Rejected(
                         NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
                 old.completions + resolved
@@ -529,6 +551,7 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                 if(resolved.completionOrder!=ordinal ||
                     resolved.workoutId!=intent.workoutId ||
                     resolved.finishEventId!=intent.operation.eventId ||
+                    resolved.completedAtEpochMillis!=intent.completedAtEpochMillis ||
                     !resolved.storedReceiptId.startsWith("custom-") ||
                     resolved.savedCorrectionRevision!=0L ||
                     resolved.originalJournalRevision!=

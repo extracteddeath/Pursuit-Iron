@@ -28,8 +28,8 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
         ): Boolean = allowed && ownerKey == "owner-1" &&
             source.athleteId == "athlete-1"
     }
-    private fun coordinator() = NativeKotlinHistoryTransactionCoordinator(
-        ledger(), journal(), corrections(), auth, fence())
+    private fun coordinator(clock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated) =
+        NativeKotlinHistoryTransactionCoordinator(ledger(),journal(),corrections(),auth,fence(),clock)
     private fun accepted(result: NativeHistoryTransactionResult) =
         result as NativeHistoryTransactionResult.Durable
     private fun manifest() = ledger().open("owner-1", "athlete-1")
@@ -84,6 +84,62 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
     private fun finished(id: Int) {
         assertEquals(id, accepted(coordinator().complete("owner-1", "athlete-1",
             "workout-$id", finish(id))).manifest.completions.size)
+    }
+
+    @Test fun recordedCompletionSurvivesAColdRetryWithoutReadingANewClockValue() {
+        enroll();issueResolved(1)
+        var now=1794690000000L
+        var reads=0
+        fun clock()=NativeHistoryCompletionClock{reads++;now}
+        val first=accepted(coordinator(clock()).complete("owner-1","athlete-1","workout-1",finish(1)))
+        assertEquals(now,first.manifest.completions.single().completedAtEpochMillis)
+        now+=86400000L
+        val replay=accepted(coordinator(clock()).complete("owner-1","athlete-1","workout-1",finish(1)))
+        assertEquals(first.manifest,replay.manifest)
+        assertEquals(1,reads)
+    }
+
+    @Test fun pendingFinishKeepsItsOriginalTimeWhenRecoveryHappensAnotherDay() {
+        enroll();issueResolved(1)
+        val recorded=1794690000000L
+        val intent=NativeHistoryWriteIntent.Finish("workout-1",finish(1),recorded)
+        assertTrue(ledger().prepare("owner-1","athlete-1",manifest().ledger.revision,intent)
+            is NativeHistoryLedgerResult.Durable)
+        val recovered=accepted(coordinator(NativeHistoryCompletionClock{error("Recovery must not read a clock")})
+            .recover("owner-1","athlete-1"))
+        assertEquals(recorded,recovered.manifest.completions.single().completedAtEpochMillis)
+        assertNull(manifest().ledger.pending)
+    }
+
+    @Test fun authorizationFailureDoesNotObserveTimeOrPublishACompletion() {
+        enroll();issueResolved(1);allowed=false
+        var reads=0
+        assertTrue(coordinator(NativeHistoryCompletionClock{reads++;1794690000000L})
+            .complete("owner-1","athlete-1","workout-1",finish(1)) is NativeHistoryTransactionResult.Rejected)
+        assertEquals(0,reads)
+        assertTrue(manifest().ledger.completions.isEmpty())
+    }
+
+    @Test fun correctingCompletedSetsKeepsTheOriginalCompletionTime() {
+        enroll();issueResolved(1)
+        val original=1794690000000L
+        accepted(coordinator(NativeHistoryCompletionClock{original})
+            .complete("owner-1","athlete-1","workout-1",finish(1)))
+        val corrected=accepted(coordinator(NativeHistoryCompletionClock{error("A correction is not a new completion")})
+            .correct("owner-1","athlete-1","workout-1",edit(1)))
+        assertEquals(original,corrected.manifest.completions.single().completedAtEpochMillis)
+        assertEquals(1L,corrected.manifest.completions.single().savedCorrectionRevision)
+    }
+
+    @Test fun anUnavailableClockDoesNotLoseACompletedWorkoutOrInventADate() {
+        for((index,clock) in listOf(NativeHistoryCompletionClock{null},
+            NativeHistoryCompletionClock{-1},NativeHistoryCompletionClock{Long.MAX_VALUE},
+            NativeHistoryCompletionClock{error("No clock")}).withIndex()) {
+            if(index==0)enroll()
+            issueResolved(index+1)
+            val result=accepted(coordinator(clock).complete("owner-1","athlete-1","workout-${index+1}",finish(index+1)))
+            assertNull(result.manifest.completions.last().completedAtEpochMillis)
+        }
     }
 
     @Test fun enrollmentMustBeApprovedAndNeverImplicitlyCreatesEmptyHistory() {

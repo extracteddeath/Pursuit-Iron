@@ -128,6 +128,20 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(built.toString(), built is NativeCandidateHistoryRootResult.Reviewed)
         return result(built)
     }
+
+    @Test fun datedCandidateShardColdReadsAndItsAcknowledgmentBindsTheOriginalTime() {
+        val initial=boot()
+        val recorded=1794690000000L
+        val intent=finish(1).copy(completedAtEpochMillis=recorded)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null) is NativeSegmentedRedoResult.Durable)
+        val staged=wal().stage(owner,athlete,NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            entry(1).copy(completedAtEpochMillis=recorded)) as NativeSegmentedRedoResult.Durable
+        val patch=checkNotNull(staged.redo.stagedPatch)
+        assertNotEquals(store().patchDigest(patch),store().patchDigest(patch.copy(
+            completions=patch.completions.map{it.copy(completedAtEpochMillis=recorded+1)})))
+        assertTrue(store().publishStagedForCandidateReview(owner,athlete) is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(1L,result(store().audit(owner,athlete)).head.completionCount)
+    }
     private fun stagedAppend(view: NativeCandidateHistoryRootView,
         number: Long = 1
     ) {

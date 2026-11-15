@@ -163,6 +163,36 @@ class NativeKotlinCustomHistoryTransactionTest {
     private fun finish()=CustomWorkoutJournalOperation.Finish(
         "finish-1",1)
 
+    @Test fun customCompletionRecordsTimeOnceAndColdRetryKeepsTheOriginalObservation() {
+        logged()
+        var now=1794690000000L
+        var reads=0
+        fun transaction()=NativeKotlinCustomHistoryTransaction(history,issued,fence,identity,
+            NativeHistoryCompletionClock{reads++;now})
+        val first=transaction().complete("owner-1","athlete-1","workout-2",finish())
+            as NativeCustomFinishResult.Committed
+        assertEquals(now,first.completion.completedAtEpochMillis)
+        now+=86400000L
+        val replay=transaction().complete("owner-1","athlete-1","workout-2",finish())
+            as NativeCustomFinishResult.Committed
+        assertEquals(first.completion,replay.completion)
+        assertEquals(1,reads)
+    }
+
+    @Test fun customCrashRecoveryUsesThePersistedIntentTimeInsteadOfTheRecoveryClock() {
+        logged()
+        val original=1794690000000L
+        val ledger=(history.open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable).ledger
+        val intent=NativeHistoryWriteIntent.CustomFinish("workout-2",finish(),original)
+        assertTrue(history.prepare("owner-1","athlete-1",ledger.revision,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(issued.applyPendingFinish("owner-1","workout-2",finish()) is NativeCustomJournalResult.Durable)
+        val recovered=NativeKotlinCustomHistoryTransaction(history,issued,fence,identity,
+            NativeHistoryCompletionClock{error("Recovery cannot invent a new observation")})
+            .recover("owner-1","athlete-1") as NativeCustomFinishResult.Committed
+        assertEquals(original,recovered.completion.completedAtEpochMillis)
+    }
+
     @Test fun oneExactCustomFinishCommitsSharedHistoryOrderAndFactualEvidence() {
         logged()
         val result=transactions.complete("owner-1","athlete-1",

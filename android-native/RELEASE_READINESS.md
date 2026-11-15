@@ -25,6 +25,14 @@ The APK/AAB freeze remains in force.
 
 ## What works in the isolated Kotlin core
 
+**Recorded History dates (2026-11-14):** both native Finish routes observe the
+device clock once in the durable History intent. Completion time survives
+recovery, duplicate acknowledgments, archived/segmented reads and corrections.
+Old ledgers remain readable and undated; original journal receipts/digests are
+unchanged. History groups recorded dates by local month, and CSV adds UTC
+values only when available. Source/JVM verification does not clear calendar,
+full UI, accessibility or actual-device acceptance. The APK/AAB freeze remains.
+
 The trap/hex-bar checkpoint adds 17 reviewed source identities and independent
 spinal-erector/trapezius accounting. Actual bar mass and paired plates flow
 through onboarding, saved gym stock, program generation, cycle conversion,

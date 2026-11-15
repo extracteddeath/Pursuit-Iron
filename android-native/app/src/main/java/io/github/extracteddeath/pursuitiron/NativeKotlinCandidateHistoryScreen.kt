@@ -148,11 +148,15 @@ internal fun NativeKotlinCandidateHistoryScreen(
             }
         }
     }
+    val historyZone=java.time.ZoneId.systemDefault()
+    val historyLocale=java.util.Locale.getDefault()
+    val monthSections=remember(visibleSessions,historyZone){nativeHistoryMonths(visibleSessions,historyZone)}
+    var visibleExerciseCount by rememberSaveable(exerciseSearch){mutableStateOf(12)}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
             PageHeading("TRAINING LOG","Workout history",
-                "Your completed workouts and saved set corrections.")
+                "Your completed workouts and corrections. Dates use your device’s time zone.")
             OutlinedButton(onClick=::reload,enabled=!busy){Text(if(busy)"Loading…" else "Refresh history")}
             enrollmentMessage?.let { Text(it,
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
@@ -250,7 +254,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 Row(Modifier.fillMaxWidth()
                                     .horizontalScroll(rememberScrollState()),
                                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                                    filteredMovements.take(8).forEach{exercise->
+                                    filteredMovements.take(visibleExerciseCount).forEach{exercise->
                                         Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
                                             OutlinedButton(onClick={historyExerciseId=exercise}) {
                                                 Text(kotlinExerciseLabel(exercise))
@@ -262,18 +266,30 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                         }
                                     }
                                 }
-                                if(filteredMovements.size>8)
-                                    Text("Showing the first 8 matching exercises; refine your search for more.",
-                                        style=MaterialTheme.typography.bodySmall,
-                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                if(filteredMovements.size>visibleExerciseCount)
+                                    TextButton(onClick={visibleExerciseCount+=12}) {
+                                        Text("Show more matching exercises")
+                                    }
                             }
                         }
                     }
                 }
-                items(visibleSessions.asReversed(),key={it.manifest.workoutId}) {entry->
+                monthSections.forEach {section->
+                item(key="history-month:${section.key}") {
+                    PursuitSectionHeading(section.title(historyLocale),
+                        "${section.sessions.size} ${if(section.sessions.size==1)"workout" else "workouts"}")
+                    if(section.month==null)Text("Older sessions and sessions without a recorded clock value stay undated.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(section.sessions,key={"session:${it.manifest.workoutId}"}) {entry->
                     var expanded by rememberSaveable(entry.manifest.workoutId){mutableStateOf(false)}
                     PursuitCard {
-                        Text("Session ${entry.manifest.completionOrder}",style=MaterialTheme.typography.titleMedium)
+                        Text(nativeHistoryDateLabel(entry.manifest,historyZone,historyLocale)
+                            ?:"Session ${entry.manifest.completionOrder}",style=MaterialTheme.typography.titleMedium)
+                        if(entry.manifest.completedAtEpochMillis!=null)Text("Session ${entry.manifest.completionOrder}",
+                            style=MaterialTheme.typography.labelSmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(if(entry is NativeKotlinMixedHistoryCompletion.Custom)"Custom program" else "Generated program",
                             style=MaterialTheme.typography.bodySmall)
                         // These are effective, correction-aware facts from the
@@ -365,6 +381,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             }
                         }
                     }
+                }
                 }
             }
             is NativeKotlinMixedHistoryReadResult.Rejected ->item {

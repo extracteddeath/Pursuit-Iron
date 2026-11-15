@@ -51,6 +51,23 @@ class NativeKotlinSegmentedRedoFileStoreTest {
             .findFirst().orElseThrow()
     }
 
+    @Test fun redoPersistsTheSameCompletionObservationInItsIntentAndStagedEntry() {
+        val h=head(0)
+        val recorded=1794690000000L
+        val intent=finish(1).copy(completedAtEpochMillis=recorded)
+        assertTrue(store().prepare(owner,athlete,h,intent,null) is NativeSegmentedRedoResult.Durable)
+        val row=entry(1).copy(completedAtEpochMillis=recorded)
+        val staged=durable(store().stage(owner,athlete,segment(h,1,0),row))
+        val cold=durable(store().read(owner,athlete)).redo
+        assertEquals(staged.redo,cold)
+        assertEquals(recorded,cold.intent.recordedCompletionTime)
+        assertEquals(recorded,cold.stagedPatch?.completions?.single()?.completedAtEpochMillis)
+        assertTrue(store().stage(owner,athlete,segment(h,1,0),
+            row.copy(completedAtEpochMillis=recorded+1)) is NativeSegmentedRedoResult.Rejected)
+        assertEquals(recorded,durable(store().read(owner,athlete)).redo.stagedPatch
+            ?.completions?.single()?.completedAtEpochMillis)
+    }
+
     @Test fun pendingFinishSurvivesColdReopenAndStagedPatchIsIdempotent() {
         val h = head(128)
         val intent = finish(129)

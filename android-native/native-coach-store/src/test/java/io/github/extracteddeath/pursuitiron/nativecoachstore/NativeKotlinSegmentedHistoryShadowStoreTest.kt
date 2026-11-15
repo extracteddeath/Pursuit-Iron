@@ -29,6 +29,16 @@ class NativeKotlinSegmentedHistoryShadowStoreTest {
     private fun entry(i: Int, corrected: Long = 0) = KotlinHistoryManifestEntry(
         i.toLong(), "workout-$i", "stored-$i", "finish-$i", 3, corrected)
     private fun history(count: Int) = (1..count).map(::entry)
+
+    @Test fun shadowPagesKeepRecordedDatesAndUndatedRowsAcrossColdReads() {
+        val entries=listOf(entry(1).copy(completedAtEpochMillis=1794690000000L),entry(2))
+        assertTrue(v2().enrollVerifiedSnapshot(owner,athlete,entries,::permitted)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(shadow().sync(owner,athlete) is NativeSegmentedHistoryResult.Indexed)
+        val page=readPage(0,2)
+        assertEquals(entries.reversed(),page.completionsNewestFirst)
+        assertEquals(entries.reversed(),readPage(0,2).completionsNewestFirst)
+    }
     private fun enroll(count: Int) {
         val result = v2().enrollVerifiedSnapshot(
             owner, athlete, history(count), ::permitted)

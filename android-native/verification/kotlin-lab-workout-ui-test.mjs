@@ -731,9 +731,29 @@ for(const source of [journal,composer]) {
     source.includes('KotlinWorkoutRestDomain.inspect(') &&
     source.includes('Column(Modifier.weight(1f).verticalScroll('),
     'Kotlin workout rest must use the recovered journal and stay below the scrolling logger');
-  assert.ok(source.includes('view.keepScreenOn=true') &&
+  assert.ok(source.includes('if(running && display.keepScreenAwake)view.keepScreenOn=true') &&
+    source.includes('DisposableEffect(view,running,display.keepScreenAwake)') &&
     source.includes('onDispose{view.keepScreenOn=previous}'),
-    'Each active Kotlin journal keeps the screen on and restores the prior view policy');
+    'Each active Kotlin journal respects the display setting and restores the prior view policy');
+}
+const displayStore=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutDisplayStore.kt');
+const displaySettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
+const application=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt');
+assert.ok(application.includes('internal val workoutDisplay by lazy'));
+assert.ok(displayStore.includes('preferences.registerOnSharedPreferenceChangeListener(listener)'));
+assert.doesNotMatch(displayStore,/LaunchedEffect|NativeKotlinCandidateHost|recordSet|prepareWorkout/,
+  'a display preference has no lifecycle-triggered write or training authority');
+assert.ok(!referenceLayout.includes('preferences.edit()'), 'mounting Last must not write back a stale reference choice');
+assert.ok(displaySettings.includes('PursuitFormSection("Workout display"') &&
+  displaySettings.includes('displayPreferences::awake') &&
+  displaySettings.includes('PursuitWorkoutReferencePicker(display.referenceMode,displayPreferences::reference)'));
+for(const source of [journal,composer]) {
+  assert.ok(source.includes('val displayPreferences=rememberNativeWorkoutDisplayStore()') &&
+    source.includes('val referenceMode=display.referenceMode') &&
+    source.includes('displayPreferences::reference') &&
+    source.includes('display.startLayout.startsInFocus(LocalConfiguration.current.screenWidthDp)') &&
+    source.includes('displayPreferences.layout('),
+    'both workout routes share the process-owned display choices and preserve per-workout editors');
 }
 assert.ok(restBridge.includes('if(!rest.hasRemainingWork)return') &&
   restBridge.includes('NativeRestTimer(workoutId,rest.manualRestSeconds,enabled,') &&

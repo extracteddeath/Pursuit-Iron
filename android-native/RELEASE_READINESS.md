@@ -63,6 +63,16 @@ Source inventory is now **320/376**; **56 IDs remain absent**. This bounded
 checkpoint does not certify full functional parity, coaching superiority or
 physical-device/UI acceptance. No APK/AAB is built or released.
 
+**Workout display checkpoint (2026-11-15):** both native workout routes and
+Settings share a device-local display source for Target/Last, Keep screen on,
+and starting layout. The existing Last preference remains compatible. Automatic
+starts compact windows in Focus and wider windows in All sets; saved current
+workout views and drafts remain independent. Awake requests default on, honor
+the toggle only while recording, and restore the previous View flag. Initial
+screen composition no longer writes an old local reference mode back to storage.
+Policy/source tests and Android compilation are required; physical-device,
+large-font/TalkBack and app-wide UI acceptance remain open. No APK/AAB.
+
 ## What works in the isolated Kotlin core
 
 **Recorded History dates (2026-11-14):** both native Finish routes observe the

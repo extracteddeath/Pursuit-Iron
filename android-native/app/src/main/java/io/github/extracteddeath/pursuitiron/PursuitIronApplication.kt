@@ -8,6 +8,9 @@ import android.app.Application
  * older legacy history and must never silently overwrite this store.
  */
 class PursuitIronApplication:Application() {
+    internal val workoutDisplay by lazy {
+        NativeKotlinWorkoutDisplayStore(applicationContext)
+    }
     internal val kotlinCandidate by lazy {
         NativeKotlinCandidateHost(applicationContext)
     }

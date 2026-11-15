@@ -1,6 +1,11 @@
 package io.github.extracteddeath.pursuitiron
 
 import android.content.Intent
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +56,8 @@ internal fun NativeKotlinCoachSettingsScreen(
     themeId:String=PursuitThemes.DEFAULT_ID,
     onOpenAppearance:()->Unit={}
 ) {
+    val displayPreferences=rememberNativeWorkoutDisplayStore()
+    val display by displayPreferences.state.collectAsState()
     val scope=rememberCoroutineScope()
     val context=LocalContext.current
     var feedbackOpen by rememberSaveable { mutableStateOf(false) }
@@ -121,8 +129,8 @@ internal fun NativeKotlinCoachSettingsScreen(
     PursuitScreenContent {
         PageHeading(
             "PREFERENCES",
-            "Your coaching, your choice",
-            "Optional suggestions never control workout logging or your authored program."
+            "Training, your way",
+            "Set your workout view, screen behavior and optional coaching."
         )
         PursuitFormSection("Appearance",
             "Choose from the original Pursuit Iron web-app themes. This changes the app's colors, not training data."
@@ -134,6 +142,32 @@ internal fun NativeKotlinCoachSettingsScreen(
             }
         }
 
+        PursuitFormSection("Workout display", "On this device") {
+            PreviewSettingSwitch(
+                title="Keep screen on",
+                description="While recording an active workout. Default is on.",
+                checked=display.keepScreenAwake,
+                onCheckedChange=displayPreferences::awake)
+            Text("Set reference",style=MaterialTheme.typography.labelLarge)
+            PursuitWorkoutReferencePicker(display.referenceMode,displayPreferences::reference)
+            Text("Start workouts in",style=MaterialTheme.typography.labelLarge)
+            Column(Modifier.selectableGroup(),verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                WorkoutStartLayout.entries.forEach {choice->
+                    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(
+                        selected=display.startLayout==choice,role=Role.RadioButton,
+                        onClick={displayPreferences.layout(choice)}),
+                        verticalAlignment=Alignment.CenterVertically,
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                        androidx.compose.material3.RadioButton(
+                            selected=display.startLayout==choice,onClick=null)
+                        Text(choice.label,modifier=Modifier.weight(1f))
+                    }
+                }
+            }
+            Text("Screen size starts phones in Focus and wider screens in All sets. Resume keeps your current workout view.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         PursuitFormSection(
             "Coaching style",
             "Choose a starting point, then customize the individual switches."
@@ -243,7 +277,7 @@ internal fun NativeKotlinCoachSettingsScreen(
                 color=if(current==null)MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text("Isolated Kotlin candidate · production settings are not changed.",
+        Text("Display choices stay on this device. Coaching settings belong to your saved athlete.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }

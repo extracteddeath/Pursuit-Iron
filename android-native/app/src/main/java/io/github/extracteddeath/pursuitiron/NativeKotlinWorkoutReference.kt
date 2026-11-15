@@ -5,7 +5,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
@@ -13,29 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
-internal enum class WorkoutReferenceMode { TARGET,LAST }
-
 /** Immutable invalidation keys only. The host still cold-verifies all facts. */
 internal sealed interface WorkoutLastReferenceInput {
     data class Generated(val snapshot:KotlinStagedWorkout):WorkoutLastReferenceInput
     data class Custom(val snapshot:CustomWorkoutDaySnapshot):WorkoutLastReferenceInput
-}
-
-/** A display preference only; never a write to a journal or a prescription. */
-@Composable
-internal fun rememberWorkoutReferenceMode():MutableState<WorkoutReferenceMode> {
-    val context=LocalContext.current.applicationContext
-    val preferences=remember(context){
-        context.getSharedPreferences("native-workout-display",0)
-    }
-    val mode=remember(preferences){mutableStateOf(
-        runCatching{WorkoutReferenceMode.valueOf(
-            preferences.getString("reference-mode",null).orEmpty())}
-            .getOrDefault(WorkoutReferenceMode.TARGET))}
-    LaunchedEffect(mode.value) {
-        preferences.edit().putString("reference-mode",mode.value.name).apply()
-    }
-    return mode
 }
 
 @Composable

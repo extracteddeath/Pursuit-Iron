@@ -488,3 +488,19 @@ History and export. Existing frozen formats/approval bytes remain checked.
 Optional onboarding fields share the existing weights section and Gym editor.
 Physical-device UI/accessibility, full catalog/engine parity and superiority
 remain open. No APK/AAB build or release.
+
+## Workout display controls — 2026-11-15
+
+The existing native persistent Target/Last choice now has one process-owned
+source shared by both workout loggers and Settings, with no write on mounting
+another screen. Add Keep screen on (default on) and a starting layout default:
+phone Focus, wider-window All sets, or explicit Focus/All sets. Header choices
+also update that future default. Each issued workout preserves its current
+saveable review mode and unsent input independently. Prior View awake flags
+are restored when a recording screen finishes or is disposed.
+
+The actual web WorkoutPanel starts targetMode in local useState. Native keeps
+its earlier persistence and removes the screen-owned writeback race; training
+journals, rest receipt projections, actuals and approvals remain separate.
+Source/policy and Android compilation evidence do not close physical-device,
+foldable, 200% text, TalkBack or full UI acceptance. No APK/AAB.

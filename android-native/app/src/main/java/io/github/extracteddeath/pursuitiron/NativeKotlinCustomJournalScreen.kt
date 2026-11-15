@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
@@ -42,6 +43,9 @@ internal fun NativeKotlinCustomJournalScreen(
     onReturnToProgram:()->Unit={},
     onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit={}
 ) {
+    val displayPreferences=rememberNativeWorkoutDisplayStore()
+    val display by displayPreferences.state.collectAsState()
+    val initialFocus=display.startLayout.startsInFocus(LocalConfiguration.current.screenWidthDp)
     val scope=rememberCoroutineScope()
     var machineRoster by remember(host,workoutId){
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
@@ -53,7 +57,7 @@ internal fun NativeKotlinCustomJournalScreen(
     }
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
-    var focusOnNext by rememberSaveable(workoutId){mutableStateOf(true)}
+    var focusOnNext by rememberSaveable(workoutId){mutableStateOf(initialFocus)}
     // Custom Focus supports reviewing past and future main/follow-up visits
     // without changing the journal's next unresolved visit or coaching.
     // Only serializable values survive Activity recreation. A swapped/removed
@@ -78,7 +82,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var priorLevelingSlotId by rememberSaveable(workoutId) {
         mutableStateOf<String?>(null)
     }
-    var referenceMode by rememberWorkoutReferenceMode()
+    val referenceMode=display.referenceMode
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var plateRequest by remember(workoutId){
@@ -127,9 +131,9 @@ internal fun NativeKotlinCustomJournalScreen(
     }
     val view=LocalView.current
     val running=journal!=null && !finished && journal?.finishedByEventId==null
-    DisposableEffect(view,running) {
+    DisposableEffect(view,running,display.keepScreenAwake) {
         val previous=view.keepScreenOn
-        if(running)view.keepScreenOn=true
+        if(running && display.keepScreenAwake)view.keepScreenOn=true
         onDispose{view.keepScreenOn=previous}
     }
 
@@ -621,6 +625,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         setDetail=focusDetail,
                         focusOnNext=focusOnNext,
                         onFocusChange={
+                            displayPreferences.layout(if(it)WorkoutStartLayout.FOCUS else WorkoutStartLayout.ALL_SETS)
                             focusOnNext=it
                             if(it) {
                                 reviewSetKey=null
@@ -740,7 +745,7 @@ internal fun NativeKotlinCustomJournalScreen(
                     )
                 }
                 if(!verifiedFinishedInHistory || showFinishedSets) {
-                PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it},
+                PursuitWorkoutReferencePicker(referenceMode,displayPreferences::reference,
                     onRetry=if(lastReferences==WorkoutLastReferenceResult.Unavailable &&
                         !busy) ({lastReferenceRefresh++}) else null)
                 current.snapshot.slots.filter {slot->

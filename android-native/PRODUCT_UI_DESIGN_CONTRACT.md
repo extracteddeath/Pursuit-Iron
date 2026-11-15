@@ -162,6 +162,33 @@ as interchangeable. Program/cycle and native-file task tests verify this
 bounded behavior; no measured task-speed, visual, motion or device improvement
 is asserted. Full app-wide design approval remains open.
 
+## Shared workout display preferences — 2026-11-15
+
+Settings now owns a Workout display section: the shared Target/Last selector,
+Keep screen on (on by default), and the starting layout. Automatic starts
+compact windows in Focus and windows of at least 600dp in All sets. Explicit
+Focus/All sets choices override that default. Each active workout retains its
+saveable current view and unsent fields through tools, minimize and recreation;
+changing a starting default does not replace an existing workout's review view.
+Header Focus/All sets taps also save the preference for the next workout.
+
+Both generated and authored loggers observe the same process-owned display
+source. Target/Last keeps its previous preference file/key and is updated only
+by deliberate selection; mounting a screen no longer writes a stale local mode
+back through an effect. Preference listeners keep the two routes and Settings
+consistent. Screen-awake requests honor the switch only during active recording
+and restore the View's previous flag on disposal/Finish. No training authority,
+source approval, rest deadline, target or actual set is changed.
+
+The prior native source hardcoded both starting views to Focus and unconditionally
+requested screen awake. The actual web WorkoutPanel initializes targetMode with
+local useState; native already retained Target/Last and preserves that behavior
+while removing screen-owned writeback. Pure policy tests cover the 599/600dp
+boundary, explicit overrides, all 12 choice combinations, existing Last and
+wrong-type/future fields. Source checks require the shared owner and recording
+boundaries. Device rotation, background, TalkBack, touch and actual foldable
+visual acceptance remain open; this does not finish the full UI gate.
+
 ## Persistent information architecture
 
 ### Authored superset execution

@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -99,6 +100,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     onReviewNext:(String)->Unit={},
     onReturnToProgram:()->Unit={}
 ) {
+    val displayPreferences=rememberNativeWorkoutDisplayStore()
+    val display by displayPreferences.state.collectAsState()
+    val initialFocus=display.startLayout.startsInFocus(LocalConfiguration.current.screenWidthDp)
     val state by controller.state.collectAsStateWithLifecycle()
     val scope=rememberCoroutineScope()
     var machineRoster by remember(host,workoutId) {
@@ -120,7 +124,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var swapLoading by remember(workoutId){mutableStateOf(false)}
     var swapError by remember(workoutId){mutableStateOf<String?>(null)}
     var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
-    var referenceMode by rememberWorkoutReferenceMode()
+    val referenceMode=display.referenceMode
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var plateRequest by remember(workoutId) {
@@ -177,9 +181,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
 
     val view=LocalView.current
-    DisposableEffect(view,running) {
+    DisposableEffect(view,running,display.keepScreenAwake) {
         val previous=view.keepScreenOn
-        if(running)view.keepScreenOn=true
+        if(running && display.keepScreenAwake)view.keepScreenOn=true
         onDispose{view.keepScreenOn=previous}
     }
 
@@ -203,7 +207,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         saver=currentWorkoutEditorSaver) {
         mutableStateMapOf<String,CurrentWorkoutEditorValue>()
     }
-    var showAll by rememberSaveable(workoutId){mutableStateOf(false)}
+    var showAll by rememberSaveable(workoutId){mutableStateOf(!initialFocus)}
     var readiness by rememberSaveable(workoutId) {
         mutableStateOf(CoachReadiness.NORMAL)
     }
@@ -503,6 +507,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             setDetail=if(showAll)null else focusDetail,
             focusOnNext=!showAll,
             onFocusChange={focus->
+                displayPreferences.layout(if(focus)WorkoutStartLayout.FOCUS else WorkoutStartLayout.ALL_SETS)
                 showAll=!focus
                 if(focus)
                     selectedKey=presentation.firstUnresolvedSetKey ?:selectedKey
@@ -581,7 +586,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        PursuitWorkoutReferencePicker(referenceMode,{referenceMode=it},
+        PursuitWorkoutReferencePicker(referenceMode,displayPreferences::reference,
             onRetry=if(lastReferences==WorkoutLastReferenceResult.Unavailable &&
                 !state.busy) ({lastReferenceRefresh++}) else null)
         // Web parity: average positive working-set editor entries in this

@@ -40,9 +40,13 @@ class NativeHistoryCompletionMetadataTest {
 
     @Test fun aChecksumValidButOutOfRangeDateIsRejectedAsCorruptHistory() {
         val recorded=1794690000000L
+        val unrelated=temp.root.toPath().resolve("unrelated-empty-file")
+        Files.write(unrelated,byteArrayOf())
         assertTrue(store().enrollVerifiedSnapshot(owner,athlete,listOf(row(recorded)),::permitted)
             is NativeHistoryLedgerResult.Durable)
-        val file=Files.list(temp.root.toPath()).use{it.filter{path->Files.isRegularFile(path)}.findFirst().orElseThrow()}
+        val file=Files.list(temp.root.toPath()).use{paths->paths.filter{path->
+            Files.isRegularFile(path) && path.fileName.toString().matches(Regex("history-[0-9a-f]{64}\\.bin"))
+        }.toList().single()}
         val bytes=Files.readAllBytes(file)
         val payloadSize=ByteBuffer.wrap(bytes).int
         val payload=bytes.copyOfRange(4,4+payloadSize)
@@ -54,5 +58,6 @@ class NativeHistoryCompletionMetadataTest {
             .put(MessageDigest.getInstance("SHA-256").digest(payload)).array()
         Files.write(file,forged)
         assertEquals(NativeHistoryLedgerResult.Rejected(NativeHistoryLedgerRefusal.CORRUPT_HISTORY),store().open(owner,athlete))
+        assertEquals(0L,Files.size(unrelated))
     }
 }

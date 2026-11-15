@@ -23,6 +23,15 @@ and suppress cancelled/superseded results. These are source/JVM guarantees;
 physical device, accessibility, visual and motion acceptance remain pending.
 The APK/AAB freeze remains in force.
 
+**Runtime configuration verified (2026-11-15):** `MainActivity` already opens
+`NativeKotlinCandidateJourney`. Both app variants compile the staged Kotlin
+source allowlist, and app dependencies exclude `:engine-runtime` and JS bridge
+modules. The standalone legacy project is retained for comparison/migration;
+it is not an app runtime fallback. `verifyEarlyBetaRuntime` checks the resolved
+release graph and device-acceptance evidence before packaging. Earlier notes
+describing a legacy release launcher/dependency were stale. Final artifact,
+full parity, complete UI, migration and physical-device acceptance remain open.
+
 ## What works in the isolated Kotlin core
 
 **Recorded History dates (2026-11-14):** both native Finish routes observe the
@@ -204,7 +213,7 @@ background/restart, keyboard and accessibility acceptance remain open.
 | Data recovery and migration | Verified rebuilt-app export/restore, conflicts/Undo, interrupted import, existing web history/settings reconciliation and active legacy-session closeout; preserve exact targets, actuals, IDs and PR eligibility. Native journal durability does not substitute for complete user backup/restore. |
 | Android acceptance | Test the installable build on phone and foldable: complete offline journey, keyboard, large fonts/TalkBack, original themes, timing/awake behavior, background/process death, corrections, recovery and signed updates retaining data. Source checks are not physical-device acceptance. |
 | Demonstrated improvement | Fresh matched comparisons of complete programs, cycles, progressions and user experience; independent expected outcomes and individual forecast calibration. Historical parity and the withdrawn one-set benchmark do not prove overall superiority. |
-| Kotlin-only production cutover | The app still depends on `:engine-runtime`; the release manifest still launches the legacy `MainActivity`. Deliberately integrate every required Kotlin feature, migrate/reconcile data, remove runnable JS training authority/fallback, test the release artifact and record explicit cutover approval. |
+| Kotlin-only packaging and release acceptance | The app already stages Kotlin-only sources and dependencies and launches the native journey. Complete every required capability and migration, verify the final resolved runtime/artifact with the existing packaging gate, and pass full UI/device acceptance before release. A configured Kotlin-only entry is not a completed beta. |
 
 The [full replacement contract](kotlin-engine/FULL_REPLACEMENT_CONTRACT.md),
 14-feature/E01–E41 scope and native UX requirements remain mandatory. None is

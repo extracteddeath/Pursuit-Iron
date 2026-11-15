@@ -6,12 +6,16 @@ JavaScript training engine.** This is a release requirement, not an optional
 architectural direction. The new engine must be **better than** the legacy
 coaching engine; reproducing its known bugs is not considered parity.
 
-**Current status (2026-11-08): NOT CUT OVER.** The isolated debug Kotlin Lab now
-connects bounded program generation and native-owned workout issuance, logging,
-correction, Finish and restart recovery. The release variant still launches the
-legacy app and retains its JavaScript engine dependency. Existing JS-based training
-must remain functional on its current branch while an independently tested
-replacement is developed. This contract does not authorize publishing,
+**Current source status (2026-11-15): Kotlin-only app configuration; NOT
+RELEASE-ACCEPTED.** `MainActivity` opens the native Kotlin journey. Debug and
+release use an explicit staged Kotlin source inventory; the app depends on
+`:domain-contract`, `:kotlin-engine` and `:native-coach-store`, with no JavaScript
+engine-runtime dependency. The separate legacy project remains for comparison
+and migration work. `verifyEarlyBetaRuntime` guards the resolved release graph
+and actual device-acceptance evidence before packaging. Source compilation does
+not establish full parity, finished UI, migration or device acceptance, and no
+APK/AAB is authorized by this status update. Existing JS-based training remains
+functional on its current branch. This contract does not authorize publishing,
 decommissioning the website, modifying another developer's native branch, or
 migrating real user data.
 

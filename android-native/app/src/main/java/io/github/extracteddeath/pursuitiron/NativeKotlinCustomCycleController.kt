@@ -1363,6 +1363,7 @@ internal class NativeKotlinCustomCycleController(
         current.value.availableChoices
 
     private fun editReviewed(
+        sourceGuard:(NativeCustomAuthoringSnapshot)->Boolean={true},
         command: (CustomTrainingCycle, AthleteSetupReview,
             List<CatalogMovement>) -> CustomAuthoringResult
     ) {
@@ -1371,9 +1372,11 @@ internal class NativeKotlinCustomCycleController(
             // Read inside IO. The subsequent write atomically checks that
             // exactly this same source revision remains under owner lock.
             val source = runCatching { authoringSource.snapshot() }.getOrNull()
-            if (source == null || source.athleteId != draft.athleteId) {
+            if (source == null || source.athleteId != draft.athleteId || !sourceGuard(source)) {
                 current.value = current.value.copy(
-                    message = "Reviewed native gym and exercise catalog required. Nothing saved.",
+                    message = if(source!=null && source.athleteId==draft.athleteId)
+                        "Training setup changed. Reload your program before saving. Nothing saved."
+                        else "Reviewed native gym and exercise catalog required. Nothing saved.",
                     authoringRefusal = CustomAuthoringRefusal.SETUP_UNRESOLVED)
                 CustomCycleBuilderResult.Rejected(
                     CustomCycleBuilderRefusal.INVALID_INPUT)
@@ -1475,6 +1478,34 @@ internal class NativeKotlinCustomCycleController(
         CustomExerciseAuthoringDomain.replaceSelectedSets(
             draft, draft.revision, blockId, weekday, slotId, sets, setup, catalog)
     }
+
+    fun supersetEditRequest(blockId:String,weekday:Int,groupId:String?=null):NativeKotlinSupersetEditRequest? {
+        val state=current.value
+        val draft=state.draft ?:return null
+        val source=openedSource?.takeIf{it.athleteId==draft.athleteId &&
+            it.revision==state.sourceRevision} ?:return null
+        if(state.busy || draft.blocks.none{it.blockId==blockId &&
+            it.days.any{day->day.weekday==weekday}})return null
+        return NativeKotlinSupersetEditRequest(source.ownerKey,draft.athleteId,draft.cycleId,
+            draft.revision,source.revision,blockId,weekday,
+            groupId ?:"ss-"+UUID.randomUUID().toString().replace("-",""))
+    }
+
+    fun saveSuperset(request:NativeKotlinSupersetEditRequest,slotIds:List<String>)=
+        editReviewed(sourceGuard=request::matchesSource) {draft,setup,_->
+            val athlete=setup.reviewed?.takeIf{
+                setup.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
+                    it.athleteProfileId==draft.athleteId}
+            if(!request.matches(draft) || athlete==null)
+                CustomAuthoringResult.Rejected(CustomAuthoringRefusal.AUTHORING_CONFLICT)
+            else when(val result=CustomCycleBuilderDomain.setSupersetMembers(draft,
+                request.cycleRevision,request.blockId,request.weekday,request.groupId,
+                slotIds,athlete.allowSupersets)) {
+                is CustomCycleBuilderResult.Proposed -> CustomAuthoringResult.Accepted(result)
+                is CustomCycleBuilderResult.Rejected -> CustomAuthoringResult.Rejected(
+                    CustomAuthoringRefusal.AUTHORING_CONFLICT)
+            }
+        }
 
     /** Read-only comparison; available for manual authoring even with coach advice off. */
     fun previewWeekSets(

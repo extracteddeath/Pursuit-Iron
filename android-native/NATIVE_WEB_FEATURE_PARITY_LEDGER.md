@@ -414,6 +414,22 @@ TalkBack and device acceptance remain open; no APK/AAB is authorized.
 
 ## Authored superset rounds — 2026-11-14
 
+Plan now exposes Create/Edit superset within each expanded day. The native
+sheet selects 2–3 current movements, replaces an entire group's membership
+or unlinks all members atomically. Group edits preserve slots, exact
+sets/loads/effort/amplifiers, machine IDs, notes, pins and week overrides;
+program Undo restores the prior snapshot. Cancel performs no write, and
+save failures retain selections. The sheet closes only after observing
+the exact committed membership and revision.
+
+The restored editor request binds owner, athlete, cycle/revision, source
+revision and day/group. The controller rechecks those values against fresh
+native source before the fenced save. Permission-off prevents grouping but
+allows unlinking. Saving invalidates future approval without changing an
+already issued workout. Tests cover atomic membership changes, conflict
+refusals, restoration, native cold save/Undo, source/owner changes and exact
+issued-snapshot preservation. Device interaction acceptance remains open.
+
 Custom Kotlin workouts now execute existing authored 2–3-movement supersets
 as alternating working rounds. Warm-ups prepare each member first; unequal
 counts continue solo. One shared Kotlin projection owns next unresolved

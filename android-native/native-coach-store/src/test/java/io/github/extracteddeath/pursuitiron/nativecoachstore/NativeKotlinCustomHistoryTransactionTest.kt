@@ -217,6 +217,45 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertEquals(complete.copy(replayed=true),transactions.complete("owner-1","athlete-1","workout-2",finish))
     }
 
+    @Test fun supersetEditColdSavesAndSourceOrOwnerFencesProtectRevisionedWrites() {
+        supersetFixture=true
+        initialize()
+        val original=cycle()
+        val edit=CustomCycleBuilderDomain.setSupersetMembers(original,1,"base",0,"pair",emptyList(),true)
+            as CustomCycleBuilderResult.Proposed
+        val coordinator=NativeKotlinCustomAuthoringDraftCoordinator(sources,drafts,fence,identity)
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            coordinator.saveVerifiedExerciseEdit("owner-1",edit.draft,1,1))
+        val cold=NativeCustomCycleDraftFileStore(temp.root.toPath(),fence,identity)
+        assertEquals(edit.draft,(cold.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
+        val undo=CustomCycleBuilderDomain.undo(edit.draft,edit.receipt) as CustomCycleBuilderResult.Proposed
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),sources.publish("owner-1",1,source(2)))
+        assertTrue(coordinator.saveVerifiedExerciseEdit("owner-1",undo.draft,2,1)
+            is NativeCustomDraftWriteResult.Rejected)
+        current=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeCustomDraftWriteResult.Rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED),
+            coordinator.saveVerifiedExerciseEdit("owner-1",undo.draft,2,2))
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeCustomDraftWriteResult.Committed(3),
+            coordinator.saveVerifiedExerciseEdit("owner-1",undo.draft,2,2))
+        assertEquals(original.copy(revision=3),
+            (cold.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
+    }
+    @Test fun changingProgramSupersetsInvalidatesFutureApprovalAndKeepsTheIssuedWorkoutExact() {
+        supersetFixture=true
+        ready()
+        val original=(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
+        val edit=CustomCycleBuilderDomain.setSupersetMembers(cycle(),1,"base",0,"pair",emptyList(),false)
+            as CustomCycleBuilderResult.Proposed
+        val coordinator=NativeKotlinCustomAuthoringDraftCoordinator(sources,drafts,fence,identity)
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            coordinator.saveVerifiedExerciseEdit("owner-1",edit.draft,1,1))
+        assertFalse((consent.read("owner-1","cycle-1",input()) as NativeCustomSignoffRead.Found).isCurrent)
+        val reopened=(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(original,reopened)
+        assertEquals(original.originalSnapshot,reopened.snapshot)
+    }
+
     @Test fun customCompletionRecordsTimeOnceAndColdRetryKeepsTheOriginalObservation() {
         logged()
         var now=1794690000000L

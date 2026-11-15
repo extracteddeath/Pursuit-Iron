@@ -145,6 +145,22 @@ and visual/motion acceptance remain open. No APK/AAB from this checkpoint.
 
 ### Authored superset execution
 
+Plan's expanded day editor provides **Create superset** and a named **Edit
+superset** action per group. The sheet selects two or three existing working
+movements, edits the complete membership atomically, or unlinks the whole
+group. It cannot steal another group's member. Cancel preserves the saved
+program and Undo; failed writes preserve the sheet's choices. A successful
+save closes only after the exact durable membership/revision is observed.
+Program Undo restores the prior grouping and every original set/override.
+
+The editor saves primitive owner/athlete/program/source coordinates across
+recreation. Controller writes recheck that same owner, source revision,
+program identity and revision. Changed setup/programs require reopening;
+no old sheet is silently applied to a new program. Supersets disabled in the
+reviewed setup block new membership, while an existing group can be unlinked.
+The full program requires renewed review after saving. An issued workout
+retains its original grouping, targets and records.
+
 The custom workout's Up next cursor, Previous/Next Focus review and rest
 projection share one pure Kotlin execution policy. A valid authored group
 has two or three movements. Warm-ups stay together for each member before

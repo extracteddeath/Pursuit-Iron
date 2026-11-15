@@ -80,6 +80,41 @@ object CustomCycleBuilderDomain {
             next, CustomCycleDraftReceipt(label, original, next))
     }
 
+    /** Atomic program-only grouping. Empty membership explicitly unlinks the
+     * entire group, also when supersets were disabled after it was authored.
+     * Never steals a slot from another group or changes sets/week overrides. */
+    fun setSupersetMembers(current:CustomTrainingCycle,expectedRevision:Long,
+        blockId:String,weekday:Int,groupId:String,slotIds:List<String>,
+        allowSupersets:Boolean):CustomCycleBuilderResult {
+        if(current.revision!=expectedRevision)return CustomCycleBuilderResult.Rejected(
+            CustomCycleBuilderRefusal.STALE_REVISION)
+        val block=current.blocks.firstOrNull{it.blockId==blockId}
+            ?:return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val day=block.days.firstOrNull{it.weekday==weekday}
+            ?:return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_SLOT)
+        val selected=slotIds.toSet()
+        val previous=day.slots.filter{it.supersetGroup==groupId}.map{it.slotId}.toSet()
+        if(!id.matches(groupId) || selected.size!=slotIds.size ||
+            (selected.isNotEmpty() && (selected.size !in 2..3 || !allowSupersets)) ||
+            selected==previous || selected.any{chosen->
+                day.slots.none {it.slotId==chosen &&
+                    (it.supersetGroup==null || it.supersetGroup==groupId) &&
+                    it.sets.any{set->set.type==DraftSetType.WORKING}}
+            })return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current,expectedRevision,
+            if(selected.isEmpty())"unlink-superset" else "edit-superset") {
+            current.copy(blocks=current.blocks.map {b->
+                if(b.blockId!=blockId)b else b.copy(days=b.days.map {d->
+                    if(d.weekday!=weekday)d else d.copy(slots=d.slots.map {slot->when {
+                        slot.slotId in selected -> slot.copy(supersetGroup=groupId)
+                        slot.supersetGroup==groupId -> slot.copy(supersetGroup=null)
+                        else -> slot
+                    }})
+                })
+            })
+        }
+    }
+
     /** The newly created blank draft is intentionally NOT executable. */
     fun blank(
         cycleId: String,

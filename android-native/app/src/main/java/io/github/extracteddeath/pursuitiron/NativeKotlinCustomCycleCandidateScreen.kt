@@ -157,6 +157,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
     var showProgramEditor by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
     var showProgramMetadata by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
+    var supersetEditor by rememberSaveable(stateSaver=NativeKotlinSupersetRequestSaver) {
+        mutableStateOf<NativeKotlinSupersetEditRequest?>(null)
+    }
+    LaunchedEffect(draft?.cycleId,draft?.athleteId) {
+        if(draft!=null && supersetEditor?.let{it.cycleId!=draft.cycleId || it.athleteId!=draft.athleteId}==true)
+            supersetEditor=null
+    }
     var expandedBlockId by rememberSaveable(draft?.cycleId) {
         mutableStateOf(draft?.blocks?.firstOrNull()?.blockId)
     }
@@ -671,6 +678,20 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 onToggle={expandedDayKey=if(dayExpanded)null else dayKey}
                             )
                             if(dayExpanded) {
+                            val supersetGroups=day.slots.mapNotNull{it.supersetGroup}.distinct()
+                            if(day.slots.size>=2 || supersetGroups.isNotEmpty()) {
+                                TextButton(onClick={supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday)},
+                                    enabled=!busy && state.reviewedSourceSetup?.reviewed?.allowSupersets==true &&
+                                        day.slots.count{it.supersetGroup==null && it.sets.any{set->set.type==DraftSetType.WORKING}}>=2,
+                                    modifier=Modifier.heightIn(min=48.dp)){Text("Create superset")}
+                                supersetGroups.forEach{group->
+                                    OutlinedButton(onClick={supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday,group)},
+                                        enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                                        Text("Edit superset · "+day.slots.filter{it.supersetGroup==group}
+                                            .joinToString(" / "){kotlinExerciseLabel(it.exerciseId)})
+                                    }
+                                }
+                            }
                             if (day.slots.isNotEmpty()) {
                                 day.slots.forEachIndexed { slotIndex, slot ->
                                     Text("${kotlinExerciseLabel(slot.exerciseId)} · ${slot.sets.size} sets" +
@@ -947,15 +968,19 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             Text("Movement is painful or restricted")
                         }
                     }
+                    val supersetOrder=session.slots.mapNotNull{it.supersetGroup}.distinct()
                     session.slots.forEach { slot ->
                         HorizontalDivider()
                         Text(kotlinExerciseLabel(slot.exerciseId),
                             style=MaterialTheme.typography.titleSmall)
-                        Text("Slot ${slot.slotId} · ${pretty(slot.role)}" +
-                            (slot.attachmentId?.let{" · Attachment $it"} ?: "") +
-                            (slot.supersetGroup?.let{" · Superset $it"} ?: "") +
+                        Text(pretty(slot.role) +
+                            (slot.attachmentId?.let{" · "+it.replace('_',' ').replace('-',' ')} ?: "") +
+                            (slot.supersetGroup?.let{" · Superset ${supersetOrder.indexOf(it)+1}"} ?: "") +
                             (if(slot.pinned)" · Pinned" else ""),
                             style=MaterialTheme.typography.bodySmall)
+                        if(showProgramMetadata)Text("Slot ${slot.slotId}",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,
                                 style=MaterialTheme.typography.bodySmall)
@@ -1536,6 +1561,15 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         onDismiss={weekExerciseEditor=null})
                 }
             }
+        }
+        supersetEditor?.let {request->
+            if(request.cycleId==current.cycleId && request.athleteId==current.athleteId)
+                NativeKotlinSupersetEditorSheet(request,current,
+                    allowSupersets=state.reviewedSourceSetup?.reviewed?.allowSupersets==true,
+                    sourceRevision=state.sourceRevision,busy=busy,message=state.message,
+                    needsSourceReload=state.authoringRefusal==CustomAuthoringRefusal.SETUP_UNRESOLVED,
+                    onSave={controller.saveSuperset(request,it)},onDismiss={supersetEditor=null},
+                    onReload={supersetEditor=null;controller.open(current.cycleId)})
         }
         swapExerciseEditor?.let { target ->
             val (blockId,weekday,slotId)=target

@@ -32,6 +32,19 @@ release graph and device-acceptance evidence before packaging. Earlier notes
 describing a legacy release launcher/dependency were stale. Final artifact,
 full parity, complete UI, migration and physical-device acceptance remain open.
 
+**Smith physical loading checkpoint (2026-11-15):** onboarding and Gym accept
+an explicitly confirmed Smith empty-bar resistance (including a confirmed zero
+counterbalance) and actual symmetric plate-pair inventory under the exact
+reviewed station ID. Free bars, other Smith stations and old lists of totals
+cannot supply that physical proof. The shared plate viewer supports both issued
+workout routes with Smith-specific labels and exact entered-load arithmetic;
+viewing it does not log a set or change approved targets. New inventory uses
+source v2 / approval v9 only when needed; old inventory retains its previous
+formats. Independently captured old Smith source/approval payloads remain
+byte-identical. Native tests cover source/consent/issuance, explicit actual
+loads, retry, cold reopen, Finish and History. Full device/visual/accessibility,
+broader equipment semantics and overall parity acceptance remain open.
+
 ## What works in the isolated Kotlin core
 
 **Recorded History dates (2026-11-14):** both native Finish routes observe the

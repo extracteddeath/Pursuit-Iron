@@ -13,12 +13,14 @@ data class KotlinVerifiedPlateLayout(
     val barWeight:BigDecimal,
     val total:BigDecimal,
     val unit:LoadUnit,
-    val perSide:List<KotlinPlateSide>
+    val perSide:List<KotlinPlateSide>,
+    val basis:LoadBasis=LoadBasis.BARBELL_TOTAL
 )
 
 /**
- * Only confirmed, exact BARBELL_TOTAL stock may yield a diagram.
- * Smith machines and other stock types are never treated as a barbell.
+ * Only a confirmed paired bar with an exact total may yield a diagram.
+ * A Smith has its own confirmed empty-bar resistance and SMITH_TOTAL basis;
+ * a list of Smith totals supplies no physical plate or bar information.
  * Keep the independent gym loadability validator authoritative, and
  * enforce a bounded pair-count search to avoid unbounded UI work.
  */
@@ -27,15 +29,18 @@ object KotlinVerifiedPlateLayoutDomain {
     private data class Plate(val weight:BigDecimal,val milli:Long,val pairs:Int)
     private data class Solution(val totalPairs:Int,val counts:List<Int>)
 
+    fun supportsBasis(basis:LoadBasis?)=basis in setOf(
+        LoadBasis.BARBELL_TOTAL,LoadBasis.SMITH_TOTAL)
+
     fun inspect(
         stock:VerifiedLoadStock?,
         entered:BigDecimal,
         unit:LoadUnit
     ):KotlinVerifiedPlateLayout? {
-        val bar=stock as? VerifiedLoadStock.Barbell ?:return null
+        val bar=stock as? VerifiedLoadStock.PairedBar ?:return null
         val checked=EquipmentLoadDomain.inspect(bar,entered,unit)
             as? LoadInspection.Confirmed ?:return null
-        if(!checked.exact || checked.basis!=LoadBasis.BARBELL_TOTAL)return null
+        if(!checked.exact || !supportsBasis(checked.basis))return null
         return runCatching {
             // Inventory supports at most 3 decimals. A desired half-load
             // that cannot be expressed at that precision is not attainable.
@@ -87,7 +92,7 @@ object KotlinVerifiedPlateLayoutDomain {
                 }.multiply(BigDecimal("2")))
             require(reconstructed.compareTo(entered)==0)
             KotlinVerifiedPlateLayout(
-                bar.barWeight,entered,unit,perSide)
+                bar.barWeight,entered,unit,perSide,bar.basis)
         }.getOrNull()
     }
 }

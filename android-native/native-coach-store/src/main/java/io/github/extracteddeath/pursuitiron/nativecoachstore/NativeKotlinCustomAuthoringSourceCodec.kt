@@ -26,7 +26,7 @@ data class NativeCustomAuthoringSnapshot(
 
 internal object NativeKotlinCustomAuthoringSourceCodec {
     private const val MAGIC = 0x50494353 // PICS
-    private const val VERSION = 1
+    private const val VERSION = 2
     const val MAX_BYTES = 512_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -93,9 +93,16 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
                 decimal(stock.minimum);decimal(stock.increment)
                 decimal(stock.maximum)
             }
+            is VerifiedLoadStock.Smith -> {
+                // New discriminator; legacy tags 1–3 retain their exact bytes.
+                writeByte(4);enum(stock.unit);decimal(stock.barWeight)
+                items(stock.pairedPlates.entries.sortedBy { it.key }) {
+                    decimal(it.key);writeInt(it.value)
+                }
+            }
         }
     }
-    private fun DataInputStream.stock(): VerifiedLoadStock = when (readUnsignedByte()) {
+    private fun DataInputStream.stock(version:Int): VerifiedLoadStock = when (readUnsignedByte()) {
         1 -> VerifiedLoadStock.Totals(enum<LoadUnit>(),enum<LoadBasis>(),
             items(1024) { decimal() })
         2 -> {
@@ -107,6 +114,14 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
         }
         3 -> VerifiedLoadStock.Stack(enum<LoadUnit>(),enum<LoadBasis>(),
             decimal(),decimal(),decimal())
+        4 -> {
+            if(version<2)throw IOException("Smith stock requires source v2")
+            val unit=enum<LoadUnit>();val resistance=decimal()
+            val values=items(32) { decimal() to readInt() }
+            if(values.map { it.first.stripTrailingZeros() }.distinct().size!=values.size)
+                throw IOException("Duplicate Smith plate denomination")
+            VerifiedLoadStock.Smith(unit,resistance,values.toMap())
+        }
         else -> throw IOException("Unknown gym stock")
     }
     private fun DataOutputStream.setup(athlete: ReviewedAthleteSetup) {
@@ -135,7 +150,7 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
         weekdays(athlete.longTrainingDays)
         weekdays(athlete.declaredRestDays)
     }
-    private fun DataInputStream.setup(): AthleteSetupReview {
+    private fun DataInputStream.setup(version:Int): AthleteSetupReview {
         val profileRevision=readUTF();val athleteId=readUTF()
         val goal=enum<AthleteTrainingGoal>()
         val experience=enum<AthleteExperience>()
@@ -149,7 +164,7 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
             else -> throw IOException("Unknown session time policy")
         }
         val gymId=readUTF();val unit=enum<LoadUnit>()
-        val gymValues=items(128) { readUTF() to stock() }
+        val gymValues=items(128) { readUTF() to stock(version) }
         if (gymValues.map { it.first }.distinct().size!=gymValues.size)
             throw IOException("Duplicate gym equipment")
         val facilities=words(128)
@@ -242,7 +257,8 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use { o ->
             with(o) {
-                writeInt(MAGIC);writeInt(VERSION)
+                writeInt(MAGIC);writeInt(if(athlete.gym.confirmedStock.values.any {
+                    it is VerifiedLoadStock.Smith })VERSION else 1)
                 word(record.ownerKey);word(record.athleteId)
                 writeLong(record.revision);setup(athlete)
                 items(record.catalog) { movement(it) }
@@ -259,10 +275,12 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
         try {
             val decoded=DataInputStream(ByteArrayInputStream(bytes)).use { data ->
                 with(data) {
-                    if (readInt()!=MAGIC || readInt()!=VERSION)
+                    if(readInt()!=MAGIC)throw IOException("Unknown native authoring magic")
+                    val version=readInt()
+                    if(version !in 1..VERSION)
                         throw IOException("Unknown native authoring version")
                     val owner=readUTF();val athleteId=readUTF()
-                    val revision=readLong();val setup=setup()
+                    val revision=readLong();val setup=setup(version)
                     val catalog=items(CoachExerciseCatalogDomain.MAX_CATALOG_ENTRIES) { movement() }
                     if (available()!=0) throw IOException("Trailing source bytes")
                     NativeCustomAuthoringSnapshot(owner,athleteId,

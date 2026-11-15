@@ -45,7 +45,7 @@ internal fun NativeKotlinCustomPlateSheet(
         result.value=PlateScreenResult.Checking
         val layout=withContext(Dispatchers.IO) {
             runCatching {
-                if(request.basis!=LoadBasis.BARBELL_TOTAL)
+                if(!KotlinVerifiedPlateLayoutDomain.supportsBasis(request.basis))
                     return@runCatching null
                 val entered=request.enteredLoad.toBigDecimalOrNull()
                     ?:return@runCatching null
@@ -67,9 +67,9 @@ internal fun NativeKotlinCustomPlateSheet(
                     it.exerciseId==request.exerciseId
                 } ?:return@runCatching null
                 val stock=option.availability.stock
-                    as? VerifiedLoadStock.Barbell
+                    as? VerifiedLoadStock.PairedBar
                     ?:return@runCatching null
-                if(option.loadBasis!=LoadBasis.BARBELL_TOTAL ||
+                if(option.loadBasis!=request.basis || stock.basis!=request.basis ||
                     option.loadUnit!=request.unit)
                     return@runCatching null
                 KotlinVerifiedPlateLayoutDomain.inspect(
@@ -127,7 +127,7 @@ private fun NativeKotlinPlateResultSheet(
     onDismiss:()->Unit
 ) {
     NativeEditSheet(busy=false,onDismiss=onDismiss) {
-        Text("Verified barbell plates",
+        Text("Verified plate layout",
             style=MaterialTheme.typography.headlineSmall)
         Text(kotlinExerciseLabel(exerciseId),
             style=MaterialTheme.typography.bodyMedium)
@@ -148,13 +148,15 @@ private fun NativeKotlinPlateResultSheet(
                 val layout=current.layout
                 fun amount(v:BigDecimal)=v.stripTrailingZeros().toPlainString()
                 val unit=layout.unit.name.lowercase()
+                val barLabel=if(layout.basis==LoadBasis.SMITH_TOTAL)
+                    "confirmed Smith empty-bar resistance" else "confirmed bar"
                 Text("${amount(layout.total)} $unit total · "+
-                    "${amount(layout.barWeight)} $unit confirmed bar",
+                    "${amount(layout.barWeight)} $unit $barLabel",
                     style=MaterialTheme.typography.titleMedium)
                 NativeKotlinVerifiedPlateDiagram(layout)
                 Text("Pair counts are per side, not total individual plates. "+
                     "Confirm collars, balance, and safe loading yourself. "+
-                    "Smith machines are not treated as barbells.",
+                    "Smith totals stay specific to this machine's confirmed resistance.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

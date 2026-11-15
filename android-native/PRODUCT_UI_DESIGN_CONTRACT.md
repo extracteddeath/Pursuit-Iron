@@ -580,3 +580,22 @@ Each barbell overview card selects its corresponding verified trend. Responsive 
 Community comparison is one collapsed Material disclosure with a saved/unsaved summary. Its optional Save/Clear actions use a new reusable responsive action-pair component, stacking at narrow widths or enlarged text. Detailed published reference thresholds and external methodology remain reachable in a **separate collapsed disclosure**, immediately after comparison and before unrelated exercise favorites. The general exercise trends and ordered favorites remain intact. All changes are to UI presentation; native history, journal transactions, profile authoring, coach permissions, progression and workout issuing are unchanged.
 
 **Acceptance still required:** real-device normal/large text, talkback selected-control wording, phone landscape/tablet/foldable spacing, dark/light theme readability, and exact interaction review. The source navigation contract now asserts this hierarchy, shared widgets and the history provenance. The final source revision passed all 33 Kotlin/Compose CI workflow steps in GitHub Actions run 42572780090. This is compilation and source-test evidence, not a physical Android UX sign-off. No APK/AAB until the entire native app design is ready.
+
+## Confirmed Smith loading — 2026-11-15
+
+Smith stock is entered with the existing bar/plate task in onboarding and the
+same physical-equipment editor in Gym. The athlete chooses an exact reviewed
+station, confirms its empty-bar resistance including counterbalance, and enters
+real plate pairs. Changing the station, stock kind or advanced load basis clears
+the prior unsaved hardware inputs. No resistance or free-bar value is assumed.
+An explicit zero is supported for a confirmed counterbalanced station.
+
+Both issued workout routes place View plates beside the entered load, including
+Focus mode and authored follow-up sets. They share one read-only Material sheet
+and schematic, with Smith-specific resistance and accessible diagram labels.
+Old totals-only Smith stock produces an honest unavailable result until its
+physical details are confirmed in Gym. Cancelling or viewing leaves actuals,
+targets and the approved program unchanged. Different stations remain separate.
+
+This source checkpoint does not certify final layout, motion, accessibility,
+phone/foldable usability or full UI completion. The APK/AAB freeze remains.

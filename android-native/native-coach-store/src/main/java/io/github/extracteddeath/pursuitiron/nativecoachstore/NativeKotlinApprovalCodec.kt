@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=8
+    private const val VERSION=9
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -94,9 +94,15 @@ internal object NativeKotlinApprovalCodec {
                 decimal(stock.minimum);decimal(stock.increment)
                 decimal(stock.maximum)
             }
+            is VerifiedLoadStock.Smith -> {
+                writeByte(4);writeEnum(stock.unit);decimal(stock.barWeight)
+                items(stock.pairedPlates.entries){(plate,count)->
+                    decimal(plate);writeInt(count)
+                }
+            }
         }
     }
-    private fun DataInputStream.stock():VerifiedLoadStock?=when(readUnsignedByte()) {
+    private fun DataInputStream.stock(version:Int):VerifiedLoadStock?=when(readUnsignedByte()) {
         0 -> null
         1 -> VerifiedLoadStock.Totals(readEnum<LoadUnit>(),readEnum<LoadBasis>(),
             items(512){decimal()})
@@ -109,6 +115,14 @@ internal object NativeKotlinApprovalCodec {
         }
         3 -> VerifiedLoadStock.Stack(readEnum<LoadUnit>(),readEnum<LoadBasis>(),
             decimal(),decimal(),decimal())
+        4 -> {
+            if(version<9)throw IOException("Smith stock requires approval v9")
+            val unit=readEnum<LoadUnit>();val resistance=decimal()
+            val entries=items(32){decimal() to readInt()}
+            if(entries.map{it.first.stripTrailingZeros()}.distinct().size!=entries.size)
+                throw IOException("duplicate Smith plate denomination")
+            VerifiedLoadStock.Smith(unit,resistance,entries.toMap())
+        }
         else -> throw IOException("unknown equipment inventory")
     }
 
@@ -120,9 +134,9 @@ internal object NativeKotlinApprovalCodec {
             }
         }
     }
-    private fun DataInputStream.equipment():ComposerEquipment=when(readUnsignedByte()) {
+    private fun DataInputStream.equipment(version:Int):ComposerEquipment=when(readUnsignedByte()) {
         0 -> ComposerEquipment.Bodyweight
-        1 -> ComposerEquipment.Verified(readEnum<LoadUnit>(),decimal(),stock())
+        1 -> ComposerEquipment.Verified(readEnum<LoadUnit>(),decimal(),stock(version))
         else -> throw IOException("unknown equipment")
     }
 
@@ -142,13 +156,13 @@ internal object NativeKotlinApprovalCodec {
         writeEnum(e.role)
         optionalBand(e.sourcePracticalReps)
     }
-    private fun DataInputStream.exercise():ComposerExerciseOption {
+    private fun DataInputStream.exercise(version:Int):ComposerExerciseOption {
         val exerciseId=readUTF()
         val pattern=readEnum<ComposerPattern>()
         val allowedFocus=items(6){readEnum<ComposerFocus>()}
         if(allowedFocus.distinct().size!=allowedFocus.size)
             throw IOException("duplicate allowed focus")
-        val equipment=equipment()
+        val equipment=equipment(version)
         val credits=items(TrainingMuscle.entries.size){
             DeclaredMuscleCredit(readEnum<TrainingMuscle>(),
                 readEnum<MuscleCreditRole>(),decimal())
@@ -202,7 +216,7 @@ internal object NativeKotlinApprovalCodec {
         }
         if(!TrainingMuscleCoverage.isComplete(bounds.map{it.muscle}))
             throw IOException("Incomplete or duplicate muscle target coverage")
-        val exercises=items(32){exercise()}
+        val exercises=items(32){exercise(version)}
         val maxDifferent=readInt()
         val preferred=readInt()
         val intents=items(6){
@@ -325,9 +339,12 @@ internal object NativeKotlinApprovalCodec {
             }
         }
         val bytes=ByteArrayOutputStream()
-        // Older v6/v7 approvals remain byte-identical; only an explicit
-        // time-limited approval introduces the v8 trailing selection.
-        val version=if(value.shortSessionLimitMinutes!=null)VERSION
+        // Old inventory retains its exact v6/v7/v8 bytes. Explicit physical
+        // Smith inventory alone opts into v9; no old total is reinterpreted.
+        val hasSmith=value.program.exercises.any {
+            (it.equipment as? ComposerEquipment.Verified)?.inventory is VerifiedLoadStock.Smith
+        }
+        val version=if(hasSmith)VERSION else if(value.shortSessionLimitMinutes!=null)8
             else if(value.program.visitTimings.isEmpty())6 else 7
         DataOutputStream(bytes).use {out->
             with(out){

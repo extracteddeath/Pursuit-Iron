@@ -109,7 +109,7 @@ object CustomExerciseAuthoringDomain {
                 // into a load recommendation.
                 val initial = when(stock) {
                     is VerifiedLoadStock.Totals -> stock.loads.firstOrNull()
-                    is VerifiedLoadStock.Barbell -> stock.barWeight
+                    is VerifiedLoadStock.PairedBar -> stock.barWeight
                     is VerifiedLoadStock.Stack -> stock.minimum
                 } ?: return@mapNotNull null
                 val inspection = EquipmentLoadDomain.inspect(

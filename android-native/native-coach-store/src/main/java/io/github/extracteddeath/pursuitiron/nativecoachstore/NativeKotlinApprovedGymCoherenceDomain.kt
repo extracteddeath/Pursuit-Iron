@@ -45,8 +45,9 @@ object NativeKotlinApprovedGymCoherenceDomain {
                     norm(a.minimum)==norm(b.minimum) &&
                     norm(a.maximum)==norm(b.maximum) &&
                     norm(a.increment)==norm(b.increment)
-            a is VerifiedLoadStock.Barbell && b is VerifiedLoadStock.Barbell ->
-                a.unit==b.unit && norm(a.barWeight)==norm(b.barWeight) &&
+            a is VerifiedLoadStock.PairedBar && b is VerifiedLoadStock.PairedBar ->
+                a.unit==b.unit && a.basis==b.basis &&
+                    norm(a.barWeight)==norm(b.barWeight) &&
                     a.pairedPlates.mapKeys {norm(it.key)}
                         .mapValues {it.value} ==
                     b.pairedPlates.mapKeys {norm(it.key)}

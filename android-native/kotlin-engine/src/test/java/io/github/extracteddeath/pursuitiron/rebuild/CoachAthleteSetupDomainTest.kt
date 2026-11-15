@@ -185,4 +185,21 @@ class CoachAthleteSetupDomainTest {
         assertEquals(setOf(0,1,3,5),draft.trainingWeekdays)
         assertEquals(4,draft.trainingWeekdays?.size)
     }
+    @Test fun reviewedSmithCounterbalanceAndPairsAreFrozenIndependentlyOfTheCaller() {
+        val pairs=linkedMapOf(n("45.0") to 1,n("5.00") to 2)
+        val supplied=VerifiedLoadStock.Smith(LoadUnit.LB,n("15.0"),pairs)
+        val reviewed=CoachAthleteSetupDomain.review(complete().copy(gym=GymProfileDraft(
+            "gym-main",LoadUnit.LB,mapOf("flat-smith-station" to supplied),emptySet(),emptySet())))
+        assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,reviewed.status)
+        pairs.clear();pairs[n("100")]=20
+        val saved=checkNotNull(reviewed.reviewed).gym.confirmedStock.getValue("flat-smith-station") as VerifiedLoadStock.Smith
+        assertEquals(n("15"),saved.barWeight)
+        assertEquals(mapOf(n("45") to 1,n("5") to 2),saved.pairedPlates)
+        assertThrows(UnsupportedOperationException::class.java){
+            (saved.pairedPlates as MutableMap)[n("5")]=10
+        }
+        assertTrue((EquipmentLoadDomain.inspect(saved,n("105"),LoadUnit.LB) as LoadInspection.Confirmed).exact)
+        assertEquals(LoadBasis.SMITH_TOTAL,saved.basis)
+    }
+
 }

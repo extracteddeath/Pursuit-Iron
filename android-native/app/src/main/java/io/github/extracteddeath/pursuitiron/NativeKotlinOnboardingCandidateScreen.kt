@@ -457,7 +457,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     supportingText={Text("Exact ${unit.lowercase().ifBlank{"weight"}} values, separated by commas")},
                     modifier=Modifier.fillMaxWidth())
                 val barChoices=remember{ kotlinGymStockChoices(StarterExerciseTranche.movements())
-                    .filter{it.basis==LoadBasis.BARBELL_TOTAL} }
+                    .filter{KotlinVerifiedPlateLayoutDomain.supportsBasis(it.basis)} }
                 NativeSetupChoice("Bar type",barChoices,
                     barChoices.firstOrNull{it.equipmentId==barEquipmentId},
                     caption={it.displayName},onChange={chosen->
@@ -466,11 +466,13 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                             barWeight="";plates="";gymConfirmed=false
                         }
                     })
-                Text("Confirm this bar's empty weight and available plate pairs. Other bars can be added in Gym.",
+                val smithBar=barChoices.firstOrNull{it.equipmentId==barEquipmentId}?.basis==LoadBasis.SMITH_TOTAL
+                Text(if(smithBar)"Confirm this Smith machine's empty-bar resistance, including its counterbalance, and real plate pairs. Zero resistance is allowed when confirmed. Other bars can be added in Gym."
+                    else "Confirm this bar's empty weight and available plate pairs. Other bars can be added in Gym.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(barWeight,{barWeight=it.take(30);gymConfirmed=false},
-                    label={Text("Empty bar weight")},modifier=Modifier.fillMaxWidth())
+                    label={Text(if(smithBar)"Confirmed empty-bar resistance" else "Empty bar weight")},modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(plates,{plates=it.take(500);gymConfirmed=false},
                     label={Text("Available plate pairs")},
                     supportingText={Text("Weight × matching pairs, e.g. 2.5x2, 5x1")},

@@ -118,7 +118,11 @@ split fits the answers. A new program's week starts on the day it is built.
 Engine (shared with the web app): a built plan is checked against the session length the app displays, in every work
 week, and a day that shows over the chosen limit is rebuilt on a tighter budget unless that would cost a large or
 focused muscle its work (`verification/b1012-displayed-time-referee-test.mjs`). A muscle focus is guaranteed to raise
-that muscle's weekly sets over the same plan without it, inside the time limit (`b1012-focus-dose-test.mjs`).
+that muscle's weekly sets over the same plan without it, inside the time limit (`b1012-focus-dose-test.mjs`). A day that would show
+under the lower edge of the chosen session length takes a lift or sets until it reaches it, inside the dose ceilings, and a
+week with no pulling (or pushing, or leg work) gets a compound for it (`b1013-session-fill-test.mjs`). Days stay short where
+the dose model has no productive work left to add: strength days are built around one heavy lift, and six long days hold
+more time than the weekly ceilings allow.
 
 Performance: engine replies are parsed off the main thread, Today paints before the other tabs load, History pages
 40 rows at a time, `androidx.profileinstaller` installs the libraries' baseline profiles outside Play, and CI measures

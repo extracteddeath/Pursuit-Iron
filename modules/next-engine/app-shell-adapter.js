@@ -9,11 +9,12 @@ import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
 import { generateProgram } from './generate.js';
-import { finalizeGeneratedShellVolume, ensureFocusedRegionDose, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
+import { moveLiftsOffOverDays, finalizeGeneratedShellVolume, ensureFocusedRegionDose, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
 import { PCT_SCHEMES } from './percentage-protocols.js';
+import { STRENGTH_STRUCTURES } from './config.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
-import { shellSessionOvershoot } from './shell-session-clock.js';
+import { shellSessionOvershoot, SESSION_BANDS } from './shell-session-clock.js';
 export { setShellSessionClock } from './shell-session-clock.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_SETS = {
@@ -21,10 +22,6 @@ const DAY_SETS = {
     5: ['monday', 'tuesday', 'thursday', 'friday', 'sunday'], 6: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'], 7: DAY_ORDER
 };
 const DAY_TO_JS = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
-const SESSION_BANDS = {
-    s20: { minMinutes: 0, maxMinutes: 20 }, s40: { minMinutes: 20, maxMinutes: 40 }, s60: { minMinutes: 40, maxMinutes: 60 },
-    s90: { minMinutes: 60, maxMinutes: 90 }, s120: { minMinutes: 90, maxMinutes: 120 }, s120p: { minMinutes: 120, maxMinutes: 150 }
-};
 // Preserve the proven session-complexity expectations from the production generator while letting
 // Engine 0.56 own the exercise choices and dosage. The old app treated the lower edge as the promise
 // and the upper edge as allowance; M48 accidentally collapsed that contract to an upper cap only.
@@ -34,7 +31,6 @@ const SESSION_EXERCISES = {
     s120: { hypertrophy: 9, strength: 8, mixed: 8 }, s120p: { hypertrophy: 11, strength: 10, mixed: 11 }
 };
 const SUPPORTED_SPLITS = new Set(['full_body', 'upper_lower', 'ppl', 'ulppl', 'pplul', 'custom', 'hybrid', 'phul', 'phat', 'bro', 'arnold', 'five_three_one', 'five31_beginner', 'strength_fb', 'academy_prep', 'texas', 'gzclp', 'rippler', 'jt', 'glute_focus', 'full_body_patterns', 'torso_limbs', 'ppla', 'ula', 'sbd_power', 'upper_lower_alt']);
-const STRENGTH_STRUCTURES = new Set(['five_three_one', 'five31_beginner', 'strength_fb', 'academy_prep', 'texas', 'gzclp', 'rippler', 'jt', 'sbd_power']);
 const OHP_STRUCTURES = new Set(['five_three_one', 'five31_beginner', 'gzclp', 'rippler', 'jt']);
 
 
@@ -525,6 +521,11 @@ export function generateNextProgramForShell(options) {
         }
         if (!moved) break;
     }
+    if (totalOver(bestOver) > 0 && options.sessionFill !== false) {
+        // Nothing tighter builds: move a lift to a day with room instead (dose-neutral).
+        const moved = moveLiftsOffOverDays(best.program, options.legacyExercises, (SESSION_BANDS[options.config?.session] ?? SESSION_BANDS.s60).maxMinutes);
+        if (moved !== best.program) best = { ...best, program: moved, nextProgram: moved.nextEngine.program };
+    }
     return best;
 }
 
@@ -619,7 +620,7 @@ function buildNextProgramForShell(options, displayTrim) {
         } : {})
     };
 
-    const finalProgram = withSupplementalSlots(withFocusDose(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises), options, displayTrim));
+    const finalProgram = withSupplementalSlots(withFocusDose(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises, { extend: true, fill: options.sessionFill !== false }), options, displayTrim));
     return {
         program: finalProgram,
         nextProgram: finalProgram.nextEngine.program,

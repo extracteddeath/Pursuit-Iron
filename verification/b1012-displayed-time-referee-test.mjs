@@ -50,7 +50,10 @@ console.log(`PASS 2 refereed: ${overAfter} of ${refereed.reduce((n, p) => n + (p
 
 // 3. A plan that already fit is returned untouched: same cells, same budgets.
 let untouched = 0;
-unrefereed.forEach((program, i) => { if (!program || overCount(program, LIMIT[configs[i].session])) return;
+// (The session fill reads the same displayed clock, so a plan it changed differs between the control, built with
+// no clock, and the refereed build for a reason that is not the referee: those are left to the fill's own gate.)
+const filled = program => { const fill = program.nextEngine.sessionFill; return !!(fill?.sets?.length || fill?.added?.length); };
+unrefereed.forEach((program, i) => { if (!program || overCount(program, LIMIT[configs[i].session]) || filled(program) || filled(refereed[i])) return;
     assert.deepEqual(refereed[i].nextWeekPrescriptions, program.nextWeekPrescriptions, configs[i].name + ': a fitting plan is not rebuilt');
     assert.deepEqual(refereed[i].days.map(d => d.exercises), program.days.map(d => d.exercises));
     untouched++; });

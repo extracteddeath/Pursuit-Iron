@@ -50,15 +50,23 @@ for (const fixture of fixtures) {
     // A requested focus adds a later, separate transaction (ensureFocusedRegionDose): generation equals the
     // direct repair plus exactly the sets that transaction recorded, never on protected strength work.
     const focusOps = (built.program.nextEngine.focusDose?.changes ?? []).flatMap(change => change.operations);
-    if (!focusOps.length) assert.deepEqual(repaired.program.nextWeekPrescriptions, built.program.nextWeekPrescriptions);
+    // Spare session time is a third recorded transaction (fillSessionsTowardBand), applied before the focus:
+    // one set per recorded step in every work week, never past five and never on strength work.
+    const fillOps = built.program.nextEngine.sessionFill?.sets ?? [];
+    if (!focusOps.length && !fillOps.length) assert.deepEqual(repaired.program.nextWeekPrescriptions, built.program.nextWeekPrescriptions);
     else {
         const expected = clone(repaired.program.nextWeekPrescriptions);
+        for (const op of fillOps) for (let step = 0; step < op.delta; step++) for (let week = 1; week <= fixture.config.weeks; week++) {
+            const cell = expected[op.key][week];
+            assert.ok(!protectedRole(cell.role), fixture.label + ': a fill set never lands on strength work');
+            cell.sets = Math.max(cell.sets, Math.min(5, cell.sets + 1));
+        }
         for (const op of focusOps) for (let week = 1; week <= fixture.config.weeks; week++) {
             const cell = expected[op.key][week];
             assert.ok(!protectedRole(cell.role), fixture.label + ': a focus set never lands on strength work');
             cell.sets = op.delta > 0 ? Math.min(5, cell.sets + op.delta) : cell.sets + op.delta;
         }
-        assert.deepEqual(built.program.nextWeekPrescriptions, expected, fixture.label + ': focus sets are the only difference from the direct repair');
+        assert.deepEqual(built.program.nextWeekPrescriptions, expected, fixture.label + ': fill and focus sets are the only difference from the direct repair');
     }
     const rerun = reconcileShellWeekDose(repaired.program, EXERCISES);
     assert.equal(rerun.changed, false, 'repair is idempotent');

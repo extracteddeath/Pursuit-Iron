@@ -12,8 +12,12 @@ import { buildProgramExplainability } from './explainability.js';
 import { estimateSessionMinutes, repsForPhase, rirForPhase, restForExercise, progressionForExercise, progressionStyleForExercise } from './realizer.js';
 import { prescriptionForSimulationWeek } from './simulation.js';
 import { phasePolicyFor } from './phase-policy.js';
-import { avoidableExerciseOverlap } from './exercise-economy.js';
+import { avoidableExerciseOverlap, primaryDirectMuscles } from './exercise-economy.js';
 import { INTENT_MUSCLES } from './topology.js';
+import { STRENGTH_STRUCTURES } from './config.js';
+import { assessWeeklyRecovery } from './weekly-recovery.js';
+import { exerciseRedundancyPenalty, exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';
+import { sessionBandFor, shellSessionMinutes } from './shell-session-clock.js';
 
 const EPS = .001;
 const STRENGTH = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
@@ -318,12 +322,24 @@ function rebuild(program, changes, legacyExercises, addition = null, options = {
     }
     const events = createTrainingSetEvents(sessions, request.customExercises);
     const engine = { ...program.nextEngine.program, sessions, events, muscleLedger: deriveMuscleLedger(events) };
-    engine.audit = auditProgram(engine, request);
     next.nextEngine.program = engine;
-    next.nextEngine.audit = engine.audit;
+    // deferAudit: the caller screens the candidate with cheaper checks first and audits what survives.
+    if (!options.deferAudit) withEngineAudit(next, request);
     return next;
 }
 
+function withEngineAudit(candidate, request) {
+    candidate.nextEngine.program.audit = auditProgram(candidate.nextEngine.program, request);
+    candidate.nextEngine.audit = candidate.nextEngine.program.audit;
+    return candidate;
+}
+
+// Findings of every severity, keyed like auditCounts.
+const findingCounts = audit => {
+    const counts = {};
+    for (const f of audit?.findings ?? []) { const key = `${f.code}:${f.sessionId ?? ''}:${f.severity}`; counts[key] = (counts[key] || 0) + 1; }
+    return counts;
+};
 const auditCounts = audit => {
     const counts = {};
     for (const f of audit.findings ?? []) {
@@ -766,12 +782,459 @@ export function preserveStrengthWeekContinuity(previous, program, legacyExercise
     ]);
 }
 
-export function finalizeGeneratedShellVolume(program, legacyExercises = []) {
+/* Spare session time. The realizer sizes a week from its dose targets, and the band's lower edge was never a
+   quota, so a lifter who chose 60-90 minutes could be handed 45-minute days of three or four lifts at two sets
+   while every region sat well inside its range. A day that shows under the lower edge of the chosen band now
+   takes work until it reaches the edge or nothing more fits inside the plan's own limits:
+     1. a new plan's short day with fewer lifts than its band targets gets a lift for the region with the most
+        room (extendSessionsTowardBand: the repair pass's own candidate rules, three sets);
+     2. then lifts take sets, the smallest first (fillSessionsTowardBand).
+   The limits, checked on every move:
+     - the first week of a region stays at or under its modeled upper dose (the phase decides how much of the
+       preferred-to-upper range a long session may use), and no week passes the region or muscle ceiling;
+     - a lift starts the block on at most four sets and never passes five;
+     - no day passes its limit on either clock, and the engine audit does not regress.
+   Strength work, the lifter's own edits, minimalist plans and the named strength programs are left as they are.
+   What stays short is reported, not forced: six 90-minute days hold more time than any lifter has productive
+   work for, and the plan says how long it really runs. */
+const FILL_PHASE_REACH = { hypertrophy_accumulation: 1, mixed_accumulation: .74, strength_accumulation: 0 };
+const FILL_FIRST_WEEK_SETS = 4;
+const FILL_REGION_GROWTH = 4 / 3;
+const FILL_NEW_LIFT_SETS = 3;
+const FILL_NEW_LIFT_MINUTES = 6;   // a day short by less than a lift's worth is closed with sets
+const FILL_MINUTES_PER_SET = 2.5;
+const FILL_NEW_LIFT_ATTEMPTS = 8;  // audited candidates per plan
+const FILL_NEW_LIFT_SCREENED = 24; // candidates rebuilt and screened without the audit
+const SET_CAP = 5;
+// Filed under a region for the ledger, but not that region's main work: a tibialis raise does not fill a calf gap.
+const FILL_SIDE_REGIONS = new Set(['tibialis', 'serratus']);
+function bandFillGuards(program, legacyExercises, generatedRegions = null, { anyBand = false } = {}) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request || !Array.isArray(program.days)) return null;
+    const band = sessionBandFor(program.config), phase = phaseOf(program), reach = FILL_PHASE_REACH[phase];
+    if ((!anyBand && !(band.minMinutes > 0)) || reach == null || program.config?.percentScheme || STRENGTH_STRUCTURES.has(program.config?.split)) return null;
+    const context = snapshotContext(program, legacyExercises), { request } = context;
+    if (!anyBand && request.preferences.volumeApproach === 'minimalist') return null;
+    const weekCount = workWeeks(program);
+    const targets = shellVolumeTargets(program, request);
+    const prescriptions = createMusclePrescriptions(request, phase);
+    const muscleCeiling = Object.fromEntries(prescriptions.map(p => [p.muscle, publicMevInternalSafetyCeiling(request, phase, p.muscle, p.upper)]));
+    // The modeled upper dose, and no more than a third (or two sets) over what the realizer gave the region: spare
+    // time is spread over the week, not poured into whichever region has the highest ceiling.
+    const firstWeekCeiling = Object.fromEntries(targets.map(t => {
+        const modeled = t.mav + Math.max(0, t.mrv / 1.2 - t.mav) * reach, generated = generatedRegions?.[t.region];
+        return [t.region, Number.isFinite(generated) ? Math.min(modeled, Math.max(generated * FILL_REGION_GROWTH, generated + 2)) : modeled];
+    }));
+    const displayed = (candidate, day, week, engineMinutes) => shellSessionMinutes(candidate, day, week) ?? Math.round(engineMinutes);
+    const underDays = (candidate, audit) => candidate.days.map((day, di) => ({ day, di,
+        minutes: displayed(candidate, day, 1, audit.weeks[0].sessions[di]?.estimatedMinutes) }))
+        .filter(x => Number.isFinite(x.minutes) && x.minutes < band.minMinutes);
+    // Dose and time are arithmetic and checked on every move. The engine audit can cost a quarter of a second
+    // on a six-day week (it searches day orders), and generation runs on the phone, so the audit is run on the
+    // finished plan, every work week (finalizeGeneratedShellVolume), and a plan that regresses is not taken.
+    // `opening`: regions a movement-pattern floor is opening, which the first-week dose ceiling does not bind.
+    // `giving`: accessory regions a pattern swap may take below their floor (the lift that made room).
+    const allowed = (before, beforeProgram, candidate, opening = null, giving = null) => {
+        const after = auditShellVolume(candidate, legacyExercises);
+        if (after.missing || after.weeks.length !== weekCount) return null;
+        for (let wi = 0; wi < weekCount; wi++) {
+            const bw = before.weeks[wi], aw = after.weeks[wi];
+            for (const t of targets) {
+                const now = aw.regions[t.region], was = bw.regions[t.region];
+                if ((now < Math.min(t.mev, was) - EPS && !giving?.includes(t.region)) || now > Math.max(t.mrv, was) + EPS) return null;
+                if (wi === 0 && !opening?.includes(t.region) && now > Math.max(firstWeekCeiling[t.region], was) + EPS) return null;
+            }
+            for (const p of prescriptions) {
+                const now = aw.muscleLedger[p.muscle].fractionalSets, was = bw.muscleLedger[p.muscle].fractionalSets;
+                if (now > Math.max(muscleCeiling[p.muscle] * (wi === 0 ? 1 : 1.2), was) + EPS) return null;
+            }
+            for (let di = 0; di < aw.sessions.length; di++) {
+                const s = aw.sessions[di], b = bw.sessions[di];
+                if (s.estimatedMinutes > Math.max(s.maxMinutes, b.estimatedMinutes) + EPS) return null;
+                const shown = displayed(candidate, candidate.days[di], wi + 1, s.estimatedMinutes);
+                if (shown > Math.max(band.maxMinutes, displayed(beforeProgram, beforeProgram.days[di], wi + 1, b.estimatedMinutes))) return null;
+            }
+            // No new hard collision between consecutive days (the audit's recovery finding, without its search).
+            if (assessWeeklyRecovery(aw.sessions, request).hardCollisions > assessWeeklyRecovery(bw.sessions, request).hardCollisions) return null;
+        }
+        return after;
+    };
+    return { band, phase, context, request, weekCount, targets, firstWeekCeiling, underDays, allowed };
+}
+const fillable = (program, ex) => !STRENGTH.has(ex.role)
+    && shellPrescriptionFieldOwner(program, program.overrides?.[ex.shellKey] ?? {}, 'sets') !== 'user';
+
+/* A week with no pulling at all. A two-day upper/lower strength plan came out as bench press and a lateral raise
+   on the upper day, 20 minutes of its 40, with no row or pulldown anywhere: the muscle ledger credits the
+   deadlift to the back, so every floor read as met while lats and upper back had no sets. The app's own
+   week audit calls this an error (pattern-absent). A new plan with a whole pattern at zero gets one compound for
+   it on the day with the most room that trains that area, under the same time, ceiling and audit limits as any
+   other added lift. Named strength programs stay as written. */
+const PATTERN_FLOORS = [
+    { regions: ['lats', 'upper_back', 'biceps'], open: ['lats', 'upper_back'] },
+    { regions: ['chest', 'side_delts', 'triceps'], open: ['chest'] },
+    { regions: ['quads', 'hamstrings', 'glutes'], open: ['quads'] }
+];
+const PATTERN_MIN_SETS = .5, PATTERN_LIFT_SETS = 2;
+const PATTERN_ACCESSORY_REGIONS = new Set(['side_delts', 'rear_delts', 'calves', 'core', 'biceps', 'triceps']);
+export function ensureMovementPatterns(program, legacyExercises = []) {
+    const untouched = { program, changes: [] };
+    const guards = bandFillGuards(program, legacyExercises, null, { anyBand: true });
+    if (!guards) return untouched;
+    const { phase, request, targets } = guards;
+    const engineContext = createEngineContext(request), policy = phasePolicyFor(phase);
+    let current = program, before = auditShellVolume(program, legacyExercises);
+    if (before.missing) return untouched;
+    const changes = [];
+    for (const floor of PATTERN_FLOORS) {
+        const first = before.weeks[0];
+        if (floor.regions.reduce((sum, region) => sum + (first.regions[region] || 0), 0) >= PATTERN_MIN_SETS) continue;
+        const days = first.sessions.map((session, di) => ({ session, di, minutes: session.estimatedMinutes / Math.max(1, session.maxMinutes) }))
+            .sort((a, b) => a.minutes - b.minutes);
+        let tried = 0;
+        search: for (const region of floor.open) {
+            const t = targets.find(x => x.region === region);
+            if (!t) continue;
+            for (const { session } of days) {
+                if (!(INTENT_MUSCLES[session.intent] ?? INTENT_MUSCLES.full).includes(t.muscle)) continue;
+                const existing = session.exercises.map(e => ({ def: engineContext.exerciseById(e.exerciseId), role: e.role })).filter(x => x.def);
+                const candidates = engineContext.candidatesForMuscle(t.muscle).filter(def => def.flags.compound
+                    && publicRegionContribution(def, region) >= .999 && engineContext.equipmentEligible(def, session.day)
+                    && !session.exercises.some(e => e.exerciseId === def.id))
+                    .map(def => ({ def, worth: (def.suitability?.hypertrophy ?? 0) * .35 + (def.stability ?? 0) * .15
+                        - exerciseRedundancyPenalty(def, 'hypertrophy_compound', existing) - exerciseSetupInefficiencyPenalty(def, existing)
+                        - (def.fatigue?.systemic ?? 0) * .1 - (def.fatigue?.lowerBack ?? 0) * .2 - (def.technicalComplexity ?? 0) * .2 }))
+                    .sort((a, b) => b.worth - a.worth || a.def.id.localeCompare(b.def.id)).slice(0, 3).map(x => x.def);
+                for (const def of candidates) {
+                    const legacy = resolveLegacyExercise({ exerciseId: def.id, name: def.name }, legacyExercises);
+                    if (!legacy || nextExerciseIdForShellExercise(legacy) !== def.id) continue;
+                    if (tried++ >= FILL_NEW_LIFT_ATTEMPTS) break search;
+                    const role = 'hypertrophy_compound';
+                    const exercise = { exerciseId: def.id, name: def.name, role, sets: PATTERN_LIFT_SETS, prescription: {
+                        reps: repsForPhase(def, role, policy), rir: rirForPhase(role, policy), restSeconds: restForExercise(role, def) },
+                        progression: progressionForExercise(def, role, policy, request.athlete.experience),
+                        progressionStyle: progressionStyleForExercise(def, role, policy, request.athlete.experience) };
+                    // Added outright where the day has the time; otherwise in place of one accessory lift whose
+                    // regions are all small ones: a week with no pulling is the worse gap.
+                    const makeRoom = [null, ...session.exercises.filter(ex => fillable(current, ex) && !ex.supersetGroup).filter(ex => {
+                        const lift = engineContext.exerciseById(ex.exerciseId);
+                        return lift && targets.every(x => !(publicRegionContribution(lift, x.region) >= .999) || PATTERN_ACCESSORY_REGIONS.has(x.region));
+                    }).sort((a, b) => a.sets - b.sets)];
+                    for (const out of makeRoom) {
+                        const lift = out && engineContext.exerciseById(out.exerciseId);
+                        const giving = lift ? targets.filter(x => publicRegionContribution(lift, x.region) > 0 && PATTERN_ACCESSORY_REGIONS.has(x.region)).map(x => x.region) : null;
+                        const candidate = withSourcePrescriptions(rebuild(current, out ? [{ dayId: session.shellDayId, slot: out.shellSlot, remove: true }] : [], legacyExercises,
+                            { dayId: session.shellDayId, legacy, exercise }, { deferAudit: true }), current);
+                        const after = candidate && guards.allowed(before, current, candidate, floor.regions, giving);
+                        if (!after) continue;
+                        if (regressedCounts(auditCounts(withEngineAudit(candidate, request).nextEngine.audit), auditCounts(current.nextEngine.program.audit))) continue;
+                        current = candidate; before = after;
+                        changes.push({ sets: [], addedExercise: def.name, ...(out ? { replacedExercise: out.name } : {}), dayId: session.shellDayId, reason: 'movement_pattern' });
+                        break search;
+                    }
+                }
+            }
+        }
+    }
+    return changes.length ? { program: current, changes } : untouched;
+}
+
+export function extendSessionsTowardBand(program, legacyExercises = [], generatedRegions = null) {
+    const untouched = { program, changes: [] };
+    const guards = bandFillGuards(program, legacyExercises, generatedRegions);
+    if (!guards) return untouched;
+    const { band, phase, request, targets, firstWeekCeiling } = guards;
+    const engineContext = createEngineContext(request), policy = phasePolicyFor(phase);
+    let current = program, before = auditShellVolume(program, legacyExercises);
+    if (before.missing) return untouched;
+    const tried = new Set(), changes = [];
+    let attempts = 0, screened = 0;
+    for (let guard = 0; guard < 16 && attempts < FILL_NEW_LIFT_ATTEMPTS && screened < FILL_NEW_LIFT_SCREENED; guard++) {
+        const first = before.weeks[0];
+        let added = false;
+        for (const { di, minutes } of guards.underDays(current, before)) {
+            const session = first.sessions[di];
+            const wanted = request.schedule.days.find(day => day.day === session?.day)?.targetExercises ?? 0;
+            if (!session || session.exercises.length >= wanted) continue;
+            // Lifts still under three sets are raised first; a lift is added for what that cannot close.
+            const fromSets = session.exercises.filter(ex => fillable(current, ex))
+                .reduce((sum, ex) => sum + Math.max(0, FILL_NEW_LIFT_SETS - ex.sets), 0) * FILL_MINUTES_PER_SET;
+            if (band.minMinutes - minutes - fromSets < FILL_NEW_LIFT_MINUTES) continue;
+            const intent = INTENT_MUSCLES[session.intent] ?? INTENT_MUSCLES.full;
+            const existing = session.exercises.map(e => ({ def: engineContext.exerciseById(e.exerciseId), role: e.role })).filter(x => x.def);
+            const inPlan = new Set(first.sessions.flatMap(s => s.exercises.map(e => e.exerciseId)));
+            const directLifts = region => existing.filter(x => directlyTargetsPublicRegion(x.def, region)).length;
+            // A region the day does not train directly yet comes first, then the one with the most room.
+            const regions = targets.filter(t => intent.includes(t.muscle) && directLifts(t.region) < 2)
+                .map(t => ({ t, direct: directLifts(t.region),
+                    room: (firstWeekCeiling[t.region] - first.regions[t.region] - FILL_NEW_LIFT_SETS) / Math.max(firstWeekCeiling[t.region], EPS) }))
+                .filter(x => x.room >= -EPS).sort((a, b) => a.direct - b.direct || b.room - a.room || a.t.region.localeCompare(b.t.region));
+            const novice = request.athlete.experience === 'novice';
+            // The realizer's own terms for a hypertrophy accessory: suited to the goal, stable, not a near-copy of
+            // a lift already in the session or the week, cheap to set up next to what is there.
+            const worth = def => {
+                const role = def.flags.compound ? 'hypertrophy_compound' : 'hypertrophy_isolation';
+                return (def.suitability?.hypertrophy ?? 0) * .35 + (def.stability ?? 0) * .15
+                    - exerciseRedundancyPenalty(def, role, existing) - exerciseSetupInefficiencyPenalty(def, existing)
+                    - (inPlan.has(def.id) ? 1 : 0) - (def.fatigue?.systemic ?? 0) * .1 - (def.technicalComplexity ?? 0) * (novice ? .3 : .1);
+            };
+            search: for (const { t } of regions) {
+                const candidates = engineContext.candidatesForMuscle(t.muscle).filter(def => !tried.has(`${session.shellDayId}:${def.id}`)
+                    && publicRegionContribution(def, t.region) >= .999 && engineContext.equipmentEligible(def, session.day)
+                    && !FILL_SIDE_REGIONS.has(def.legacySubregion)
+                    && !session.exercises.some(e => e.exerciseId === def.id)
+                    && !avoidableExerciseOverlap(def, def.flags.compound ? 'hypertrophy_compound' : 'hypertrophy_isolation', existing, { priority: t.priority }))
+                    .map(def => ({ def, worth: worth(def) })).sort((a, b) => b.worth - a.worth || a.def.id.localeCompare(b.def.id)).slice(0, 2).map(x => x.def);
+                for (const def of candidates) {
+                    tried.add(`${session.shellDayId}:${def.id}`);
+                    // Cheap arithmetic first: every region the lift credits must have first-week room for it.
+                    if (targets.some(x => first.regions[x.region] + FILL_NEW_LIFT_SETS * publicRegionContribution(def, x.region) > Math.max(firstWeekCeiling[x.region], first.regions[x.region]) + EPS)) continue;
+                    const legacy = resolveLegacyExercise({ exerciseId: def.id, name: def.name }, legacyExercises);
+                    if (!legacy || nextExerciseIdForShellExercise(legacy) !== def.id) continue;
+                    if (screened++ >= FILL_NEW_LIFT_SCREENED) break search;
+                    const role = def.flags.compound ? 'hypertrophy_compound' : 'hypertrophy_isolation';
+                    const exercise = { exerciseId: def.id, name: def.name, role, sets: FILL_NEW_LIFT_SETS, prescription: {
+                        reps: repsForPhase(def, role, policy), rir: rirForPhase(role, policy), restSeconds: restForExercise(role, def) },
+                        progression: progressionForExercise(def, role, policy, request.athlete.experience),
+                        progressionStyle: progressionStyleForExercise(def, role, policy, request.athlete.experience) };
+                    const candidate = withSourcePrescriptions(rebuild(current, [], legacyExercises, { dayId: session.shellDayId, legacy, exercise }, { deferAudit: true }), current);
+                    const after = candidate && guards.allowed(before, current, candidate);
+                    if (!after) continue;
+                    if (attempts++ >= FILL_NEW_LIFT_ATTEMPTS) break search;
+                    if (regressedCounts(findingCounts(withEngineAudit(candidate, request).nextEngine.audit), findingCounts(current.nextEngine.program.audit))) continue;
+                    current = candidate; before = after; added = true;
+                    changes.push({ sets: [], addedExercise: def.name, dayId: session.shellDayId, reason: 'session_fill' });
+                    break search;
+                }
+            }
+            if (added) break; // the week's doses moved: re-read before the next day
+        }
+        if (!added) break;
+    }
+    return changes.length ? { program: current, changes } : untouched;
+}
+/* rebuild() reads its sessions from the live first week, so the engine source it stores would carry week-one
+   effort and rest as the block's base, and every later projection of that source would shift them again. A new
+   plan keeps the generated base prescription of every lift it already had; only the roster and sets change. */
+function withSourcePrescriptions(candidate, source) {
+    if (!candidate) return candidate;
+    const sessions = candidate.nextEngine.program.sessions.map((session, di) => {
+        const original = source.nextEngine.program.sessions[di];
+        return { ...session, exercises: session.exercises.map(exercise => {
+            const base = original?.exercises.find(x => x.exerciseId === exercise.exerciseId);
+            return base ? { ...exercise, prescription: base.prescription, progression: base.progression ?? exercise.progression,
+                progressionStyle: base.progressionStyle ?? exercise.progressionStyle } : exercise;
+        }) };
+    });
+    candidate.nextEngine.program = { ...candidate.nextEngine.program, sessions };
+    return candidate;
+}
+const regressedCounts = (counts, baseline) => Object.entries(counts).some(([key, n]) => n > (baseline[key] || 0));
+
+export function fillSessionsTowardBand(program, legacyExercises = [], skipDayIds = null, generatedRegions = null) {
+    const untouched = { program, changes: [] };
+    const guards = bandFillGuards(program, legacyExercises, generatedRegions);
+    if (!guards) return untouched;
+    const { band, context, weekCount, targets, firstWeekCeiling } = guards;
+    const withSets = (candidate, keys) => {
+        const cells = { ...candidate.nextWeekPrescriptions };
+        for (const key of keys) {
+            cells[key] = { ...cells[key] };
+            for (let w = 1; w <= weekCount; w++) cells[key][w] = { ...cells[key][w], sets: Math.max(cells[key][w].sets, Math.min(SET_CAP, cells[key][w].sets + 1)) };
+        }
+        return { ...candidate, nextWeekPrescriptions: cells };
+    };
+    let current = program, before = auditShellVolume(program, legacyExercises);
+    if (before.missing || before.weeks.length !== weekCount) return untouched;
+    const blocked = new Set(), changes = [];
+    for (let round = 0; round < 48; round++) {
+        const under = guards.underDays(current, before).filter(x => !skipDayIds?.has(x.day.id));
+        if (!under.length) break;
+        const first = before.weeks[0], pending = {};
+        const picks = [];
+        for (const { di } of under) {
+            const session = first.sessions[di];
+            const options = (session?.exercises ?? []).map(ex => ({ ex, def: context.exerciseMap.get(ex.exerciseId),
+                weekly: Array.from({ length: weekCount }, (_, i) => current.nextWeekPrescriptions?.[ex.shellKey]?.[i + 1]?.sets) }))
+                .filter(x => x.def && !blocked.has(x.ex.shellKey) && fillable(current, x.ex)
+                    && x.weekly.every(Number.isFinite) && x.weekly[0] < FILL_FIRST_WEEK_SETS && x.weekly.some(sets => sets < SET_CAP))
+                .map(x => {
+                    // Room left, as a share of the ceiling, in the tightest region this lift trains.
+                    let room = Infinity;
+                    for (const t of targets) {
+                        const credit = publicRegionContribution(x.def, t.region);
+                        if (!(credit > 0)) continue;
+                        const ceiling = Math.max(firstWeekCeiling[t.region], EPS);
+                        room = Math.min(room, (ceiling - first.regions[t.region] - (pending[t.region] || 0) - credit) / ceiling);
+                    }
+                    return { ...x, room };
+                })
+                .filter(x => x.room >= -EPS)
+                .sort((a, b) => a.weekly[0] - b.weekly[0] || b.room - a.room || a.ex.shellKey.localeCompare(b.ex.shellKey));
+            const pick = options[0];
+            if (!pick) continue;
+            picks.push(pick.ex.shellKey);
+            for (const t of targets) pending[t.region] = (pending[t.region] || 0) + publicRegionContribution(pick.def, t.region);
+        }
+        if (!picks.length) break;
+        const together = withSets(current, picks), afterTogether = guards.allowed(before, current, together);
+        if (afterTogether) { current = together; before = afterTogether; changes.push(...picks); continue; }
+        for (const key of picks) {
+            const one = withSets(current, [key]);
+            const after = guards.allowed(before, current, one);
+            if (after) { current = one; before = after; changes.push(key); }
+            else blocked.add(key);
+        }
+    }
+    if (!changes.length) return untouched;
+    const tally = {};
+    for (const key of changes) tally[key] = (tally[key] || 0) + 1;
+    return { program: current, changes: Object.entries(tally).map(([key, delta]) => ({ sets: [{ key, delta }], reason: 'session_fill' })) };
+}
+
+/* Engine findings of every severity in each work week of the executable plan (weeks with the same sets share
+   one audit). */
+function weeklyAuditCounts(program, legacyExercises) {
+    const request = requestOf(program), audit = auditShellVolume(program, legacyExercises), seen = new Map();
+    return audit.weeks.map(week => {
+        const key = JSON.stringify(week.sessions.map(s => s.exercises.map(e => [e.exerciseId, e.sets, e.supersetGroup ? 1 : 0])));
+        if (!seen.has(key)) seen.set(key, findingCounts(auditProgram({ ...program.nextEngine.program,
+            sessions: week.sessions, events: week.events, muscleLedger: week.muscleLedger }, request)));
+        return seen.get(key);
+    });
+}
+
+/* A day that still shows over its limit after every tighter build was refused (app-shell-adapter referee) is
+   often next to a day with room: the engine clock saw 13 and 20 minutes where the lifter is shown 12 and 22.
+   Moving a whole lift is dose-neutral, so nothing has to be given up for it: one accessory goes from the over
+   day to the shortest day that trains the same muscles, when that brings the week's overshoot down, no day
+   newly passes its limit, protected coverage is kept and the engine audit does not regress in any week. */
+const MOVE_CANDIDATES = 6;
+const acrossSessions = counts => {
+    const total = {};
+    for (const [key, n] of Object.entries(counts)) { const [code, , severity] = key.split(':'); total[`${code}:${severity}`] = (total[`${code}:${severity}`] || 0) + n; }
+    return total;
+};
+export function moveLiftsOffOverDays(program, legacyExercises = [], maxMinutes = null) {
+    if (!program?.nextEngine?.program || !program.nextEngine.request || !Number.isFinite(maxMinutes)) return program;
+    if (program.config?.percentScheme || STRENGTH_STRUCTURES.has(program.config?.split)) return program;
+    const request = requestOf(program), engineContext = createEngineContext(request), weekCount = workWeeks(program);
+    const shownOf = candidate => candidate.days.map(day => {
+        let worst = -Infinity;
+        for (let w = 1; w <= weekCount; w++) { const m = shellSessionMinutes(candidate, day, w); if (m == null) return null; worst = Math.max(worst, m); }
+        return worst;
+    });
+    const overOf = shown => shown.reduce((sum, m) => sum + Math.max(0, m - maxMinutes), 0);
+    let current = program, shown = shownOf(program), tried = 0;
+    if (shown.some(m => m == null) || overOf(shown) <= 0) return program;
+    let baselineCounts = null;
+    for (let move = 0; move < 3 && overOf(shown) > 0 && tried < MOVE_CANDIDATES; move++) {
+        const first = captureShellVolumeSnapshot(current, 1, legacyExercises);
+        if (!first || first.missing) break;
+        const quality = shellPlanQuality(current, legacyExercises);
+        const sources = shown.map((m, di) => ({ di, m })).filter(x => x.m > maxMinutes).sort((a, b) => b.m - a.m);
+        const destinations = shown.map((m, di) => ({ di, m })).filter(x => x.m < maxMinutes).sort((a, b) => a.m - b.m);
+        let accepted = null;
+        search: for (const src of sources) {
+            const from = first.sessions[src.di];
+            const movers = from.exercises.filter(ex => fillable(current, ex) && !ex.supersetGroup).sort((a, b) => a.sets - b.sets);
+            for (const mover of movers) for (const dst of destinations) {
+                const to = first.sessions[dst.di], def = engineContext.exerciseById(mover.exerciseId);
+                const base = current.nextEngine.program.sessions[src.di]?.exercises.find(x => x.exerciseId === mover.exerciseId);
+                if (!def || !base || to.exercises.some(e => e.exerciseId === mover.exerciseId)) continue;
+                const intent = INTENT_MUSCLES[to.intent] ?? INTENT_MUSCLES.full;
+                if (!primaryDirectMuscles(def).every(muscle => intent.includes(muscle)) || !engineContext.equipmentEligible(def, to.day)) continue;
+                const existing = to.exercises.map(e => ({ def: engineContext.exerciseById(e.exerciseId), role: e.role })).filter(x => x.def);
+                if (avoidableExerciseOverlap(def, mover.role, existing, {})) continue;
+                const legacy = resolveLegacyExercise({ exerciseId: def.id, name: def.name }, legacyExercises);
+                if (!legacy || nextExerciseIdForShellExercise(legacy) !== def.id) continue;
+                if (tried++ >= MOVE_CANDIDATES) break search;
+                const { supersetGroup, shellKey, shellSlot, shellId, ...exercise } = base;
+                const rebuilt = withSourcePrescriptions(rebuild(current, [{ dayId: from.shellDayId, slot: mover.shellSlot, remove: true }], legacyExercises,
+                    { dayId: to.shellDayId, legacy, exercise }, { deferAudit: true }), current);
+                if (!rebuilt) continue;
+                let candidate;
+                try { candidate = enforceShellWeekCapacity(reconcileShellWeekDose(rebuilt, legacyExercises).program, legacyExercises).program; }
+                catch { continue; } // the moved week has no legal rounding: not a move
+                const after = shownOf(candidate);
+                if (after.some(m => m == null) || overOf(after) >= overOf(shown) || after.some((m, di) => m > Math.max(maxMinutes, shown[di]))) continue;
+                const audit = auditShellVolume(candidate, legacyExercises);
+                if (audit.missing || audit.issues.length > auditShellVolume(current, legacyExercises).issues.length) continue;
+                if (audit.weeks.some(week => week.sessions.some(x => x.estimatedMinutes > x.maxMinutes + EPS))) continue;
+                if (!shellPlanQualityKept(quality, shellPlanQuality(candidate, legacyExercises))) continue;
+                // A finding that travels with the lift is not a new one: compare by code, not by session.
+                baselineCounts ??= weeklyAuditCounts(program, legacyExercises).map(acrossSessions);
+                const counts = weeklyAuditCounts(candidate, legacyExercises).map(acrossSessions);
+                if (counts.length !== baselineCounts.length || counts.some((week, wi) => regressedCounts(week, baselineCounts[wi]))) continue;
+                accepted = { candidate: withEngineAudit(candidate, request), after, lift: def.name, from: from.shellDayId, to: to.shellDayId };
+                break search;
+            }
+        }
+        if (!accepted) break;
+        current = { ...accepted.candidate, nextEngine: { ...accepted.candidate.nextEngine,
+            displayMoves: [...(accepted.candidate.nextEngine.displayMoves ?? []), { exercise: accepted.lift, from: accepted.from, to: accepted.to }] } };
+        shown = accepted.after;
+    }
+    return current;
+}
+
+/** `extend`: a new plan (a standalone program or a cycle's entry block) may also take a lift on a short day.
+ *  Later cycle blocks keep the roster they were given. `fill: false` returns the plan as generated (the control
+ *  the fill's gate measures against). */
+export function finalizeGeneratedShellVolume(program, legacyExercises = [], { extend = false, fill = true } = {}) {
     if (!program?.nextEngine?.program || !program.nextEngine.request) return program;
-    const result = reconcileShellWeekDose(program, legacyExercises);
-    const capacity = enforceShellWeekCapacity(result.program, legacyExercises);
-    const changes = [...result.changes, ...capacity.changes];
-    return attachRegionalDose(capacity.program, legacyExercises, changes);
+    const finish = (start, fill, skipDayIds = null) => {
+        const result = reconcileShellWeekDose(start.program, legacyExercises);
+        const capacity = enforceShellWeekCapacity(result.program, legacyExercises);
+        const filled = fill ? fillSessionsTowardBand(capacity.program, legacyExercises, skipDayIds, generatedRegions) : { program: capacity.program, changes: [] };
+        return { program: filled.program, added: start.changes, sets: filled.changes,
+            changes: [...start.changes, ...result.changes, ...capacity.changes, ...filled.changes] };
+    };
+    const asGenerated = { program, changes: [] };
+    const generatedRegions = captureShellVolumeSnapshot(program, 1, legacyExercises)?.regions ?? null;
+    let plain = null, plainCounts = null;
+    // Findings the candidate has and the plan as generated does not: null when there are none.
+    const newFindings = candidate => {
+        if (!candidate.added.length && !candidate.sets.length) return null;
+        const counts = weeklyAuditCounts(candidate.program, legacyExercises);
+        if (counts.every(week => !Object.keys(week).length)) return null;
+        plain ??= finish(asGenerated, false);
+        plainCounts ??= weeklyAuditCounts(plain.program, legacyExercises);
+        const keys = counts.flatMap((week, wi) => Object.keys(week).filter(key => week[key] > (plainCounts[wi]?.[key] || 0)));
+        return keys.length || counts.length !== plainCounts.length ? keys : null;
+    };
+    // The fullest plan first. One the engine audit likes less than the plan as generated is retried without
+    // the set changes on the days its new findings name, then dropped for the next (sets only, then as generated).
+    const extended = () => {
+        const patterned = ensureMovementPatterns(program, legacyExercises);
+        const lifted = extendSessionsTowardBand(patterned.program, legacyExercises, generatedRegions);
+        return { program: lifted.program, changes: [...patterned.changes, ...lifted.changes] };
+    };
+    const starts = fill ? [...(extend ? [extended] : []), () => asGenerated] : [];
+    let chosen = null;
+    for (const startOf of starts) {
+        const start = startOf();
+        let candidate = finish(start, true), findings = newFindings(candidate);
+        if (findings) {
+            const sessionIds = new Set(findings.map(key => key.split(':')[1]).filter(Boolean));
+            const sessions = candidate.program.nextEngine.program.sessions;
+            const blamed = new Set(candidate.program.days.filter((_, di) => sessionIds.has(sessions[di]?.id)).map(day => day.id));
+            if (blamed.size && findings.every(key => key.split(':')[1])) {
+                candidate = finish(start, true, blamed);
+                findings = newFindings(candidate);
+            }
+        }
+        if (!findings) { chosen = candidate; break; }
+    }
+    chosen ??= plain ?? finish(asGenerated, false);
+    const finished = attachRegionalDose(chosen.program, legacyExercises, chosen.changes);
+    if (!chosen.added.length && !chosen.sets.length) return finished;
+    const guards = bandFillGuards(finished, legacyExercises, null, { anyBand: true });
+    if (!guards) return finished;
+    const remaining = guards.underDays(finished, auditShellVolume(finished, legacyExercises)).map(x => ({ dayId: x.day.id, minutes: x.minutes }));
+    return { ...finished, nextEngine: { ...finished.nextEngine, sessionFill: {
+        status: remaining.length ? 'limited' : 'filled', minimumMinutes: guards.band.minMinutes,
+        added: chosen.added.map(change => ({ dayId: change.dayId, exercise: change.addedExercise, reason: change.reason, ...(change.replacedExercise ? { replaced: change.replacedExercise } : {}) })),
+        sets: chosen.sets.flatMap(change => change.sets), remaining } } };
 }
 function attachRegionalDose(program, legacyExercises, changes) {
     const after = auditShellVolume(program, legacyExercises);

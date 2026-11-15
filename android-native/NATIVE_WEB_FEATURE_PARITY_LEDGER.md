@@ -393,3 +393,21 @@ at `ef2b4e6291ab626750e7a705ffe43286e799fcd0`.
 **Remaining:** physical-device accessibility and very large catalog UX,
 multi-instance variant selection model if ever authorized, and
 full native-web feature parity and training-quality superiority.
+
+## Recorded-date History browsing — 2026-11-14
+
+The mixed native timeline now has a read-only Calendar view, with recorded
+month selection, earlier/later recorded-month actions, day counts and a day
+filter over the existing correction-aware session list. Exercise search and
+date filters intersect; complete exercise drilldowns remain independent of
+the visible date range. All workouts and explicit undated views keep older
+records reachable. History export and navigation shortcuts are grouped in
+History options so the primary task remains browsing saved training.
+
+The date model uses the device zone and locale week start. A grid is used
+only when seven 48dp targets fit; narrow or enlarged-text panes use full-width
+recorded-day choices. No rest days, streaks or original legacy dates are
+inferred. Pure Kotlin fixtures cover Gregorian/leap/calendar boundaries,
+time zones, duplicate DST hours, both workout routes, query intersections,
+stale restored selection and long histories. Actual Android visual,
+TalkBack and device acceptance remain open; no APK/AAB is authorized.

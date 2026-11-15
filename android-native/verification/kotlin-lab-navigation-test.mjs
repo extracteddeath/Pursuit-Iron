@@ -141,7 +141,8 @@ for(const phrase of ['host.reviewVerifiedKotlinHistory()', 'reviewWorkingSetFact
   assert.ok(standards.includes(phrase),'Unverified strength standards design contract: '+phrase);
 assert.ok(history.includes('var exerciseSearch by rememberSaveable') &&
   history.includes('visibleSessions=remember(verified,filteredMovements,exerciseSearch)') &&
-  history.includes('nativeHistoryMonths(visibleSessions,historyZone)') &&
+  history.includes('nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)') &&
+  history.includes('nativeHistoryMonths(displayedSessions,historyZone)') &&
   history.includes('items(section.sessions') &&
   history.includes('onClick={historyExerciseId=exercise}') &&
   history.includes('Text("Search exercises")') &&

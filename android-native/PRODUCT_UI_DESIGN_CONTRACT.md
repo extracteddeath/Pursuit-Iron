@@ -149,8 +149,8 @@ old date from session order, a program week, a correction, a file timestamp or
 the current day. Both active native Finish owners explicitly provide the
 device clock; the observation is durably bound before the journal changes.
 Retries/recovery reuse it, and set corrections retain it. A missing/invalid
-clock can save an undated workout. Calendar grids and device acceptance remain
-separate unfinished work.
+clock can save an undated workout. The read-only calendar browser uses those
+same verified records; visual, accessibility and device acceptance remain open.
 
 Exercise search retains every matching session and exposes more exercise
 drilldowns without the previous eight-result cutoff. Dates are displayed
@@ -158,6 +158,26 @@ through the same Material section/card hierarchy for both workout routes.
 CSV keeps its original v1 shape for wholly undated history; exports containing
 recorded times use v2 with an appended UTC column and blank older dates. No
 private session notes, reconstructed dates or backup/restore claims are added.
+
+### Recorded-date browsing
+
+History prioritizes exercise search, date browsing and the saved session list.
+Export and navigation shortcuts share a collapsed **History options** section.
+**All workouts**, **Calendar** and **Undated** are explicit choices. Calendar
+opens the latest recorded month; earlier/later controls and a paged month
+chooser reach every recorded month. A day filters the same list; tapping it
+again or choosing **Show whole month** restores that month. Search and dates
+intersect without changing the complete exercise-history drilldown.
+
+The calendar uses the locale's first weekday and the device time zone, counts
+both native workout routes, and never turns missing dates into rest days or
+streak gaps. Narrow panes or large fonts use full-width recorded-day choices
+instead of squeezing seven touch targets below 48dp. Grid dates have complete
+date/count accessibility labels and selected semantics. An empty match keeps
+clear date/search recovery actions. Date selection survives recreation and
+refresh, is scoped to the verified athlete, and is ignored if the saved month
+no longer exists. This is a source/JVM milestone; real phone/foldable,
+large-font, TalkBack and visual/motion acceptance are still required. No APK/AAB.
 
 The verified bar flow uses one physical-stock parser in onboarding and Gym.
 Athletes explicitly choose straight, EZ or trap/hex bar and enter its actual

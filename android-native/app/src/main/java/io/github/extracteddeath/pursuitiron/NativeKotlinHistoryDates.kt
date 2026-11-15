@@ -3,6 +3,8 @@ package io.github.extracteddeath.pursuitiron
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeKotlinMixedHistoryCompletion
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinHistoryManifestEntry
 import java.time.Instant
+import java.time.LocalDate
+import java.time.DayOfWeek
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,4 +32,63 @@ internal fun nativeHistoryDateLabel(entry:KotlinHistoryManifestEntry,zone:ZoneId
     locale:Locale):String?=entry.completedAtEpochMillis?.let {
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM,FormatStyle.SHORT)
         .withLocale(locale).withZone(zone).format(Instant.ofEpochMilli(it))
+}
+
+internal fun nativeHistoryRecordedDate(entry:KotlinHistoryManifestEntry,zone:ZoneId):LocalDate?=
+    entry.completedAtEpochMillis?.let {Instant.ofEpochMilli(it).atZone(zone).toLocalDate()}
+
+/** A date browser filters verified records only. Unknown dates never become
+ * rest days, streak gaps or inferred calendar entries. */
+internal sealed interface NativeKotlinHistoryDateSelection {
+    data object All:NativeKotlinHistoryDateSelection
+    data object Undated:NativeKotlinHistoryDateSelection
+    data class Month(val month:YearMonth,val day:LocalDate?=null):NativeKotlinHistoryDateSelection {
+        init {require(day==null || YearMonth.from(day)==month)}
+    }
+}
+
+/** Saved UI strings are hints, not history authority. A removed month or an
+ * old athlete's selection cannot hide all of the current athlete's sessions. */
+internal fun nativeHistoryDateSelection(key:String,dayKey:String?,
+    available:List<NativeKotlinHistoryMonth>):NativeKotlinHistoryDateSelection = when(key) {
+    "all" -> NativeKotlinHistoryDateSelection.All
+    "undated" -> if(available.any{it.month==null})NativeKotlinHistoryDateSelection.Undated
+        else NativeKotlinHistoryDateSelection.All
+    else -> {
+        val month=runCatching {YearMonth.parse(key)}.getOrNull()
+        if(month==null || available.none{it.month==month})NativeKotlinHistoryDateSelection.All
+        else NativeKotlinHistoryDateSelection.Month(month,
+            dayKey?.let{runCatching{LocalDate.parse(it)}.getOrNull()}
+                ?.takeIf{YearMonth.from(it)==month})
+    }
+}
+
+internal fun nativeHistorySessionsInSelection(sessions:List<NativeKotlinMixedHistoryCompletion>,
+    selection:NativeKotlinHistoryDateSelection,zone:ZoneId):List<NativeKotlinMixedHistoryCompletion> =
+    sessions.filter {entry->when(selection) {
+        NativeKotlinHistoryDateSelection.All -> true
+        NativeKotlinHistoryDateSelection.Undated -> entry.manifest.completedAtEpochMillis==null
+        is NativeKotlinHistoryDateSelection.Month -> nativeHistoryRecordedDate(entry.manifest,zone)?.let {
+            YearMonth.from(it)==selection.month && (selection.day==null || it==selection.day)
+        } ?:false
+    }}
+
+internal data class NativeKotlinHistoryCalendar(
+    val month:YearMonth,val weekdays:List<DayOfWeek>,val weeks:List<List<LocalDate?>>,
+    val sessionsByDate:Map<LocalDate,List<NativeKotlinMixedHistoryCompletion>>
+)
+
+internal fun nativeHistoryCalendar(sessions:List<NativeKotlinMixedHistoryCompletion>,
+    month:YearMonth,zone:ZoneId,firstDay:DayOfWeek):NativeKotlinHistoryCalendar {
+    val byDate=sessions.mapNotNull {entry->
+        nativeHistoryRecordedDate(entry.manifest,zone)?.takeIf{YearMonth.from(it)==month}
+            ?.let{it to entry}
+    }.groupBy({it.first},{it.second})
+        .mapValues{(_,entries)->entries.sortedByDescending{it.manifest.completionOrder}}
+    val leading=Math.floorMod(month.atDay(1).dayOfWeek.value-firstDay.value,7)
+    val cellCount=((leading+month.lengthOfMonth()+6)/7)*7
+    val weeks=(0 until cellCount).map{index->
+        (index-leading+1).takeIf{it in 1..month.lengthOfMonth()}?.let(month::atDay)
+    }.chunked(7)
+    return NativeKotlinHistoryCalendar(month,(0..6).map{firstDay.plus(it.toLong())},weeks,byDate)
 }

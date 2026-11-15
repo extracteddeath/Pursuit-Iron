@@ -44,6 +44,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     }
     var exporting by remember {mutableStateOf(false)}
     var exportNotice by remember {mutableStateOf<String?>(null)}
+    var historyOptionsExpanded by rememberSaveable{mutableStateOf(false)}
     val csvDocument=rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
@@ -150,7 +151,18 @@ internal fun NativeKotlinCandidateHistoryScreen(
     }
     val historyZone=java.time.ZoneId.systemDefault()
     val historyLocale=java.util.Locale.getDefault()
-    val monthSections=remember(visibleSessions,historyZone){nativeHistoryMonths(visibleSessions,historyZone)}
+    val historyMonths=remember(verified,historyZone){nativeHistoryMonths(verified?.completions.orEmpty(),historyZone)}
+    var dateSelectionAthlete by rememberSaveable{mutableStateOf<String?>(null)}
+    var historyDateKey by rememberSaveable{mutableStateOf("all")}
+    var historyDayKey by rememberSaveable{mutableStateOf<String?>(null)}
+    val dateSelection=remember(historyDateKey,historyDayKey,dateSelectionAthlete,verified?.athleteId,historyMonths) {
+        if(dateSelectionAthlete!=verified?.athleteId)NativeKotlinHistoryDateSelection.All
+        else nativeHistoryDateSelection(historyDateKey,historyDayKey,historyMonths)
+    }
+    val displayedSessions=remember(visibleSessions,dateSelection,historyZone) {
+        nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)
+    }
+    val monthSections=remember(displayedSessions,historyZone){nativeHistoryMonths(displayedSessions,historyZone)}
     var visibleExerciseCount by rememberSaveable(exerciseSearch){mutableStateOf(12)}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -168,63 +180,68 @@ internal fun NativeKotlinCandidateHistoryScreen(
         when(val read=result) {
             is NativeKotlinMixedHistoryReadResult.Review -> {
                 item {
-                    PursuitPrimaryAction("Continue to my program",enabled=!busy) {
-                        onOpenProgram()
-                    }
-                    OutlinedButton(onClick=onOpenProgress,
-                        enabled=!busy,modifier=Modifier.fillMaxWidth()) {
-                        Text("Strength standards")
-                    }
-                    if(read.timeline.completions.isNotEmpty())
-                        OutlinedButton(
-                            onClick={onOpenCoach(null)},enabled=!busy,
-                            modifier=Modifier.fillMaxWidth()) {
-                            Text("Review next workout with Coach")
+                    PursuitDisclosureRow("History options","Export, program and coaching shortcuts",
+                        historyOptionsExpanded,{historyOptionsExpanded=!historyOptionsExpanded})
+                    if(historyOptionsExpanded)Column(Modifier.fillMaxWidth(),
+                        verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                        PursuitPrimaryAction("Continue to my program",enabled=!busy) {
+                            onOpenProgram()
                         }
-                    if(read.timeline.completions.isNotEmpty()) {
-                        OutlinedButton(
-                            onClick={
-                                exporting=true
-                                exportNotice=null
-                                scope.launch {
-                                    val current=withContext(Dispatchers.IO) {
-                                        runCatching {
-                                            val first=host.currentHistoryExportOwner()
-                                            val timeline=(host.reviewVerifiedKotlinHistory()
-                                                as? NativeKotlinMixedHistoryReadResult.Review)
-                                                ?.timeline
-                                            val second=host.currentHistoryExportOwner()
-                                            if(first!=null && first==second &&
-                                                timeline!=null &&
-                                                first.athleteId==timeline.athleteId &&
-                                                timeline.athleteId==read.timeline.athleteId &&
-                                                timeline.manifestRevision==
-                                                    read.timeline.manifestRevision)
-                                                Triple(first.ownerKey,first.athleteId,
-                                                    timeline.manifestRevision)
-                                            else null
-                                        }.getOrNull()
-                                    }
-                                    exporting=false
-                                    if(current==null)
-                                        exportNotice="History or athlete changed. Refresh History before exporting."
-                                    else {
-                                        pendingCsvExport=current
-                                        csvDocument.launch("Pursuit-Iron-training-history.csv")
-                                    }
-                                }
-                            },
-                            enabled=!busy && !exporting,
-                            modifier=Modifier.fillMaxWidth()
-                        ) {
-                            Text(if(exporting)"Preparing history export…"
-                                else "Export completed workouts (CSV)")
+                        OutlinedButton(onClick=onOpenProgress,
+                            enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+                            Text("Strength standards")
                         }
-                        Text(
-                            "Choose where to save your completed workout and set history. Includes target and actual weights, corrections, gym IDs and machine A/B IDs. No dates are invented. This is a personal record, not a full backup or restore.",
-                            style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if(read.timeline.completions.isNotEmpty())
+                            OutlinedButton(
+                                onClick={onOpenCoach(null)},enabled=!busy,
+                                modifier=Modifier.fillMaxWidth()) {
+                                Text("Review next workout with Coach")
+                            }
+                        if(read.timeline.completions.isNotEmpty()) {
+                            OutlinedButton(
+                                onClick={
+                                    exporting=true
+                                    exportNotice=null
+                                    scope.launch {
+                                        val current=withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                val first=host.currentHistoryExportOwner()
+                                                val timeline=(host.reviewVerifiedKotlinHistory()
+                                                    as? NativeKotlinMixedHistoryReadResult.Review)
+                                                    ?.timeline
+                                                val second=host.currentHistoryExportOwner()
+                                                if(first!=null && first==second &&
+                                                    timeline!=null &&
+                                                    first.athleteId==timeline.athleteId &&
+                                                    timeline.athleteId==read.timeline.athleteId &&
+                                                    timeline.manifestRevision==
+                                                        read.timeline.manifestRevision)
+                                                    Triple(first.ownerKey,first.athleteId,
+                                                        timeline.manifestRevision)
+                                                else null
+                                            }.getOrNull()
+                                        }
+                                        exporting=false
+                                        if(current==null)
+                                            exportNotice="History or athlete changed. Refresh History before exporting."
+                                        else {
+                                            pendingCsvExport=current
+                                            csvDocument.launch("Pursuit-Iron-training-history.csv")
+                                        }
+                                    }
+                                },
+                                enabled=!busy && !exporting,
+                                modifier=Modifier.fillMaxWidth()
+                            ) {
+                                Text(if(exporting)"Preparing history export…"
+                                    else "Export completed workouts (CSV)")
+                            }
+                            Text(
+                                "Choose where to save your completed workout and set history. Includes target and actual weights, corrections, gym IDs and machine A/B IDs. No dates are invented. This is a personal record, not a full backup or restore.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 if(read.timeline.completions.isEmpty())item {Text("Your first finished workout will appear here.")}
@@ -242,7 +259,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         if(exerciseSearch.isNotBlank()) {
                             Row(Modifier.fillMaxWidth(),
                                 horizontalArrangement=Arrangement.SpaceBetween) {
-                                Text("${visibleSessions.size} matching sessions",
+                                Text("${displayedSessions.size} matching sessions in this view",
                                     style=MaterialTheme.typography.bodySmall)
                                 TextButton(onClick={exerciseSearch=""}) {Text("Clear")}
                             }
@@ -272,6 +289,25 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                     }
                             }
                         }
+                    }
+                }
+                if(read.timeline.completions.isNotEmpty())item(key="history-date-browser") {
+                    key(read.timeline.athleteId) {
+                        NativeKotlinHistoryDateBrowser(historyMonths,visibleSessions,dateSelection,historyZone,historyLocale) {selection->
+                            dateSelectionAthlete=read.timeline.athleteId
+                            historyDayKey=(selection as? NativeKotlinHistoryDateSelection.Month)?.day?.toString()
+                            historyDateKey=when(selection) {
+                                NativeKotlinHistoryDateSelection.All -> "all"
+                                NativeKotlinHistoryDateSelection.Undated -> "undated"
+                                is NativeKotlinHistoryDateSelection.Month -> selection.month.toString()
+                            }
+                        }
+                    }
+                    if(displayedSessions.isEmpty()) {
+                        Text("No saved workouts match this date view and exercise search.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick={historyDateKey="all";historyDayKey=null;exerciseSearch=""},
+                            modifier=Modifier.heightIn(min=48.dp)){Text("Show all workouts")}
                     }
                 }
                 monthSections.forEach {section->

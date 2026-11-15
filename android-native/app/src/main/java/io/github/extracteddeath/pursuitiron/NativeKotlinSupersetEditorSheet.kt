@@ -16,7 +16,8 @@ internal val NativeKotlinSupersetRequestSaver=listSaver<NativeKotlinSupersetEdit
 internal fun NativeKotlinSupersetEditorSheet(
     request:NativeKotlinSupersetEditRequest,draft:CustomTrainingCycle,
     allowSupersets:Boolean,sourceRevision:Long?,busy:Boolean,message:String?,
-    needsSourceReload:Boolean,onSave:(List<String>)->Unit,onDismiss:()->Unit,onReload:()->Unit
+    needsSourceReload:Boolean,available:List<CustomExercisePickerOption>,ideasEnabled:Boolean,
+    onSave:(List<String>)->Unit,onDismiss:()->Unit,onReload:()->Unit
 ) {
     val day=draft.blocks.firstOrNull{it.blockId==request.blockId}
         ?.days?.firstOrNull{it.weekday==request.weekday}
@@ -36,6 +37,11 @@ internal fun NativeKotlinSupersetEditorSheet(
         (slot.supersetGroup==null || slot.supersetGroup==request.groupId) &&
             slot.sets.any{it.type==DraftSetType.WORKING}
     }.map{it.slotId}.toSet()
+    val anchorSlotId=selected.singleOrNull()
+    val partnerIdeas=remember(day,available,anchorSlotId,request.groupId,allowSupersets,ideasEnabled) {
+        if(day==null || anchorSlotId==null)null else CustomSupersetPartnerRankingDomain.rank(
+            day,available,anchorSlotId,request.groupId,allowSupersets,ideasEnabled)
+    }
     // Close only after the durable revision and exact requested membership
     // are visible. Failure keeps the athlete's choices and recovery message.
     LaunchedEffect(draft.revision,busy,submitted?.toList()) {
@@ -54,20 +60,28 @@ internal fun NativeKotlinSupersetEditorSheet(
             style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(submitted!=null && !busy && !message.isNullOrBlank())Text(message,
             style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(ideasEnabled && allowSupersets && !stale && selected.isEmpty())Text(
+            "Choose your first movement to see partner ideas from this day.",
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         day?.slots.orEmpty().forEach {slot->
             val checked=slot.slotId in selected
-            val available=slot.slotId in eligible
+            val canSelect=slot.slotId in eligible
             FilterChip(selected=checked,
                 onClick={selected=ArrayList(selected).apply {
                     if(checked)remove(slot.slotId) else add(slot.slotId)
                 }},
-                enabled=!busy && !stale && allowSupersets && available &&
+                enabled=!busy && !stale && allowSupersets && canSelect &&
                     (checked || selected.size<3),
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
                 label={Text(kotlinExerciseLabel(slot.exerciseId)+
                     " · ${slot.sets.count{it.type==DraftSetType.WORKING}} working sets"+
                     (if(slot.role==ComposerRole.PRIMARY)" · main lift" else "")+
                     if(slot.supersetGroup!=null && slot.supersetGroup!=request.groupId)" · already paired" else "")})
+            if(ideasEnabled && !stale && slot.slotId==anchorSlotId && partnerIdeas!=null)
+                NativeKotlinSupersetPartnerIdeas(partnerIdeas,slot.slotId,enabled=!busy) {partnerId->
+                    if(selected.singleOrNull()==slot.slotId)
+                        selected=arrayListOf(slot.slotId,partnerId)
+                }
         }
         if(selected.isNotEmpty())Text("Round order · "+day?.slots.orEmpty().filter{it.slotId in selected}
             .joinToString(" → "){kotlinExerciseLabel(it.exerciseId)}+

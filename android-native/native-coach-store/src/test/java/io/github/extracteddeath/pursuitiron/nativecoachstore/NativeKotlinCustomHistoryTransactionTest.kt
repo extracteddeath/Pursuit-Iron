@@ -10,6 +10,7 @@ import org.junit.rules.TemporaryFolder
 class NativeKotlinCustomHistoryTransactionTest {
     @get:Rule val temp=TemporaryFolder()
     private var supersetFixture=false
+    private var partnerIdeasFixture=false
     private var current:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
     private val identity=NativeKotlinCurrentIdentity {current}
@@ -109,7 +110,8 @@ class NativeKotlinCustomHistoryTransactionTest {
                         supersetGroup=if(supersetFixture)"pair" else null,pinned=true,
                         coachNote="My exact prescription"))+
                         if(supersetFixture)listOf(CustomExerciseSlot("partner-$day",
-                            "bodyweight_crunch",ComposerRole.ACCESSORY,listOf(set(10),set(10)),
+                            if(partnerIdeasFixture)"bw-calf" else "bodyweight_crunch",ComposerRole.ACCESSORY,
+                            List(2){set(if(partnerIdeasFixture)16 else 10)},
                             supersetGroup="pair")) else emptyList())
             }
         )),mapOf("base" to listOf(
@@ -118,10 +120,13 @@ class NativeKotlinCustomHistoryTransactionTest {
                     followUpActiveSeconds=15)),set(16)) else listOf(set(16))))))
     private fun bounds()=TrainingMuscle.entries.map { muscle ->
         DeclaredMuscleDoseBounds(muscle,
-            if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"12" else "3") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"16" else "4") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"20" else "5") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)3 else 0)
+            if(partnerIdeasFixture && muscle in setOf(TrainingMuscle.ABS,TrainingMuscle.CALVES))n("6")
+                else if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"12" else "3") else BigDecimal.ZERO,
+            if(partnerIdeasFixture && muscle in setOf(TrainingMuscle.ABS,TrainingMuscle.CALVES))n("8")
+                else if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"16" else "4") else BigDecimal.ZERO,
+            if(partnerIdeasFixture && muscle in setOf(TrainingMuscle.ABS,TrainingMuscle.CALVES))n("10")
+                else if(muscle==TrainingMuscle.ABS)n(if(supersetFixture)"20" else "5") else BigDecimal.ZERO,
+            if(muscle==TrainingMuscle.ABS || (partnerIdeasFixture && muscle==TrainingMuscle.CALVES))3 else 0)
     }
     private fun input()=CustomCoachAuditInputs(
         policiesByPhase=mapOf(TrainingPhase.HYPERTROPHY to
@@ -254,6 +259,50 @@ class NativeKotlinCustomHistoryTransactionTest {
         val reopened=(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
         assertEquals(original,reopened)
         assertEquals(original.originalSnapshot,reopened.snapshot)
+    }
+
+    @Test fun reviewedPartnerIdeaRequiresASaveAndApprovalBeforeIssuingAndLoggingThePair() {
+        supersetFixture=true;partnerIdeasFixture=true
+        val original=cycle().let {cycle->cycle.copy(blocks=cycle.blocks.map{block->
+            block.copy(days=block.days.map{day->day.copy(slots=day.slots.map{it.copy(supersetGroup=null)})})
+        })}
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources.publish("owner-1",0,source()))
+        assertEquals(NativeCustomDraftWriteResult.Committed(1),drafts.save("owner-1","cycle-1",0,original))
+        val currentSource=(sources.read("owner-1") as NativeAuthoringSourceRead.Found).source
+        val day=original.blocks.single().days.single{it.weekday==0}
+        val ideas=CustomSupersetPartnerRankingDomain.rank(day,
+            CustomExerciseAuthoringDomain.picker(currentSource.setup,currentSource.catalog),
+            "slot-0",null,true,CoachAssistancePolicy.STANDARD.coachingSuggestionsEnabled)
+        assertEquals(listOf("partner-0"),ideas.partners.map{it.slotId})
+        assertEquals(original,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft)
+        val proposal=CustomCycleBuilderDomain.setSupersetMembers(original,1,"base",0,"chosen-pair",
+            listOf("slot-0",ideas.partners.single().slotId),true) as CustomCycleBuilderResult.Proposed
+        val coordinator=NativeKotlinCustomAuthoringDraftCoordinator(sources,drafts,fence,identity)
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            coordinator.saveVerifiedExerciseEdit("owner-1",proposal.draft,1,1))
+        assertEquals(original.weekOverrides,proposal.draft.weekOverrides)
+        assertTrue(consent.confirm("owner-1","cycle-1",2,1,0,input(),true) is NativeCustomSignoffWrite.Committed)
+        prepareWeek();enroll();issueWeek()
+        var journal=(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
+        val snapshot=journal.originalSnapshot
+        val visited=mutableListOf<CustomWorkoutVisitKey>()
+        while(true) {
+            val next=CustomWorkoutJournalDomain.nextUnresolvedVisit(journal) ?:break
+            visited+=next
+            val record=CustomWorkoutJournalOperation.Record("idea-${journal.revision}",journal.revision,next,
+                KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(null,null,
+                    if(next.part==CustomWorkoutVisitPart.FOLLOW_UP)4 else 16,null))
+            assertTrue(issued.record("owner-1","workout-2",record) is NativeCustomJournalResult.Durable)
+            journal=(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal
+            assertEquals(snapshot,journal.originalSnapshot)
+        }
+        assertEquals(listOf("slot-0","slot-0","partner-0","slot-0","partner-0"),
+            visited.map{key->snapshot.slots.single{slot->slot.sets.any{it.setKey==key.setKey}}.slotId})
+        val completed=transactions.complete("owner-1","athlete-1","workout-2",
+            CustomWorkoutJournalOperation.Finish("finish-ideas",journal.revision)) as NativeCustomFinishResult.Committed
+        assertEquals(5,completed.evidence.visits.size)
+        assertEquals(setOf("bodyweight_crunch","bw-calf"),completed.evidence.visits.map{it.exerciseId}.toSet())
+        assertTrue(completed.evidence.visits.all{it.actual?.actualRir==null})
     }
 
     @Test fun customCompletionRecordsTimeOnceAndColdRetryKeepsTheOriginalObservation() {

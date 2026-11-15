@@ -183,8 +183,27 @@ Native file tests cover issue, alternating main/amplifier logs, cold reopen,
 exact retry and verified Finish-to-History with all actual RIR still unknown
 when not recorded. This is connected source and integration evidence;
 real phone/foldable, keyboard, TalkBack, timer and motion acceptance remain
-open. Automatic partner suggestions and generated pairing are separate
+open. In-session partner suggestions and generated pairing remain separate
 unfinished parity work. The APK/AAB freeze remains in force.
+
+### Reviewed partner ideas in Plan — 2026-11-15
+
+Selecting one movement in the superset sheet reveals partner ideas immediately
+below that selected movement, keeping the anchor in place. The complete manual
+list remains available. Ideas use the current day's eligible reviewed catalog
+accessories, distinct direct targets, supporting-target overlap, working-set
+counts and current positions. Protected main/supporting lifts, unknown source
+metadata, mismatched attachments, same-family/cross-target work and members of
+other groups remain manual choices. These are provisional catalog comparisons,
+not physiological interference, fatigue or time-saving predictions.
+
+Each idea explains its set count and recorded target overlap. Show more exposes
+the full ranked universe. Selecting one changes only the unsaved membership;
+Save superset still performs the existing exact owner/source/revision check,
+and a full review is required before future issuance. A stale anchor callback
+cannot replace a newer selection. Coaching-off suppresses ideas without
+removing manual grouping. Source/JVM and Compose evidence do not replace real
+phone/foldable, large-font, TalkBack and motion acceptance. No APK/AAB.
 
 History now groups completed workouts by their recorded Finish month in the
 device time zone and labels undated training separately. It never derives an

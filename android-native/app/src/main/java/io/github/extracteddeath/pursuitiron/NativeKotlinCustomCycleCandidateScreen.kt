@@ -1568,6 +1568,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     allowSupersets=state.reviewedSourceSetup?.reviewed?.allowSupersets==true,
                     sourceRevision=state.sourceRevision,busy=busy,message=state.message,
                     needsSourceReload=state.authoringRefusal==CustomAuthoringRefusal.SETUP_UNRESOLVED,
+                    available=state.availableChoices,ideasEnabled=state.coachingSuggestionsEnabled,
                     onSave={controller.saveSuperset(request,it)},onDismiss={supersetEditor=null},
                     onReload={supersetEditor=null;controller.open(current.cycleId)})
         }

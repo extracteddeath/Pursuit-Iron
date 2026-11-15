@@ -14,7 +14,9 @@ enum class LoadUnit { LB, KG }
 
 enum class LoadBasis {
     BARBELL_TOTAL, DUMBBELL_PER_HAND, CABLE_STACK, MACHINE_STACK,
-    SMITH_TOTAL, EXERCISE_OVERRIDE
+    SMITH_TOTAL, EXERCISE_OVERRIDE,
+    /** Mass of ONE bell, including a two-handed swing or a matched-pair row. */
+    KETTLEBELL_EACH
 }
 
 sealed interface VerifiedLoadStock {
@@ -144,6 +146,8 @@ object EquipmentLoadDomain {
         is VerifiedLoadStock.Totals -> {
             require(stock.loads.size in 1..MAX_ATTAINABLE_TOTALS &&
                 stock.loads.all(::validLoad))
+            if(stock.basis==LoadBasis.KETTLEBELL_EACH)
+                require(stock.loads.all{it>zero})
             require(stock.loads.map { it.stripTrailingZeros() }.distinct().size ==
                 stock.loads.size)
             TreeSet<BigDecimal>().apply { addAll(stock.loads) }

@@ -45,6 +45,24 @@ byte-identical. Native tests cover source/consent/issuance, explicit actual
 loads, retry, cold reopen, Finish and History. Full device/visual/accessibility,
 broader equipment semantics and overall parity acceptance remain open.
 
+**Kettlebell equipment checkpoint (2026-11-15):** the two active-web
+kettlebell identities now use a distinct per-bell loading basis. One-bell
+swings and matched-pair gorilla rows require separately confirmed inventory;
+a single bell or dumbbell rack cannot prove a matched pair. Onboarding
+reveals the optional fields on request, and Gym uses the same exact-mass input
+and native source review. Plan calibration, issued set entry/Last, exercise
+Info, coaching reviews, history and machine-record presentation share the
+physical units. Viewing or entering a weight never silently changes targets.
+
+Real Kotlin program generation and four-week conversion preserve the new
+movements' exact calibration and source rep bands. Native-file tests cover
+source/consent/preparation/issuance, deliberately different actual loads,
+retry, cold reopen after each set, Finish, verified History and CSV. All
+pre-existing frozen native/approval compatibility tests remain mandatory.
+Source inventory is now **320/376**; **56 IDs remain absent**. This bounded
+checkpoint does not certify full functional parity, coaching superiority or
+physical-device/UI acceptance. No APK/AAB is built or released.
+
 ## What works in the isolated Kotlin core
 
 **Recorded History dates (2026-11-14):** both native Finish routes observe the
@@ -63,7 +81,7 @@ spinal-erector/trapezius accounting. Actual bar mass and paired plates flow
 through onboarding, saved gym stock, program generation, cycle conversion,
 workout logging/corrections, completion and cold recovery. Missing equipment,
 unsupported old muscle scopes and copied straight-bar weights fail closed.
-Current source coverage is 318/376; the remaining 58 identities, full functional
+At that checkpoint source coverage was 318/376; the remaining identities, full functional
 parity, comparative coaching evidence and device/UI acceptance are still open.
 On 2026-11-15 the two web catalog files used by this audit were checked against
 `main` and their Git blob IDs matched. This is current source-inventory evidence,

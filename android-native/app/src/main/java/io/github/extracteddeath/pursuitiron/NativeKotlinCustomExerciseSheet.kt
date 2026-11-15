@@ -353,7 +353,7 @@ internal fun NativeKotlinCustomExerciseSheet(
         if (option != null) {
             Text(
                 if (option.bodyweight) "Explicit bodyweight (no external load)"
-                else "Physically verified: ${option.loadUnit} · ${option.loadBasis}",
+                else "Physically verified: ${option.loadUnit} · ${kotlinLoadBasisLabel(option.loadBasis)}",
                 style = MaterialTheme.typography.labelLarge)
             Text("Attachment: ${option.attachmentId ?: "none"}",
                 style = MaterialTheme.typography.bodySmall)

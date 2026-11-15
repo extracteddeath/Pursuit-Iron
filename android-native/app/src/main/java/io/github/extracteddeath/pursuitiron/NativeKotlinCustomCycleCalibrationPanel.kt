@@ -116,7 +116,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             review.higherSlots.forEach {slot->
                 Text(kotlinExerciseLabel(slot.exerciseId),style=MaterialTheme.typography.titleSmall)
                 slot.higherSets.forEach {set->
-                    val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                    val basis=kotlinLoadBasisSuffix(set.basis)
                     Text("Set ${set.ordinal}: previously prescribed ${set.lastIssuedLoad} → authored ${set.authoredLoad} ${set.unit.name.lowercase()}$basis",
                         style=MaterialTheme.typography.bodyMedium)
                 }
@@ -140,7 +140,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                         style=MaterialTheme.typography.bodySmall)
             }
             it.receipt.setKeys.indices.forEach {i->
-                val basis=if(it.receipt.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                val basis=kotlinLoadBasisSuffix(it.receipt.basis)
                 val from=if(earned)it.receipt.baselineLoads[i] else it.receipt.authoredLoads[i]
                 Text("Working set ${i+1}: $from → ${it.receipt.proposedLoads[i]} ${it.receipt.unit.name.lowercase()}$basis")
             }
@@ -187,7 +187,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                     val weight=when(val load=target.load) {
                         DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
                         is DraftSetLoad.Verified -> "${load.value.toPlainString()} ${load.unit.name.lowercase()}"+
-                            if(load.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                            kotlinLoadBasisSuffix(load.basis)
                     }
                     val reps=if(target.reps.minimum==target.reps.maximum)
                         "${target.reps.minimum}" else "${target.reps.minimum}–${target.reps.maximum}"
@@ -248,7 +248,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             Text("Original authored workout",style=MaterialTheme.typography.titleMedium)
             it.authored.slots.forEach {slot->slot.sets.forEach {set->
                 val load=set.prescription.load as? DraftSetLoad.Verified
-                val basis=if(load?.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                val basis=kotlinLoadBasisSuffix(load?.basis)
                 Text("${kotlinExerciseLabel(slot.exerciseId)} · set ${set.ordinalInSlot}: ${load?.value ?: "bodyweight"} ${load?.unit?.name?.lowercase().orEmpty()}$basis",
                     style=MaterialTheme.typography.bodySmall)
             }}

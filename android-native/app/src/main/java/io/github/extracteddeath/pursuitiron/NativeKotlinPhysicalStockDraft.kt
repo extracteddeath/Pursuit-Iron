@@ -83,6 +83,8 @@ internal data class KotlinGymStockChoice(
         "trap-hex-bar" -> "Trap/hex bar and plates"
         "smith-machine" -> "Smith machine and plates"
         "dumbbell-rack" -> "Dumbbells"
+        "single-kettlebell" -> "Kettlebell (single)"
+        "matched-kettlebell-pair" -> "Kettlebells (matching pair)"
         "cable-station" -> "Cable station"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}
@@ -115,13 +117,20 @@ internal fun onboardingStock(
     db:String,cable:String,barWeight:String,plates:String,
     machineId:String,machineLoads:String,
     savedMachines:String,nonMachineEquipmentIds:Set<String>,
-    barEquipmentId:String="straight-bar"
+    barEquipmentId:String="straight-bar",
+    kettlebells:String="",kettlebellPairs:String=""
 ):Map<String,VerifiedLoadStock>? {
     if(unit==null) return null
     return runCatching {
         val stock=linkedMapOf<String,VerifiedLoadStock>()
         if(db.isNotBlank())stock["dumbbell-rack"]=VerifiedLoadStock.Totals(
             unit,LoadBasis.DUMBBELL_PER_HAND,exactPhysicalLoads(db))
+        if(kettlebells.isNotBlank())stock["single-kettlebell"]=VerifiedLoadStock.Totals(
+            unit,LoadBasis.KETTLEBELL_EACH,exactPhysicalLoads(kettlebells).also {
+                require(it.all{weight->weight>BigDecimal.ZERO}) })
+        if(kettlebellPairs.isNotBlank())stock["matched-kettlebell-pair"]=VerifiedLoadStock.Totals(
+            unit,LoadBasis.KETTLEBELL_EACH,exactPhysicalLoads(kettlebellPairs).also {
+                require(it.all{weight->weight>BigDecimal.ZERO}) })
         if(cable.isNotBlank()) {
             val parts=cable.split(",").map{BigDecimal(it.trim())}
             require(parts.size==3)

@@ -8191,6 +8191,69 @@
         "attachment": null,
         "note": "The second active-web incline bench dumbbell shrug retains its exact source identity and separate per-hand calibration. An incline bench is required; ambiguous generic-back credit is quarantined and no automatic alias or history merge is performed."
       }
+    },
+    {
+      "id": "kb-swing",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "kettlebell"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "kettlebell-swing",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "single-kettlebell",
+        "basis": "KETTLEBELL_EACH",
+        "fixtures": [],
+        "attachment": null,
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.25",
+          "SPINAL_ERECTORS:0.25"
+        ],
+        "note": "Two-handed swing with one verified kettlebell; log the mass of that one bell. Single-bell stock never proves a matched pair; practical reps retain the source band. Muscle credits remain provisional and no dumbbell load or history transfers."
+      }
+    },
+    {
+      "id": "kb-gorilla-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "kettlebell"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "horizontal_pull",
+        "variant": "kettlebell-gorilla-row",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "matched-kettlebell-pair",
+        "basis": "KETTLEBELL_EACH",
+        "fixtures": [],
+        "attachment": null,
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "TRAPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "note": "Alternating gorilla row with an explicitly confirmed matched pair; log the mass of each bell and repetitions per arm. Single bells or a dumbbell rack do not verify this pair, and no related row load or history transfers. Muscle credits remain provisional."
+      }
     }
   ]
 }

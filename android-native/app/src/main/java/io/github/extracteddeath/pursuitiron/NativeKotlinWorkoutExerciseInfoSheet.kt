@@ -26,7 +26,7 @@ private fun infoLoad(load:DraftSetLoad):String=when(load) {
     DraftSetLoad.ExplicitBodyweight -> "Bodyweight · no external load"
     is DraftSetLoad.Verified ->
         "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"+
-            " · ${load.basis.name.lowercase().replace('_',' ')}"
+            " · ${kotlinLoadBasisLabel(load.basis)}"
 }
 
 private fun infoReps(reps:RepBand):String =

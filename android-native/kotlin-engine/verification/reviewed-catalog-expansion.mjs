@@ -128,6 +128,11 @@ function validateRows(manifest,web=EXERCISES) {
        assert.equal(a.implement,'dumbbell-rack');
        assert.deepEqual(a.attachment,null);
        assert.ok(equipment.includes('dumbbell'));
+     } else if(a.basis==='KETTLEBELL_EACH') {
+       assert.ok(equipment.includes('kettlebell'));
+       assert.equal(a.implement,({'kb-swing':'single-kettlebell',
+         'kb-gorilla-row':'matched-kettlebell-pair'})[row.id]);
+       assert.equal(a.attachment,null);
      } else if(a.basis==='SMITH_TOTAL') {
        assert.ok(equipment.includes('smith'));
        assert.ok(a.implement.endsWith('-station'));
@@ -197,10 +202,13 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,318);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,320);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);
+ const wrongBell=structuredClone(m);
+ wrongBell.records.find(x=>x.id==='kb-gorilla-row').review.implement='single-kettlebell';
+ assert.throws(()=>validateReviewedCatalogExpansion(wrongBell,src));
  const forged=structuredClone(m);
  forged.records[0].review.basis=null;
  assert.throws(()=>validateReviewedCatalogExpansion(forged,src),/unweighted cannot/);

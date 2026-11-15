@@ -181,7 +181,7 @@ and restore the View's previous flag on disposal/Finish. No training authority,
 source approval, rest deadline, target or actual set is changed.
 
 The prior native source hardcoded both starting views to Focus and unconditionally
-requested screen awake. The actual web WorkoutPanel initializes targetMode with
+requested screen awake. The actual web WorkoutSession initializes targetMode with
 local useState; native already retained Target/Last and preserves that behavior
 while removing screen-owned writeback. Pure policy tests cover the 599/600dp
 boundary, explicit overrides, all 12 choice combinations, existing Last and

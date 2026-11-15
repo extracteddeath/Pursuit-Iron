@@ -499,8 +499,8 @@ also update that future default. Each issued workout preserves its current
 saveable review mode and unsent input independently. Prior View awake flags
 are restored when a recording screen finishes or is disposed.
 
-The actual web WorkoutPanel starts targetMode in local useState. Native keeps
-its earlier persistence and removes the screen-owned writeback race; training
+The actual web WorkoutSession starts targetMode in local useState. Native keeps
+its earlier persistence and removes the screen-owned writeback; training
 journals, rest receipt projections, actuals and approvals remain separate.
 Source/policy and Android compilation evidence do not close physical-device,
 foldable, 200% text, TalkBack or full UI acceptance. No APK/AAB.

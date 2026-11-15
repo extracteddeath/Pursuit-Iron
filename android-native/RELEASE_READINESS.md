@@ -30,8 +30,11 @@ device clock once in the durable History intent. Completion time survives
 recovery, duplicate acknowledgments, archived/segmented reads and corrections.
 Old ledgers remain readable and undated; original journal receipts/digests are
 unchanged. History groups recorded dates by local month, and CSV adds UTC
-values only when available. Source/JVM verification does not clear calendar,
-full UI, accessibility or actual-device acceptance. The APK/AAB freeze remains.
+values only when available. The source calendar browser adds recorded-month/day
+filters intersected with exercise search, explicit undated access, locale
+week starts, and a full-width day list for small panes/large fonts. Source/JVM
+verification does not clear full UI, visual, accessibility or actual-device
+acceptance. The APK/AAB freeze remains.
 
 The trap/hex-bar checkpoint adds 17 reviewed source identities and independent
 spinal-erector/trapezius accounting. Actual bar mass and paired plates flow

@@ -989,7 +989,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             val load=when(val weight=target.load) {
                                 DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
                                 is DraftSetLoad.Verified ->
-                                    "${weight.value.toPlainString()} ${weight.unit} · ${pretty(weight.basis)}"
+                                    "${weight.value.toPlainString()} ${weight.unit} · ${kotlinLoadBasisLabel(weight.basis)}"
                             }
                             Text("Set ${set.ordinalInSlot} · ${pretty(target.type)} · $load · ${target.reps.minimum}–${target.reps.maximum} reps · RIR ${target.targetRir?.toString() ?: "not set"}",
                                 style=MaterialTheme.typography.bodyMedium)
@@ -1004,7 +1004,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                         null -> "Same confirmed load"
                                         DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
                                         is DraftSetLoad.Verified ->
-                                            "${extra.value.toPlainString()} ${extra.unit} · ${pretty(extra.basis)}"
+                                            "${extra.value.toPlainString()} ${extra.unit} · ${kotlinLoadBasisLabel(extra.basis)}"
                                     }),
                                     style=MaterialTheme.typography.bodySmall)
                             }

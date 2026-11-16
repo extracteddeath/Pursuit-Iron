@@ -835,7 +835,6 @@ class StarterExerciseTrancheTest {
         val extension=byId.getValue("back-ext-45").movement
         assertEquals(setOf(TrainingMuscle.SPINAL_ERECTORS,TrainingMuscle.GLUTES,
             TrainingMuscle.HAMSTRINGS),extension.credits.map{it.muscle}.toSet())
-        assertEquals(listOf("spinal", "hamstrings").size,2)
     }
 
 }

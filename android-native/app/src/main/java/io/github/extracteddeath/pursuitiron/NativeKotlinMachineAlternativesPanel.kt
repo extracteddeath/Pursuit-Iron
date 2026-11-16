@@ -93,6 +93,19 @@ internal fun NativeKotlinMachineAlternativesPanel(
     val config=roster?.configurations?.firstOrNull{
         it.gymId==gymId && it.exerciseId==exerciseId
     }
+    // Plan -> Gym focus may resolve before roster data is loaded. Once the
+    // exact gym is available, avoid suggesting an already existing Machine A.
+    LaunchedEffect(gymId,exerciseId,roster?.revision) {
+        if(exerciseId.isNotBlank()) {
+            val existing=roster?.configurations?.firstOrNull {
+                it.gymId==gymId && it.exerciseId==exerciseId
+            }?.machines.orEmpty().map{it.label.trim().lowercase()}.toSet()
+            if(label.trim().lowercase() in existing) {
+                label=('A'..'Z').map{"Machine $it"}
+                    .firstOrNull{it.lowercase() !in existing} ?:"Other machine"
+            }
+        }
+    }
     // A saved group must be discoverable without guessing the logical
     // exercise name. The roster is already the verified current gym snapshot.
     val savedGroups=roster?.configurations.orEmpty().filter {

@@ -72,7 +72,7 @@ assert.match(host,/LoadBasis\.MACHINE_STACK,LoadBasis\.CABLE_STACK/);
 assert.match(host,/EXERCISE_HAS_NO_MACHINE_STACK/);
 const admission=host.slice(host.indexOf('fun addWorkoutPhysicalMachine('),
   host.indexOf('MACHINE_NAME_ALREADY_USED_OR_LIMIT_REACHED'));
-assert.match(admission,/if\(source\.catalog\.none \{/);
+assert.match(admission,/if\(source\.catalog\.singleOrNull \{it\.exerciseId==exerciseId\}/);
 assert.doesNotMatch(admission,/previous\.machines\.isEmpty\(\) && source\.catalog\.none/,
   'an existing legacy machine group must not bypass current machine-stack eligibility');
 for(const screen of [generated,custom]){

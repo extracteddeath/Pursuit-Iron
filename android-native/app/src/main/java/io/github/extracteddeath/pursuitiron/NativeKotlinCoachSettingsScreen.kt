@@ -327,47 +327,54 @@ internal fun NativeKotlinCoachSettingsScreen(
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
     if(feedbackOpen) {
-        AlertDialog(
-            onDismissRequest={ feedbackOpen=false },
-            title={Text("Share early beta feedback")},
-            text={
-                Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text("Describe what happened or what you would improve. Avoid personal or medical details unless you choose to include them.",
-                        style=MaterialTheme.typography.bodyMedium)
-                    OutlinedTextField(
-                        value=feedbackDraft,
-                        onValueChange={feedbackDraft=it.take(2000)},
-                        label={Text("Your feedback")},
-                        minLines=3,
-                        maxLines=7,
-                        modifier=Modifier.fillMaxWidth()
-                    )
-                    Text("Only your message and app version are shared after you choose an app. This does not send anything automatically.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    feedbackShareError?.let{
-                        Text(it,color=MaterialTheme.colorScheme.error,
-                            style=MaterialTheme.typography.bodySmall)
-                    }
-                }
-            },
-            confirmButton={
-                TextButton(
-                    enabled=NativeKotlinBetaFeedbackFormat.canShare(
-                        NativeBetaFeedbackDraft(
-                            NativeBetaFeedbackKind.GENERAL,message=feedbackDraft)),
-                    onClick={
-                        val launched=shareWithChosenApp(NativeBetaFeedbackDraft(
-                            NativeBetaFeedbackKind.GENERAL,message=feedbackDraft))
-                        if(launched)feedbackOpen=false
-                        else feedbackShareError="No app could open the feedback share sheet."
-                    }
-                ) {Text("Choose app to send")}
-            },
-            dismissButton={
-                TextButton(onClick={feedbackOpen=false}) {Text("Cancel")}
-            }
+        val draft=NativeBetaFeedbackDraft(
+            kind=NativeBetaFeedbackKind.GENERAL,
+            message=feedbackDraft
         )
+        // This editor has the same scrollable, IME-aware body and persistent
+        // actions as the structured problem report. A fixed AlertDialog can
+        // hide the send/cancel actions on small screens or enlarged text.
+        NativeEditSheet(
+            busy=false,
+            onDismiss={feedbackOpen=false},
+            footer={
+                Button(
+                    enabled=NativeKotlinBetaFeedbackFormat.canShare(draft),
+                    onClick={
+                        if(shareWithChosenApp(draft))feedbackOpen=false
+                        else feedbackShareError="No app could open the feedback share sheet."
+                    },
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Choose app to send")}
+                TextButton(
+                    onClick={feedbackOpen=false},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Cancel")}
+            }
+        ) {
+            Text("Share early beta feedback",
+                style=MaterialTheme.typography.titleLarge)
+            Text("Describe what happened or what you would improve. Avoid personal or medical details unless you choose to include them.",
+                style=MaterialTheme.typography.bodyMedium)
+            OutlinedTextField(
+                value=feedbackDraft,
+                onValueChange={
+                    feedbackDraft=it.take(2000)
+                    feedbackShareError=null
+                },
+                label={Text("Your feedback")},
+                minLines=3,
+                maxLines=7,
+                modifier=Modifier.fillMaxWidth()
+            )
+            Text("Only your message and app version are shared after you choose an app. Opening the chooser does not send anything automatically.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            feedbackShareError?.let {
+                Text(it,color=MaterialTheme.colorScheme.error,
+                    style=MaterialTheme.typography.bodySmall)
+            }
+        }
     }
     if(problemOpen) {
         val draft=NativeBetaFeedbackDraft(

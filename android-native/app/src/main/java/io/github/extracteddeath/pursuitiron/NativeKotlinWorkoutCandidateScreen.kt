@@ -542,6 +542,20 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 {pendingSkip=key}
             }
         )
+        if(!showAll && !presentation.finished && selected!=null) {
+            NativeKotlinWorkoutFocusNavigation(
+                steps=allSets.map{
+                    NativeKotlinFocusStep(it.target.setKey,it.isResolved)
+                },
+                selected=selected.target.setKey,
+                nextUnfinished=presentation.firstUnresolvedSetKey,
+                enabled=!state.busy,
+                onChoose={key->selectedKey=key},
+                onReturnToNextUnfinished={
+                    selectedKey=presentation.firstUnresolvedSetKey
+                }
+            )
+        }
         if(!showAll && !presentation.finished && journal!=null) {
             val toolExercise=selected?.target?.exerciseId
             val toolTargets=journal.snapshot.targets.filter{it.exerciseId==toolExercise}

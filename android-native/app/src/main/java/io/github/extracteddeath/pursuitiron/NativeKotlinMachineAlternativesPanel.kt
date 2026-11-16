@@ -43,10 +43,30 @@ internal fun NativeKotlinMachineAlternativesPanel(
     gymId:String,
     catalog:List<CatalogMovement>,
     roster:NativeMachineRosterSnapshot?,
-    busy:Boolean
+    busy:Boolean,
+    focusedMachineExerciseId:String?=null,
+    onMachineFocusConsumed:()->Unit={}
 ) {
     var query by rememberSaveable{mutableStateOf("")}
     var exerciseId by rememberSaveable{mutableStateOf("")}
+    var stalePlanFocus by remember(gymId){mutableStateOf(false)}
+    LaunchedEffect(gymId,focusedMachineExerciseId,catalog) {
+        val focused=focusedMachineExerciseId ?:return@LaunchedEffect
+        // The current Gym source, not an ID carried from Plan navigation,
+        // decides whether the movement is still an eligible machine stack.
+        val option=catalog.singleOrNull {
+            it.exerciseId==focused &&
+                it.expectedLoadBasis in setOf(
+                    io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.MACHINE_STACK,
+                    io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.CABLE_STACK)
+        }
+        stalePlanFocus=option==null
+        if(option!=null) {
+            exerciseId=option.exerciseId
+            query=kotlinExerciseLabel(option.exerciseId)
+        }
+        onMachineFocusConsumed()
+    }
     var label by rememberSaveable{mutableStateOf("Machine A")}
     var incrementText by rememberSaveable{mutableStateOf("")}
     var minimumText by rememberSaveable{mutableStateOf("")}
@@ -78,6 +98,11 @@ internal fun NativeKotlinMachineAlternativesPanel(
     PursuitCard {
         PursuitSectionHeading("Physical machines A / B",
             "The same exercise can use differently weighted machines. Your gym remembers its default; completed workouts never change.")
+        if(stalePlanFocus)Text(
+            "That Plan exercise is no longer verified as a machine/cable movement "+
+                "at this gym. Search current equipment instead.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.error)
         if(savedGroups.isNotEmpty()) {
             Text("Saved Machine A/B groups at this gym",
                 style=MaterialTheme.typography.titleMedium)

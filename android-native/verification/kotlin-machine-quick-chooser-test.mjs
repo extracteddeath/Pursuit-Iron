@@ -84,7 +84,7 @@ for(const screen of [generated,custom]){
 // searching for a hidden logical movement. Source choices stay owner/revision
 // verified by the existing controller, not an ad-hoc UI roster writer.
 assert.match(gym,/Saved Machine A\/B groups at this gym/);
-assert.match(gym,/it\.gymId==gymId && it\.machines\.isNotEmpty\(\)/);
+// Only catalog-qualified stacks are selectable; older non-stack physical\n// groups remain visible as read-only historical identity, never reclassified.\nassert.match(gym,/it\.gymId==gymId && it\.exerciseId in verifiedMachineIds &&/);\nassert.match(gym,/it\.machines\.isNotEmpty\(\)/);\nassert.match(gym,/it\.exerciseId !in verifiedMachineIds/);\nassert.match(gym,/History only/);
 assert.match(gym,/savedGroups\.take\(if\(showAllSaved\)savedGroups\.size else 5\)/);
 assert.match(gym,/exerciseId=saved\.exerciseId/);
 assert.match(gym,/Default: \$it/);

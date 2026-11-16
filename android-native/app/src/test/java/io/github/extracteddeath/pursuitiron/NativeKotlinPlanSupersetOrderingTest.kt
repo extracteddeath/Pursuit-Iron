@@ -89,15 +89,24 @@ internal class NativeKotlinPlanSupersetOrderingTest:
         assertFalse(blocked.later)
     }
 
-    @Test fun authorCannotCreateSeparatedSupersetButCanUnlinkOldMembership() {
+    @Test fun separatedSupersetsStillAuthorButUnsafeReorderingRefusesAndUnlinkWorks() {
         val before=threeSlotDraft("new-superset-members")
-        val blocked=CustomCycleBuilderDomain.setSupersetMembers(
+        val revised=CustomCycleBuilderDomain.setSupersetMembers(
             before,1,"phase-1",0,"pair",
             listOf("curl-0","solo"),true)
-        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            as CustomCycleBuilderResult.Proposed
+        val day=revised.draft.blocks.single().days.first()
+        assertEquals(listOf("pair",null,"pair"),
+            day.slots.map{it.supersetGroup})
+        assertNull(policy.proposed(day,"curl-0",1))
+        assertNull(policy.proposed(day,"solo",-1))
+        val blocked=CustomCycleBuilderDomain.reorderSlots(
+            revised.draft,2,"phase-1",0,
+            listOf("curl-0","partner","solo"))
+        assertEquals(CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT,
             (blocked as CustomCycleBuilderResult.Rejected).reason)
         val detached=CustomCycleBuilderDomain.setSupersetMembers(
-            before,1,"phase-1",0,"pair",emptyList(),false)
+            revised.draft,2,"phase-1",0,"pair",emptyList(),false)
             as CustomCycleBuilderResult.Proposed
         assertTrue(detached.draft.blocks.single().days.first().slots
             .all{it.supersetGroup==null})

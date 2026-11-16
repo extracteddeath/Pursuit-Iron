@@ -817,6 +817,8 @@ next unlogged warm-up in Focus. This is navigation only: recorded results,
 targets, selected physical machines, other set drafts and the rest timer keep
 their existing owners. Closing or opening History restores normal Info scope.
 Normal Info also shows main-entry outcome status and explicitly authored
-amplifier follow-up work time. Missing work duration is shown as unknown.
+amplifier follow-up work time. Custom working-set labels restart after warm-ups,
+matching Focus and the logger while preserving immutable receipt ordinals;
+six JVM presentation tests cover numbering, slots, physical units and timing. Missing work duration is shown as unknown.
 This source change still requires Android compilation and physical-device,
 large-font and TalkBack acceptance; the whole-app design gate remains open.

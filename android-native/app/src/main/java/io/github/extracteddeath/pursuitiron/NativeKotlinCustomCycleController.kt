@@ -1481,18 +1481,13 @@ internal class NativeKotlinCustomCycleController(
     ) = edit { draft ->
         val day = draft.blocks.firstOrNull { it.blockId == blockId }
             ?.days?.firstOrNull { it.weekday == weekday }
-        val order = day?.slots?.map { it.slotId }?.toMutableList()
-        val index = order?.indexOf(slotId) ?: -1
-        val target = index + direction
-        if (order == null || index < 0 || target !in order.indices)
-            CustomCycleBuilderResult.Rejected(
-                CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT)
-        else {
-            val chosen = order.removeAt(index)
-            order.add(target, chosen)
-            CustomCycleBuilderDomain.reorderSlots(
-                draft, draft.revision, blockId, weekday, order)
+        val order=day?.let{
+            NativeKotlinPlanSupersetOrdering.proposed(it,slotId,direction)
         }
+        if(order==null)CustomCycleBuilderResult.Rejected(
+            CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT)
+        else CustomCycleBuilderDomain.reorderSlots(
+            draft,draft.revision,blockId,weekday,order)
     }
 
     fun editReviewedExerciseSets(

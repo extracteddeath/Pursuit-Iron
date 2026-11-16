@@ -234,6 +234,9 @@ internal class NativeKotlinGymSourceController(
             val current=roster.configurations.firstOrNull{
                 it.gymId==gymId && it.exerciseId==exerciseId
             }?:KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+            require(current.machines.none {
+                it.label.trim().equals(label.trim(),ignoreCase=true)
+            }) { "A physical machine with this name already exists at this gym." }
             val uniqueId="machine_"+UUID.randomUUID().toString().replace("-","").take(16)
             val added=KotlinMachineAlternativesDomain.add(current,
                 KotlinPhysicalMachine(uniqueId,label.trim(),
@@ -287,6 +290,10 @@ internal class NativeKotlinGymSourceController(
             roster.configurations.map { config ->
                 if(config.gymId==gymId && config.exerciseId==exerciseId) {
                     val previous=checkNotNull(config.machines.firstOrNull{it.id==machineId})
+                    require(label.trim().isNotBlank() && config.machines.none {
+                        it.id!=machineId &&
+                            it.label.trim().equals(label.trim(),ignoreCase=true)
+                    }) { "Choose a unique name for this physical machine." }
                     KotlinMachineAlternativesDomain.edit(config,previous.copy(label=label.trim()))
                 } else config
             }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Explicit user-initiated exports only; never allow all of cacheDir. -->
+    <cache-path name="profile_share_images" path="profile_shares/" />
+</paths>

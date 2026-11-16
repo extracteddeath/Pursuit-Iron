@@ -8,7 +8,7 @@ import org.junit.Test
 internal class NativeKotlinMovementConcernPresentationTest {
     private val selection=NativeMovementConcernRequest("slot-a",7L)
     private fun review(revision:Long=7L,
-        values:List<String>=listOf("a:s2","a:s3"),
+        values:List<String> = listOf("a:s2","a:s3"),
         preserved:Int=1)=RemainingExerciseReview(
             "dumbbell-press",revision,values,0,values.size,0,preserved)
 

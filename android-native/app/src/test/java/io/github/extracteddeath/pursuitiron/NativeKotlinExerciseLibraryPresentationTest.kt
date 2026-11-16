@@ -9,8 +9,9 @@ internal class NativeKotlinExerciseLibraryPresentationTest:NativeKotlinProgramFi
     private fun records(value:NativeCustomAuthoringSnapshot=source())=
         nativeExerciseLibraryRecords(value,::nativeLibraryWords,::nativeLibraryWords,::nativeLibraryWords)
     private fun find(query:String="",muscle:TrainingMuscle?=null,gear:String?=null,
-        mode:NativeLibraryAvailability=NativeLibraryAvailability.ALL,excluded:Set<String> = emptySet())=
-        filterNativeExerciseLibrary(records(),query,muscle,gear,mode,excluded)
+        mode:NativeLibraryAvailability=NativeLibraryAvailability.ALL,excluded:Set<String> = emptySet(),
+        pattern:ComposerPattern?=null,role:ComposerRole?=null)=
+        filterNativeExerciseLibrary(records(),query,muscle,gear,mode,excluded,pattern,role)
 
     @Test fun entireCatalogIsSearchableBeforePagingAndPhysicalEligibilityIsNotInferred() {
         val all=records()
@@ -47,6 +48,30 @@ internal class NativeKotlinExerciseLibraryPresentationTest:NativeKotlinProgramFi
         assertEquals(listOf("db_curl"),find(mode=NativeLibraryAvailability.EXCLUDED,excluded=excluded).map{it.movement.exerciseId})
         assertTrue(find(mode=NativeLibraryAvailability.ELIGIBLE,excluded=excluded).none{it.movement.exerciseId=="db_curl"})
         assertTrue(records().single{it.movement.exerciseId=="db_curl"}.eligible)
+    }
+
+    @Test fun patternAndRoleNarrowSourceResultsWithoutChangingEligibility() {
+        val presses=find(pattern=ComposerPattern.HORIZONTAL_PRESS)
+        assertTrue(presses.isNotEmpty())
+        assertTrue(presses.all{it.movement.pattern==ComposerPattern.HORIZONTAL_PRESS})
+        val supporting=find(pattern=ComposerPattern.HORIZONTAL_PRESS,role=ComposerRole.SECONDARY)
+        assertTrue(supporting.isNotEmpty())
+        assertTrue(supporting.all{it.movement.role==ComposerRole.SECONDARY &&
+            it.movement.pattern==ComposerPattern.HORIZONTAL_PRESS})
+        val incline=find("incline",pattern=ComposerPattern.HORIZONTAL_PRESS,
+            role=ComposerRole.SECONDARY)
+        assertTrue(incline.isNotEmpty())
+        assertTrue(incline.all{it.searchText.contains("incline",ignoreCase=true)})
+        assertTrue(find(pattern=ComposerPattern.HORIZONTAL_PRESS,gear="dual-rope").isEmpty())
+        val excluded=setOf("db_curl")
+        assertTrue(find(pattern=ComposerPattern.HORIZONTAL_PRESS,
+            mode=NativeLibraryAvailability.EXCLUDED,excluded=excluded).isEmpty())
+        assertTrue(find(pattern=ComposerPattern.ISOLATION,
+            mode=NativeLibraryAvailability.ELIGIBLE,excluded=excluded)
+            .none{it.movement.exerciseId in excluded})
+        assertTrue(presses.all {record->
+            record.eligible==records().single{it.movement.exerciseId==record.movement.exerciseId}.eligible
+        })
     }
 
     @Test fun corruptOrUnresolvedCatalogsCannotAcquireAnEligibilityClaim() {

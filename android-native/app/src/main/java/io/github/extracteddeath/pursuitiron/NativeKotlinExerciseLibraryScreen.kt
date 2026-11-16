@@ -26,7 +26,7 @@ internal fun NativeKotlinExerciseLibraryAccess(
     onSave:(NativeGymExerciseExclusionChange)->Unit,
     onUndo:(NativeKotlinExerciseExclusionCommit)->Unit
 ) {
-    var open by rememberSaveable { mutableStateOf(false) }
+    var open by rememberSaveable(source.ownerKey,source.athleteId) { mutableStateOf(false) }
     PursuitCard {
         PursuitSectionHeading("Exercise library",
             "${source.catalog.size} exercises · ${source.setup.reviewed?.excludedExerciseIds?.size ?: 0} excluded")
@@ -57,20 +57,23 @@ private fun NativeKotlinExerciseLibrarySheet(
     historyHost:NativeKotlinCandidateHost?,
     onSave:(NativeGymExerciseExclusionChange)->Unit,onDismiss:()->Unit
 ) {
-    var baseRevision by rememberSaveable { mutableLongStateOf(source.revision) }
-    var original by rememberSaveable {mutableStateOf(source.setup.reviewed?.excludedExerciseIds.orEmpty().toList())}
-    var draft by rememberSaveable {mutableStateOf(original)}
-    var query by rememberSaveable {mutableStateOf("")}
-    var muscleId by rememberSaveable {mutableStateOf<String?>(null)}
-    var gearId by rememberSaveable {mutableStateOf<String?>(null)}
-    var availability by rememberSaveable {mutableStateOf(NativeLibraryAvailability.ALL)}
-    var showFilters by rememberSaveable {mutableStateOf(false)}
-    var visibleCount by rememberSaveable(query,muscleId,gearId,availability) {mutableIntStateOf(20)}
-    var selectedId by rememberSaveable {mutableStateOf<String?>(null)}
-    var historyId by rememberSaveable {mutableStateOf<String?>(null)}
-    var filterPicker by remember {mutableStateOf<String?>(null)}
-    var discard by remember {mutableStateOf(false)}
-    var submitted by remember {mutableStateOf<NativeGymExerciseExclusionChange?>(null)}
+    var baseRevision by rememberSaveable(source.ownerKey,source.athleteId) { mutableLongStateOf(source.revision) }
+    var original by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(source.setup.reviewed?.excludedExerciseIds.orEmpty().toList())}
+    var draft by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(original)}
+    var query by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf("")}
+    var muscleId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var gearId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var patternId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var roleId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var availability by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(NativeLibraryAvailability.ALL)}
+    var showFilters by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(false)}
+    var visibleCount by rememberSaveable(source.ownerKey,source.athleteId,
+        query,muscleId,gearId,patternId,roleId,availability) {mutableIntStateOf(20)}
+    var selectedId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var historyId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var filterPicker by remember(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var discard by remember(source.ownerKey,source.athleteId) {mutableStateOf(false)}
+    var submitted by remember(source.ownerKey,source.athleteId) {mutableStateOf<NativeGymExerciseExclusionChange?>(null)}
     val changed=draft.toSet()!=original.toSet()
     val stale=baseRevision!=source.revision
     val equipmentNames=remember(source.ownerKey,source.athleteId,source.revision) {
@@ -87,7 +90,10 @@ private fun NativeKotlinExerciseLibrarySheet(
             ::kotlinGymFacilityLabel,::kotlinGymAttachmentLabel)
     }
     val muscle=TrainingMuscle.entries.firstOrNull{it.name==muscleId}
-    val matches=filterNativeExerciseLibrary(records,query,muscle,gearId,availability,draft.toSet())
+    val pattern=ComposerPattern.entries.firstOrNull{it.name==patternId}
+    val role=ComposerRole.entries.firstOrNull{it.name==roleId}
+    val matches=filterNativeExerciseLibrary(records,query,muscle,gearId,availability,
+        draft.toSet(),pattern,role)
     val overLimit=draft.size>CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES
     LaunchedEffect(lastEdit,source) {
         if(submitted!=null && lastEdit!=null && lastEdit.request==submitted && lastEdit.matches(source))onDismiss()
@@ -128,17 +134,27 @@ private fun NativeKotlinExerciseLibrarySheet(
             modifier=Modifier.fillMaxWidth(),singleLine=true)
         PursuitDisclosureRow("Filters",
             listOf(muscle?.let{nativeLibraryWords(it.name)} ?: "All muscles",
-                gearId?.let(::gearLabel) ?: "Any equipment",nativeLibraryWords(availability.name)).joinToString(" · "),
+                pattern?.let{nativeLibraryWords(it.name)} ?: "Any movement pattern",
+                role?.let{nativeLibraryWords(it.name)} ?: "Any program role",
+                gearId?.let(::gearLabel) ?: "Any equipment",
+                nativeLibraryWords(availability.name)).joinToString(" · "),
             showFilters,{showFilters=!showFilters})
         if(showFilters) {
-            for((id,label) in listOf("muscle" to (muscle?.let{nativeLibraryWords(it.name)} ?: "All muscles"),
+            for((id,label) in listOf(
+                "muscle" to (muscle?.let{nativeLibraryWords(it.name)} ?: "All muscles"),
+                "pattern" to (pattern?.let{nativeLibraryWords(it.name)} ?: "Any movement pattern"),
+                "role" to (role?.let{nativeLibraryWords(it.name)} ?: "Any program role"),
                 "gear" to (gearId?.let(::gearLabel) ?: "Any equipment or attachment"),
                 "availability" to nativeLibraryWords(availability.name))) {
                 OutlinedButton(onClick={filterPicker=id},modifier=Modifier.fillMaxWidth()) {Text(label)}
             }
         }
-        if(query.isNotBlank() || muscleId!=null || gearId!=null || availability!=NativeLibraryAvailability.ALL)
-            TextButton(onClick={query="";muscleId=null;gearId=null;availability=NativeLibraryAvailability.ALL}) {Text("Clear search and filters")}
+        if(query.isNotBlank() || muscleId!=null || patternId!=null || roleId!=null ||
+            gearId!=null || availability!=NativeLibraryAvailability.ALL)
+            TextButton(onClick={
+                query="";muscleId=null;patternId=null;roleId=null
+                gearId=null;availability=NativeLibraryAvailability.ALL
+            }) {Text("Clear search and filters")}
         val inherited=original.toSet()-records.map{it.movement.exerciseId}.toSet()
         if(inherited.isNotEmpty())Text("${inherited.size} exclusion(s) from an older catalog will be retained.",
             style=MaterialTheme.typography.bodySmall)
@@ -210,18 +226,32 @@ private fun NativeKotlinExerciseLibrarySheet(
     filterPicker?.let { kind ->
         val options:List<Pair<String?,String>> = when(kind) {
             "muscle" -> listOf(null to "All muscles")+TrainingMuscle.entries.map{it.name to nativeLibraryWords(it.name)}
+            "pattern" -> listOf(null to "Any movement pattern")+records.map{it.movement.pattern}.distinct()
+                .sortedBy{nativeLibraryWords(it.name)}.map{it.name to nativeLibraryWords(it.name)}
+            "role" -> listOf(null to "Any program role")+records.map{it.movement.role}.distinct()
+                .sortedBy{nativeLibraryWords(it.name)}.map{it.name to nativeLibraryWords(it.name)}
             "gear" -> listOf(null to "Any equipment or attachment")+records.flatMap{it.gearIds}.distinct()
                 .sortedBy{gearLabel(it)}.map{it to gearLabel(it)}
             else -> NativeLibraryAvailability.entries.map{it.name to nativeLibraryWords(it.name)}
         }
-        AlertDialog(onDismissRequest={filterPicker=null},title={Text(when(kind){"muscle"->"Muscle";"gear"->"Equipment and attachments";else->"Availability"})},
+        AlertDialog(onDismissRequest={filterPicker=null},title={Text(when(kind){
+            "muscle"->"Muscle";"pattern"->"Movement pattern";"role"->"Program role"
+            "gear"->"Equipment and attachments";else->"Availability"
+        })},
             text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
                 options.forEach{(id,label)->
-                    val checked=when(kind){"muscle"->muscleId==id;"gear"->gearId==id;else->availability.name==id}
+                    val checked=when(kind){
+                        "muscle"->muscleId==id;"pattern"->patternId==id
+                        "role"->roleId==id;"gear"->gearId==id
+                        else->availability.name==id
+                    }
                     Row(Modifier.fillMaxWidth().heightIn(min=48.dp)
                         .selectable(checked,role=Role.RadioButton,onClick={
-                            when(kind){"muscle"->muscleId=id;"gear"->gearId=id
-                                else->availability=NativeLibraryAvailability.valueOf(checkNotNull(id))}
+                            when(kind){
+                                "muscle"->muscleId=id;"pattern"->patternId=id
+                                "role"->roleId=id;"gear"->gearId=id
+                                else->availability=NativeLibraryAvailability.valueOf(checkNotNull(id))
+                            }
                             filterPicker=null
                         }).padding(PursuitSpace.xs),verticalAlignment=Alignment.CenterVertically) {
                         RadioButton(selected=checked,onClick=null)

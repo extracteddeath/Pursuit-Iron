@@ -24,7 +24,20 @@ assert.doesNotMatch(model,/StarterExerciseTranche|\.publish\(|\.record\(|\.issue
 assert.match(screen,/val matches=filterNativeExerciseLibrary/);
 assert.match(screen,/matches\.take\(visibleCount\)/);
 assert.match(screen,/Show more exercises/);
-assert.match(screen,/rememberSaveable\(query,muscleId,gearId,availability\)/);
+assert.match(screen,/rememberSaveable\(source\.ownerKey,source\.athleteId,\s*query,muscleId,gearId,patternId,roleId,availability\)/);
+assert.match(model,/record\.movement\.pattern==pattern/);
+assert.match(model,/record\.movement\.role==role/);
+assert.match(screen,/"pattern" to \(pattern\?/);
+assert.match(screen,/"role" to \(role\?/);
+assert.match(screen,/patternId=null;roleId=null/);
+assert.match(screen,/var open by rememberSaveable\(source\.ownerKey,source\.athleteId\)/);
+for(const name of ['baseRevision','original','draft','query','muscleId','gearId',
+  'patternId','roleId','availability','showFilters','selectedId','historyId']) {
+  assert.match(screen,new RegExp('var '+name+' by rememberSaveable\\(source\\.ownerKey,source\\.athleteId\\)'));
+}
+for(const name of ['filterPicker','discard','submitted']) {
+  assert.match(screen,new RegExp('var '+name+' by remember\\(source\\.ownerKey,source\\.athleteId\\)'));
+}
 assert.match(screen,/Role\.RadioButton/);
 assert.match(screen,/older catalog will be retained/);
 

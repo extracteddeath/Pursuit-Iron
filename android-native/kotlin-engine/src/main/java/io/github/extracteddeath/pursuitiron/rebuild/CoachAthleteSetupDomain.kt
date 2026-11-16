@@ -114,6 +114,7 @@ data class AthleteSetupReview(
 }
 
 object CoachAthleteSetupDomain {
+    const val MAX_EXCLUDED_EXERCISES=256
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")
     private val zero=BigDecimal.ZERO
     private fun <T> frozenSet(s:Set<T>):Set<T> =
@@ -223,7 +224,7 @@ object CoachAthleteSetupDomain {
             problem("focusedMuscles",AthleteSetupIssueKind.CONFLICT,
                 "A muscle cannot simultaneously be prioritized and reduced.")
         if(draft.excludedExerciseIds==null)missing("excludedExerciseIds")
-        else if(draft.excludedExerciseIds.size>256 ||
+        else if(draft.excludedExerciseIds.size>MAX_EXCLUDED_EXERCISES ||
             draft.excludedExerciseIds.any {!id.matches(it)})
             problem("excludedExerciseIds",AthleteSetupIssueKind.INVALID,
                 "All excluded exercises need stable IDs.")

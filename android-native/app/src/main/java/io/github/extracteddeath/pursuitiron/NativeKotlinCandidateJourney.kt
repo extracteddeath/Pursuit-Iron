@@ -298,7 +298,8 @@ internal fun NativeKotlinCandidateJourney(
                             onContinue={navigate(KotlinCandidateDestination.PROGRAM)},
                             onBuildProgram={navigate(KotlinCandidateDestination.STARTER)})
                     KotlinCandidateDestination.GYM ->
-                        NativeKotlinGymSourceCandidateScreen(gymController)
+                        NativeKotlinGymSourceCandidateScreen(gymController,
+                            onReviewPlan={navigate(KotlinCandidateDestination.PROGRAM)},historyHost=host)
                     KotlinCandidateDestination.STARTER ->
                         NativeKotlinFirstProgramCandidateScreen(
                             starterController,

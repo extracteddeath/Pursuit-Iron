@@ -14,8 +14,14 @@ import java.util.Collections
  */
 enum class NativeGymCatalogEditRefusal {
     STALE_SOURCE, INVALID_EQUIPMENT, INVALID_GYM, INVALID_CATALOG,
-    ATHLETE_CONFLICT
+    ATHLETE_CONFLICT, INVALID_EXCLUSIONS
 }
+
+/** Uncommitted athlete intent, never a source receipt or workout approval. */
+data class NativeGymExerciseExclusionChange(
+    val ownerKey:String,val athleteId:String,val sourceRevision:Long,
+    val previous:Set<String>,val next:Set<String>
+)
 sealed interface NativeGymCatalogEdit {
     data class Proposed(
         val source: NativeCustomAuthoringSnapshot,
@@ -88,6 +94,34 @@ object NativeKotlinGymCatalogEditingDomain {
                 NativeGymCatalogEditRefusal.INVALID_GYM)
         return NativeGymCatalogEdit.Proposed(
             source.copy(revision=expectedRevision+1,setup=reviewed),name)
+    }
+
+    /** Changes only exercise preferences, with the exact reviewed source as base. */
+    fun setExerciseExclusions(
+        source:NativeCustomAuthoringSnapshot,
+        change:NativeGymExerciseExclusionChange
+    ):NativeGymCatalogEdit {
+        check(source,change.sourceRevision)?.let { return NativeGymCatalogEdit.Rejected(it) }
+        if(source.ownerKey!=change.ownerKey || source.athleteId!=change.athleteId)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.ATHLETE_CONFLICT)
+        val athlete=checkNotNull(source.setup.reviewed)
+        if(athlete.excludedExerciseIds!=change.previous)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.STALE_SOURCE)
+        val known=source.catalog.map{it.exerciseId}.toSet()
+        if(known.size!=source.catalog.size || known.isEmpty())
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_CATALOG)
+        // Keep inherited exclusions absent from this catalog. They need a
+        // separate identity reconciliation, never an accidental Clear all.
+        if(change.next==change.previous || change.next.size>CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES ||
+            change.next.any{!id.matches(it)} ||
+            change.next-known!=change.previous-known)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_EXCLUSIONS)
+        val reviewed=CoachAthleteSetupDomain.review(draft(athlete,baseGym(athlete.gym))
+            .copy(excludedExerciseIds=change.next.toSet()))
+        if(reviewed.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW || reviewed.reviewed==null)
+            return NativeGymCatalogEdit.Rejected(NativeGymCatalogEditRefusal.INVALID_EXCLUSIONS)
+        return NativeGymCatalogEdit.Proposed(source.copy(
+            revision=source.revision+1,setup=reviewed),"set-exercise-exclusions")
     }
 
     /**

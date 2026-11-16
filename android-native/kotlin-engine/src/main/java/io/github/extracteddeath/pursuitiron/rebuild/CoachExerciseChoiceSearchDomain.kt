@@ -9,10 +9,10 @@ object CoachExerciseChoiceSearchDomain {
         approved:List<String>,query:String,label:(String)->String
     ):List<String> {
         val tokens=query.trim().take(80).replace('_',' ').replace('-',' ')
-            .lowercase().split(Regex("\\s+")).filter {it.isNotBlank()}
+            .lowercase(java.util.Locale.ROOT).split(Regex("\\s+")).filter {it.isNotBlank()}
         return approved.distinct().filter { id ->
             val searchable=(label(id)+" "+id).replace('_',' ').replace('-',' ')
-                .lowercase()
+                .lowercase(java.util.Locale.ROOT)
             tokens.all { searchable.contains(it) }
         }
     }

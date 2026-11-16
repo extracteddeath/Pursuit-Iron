@@ -159,7 +159,7 @@ catalog count or by green source/CI tests.
 | Month-grouped History, workout search, corrections, session notes (v3.1.7 B459; build 743; B935) | **Partial/source-tested.** Native Finish transactions record completion time once; retries, recovery and corrections preserve it. Both workout routes share local-month grouping, separate undated sessions, reachable exercise search/drilldowns and versioned UTC CSV export. Older training dates are never reconstructed. | Calendar-grid/period controls, physical-device navigation, large-font and TalkBack acceptance remain open. |
 | Profile level/XP, achievement cards, strength club, customizable sections, share cards (M297; v3.0 B441) | **Partial/open.** Native Profile and strength history shortcuts exist. | Section order/visibility, coherent level visuals, milestones, thousand-pound club and privacy-safe shareable cards. |
 | Shared programs gallery, template import, favorites and older program upgrades (v3.3 B478; B983) | **Open/unverified.** Native custom program builder exists. | Discover/import/verify real templates, avoid duplicates, equipment adaptation and revised engine upgrades with review. |
-| Exercise Library: equipment/muscle filters, ban/unban, search, attachments, movement visuals (B939, v3.? B?, B578) | **Partial/open.** Curated native catalog and gym editor exist. | First-class discoverable Library, verified filters, pictures/variants, ban undo, and shared search semantics with swap. |
+| Exercise Library: equipment/muscle filters, ban/unban, search, attachments, movement visuals (B939, v3.? B?, B578) | **Partial/source-tested.** Gym contains a searchable saved-source library with muscle/equipment/fixture/attachment filters, eligibility, complete paging, shared verified History and draft Include/Exclude choices. Save uses native owner/revision/original-set checks; exact-source Undo restores only preferences. Issued work and historical actuals remain intact. | Real phone/foldable/large-font/TalkBack/back/keyboard acceptance; movement visuals, exercise goals/comparison and custom exercise creation. Existing-program replacement remains an explicit Plan-review task. Full web library parity is not yet certified. |
 | “What's New”, release notes and complete settings controls (B917; latest changelog) | **Open/unverified.** Native Settings and theme options exist. | Current release highlights with archive; offline privacy/data controls and native backup/restore if retained. |
 
 ## Priority 2 — native UX quality gates, not pixel-for-pixel web cloning
@@ -565,3 +565,33 @@ The inventory is now **325/376**, with **51 IDs absent**. See the bounded
 [physical/source review](kotlin-engine/verification/landmine-loading-review.md).
 Full functional parity, measured coaching improvement and whole-app/device
 acceptance remain open. No APK/AAB.
+
+## Exercise library and controlled exclusions — 2026-11-16
+
+Gym is the native library/preference home, with discovery called out in Profile.
+The old unfiltered catalog list is replaced by name/muscle/equipment/attachment
+search, independent muscle and equipment/fixture/attachment filters, eligible
+and excluded views, and paging of the full filtered source. Detail distinguishes
+direct/supporting catalog targets and actual requirements. It opens the same
+owner-verified Exercise History sheet as Train. Browsing never authorizes an
+exercise or fabricates stock, attainable loads or equivalence.
+
+Include/Exclude changes remain an unsent draft with a persistent Save/Close
+footer and discard confirmation. Owner/athlete scope, exact source revision and
+original exclusions are independently rechecked by the existing source editor.
+The canonical 256-exclusion limit is shared, and exclusions absent from the
+current catalog survive. A stale draft needs explicit reload. Undo requires the
+whole saved source to match; it cannot erase a later equipment/preference edit,
+restore old workout consent, change a plan or touch recorded history. Issued
+journals can keep logging and finish; future issuance needs current Plan review.
+
+Actual web `LibraryView` at main `12e2bd37258c56255c687cc6abed78d1921f6c07`
+has search, muscle/equipment/flag filters, exercise detail and ban controls.
+This native continuation adds deliberate pending/save/discard and exact-context
+Undo through the existing source owner, with current gym eligibility visible.
+It does not claim full library parity or faster interaction. Native files test
+save/cold reopen/Undo, real revision conflicts and an issued workout through
+correction, Finish and verified History after preferences change. Source tests
+verify History/Plan handoffs and saveable filter/edit scope. Runtime restoration,
+visuals, goals, comparisons, custom exercise creation and device acceptance remain
+open. No APK/AAB.

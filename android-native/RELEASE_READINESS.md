@@ -1,6 +1,6 @@
 # Pursuit Iron Kotlin release status
 
-As of 2026-11-15. Active branch: `architecture/kotlin-engine-rebuild`.
+As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
 **Production verdict: NOT READY.** There is a source-tested native training
 core, but substantial engine, feature, data and device acceptance work remains.
@@ -105,6 +105,23 @@ actuals, corrections, retries, cold reopen, Finish and CSV; old archive replay
 and byte compatibility remain required. Current catalog source inventory is
 **325/376**, with **51 absent**. Full CI, physical/UI/accessibility acceptance,
 complete parity and measured superiority remain separate gates. No APK/AAB.
+
+**Exercise library checkpoint (2026-11-16):** Gym now has searchable discovery
+of its exact saved catalog, muscle/equipment/fixture/attachment filters,
+saved-source eligibility, bounded paging and a shared factual History sheet.
+Include/exclude choices remain local until Save. The existing native source
+owner rechecks athlete, original preferences and revision before committing;
+Undo is available only against that exact saved source. Unknown inherited
+exclusions are retained. No program, load, issued target or historical actual
+is rewritten. Native-file tests demonstrate continued logging/correction/
+Finish/History for an issued workout after an exclusion edit, and rejection
+of a previously prepared future issuance both after Save and after Undo.
+The library links to the existing Plan review, rather than authorizing a new
+workout itself. A shared optional sheet footer keeps Save/Close outside the
+scrolling results; other edit sheets retain their existing presentation.
+Source/JVM and full CI are required. Device/back/keyboard/TalkBack and full
+visual acceptance remain open, as do movement visuals, exercise goals,
+comparison, custom exercise creation and broader library parity. No APK/AAB.
 
 ## What works in the isolated Kotlin core
 

@@ -252,7 +252,7 @@ internal fun NativeKotlinProfileScreen(
         )
         PursuitDestinationRow(
             title="Gym and equipment",
-            description="Verify the exact machines, attachments and available weights.",
+            description="Verify equipment, browse the exercise library and manage exclusions.",
             onClick=onGym,
             icon={Icon(Icons.Filled.Tune,contentDescription=null)}
         )

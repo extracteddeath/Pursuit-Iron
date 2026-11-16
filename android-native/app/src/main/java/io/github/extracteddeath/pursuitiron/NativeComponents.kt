@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.compose.material3.HorizontalDivider
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -67,15 +69,27 @@ import io.github.extracteddeath.pursuitiron.domain.NativeSetEntryPolicy
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NativeEditSheet(busy: Boolean,onDismiss: ()->Unit,
-    canDismiss: ()->Boolean = {true},content: @Composable ColumnScope.()->Unit) {
+    canDismiss: ()->Boolean = {true},
+    footer:(@Composable ColumnScope.()->Unit)?=null,
+    content: @Composable ColumnScope.()->Unit) {
     val currentBusy by rememberUpdatedState(busy)
     val currentCanDismiss by rememberUpdatedState(canDismiss)
     val sheet=rememberBottomSheetState(initialValue=SheetValue.Hidden,
         enabledValues=setOf(SheetValue.Hidden,SheetValue.Expanded),
         confirmValueChange={it!=SheetValue.Hidden || !currentBusy && currentCanDismiss()})
     ModalBottomSheet(sheetState=sheet,onDismissRequest={if(!currentBusy && currentCanDismiss())onDismiss()}) {
-        Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+        if(footer==null) {
+            Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
+                verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+        } else {
+            Column(Modifier.fillMaxWidth().imePadding().padding(PursuitSpace.md)) {
+                Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.md),content=content)
+                HorizontalDivider(Modifier.padding(vertical=PursuitSpace.sm))
+                Column(Modifier.fillMaxWidth(),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm),content=footer)
+            }
+        }
     }
 }
 

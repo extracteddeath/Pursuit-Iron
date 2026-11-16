@@ -15,7 +15,7 @@ import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Candidate-only native gym source editor. IO and owner fence live off Main.
+ * Native gym and exercise source editor. IO and owner fence live off Main.
  * Never creates demo stock, silently imports JS program inventory, or
  * optimistically claims that a change has been durably applied.
  */
@@ -25,7 +25,8 @@ internal data class NativeKotlinGymSourceState(
     val message: String? = null,
     val refusal: NativeAuthoringSourceRefusal? = null,
     val savedAthleteId: String? = null,
-    val machineRoster: NativeMachineRosterSnapshot? = null
+    val machineRoster: NativeMachineRosterSnapshot? = null,
+    val lastExclusionEdit:NativeKotlinExerciseExclusionCommit?=null
 )
 
 internal class NativeKotlinGymSourceController(
@@ -52,13 +53,15 @@ internal class NativeKotlinGymSourceController(
     }
 
     private fun load(message:String?=null) {
+        val previousExclusionEdit=current.value.lastExclusionEdit
         val previousAthlete=host.savedAthleteIdForExplicitResume()
         val result=host.readCustomAuthoringSource()
-        current.value=when(result) {
+        val loaded=when(result) {
             is NativeAuthoringSourceRead.Found ->
                 NativeKotlinGymSourceState(source=result.source,
                     savedAthleteId=previousAthlete,
-                    message=message ?: "Verified native gym and catalog restored · revision ${result.source.revision}")
+                    lastExclusionEdit=previousExclusionEdit?.takeIf{it.matches(result.source)},
+                    message=message ?: "Saved gym and exercise choices loaded.")
             NativeAuthoringSourceRead.Missing ->
                 NativeKotlinGymSourceState(savedAthleteId=previousAthlete,
                     message=
@@ -80,6 +83,7 @@ internal class NativeKotlinGymSourceController(
                     savedAthleteId=previousAthlete,
                     message="Native equipment could not be verified; nothing was replaced.")
         }
+        current.value=loaded.copy(busy=pending.get())
         if(current.value.source!=null) {
             when(val roster=host.readMachineRoster()) {
                 is NativeMachineRosterResult.Saved ->
@@ -163,6 +167,34 @@ internal class NativeKotlinGymSourceController(
     fun setFacilitiesAndAttachments(
         facilities:Set<String>,attachments:Set<String>
     )=change {host.updateNativeGymFixtures(it,facilities,attachments)}
+
+    fun saveExerciseExclusions(intent:NativeGymExerciseExclusionChange) {
+        val captured=intent.copy(previous=intent.previous.toSet(),next=intent.next.toSet())
+        writeExerciseExclusions(captured,undo=false)
+    }
+
+    fun undoExerciseExclusions(edit:NativeKotlinExerciseExclusionCommit) {
+        if(edit==current.value.lastExclusionEdit && edit.matches(current.value.source))
+            writeExerciseExclusions(edit.undoRequest(),undo=true)
+    }
+
+    private fun writeExerciseExclusions(intent:NativeGymExerciseExclusionChange,undo:Boolean)=run {
+        when(val result=host.updateNativeExerciseExclusions(intent)) {
+            is NativeAuthoringSourceWrite.Committed -> {
+                load(if(undo)"Restored the previous exercise exclusions. Review your plan before starting a new workout."
+                    else "Saved exercise exclusions. Review your plan before starting a new workout; issued workouts retain their saved targets.")
+                val saved=current.value.source
+                val edit=saved?.let{NativeKotlinExerciseExclusionCommit(intent,it)}
+                    ?.takeIf{it.matches(saved)}
+                current.value=current.value.copy(lastExclusionEdit=if(undo)null else edit)
+            }
+            is NativeAuthoringSourceWrite.Rejected -> {
+                load()
+                current.value=current.value.copy(refusal=result.reason,
+                    message="The exclusion save could not be confirmed. Check the reloaded saved library before retrying.")
+            }
+        }
+    }
 
     /** Catalog is curated elsewhere with explicit provisional review facts. */
     fun publishReviewedCatalog(catalog:List<CatalogMovement>)=

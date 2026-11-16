@@ -899,3 +899,26 @@ four JVM tests and exact-source navigation contracts cover revision
 changes, preserved recorded work, absent selections and already-complete
 exercises. Android source and phone accessibility acceptance remain
 separate gates. No APK/AAB.
+
+## Concern → verified replacement without hidden navigation — 2026-11-16 (pending CI)
+
+The in-workout concern guide now provides **Review replacement exercises**
+as an explicit third option alongside writing a session note or confirming
+skips. It opens the **existing current-gym/owner-verified Kotlin swap
+reviewer**, never chooses an alternative automatically or changes a signed
+program. Both generated and custom workouts use the same strict
+historical-record eligibility: any previously recorded set in the
+exercise/slot, including an earlier corrected set, disables replacement.
+Custom linked supersets cannot be swapped in-place; the athlete can
+review explicit skips or change the program separately.
+
+The guide displays original recorded/remaining counts and never offers
+replacement if no exact current unresolved exercise exists. On selecting
+replacement, the current journal revision and unstarted exercise
+eligibility are checked **again** before the swap reviewer is opened.
+The eventual replacement still has to pass its original independent
+catalog, machine/gym, immutable-snapshot and consent gates. This is
+navigation only: no automatic load reduction, logged set, medical
+inference, or next-program mutation. App JVM cases and source contracts
+assert stale, linked, corrected and unstarted boundaries. Real-device
+large-font/TalkBack and full parity acceptance remain open. No APK/AAB.

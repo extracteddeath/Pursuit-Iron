@@ -23,6 +23,29 @@ internal class NativeKotlinMovementConcernPresentationTest {
             options.skipRequest)
     }
 
+    @Test fun onlyUnstartedExerciseCanOpenIndependentReplacementReview() {
+        val untouched=review(preserved=0)
+        val eligible=NativeMovementConcernPresentation.review(
+            selection,7L,true,untouched,canReviewReplacement=true)
+        assertEquals("slot-a",eligible.replacementScopeId)
+        assertEquals(NativeExerciseSkipRequest("slot-a",7L),eligible.skipRequest)
+        assertNull(NativeMovementConcernPresentation.review(
+            selection,7L,true,untouched,canReviewReplacement=false)
+                .replacementScopeId)
+        assertNull(NativeMovementConcernPresentation.review(
+            selection,7L,true,review(),canReviewReplacement=true)
+                .replacementScopeId)
+        assertNull(NativeMovementConcernPresentation.review(
+            selection,8L,true,untouched,canReviewReplacement=true)
+                .replacementScopeId)
+        assertNull(NativeMovementConcernPresentation.review(
+            selection,7L,true,review(revision=6L),canReviewReplacement=true)
+                .replacementScopeId)
+        assertNull(NativeMovementConcernPresentation.review(
+            NativeMovementConcernRequest(null,7L),7L,true,
+            null,canReviewReplacement=true).replacementScopeId)
+    }
+
     @Test fun staleOrFinishedWorkoutNeverOffersNoteOrSkip() {
         for(options in listOf(
             NativeMovementConcernPresentation.review(selection,8L,true,review()),

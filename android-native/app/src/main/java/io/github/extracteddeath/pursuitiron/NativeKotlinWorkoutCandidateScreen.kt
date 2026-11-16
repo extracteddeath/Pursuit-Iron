@@ -1152,7 +1152,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
         val options=NativeMovementConcernPresentation.review(
             request,journal?.revision,
-            journal!=null && journal.finishedByEventId==null,remaining)
+            journal!=null && journal.finishedByEventId==null,remaining,
+            canReviewReplacement=NativeMovementSwapEligibility.generated(
+                journal,request.scopeId))
         NativeKotlinMovementConcernDialog(
             options=options,busy=state.busy,
             onWriteNote={
@@ -1168,6 +1170,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     journal?.revision==request.journalRevision) {
                     pendingConcern=null
                     pendingExerciseSkip=selectedRequest
+                }
+            },
+            onReviewReplacement={
+                val candidate=options.replacementScopeId
+                val latest=journal
+                if(candidate!=null && latest?.revision==request.journalRevision &&
+                    !state.busy && !swapLoading &&
+                    NativeMovementSwapEligibility.generated(latest,candidate)) {
+                    pendingConcern=null
+                    reviewSwap(candidate)
                 }
             },onDismiss={pendingConcern=null}
         )

@@ -72,6 +72,20 @@ assert.match(concernGuide,/it.journalRevision==currentRevision/);
 assert.match(concernGuide,/if\(count>0\)/);
 assert.match(concernGuide,/Write session note/);
 assert.match(concernGuide,/Review skipping remaining exercise/);
+assert.match(concernGuide,/Review replacement exercises/);
+assert.match(concernGuide,/replacementScopeId=if\(count>0 && canReviewReplacement/);
+assert.match(concernGuide,/journal\.receipts\.none/);
+assert.match(concernGuide,/slot\.supersetGroup!=null/);
+for(const [source,label] of [[generatedFocus,'generated'],[journal,'custom']]) {
+  assert.ok(source.includes('canReviewReplacement=NativeMovementSwapEligibility.'),
+      label+' must use exact unfinished journal to determine replacement eligibility');
+  assert.ok(source.includes('onReviewReplacement={') &&
+      source.includes('val candidate=options.replacementScopeId') &&
+      source.includes('latest?.revision==request.journalRevision'),
+      label+' must revalidate journal before invoking existing reviewed swap');
+}
+assert.match(generatedFocus,/reviewSwap\(candidate\)/);
+assert.match(journal,/reviewSwap\(target\)/);
 assert.doesNotMatch(concernGuide,/host\.|\.record\(|\.finish\(|\.save\(/);
 const m3focus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const fragment of [

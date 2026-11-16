@@ -903,6 +903,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customIssuedStore.record(owner.ownerKey,workoutId,operation)
     }
 
+    fun skipRemainingCustomExercise(
+        workoutId:String,expectedRevision:Long,slotId:String
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.skipRemainingExercise(
+            owner.ownerKey,workoutId,expectedRevision,slotId)
+    }
+
     /**
      * Custom Finish is committed ONLY by shared native history redo.
      * No direct reducer Finish or misleading in-memory completion.
@@ -2868,6 +2878,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeJournalFileRefusal.NOT_AUTHORIZED)
         return trackedWorkout.append(
             owner.ownerKey,owner.athleteId,workoutId,operation)
+    }
+
+    fun skipRemainingGeneratedExercise(
+        workoutId:String,expectedRevision:Long,exerciseId:String
+    ):NativeJournalFileResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.NOT_AUTHORIZED)
+        return trackedWorkout.skipRemainingExercise(
+            owner.ownerKey,owner.athleteId,workoutId,expectedRevision,exerciseId)
     }
 
     /**

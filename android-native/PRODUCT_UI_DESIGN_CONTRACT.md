@@ -785,3 +785,24 @@ text, keyboard, TalkBack, Back/swipe, failed-save recovery and process-death
 restoration with pending choices. Movement visuals, exercise goals/comparison,
 custom exercise creation and full library parity remain separate work. Whole-app
 UI acceptance is unfinished. No APK/AAB.
+
+
+## Confirmed remaining-exercise skips — 2026-11-16
+
+Both generated and custom Train flows offer **Skip remaining exercise** from
+Skip confirmation in Focus and the exercise controls in All sets. A shared
+Material confirmation lists remaining warm-ups, working sets and any already
+unlocked amplifier follow-ups. It keeps the exact exercise (custom: authored
+slot) and reviewed journal revision; a changed workout requires fresh review.
+Previously completed, failed, skipped and corrected entries remain untouched,
+and repeated copies of a custom movement and superset partners stay separate.
+
+One Kotlin selection policy consumes the currently issued snapshot. The normal
+owner-fenced writers append ordinary atomic SKIPPED receipts, with no new
+persistence format, invented actuals, load edits or program changes. Partial
+writes retain each committed receipt; recovery and a newly confirmed review
+select only unresolved entries. Finish remains a separate history transaction.
+Pure reducer and real native-file tests cover immutable targets, cold recovery,
+stale revisions, identity refusal, repeated movements and conditional amplifier
+entries. Source/CI verification does not establish device or accessibility
+acceptance; full-design and beta release gates remain open. No APK/AAB.

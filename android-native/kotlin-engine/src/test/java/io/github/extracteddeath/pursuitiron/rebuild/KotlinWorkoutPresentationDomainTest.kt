@@ -90,4 +90,26 @@ class KotlinWorkoutPresentationDomainTest {
         assertEquals(1,ui.skippedCount)
         assertEquals(1,ui.failedCount)
     }
+
+    @Test fun remainingExerciseKeepsCompletedWarmupsAndOtherExercises() {
+        var j=KotlinWorkoutJournalDomain.begin(snapshot,identity)
+        j=step(j,recorded("done",0,"press:w0",KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,8,null)))
+        val before=j
+        val review=WorkoutRemainingExerciseDomain.generated(j,"press")!!
+        assertEquals(listOf("press:s1"),review.entries)
+        assertEquals(0,review.warmupCount)
+        assertEquals(1,review.workingCount)
+        assertEquals(1,review.preservedEntryCount)
+        j=step(j,recorded("skip-rest",review.journalRevision,review.entries.single(),
+            KotlinJournalSetOutcome.SKIPPED,null))
+        assertEquals(before.effectiveSets["press:w0"],j.effectiveSets["press:w0"])
+        assertFalse(j.effectiveSets.containsKey("chin:s1"))
+        assertEquals(before.snapshot,j.snapshot)
+        assertEquals(before.originalSnapshot,j.originalSnapshot)
+        assertEquals(emptyList<String>(),WorkoutRemainingExerciseDomain.generated(j,"press")!!.entries)
+        assertNull(WorkoutRemainingExerciseDomain.generated(j,"missing"))
+        assertNull(WorkoutRemainingExerciseDomain.generated(j.copy(finishedByEventId="finish"),"press"))
+    }
+
 }

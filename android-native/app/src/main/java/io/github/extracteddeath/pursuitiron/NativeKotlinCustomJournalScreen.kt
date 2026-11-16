@@ -117,6 +117,9 @@ internal fun NativeKotlinCustomJournalScreen(
     var pendingQuickSkip by remember(workoutId) {
         mutableStateOf<CustomWorkoutVisitKey?>(null)
     }
+    var pendingExerciseSkip by remember(workoutId) {
+        mutableStateOf<NativeExerciseSkipRequest?>(null)
+    }
     var verifiedFinishedInHistory by remember(host,workoutId){
         mutableStateOf(false)
     }
@@ -258,6 +261,33 @@ internal fun NativeKotlinCustomJournalScreen(
             busy=false
         }
     }
+    fun skipRemainingExercise(request:NativeExerciseSkipRequest) {
+        val current=journal ?:return
+        if(busy || current.finishedByEventId!=null ||
+            current.revision!=request.revision)return
+        busy=true
+        scope.launch {
+            val result=withContext(Dispatchers.IO) {
+                runCatching {
+                    host.skipRemainingCustomExercise(workoutId,request.revision,request.scopeId)
+                }.getOrNull()
+            }
+            if(result is NativeCustomJournalResult.Durable) {
+                journal=result.issued.journal
+                error=null
+                reviewSetKey=null
+                reviewPart=null
+            } else {
+                error="Skipping stopped. Review the saved entries before skipping the rest."
+                val recovered=withContext(Dispatchers.IO) {
+                    runCatching{host.openIssuedCustomWorkout(workoutId)}.getOrNull()
+                }
+                journal=(recovered as? NativeCustomJournalResult.Durable)?.issued?.journal
+            }
+            busy=false
+        }
+    }
+
     fun saveSessionNote(text:String) {
         if(busy)return
         val current=journal ?:return
@@ -1007,6 +1037,15 @@ internal fun NativeKotlinCustomJournalScreen(
                         val partners=current.snapshot.slots.filter {
                             slot.supersetGroup!=null && it.supersetGroup==slot.supersetGroup
                         }
+                        if(activeFocus==null && !finished) {
+                            val remaining=WorkoutRemainingExerciseDomain.custom(current,slot.slotId)
+                            if(remaining!=null && remaining.entries.isNotEmpty())
+                                OutlinedButton(enabled=!busy,onClick={
+                                    pendingExerciseSkip=NativeExerciseSkipRequest(slot.slotId,current.revision)
+                                },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                                    Text("Skip remaining exercise")
+                                }
+                        }
                         if(activeFocus==null && partners.size in 2..3)Text(
                             "Superset · "+partners.joinToString(" · "){kotlinExerciseLabel(it.exerciseId)}+
                                 ". Alternate working sets; warm up each movement first.",
@@ -1358,6 +1397,14 @@ internal fun NativeKotlinCustomJournalScreen(
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})
     }
+    pendingExerciseSkip?.let {request->
+        val review=journal?.let{WorkoutRemainingExerciseDomain.custom(it,request.scopeId)}
+        NativeKotlinRemainingExerciseSkipDialog(request,review,busy,
+            onConfirm={
+                skipRemainingExercise(request)
+                pendingExerciseSkip=null
+            },onDismiss={pendingExerciseSkip=null})
+    }
     val quickSkip=pendingQuickSkip
     if(quickSkip!=null) {
         // Confirm against the newest owned journal, not the set that was
@@ -1372,9 +1419,21 @@ internal fun NativeKotlinCustomJournalScreen(
         AlertDialog(
             onDismissRequest={pendingQuickSkip=null},
             title={Text("Skip the next entry?")},
-            text={Text(if(stillNext)
-                "Skipping records an explicit outcome for this ${if(quickSkip.part==CustomWorkoutVisitPart.FOLLOW_UP) "amplifier follow-up" else "set"}. You can correct it before Finish."
-            else "The saved workout advanced while this confirmation was open. Dismiss and review the new next entry; no set was changed.")},
+            text={Column {
+                Text(if(stillNext)
+                    "Skipping records an explicit outcome for this ${if(quickSkip.part==CustomWorkoutVisitPart.FOLLOW_UP) "amplifier follow-up" else "set"}. You can correct it before Finish."
+                else "The saved workout advanced while this confirmation was open. Dismiss and review the new next entry; no set was changed.")
+                val current=journal
+                val slot=current?.snapshot?.slots?.singleOrNull { slot->
+                    slot.sets.any{it.setKey==quickSkip.setKey}
+                }
+                if(current!=null && slot!=null && stillNext) {
+                    TextButton(enabled=canSkip,onClick={
+                        pendingExerciseSkip=NativeExerciseSkipRequest(slot.slotId,current.revision)
+                        pendingQuickSkip=null
+                    }) {Text("Skip remaining exercise…")}
+                }
+            }},
             confirmButton={
                 Button(enabled=canSkip,onClick={
                     // Recheck after the dialog's composition as well.

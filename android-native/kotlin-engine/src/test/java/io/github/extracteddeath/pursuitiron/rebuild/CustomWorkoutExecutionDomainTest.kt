@@ -193,4 +193,39 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(visit("a:s2"),next(j))
         assertEquals(review,CustomWorkoutVisitFocusDomain.visibleOrder(j))
     }
+
+    @Test fun remainingCustomExercisePreservesSupersetPartnerAndCompletedMain() {
+        for(kind in CustomAmplifierKind.entries) {
+            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15)),slot("b"))
+            j=record(j,"a:s1")
+            val original=j
+            val review=WorkoutRemainingExerciseDomain.custom(j,"a")!!
+            assertEquals(listOf(visit("a:s1",CustomWorkoutVisitPart.FOLLOW_UP),visit("a:s2")),review.entries)
+            assertEquals(1,review.workingCount)
+            assertEquals(1,review.followUpCount)
+            assertEquals(1,review.preservedEntryCount)
+            for(key in review.entries)j=record(j,key.setKey,key.part,KotlinJournalSetOutcome.SKIPPED)
+            assertEquals(original.effectiveVisits[visit("a:s1")],j.effectiveVisits[visit("a:s1")])
+            assertEquals(emptyList<CustomWorkoutVisitKey>(),WorkoutRemainingExerciseDomain.custom(j,"a")!!.entries)
+            assertFalse(j.effectiveVisits.containsKey(visit("a:s2",CustomWorkoutVisitPart.FOLLOW_UP)))
+            assertEquals(visit("b:s1"),next(j))
+            assertEquals(original.snapshot,j.snapshot)
+            assertNull(j.finishedByEventId)
+            assertNull(WorkoutRemainingExerciseDomain.custom(j,"missing"))
+        }
+    }
+    @Test fun remainingCustomExerciseIncludesWarmupsWithoutUnlockingSkippedAmplifiers() {
+        val j=initial(slot("a",warmups=2,amplifier=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,4,15)))
+        val review=WorkoutRemainingExerciseDomain.custom(j,"a")!!
+        assertEquals(2,review.warmupCount)
+        assertEquals(2,review.workingCount)
+        assertEquals(0,review.followUpCount)
+        assertEquals(4,review.entries.size)
+        var saved=j
+        for(key in review.entries)saved=record(saved,key.setKey,key.part,KotlinJournalSetOutcome.SKIPPED)
+        assertTrue(saved.canProposeFinish)
+        assertEquals(4,saved.effectiveVisits.size)
+        assertNull(WorkoutRemainingExerciseDomain.custom(saved.copy(finishedByEventId="finish"),"a"))
+    }
+
 }

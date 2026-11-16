@@ -208,18 +208,19 @@ internal fun NativeKotlinExerciseHistorySheet(
                     val activeMachine=machineKeys.find{
                         it.gymId==selectedGymId && it.machineId==selectedMachineId
                     } ?:machineKeys.firstOrNull()
-                    val machineLabels=machineRoster?.configurations
-                        ?.filter{it.exerciseId==exerciseId}
-                        ?.flatMap{config->
-                            config.machines.map{machine->
-                                (config.gymId to machine.id) to machine.label
-                            }
-                        }?.toMap().orEmpty()
+                    // A saved name is only a label. The exact gym + machine
+                    // key still controls filtering and history isolation.
+                    val displayStations=machineKeys.map{
+                        it.gymId to it.machineId.takeUnless{
+                            id->id==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
+                        }
+                    }
                     fun machineLabel(key:PhysicalMachineHistoryKey):String =
-                        if(key.machineId==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID)
-                            "Unassigned (older sets)"
-                        else machineLabels[key.gymId to key.machineId]
-                            ?: "Machine ${key.machineId}"
+                        NativeKotlinMachineStationLabels.label(
+                            exerciseId,key.gymId,
+                            key.machineId.takeUnless{
+                                it==KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID
+                            },displayStations,machineRoster)
                     if(rows.isEmpty())
                         PursuitEmptyState("No recorded sets yet",
                             "After this exercise has a finished native workout, its actual visits will appear here.")
@@ -256,7 +257,7 @@ internal fun NativeKotlinExerciseHistorySheet(
                                             selectedMachineId=key.machineId
                                             showAllMachines=false
                                         },
-                                        label={Text("${key.gymId} · ${machineLabel(key)}")})
+                                        label={Text(machineLabel(key))})
                                 }
                             }
                         }
@@ -330,7 +331,7 @@ internal fun NativeKotlinExerciseHistorySheet(
                                         KotlinJournalSetOutcome.COMPLETED ->
                                             "Actual · ${actualLabel(row.actual)}"
                                     },style=MaterialTheme.typography.bodyMedium)
-                                    Text("${row.gymId} · ${machineLabel(historyMachine(row))}",
+                                    Text(machineLabel(historyMachine(row)),
                                         style=MaterialTheme.typography.bodySmall,
                                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }

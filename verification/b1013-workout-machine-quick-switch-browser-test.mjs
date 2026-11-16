@@ -80,10 +80,7 @@ try{
             el.textContent.includes('Different machine here?')));
     // Name and save the machine WHILE the resumed workout is open. Previously
     // the user had to leave the workout, dig into Settings and return.
-    await page.$eval('.wpb-machine-switch-create input:not([type])',
-        el=>{el.value='Machine B';el.dispatchEvent(new Event('input',{bubbles:true}));});
-    // Use type() so React's controlled input sees a real interaction.
-    await page.$eval('.wpb-machine-switch-create input:not([type])',el=>{el.value='';});
+    // Type with real DOM keyboard input, so React's controlled field updates.
     await page.type('.wpb-machine-switch-create input:not([type])','Machine B');
     await page.click('.wpb-machine-switch-default input');
     await page.click('.wpb-machine-switch-add');
@@ -94,6 +91,15 @@ try{
         const saved=JSON.parse(localStorage.getItem('wpb:v1')||'{}');
         return saved.gyms?.some(g=>g.id==='gym-b1013' &&
             g.machineVariants?.['machine-press']?.instances?.some(v=>v.label==='Machine B'));
+    },{timeout:12000});
+    await page.waitForFunction(()=>{
+        const saved=JSON.parse(localStorage.getItem('wpb:v1')||'{}');
+        const variant=saved.gyms?.find(g=>g.id==='gym-b1013')
+            ?.machineVariants?.['machine-press']?.instances
+            ?.find(v=>v.label==='Machine B');
+        const live=JSON.parse(localStorage.getItem('wpb:live')||'{}');
+        return !!variant&&live.data?.find(e=>e.id==='machine-press')
+            ?.sets?.[1]?.machineInstanceId===variant.id;
     },{timeout:12000});
     const persisted=await page.evaluate(()=>{
         const saved=JSON.parse(localStorage.getItem('wpb:v1'));

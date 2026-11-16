@@ -61,7 +61,7 @@ internal fun NativeKotlinPlanDayEditor(
     busy:Boolean,allowSupersets:Boolean,
     onEditExercise:(String)->Unit,onSwapExercise:(String)->Unit,
     onMoveExercise:(String,Int)->Unit,onEditSuperset:(String?)->Unit,
-    onRemoveExercise:(String)->Unit,
+    onRemoveExercise:(String)->Unit,onMoveToDay:(String)->Unit,
     onEditDay:()->Unit,onAddExercise:()->Unit
 ) {
     if(!nativePlanDayIsCurrent(draft,block,day)) {
@@ -125,6 +125,11 @@ internal fun NativeKotlinPlanDayEditor(
                         }
                     }
                 )
+                if(block.days.size>1 && actions.edit)OutlinedButton(
+                    onClick={onMoveToDay(slot.slotId)},
+                    enabled=!busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Move to another training day")}
                 if(actions.remove)TextButton(
                     onClick={onRemoveExercise(slot.slotId)},
                     enabled=!busy,
@@ -132,7 +137,7 @@ internal fun NativeKotlinPlanDayEditor(
                 ) {Text("Remove exercise from program")}
                 if(actions.weekOverride || actions.superset)Text(
                     if(actions.superset)
-                        "Unlink this exercise from its superset before swapping or removing."
+                        "Move this entire superset together, or unlink it before swapping or removing."
                     else "Review this exercise's week-specific overrides before swapping. Removing it will show every affected week first.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)

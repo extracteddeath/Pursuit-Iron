@@ -1469,6 +1469,12 @@ internal class NativeKotlinCustomCycleController(
         NativeKotlinPlanExerciseRemoval.confirmed(draft,review)
     }
 
+    /** Explicit source/destination confirmation. Stable authored slot IDs,
+     * grouped rounds and week overrides are preserved by the single Kotlin
+     * cycle builder; native CAS/save/undo and renewed approval are shared. */
+    fun moveExerciseAcrossDays(review:NativeKotlinPlanCrossDayMoveReview) =
+        edit {draft->NativeKotlinPlanCrossDayMove.confirmed(draft,review)}
+
     /** Accessible alternative to drag gestures, stable slot identity intact. */
     fun moveExercise(
         blockId: String, weekday: Int, slotId: String, direction: Int

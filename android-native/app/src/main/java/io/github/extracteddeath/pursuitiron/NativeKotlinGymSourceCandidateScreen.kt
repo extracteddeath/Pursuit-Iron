@@ -45,7 +45,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     controller:NativeKotlinGymSourceController,
     reviewedSetupDraft:AthleteSetupDraft?=null,
     onReviewPlan:(()->Unit)?=null,
-    historyHost:NativeKotlinCandidateHost?=null
+    historyHost:NativeKotlinCandidateHost?=null,
+    focusedMachineExerciseId:String?=null,
+    onMachineFocusConsumed:()->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val source=state.source
@@ -132,15 +134,20 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        // Machine A/B is a primary gym action, above the long equipment and
+        // exercise inventory. A Plan deep link selects ONLY the logical
+        // exercise in this editor; owner/source checks still guard all edits.
+        NativeKotlinMachineAlternativesPanel(
+            controller,gym.gymId,source.catalog,state.machineRoster,state.busy,
+            focusedMachineExerciseId=focusedMachineExerciseId,
+            onMachineFocusConsumed=onMachineFocusConsumed
+        )
         key(source.ownerKey,source.athleteId) {
             NativeKotlinExerciseLibraryAccess(source,state.busy,state.message,state.lastExclusionEdit,
                 onReviewPlan=onReviewPlan,
                 historyHost=historyHost,
                 onSave=controller::saveExerciseExclusions,onUndo=controller::undoExerciseExclusions)
         }
-        NativeKotlinMachineAlternativesPanel(
-            controller,gym.gymId,source.catalog,state.machineRoster,state.busy
-        )
         gym.confirmedStock.toSortedMap().forEach { (id, stock) ->
             key(id) {
                 PursuitCard {

@@ -138,7 +138,7 @@ internal fun NativeKotlinPlanDayEditor(
         groups.forEach{group->
             OutlinedButton(onClick={onEditSuperset(group)},enabled=!busy,
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-                Text("Edit · "+day.slots.filter{it.supersetGroup==group}
+                Text("Edit superset · "+day.slots.filter{it.supersetGroup==group}
                     .joinToString(" / "){kotlinExerciseLabel(it.exerciseId)})
             }
         }

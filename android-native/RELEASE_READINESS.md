@@ -97,6 +97,18 @@ whole-app UI / physical-device acceptance remain open. No APK/AAB.
 
 ## What works in the isolated Kotlin core
 
+**Responsive Plan editor (2026-11-15):** the full-program editor keeps an
+independently scrolling block/day outline beside the selected day at adequate
+available width/text scale. Compact/large-text layouts use the existing inline
+disclosures. Both use the same day controls and native edit/review authority.
+One keyed detail composition preserves its state owner across layout changes;
+selection resolves against the current draft and refuses removed or ambiguous
+days. Real-file JVM tests cover explicit edits, cold read and Undo with all
+authored sets, amplifiers, notes and overrides preserved. Source contracts check
+both layouts and exact controller scope. Android compilation, physical resize /
+folding, unsent-field restoration, visual and accessibility acceptance remain
+required; this does not finish the app design or full parity. No APK/AAB.
+
 **Recorded History dates (2026-11-14):** both native Finish routes observe the
 device clock once in the durable History intent. Completion time survives
 recovery, duplicate acknowledgments, archived/segmented reads and corrections.

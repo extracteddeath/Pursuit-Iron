@@ -6,17 +6,19 @@
 
 ## Live web baseline reconciliation — Build 1011
 
-Current source checkpoint, November 14: **318 of 376 exact active web IDs**
+Historical source checkpoint, November 14: **318 of 376 exact active web IDs**
 are in the reviewed, engineering-provisional Kotlin catalog; **58 remain
 absent**. The 17 appended deadlift/shrug identities use explicit physical
 stock and independent load baselines, plus separate spinal-erector and
 trapezius ledgers. A trap/hex bar requires its own confirmed mass and plate
 pairs; straight-bar stock is not a substitute. Onboarding and Gym share this
-stock input, and new program policy v10 declares all 20 muscle groups.
+stock input; at that checkpoint, program policy v10 declared all 20 muscle groups.
 Saved v9 policies retain exactly 18 rows, and v1–v8 retain 16. Independently
 captured v8 and v9 native stores test byte-preserving cold recovery of their
 original approvals and completed training. Historical counts below describe
-earlier checkpoints, not current coverage. None of these source counts proves
+earlier checkpoints. The latest November 15 checkpoint is **322/376 IDs**,
+with **54 absent**, and new policy v11 declares 22 separate muscle groups;
+v10/v9/v1–v8 retain their original 20/18/16 scopes. None of these counts proves
 complete engine parity, science validation or comparative coaching superiority.
 
 On November 12, 2026, the latest publicly deployed-source reference is
@@ -341,6 +343,20 @@ next block. Independently collapsible block/day outlines show
 actual cumulative weeks and exact Next/Prepared/Resume states,
 without hiding working-set targets, amplifier details or direct
 edit-day/edit-exercise routes. This changes presentation only.
+
+**Responsive editor continuation — 2026-11-15:** the full editor now retains
+an independent block/day outline beside the selected day on sufficiently wide
+content panes; compact and enlarged-text layouts keep inline disclosure. Both
+layouts use one shared day editor, current draft selection and the original
+native controller/review boundaries. Selection survives reorder and explicit
+save/Undo, while removed or ambiguous days cannot open stale exercise controls.
+The detail has one keyed composition parent so moving the outline does not
+replace its saveable-state owner. Current web `ProgramView` uses `openDay`, day
+cards and a day-jump menu (`scrollToDay`); the native wide layout is intended to
+keep that navigation visible during editing. Source/JVM checks verify wiring,
+width/text policy, actual native-file edit/cold-read/Undo and no browsing writes.
+Runtime resize/fold and unsent-input preservation, visual/accessibility review
+and measured task improvement remain unverified. No APK/AAB.
 
 **Evidence:** [Native CI run 42744944590 (33/33 passed)](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42744944590),
 implementation SHA `5d1ebfc8717f6021bb25290934123f09f9a04901`.

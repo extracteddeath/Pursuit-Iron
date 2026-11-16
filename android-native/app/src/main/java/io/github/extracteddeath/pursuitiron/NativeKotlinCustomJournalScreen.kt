@@ -825,14 +825,14 @@ internal fun NativeKotlinCustomJournalScreen(
                         slot.sets.any{it.setKey==activeFocus.setKey}
                 }.forEach {slot->
                     // The immutable issued-workout gym owns this choice.
-                    val config=KotlinMachineAlternativesDomain.forGymExercise(
-                        machineRoster?.configurations.orEmpty(),
-                        current.originalSnapshot.stamp.gymId,slot.exerciseId)
-                        ?:if(slot.exerciseId in eligibleMachineExercises)
-                            KotlinGymMachineAlternatives(
+                    val config=if(slot.exerciseId in eligibleMachineExercises)
+                        KotlinMachineAlternativesDomain.forGymExercise(
+                            machineRoster?.configurations.orEmpty(),
+                            current.originalSnapshot.stamp.gymId,slot.exerciseId)
+                            ?:KotlinGymMachineAlternatives(
                                 current.originalSnapshot.stamp.gymId,
                                 slot.exerciseId,null,emptyList())
-                        else null
+                    else null
                     val selectedMachineId=workoutMachineChoice(
                         machineChoices.encoded,slot.exerciseId,null)
                     val requiresNewMachineChoice=config?.machines?.isNotEmpty()==true &&

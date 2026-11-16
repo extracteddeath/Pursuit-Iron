@@ -23,7 +23,7 @@ class ReviewedSerratusTibialisCatalogTest {
         assertEquals(listOf(TrainingMuscle.SERRATUS_ANTERIOR,TrainingMuscle.TIBIALIS_ANTERIOR),
             added.map{it.movement.credits.single().muscle})
         assertTrue(added.all{it.movement.expectedLoadBasis==null && it.movement.equipmentId==null && !it.mayTransferPreviousLoad})
-        assertEquals(325,StarterExerciseTranche.entries().size)
+        assertEquals(329,StarterExerciseTranche.entries().size)
         assertEquals((0..19).toList(),TrainingMuscleCoverage.legacyV3.map{it.ordinal})
     }
 

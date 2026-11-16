@@ -2053,12 +2053,35 @@ object StarterExerciseTranche {
             "Landmine squat requires the confirmed bar and anchored pivot. Record only added plates at the loaded end; zero means no added plates, not bodyweight or zero total resistance. Source muscle credits remain provisional; no free-bar squat load, practice identity or history transfers.",
             direct(TrainingMuscle.QUADS),
             indirect(TrainingMuscle.GLUTES,"0.25"),
-            indirect(TrainingMuscle.HAMSTRINGS,"0.25"))
+            indirect(TrainingMuscle.HAMSTRINGS,"0.25")),
+        entry("lat-raise","lateral_raise","legacy-dumbbell-raise",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),12..20,
+            "Source legacy dumbbell lateral raise uses independently calibrated per-hand dumbbells. It retains a separate exact web exercise ID from the curated dumbbell variant; no historical weights or credits are transferred.",
+            direct(TrainingMuscle.SIDE_DELTS)),
+        entry("db-curl","elbow_flexion","legacy-dumbbell-curl",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),8..12,
+            "The legacy dumbbell-curl source ID requires separately confirmed per-hand dumbbell mass. Biceps receive direct provisional credit without silently crediting brachialis or reusing another curl exercise's progression.",
+            direct(TrainingMuscle.BICEPS)),
+        entry("bw-pullup","vertical_pull","legacy-overhand-bodyweight",
+            ComposerPattern.VERTICAL_PULL,ComposerRole.PRIMARY,pull,
+            null,null,setOf("pullup-bar"),5..12,
+            "Legacy pull-up requires an explicitly verified stable pull-up bar and opted-in unweighted repetitions. An assisted or externally weighted version needs a separate physical load basis, and previous pull-up identities never grant shared progression.",
+            direct(TrainingMuscle.LATS),
+            indirect(TrainingMuscle.BICEPS,"0.5"),
+            indirect(TrainingMuscle.TRAPS,"0.25")),
+        entry("prone-rear-delt-raise","rear_delt","prone-unweighted-floor",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            null,null,emptySet(),12..25,
+            "Source-defined prone rear-delt raises are unweighted controlled repetitions, not dumbbell, cable or machine sets. Optional provisional trap contribution remains separate and no phantom external load or machine history is inferred.",
+            direct(TrainingMuscle.REAR_DELTS),
+            indirect(TrainingMuscle.TRAPS,"0.25"))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==325)
+        require(definitions.size==329)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

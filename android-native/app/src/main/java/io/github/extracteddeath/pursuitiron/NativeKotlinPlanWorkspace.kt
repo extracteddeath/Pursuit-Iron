@@ -19,13 +19,14 @@ internal fun NativeKotlinPlanWorkspace(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val twoPane=showNavigator &&
             nativePlanUsesTwoPanes(maxWidth.value,LocalDensity.current.fontScale)
+        val outlineWidth=(maxWidth*0.28f).coerceIn(260.dp,320.dp)
         val navigationScroll=key(navigationKey) { rememberScrollState() }
         // The detail always has the same keyed parent. Moving the outline must
         // not recreate unsaved policy fields, dialogs or the detail's scroll.
         Row(Modifier.fillMaxSize()) {
             if(twoPane)key("plan-outline") {
                 PursuitScreenContent(
-                    modifier=Modifier.width((maxWidth*0.28f).coerceIn(260.dp,320.dp)),
+                    modifier=Modifier.width(outlineWidth),
                     scrollState=navigationScroll,content=navigator
                 )
             }

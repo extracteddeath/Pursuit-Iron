@@ -49,6 +49,7 @@ assert.match(machines,/catalog\.singleOrNull/);
 assert.match(machines,/LoadBasis\.MACHINE_STACK/);
 assert.match(machines,/LoadBasis\.CABLE_STACK/);
 assert.match(machines,/stalePlanFocus=option==null/);
+assert.match(machines,/exerciseId="";\s*query=""/);
 assert.match(machines,/onMachineFocusConsumed\(\)/);
 assert.doesNotMatch(machines.slice(machines.indexOf('LaunchedEffect('),
     machines.indexOf('var label by rememberSaveable')),

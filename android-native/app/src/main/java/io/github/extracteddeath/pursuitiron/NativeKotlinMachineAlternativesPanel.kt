@@ -64,6 +64,11 @@ internal fun NativeKotlinMachineAlternativesPanel(
         if(option!=null) {
             exerciseId=option.exerciseId
             query=kotlinExerciseLabel(option.exerciseId)
+        } else {
+            // Never leave another, previously selected machine editable when
+            // the linked Plan movement is no longer in this reviewed catalog.
+            exerciseId=""
+            query=""
         }
         onMachineFocusConsumed()
     }
@@ -139,7 +144,10 @@ internal fun NativeKotlinMachineAlternativesPanel(
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
-            value=query,onValueChange={query=it.take(80)},
+            value=query,onValueChange={
+                query=it.take(80)
+                stalePlanFocus=false
+            },
             label={Text("Find a machine exercise")},
             supportingText={Text("Choose the logical exercise, then label its actual stations.")},
             singleLine=true,modifier=Modifier.fillMaxWidth()

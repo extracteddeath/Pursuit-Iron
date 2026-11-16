@@ -125,7 +125,7 @@ internal fun PursuitWorkoutReadinessPanel(
     enabled:Boolean=true,
     showReadiness:Boolean=true,
     restrictionLabel:String="Movement restricted",
-    /** UI-only handoff into the current owner's existing durable note editor. */
+    /** UI-only concern guide; note and skip require separate durable confirmations. */
     onReportConcern:(()->Unit)?=null,
     /** Keep the current set closer to the top; all coach inputs stay accessible. */
     compactByDefault:Boolean=false
@@ -218,9 +218,9 @@ internal fun PursuitWorkoutReadinessPanel(
                     onClick=onReportConcern,
                     enabled=enabled,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
-                ) {Text("Injury or discomfort · add a note")}
+                ) {Text("Injury or discomfort · review options")}
                 Text(
-                    "This marks the movement as restricted for optional coaching and opens the saved session note. You still choose Skip or Swap for any unfinished sets; nothing is changed automatically.",
+                    "This marks the movement as restricted for optional coaching and offers a session note or a separate review of skipping this exercise. You still choose Skip or Swap; nothing is changed automatically.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant
                 )

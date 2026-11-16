@@ -314,11 +314,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val issuedGymId=journal?.originalSnapshot?.source?.gymId
     val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
         issuedGymId?.let {gymId->
-            KotlinMachineAlternativesDomain.forGymExercise(
-                machineRoster?.configurations.orEmpty(),gymId,exerciseId)
-                ?:if(exerciseId in eligibleMachineExercises)
-                    KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
-                else null
+            if(exerciseId in eligibleMachineExercises)
+                KotlinMachineAlternativesDomain.forGymExercise(
+                    machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+                    ?:KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+            else null
         }
     }
     val currentMachine=selected?.target?.exerciseId?.let{

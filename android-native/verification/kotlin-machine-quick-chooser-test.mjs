@@ -5,6 +5,7 @@ const picker=readFileSync(root+'NativeKotlinWorkoutMachineSelector.kt','utf8');
 const generated=readFileSync(root+'NativeKotlinWorkoutCandidateScreen.kt','utf8');
 const custom=readFileSync(root+'NativeKotlinCustomJournalScreen.kt','utf8');
 const host=readFileSync(root+'NativeKotlinCandidateHost.kt','utf8');
+const gym=readFileSync(root+'NativeKotlinMachineAlternativesPanel.kt','utf8');
 // Both Kotlin journals must share the same compact presentation and keep the
 // existing owner-verified, revision-fenced set-selection authority.
 for(const call of [generated,custom])
@@ -73,4 +74,15 @@ for(const screen of [generated,custom]){
   assert.match(screen,/workoutMachineEligibleExerciseIds\(/);
   assert.match(screen,/KotlinGymMachineAlternatives\(/);
 }
+// Saved physical stations must be visible at their exact gym without first
+// searching for a hidden logical movement. Source choices stay owner/revision
+// verified by the existing controller, not an ad-hoc UI roster writer.
+assert.match(gym,/Saved Machine A\/B groups at this gym/);
+assert.match(gym,/it\.gymId==gymId && it\.machines\.isNotEmpty\(\)/);
+assert.match(gym,/savedGroups\.take\(if\(showAllSaved\)savedGroups\.size else 5\)/);
+assert.match(gym,/exerciseId=saved\.exerciseId/);
+assert.match(gym,/Default: \$it/);
+assert.match(gym,/val usedNames=config\?\.machines\.orEmpty\(\)/);
+assert.match(gym,/firstOrNull\{it\.lowercase\(\) !in usedNames\}/);
+assert.doesNotMatch(gym,/'B'\.code\+\(config\?\.machines\?\.size/);
 console.log('PASS native Machine A/B: compact touch-safe picker, keyboard/scroll sheet, disabled inactive options, same engine CAS and isolated set/Last scope.');

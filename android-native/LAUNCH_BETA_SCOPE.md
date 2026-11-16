@@ -73,6 +73,16 @@ supported plan/day/cycle may use an incomplete or weaker engine silently.
    not fabricated support addresses or silent collection of medical/training
    details. Bugs/crashes must be reproducible with clear build and workflow
    versions. Add voluntary diagnostics only with appropriate notice/consent.
+   Settings now has separate **Share beta feedback** and **Report a problem**
+   actions. A problem report can contain user-authored workflow, reproduction
+   steps, expected behavior, and actual behavior, plus the installed version.
+   The Android share chooser requires an explicit destination; nothing is
+   uploaded or sent by the app itself, and no athlete data, journal records,
+   diagnostics, emails or attachments are added automatically. JVM tests
+   verify field limits, partial reports and deterministic privacy-preserving
+   text; Android source tests verify the interactive route. Real-device,
+   large-font, keyboard and talkback acceptance remain open.
+
 5. **Keep months of history:** verified private save, safe upgrades and
    recovery; a usable export/restore or other tested recovery mechanism is
    required before inviting external testers. No silent data reset, double

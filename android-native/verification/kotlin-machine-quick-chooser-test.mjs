@@ -50,5 +50,8 @@ assert.match(host,/it\.label\.equals\(name,ignoreCase=true\)/);
 assert.match(host,/machineRosters\.save\(signed\.ownerKey/);
 assert.match(host,/workoutMachineChoices\.save\(signed\.ownerKey,workoutId/);
 assert.match(host,/NativeWorkoutMachineCreationResult\.AddedNeedsSelection\(/);
-assert.doesNotMatch(host,/fun addWorkoutPhysicalMachine\([\s\S]*?journalStore\.save\(/);
+const createSection=host.slice(host.indexOf('fun addWorkoutPhysicalMachine('),
+  host.indexOf('Read-only profile/settings summary',host.indexOf('fun addWorkoutPhysicalMachine(')));
+assert.ok(createSection.length>1000);
+assert.doesNotMatch(createSection,/journalStore\.save\(|customIssuedStore\.save\(|\.finish\(/);
 console.log('PASS native Machine A/B: compact touch-safe picker, keyboard/scroll sheet, disabled inactive options, same engine CAS and isolated set/Last scope.');

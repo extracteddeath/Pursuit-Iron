@@ -129,6 +129,14 @@ internal fun NativeKotlinProfileScreen(
     val finished=timeline?.completions?.size?.toString()?:"—"
     val working=timeline?.let{verifiedWorkingCount(it).toString()}?:"—"
     val days=current?.trainingWeekdays?.size?.toString()?:"—"
+    // Presentation-only activity level. Unknown history is NOT level 1/zero XP.
+    // The summary domain counts only corrected, completed main working sets.
+    val profileProgress=remember(timeline) {
+        timeline?.let {
+            NativeKotlinProfileMilestones.fromVerifiedCounts(
+                it.completions.size,verifiedWorkingCount(it))
+        }
+    }
     PursuitScreenContent {
         Text("Your profile",style=MaterialTheme.typography.headlineSmall)
         PursuitCard(highlighted=true) {
@@ -165,6 +173,7 @@ internal fun NativeKotlinProfileScreen(
                 "Working sets" to working,
                 "Days / week" to days
             ))
+            NativeKotlinProfileLevelBar(profileProgress)
             if(timeline==null)Text(
                 "History totals appear only after the native training ledger is verified; previous web records are not counted here.",
                 style=MaterialTheme.typography.bodySmall,
@@ -204,6 +213,7 @@ internal fun NativeKotlinProfileScreen(
         }
         PursuitSectionHeading("Your progress",
             "Strength Standards and workout records from your verified training.")
+        NativeKotlinProfileMilestonesPanel(profileProgress,current?.athleteProfileId)
         NativeKotlinStrengthClubPanel(strengthClub,onOpenStandards=onProgress)
         PursuitDestinationRow(
             title="Strength Standards",

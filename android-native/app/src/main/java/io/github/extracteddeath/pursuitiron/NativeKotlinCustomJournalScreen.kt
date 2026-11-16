@@ -66,6 +66,10 @@ internal fun NativeKotlinCustomJournalScreen(
     var reviewPart by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pinnedSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    // Only a read-only navigation destination, scoped to this issued workout.
+    var supersetRoundGroup by rememberSaveable(workoutId) {
+        mutableStateOf<String?>(null)
+    }
     val editorStates=rememberSaveableStateHolder()
     // One Kotlin Leveling behavior for generated and custom set editors.
     val currentEditors=rememberSaveable(workoutId,
@@ -698,9 +702,16 @@ internal fun NativeKotlinCustomJournalScreen(
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    val activeSupersetGroup=upcoming?.first?.supersetGroup
+                        ?.takeIf {group->
+                            executionSteps.any{it.round?.groupId==group}
+                        }
                     if(focusOnNext)NativeKotlinWorkoutTools(
                         enabled=!busy,
                         onSessionNote={noteError=null;showSessionNote=true},
+                        onSuperset=activeSupersetGroup?.let {group->
+                            {supersetRoundGroup=group}
+                        },
                         onPinnedNote=upcoming?.first?.let {slot->
                             {pinnedSlotId=slot.slotId}
                         },
@@ -719,6 +730,34 @@ internal fun NativeKotlinCustomJournalScreen(
                             infoSlotId=slot.slotId
                         }}
                     )
+                    supersetRoundGroup?.let {group->
+                        if(executionSteps.any{it.round?.groupId==group}) {
+                            NativeKotlinSupersetRoundSheet(
+                                journal=current,groupId=group,focus=activeFocus,
+                                busy=busy,
+                                onChoose={visit->
+                                    // A stale sheet cannot jump to an old or
+                                    // untriggered follow-up. Focus only; the
+                                    // journal and program are never mutated.
+                                    val latest=journal
+                                    val currentVisit=visit in
+                                        CustomWorkoutVisitFocusDomain.visibleOrder(current)
+                                    val sameIssuedGroup=executionSteps.any{step->
+                                        step.round?.groupId==group &&
+                                            step.set.setKey==visit.setKey
+                                    }
+                                    if(!busy && latest?.revision==current.revision &&
+                                        currentVisit && sameIssuedGroup) {
+                                        reviewSetKey=visit.setKey
+                                        reviewPart=visit.part.name
+                                        focusOnNext=true
+                                        displayPreferences.layout(WorkoutStartLayout.FOCUS)
+                                        supersetRoundGroup=null
+                                    }
+                                },onDismiss={supersetRoundGroup=null}
+                            )
+                        }
+                    }
                     // Review recorded work, then return to the actual next
                     // visit with one tap. A pending amplifier follow-up is
                     // navigable only after its main was completed.

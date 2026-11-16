@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,13 +23,17 @@ internal fun NativeKotlinWorkoutTools(
     onSessionNote:()->Unit,
     onPinnedNote:(()->Unit)?,
     onSwap:(()->Unit)?,
-    onWarmup:(()->Unit)?
+    onWarmup:(()->Unit)?,
+    onSuperset:(()->Unit)?=null
 ) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
         verticalAlignment=Alignment.CenterVertically) {
         onWarmup?.let {
             WorkoutTool("View warm-up targets",Icons.Outlined.FitnessCenter,enabled,it)
+        }
+        onSuperset?.let {
+            WorkoutTool("Review superset rounds",Icons.Outlined.Repeat,enabled,it)
         }
         onSwap?.let {
             WorkoutTool("Swap exercise",Icons.Outlined.SwapHoriz,enabled,it)

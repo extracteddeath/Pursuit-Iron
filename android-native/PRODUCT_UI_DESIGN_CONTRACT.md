@@ -858,3 +858,21 @@ never writes to stored programs. This changes no engine prescription,
 written workout, approval or draft-store authority. Android CI and actual
 phone/foldable/large-font/TalkBack review remain separate acceptance gates.
 No APK or AAB.
+
+## Native Train superset-round shortcut — 2026-11-16 (pending CI)
+
+The custom Focus toolbar now has a real **Superset rounds** tool only
+when the selected exercise is part of a valid, issued Kotlin superset.
+The sheet displays original movement and set order, target reps and RIR,
+recorded/completed/skipped/failed states, and an outstanding amplifier
+follow-up. Tapping a verified set or follow-up returns to the exact
+saveable Focus editor, without writing a set, amending a prescription,
+changing physical machines or restarting rest. The same engine-owned
+execution domain produces workout order and round-completion status;
+malformed groups do not gain a fake superset control. The generated
+workout toolbar keeps the optional action absent because no generated
+linked group is represented in its issued snapshot.
+
+Source tests and independent app JVM tests cover actual grouped sets,
+missing follow-ups, failed/skipped outcomes and invalid group sizes.
+This is not phone/foldable, 200% text or TalkBack acceptance. No APK/AAB.

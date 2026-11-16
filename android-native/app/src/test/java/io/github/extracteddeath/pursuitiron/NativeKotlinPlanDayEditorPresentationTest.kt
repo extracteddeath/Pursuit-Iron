@@ -15,10 +15,10 @@ internal class NativeKotlinPlanDayEditorPresentationTest:
         assertFalse(blocked.swap)
         assertTrue(blocked.weekOverride)
         val ordinary=block.days[1]
-        val open=nativePlanExerciseActions(draft,block,ordinary,0,false)
-        assertTrue(open.edit)
-        assertTrue(open.swap)
-        assertFalse(open.weekOverride)
+        val ordinaryAction=nativePlanExerciseActions(draft,block,ordinary,0,false)
+        assertTrue(ordinaryAction.edit)
+        assertTrue(ordinaryAction.swap)
+        assertFalse(ordinaryAction.weekOverride)
         val grouped=ordinary.copy(slots=ordinary.slots.map{
             it.copy(supersetGroup="linked-a")
         })

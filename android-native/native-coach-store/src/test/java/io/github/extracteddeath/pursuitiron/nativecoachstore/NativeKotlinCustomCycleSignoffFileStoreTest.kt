@@ -193,6 +193,82 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             as NativeCustomDraftReadResult.Found).draft.revision)
     }
 
+    @Test fun customConsentInventoryPreservesActiveRevokedAndLegacyHistoryWithoutGrantingAuthority() {
+        initialize()
+        val reader=store()
+        assertEquals(NativeCustomSignoffInventory.Verified(emptyList()),
+            reader.inventoryOwner("owner-1"))
+        val receipt=approved()
+        val active=reader.inventoryOwner("owner-1")
+            as NativeCustomSignoffInventory.Verified
+        assertEquals(listOf(NativeCustomSignoffInventoryFact(
+            "cycle-1",1,false,true)),active.records)
+        assertFalse(receipt.mayIssueWorkout)
+        writeConsentFixture(receipt,1)
+        val historical=reader.inventoryOwner("owner-1")
+            as NativeCustomSignoffInventory.Verified
+        assertEquals(listOf(NativeCustomSignoffInventoryFact(
+            "cycle-1",1,false,false)),historical.records)
+        assertEquals(NativeCustomSavedCoachReview.LegacyWithoutInputs,
+            reader.recoverReviewedInputs("owner-1","cycle-1"))
+        assertEquals(NativeCustomSignoffWrite.Committed(
+            receipt.copy(recordRevision=2)),
+            reader.revoke("owner-1","cycle-1",1))
+        val revoked=reader.inventoryOwner("owner-1")
+            as NativeCustomSignoffInventory.Verified
+        assertEquals(listOf(NativeCustomSignoffInventoryFact(
+            "cycle-1",2,true,false)),revoked.records)
+        assertEquals(NativeCustomSignoffRead.Revoked(2),
+            reader.read("owner-1","cycle-1"))
+        // Explicitly revoked consent survives a program edit and cannot
+        // turn into a newly signed program merely by being inventoried.
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            drafts.save("owner-1","cycle-1",1,cycle(2).copy(title="Renamed")))
+        assertEquals(revoked,reader.inventoryOwner("owner-1"))
+    }
+
+    @Test fun customConsentInventoryRejectsPhysicalOrphanPendingForeignAndCorruptFiles() {
+        initialize()
+        approved()
+        val reader=store()
+        val root=temp.root.toPath()
+        val original=Files.list(root).use{stream->
+            stream.filter{it.fileName.toString().startsWith("custom-consent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val bytes=Files.readAllBytes(original)
+        val good=reader.inventoryOwner("owner-1")
+        assertTrue(good is NativeCustomSignoffInventory.Verified)
+        for(name in listOf(
+            "custom-consent-interrupted.pending",
+            "custom-consent-"+"0".repeat(64)+".bin",
+            "custom-consent-"+"f".repeat(64)+".bin.bak"
+        )) {
+            val extra=root.resolve(name)
+            Files.write(extra,bytes)
+            assertEquals(name,NativeCustomSignoffInventory.InvalidOrForeign,
+                reader.inventoryOwner("owner-1"))
+            Files.delete(extra)
+        }
+        val link=root.resolve("custom-consent-"+"a".repeat(64)+".bin")
+        Files.createSymbolicLink(link,original)
+        assertEquals(NativeCustomSignoffInventory.InvalidOrForeign,
+            reader.inventoryOwner("owner-1"))
+        Files.delete(link)
+        Files.write(original,bytes.copyOf().also{
+            it[it.lastIndex]=(it.last().toInt() xor 1).toByte()
+        })
+        assertEquals(NativeCustomSignoffInventory.InvalidOrForeign,
+            reader.inventoryOwner("owner-1"))
+        Files.write(original,bytes)
+        assertEquals(good,reader.inventoryOwner("owner-1"))
+        active=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertEquals(NativeCustomSignoffInventory.InvalidOrForeign,
+            reader.inventoryOwner("owner-1"))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertArrayEquals(bytes,Files.readAllBytes(original))
+    }
+
     @Test fun exactReviewedProgramConsentSurvivesColdRestorationNotWorkoutIssuance() {
         initialize()
         assertEquals(NativeCustomSignoffRead.Missing,
@@ -4399,6 +4475,37 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(newHandoff().blocksNewIssuance("owner-1"))
         assertArrayEquals(bytes,Files.readAllBytes(original))
     }
+    @Test fun stagedCoreRejectsCorruptOrOrphanedCustomProgramConsentEvenWhenHistoryIsValid() {
+        readyFutureForSecondConsent(realPriorHistory=true)
+        recoveryOwnerFile()
+        val expected=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val verified=NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected)
+        assertTrue(verified.toString(),verified is NativeKotlinStagedCoreAuditResult.Verified)
+        val report=verified as NativeKotlinStagedCoreAuditResult.Verified
+        assertEquals(1,report.customConsentRecords)
+        assertEquals(0,report.revokedCustomConsents)
+        val actual=Files.list(temp.root.toPath()).use {stream->
+            stream.filter{it.fileName.toString().startsWith("custom-consent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val bytes=Files.readAllBytes(actual)
+        val pending=temp.root.toPath().resolve("custom-consent-unfinished.pending")
+        Files.write(pending,bytes)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.CUSTOM_SIGNOFFS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        Files.delete(pending)
+        val forged=bytes.copyOf().also{it[it.lastIndex]=(it.last().toInt() xor 3).toByte()}
+        Files.write(actual,forged)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.CUSTOM_SIGNOFFS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        Files.write(actual,bytes)
+        assertEquals(verified,NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected))
+        assertArrayEquals(bytes,Files.readAllBytes(actual))
+    }
+
     @Test fun stagedCoreRejectsAnOrphanBarrierAndPendingSecondConsent() {
         readyFutureForSecondConsent();recoveryOwnerFile()
         val approval=acceptedFutureForRecovery()

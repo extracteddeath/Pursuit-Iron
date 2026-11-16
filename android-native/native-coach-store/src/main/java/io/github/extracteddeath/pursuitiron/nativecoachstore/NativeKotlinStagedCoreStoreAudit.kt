@@ -21,6 +21,7 @@ enum class NativeKotlinStagedCoreRefusal {
     INVALID_DIRECTORY_OR_IDENTITY,
     AUTHORING_SOURCE_UNAVAILABLE,
     DRAFTS_UNVERIFIED,
+    CUSTOM_SIGNOFFS_UNVERIFIED,
     MACHINE_ROSTER_UNVERIFIED,
     COACH_SETTINGS_UNVERIFIED,
     MACHINE_CHOICES_UNVERIFIED,
@@ -54,7 +55,10 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val futureActivationApprovals:Int=0,
         val revokedFutureActivationApprovals:Int=0,
         val stagedFutureHandoffs:Int=0,
-        val savedFutureBlockContexts:Int=0
+        val savedFutureBlockContexts:Int=0,
+        val customConsentRecords:Int=0,
+        val revokedCustomConsents:Int=0,
+        val legacyCustomConsents:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -141,6 +145,13 @@ object NativeKotlinStagedCoreStoreAudit {
                 if(savedDrafts !is NativeCustomDraftListResult.Ready)
                     return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.DRAFTS_UNVERIFIED)
+                // Every archived custom-cycle consent and revocation has
+                // training significance, even if its draft was retired.
+                // A valid checksum alone does not re-approve the program.
+                val customConsents=signoffs.inventoryOwner(expected.ownerKey)
+                    as? NativeCustomSignoffInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.CUSTOM_SIGNOFFS_UNVERIFIED)
                 if(machineRosters.read(expected.ownerKey)
                     !is NativeMachineRosterResult.Saved)
                     return@withOwnerTransaction reject(
@@ -300,7 +311,10 @@ object NativeKotlinStagedCoreStoreAudit {
                     secondConsents.records.size,
                     secondConsents.records.count{it.revoked},
                     if(switchBarrier is NativeFutureHandoffReview.Staged)1 else 0,
-                    futureContexts.records.size)
+                    futureContexts.records.size,
+                    customConsents.records.size,
+                    customConsents.records.count{it.revoked},
+                    customConsents.records.count{!it.revoked && !it.hasReviewedInputs})
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

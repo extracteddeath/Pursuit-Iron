@@ -23,7 +23,7 @@ import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
 import { latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
-import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine } from './workout-machine-runtime.js';
+import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine, withGymMachineConfig } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
@@ -21742,18 +21742,9 @@ function App() {
                                             gymEquipment: gymEquipment,
                                             gymProfile:activeGym,
                                             onSaveGymMachineVariant:(gymId,exerciseId,config)=>{
-                                                // Avoid overwriting other gyms or exercises.
-                                                // The canonical central gym persistence effect
-                                                // owns the durable save and offline merge.
-                                                if(!activeGym || activeGym.id!==gymId ||
-                                                    !EX_BY_ID[exerciseId] || !config?.instances?.length)
-                                                    return false;
-                                                setGyms(current=>current.map(g=>g.id!==gymId?g:{
-                                                    ...g,updatedAt:Date.now(),
-                                                    machineVariants:{
-                                                        ...g.machineVariants,[exerciseId]:config
-                                                    }
-                                                }));
+                                                if(activeGym?.id!==gymId || !EX_BY_ID[exerciseId])return false;
+                                                setGyms(gs=>withGymMachineConfig(
+                                                    gs,gymId,exerciseId,config,Date.now()));
                                                 return true;
                                             },
                                             /* ⚠ THE DAY IS LOOKED UP FROM THE PROGRAM, NOT HELD AS A SECOND COPY. `sessionDay` is

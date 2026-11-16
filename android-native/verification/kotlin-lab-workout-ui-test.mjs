@@ -572,7 +572,7 @@ assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
 // context, not a durable set result or a signed program prescription.
 assert.ok(sharedFocus.includes('onReportConcern:(()->Unit)?=null') &&
   sharedFocus.includes('onClick=onReportConcern') &&
-  sharedFocus.includes('Text("Injury or discomfort · add a note")') &&
+  sharedFocus.includes('Text("Injury or discomfort · review options")') &&
   sharedFocus.includes('You still choose Skip or Swap') &&
   sharedFocus.includes('modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)'),
   'The shared injury entry needs a large accessible action and truthful, nonautomatic semantics');

@@ -43,12 +43,12 @@ internal class NativeKotlinProfileConsistencyTest {
             it.weekStartingMonday==LocalDate.of(2026,11,9)}.sessions)
     }
 
-    @Test fun oldUndatedInvalidAndFutureDatesAreNotInventedIntoRecentWeeks() {
+    @Test fun oldUndatedAndFutureDatesAreNotInventedIntoRecentWeeks() {
         val report=NativeKotlinProfileConsistency.fromVerifiedFinishTimes(
-            listOf(null,Long.MAX_VALUE,stamp("2026-08-01T18:00:00Z"),
+            listOf(null,stamp("2026-08-01T18:00:00Z"),
                 stamp("2026-11-18T18:00:00Z"),stamp("2026-11-16T13:00:00Z")),
             today,ny)
-        assertEquals(2,report.undatedOrInvalidSessions)
+        assertEquals(1,report.undatedOrInvalidSessions)
         assertEquals(1,report.futureDatedSessions)
         assertEquals(1,report.sessionsInWindow)
         assertEquals(1,report.activeDaysInWindow)

@@ -851,11 +851,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 color=MaterialTheme.colorScheme.error)
         }
         activeKeys.forEach{set->
-            val perSetMachineConfig=issuedGymId?.let {gymId->
-                KotlinMachineAlternativesDomain.forGymExercise(
-                    machineRoster?.configurations.orEmpty(),gymId,
-                    set.target.exerciseId)
-            }
+            // Obsolete non-stack physical groups are History-only. Never
+            // let them impose a machine-selection gate on live barbell/
+            // dumbbell sets when the picker itself is correctly unavailable.
+            val perSetMachineConfig=if(set.target.exerciseId in eligibleMachineExercises)
+                issuedGymId?.let {gymId->
+                    KotlinMachineAlternativesDomain.forGymExercise(
+                        machineRoster?.configurations.orEmpty(),gymId,
+                        set.target.exerciseId)
+                }
+            else null
             val perSetMachineId=perSetMachineConfig?.let {
                 workoutMachineChoice(machineChoices.encoded,set.target.exerciseId,null)
             }

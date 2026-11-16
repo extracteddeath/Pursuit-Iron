@@ -162,7 +162,7 @@ internal fun NativeKotlinWorkoutMachineSelector(
     onSelect:(String)->Unit,
     onCreate:((String,Boolean)->Unit)?=null
 ) {
-    if(config==null || config.machines.isEmpty())return
+    if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
     val selected=config.machines.firstOrNull {it.id==selectedId}
     val display=selected?.label ?: "Choose machine"

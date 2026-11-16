@@ -54,4 +54,13 @@ const createSection=host.slice(host.indexOf('fun addWorkoutPhysicalMachine('),
   host.indexOf('Read-only profile/settings summary',host.indexOf('fun addWorkoutPhysicalMachine(')));
 assert.ok(createSection.length>1000);
 assert.doesNotMatch(createSection,/journalStore\.save\(|customIssuedStore\.save\(|\.finish\(/);
+assert.match(picker,/config==null \|\| \(config\.machines\.isEmpty\(\) && onCreate==null\)/);
+assert.match(host,/fun workoutMachineEligibleExerciseIds\(/);
+assert.match(host,/LoadBasis\.MACHINE_STACK,LoadBasis\.CABLE_STACK/);
+assert.match(host,/EXERCISE_HAS_NO_MACHINE_STACK/);
+for(const screen of [generated,custom]){
+  assert.match(screen,/eligibleMachineExercises/);
+  assert.match(screen,/workoutMachineEligibleExerciseIds\(/);
+  assert.match(screen,/KotlinGymMachineAlternatives\(/);
+}
 console.log('PASS native Machine A/B: compact touch-safe picker, keyboard/scroll sheet, disabled inactive options, same engine CAS and isolated set/Last scope.');

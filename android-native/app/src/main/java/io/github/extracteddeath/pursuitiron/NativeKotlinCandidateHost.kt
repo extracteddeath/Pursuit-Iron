@@ -453,6 +453,32 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Discover physical-machine affordances for an issued, owner-verified
+     * workout. No speculative station is created: a missing roster entry
+     * becomes an empty UI choice only for a cataloged machine/cable movement.
+     */
+    fun workoutMachineEligibleExerciseIds(
+        workoutId:String,custom:Boolean
+    ):Set<String> {
+        val signed=localAthlete.signedInIdentity()?:return emptySet()
+        return runCatching {revisionFence.withOwnerTransaction(signed.ownerKey) {
+            val scope=issuedMachineWorkoutScope(signed,workoutId,custom)
+                ?:return@withOwnerTransaction emptySet<String>()
+            val source=(authoringSourceStore.read(signed.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            if(source==null || source.ownerKey!=signed.ownerKey ||
+                source.athleteId!=signed.athleteId ||
+                source.setup.reviewed?.gym?.gymId!=scope.gymId)
+                return@withOwnerTransaction emptySet<String>()
+            source.catalog.asSequence().filter {
+                it.exerciseId in scope.exerciseIds &&
+                it.expectedLoadBasis in setOf(
+                    LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
+            }.map {it.exerciseId}.toSet()
+        }}.getOrDefault(emptySet())
+    }
+
+    /**
      * Only an athlete action during an actually issued workout can register a
      * new physical machine at its ORIGINAL gym. The live gym source, roster
      * revision and choice revision are independently verified under one owner
@@ -500,6 +526,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
             val previous=KotlinMachineAlternativesDomain.forGymExercise(
                 rosters.snapshot.configurations,scope.gymId,exerciseId)
                 ?:KotlinGymMachineAlternatives(scope.gymId,exerciseId,null,emptyList())
+            if(previous.machines.isEmpty() && source.catalog.none {
+                it.exerciseId==exerciseId &&
+                it.expectedLoadBasis in setOf(
+                    LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
+            })return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                "EXERCISE_HAS_NO_MACHINE_STACK")
             if(previous.machines.size>=32 ||
                 previous.machines.any{it.label.equals(name,ignoreCase=true)})
                 return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(

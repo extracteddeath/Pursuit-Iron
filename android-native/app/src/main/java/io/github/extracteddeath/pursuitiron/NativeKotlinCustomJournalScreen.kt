@@ -50,10 +50,16 @@ internal fun NativeKotlinCustomJournalScreen(
     var machineRoster by remember(host,workoutId){
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
+    var eligibleMachineExercises by remember(host,workoutId) {
+        mutableStateOf<Set<String>>(emptySet())
+    }
     LaunchedEffect(host,workoutId) {
-        machineRoster=withContext(Dispatchers.IO) {
-            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+        val recovered=withContext(Dispatchers.IO) {
+            Pair((host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot,
+                host.workoutMachineEligibleExerciseIds(workoutId,custom=true))
         }
+        machineRoster=recovered.first
+        eligibleMachineExercises=recovered.second
     }
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
@@ -822,6 +828,11 @@ internal fun NativeKotlinCustomJournalScreen(
                     val config=KotlinMachineAlternativesDomain.forGymExercise(
                         machineRoster?.configurations.orEmpty(),
                         current.originalSnapshot.stamp.gymId,slot.exerciseId)
+                        ?:if(slot.exerciseId in eligibleMachineExercises)
+                            KotlinGymMachineAlternatives(
+                                current.originalSnapshot.stamp.gymId,
+                                slot.exerciseId,null,emptyList())
+                        else null
                     val selectedMachineId=workoutMachineChoice(
                         machineChoices.encoded,slot.exerciseId,null)
                     val requiresNewMachineChoice=config?.machines?.isNotEmpty()==true &&

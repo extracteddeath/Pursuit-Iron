@@ -108,10 +108,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var machineRoster by remember(host,workoutId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
+    var eligibleMachineExercises by remember(host,workoutId) {
+        mutableStateOf<Set<String>>(emptySet())
+    }
     LaunchedEffect(host,workoutId) {
-        machineRoster=withContext(Dispatchers.IO) {
-            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+        val recovered=withContext(Dispatchers.IO) {
+            Pair((host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot,
+                host.workoutMachineEligibleExerciseIds(workoutId,custom=false))
         }
+        machineRoster=recovered.first
+        eligibleMachineExercises=recovered.second
     }
     // Restore the athlete's pending workout-only swap after rotation, but
     // NEVER restore a previously fetched option as a new source grant.
@@ -310,6 +316,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         issuedGymId?.let {gymId->
             KotlinMachineAlternativesDomain.forGymExercise(
                 machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+                ?:if(exerciseId in eligibleMachineExercises)
+                    KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+                else null
         }
     }
     val currentMachine=selected?.target?.exerciseId?.let{

@@ -94,6 +94,39 @@ class CustomCycleBuilderDomainTest {
                 as CustomCycleBuilderResult.Rejected).reason)
     }
 
+    @Test fun canonicalSupersetRoundCannotBeScatteredOrAuthoredAcrossGaps() {
+        val initial=draft()
+        val third=initial.blocks.single().days.single().slots.last()
+            .copy(slotId="bench-c",pinned=false)
+        val added=accepted(CustomCycleBuilderDomain.addSlot(
+            initial,1,"base",0,third))
+        val scatteredCreate=CustomCycleBuilderDomain.setSupersetMembers(
+            added.draft,2,"base",0,"pair",
+            listOf("bench-a","bench-c"),true)
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (scatteredCreate as CustomCycleBuilderResult.Rejected).reason)
+        val grouped=accepted(CustomCycleBuilderDomain.setSupersetMembers(
+            added.draft,2,"base",0,"pair",
+            listOf("bench-a","bench-b"),true))
+        val broken=CustomCycleBuilderDomain.reorderSlots(
+            grouped.draft,3,"base",0,
+            listOf("bench-a","bench-c","bench-b"))
+        assertEquals(CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT,
+            (broken as CustomCycleBuilderResult.Rejected).reason)
+        val moved=accepted(CustomCycleBuilderDomain.reorderSlots(
+            grouped.draft,3,"base",0,
+            listOf("bench-c","bench-a","bench-b")))
+        assertEquals(grouped.draft.weekOverrides,moved.draft.weekOverrides)
+        val slots=moved.draft.blocks.single().days.single().slots
+        assertEquals(listOf("bench-c","bench-a","bench-b"),
+            slots.map{it.slotId})
+        assertEquals(listOf("pair","pair"),
+            slots.drop(1).map{it.supersetGroup})
+        val undone=accepted(CustomCycleBuilderDomain.undo(
+            moved.draft,moved.receipt))
+        assertEquals(grouped.draft.blocks,undone.draft.blocks)
+    }
+
     @Test fun oneSlotEditDoesNotOverwriteIdenticalExerciseInAnotherSlot() {
         val before = draft()
         val changed = accepted(CustomCycleBuilderDomain.replaceSlotSets(

@@ -797,10 +797,42 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         Text(timeReview.explanation,
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        if(timeReview.omittedSlotIds.isNotEmpty())
-                            Text("Optional slots omitted: " +
-                                timeReview.omittedSlotIds.joinToString(", "),
-                                style=MaterialTheme.typography.bodySmall)
+                        val changedSlots=timeReview.slotImpacts.filter {
+                            it.omittedWorkingSets>0 || it.omittedWarmupSets>0
+                        }
+                        if(changedSlots.isNotEmpty()) {
+                            HorizontalDivider()
+                            PursuitSectionHeading("What changes in this session",
+                                if(canFit)
+                                    "Compare exact retained work before saving a shorter custom session."
+                                else "These proposed cuts still cannot meet the chosen time limit. Nothing can be approved.")
+                            val originalSets=timeReview.slotImpacts.sumOf {
+                                it.originalWorkingSets
+                            }
+                            val retainedSets=timeReview.slotImpacts.sumOf {
+                                it.retainedWorkingSets
+                            }
+                            Text("$retainedSets of $originalSets working sets retained · ${timeReview.omittedWorkingSets} omitted",
+                                style=MaterialTheme.typography.labelLarge)
+                            changedSlots.forEach {impact->
+                                Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                                    Text("${kotlinExerciseLabel(impact.exerciseId)} · Exercise ${impact.originalPosition}",
+                                        style=MaterialTheme.typography.titleSmall)
+                                    Text("${impact.retainedWorkingSets} of ${impact.originalWorkingSets} working sets kept · ${impact.omittedWorkingSets} omitted",
+                                        style=MaterialTheme.typography.bodySmall)
+                                    if(impact.omittedWarmupSets>0)
+                                        Text("${impact.omittedWarmupSets} warm-up set(s) omitted with this exercise",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if(impact.supersetGroup!=null)
+                                        Text("Linked superset · partners are changed together",
+                                            style=MaterialTheme.typography.labelSmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        } else if(canFit) Text(
+                            "All originally authored working sets are retained.",
+                            style=MaterialTheme.typography.bodySmall)
                         Text("This review cannot alter the program or any previously issued workout. To use a shorter session, explicitly approve a separate saved preparation; the native issuer will independently verify it again.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)

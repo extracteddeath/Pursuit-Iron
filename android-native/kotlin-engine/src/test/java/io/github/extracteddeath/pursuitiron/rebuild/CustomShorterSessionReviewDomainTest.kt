@@ -77,6 +77,15 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(2,result.retainedSetKeys.count{
             it.contains(":curl:")
         })
+        assertEquals(listOf("press","row","curl"),
+            result.slotImpacts.map {it.slotId})
+        assertEquals(4,result.slotImpacts[0].retainedWorkingSets)
+        assertEquals(4,result.slotImpacts[1].retainedWorkingSets)
+        assertEquals(6,result.slotImpacts[2].originalWorkingSets)
+        assertEquals(2,result.slotImpacts[2].retainedWorkingSets)
+        assertEquals(4,result.slotImpacts[2].omittedWorkingSets)
+        assertEquals(result.omittedWorkingSets,
+            result.slotImpacts.sumOf {it.omittedWorkingSets})
         assertEquals(source.slots.flatMap{it.sets}.size,
             result.retainedSetKeys.size+result.omittedSetKeys.size)
         assertFalse(result.canIssueWorkout)
@@ -103,6 +112,9 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(0,result.retainedSetKeys.count{
             it.contains(":curl:")
         })
+        assertEquals(0,result.slotImpacts.last().retainedWorkingSets)
+        assertEquals(6,result.slotImpacts.last().omittedWorkingSets)
+        assertEquals(2,result.slotImpacts[1].retainedWorkingSets)
     }
 
     @Test fun supersetsAreNeverSplitOrGivenFakeRestOverlapDiscounts() {
@@ -117,6 +129,11 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(900L,result.reviewedEstimatedSeconds)
         assertEquals(listOf("sup-a","sup-b"),result.omittedSlotIds)
         assertEquals(6,result.omittedWorkingSets)
+        assertEquals(listOf("ss-1","ss-1"),
+            result.slotImpacts.drop(1).map {it.supersetGroup})
+        assertEquals(listOf(3,3),
+            result.slotImpacts.drop(1).map {it.omittedWorkingSets})
+        assertEquals(0,result.slotImpacts.first().omittedWorkingSets)
         assertEquals(key.sets.map {it.setKey},result.retainedSetKeys)
         assertTrue(result.retainedSupersetGroups.isEmpty())
         val retained=review(source,30)
@@ -136,6 +153,7 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(1800L,result.reviewedEstimatedSeconds)
         assertEquals(0,result.omittedWorkingSets)
         assertTrue(result.omittedSlotIds.isEmpty())
+        assertTrue(result.slotImpacts.all {it.omittedWorkingSets==0})
     }
 
     @Test fun warmupsAndVariableBackoffRemainAttachedOrAreDroppedAsOneSlot() {
@@ -152,6 +170,8 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(1,review.omittedSetKeys.count{
             it==backoff.sets.first().setKey
         })
+        assertEquals(1,review.slotImpacts.last().omittedWarmupSets)
+        assertEquals(0,review.slotImpacts.last().retainedWorkingSets)
         assertEquals(10,backoff.sets[1].prescription.reps.minimum)
         assertEquals(8,backoff.sets.last().prescription.reps.minimum)
     }
@@ -185,6 +205,7 @@ class CustomShorterSessionReviewDomainTest {
         assertNull(review.reviewedEstimatedSeconds)
         assertTrue(review.omittedSetKeys.isEmpty())
         assertTrue(review.retainedSetKeys.isEmpty())
+        assertTrue(review.slotImpacts.isEmpty())
         assertEquals(15,
             advanced.sets.last().prescription.amplifier?.followUpRestSeconds)
     }
@@ -203,7 +224,56 @@ class CustomShorterSessionReviewDomainTest {
         assertEquals(CustomShortSessionStatus.ALREADY_FITS,
             review(src,20).status)
         assertTrue(review(src,20).omittedSetKeys.isEmpty())
+        assertTrue(review(src,20).slotImpacts.all {
+            it.omittedWorkingSets==0 && it.omittedWarmupSets==0
+        })
     }
+
+    @Test fun duplicateExerciseVisitsKeepSeparateOriginalSlotIdentities() {
+        val first=slot("curl-a",4).copy(exerciseId="shared-curl")
+        val second=slot("curl-b",5).copy(exerciseId="shared-curl")
+        val key=slot("press",4,ComposerRole.PRIMARY,true)
+        val source=snapshot(listOf(key,first,second))
+        val result=review(source,20)
+        assertEquals(CustomShortSessionStatus.READY_FOR_ATHLETE_REVIEW,
+            result.status)
+        assertEquals(listOf("press","curl-a","curl-b"),
+            result.slotImpacts.map {it.slotId})
+        assertEquals(listOf("exercise-press","shared-curl","shared-curl"),
+            result.slotImpacts.map {it.exerciseId})
+        assertEquals(listOf(1,2,3),
+            result.slotImpacts.map {it.originalPosition})
+        assertEquals(result.omittedWorkingSets,
+            result.slotImpacts.sumOf {it.omittedWorkingSets})
+        assertEquals(source.slots.flatMap{it.sets}.size,
+            result.retainedSetKeys.size+result.omittedSetKeys.size)
+        assertFalse(result.canIssueWorkout)
+    }
+
+    @Test fun impactEvidenceIsReadOnlyAndNeverChangesAthleteAuthoredSets() {
+        val source=snapshot(listOf(
+            slot("press",4,ComposerRole.PRIMARY,true),
+            slot("optional",6,warmups=1)))
+        val original=source.slots.flatMap {it.sets}
+        val reviewed=review(source,20)
+        assertEquals(original,source.slots.flatMap {it.sets})
+        assertEquals(reviewed.omittedWorkingSets,
+            reviewed.slotImpacts.sumOf {it.omittedWorkingSets})
+        assertEquals(reviewed.omittedSetKeys.count{key->
+            original.any {
+                it.setKey==key && it.prescription.type==DraftSetType.WARMUP
+            }
+        },reviewed.slotImpacts.sumOf {it.omittedWarmupSets})
+        try {
+            (reviewed.slotImpacts as MutableList).clear()
+            fail("Impact list must not be mutable by the caller.")
+        } catch (_:UnsupportedOperationException) {
+            // The native source remains the only review authority.
+        }
+        assertFalse(reviewed.canAppendJournal)
+        assertFalse(reviewed.canConfirmAthleteConsent)
+    }
+
     @Test fun projectedShorterSnapshotRetainsExactPrefixAndNeverAltersAuthoredProgram() {
         val primary=slot("press",5,ComposerRole.PRIMARY,pinned=true)
         val accessory=slot("curl",6)

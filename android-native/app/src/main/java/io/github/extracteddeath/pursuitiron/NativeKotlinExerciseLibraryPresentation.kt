@@ -53,7 +53,8 @@ internal fun nativeExerciseLibraryRecords(
 internal fun filterNativeExerciseLibrary(
     records:List<NativeKotlinExerciseLibraryRecord>,query:String,
     muscle:TrainingMuscle?,gearId:String?,availability:NativeLibraryAvailability,
-    draftExclusions:Set<String>
+    draftExclusions:Set<String>,pattern:ComposerPattern?=null,
+    role:ComposerRole?=null
 ):List<NativeKotlinExerciseLibraryRecord> {
     val byId=records.associateBy{it.movement.exerciseId}
     if(byId.size!=records.size)return emptyList()
@@ -62,7 +63,9 @@ internal fun filterNativeExerciseLibrary(
     }.toSet()
     return records.filter { record ->
         val id=record.movement.exerciseId
-        id in matches && (muscle==null || record.movement.credits.any{
+        id in matches && (pattern==null || record.movement.pattern==pattern) &&
+            (role==null || record.movement.role==role) &&
+            (muscle==null || record.movement.credits.any{
             it.muscle==muscle && it.fractionalSet.signum()>0}) &&
             (gearId==null || gearId in record.gearIds) && when(availability) {
                 NativeLibraryAvailability.ALL -> true

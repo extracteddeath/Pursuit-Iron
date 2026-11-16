@@ -1472,7 +1472,7 @@ internal fun NativeKotlinCustomJournalScreen(
         }
         val options=NativeMovementConcernPresentation.review(
             request,journal?.revision,
-            journal!=null && journal.finishedByEventId==null && !finished,
+            journal?.let{it.finishedByEventId==null}==true && !finished,
             remaining)
         NativeKotlinMovementConcernDialog(
             options=options,busy=busy,

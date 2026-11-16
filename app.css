@@ -6996,6 +6996,13 @@ background:var(--pi-color-card)!important;
   font-weight:750!important;
   background:var(--pi-color-control)!important;
 }
+/* Compact landscape keeps 16px text legible without clipping decimal loads.
+   Preserve the full stepper hit targets; recover unused input side padding. */
+@media (max-height:420px) and (min-width:421px){
+  #root .wpb-workout .wpb-set-controls .wpb-num-input{
+    padding-inline:2px!important;
+  }
+}
 #root .wpb-workout [data-active="1"] .wpb-set-controls .wpb-num-input{
   border-color:color-mix(in srgb,var(--pi-m3e-primary) 42%,var(--pi-r11-edge))!important;
 }

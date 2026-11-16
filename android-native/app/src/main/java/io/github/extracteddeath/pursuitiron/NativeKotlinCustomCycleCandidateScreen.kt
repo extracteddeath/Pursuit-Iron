@@ -134,7 +134,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     onBuildProgram:()->Unit = {},
     permissionHost:NativeKotlinCandidateHost?=null,
     programSwapReview:NativeKotlinProgramSwapHandoff?=null,
-    onProgramSwapReviewDismiss:()->Unit={}
+    onProgramSwapReviewDismiss:()->Unit={},
+    onManagePhysicalMachine:(String)->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val programPicker by controller.programPicker.collectAsStateWithLifecycle()
@@ -146,6 +147,22 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var showAdvancedId by rememberSaveable {mutableStateOf(false)}
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
     var showProgramEditor by rememberSaveable(draft?.athleteId,draft?.cycleId) {mutableStateOf(false)}
+    val reviewedMachineGymId=state.reviewedSourceSetup?.reviewed?.gym?.gymId
+    var planMachineReview by remember(permissionHost,draft?.athleteId,draft?.cycleId) {
+        mutableStateOf<NativePlanMachineReview?>(null)
+    }
+    LaunchedEffect(permissionHost,draft?.athleteId,draft?.cycleId,
+        reviewedMachineGymId,state.sourceRevision) {
+        // Never retain another owner's gym roster after account/program changes.
+        planMachineReview=null
+        val athleteId=draft?.athleteId
+        val gymId=reviewedMachineGymId
+        if(permissionHost!=null && athleteId!=null && gymId!=null) {
+            planMachineReview=withContext(Dispatchers.IO) {
+                permissionHost.reviewPlanPhysicalMachines(athleteId,gymId)
+            }
+        }
+    }
     var showProgramMetadata by rememberSaveable(draft?.athleteId,draft?.cycleId) {mutableStateOf(false)}
     var supersetEditor by rememberSaveable(stateSaver=NativeKotlinSupersetRequestSaver) {
         mutableStateOf<NativeKotlinSupersetEditRequest?>(null)
@@ -345,7 +362,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 onRemoveDay={
                     removeDayReview=NativeKotlinPlanStructureRemoval.day(
                         current,block.blockId,day.weekday)
-                })
+                },
+                machineReview=planMachineReview,
+                onManageMachine=onManagePhysicalMachine)
         }
     }
     val renderNavigator:@Composable (Boolean)->Unit={wide->

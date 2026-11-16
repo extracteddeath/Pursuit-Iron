@@ -48,6 +48,7 @@ on:
       - 'android-native/verification/kotlin-coach-choice-search-test.mjs'
       - 'android-native/verification/kotlin-custom-exercise-search-paging-test.mjs'
       - 'android-native/verification/kotlin-beta-feedback-share-test.mjs'
+      - 'android-native/verification/kotlin-plan-exercise-removal-test.mjs'
       - 'android-native/verification/kotlin-weekly-swap-coverage-test.mjs'
       - 'android-native/verification/kotlin-train-resume-test.mjs'
       - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
@@ -171,6 +172,7 @@ jobs:
           node android-native/verification/kotlin-coach-choice-search-test.mjs
           node android-native/verification/kotlin-custom-exercise-search-paging-test.mjs
           node android-native/verification/kotlin-beta-feedback-share-test.mjs
+          node android-native/verification/kotlin-plan-exercise-removal-test.mjs
           node android-native/verification/kotlin-weekly-swap-coverage-test.mjs
           node android-native/verification/kotlin-train-resume-test.mjs
           node android-native/verification/kotlin-plan-hierarchy-test.mjs

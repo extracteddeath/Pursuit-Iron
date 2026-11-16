@@ -90,12 +90,18 @@ internal fun <K:Any> NativeKotlinWorkoutFocusNavigation(
             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
         ) {
             OutlinedButton(
-                onClick={navigation.previous?.let{key->{onChoose(key)}} ?: {}},
+                onClick={
+                    val previous=navigation.previous
+                    if(previous!=null)onChoose(previous)
+                },
                 enabled=enabled && navigation.previous!=null,
                 modifier=Modifier.weight(1f).heightIn(min=48.dp)
             ) {Text("Previous set")}
             OutlinedButton(
-                onClick={navigation.next?.let{key->{onChoose(key)}} ?: {}},
+                onClick={
+                    val next=navigation.next
+                    if(next!=null)onChoose(next)
+                },
                 enabled=enabled && navigation.next!=null,
                 modifier=Modifier.weight(1f).heightIn(min=48.dp)
             ) {Text("Next set")}

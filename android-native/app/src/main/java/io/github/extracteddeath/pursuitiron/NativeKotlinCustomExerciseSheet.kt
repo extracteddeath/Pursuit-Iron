@@ -153,6 +153,9 @@ internal fun NativeKotlinCustomExerciseSheet(
     workoutOnlySwap: Boolean = false,
     /** Exact other exercises in this program day or issued workout, if known. */
     otherDayExerciseIds: List<String>? = null,
+    /** Known working exercises on EACH other weekday in the unchanged
+     * saved block; null for any week override or unknown catalog source. */
+    otherWeekdayExerciseIds:List<List<String>>?=null,
     /** Search suggestion only. Never preselects or transfers a load/target. */
     initialSearchQuery:String = ""
 ) {
@@ -210,6 +213,7 @@ internal fun NativeKotlinCustomExerciseSheet(
         sameRoleOnly=sameRoleOnly,
         sameFamilyOnly=sameFamilyOnly,
         otherDayExerciseIds=otherDayExerciseIds,
+        otherWeekdayExerciseIds=otherWeekdayExerciseIds,
         sourceHasWorkingSets=replacing?.sets?.any {
             it.type==DraftSetType.WORKING
         }==true)
@@ -300,7 +304,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                 }
                 Text(if(source==null)
                     "The former exercise is not in the current gym/catalog. No similarity score is assumed."
-                    else "Alternatives rank by reviewed movement pattern, family, training role and credited muscles. When the full day catalog is verified, sole direct muscle coverage is also considered. A match is not a guarantee of equal load or effect.",
+                    else "Alternatives rank by reviewed pattern, family, role and credited muscles. When the full saved week is verified, ties also protect scarce direct training days. This is not proof of equal volume, load or effect.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

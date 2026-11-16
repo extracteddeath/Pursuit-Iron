@@ -296,6 +296,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
                         prior.snapshot.configurations,configurations,
                         reviewed.gym.gymId))
                     NativeMachineRosterResult.Rejected("CROSS_GYM_EDIT")
+                else if(!nativeMachineRosterSourceEligible(
+                    reviewed.gym.gymId,
+                    // Only one exact, currently reviewed catalog identity with a
+                    // real machine/cable stack can authorize new roster facts.
+                    source.catalog.groupBy {it.exerciseId}.filterValues {entries->
+                        entries.size==1 && entries.single().expectedLoadBasis in
+                            setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
+                    }.keys,
+                    prior.snapshot.configurations,configurations))
+                    NativeMachineRosterResult.Rejected("EXERCISE_HAS_NO_MACHINE_STACK")
                 else if(configurations.any { config ->
                     config.gymId==reviewed.gym.gymId &&
                     config.machines.any { candidate ->

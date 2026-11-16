@@ -16,6 +16,14 @@ enum class KotlinShortSessionStatus {
     READY_FOR_ATHLETE_REVIEW, PROTECTED_WORK_EXCEEDS_LIMIT
 }
 
+/** Complete, unchanged-source working-set impact in exercise order. */
+data class KotlinShortSessionExerciseImpact(
+    val exerciseId:String,
+    val originalWorkingSets:Int,
+    val retainedWorkingSets:Int,
+    val omittedWorkingSets:Int
+)
+
 data class KotlinShortSessionReview(
     val status: KotlinShortSessionStatus,
     val sourceWorkoutId: String?,
@@ -26,7 +34,9 @@ data class KotlinShortSessionReview(
     val omittedSetKeys: List<String>,
     val omittedExerciseIds: List<String>,
     val omittedWorkingSets: Int,
-    val explanation: String
+    val explanation: String,
+    /** Read-only evidence, not an issuance or program-edit grant. */
+    val exerciseImpacts:List<KotlinShortSessionExerciseImpact> = emptyList()
 ) {
     val changesPrescription: Boolean get() = omittedSetKeys.isNotEmpty()
     val canStartWorkout: Boolean get() = false
@@ -189,6 +199,14 @@ object KotlinShorterSessionReviewDomain {
                 "The protected lifts and their prescribed work exceed this time limit. Choose Full or a longer limit; shortening rest or silently changing strength sets is not allowed."
             else -> error("A staged preview cannot have an invalid source or limit.")
         }
+        val impacts=order.map {id ->
+            val working=workById.getValue(id)
+            val retained=working.count {it.setKey in kept}
+            KotlinShortSessionExerciseImpact(
+                id,working.size,retained,working.size-retained)
+        }
+        require(impacts.sumOf {it.omittedWorkingSets}==
+            omitted.count {it.type==DraftSetType.WORKING})
         return KotlinShortSessionReview(
             status,staged.workoutId,requestedMinutes,after,original,
             Collections.unmodifiableList(surviving.map { it.setKey }),
@@ -197,7 +215,7 @@ object KotlinShorterSessionReviewDomain {
                 id -> byId.getValue(id).all { it.setKey !in kept }
             }),
             omitted.count { it.type == DraftSetType.WORKING },
-            explanation
+            explanation,Collections.unmodifiableList(impacts)
         )
     }
 }

@@ -83,6 +83,9 @@ internal fun NativeKotlinProfileScreen(
     var favoriteExercises by remember(host){
         mutableStateOf<List<String>>(emptyList())
     }
+    var favoriteExercisesOwner by remember(host){mutableStateOf<String?>(null)}
+    var displayNameOwner by remember(host){mutableStateOf<String?>(null)}
+    var editNameOwner by rememberSaveable{mutableStateOf<String?>(null)}
     var draftName by rememberSaveable{mutableStateOf("")}
     var editingName by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(host,refresh) {
@@ -96,10 +99,13 @@ internal fun NativeKotlinProfileScreen(
     }
     val current=(setup as? NativeSavedSetupResume.Ready)?.setup
     LaunchedEffect(current?.athleteProfileId) {
+        displayNameOwner=null
         val athleteId=current?.athleteProfileId
         displayName=athleteId?.let {
             prefs.getString("name:$it","").orEmpty()
         }.orEmpty()
+        if(athleteId!=null && current?.athleteProfileId==athleteId)
+            displayNameOwner=athleteId
         favoriteLifts=if(athleteId==null)emptyList() else withContext(Dispatchers.IO) {
             NativeStrengthFavorites.read(favoritePreferences,athleteId)
         }
@@ -113,6 +119,7 @@ internal fun NativeKotlinProfileScreen(
     }
     LaunchedEffect(current?.athleteProfileId,timeline?.manifestRevision) {
         favoriteExercises=emptyList()
+        favoriteExercisesOwner=null
         val athleteId=current?.athleteProfileId
         val verified=timeline?.takeIf{it.athleteId==athleteId}
         if(athleteId!=null && verified!=null) {
@@ -122,10 +129,15 @@ internal fun NativeKotlinProfileScreen(
             }
             if(current?.athleteProfileId==athleteId &&
                 timeline?.athleteId==athleteId &&
-                timeline?.manifestRevision==verified.manifestRevision)
+                timeline?.manifestRevision==verified.manifestRevision) {
                 favoriteExercises=stored
+                favoriteExercisesOwner=athleteId
+            }
         }
     }
+    val displayNameForCurrentAthlete=displayName.takeIf {
+        displayNameOwner==current?.athleteProfileId
+    }.orEmpty()
     val finished=timeline?.completions?.size?.toString()?:"—"
     val working=timeline?.let{verifiedWorkingCount(it).toString()}?:"—"
     val days=current?.trainingWeekdays?.size?.toString()?:"—"
@@ -155,13 +167,14 @@ internal fun NativeKotlinProfileScreen(
                 }
                 Column(Modifier.weight(1f),
                     verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
-                    Text(displayName.ifBlank{"Pursuit athlete"},
+                    Text(displayNameForCurrentAthlete.ifBlank{"Pursuit athlete"},
                         style=MaterialTheme.typography.headlineSmall)
                     Text("Local training profile",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                     TextButton(onClick={
-                        draftName=displayName
+                        draftName=displayNameForCurrentAthlete
+                        editNameOwner=current?.athleteProfileId
                         editingName=true
                     },enabled=current!=null) {
                         Text("Customize display name")
@@ -191,7 +204,7 @@ internal fun NativeKotlinProfileScreen(
                         "Your saved, reviewed setup · changes belong in program review.")
                     PursuitMetricStrip(listOf(
                         "Goal" to profileText(athlete.goal),
-                        "Level" to profileText(athlete.experience),
+                        "Experience" to profileText(athlete.experience),
                         "Schedule" to athlete.trainingWeekdays.sorted().joinToString(" / ") {
                             weekdays.getOrElse(it){"Day"}
                         }
@@ -215,6 +228,15 @@ internal fun NativeKotlinProfileScreen(
             "Strength Standards and workout records from your verified training.")
         NativeKotlinProfileMilestonesPanel(profileProgress,current?.athleteProfileId)
         NativeKotlinStrengthClubPanel(strengthClub,onOpenStandards=onProgress)
+        if(current!=null && timeline?.athleteId==current.athleteProfileId &&
+            profileProgress!=null) {
+            val shareFavoriteLabels=if(favoriteExercisesOwner==current.athleteProfileId)
+                favoriteExercises.map(::kotlinExerciseLabel)
+            else emptyList()
+            NativeKotlinProfileSharePanel(
+                current.athleteProfileId,profileProgress,displayNameForCurrentAthlete,
+                shareFavoriteLabels,strengthClub?.hasLoggedThousandPoundTotal==true)
+        }
         PursuitDestinationRow(
             title="Strength Standards",
             description="Compare your recorded lifts with sourced community benchmarks.",
@@ -282,7 +304,7 @@ internal fun NativeKotlinProfileScreen(
             Text("Refresh verified profile")
         }
     }
-    if(editingName)AlertDialog(
+    if(editingName && current!=null && editNameOwner==current.athleteProfileId)AlertDialog(
         onDismissRequest={editingName=false},
         title={Text("Customize profile name")},
         text={
@@ -303,7 +325,10 @@ internal fun NativeKotlinProfileScreen(
                 current?.athleteProfileId?.let {
                     val sanitized=draftName.trim()
                     prefs.edit().putString("name:$it",sanitized).apply()
-                    displayName=sanitized
+                    if(editNameOwner==it) {
+                        displayName=sanitized
+                        displayNameOwner=it
+                    }
                 }
                 editingName=false
             },enabled=current!=null) {Text("Save")}

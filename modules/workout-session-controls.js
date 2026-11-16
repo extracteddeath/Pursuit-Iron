@@ -5,7 +5,7 @@ import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Check, ChevronDown, Repeat, Plus } from 'lucide-react';
 import { createPortal } from '../vendor/react-dom.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
-import { UiField } from './ui-primitives.js';
+import { UiAction, UiField } from './ui-primitives.js';
 import { latestMachineSet, LEGACY_MACHINE_ID, resolveMachineVariant } from './next-engine/machine-instances.js';
 import { EX_BY_ID, isMachineLike, isWorkSet } from './engine-api.js';
 import { workoutNavLabel } from './workout-nav-labels.js';
@@ -177,9 +177,9 @@ export function WorkoutMachineVariantControl({
                     _jsx('h3',{children:'Use a machine at this gym'}),
                     !choices.length && _jsx('p',{className:'wpb-machine-switch-empty',
                         children:'No machine saved yet. Add the one in front of you below.'}),
-                    ...choices.map(machine=>_jsxs('button',{
+                    ...choices.map(machine=>_jsxs(UiAction,{
                         type:'button',
-                        className:'pressable wpb-machine-switch-option',
+                        className:'wpb-machine-switch-option',
                         'data-selected':machine.id===selected.id?'true':'false',
                         'aria-pressed':machine.id===selected.id,
                         disabled:machine.id===selected.id || machine.active===false,
@@ -208,16 +208,16 @@ export function WorkoutMachineVariantControl({
                             onChange:event=>{setName(event.target.value);setMessage('');}})
                     ]}),
                     _jsxs('label',{className:'wpb-machine-switch-default',children:[
-                        _jsx('input',{type:'checkbox',checked:makeDefault,
+                        _jsx(UiField,{type:'checkbox',checked:makeDefault,
                             onChange:event=>setMakeDefault(event.target.checked)}),
                         _jsx('span',{children:'Use as the default for this exercise at this gym'})
                     ]}),
-                    _jsxs('button',{type:'submit',className:'pressable wpb-machine-switch-add',
+                    _jsxs(UiAction,{type:'submit',variant:'primary',className:'wpb-machine-switch-add',
                         children:[_jsx(Plus,{size:18,'aria-hidden':true}),
                             _jsx('span',{children:`Add ${name.trim()||hint} & use now`})]})
                 ]}),
-            !!onSwap && _jsx('button',{type:'button',
-                className:'pressable wpb-machine-switch-swap',
+            !!onSwap && _jsx(UiAction,{type:'button',
+                className:'wpb-machine-switch-swap',
                 onClick:()=>{close();onSwap();},
                 children:'No suitable machine? Swap to another exercise'}),
             message && _jsx('p',{role:'alert',className:'wpb-machine-switch-error',
@@ -227,8 +227,8 @@ export function WorkoutMachineVariantControl({
 
     return _jsxs('div',{className:'wpb-machine-switch',
         'data-noswipe':true,children:[
-        _jsxs('button',{type:'button',ref:trigger,
-            className:'pressable wpb-machine-switch-trigger',
+        _jsxs(UiAction,{type:'button',ref:trigger,
+            className:'wpb-machine-switch-trigger',
             'aria-label':`Machine for ${EX_BY_ID[exerciseId]?.name||'exercise'}: ${selected.label}. Choose or add machine`,
             'aria-haspopup':'dialog','aria-expanded':open,
             onClick:()=>{setOpen(true);setMessage('');},

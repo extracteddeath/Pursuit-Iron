@@ -50,10 +50,16 @@ internal fun NativeKotlinCustomJournalScreen(
     var machineRoster by remember(host,workoutId){
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
+    var eligibleMachineExercises by remember(host,workoutId) {
+        mutableStateOf<Set<String>>(emptySet())
+    }
     LaunchedEffect(host,workoutId) {
-        machineRoster=withContext(Dispatchers.IO) {
-            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+        val recovered=withContext(Dispatchers.IO) {
+            Pair((host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot,
+                host.workoutMachineEligibleExerciseIds(workoutId,custom=true))
         }
+        machineRoster=recovered.first
+        eligibleMachineExercises=recovered.second
     }
     val workoutScroll=rememberScrollState()
     var showFinishedSets by rememberSaveable(workoutId){mutableStateOf(false)}
@@ -104,7 +110,8 @@ internal fun NativeKotlinCustomJournalScreen(
     val machineChoices=rememberNativeWorkoutMachineChoices(
         host,workoutId,custom=true,ready=journal!=null,
         exerciseSignature=journal?.snapshot?.slots
-            ?.map{it.exerciseId}?.distinct()?.joinToString(";").orEmpty())
+            ?.map{it.exerciseId}?.distinct()?.joinToString(";").orEmpty(),
+        roster=machineRoster,onRosterChanged={machineRoster=it})
     var busy by remember(host,workoutId){mutableStateOf(false)}
     // The system Back gesture and visible Minimize are the same navigation.
     // Consume Back during an in-flight disk write instead of dropping the
@@ -821,6 +828,11 @@ internal fun NativeKotlinCustomJournalScreen(
                     val config=KotlinMachineAlternativesDomain.forGymExercise(
                         machineRoster?.configurations.orEmpty(),
                         current.originalSnapshot.stamp.gymId,slot.exerciseId)
+                        ?:if(slot.exerciseId in eligibleMachineExercises)
+                            KotlinGymMachineAlternatives(
+                                current.originalSnapshot.stamp.gymId,
+                                slot.exerciseId,null,emptyList())
+                        else null
                     val selectedMachineId=workoutMachineChoice(
                         machineChoices.encoded,slot.exerciseId,null)
                     val requiresNewMachineChoice=config?.machines?.isNotEmpty()==true &&
@@ -836,7 +848,10 @@ internal fun NativeKotlinCustomJournalScreen(
                             machineChoices.ready && !machineChoices.busy,
                         onSelect={machineId->
                             machineChoices.onSelect(slot.exerciseId,machineId)
-                        })
+                        },
+                        onCreate={label,makeDefault->
+                            machineChoices.onCreate(slot.exerciseId,label,makeDefault)
+                        },error=machineChoices.error)
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)

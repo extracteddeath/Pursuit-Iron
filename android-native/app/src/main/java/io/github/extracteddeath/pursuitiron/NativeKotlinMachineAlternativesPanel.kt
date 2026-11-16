@@ -68,17 +68,58 @@ internal fun NativeKotlinMachineAlternativesPanel(
     val config=roster?.configurations?.firstOrNull{
         it.gymId==gymId && it.exerciseId==exerciseId
     }
+    // A saved group must be discoverable without guessing the logical
+    // exercise name. The roster is already the verified current gym snapshot.
+    val savedGroups=roster?.configurations.orEmpty().filter {
+        it.gymId==gymId && it.machines.isNotEmpty()
+    }.sortedBy { kotlinExerciseLabel(it.exerciseId) }
+    var showAllSaved by rememberSaveable(gymId) { mutableStateOf(false) }
 
     PursuitCard {
         PursuitSectionHeading("Physical machines A / B",
             "The same exercise can use differently weighted machines. Your gym remembers its default; completed workouts never change.")
+        if(savedGroups.isNotEmpty()) {
+            Text("Saved Machine A/B groups at this gym",
+                style=MaterialTheme.typography.titleMedium)
+            savedGroups.take(if(showAllSaved)savedGroups.size else 5).forEach {saved->
+                val currentDefault=saved.machines.firstOrNull {
+                    it.id==saved.defaultMachineId
+                }?.label
+                OutlinedButton(
+                    onClick={
+                        exerciseId=saved.exerciseId
+                        query=kotlinExerciseLabel(saved.exerciseId)
+                    },
+                    enabled=!busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {
+                    Column(Modifier.fillMaxWidth()) {
+                        Text(kotlinExerciseLabel(saved.exerciseId),
+                            style=MaterialTheme.typography.labelLarge)
+                        Text("${saved.machines.size} physical machines"+
+                            (currentDefault?.let{" · Default: $it"} ?:" · No default"),
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            if(savedGroups.size>5)TextButton(
+                onClick={showAllSaved=!showAllSaved},
+                modifier=Modifier.heightIn(min=48.dp)
+            ) {
+                Text(if(showAllSaved)"Show fewer saved groups"
+                     else "Show all ${savedGroups.size} saved groups")
+            }
+        } else if(roster!=null)Text(
+            "No physical machine groups yet. Search for an exercise below to add Machine A.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value=query,onValueChange={query=it.take(80)},
             label={Text("Find a machine exercise")},
             supportingText={Text("Choose the logical exercise, then label its actual stations.")},
             singleLine=true,modifier=Modifier.fillMaxWidth()
         )
-        matches.forEach {ex->
+        matches.filter {it.exerciseId!=exerciseId}.forEach {ex->
             OutlinedButton(onClick={
                 exerciseId=ex.exerciseId
                 query=kotlinExerciseLabel(ex.exerciseId)
@@ -208,7 +249,11 @@ internal fun NativeKotlinMachineAlternativesPanel(
             Button(
                 onClick={
                     controller.addPhysicalMachine(exerciseId,label,increment,minimum,maximum)
-                    label="Machine ${(('B'.code+(config?.machines?.size?:0)).coerceAtMost('Z'.code)).toChar()}"
+                    val usedNames=config?.machines.orEmpty().map {
+                        it.label.trim().lowercase()
+                    }.toSet()+label.trim().lowercase()
+                    label=('A'..'Z').map{"Machine $it"}
+                        .firstOrNull{it.lowercase() !in usedNames} ?:"Other machine"
                 },
                 enabled=!busy && roster!=null && label.isNotBlank() &&
                     incrementValid && stackValid && (config?.machines?.size?:0)<32,

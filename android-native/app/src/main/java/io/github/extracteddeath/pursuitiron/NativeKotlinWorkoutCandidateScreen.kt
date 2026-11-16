@@ -108,10 +108,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var machineRoster by remember(host,workoutId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
+    var eligibleMachineExercises by remember(host,workoutId) {
+        mutableStateOf<Set<String>>(emptySet())
+    }
     LaunchedEffect(host,workoutId) {
-        machineRoster=withContext(Dispatchers.IO) {
-            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+        val recovered=withContext(Dispatchers.IO) {
+            Pair((host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot,
+                host.workoutMachineEligibleExerciseIds(workoutId,custom=false))
         }
+        machineRoster=recovered.first
+        eligibleMachineExercises=recovered.second
     }
     // Restore the athlete's pending workout-only swap after rotation, but
     // NEVER restore a previously fetched option as a new source grant.
@@ -139,7 +145,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val machineChoices=rememberNativeWorkoutMachineChoices(
         host,workoutId,custom=false,ready=journal!=null,
         exerciseSignature=journal?.snapshot?.targets
-            ?.map { it.exerciseId }?.distinct()?.joinToString(";").orEmpty())
+            ?.map { it.exerciseId }?.distinct()?.joinToString(";").orEmpty(),
+        roster=machineRoster,onRosterChanged={machineRoster=it})
     // Retain only the most recent VERIFIED journal reference for an open
     // note draft. A double storage failure must not discard unsaved text.
     // The cached reference never authorizes saving or marks a note saved.
@@ -309,6 +316,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         issuedGymId?.let {gymId->
             KotlinMachineAlternativesDomain.forGymExercise(
                 machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+                ?:if(exerciseId in eligibleMachineExercises)
+                    KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+                else null
         }
     }
     val currentMachine=selected?.target?.exerciseId?.let{
@@ -830,7 +840,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             onSelect={machineId->
                 val exerciseId=selected?.target?.exerciseId
                 if(exerciseId!=null)machineChoices.onSelect(exerciseId,machineId)
-            })
+            },
+            onCreate={label,makeDefault->
+                val exerciseId=selected?.target?.exerciseId
+                if(exerciseId!=null)
+                    machineChoices.onCreate(exerciseId,label,makeDefault)
+            },error=machineChoices.error)
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)

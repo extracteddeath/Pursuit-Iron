@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
@@ -27,7 +28,8 @@ internal data class NativeWorkoutMachineChoicesUi(
     val ready:Boolean,
     val busy:Boolean,
     val error:String?,
-    val onSelect:(String,String)->Unit
+    val onSelect:(String,String)->Unit,
+    val onCreate:(String,String,Boolean)->Unit
 )
 
 @Composable
@@ -36,7 +38,9 @@ internal fun rememberNativeWorkoutMachineChoices(
     workoutId:String,
     custom:Boolean,
     ready:Boolean,
-    exerciseSignature:String
+    exerciseSignature:String,
+    roster:NativeMachineRosterSnapshot?,
+    onRosterChanged:(NativeMachineRosterSnapshot)->Unit
 ):NativeWorkoutMachineChoicesUi {
     val scope=rememberCoroutineScope()
     var saved by remember(host,workoutId,custom) {
@@ -78,6 +82,35 @@ internal fun rememberNativeWorkoutMachineChoices(
                     busy=false
                 }
             }
+        },
+        onCreate={exerciseId,label,makeDefault->
+            val current=saved
+            val confirmedRoster=roster
+            if(current!=null && confirmedRoster!=null && ready && !busy) {
+                busy=true
+                error=null
+                scope.launch {
+                    val result=withContext(Dispatchers.IO) {
+                        host.addWorkoutPhysicalMachine(workoutId,custom,
+                            exerciseId,label,makeDefault,
+                            confirmedRoster.revision,current.revision)
+                    }
+                    when(result) {
+                        is NativeWorkoutMachineCreationResult.Created -> {
+                            onRosterChanged(result.roster)
+                            saved=result.choice
+                        }
+                        is NativeWorkoutMachineCreationResult.AddedNeedsSelection -> {
+                            onRosterChanged(result.roster)
+                            error=result.reason
+                        }
+                        is NativeWorkoutMachineCreationResult.Rejected ->
+                            error="Could not add that machine: ${result.reason}. "+
+                                "Your logged sets were not changed."
+                    }
+                    busy=false
+                }
+            }
         })
 }
 
@@ -115,39 +148,133 @@ internal fun initialMachineScopedLoad(
         else (issued as? DraftSetLoad.Verified)?.value?.toPlainString().orEmpty()
 }
 
-/** One shared Material 3 selector for both generated and custom workout journals. */
+/**
+ * Compact Material 3 entry point in both Kotlin workout types. The physical
+ * machine picker is a sheet, not another permanent card above working sets.
+ * It only selects an existing verified gym machine; a tap never rewrites the
+ * issued prescription, a completed set, another station's Last, or gym defaults.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NativeKotlinWorkoutMachineSelector(
     config:KotlinGymMachineAlternatives?,
     selectedId:String?,
     enabled:Boolean,
-    onSelect:(String)->Unit
+    onSelect:(String)->Unit,
+    onCreate:((String,Boolean)->Unit)?=null,
+    error:String?=null
 ) {
-    if(config==null||config.machines.isEmpty())return
-    PursuitCard {
-        Text("Physical machine",style=MaterialTheme.typography.titleMedium)
-        Text("This exercise is shared, but each machine has its own weight history and progression.",
-            style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)
+    if(config==null || (config.machines.isEmpty() && onCreate==null))return
+    var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
+    val selected=config.machines.firstOrNull {it.id==selectedId}
+    val display=selected?.label ?: "Choose machine"
+    val active=config.machines.filter {it.active || it.id==selectedId}
+    val existingNames=config.machines.map{it.label.trim().lowercase()}.toSet()
+    val suggestedName=('A'..'Z').map{"Machine $it"}
+        .firstOrNull{it.lowercase() !in existingNames} ?: "Other machine"
+    var newMachineName by remember(config.gymId,config.exerciseId){
+        mutableStateOf("")
+    }
+    var makeDefault by remember(config.gymId,config.exerciseId){
+        mutableStateOf(false)
+    }
+    OutlinedButton(
+        onClick={open=true},
+        enabled=true, // inspection remains available on finished/paused workouts
+        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+    ) {
+        Text("Physical machine · $display",
+            maxLines=2,style=MaterialTheme.typography.labelLarge)
+    }
+    if(open)ModalBottomSheet(onDismissRequest={open=false}) {
+        Column(
+            Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal=20.dp,vertical=12.dp),
+            verticalArrangement=Arrangement.spacedBy(12.dp)
         ) {
-            config.machines.filter {it.active||it.id==selectedId}.forEach {machine->
-                FilterChip(selected=machine.id==selectedId,
-                    enabled=enabled&&machine.active,
-                    onClick={onSelect(machine.id)},
-                    label={Text(machine.label)})
+            Text("Choose physical machine",style=MaterialTheme.typography.titleLarge)
+            Text("Same exercise, different weight stacks. Your actual load, Last, "+
+                "progression and records stay with each physical machine.",
+                style=MaterialTheme.typography.bodyMedium,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            error?.let {Text(it,style=MaterialTheme.typography.bodyMedium,
+                color=MaterialTheme.colorScheme.error)}
+            if(selected!=null && !selected.active)Text(
+                "The previously selected machine is inactive. Select an active "+
+                    "machine before recording another set.",
+                style=MaterialTheme.typography.bodyMedium,
+                color=MaterialTheme.colorScheme.error)
+            active.forEach {machine->
+                val current=machine.id==selectedId
+                OutlinedButton(
+                    onClick={
+                        // Existing owner-fenced Kotlin writer confirms this choice.
+                        // Keep the sheet visible until the source-backed choice
+                        // revision returns. A failed save must remain actionable
+                        // here, not be hidden behind a prematurely closed sheet.
+                        onSelect(machine.id)
+                    },
+                    enabled=enabled && machine.active && !current,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
+                ) {
+                    Column(Modifier.fillMaxWidth()) {
+                        Text(machine.label,
+                            style=MaterialTheme.typography.labelLarge)
+                        if(current)Text("Selected for this workout",
+                            style=MaterialTheme.typography.bodySmall)
+                        else if(!machine.active)Text(
+                            "Inactive · saved sets remain on this machine",
+                            style=MaterialTheme.typography.bodySmall)
+                        else Text("Switch unfinished sets to this machine",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
+            if(onCreate!=null) {
+                HorizontalDivider()
+                Text("Different machine here?",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Add it now without leaving the workout. Each physical "+
+                    "machine keeps its own loads and performance history.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value=newMachineName,onValueChange={newMachineName=it.take(80)},
+                    label={Text("Machine name")},
+                    placeholder={Text(suggestedName)},
+                    singleLine=true,modifier=Modifier.fillMaxWidth(),
+                    enabled=enabled
+                )
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Checkbox(checked=makeDefault,
+                        onCheckedChange={makeDefault=it},
+                        enabled=enabled)
+                    Text("Use as the default for this exercise at this gym",
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                Button(
+                    onClick={
+                        // Do not erase the draft before the owner-fenced roster
+                        // and workout-choice writes are both confirmed. On partial
+                        // save the athlete can see the new machine and select it.
+                        onCreate(newMachineName.trim().ifEmpty{suggestedName},makeDefault)
+                    },
+                    enabled=enabled && config.machines.size<32,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Add machine & use now")}
+            } else Text(
+                "Different machine not saved? Add it under Your gym → "+
+                    "Physical machines A/B. Existing sets are not reassigned.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(
+                onClick={open=false},
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) { Text("Back to workout") }
+            Spacer(Modifier.height(12.dp))
         }
-        val chosen=config.machines.firstOrNull{it.id==selectedId}
-        Text(
-            if(chosen!=null)
-                "Selected: ${chosen.label}. Enter the actual weight for this machine; no conversion from another machine is assumed."
-            else "Choose a machine before logging this set.",
-            style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 

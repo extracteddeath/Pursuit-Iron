@@ -1,6 +1,6 @@
 /* Machine A/B — one compact workout affordance and a single M3-style choice
    sheet. Never introduce a second tall card into the active set workspace. */
-#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child{
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child:has(.wpb-machine-switch){
   grid-template-rows:auto auto auto auto;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-machine-switch{

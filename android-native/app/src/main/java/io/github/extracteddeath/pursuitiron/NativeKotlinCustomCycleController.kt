@@ -1457,6 +1457,18 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
+    /**
+     * The athlete confirmed a fully disclosed removal (pinned status,
+     * block-wide effect and every week-specific set exception).
+     * Recheck that exact revision in the existing durable edit transaction;
+     * a stale dialog cannot remove a similarly named newer exercise.
+     * Undo, consent invalidation and all journal protections are shared
+     * with every other custom-cycle edit.
+     */
+    fun removeExercise(review:NativeKotlinPlanExerciseRemovalReview) = edit { draft ->
+        NativeKotlinPlanExerciseRemoval.confirmed(draft,review)
+    }
+
     /** Accessible alternative to drag gestures, stable slot identity intact. */
     fun moveExercise(
         blockId: String, weekday: Int, slotId: String, direction: Int

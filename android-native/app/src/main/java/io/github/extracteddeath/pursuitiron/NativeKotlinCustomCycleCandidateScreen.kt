@@ -267,6 +267,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var swapSearchSuggestion by remember {
         mutableStateOf<String?>(null)
     }
+    // A removal review is intentionally transient: relaunching the app
+    // cannot silently inherit permission to discard a program slot.
+    var removeExerciseReview by remember(draft?.athleteId,draft?.cycleId) {
+        mutableStateOf<NativeKotlinPlanExerciseRemovalReview?>(null)
+    }
     var weekExerciseEditor by remember(draft?.cycleId,draft?.revision) {
         mutableStateOf<Triple<Int,Int,String>?>(null)
     }
@@ -295,6 +300,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 onSwapExercise={slot->swapExerciseEditor=Triple(block.blockId,day.weekday,slot)},
                 onMoveExercise={slot,direction->
                     controller.moveExercise(block.blockId,day.weekday,slot,direction)
+                },
+                onRemoveExercise={slot->
+                    removeExerciseReview=NativeKotlinPlanExerciseRemoval.inspect(
+                        current,block.blockId,day.weekday,slot)
                 },
                 onEditSuperset={group->
                     supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday,group)
@@ -1790,6 +1799,80 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 dismissButton = { TextButton(onClick = {
                     editingBlock = null; addingBlock = false
                 }) { Text("Cancel") } })
+        }
+
+        removeExerciseReview?.let { review ->
+            // An owner, program, revision, day or slot change invalidates
+            // an older confirmation. The writer independently repeats this
+            // check against its CURRENT durable candidate before Save.
+            val stillCurrent=NativeKotlinPlanExerciseRemoval.inspect(
+                current,review.blockId,review.weekday,review.slotId)==review
+            AlertDialog(
+                onDismissRequest={if(!busy)removeExerciseReview=null},
+                title={Text("Remove exercise from program?")},
+                text={
+                    Column(
+                        Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)
+                    ) {
+                        Text(kotlinExerciseLabel(review.exerciseId),
+                            style=MaterialTheme.typography.titleMedium)
+                        Text("${review.dayLabel} · ${review.blockLabel} · ${review.blockWeeks} weeks",
+                            style=MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Removes ${review.baseWorkingSets} base working set(s) and "+
+                                "${review.baseWarmupSets} warm-up set(s) from this day "+
+                                "in every week of the block.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        if(review.overriddenWeeks.isNotEmpty())Text(
+                            "Also discards ${review.overriddenWeeks.size} authored week-specific "+
+                                "prescription(s) for week(s) "+
+                                review.overriddenWeeks.joinToString(", ") +
+                                " (${review.overrideWorkingSets} exception working sets).",
+                            style=MaterialTheme.typography.bodyMedium,
+                            color=MaterialTheme.colorScheme.error)
+                        if(review.pinned)Text(
+                            "This is a pinned exercise. Removing it is an explicit "+
+                                "change to your authored exercise selection.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        if(review.remainingExercises==0)Text(
+                            "This day will have no exercises. Add a movement before "+
+                                "requesting a new workout.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Only this draft slot and its own future-week overrides "+
+                                "will be removed. Other exercises, issued workouts, "+
+                                "saved actuals and completed History stay unchanged. "+
+                                "The edited cycle needs a new review and approval. "+
+                                "You can Undo immediately after a successful save.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(!stillCurrent)Text(
+                            "This program changed. Close and open Remove again "+
+                                "to review the latest saved prescription.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.error)
+                    }
+                },
+                confirmButton={
+                    Button(
+                        onClick={
+                            if(stillCurrent) {
+                                controller.removeExercise(review)
+                                removeExerciseReview=null
+                            }
+                        },
+                        enabled=!busy && stillCurrent
+                    ) {Text(if(review.pinned)"Remove pinned exercise"
+                        else "Remove exercise")}
+                },
+                dismissButton={
+                    TextButton(onClick={removeExerciseReview=null},enabled=!busy) {
+                        Text("Keep exercise")
+                    }
+                }
+            )
         }
 
         if (deleteConfirm) AlertDialog(

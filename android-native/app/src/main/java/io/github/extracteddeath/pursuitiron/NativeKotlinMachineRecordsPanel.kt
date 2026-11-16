@@ -51,17 +51,17 @@ internal fun NativeKotlinMachineRecordsPanel(
     val visible=if(showAll)ordered else ordered.take(8)
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         visible.forEach { (key,record)->
-            val label=roster?.configurations?.singleOrNull{
-                it.gymId==key.gymId && it.exerciseId==key.exerciseId
-            }?.machines?.singleOrNull{it.id==key.machineInstanceId}?.label
-                ?: "Machine ${key.machineInstanceId}"
+            val stationLabel=NativeKotlinMachineStationLabels.label(
+                key.exerciseId,key.gymId,key.machineInstanceId,
+                ordered.filter{it.key.exerciseId==key.exerciseId}
+                    .map{it.key.gymId to it.key.machineInstanceId},roster)
             val basis=kotlinLoadBasisLabel(key.basis)
             val unit=key.unit.name.lowercase()
             val bestSingle=singlesByMachine[key]
             PursuitCard {
                 Text(kotlinExerciseLabel(key.exerciseId),
                     style=MaterialTheme.typography.titleMedium)
-                Text("${key.gymId} · $label · $basis",
+                Text("$stationLabel · $basis",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 PursuitMetricStrip(listOf(

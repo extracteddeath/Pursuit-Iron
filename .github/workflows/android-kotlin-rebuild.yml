@@ -55,6 +55,7 @@ on:
       - 'android-native/verification/kotlin-profile-milestones-test.mjs'
       - 'android-native/verification/kotlin-profile-share-test.mjs'
       - 'android-native/verification/kotlin-profile-share-image-test.mjs'
+      - 'android-native/verification/kotlin-machine-station-label-test.mjs'
       - 'android-native/verification/kotlin-superset-execution-test.mjs'
       - 'android-native/verification/kotlin-lab-stable-signing-test.mjs'
       - 'android-native/KOTLIN_LAB_SIGNING_SETUP.md'
@@ -162,6 +163,7 @@ jobs:
           node android-native/verification/kotlin-profile-milestones-test.mjs
           node android-native/verification/kotlin-profile-share-test.mjs
           node android-native/verification/kotlin-profile-share-image-test.mjs
+          node android-native/verification/kotlin-machine-station-label-test.mjs
           node android-native/verification/kotlin-coach-choice-search-test.mjs
           node android-native/verification/kotlin-custom-exercise-search-paging-test.mjs
           node android-native/verification/kotlin-train-resume-test.mjs

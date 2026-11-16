@@ -36,8 +36,12 @@ assert.match(facts,/Collections\.unmodifiableMap\(highestByMachine\)/);
 assert.match(physical,/title="Physical machine bests"/);
 assert.match(physical,/Each physical machine has its own weight history/);
 assert.match(physical,/not certified PR badges/);
-assert.match(physical,/key\.gymId==key\.gymId|it\.gymId==key\.gymId/);
-assert.match(physical,/it\.id==key\.machineInstanceId/);
+// Display identity now resolves through a read-only label adapter. Preserve
+// the exact history scope and require matching gym/exercise/machine on lookup.
+const stationLabels=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMachineStationLabels.kt');
+assert.match(physical,/NativeKotlinMachineStationLabels\.label\(\s*key\.exerciseId,key\.gymId,key\.machineInstanceId/);
+assert.match(stationLabels,/it\.gymId==gymId && it\.exerciseId==exerciseId/);
+assert.match(stationLabels,/it\.id==machineId/);
 assert.match(physical,/singlesByMachine\[key\]/);
 assert.match(physical,/onOpenHistory\(key\.exerciseId\)/);
 assert.doesNotMatch(physical,/approve\(|recordWorkoutOperation\(|saveMachineRoster\(/);

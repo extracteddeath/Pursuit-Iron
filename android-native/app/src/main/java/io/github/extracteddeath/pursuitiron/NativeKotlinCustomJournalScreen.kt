@@ -851,7 +851,8 @@ internal fun NativeKotlinCustomJournalScreen(
                         },
                         onCreate={label,makeDefault->
                             machineChoices.onCreate(slot.exerciseId,label,makeDefault)
-                        },error=machineChoices.error)
+                        },error=machineChoices.error,
+            acknowledgedCreatedMachineId=machineChoices.createdMachineId)
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)

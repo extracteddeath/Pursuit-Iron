@@ -28,6 +28,7 @@ internal data class NativeWorkoutMachineChoicesUi(
     val ready:Boolean,
     val busy:Boolean,
     val error:String?,
+    val createdMachineId:String?,
     val onSelect:(String,String)->Unit,
     val onCreate:(String,String,Boolean)->Unit
 )
@@ -48,9 +49,13 @@ internal fun rememberNativeWorkoutMachineChoices(
     }
     var busy by remember(host,workoutId,custom){mutableStateOf(false)}
     var error by remember(host,workoutId,custom){mutableStateOf<String?>(null)}
+    var createdMachineId by remember(host,workoutId,custom) {
+        mutableStateOf<String?>(null)
+    }
     LaunchedEffect(host,workoutId,custom,ready,exerciseSignature) {
         saved=null
         error=null
+        createdMachineId=null
         if(!ready)return@LaunchedEffect
         busy=true
         val recovered=withContext(Dispatchers.IO) {
@@ -65,12 +70,13 @@ internal fun rememberNativeWorkoutMachineChoices(
         "${it.key}=${it.value}"
     }.orEmpty()
     return NativeWorkoutMachineChoicesUi(
-        encoded,ready && saved!=null,!ready || busy,error,
+        encoded,ready && saved!=null,!ready || busy,error,createdMachineId,
         onSelect={exerciseId,machineId->
             val current=saved
             if(current!=null && ready && !busy) {
                 busy=true
                 error=null
+                createdMachineId=null
                 scope.launch {
                     val result=withContext(Dispatchers.IO){
                         host.selectWorkoutPhysicalMachine(workoutId,custom,
@@ -89,6 +95,7 @@ internal fun rememberNativeWorkoutMachineChoices(
             if(current!=null && confirmedRoster!=null && ready && !busy) {
                 busy=true
                 error=null
+                createdMachineId=null
                 scope.launch {
                     val result=withContext(Dispatchers.IO) {
                         host.addWorkoutPhysicalMachine(workoutId,custom,
@@ -99,6 +106,9 @@ internal fun rememberNativeWorkoutMachineChoices(
                         is NativeWorkoutMachineCreationResult.Created -> {
                             onRosterChanged(result.roster)
                             saved=result.choice
+                            // Only this exact two-store confirmation may
+                            // acknowledge a newly created workout station.
+                            createdMachineId=result.choice.machines[exerciseId]
                         }
                         is NativeWorkoutMachineCreationResult.AddedNeedsSelection -> {
                             onRosterChanged(result.roster)
@@ -162,7 +172,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
     enabled:Boolean,
     onSelect:(String)->Unit,
     onCreate:((String,Boolean)->Unit)?=null,
-    error:String?=null
+    error:String?=null,
+    acknowledgedCreatedMachineId:String?=null
 ) {
     if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
@@ -177,6 +188,32 @@ internal fun NativeKotlinWorkoutMachineSelector(
     }
     var makeDefault by remember(config.gymId,config.exerciseId){
         mutableStateOf(false)
+    }
+    // A request is not proof of a saved physical-machine change. Close only
+    // after the owner-fenced writer has published the selected station.
+    var pendingChoice by remember(config.gymId,config.exerciseId) {
+        mutableStateOf<String?>(null)
+    }
+    var pendingCreation by remember(config.gymId,config.exerciseId) {
+        mutableStateOf<Pair<String?,Int>?>(null)
+    }
+    LaunchedEffect(selectedId,config.machines,acknowledgedCreatedMachineId) {
+        if(pendingChoice!=null && selectedId==pendingChoice) {
+            pendingChoice=null
+            open=false
+        }
+        val creation=pendingCreation
+        if(creation!=null && config.machines.size>creation.second &&
+            selectedId!=null && selectedId!=creation.first &&
+            acknowledgedCreatedMachineId==selectedId &&
+            config.machines.any{it.id==selectedId}) {
+            // Both durable source owners must already have acknowledged this
+            // new physical machine before selectedId can change.
+            pendingCreation=null
+            newMachineName=""
+            makeDefault=false
+            open=false
+        }
     }
     OutlinedButton(
         onClick={open=true},
@@ -213,6 +250,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
                         // Keep the sheet visible until the source-backed choice
                         // revision returns. A failed save must remain actionable
                         // here, not be hidden behind a prematurely closed sheet.
+                        pendingCreation=null
+                        pendingChoice=machine.id
                         onSelect(machine.id)
                     },
                     enabled=enabled && machine.active && !current,
@@ -259,6 +298,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
                         // Do not erase the draft before the owner-fenced roster
                         // and workout-choice writes are both confirmed. On partial
                         // save the athlete can see the new machine and select it.
+                        pendingChoice=null
+                        pendingCreation=selectedId to config.machines.size
                         onCreate(newMachineName.trim().ifEmpty{suggestedName},makeDefault)
                     },
                     enabled=enabled && config.machines.size<32,

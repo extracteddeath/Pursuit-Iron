@@ -2020,12 +2020,22 @@ object StarterExerciseTranche {
             direct(TrainingMuscle.UPPER_BACK),
             indirect(TrainingMuscle.BICEPS,"0.25"),
             indirect(TrainingMuscle.TRAPS,"0.25"),
-            indirect(TrainingMuscle.REAR_DELTS,"0.25"))
+            indirect(TrainingMuscle.REAR_DELTS,"0.25")),
+        entry("serratus-pushup","scapular_protraction","bodyweight-serratus-pushup",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            null,null,emptySet(),12..20,
+            "Unweighted serratus push-up uses scapular protraction with no invented external load. Serratus anterior is tracked separately from abdominal work; these provisional set credits are not an EMG-derived dose or a promise of training effect.",
+            direct(TrainingMuscle.SERRATUS_ANTERIOR)),
+        entry("tibialis-raise","ankle_dorsiflexion","wall-supported-bodyweight-tibialis",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            null,null,setOf("wall-support"),15..25,
+            "Unweighted tibialis raise uses the explicitly confirmed stable wall for support and ankle dorsiflexion. Tibialis anterior has its own ledger, independent of plantar-flexion calf work. No machine, band or external load is inferred; credit is provisional.",
+            direct(TrainingMuscle.TIBIALIS_ANTERIOR))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==320)
+        require(definitions.size==322)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

@@ -52,6 +52,12 @@ class NativeLegacyMuscleCoverageTest {
             "5ebc95e852a30ea65758d03f8737f26040e13306180dc8cfd584a2f206a8f9a8",301,"v9",TrainingMuscleCoverage.legacyV2)
     }
 
+    @Test fun actualV10StoreKeepsItsTwentyMuscleConsentAndEveryOriginalFileByte() {
+        assertFrozen("legacy-v10-twenty-muscle-store.zip.base64",
+            "a81e28d3087575ecb7378d579c04e27fb92ba03ed1c634cd8c78662a2ef8af06",
+            320,"v10",TrainingMuscleCoverage.legacyV3)
+    }
+
     private fun assertFrozen(resource:String,sha:String,catalogSize:Int,
         revision:String,scope:List<TrainingMuscle>) {
         val root=restoreFixture(resource,sha)
@@ -84,12 +90,22 @@ class NativeLegacyMuscleCoverageTest {
         assertTrue(signed.toString(),signed is NativeCustomSignoffRead.Found && signed.isCurrent)
         assertEquals(program.revision,
             (signed as NativeCustomSignoffRead.Found).receipt.cycleRevision)
+        val seed=(NativeKotlinFirstProgramSeedFileStore(root,fence,identity)
+            .read(owner.ownerKey,"generated-first") as NativeFirstProgramSeedRead.Found).seed
+        assertEquals(source.revision,seed.sourceRevision)
+        val regenerated=CoachFirstProgramStartDomain.review(FirstProgramStartRequest(
+            source.setup,source.catalog,seed.startingLoads,seed.bodyweightExercises,
+            seed.phase,seed.extraFocuses,seed.nonSetSeconds,seed.policyVersion))
+        assertEquals(regenerated.issues.toString(),FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,regenerated.status)
+        assertEquals(program,CoachFirstProgramDraftConversionDomain.propose(regenerated,source.setup,
+            source.catalog,seed.cycleId,seed.title,seed.blockWeeks).cycle)
+        assertEquals(scope,regenerated.policy?.selectedBounds?.map{it.muscle})
         assertEquals(before,content(root))
     }
 
     @Test fun policyCodecPreservesLegacyAndNewScopesWithoutFillingOrDroppingRows() {
         for(scope in listOf(TrainingMuscleCoverage.legacyV1,TrainingMuscleCoverage.legacyV2,
-            TrainingMuscleCoverage.current)) {
+            TrainingMuscleCoverage.legacyV3,TrainingMuscleCoverage.current)) {
             val bounds=scope.reversed().map{DeclaredMuscleDoseBounds(it,
                 BigDecimal("0.00"),BigDecimal("3.50"),BigDecimal("12.000"),0)}
             val policy=AuthoredGoalProgramPolicy("explicit","r1","Reviewed exact coverage",

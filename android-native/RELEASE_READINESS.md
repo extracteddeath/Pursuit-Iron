@@ -59,7 +59,7 @@ movements' exact calibration and source rep bands. Native-file tests cover
 source/consent/preparation/issuance, deliberately different actual loads,
 retry, cold reopen after each set, Finish, verified History and CSV. All
 pre-existing frozen native/approval compatibility tests remain mandatory.
-Source inventory is now **320/376**; **56 IDs remain absent**. This bounded
+At that checkpoint source inventory was **320/376**, with **56 IDs absent**. This bounded
 checkpoint does not certify full functional parity, coaching superiority or
 physical-device/UI acceptance. No APK/AAB is built or released.
 
@@ -72,6 +72,28 @@ the toggle only while recording, and restore the previous View flag. Initial
 screen composition no longer writes an old local reference mode back to storage.
 Policy/source tests and Android compilation are required; physical-device,
 large-font/TalkBack and app-wide UI acceptance remain open. No APK/AAB.
+
+**Serratus/tibialis checkpoint (2026-11-15):** the engine now tracks serratus
+anterior and tibialis anterior independently of abdominal and plantar-flexion
+calf work. Two source-matched, unweighted movements reach explicit calibration,
+real program generation, every converted cycle week and the native workout /
+correction / History / cold-replay journey. The tibialis definition requires a
+separately confirmed wall support, offered by name in onboarding and Gym.
+
+New first-program policy v11 declares 22 groups. V10 retains 20, v9 retains 18,
+and v1-v8 retain 16; no old consent or target is upgraded automatically. The
+custom-policy editor keeps each saved scope and needs explicit complete values
+to add current targets. A pre-change, independently captured v10 native store
+contains four completed workouts and corrections; all 21 files must retain their
+exact bytes, original consent and regenerated cycle. The existing v8/v9 archives
+remain pinned and must also reproduce their exact original cycles.
+
+Current source inventory is **322/376**, with **54 IDs still absent**. Both web
+catalog blobs were checked against current main and remain identical to the
+inventory baseline. [The source review](kotlin-engine/verification/serratus-tibialis-review.md)
+distinguishes anatomical/function evidence from unvalidated numeric set credits
+and dose planning. Full functional parity, measured coaching superiority and
+whole-app UI / physical-device acceptance remain open. No APK/AAB.
 
 ## What works in the isolated Kotlin core
 

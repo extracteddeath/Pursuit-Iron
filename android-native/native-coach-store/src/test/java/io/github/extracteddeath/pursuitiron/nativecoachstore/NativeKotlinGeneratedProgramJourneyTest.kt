@@ -53,9 +53,17 @@ class NativeKotlinGeneratedProgramJourneyTest {
     private val catalog=StarterExerciseTranche.movements()
     private fun request(split:ComposerSplit=ComposerSplit.UPPER_LOWER,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
-        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false):FirstProgramStartRequest {
+        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
+        includeNewTargets:Boolean=false):FirstProgramStartRequest {
         val input=FirstProgramStartRequest(setup(split,phase),catalog,loads,
             bodyweight,phase,nonSetSecondsPerDay=900)
+        if(includeNewTargets) {
+            val profile=checkNotNull(input.setup.reviewed)
+            return input.copy(setup=input.setup.copy(reviewed=profile.copy(
+                sessionTimeBucket=SessionTimeBucket.SIXTY_TO_NINETY,
+                gym=profile.gym.copy(availableFacilities=profile.gym.availableFacilities+"wall-support"))),
+                selectedBodyweightExerciseIds=bodyweight+setOf("serratus-pushup","tibialis-raise"))
+        }
         if(includeTrapBar) {
             val profile=checkNotNull(input.setup.reviewed)
             return input.copy(setup=input.setup.copy(reviewed=profile.copy(
@@ -116,9 +124,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         policyVersion:String=CoachFirstProgramStartDomain.POLICY_VERSION,
         split:ComposerSplit=ComposerSplit.UPPER_LOWER,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
-        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false
+        includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
+        includeNewTargets:Boolean=false
     ):Pair<CustomTrainingCycle,CustomCoachAuditInputs> {
-        val input=request(split,phase,includeHipMachines,includeTrapBar).copy(policyVersion=policyVersion)
+        val input=request(split,phase,includeHipMachines,includeTrapBar,includeNewTargets).copy(policyVersion=policyVersion)
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,input.setup.status)
         val generated=CoachFirstProgramStartDomain.review(input)
         val draft=generated.generation?.candidate?.catalogReview?.draft
@@ -658,6 +667,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(expected,issued.snapshot)
     }
 
+    @Test fun serratusAndTibialisWeekLogsEveryBodyweightSetAndColdRestoresItsOwnTargets() {
+        completeGeneratedWeek(ComposerSplit.FULL_BODY,includeNewTargets=true)
+    }
+
     @Test fun generatedTrapBarProgramLogsEverySetFinishesAndColdReplaysWithTheCorrectBarMass() {
         completeGeneratedWeek(ComposerSplit.FULL_BODY,includeTrapBar=true)
     }
@@ -736,15 +749,23 @@ class NativeKotlinGeneratedProgramJourneyTest {
     private fun completeGeneratedWeek(split:ComposerSplit,
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
         includeHipMachines:Boolean=false,includeTrapBar:Boolean=false,
-        completionClock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated) {
+        completionClock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated,
+        includeNewTargets:Boolean=false) {
         val (cycle,inputs)=saveGenerated(split=split,phase=phase,
-            includeHipMachines=includeHipMachines,includeTrapBar=includeTrapBar)
+            includeHipMachines=includeHipMachines,includeTrapBar=includeTrapBar,includeNewTargets=includeNewTargets)
         val days=cycle.blocks.single().days.sortedBy{it.weekday}
         assertEquals(weekdays(split).sorted(),days.map{it.weekday})
         assertTrue(days.all{it.slots.size>=3})
         val selected=days.flatMap{it.slots}.map{it.exerciseId}.toSet()
         assertTrue(selected.containsAll(setOf("barbell_bench","back_squat",
             "one_arm_db_row","db_rdl")))
+        if(includeNewTargets) {
+            assertTrue(selected.containsAll(setOf("serratus-pushup","tibialis-raise")))
+            assertEquals("v11",inputs.policiesByPhase.getValue(phase).revision)
+            assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase.getValue(phase).selectedBounds.map{it.muscle})
+            for(slot in days.flatMap{it.slots}.filter{it.exerciseId in setOf("serratus-pushup","tibialis-raise")})
+                assertTrue(slot.sets.all{it.load==DraftSetLoad.ExplicitBodyweight && it.type==DraftSetType.WORKING})
+        }
         if(includeTrapBar) {
             assertTrue(selected.containsAll(setOf("trap-bar-deadlift","db-shrug")))
             assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase
@@ -855,10 +876,10 @@ class NativeKotlinGeneratedProgramJourneyTest {
             temp.root.toPath(),Disk().fence,identity).read(owner,cycleId)
             as NativeFirstProgramSeedRead.Found).seed
         assertEquals(phase,seed.phase)
-        val replayInput=request(split,seed.phase,includeHipMachines,includeTrapBar).copy(
-            startingLoads=seed.startingLoads,
-            selectedBodyweightExerciseIds=seed.bodyweightExercises,
-            nonSetSecondsPerDay=seed.nonSetSeconds,policyVersion=seed.policyVersion)
+        val savedSource=(Disk().sources.read(owner) as NativeAuthoringSourceRead.Found).source
+        val replayInput=FirstProgramStartRequest(savedSource.setup,savedSource.catalog,
+            seed.startingLoads,seed.bodyweightExercises,seed.phase,seed.extraFocuses,
+            seed.nonSetSeconds,seed.policyVersion)
         val regenerated=CoachFirstProgramStartDomain.review(replayInput)
         assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
             regenerated,replayInput.setup,catalog,cycleId,seed.title,seed.blockWeeks).cycle)
@@ -870,7 +891,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val d=Disk()
         val original=(d.journals.open(owner,firstId)
             as NativeCustomJournalResult.Durable).issued.journal
-        val working=original.snapshot.slots.flatMap{it.sets}
+        val working=original.snapshot.slots.filter{!includeNewTargets || it.exerciseId=="tibialis-raise"}.flatMap{it.sets}
             .first{it.prescription.type==DraftSetType.WORKING}
         val visit=CustomWorkoutVisitKey(working.setKey,CustomWorkoutVisitPart.MAIN)
         val old=original.effectiveVisits.getValue(visit).operation

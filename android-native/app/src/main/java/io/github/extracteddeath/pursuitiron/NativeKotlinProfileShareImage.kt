@@ -42,7 +42,7 @@ internal object NativeKotlinProfileShareImage {
         }
         val blocks=summary.lineSequence().drop(1).filter { it.isNotBlank() }
             .map { wrap(it,body,WIDTH-2*MARGIN) }.toList()
-        val contentHeight=blocks.sumOf { it.size*LINE_HEIGHT+PARAGRAPH_GAP }
+        val contentHeight=blocks.sumOf { (it.size*LINE_HEIGHT+PARAGRAPH_GAP).toDouble() }.toFloat()
         val height=maxOf(920,(318f+contentHeight+152f).toInt())
         val bitmap=Bitmap.createBitmap(WIDTH,height,Bitmap.Config.ARGB_8888)
         val canvas=Canvas(bitmap)

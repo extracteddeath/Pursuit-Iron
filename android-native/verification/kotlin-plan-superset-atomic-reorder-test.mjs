@@ -24,17 +24,18 @@ assert.match(plan,/later=NativeKotlinPlanSupersetOrdering\.proposed\(/);
 assert.match(controller,/NativeKotlinPlanSupersetOrdering\.proposed\(it,slotId,direction\)/);
 assert.match(controller,/CustomCycleBuilderDomain\.reorderSlots\(/);
 assert.match(engine,/val grouped=proposed\.withIndex\(\)\.filter\{it\.value\.supersetGroup!=null\}/);
-assert.match(engine,/val noncontiguous=selected\.isNotEmpty\(\)/);
-assert.match(engine,/noncontiguous \|\|/);
+// Existing programs support nonadjacent supersets. The new safety rule
+// protects reordering, not authoring or logging previously allowed groups.
+assert.doesNotMatch(engine,/val noncontiguous=selected\.isNotEmpty\(\)/);
 assert.match(supersetEditor,/val selectionContiguous=selected\.size in 2\.\.3/);
-assert.match(supersetEditor,/enabled=!busy && !stale && allowSupersets && selectionContiguous/);
-assert.match(supersetEditor,/Superset partners must be adjacent/);
+assert.match(supersetEditor,/These linked movements are separated/);
+assert.match(supersetEditor,/enabled=!busy && !stale && allowSupersets && selected\.size in 2\.\.3/);
 assert.match(engine,/CustomCycleBuilderRefusal\.SLOT_ORDER_CONFLICT/);
 for(const name of [
     'movingOneLinkedMemberMovesEntireGroupWithStableInnerOrder',
     'canonicalBuilderRejectsMaliciousScatteredRoundButAcceptsAtomicMove',
     'invalidOrNoncontiguousSupersetRemainsImmutableUntilUnlinked',
-    'authorCannotCreateSeparatedSupersetButCanUnlinkOldMembership',
+    'separatedSupersetsStillAuthorButUnsafeReorderingRefusesAndUnlinkWorks',
     'realNativeFileMoveAndUndoPreserveEachProgramSetAndOverride',
     'inspectingMovementOrderNeverWritesOwnerTrainingFiles'
 ])assert.ok(test.includes(name),'Missing native source-backed test '+name);

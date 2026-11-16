@@ -61,3 +61,16 @@ export function createWorkoutPhysicalMachine(gym,exerciseId,label,makeDefault=fa
         return {ok:true,nextGym,id:instance.id};
     }catch(error){return fail(String(error?.message||'Unable to add physical machine'));}
 }
+
+/** Apply a validated exercise-scoped machine catalog to its existing gym.
+ * Nothing else in the gym (including other machines, gym loading settings,
+ * equipment, or other saved gym identities) is rewritten. */
+export function withGymMachineConfig(gyms,gymId,exerciseId,config,updatedAt){
+    if(!Array.isArray(gyms)||!gymId||!exerciseId||
+        !Array.isArray(config?.instances)||!config.instances.length)
+        return gyms;
+    return gyms.map(g=>g.id!==gymId?g:{
+        ...g,updatedAt,
+        machineVariants:{...g.machineVariants,[exerciseId]:config}
+    });
+}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
 import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
-import { PART_LABEL, formatSetup } from './engine-api.js';
+import { PART_LABEL, formatSetup, isMachineLike } from './engine-api.js';
 
 export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, linked,
     note, setup, onNote, onSuperset, onWhy, onInfo, onBan, onRemove, onClose, sheetDragRef }) {
@@ -46,6 +46,12 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
                     _jsx(UiSheetClose, { variant: 'tonal', 'aria-label': 'Close', onClick: close })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body wpb-ui-sheet-scroll', children: [
+                    isMachineLike(exercise.equip) && _jsxs('div',{
+                        className:'wpb-gym-guidance',role:'note',children:[
+                            _jsx('strong',{children:'Machine A/B is selected during a workout.'}),
+                            _jsx('p',{children:'For a different physical machine with its own weight stack, go to Settings → Your gyms → expand your gym → Machine A/B. Add each machine for this exact exercise and tap Done. In the workout, use the Machine A/B selector above the exercise name. The Program exercise stays the same and each physical machine keeps a separate Last and progression history.'})
+                        ]
+                    }),
                     action('note', Pin, hasNote ? 'Edit pinned note' : 'Add pinned note',
                         setup ? [formatSetup(setup), note].filter(Boolean).join(' — ') : note || "A cue you'll see every time — seat height, tempo…", act(onNote)),
                     canLink && action('superset', Layers, linked ? 'Unlink superset' : 'Superset with next',

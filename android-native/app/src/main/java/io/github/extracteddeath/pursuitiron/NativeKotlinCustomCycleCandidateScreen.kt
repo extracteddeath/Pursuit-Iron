@@ -272,6 +272,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var removeExerciseReview by remember(draft?.athleteId,draft?.cycleId) {
         mutableStateOf<NativeKotlinPlanExerciseRemovalReview?>(null)
     }
+    var crossDayMoveScope by remember(draft?.athleteId,draft?.cycleId) {
+        mutableStateOf<NativeKotlinPlanCrossDayMoveScope?>(null)
+    }
     var weekExerciseEditor by remember(draft?.cycleId,draft?.revision) {
         mutableStateOf<Triple<Int,Int,String>?>(null)
     }
@@ -304,6 +307,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 onRemoveExercise={slot->
                     removeExerciseReview=NativeKotlinPlanExerciseRemoval.inspect(
                         current,block.blockId,day.weekday,slot)
+                },
+                onMoveToDay={slot->
+                    crossDayMoveScope=NativeKotlinPlanCrossDayMoveScope(
+                        current.athleteId,current.cycleId,current.revision,
+                        block.blockId,day.weekday,slot)
                 },
                 onEditSuperset={group->
                     supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday,group)
@@ -1799,6 +1807,117 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 dismissButton = { TextButton(onClick = {
                     editingBlock = null; addingBlock = false
                 }) { Text("Cancel") } })
+        }
+
+        crossDayMoveScope?.let {scope->
+            // Destinations are derived from the exact CURRENT draft. An
+            // old request may remain visible for explanation, but can never
+            // apply after a revision, owner or program change.
+            val matching=current.athleteId==scope.athleteId &&
+                current.cycleId==scope.cycleId &&
+                current.revision==scope.cycleRevision
+            val sourceBlock=current.blocks.singleOrNull{
+                it.blockId==scope.blockId
+            }
+            val sourceDay=sourceBlock?.days?.singleOrNull{
+                it.weekday==scope.fromWeekday
+            }
+            var destinationWeekday by remember(scope) {mutableIntStateOf(-1)}
+            val preview=if(matching && destinationWeekday in 0..6)
+                NativeKotlinPlanCrossDayMove.inspect(
+                    current,scope.blockId,scope.fromWeekday,
+                    scope.selectedSlotId,destinationWeekday)
+            else null
+            NativeEditSheet(
+                busy=busy,
+                onDismiss={crossDayMoveScope=null},
+                footer={
+                    Button(
+                        onClick={
+                            preview?.let{controller.moveExerciseAcrossDays(it)}
+                            crossDayMoveScope=null
+                        },
+                        enabled=!busy && preview!=null,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Confirm move to selected day")}
+                    TextButton(
+                        onClick={crossDayMoveScope=null},
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Keep original training day")}
+                }
+            ) {
+                Text("Move exercise to another day",
+                    style=MaterialTheme.typography.titleLarge)
+                if(!matching || sourceBlock==null || sourceDay==null) {
+                    Text("This program or exercise changed. Close and reopen "+
+                        "the move request for the latest saved draft.",
+                        style=MaterialTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.error)
+                } else {
+                    Text("From ${sourceDay.label} · ${sourceBlock.label}. "+
+                        "Choose the destination within this block; nothing "+
+                        "moves until you confirm.",
+                        style=MaterialTheme.typography.bodyMedium)
+                    val destinations=sourceBlock.days.filter{
+                        it.weekday!=scope.fromWeekday
+                    }.sortedBy{it.weekday}
+                    if(destinations.isEmpty())Text(
+                        "Add another training day to this block before moving exercises.",
+                        style=MaterialTheme.typography.bodyMedium)
+                    destinations.forEach {day->
+                        val option=NativeKotlinPlanCrossDayMove.inspect(
+                            current,scope.blockId,scope.fromWeekday,
+                            scope.selectedSlotId,day.weekday)
+                        FilterChip(
+                            selected=destinationWeekday==day.weekday,
+                            onClick={destinationWeekday=day.weekday},
+                            enabled=!busy && option!=null,
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                            label={Text("${customWeekdays.getOrElse(day.weekday){"Day"}} · "+
+                                day.label+(if(option==null)" · unavailable" else ""))}
+                        )
+                    }
+                    if(preview!=null) {
+                        HorizontalDivider()
+                        PursuitSectionHeading("Exact movement review",
+                            "${preview.fromDayLabel} → ${preview.toDayLabel}")
+                        Text(preview.movedExerciseIds.joinToString(" / "){
+                            kotlinExerciseLabel(it)
+                        },style=MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Move ${preview.movedSlotIds.size} exact exercise slot(s), "+
+                                "${preview.baseWorkingSets} base working sets and "+
+                                "${preview.baseWarmupSets} warm-ups to the END of the "+
+                                "selected day in this block. Pinned slots: "+
+                                "${preview.pinnedCount}.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        if(preview.supersetGroup!=null)Text(
+                            "The entire linked superset moves together, "+
+                                "with its original round members and order.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        if(preview.overrideCount>0)Text(
+                            "${preview.overrideCount} existing week-specific "+
+                                "prescription(s) follow these same slots to "+
+                                "week(s) ${preview.overrideWeeks.joinToString(", ")}. "+
+                                "Their ${preview.overrideWorkingSets} working "+
+                                "sets are preserved, not reset.",
+                            style=MaterialTheme.typography.bodyMedium)
+                        if(preview.remainingSourceSlots==0)Text(
+                            "The original training day will be empty until "+
+                                "you add another exercise.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                        Text(
+                            "Other days, source loads, exercise IDs, notes, "+
+                                "issued sessions and completed History remain "+
+                                "untouched. The new draft requires full review "+
+                                "and consent; Undo is available after saving.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
 
         removeExerciseReview?.let { review ->

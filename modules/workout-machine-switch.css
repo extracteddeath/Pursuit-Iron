@@ -81,7 +81,12 @@
   display:flex;align-items:center;gap:12px;font-size:.875rem;
   font-weight:550;min-height:48px;line-height:1.4;
 }
-#root .wpb .wpb-machine-switch-default input{width:22px;height:22px;flex-shrink:0;accent-color:var(--wpb-theme-accent)}
+#root .wpb .wpb-machine-switch-default .wpb-ui-control[type="checkbox"]{
+  appearance:auto;box-sizing:border-box;flex:0 0 22px;
+  width:22px;min-width:22px;max-width:22px;height:22px;min-height:22px;
+  padding:0;border-radius:4px;background:transparent;
+  accent-color:var(--wpb-theme-accent)
+}
 #root .wpb .wpb-machine-switch-add{
   display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;
   padding:10px 14px;border:none;border-radius:var(--pi-shape-action,16px);

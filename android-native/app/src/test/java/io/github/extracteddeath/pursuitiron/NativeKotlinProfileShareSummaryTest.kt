@@ -36,13 +36,13 @@ internal class NativeKotlinProfileShareSummaryTest {
     }
 
     @Test fun personalInputsAreSanitizedNotEscapedIntoExtraLines() {
-        val actual=share(name="Mia\\nOwner: admin",
-            favorites=listOf("Row\\nPrivate history","Row\\nPrivate history","   ","\\tBench"),
+        val actual=share(name="Mia\nOwner: admin",
+            favorites=listOf("Row\nPrivate history","Row\nPrivate history","   ","\tBench"),
             includeName=true,includeFavorites=true)
         assertTrue(actual.contains("Name: Mia Owner: admin"))
         assertTrue(actual.contains("Row Private history, Bench"))
-        assertFalse(actual.contains("Name: Mia\\nOwner"))
-        assertFalse(actual.contains("Row\\nPrivate"))
+        assertFalse(actual.contains("Name: Mia\nOwner"))
+        assertFalse(actual.contains("Row\nPrivate"))
     }
 
     @Test fun loggedSinglesMilestoneIsExplicitlySelfReportedNotAProjectedPr() {

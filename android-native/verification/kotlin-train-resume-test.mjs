@@ -41,4 +41,16 @@ assert.match(candidate,/\(visibleUnfinishedCount\+20\)\.coerceAtMost\(result\.wo
 assert.match(candidate,/visibleUnfinishedCount=20\s*resumable=null/);
 assert.doesNotMatch(candidate,/more navigation is still needed/);
 assert.match(candidate,/onOpenCustomWorkout\(item\.workoutId\)/);
+// Shortened-session review must use exact Kotlin-staged set evidence and
+// readable exercise identities, not raw source IDs or inferred counts.
+const shortDomain=readFileSync(
+ 'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinShorterSessionReviewDomain.kt','utf8');
+assert.match(shortDomain,/data class KotlinShortSessionExerciseImpact/);
+assert.match(shortDomain,/Collections\.unmodifiableList\(impacts\)/);
+assert.match(candidate,/val changedImpacts=review\.exerciseImpacts\.filter/);
+assert.match(candidate,/kotlinExerciseLabel\(impact\.exerciseId\)/);
+assert.match(candidate,/remainingWorking of \$originalWorking working sets retained/);
+assert.match(candidate,/!available\.alreadyIssued &&\s*changedImpacts\.isNotEmpty\(\)/);
+assert.doesNotMatch(candidate,/review\.omittedExerciseIds\.joinToString/);
 console.log('PASS native Train owner-scoped minimize, reverified resume, save-state retention, and complete unfinished-workout pagination');
+console.log('PASS native shorter-session impact evidence, exact counts and readable Train review');

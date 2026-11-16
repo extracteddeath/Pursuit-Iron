@@ -36,6 +36,21 @@ assert.match(policy,/it\.gymId==gymId && it\.exerciseId !in eligibleExerciseIds/
 assert.match(policy,/return historical==after/);
 assert.doesNotMatch(policy,/\.save\(|Journal|WorkoutMachineChoice/);
 
+const generated=readFileSync(root+'NativeKotlinWorkoutCandidateScreen.kt','utf8');
+const custom=readFileSync(root+'NativeKotlinCustomJournalScreen.kt','utf8');
+const selection=host.slice(host.indexOf('fun selectWorkoutPhysicalMachine('),
+    host.indexOf('fun workoutMachineEligibleExerciseIds('));
+assert.match(selection,/source\.catalog\.singleOrNull\{it\.exerciseId==exerciseId\}/);
+assert.match(selection,/EXERCISE_HAS_NO_MACHINE_STACK/);
+assert.ok(selection.indexOf('source.catalog.singleOrNull') <
+    selection.indexOf('workoutMachineChoices.save('));
+const recovery=host.slice(host.indexOf('fun recoverWorkoutMachineChoices('),
+    host.indexOf('fun selectWorkoutPhysicalMachine('));
+assert.match(recovery,/val eligible=if\(source!=null/);
+assert.match(recovery,/val machine=bound\[exercise\] \?: if\(exercise in eligible\)/);
+assert.match(recovery,/scope\.observedMachines\.forEach/);
+assert.match(custom,/val config=if\(slot\.exerciseId in eligibleMachineExercises\)/);
+assert.match(generated,/if\(exerciseId in eligibleMachineExercises\)/);
 assert.match(panel,/val verifiedMachineIds=catalog\.groupBy/);
 assert.match(panel,/records\.size==1/);
 assert.match(panel,/ex\.exerciseId in verifiedMachineIds/);

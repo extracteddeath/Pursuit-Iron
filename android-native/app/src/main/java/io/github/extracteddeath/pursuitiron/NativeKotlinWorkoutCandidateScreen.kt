@@ -127,6 +127,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val referenceMode=display.referenceMode
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var infoWarmupsOnly by rememberSaveable(workoutId){mutableStateOf(false)}
     var plateRequest by remember(workoutId) {
         mutableStateOf<NativeComposerPlateRequest?>(null)
     }
@@ -550,7 +551,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 }?.let {exerciseId->{reviewSwap(exerciseId)}},
                 onWarmup=toolExercise?.takeIf {
                     toolTargets.any{it.type==DraftSetType.WARMUP}
-                }?.let {exerciseId->{infoExerciseId=exerciseId}}
+                }?.let {exerciseId->{
+                    infoWarmupsOnly=true
+                    infoExerciseId=exerciseId
+                }}
             )
         }
         if(!presentation.finished) {
@@ -1110,11 +1114,23 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     first.role.name.lowercase().replace('_',' ')+
                     " · "+first.purpose.name.lowercase().replace('_',' '),
                 sets=composerWorkoutInfoSets(targets),
+                warmupsOnly=infoWarmupsOnly,
+                outcomes=journal?.effectiveSets.orEmpty().mapNotNull { (key,receipt)->
+                    (receipt.operation as? KotlinJournalOperation.RecordSet)?.let{key to it.outcome}
+                }.toMap(),
+                onSelectWarmup=if(state.busy || presentation?.finished!=false)null else ({key->
+                    // Navigation only: leave the ordinary set writer in charge.
+                    selectedKey=key
+                    showAll=false
+                    infoExerciseId=null
+                    infoWarmupsOnly=false
+                }),
                 onHistory={
                     infoExerciseId=null
+                    infoWarmupsOnly=false
                     historyExerciseId=exerciseId
                 },
-                onDismiss={infoExerciseId=null}
+                onDismiss={infoExerciseId=null;infoWarmupsOnly=false}
             )
         }
     }

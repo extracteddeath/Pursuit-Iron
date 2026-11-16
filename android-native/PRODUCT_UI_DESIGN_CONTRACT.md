@@ -806,3 +806,17 @@ Pure reducer and real native-file tests cover immutable targets, cold recovery,
 stale revisions, identity refusal, repeated movements and conditional amplifier
 entries. Source/CI verification does not establish device or accessibility
 acceptance; full-design and beta release gates remain open. No APK/AAB.
+
+
+## Warm-up task continuity — 2026-11-16
+
+The existing Warm-up shortcut now filters the shared issued-exercise details
+sheet to prescribed warm-ups rather than opening every working set. Both
+workout routes show saved warm-up outcomes and offer a direct jump to the
+next unlogged warm-up in Focus. This is navigation only: recorded results,
+targets, selected physical machines, other set drafts and the rest timer keep
+their existing owners. Closing or opening History restores normal Info scope.
+Normal Info also shows main-entry outcome status and explicitly authored
+amplifier follow-up work time. Missing work duration is shown as unknown.
+This source change still requires Android compilation and physical-device,
+large-font and TalkBack acceptance; the whole-app design gate remains open.

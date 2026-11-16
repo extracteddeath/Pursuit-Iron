@@ -139,7 +139,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val machineChoices=rememberNativeWorkoutMachineChoices(
         host,workoutId,custom=false,ready=journal!=null,
         exerciseSignature=journal?.snapshot?.targets
-            ?.map { it.exerciseId }?.distinct()?.joinToString(";").orEmpty())
+            ?.map { it.exerciseId }?.distinct()?.joinToString(";").orEmpty(),
+        roster=machineRoster,onRosterChanged={machineRoster=it})
     // Retain only the most recent VERIFIED journal reference for an open
     // note draft. A double storage failure must not discard unsaved text.
     // The cached reference never authorizes saving or marks a note saved.
@@ -830,6 +831,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             onSelect={machineId->
                 val exerciseId=selected?.target?.exerciseId
                 if(exerciseId!=null)machineChoices.onSelect(exerciseId,machineId)
+            },
+            onCreate={label,makeDefault->
+                val exerciseId=selected?.target?.exerciseId
+                if(exerciseId!=null)
+                    machineChoices.onCreate(exerciseId,label,makeDefault)
             })
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,

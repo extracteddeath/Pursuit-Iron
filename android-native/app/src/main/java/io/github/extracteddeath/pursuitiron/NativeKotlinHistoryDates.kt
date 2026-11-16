@@ -34,6 +34,11 @@ internal fun nativeHistoryDateLabel(entry:KotlinHistoryManifestEntry,zone:ZoneId
         .withLocale(locale).withZone(zone).format(Instant.ofEpochMilli(it))
 }
 
+/** Exercise visits use the recorded Finish clock, not their receipt order as a date. */
+internal fun nativeExerciseHistorySessionTitle(entry:KotlinHistoryManifestEntry,
+    zone:ZoneId,locale:Locale):String =
+    "Session ${entry.completionOrder} · ${nativeHistoryDateLabel(entry,zone,locale) ?: "Date not recorded"}"
+
 internal fun nativeHistoryRecordedDate(entry:KotlinHistoryManifestEntry,zone:ZoneId):LocalDate?=
     entry.completedAtEpochMillis?.let {Instant.ofEpochMilli(it).atZone(zone).toLocalDate()}
 

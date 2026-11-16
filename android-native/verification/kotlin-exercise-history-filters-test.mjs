@@ -69,4 +69,14 @@ assert.match(ui,/Text\("All machines · labeled"\)/);
 assert.match(ui,/showAllMachines=false/);
 assert.match(ui,/shown\.filter\{historyMachine\(it\)==activeMachine\}/);
 assert.match(ui,/row\.gymId/);
+// The History sheet must remain useful after a storage/inventory read error,
+// and session headings must use recorded Finish dates (never receipt order).
+assert.match(ui,/var refreshVersion by remember\(host,exerciseId\)/);
+assert.match(ui,/LaunchedEffect\(host,exerciseId,refreshVersion\)/);
+assert.match(ui,/refreshVersion\+\+/);
+assert.match(ui,/Retry history/);
+assert.match(ui,/Refresh history/);
+assert.match(ui,/catch\(cancelled:CancellationException\) \{ throw cancelled \}/);
+assert.match(ui,/sessionManifests\[row\.sessionOrder\]/);
+assert.match(ui,/nativeExerciseHistorySessionTitle\(it,historyZone,historyLocale\)/);
 console.log('PASS verified exercise history session grouping, gym-specific A\/B filters, and correction-aware favorites');

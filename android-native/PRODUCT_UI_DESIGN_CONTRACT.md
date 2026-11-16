@@ -737,3 +737,51 @@ prediction is claimed.
 Source/JVM checks cover these bindings and native task flow. Real phone/tablet
 entry, unit-change/cancel/retry, 200% text, TalkBack and workout-sheet return
 remain unverified. Whole-app design is still unfinished; no APK/AAB.
+
+## Exercise discovery and preference editing — 2026-11-16
+
+**Purpose and placement:** Gym owns equipment and future exercise preferences.
+Profile now describes its exercise library, and Gym places **Browse exercises**
+ahead of the long inventory. The old plain catalog list is removed. No competing
+primary tab or second training-selection authority is added.
+
+**Task flow:** browse the exact saved source; search names, muscles, movement
+metadata, equipment, fixtures or attachments; filter the complete result before
+paging; inspect requirements and direct/supporting targets; open the shared
+verified Exercise History sheet and return; stage Include/Exclude; Save or
+Discard; optionally Undo the last confirmed preference edit; use **Review your
+program** to enter the existing native Plan review. Eligibility comes from the
+canonical native picker, never from search text or merely having a display label.
+Pending inclusion does not claim a newly verified exercise before Save.
+
+Search, filters, paging, detail and unsent choices have saveable UI state inside
+the verified owner/athlete scope. The draft's original revision and exclusions
+remain fixed until an explicit reload; source changes disable Save. Back/swipe
+with changes requests discard, while in-flight writes block dismissal. Nested
+History keeps the library's filter/edit task in place. The shared native edit
+sheet now supports an optional stationary footer with scrollable content, so
+Save/Close stay reachable for a long catalog and adapt through the shared action
+pair. Other sheets keep their prior default body.
+
+The actual web `LibraryView` at verified main
+`12e2bd37258c56255c687cc6abed78d1921f6c07` exposes search,
+muscle/equipment/flag filters and a detail ban control. The previous native
+screen offered an unfiltered name list under the inventory. This continuation
+integrates searchable discovery with actual gym eligibility and explicit
+pending/save/discard/Undo boundaries. Shared labels, Material surfaces, radio
+selection semantics, 48dp targets and the canonical History sheet avoid parallel
+widget or historical-fact implementations. No measured speed or visual
+superiority is claimed.
+
+**Evidence:** real source files cover exclusion save/cold read/Undo, stale
+revision refusal, preserved authored programs and zero writes during browsing.
+A native issued workout continues recording and correction and reaches Finish /
+History after an exclusion, while a separately prepared future workout cannot
+use stale consent, including after preference Undo. Independent UI/source checks
+guard actual save/History/Plan wiring and the owner-scoped draft and footer.
+
+**Still required:** physical phone/tablet/foldable layouts, both themes, 200%
+text, keyboard, TalkBack, Back/swipe, failed-save recovery and process-death
+restoration with pending choices. Movement visuals, exercise goals/comparison,
+custom exercise creation and full library parity remain separate work. Whole-app
+UI acceptance is unfinished. No APK/AAB.

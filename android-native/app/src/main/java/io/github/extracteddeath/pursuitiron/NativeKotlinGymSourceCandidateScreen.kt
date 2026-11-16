@@ -37,14 +37,15 @@ internal fun kotlinGymAttachmentLabel(id:String):String=when(id) {
 }
 
 /**
- * Candidate-only native equipment setup, using Pursuit shared M3 components.
- * The full native onboarding/catalog curator must call the explicit source
- * publication API first. This is NOT attached to legacy MainActivity.
+ * Native equipment and exercise-library home, using shared Material components.
+ * Only the controller's verified source can supply catalog or gym facts.
  */
 @Composable
 internal fun NativeKotlinGymSourceCandidateScreen(
     controller:NativeKotlinGymSourceController,
-    reviewedSetupDraft:AthleteSetupDraft?=null
+    reviewedSetupDraft:AthleteSetupDraft?=null,
+    onReviewPlan:(()->Unit)?=null,
+    historyHost:NativeKotlinCandidateHost?=null
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val source=state.source
@@ -52,7 +53,6 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     val reviewed=source?.setup?.reviewed
     var editingFixtures by remember {mutableStateOf(false)}
     var showGymDetails by rememberSaveable {mutableStateOf(false)}
-    var showMovementCatalog by rememberSaveable {mutableStateOf(false)}
     var equipmentEditor by remember {mutableStateOf(false)}
     var removeTarget by remember {mutableStateOf<String?>(null)}
     var equipmentId by rememberSaveable {mutableStateOf("")}
@@ -132,6 +132,12 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        key(source.ownerKey,source.athleteId) {
+            NativeKotlinExerciseLibraryAccess(source,state.busy,state.message,state.lastExclusionEdit,
+                onReviewPlan=onReviewPlan,
+                historyHost=historyHost,
+                onSave=controller::saveExerciseExclusions,onUndo=controller::undoExerciseExclusions)
+        }
         NativeKotlinMachineAlternativesPanel(
             controller,gym.gymId,source.catalog,state.machineRoster,state.busy
         )
@@ -194,23 +200,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
             OutlinedButton(onClick={editingFixtures=true},
                 enabled=!state.busy) {Text("Edit availability")}
         }
-        PursuitCard {
-            PursuitSectionHeading("Reviewed exercises",
-                "${source.catalog.size} exercise definitions. Viewing them never edits your saved gym.")
-            TextButton(onClick={showMovementCatalog=!showMovementCatalog}) {
-                Text(if(showMovementCatalog)"Hide exercises" else "Show exercise catalog")
-            }
-            if(showMovementCatalog)source.catalog.forEach { item ->
-                Text(kotlinExerciseLabel(item.exerciseId),
-                    style=MaterialTheme.typography.bodyMedium)
-                if(showGymDetails)Text(
-                    "${item.familyId}/${item.variantId} · " +
-                    "Equipment ${item.equipmentId ?: "bodyweight"} · " +
-                    "Attachment ${item.attachmentId ?: "none"}",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+
     }
 
     if(reviewed!=null && source!=null && equipmentEditor) {

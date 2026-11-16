@@ -2200,6 +2200,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
             it,expectedRevision,facilities,attachments)
     }
 
+    fun updateNativeExerciseExclusions(
+        intent:NativeGymExerciseExclusionChange
+    ):NativeAuthoringSourceWrite {
+        val captured=intent.copy(previous=intent.previous.toSet(),next=intent.next.toSet())
+        return editCustomAuthoringSource(captured.sourceRevision) {
+            NativeKotlinGymCatalogEditingDomain.setExerciseExclusions(it,captured)
+        }
+    }
+
     /** Catalog metadata requires a human-reviewed provisional credit source. */
     fun publishNativeCuratedCatalog(
         expectedRevision:Long,catalog:List<CatalogMovement>

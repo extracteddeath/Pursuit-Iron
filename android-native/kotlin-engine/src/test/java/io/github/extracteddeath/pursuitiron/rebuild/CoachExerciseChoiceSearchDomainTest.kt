@@ -40,4 +40,13 @@ class CoachExerciseChoiceSearchDomainTest {
         assertEquals(copy,approved)
         assertEquals(approved.distinct(),search(""))
     }
+    @Test fun metadataSearchIsIndependentOfTheDevicesCaseConversionLocale() {
+        val before=java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR"))
+            assertEquals(listOf("curl"),CoachExerciseChoiceSearchDomain.filter(
+                listOf("curl","raise"),"biceps") {if(it=="curl")"BICEPS" else "DELTOIDS"})
+        } finally { java.util.Locale.setDefault(before) }
+    }
+
 }

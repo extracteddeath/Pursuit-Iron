@@ -941,14 +941,22 @@ assert.ok(!migrationGradle.includes('implementation(project(":engine-runtime"))'
 const betaSettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
 const betaGradle=read('android-native/app/build.gradle.kts');
 const betaScope=read('android-native/LAUNCH_BETA_SCOPE.md');
+const betaFormat=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinBetaFeedback.kt');
 assert.ok(betaSettings.includes('Share beta feedback') &&
+  betaSettings.includes('Report a problem') &&
   betaSettings.includes('Intent(Intent.ACTION_SEND)') &&
   betaSettings.includes('context.startActivity(Intent.createChooser(') &&
   betaSettings.includes('feedbackDraft=it.take(2000)') &&
-  betaSettings.includes('enabled=feedbackDraft.isNotBlank()') &&
-  betaSettings.includes('No training records, injury notes or diagnostics are attached automatically.') &&
-  !betaSettings.includes('READ_CONTACTS'),
-  'Early beta feedback requires an explicit opt-in share, no silent training/medical data upload');
+  betaSettings.includes('NativeKotlinBetaFeedbackFormat.canShare(') &&
+  betaSettings.includes('Only what you type and the installed app version are included') &&
+  betaSettings.includes('NativeEditSheet(') &&
+  betaSettings.includes('problemActual=it.take(NativeKotlinBetaFeedbackFormat.MAX_FIELD_CHARS)') &&
+  betaFormat.includes('it==\'\\u0000\'') &&
+  betaFormat.includes('NativeBetaFeedbackKind.PROBLEM ->') &&
+  !betaSettings.includes('READ_CONTACTS') &&
+  !betaSettings.includes('Intent.EXTRA_EMAIL') &&
+  !betaSettings.includes('Intent.EXTRA_STREAM'),
+  'Early beta feedback and problem reporting must be explicit, bounded and privacy-safe');
 assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
   betaGradle.includes('releaseRuntimeClasspath') &&
   betaGradle.includes('forbiddenProjectPaths') &&

@@ -8,6 +8,7 @@ const loader = read('modules/gym-load-fields.js');
 const session = read('modules/workout-session-controls.js');
 const program = read('modules/program-exercise-options.js');
 const app = read('modules/App.js');
+const runtime = read('modules/workout-machine-runtime.js');
 
 // The original A/B creation, gym default and workout set switching remain the
 // only owners. Discoverability must never redefine progression or merge stacks.
@@ -35,8 +36,11 @@ assert.match(session,/createPortal\(/);
 assert.match(session,/role:'alert'/);
 assert.match(session,/Same exercise, different physical machine/);
 assert.match(app,/onSelect:id=>switchPhysicalMachine\(ei,id\)/);
-assert.match(app,/if\(set\.done\)return set/);
-assert.match(app,/set\.machineInstanceId:nextId|machineInstanceId:nextId/);
+assert.match(runtime,/if\(set\.done\)return set/);
+assert.match(app,/chooseWorkoutPhysicalMachine\(row,scope\)/);
+assert.match(app,/createWorkoutPhysicalMachine\(gymProfile,row\?\.id,name,makeDefault\)/);
+assert.match(runtime,/machineInstanceId:nextId/);
+assert.match(runtime,/withGymMachineConfig/);
 assert.match(app,/lastMachine=machineId \? latestMachineSet\(history/);
 assert.doesNotMatch(gym,/setProgram\(|history\.push\(/);
 assert.doesNotMatch(session,/localStorage\.setItem\(|history\.push\(/);

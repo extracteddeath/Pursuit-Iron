@@ -27,4 +27,28 @@ assert.match(picker,/initialMachineScopedLoad\(/);
 assert.match(picker,/saved\.machineInstanceId==selectedMachineId/);
 assert.match(picker,/physicalMachineLastReferences\(/);
 assert.match(picker,/filterKeys \{ it\.machineId==requested \}/);
+// Creating a surprise physical machine must remain on an actual workout +
+// exact source gym, never act as a new program prescription or a JS fallback.
+assert.match(picker,/onCreate:\(String,String,Boolean\)->Unit/);
+assert.match(picker,/host\.addWorkoutPhysicalMachine\(/);
+assert.match(picker,/NativeWorkoutMachineCreationResult\.AddedNeedsSelection/);
+assert.match(picker,/onRosterChanged\(result\.roster\)/);
+assert.match(picker,/Add machine & use now/);
+assert.match(picker,/makeDefault/);
+for(const call of [generated,custom]) {
+  assert.match(call,/onRosterChanged=\{machineRoster=it\}/);
+  assert.match(call,/machineChoices\.onCreate\(/);
+}
+assert.match(host,/fun addWorkoutPhysicalMachine\(/);
+assert.match(host,/expectedRosterRevision:Long/);
+assert.match(host,/expectedChoiceRevision:Long/);
+assert.match(host,/reviewedGym==null \|\| reviewedGym\.gymId!=scope\.gymId/);
+assert.match(host,/scope\.finished \|\| exerciseId !in scope\.exerciseIds/);
+assert.match(host,/source\.catalog\.none\{it\.exerciseId==exerciseId\}/);
+assert.match(host,/previous\.machines\.size>=32/);
+assert.match(host,/it\.label\.equals\(name,ignoreCase=true\)/);
+assert.match(host,/machineRosters\.save\(signed\.ownerKey/);
+assert.match(host,/workoutMachineChoices\.save\(signed\.ownerKey,workoutId/);
+assert.match(host,/NativeWorkoutMachineCreationResult\.AddedNeedsSelection\(/);
+assert.doesNotMatch(host,/fun addWorkoutPhysicalMachine\([\s\S]*?journalStore\.save\(/);
 console.log('PASS native Machine A/B: compact touch-safe picker, keyboard/scroll sheet, disabled inactive options, same engine CAS and isolated set/Last scope.');

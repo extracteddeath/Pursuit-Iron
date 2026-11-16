@@ -58,6 +58,35 @@ internal fun nativePlanCanCreateSuperset(
             slot.sets.any{it.type==DraftSetType.WORKING}
     }>=2
 
+/**
+ * Plan labels are factual current-gym information, not per-program loads or
+ * authority to change an already issued workout's selected machine.
+ */
+internal fun nativePlanMachineDescription(
+    review:NativePlanMachineReview?,exerciseId:String
+):String? {
+    if(review==null || exerciseId !in review.eligibleExerciseIds)
+        return null
+    val groups=review.roster.configurations.filter {
+        it.gymId==review.gymId && it.exerciseId==exerciseId
+    }
+    if(groups.isEmpty())return "No physical machines saved at this gym yet."
+    val group=groups.singleOrNull()
+        ?:return "Machine A/B choices need review in Gym."
+    val active=group.machines.filter{it.active}
+    val gymDefault=active.singleOrNull { it.id==group.defaultMachineId }
+    return if(active.isEmpty())"No active physical machines at this gym."
+        else buildString {
+            append(active.size)
+            append(if(active.size==1)" active physical machine" else " active physical machines")
+            append(" at this gym")
+            if(gymDefault!=null) {
+                append(" · Default: ")
+                append(gymDefault.label)
+            } else append(" · Default not verified")
+        }
+}
+
 /** Same accessible, non-horizontal-scrolling day editor in both Plan layouts. */
 @Composable
 internal fun NativeKotlinPlanDayEditor(
@@ -66,7 +95,9 @@ internal fun NativeKotlinPlanDayEditor(
     onEditExercise:(String)->Unit,onSwapExercise:(String)->Unit,
     onMoveExercise:(String,Int)->Unit,onEditSuperset:(String?)->Unit,
     onRemoveExercise:(String)->Unit,onMoveToDay:(String)->Unit,
-    onEditDay:()->Unit,onAddExercise:()->Unit,onRemoveDay:()->Unit
+    onEditDay:()->Unit,onAddExercise:()->Unit,onRemoveDay:()->Unit,
+    machineReview:NativePlanMachineReview?=null,
+    onManageMachine:(String)->Unit={}
 ) {
     if(!nativePlanDayIsCurrent(draft,block,day)) {
         PursuitEmptyState("Program changed",
@@ -105,6 +136,21 @@ internal fun NativeKotlinPlanDayEditor(
                     "Superset with "+partnerNames.joinToString(" / ").ifEmpty{"linked movement"},
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.primary)
+                nativePlanMachineDescription(machineReview,slot.exerciseId)?.let {summary->
+                    Text("Physical Machine A/B · $summary",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(
+                        onClick={onManageMachine(slot.exerciseId)},
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Manage Machine A/B at my gym")}
+                    Text("A gym default applies to future workouts. Use the workout "+
+                        "machine picker to change an already issued session; "+
+                        "neither action rewrites logged weights.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 PursuitResponsiveActionPair(
                     primary={m->
                         Button(onClick={onEditExercise(slot.slotId)},enabled=actions.edit,

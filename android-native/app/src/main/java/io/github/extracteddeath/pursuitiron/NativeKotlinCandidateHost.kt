@@ -58,6 +58,13 @@ internal data class NativeKotlinTimeLimitChoiceReview(
  * fail after the roster commits; never hide that partial result or invent a
  * successful switch. No journal, issued load or completed set is rewritten.
  */
+/** Source-backed, read-only plan projection. Never authorizes a machine switch. */
+internal data class NativePlanMachineReview(
+    val gymId:String,
+    val eligibleExerciseIds:Set<String>,
+    val roster:NativeMachineRosterSnapshot
+)
+
 internal sealed interface NativeWorkoutMachineCreationResult {
     data class Created(
         val roster:NativeMachineRosterSnapshot,
@@ -219,6 +226,38 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * Physical machine alternatives use an independent owner-fenced source.
      * Changing a default never rewrites a reviewed program or past set receipt.
      */
+    /**
+     * Plan may disclose a gym's saved physical machines without granting new
+     * training rights. Authenticate the CURRENT owner/athlete and reviewed
+     * gym, then read the catalog basis and roster under one owner fence.
+     * A stale or foreign Plan returns no review instead of borrowing defaults.
+     */
+    fun reviewPlanPhysicalMachines(
+        athleteId:String,gymId:String
+    ):NativePlanMachineReview? {
+        val identity=localAthlete.signedInIdentity()?:return null
+        if(identity.athleteId!=athleteId)return null
+        return runCatching {revisionFence.withOwnerTransaction(identity.ownerKey) {
+            val source=(authoringSourceStore.read(identity.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            if(source==null || source.ownerKey!=identity.ownerKey ||
+                source.athleteId!=athleteId ||
+                source.setup.reviewed?.athleteProfileId!=athleteId ||
+                source.setup.reviewed?.gym?.gymId!=gymId)
+                return@withOwnerTransaction null
+            val saved=machineRosters.read(identity.ownerKey)
+                as? NativeMachineRosterResult.Saved
+                ?:return@withOwnerTransaction null
+            NativePlanMachineReview(
+                gymId=gymId,
+                eligibleExerciseIds=source.catalog.asSequence().filter {
+                    it.expectedLoadBasis in setOf(
+                        LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
+                }.map{it.exerciseId}.toSet(),
+                roster=saved.snapshot)
+        }}.getOrNull()
+    }
+
     fun readMachineRoster():NativeMachineRosterResult {
         val identity=localAthlete.signedInIdentity()
             ?:return NativeMachineRosterResult.Rejected("NOT_AUTHORIZED")

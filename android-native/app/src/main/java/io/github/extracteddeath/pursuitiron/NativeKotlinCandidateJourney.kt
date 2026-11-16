@@ -117,6 +117,11 @@ internal fun NativeKotlinCandidateJourney(
     var selectedGeneratedWorkoutId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    // Navigation-only request. No workout permission or machine default is
+    // granted by this ephemeral exercise focus.
+    var pendingMachineExerciseId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
     val savedScreens=rememberSaveableStateHolder()
     var previousContextKeys by remember {mutableStateOf(navigation.contextStateKeys)}
     LaunchedEffect(navigation) {
@@ -298,7 +303,10 @@ internal fun NativeKotlinCandidateJourney(
                             onBuildProgram={navigate(KotlinCandidateDestination.STARTER)})
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController,
-                            onReviewPlan={navigate(KotlinCandidateDestination.PROGRAM)},historyHost=host)
+                            onReviewPlan={navigate(KotlinCandidateDestination.PROGRAM)},
+                            historyHost=host,
+                            focusedMachineExerciseId=pendingMachineExerciseId,
+                            onMachineFocusConsumed={pendingMachineExerciseId=null})
                     KotlinCandidateDestination.STARTER ->
                         NativeKotlinFirstProgramCandidateScreen(
                             starterController,
@@ -326,6 +334,10 @@ internal fun NativeKotlinCandidateJourney(
                                 navigate(KotlinCandidateDestination.HISTORY)
                             },
                             onBuildProgram={navigate(KotlinCandidateDestination.STARTER)},
+                            onManagePhysicalMachine={exerciseId->
+                                pendingMachineExerciseId=exerciseId
+                                navigate(KotlinCandidateDestination.GYM)
+                            },
                             permissionHost=host)
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,

@@ -236,7 +236,7 @@ object CustomCycleCoachAuditDomain {
                         !profile.allowBodyweight)
                         add(CustomCoachIssueKind.BODYWEIGHT_DISABLED,at,
                             "The athlete disabled bodyweight movements.")
-                    if (catalogEntry.expectedLoadBasis == LoadBasis.BARBELL_TOTAL)
+                    if (catalogEntry.expectedLoadBasis?.countsTowardBarbellLimit==true)
                         barbellCount++
                 }
             }

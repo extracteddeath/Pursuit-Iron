@@ -102,7 +102,7 @@ object CustomExerciseAuthoringDomain {
                     ?: return@mapNotNull null
                 if (stock.unit != gym.unit ||
                     stock.basis != move.expectedLoadBasis ||
-                    (stock.basis == LoadBasis.BARBELL_TOTAL &&
+                    (stock.basis.countsTowardBarbellLimit &&
                         athlete.maxBarbellExercisesPerDay == 0))
                     return@mapNotNull null
                 // Reject malformed stock; never turn an inventory exception
@@ -145,7 +145,8 @@ object CustomExerciseAuthoringDomain {
             DraftSetLoad.ExplicitBodyweight -> selection.bodyweight
             is DraftSetLoad.Verified -> {
                 val stock = selection.availability.stock
-                if (stock == null || load.value <= zero || load.value > max ||
+                if (stock == null || load.value < zero ||
+                    load.value.signum()==0 && !load.basis.permitsZeroAddedLoad || load.value > max ||
                     load.value.stripTrailingZeros().scale() > 3 ||
                     load.unit != stock.unit || load.basis != stock.basis) false
                 else {

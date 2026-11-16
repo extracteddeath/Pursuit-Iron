@@ -16,7 +16,17 @@ enum class LoadBasis {
     BARBELL_TOTAL, DUMBBELL_PER_HAND, CABLE_STACK, MACHINE_STACK,
     SMITH_TOTAL, EXERCISE_OVERRIDE,
     /** Mass of ONE bell, including a two-handed swing or a matched-pair row. */
-    KETTLEBELL_EACH
+    KETTLEBELL_EACH,
+    /** Plates added at the loaded end; excludes the bar and pivot/base mass. */
+    LANDMINE_ADDED_PLATES;
+
+    /** Physical free bars count even when the logged convention excludes bar mass. */
+    val countsTowardBarbellLimit:Boolean
+        get()=this==BARBELL_TOTAL || this==LANDMINE_ADDED_PLATES
+
+    /** Zero ADDED mass still leaves a real bar; other conventions stay unchanged. */
+    val permitsZeroAddedLoad:Boolean
+        get()=this==LANDMINE_ADDED_PLATES
 }
 
 sealed interface VerifiedLoadStock {

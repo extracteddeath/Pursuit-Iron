@@ -6,7 +6,7 @@ import org.junit.Test
 
 class ReviewedSerratusTibialisCatalogTest {
     private val ids=listOf("serratus-pushup","tibialis-raise")
-    private val added=StarterExerciseTranche.entries().takeLast(2)
+    private val added=StarterExerciseTranche.entries().filter { it.legacyCuratedId in setOf("serratus-pushup","tibialis-raise") }
     private fun n(v:String)=BigDecimal(v)
     private val template=ComposerRequest(ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY,
         listOf(0,2,4).map{ComposerDay(it,ComposerFocus.FULL_BODY,DeclaredSessionWindow(1,90,null,60))},
@@ -23,7 +23,7 @@ class ReviewedSerratusTibialisCatalogTest {
         assertEquals(listOf(TrainingMuscle.SERRATUS_ANTERIOR,TrainingMuscle.TIBIALIS_ANTERIOR),
             added.map{it.movement.credits.single().muscle})
         assertTrue(added.all{it.movement.expectedLoadBasis==null && it.movement.equipmentId==null && !it.mayTransferPreviousLoad})
-        assertEquals(322,StarterExerciseTranche.entries().size)
+        assertEquals(325,StarterExerciseTranche.entries().size)
         assertEquals((0..19).toList(),TrainingMuscleCoverage.legacyV3.map{it.ordinal})
     }
 

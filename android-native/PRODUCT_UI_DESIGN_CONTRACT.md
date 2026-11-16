@@ -709,3 +709,31 @@ targets and the approved program unchanged. Different stations remain separate.
 
 This source checkpoint does not certify final layout, motion, accessibility,
 phone/foldable usability or full UI completion. The APK/AAB freeze remains.
+
+## Landmine inventory and shared load language — 2026-11-15
+
+Onboarding offers **Add a landmine station** beside existing optional equipment.
+Its field confirms the bar/pivot and lists attainable added-plate totals; zero
+requires explicit entry. Changing units clears it with the rest of provisional
+inventory. Gym retains its existing searchable physical-stock home, exact-list
+input and source-fenced save. An opaque machine entry cannot shadow the station.
+
+The shared label **landmine added plates** and weight suffix **added plates**
+follow the same convention through calibration, both workout routes, Last,
+Info, reviews and History. The free-bar plate viewer cannot invent a symmetric
+layout or bar mass for this list. Current Leveling averages landmine zero rows
+as unloaded-bar work and only offers unfinished row keys; acceptance changes
+unsent input, followed by ordinary explicit set logging. It does not change
+issued targets or future programs.
+
+The actual web `barFor` route maps a landmine to the generic barbell plate
+helper. This native flow instead makes the chosen added-plate convention
+visible at entry and throughout the workout, and refuses a guessed symmetric
+plate diagram. It requires explicit movement calibration rather than the web
+starting-load module's generic 0.6 landmine factor. The source comparison is
+recorded in the landmine loading review; no faster interaction or better force
+prediction is claimed.
+
+Source/JVM checks cover these bindings and native task flow. Real phone/tablet
+entry, unit-change/cancel/retry, 200% text, TalkBack and workout-sheet return
+remain unverified. Whole-app design is still unfinished; no APK/AAB.

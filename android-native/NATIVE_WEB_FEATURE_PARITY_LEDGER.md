@@ -16,8 +16,8 @@ stock input; at that checkpoint, program policy v10 declared all 20 muscle group
 Saved v9 policies retain exactly 18 rows, and v1–v8 retain 16. Independently
 captured v8 and v9 native stores test byte-preserving cold recovery of their
 original approvals and completed training. Historical counts below describe
-earlier checkpoints. The latest November 15 checkpoint is **322/376 IDs**,
-with **54 absent**, and new policy v11 declares 22 separate muscle groups;
+earlier checkpoints. The latest November 15 checkpoint is **325/376 IDs**,
+with **51 absent**, and new policy v11 declares 22 separate muscle groups;
 v10/v9/v1–v8 retain their original 20/18/16 scopes. None of these counts proves
 complete engine parity, science validation or comparative coaching superiority.
 
@@ -540,3 +540,28 @@ sources and the limits of provisional set/dose accounting are documented in
 [kotlin-engine/verification/serratus-tibialis-review.md](kotlin-engine/verification/serratus-tibialis-review.md).
 Full functional parity, superiority, complete UI and device acceptance remain
 open. Cable, banded, weighted and timed variants are separate work. No APK/AAB.
+
+## Landmine loading and exercises — 2026-11-15
+
+All three active-web landmine identities now have Kotlin definitions, their
+8–12 source practical bands and separate movement-specific calibrations. A
+confirmed bar and anchored pivot use their own `landmine-station` stock and
+`LANDMINE_ADDED_PLATES` basis. The athlete enters attainable plate totals at
+the loaded end, excluding bar and base; zero is explicit, never a blank default.
+No straight-bar fallback, half-bar resistance, doubled plate total or free-bar
+history/strength equivalence is inferred. The shared composer, selection and
+custom audit count landmine work against the barbell-per-day cap.
+
+Onboarding reveals this optional input on request; Gym uses the existing
+searchable stock editor with the same convention. Shared labels follow the
+load through calibration, workout entry/Last, Info, coaching review and History.
+Current-workout Leveling includes explicit zero-added-plate landmine sets, with
+completed sets excluded from edit keys. Ordinary journaled actuals remain factual.
+
+Source/native tests cover generation and every converted cycle week, explicit
+loads, zero semantics, caps, consent/issuance, correction/retry, cold reopen,
+Finish and verified CSV. Existing v8/v9/v10 archive replay remains mandatory.
+The inventory is now **325/376**, with **51 IDs absent**. See the bounded
+[physical/source review](kotlin-engine/verification/landmine-loading-review.md).
+Full functional parity, measured coaching improvement and whole-app/device
+acceptance remain open. No APK/AAB.

@@ -88,12 +88,23 @@ contains four completed workouts and corrections; all 21 files must retain their
 exact bytes, original consent and regenerated cycle. The existing v8/v9 archives
 remain pinned and must also reproduce their exact original cycles.
 
-Current source inventory is **322/376**, with **54 IDs still absent**. Both web
+At that checkpoint source inventory was **322/376**, with **54 IDs still absent**. Both web
 catalog blobs were checked against current main and remain identical to the
 inventory baseline. [The source review](kotlin-engine/verification/serratus-tibialis-review.md)
 distinguishes anatomical/function evidence from unvalidated numeric set credits
 and dose planning. Full functional parity, measured coaching superiority and
 whole-app UI / physical-device acceptance remain open. No APK/AAB.
+
+**Landmine checkpoint (2026-11-15):** Meadows row, landmine press and landmine
+squat use a separate confirmed bar/pivot station and added-plate-only load
+basis. Blank never means zero; explicitly entered zero means an unloaded bar.
+All barbell limits use the same physical classification. Calibration, generated
+program/cycle targets, set entry/Last, optional Leveling and History retain this
+convention without free-bar load or force equivalence. Native-file tests cover
+actuals, corrections, retries, cold reopen, Finish and CSV; old archive replay
+and byte compatibility remain required. Current catalog source inventory is
+**325/376**, with **51 absent**. Full CI, physical/UI/accessibility acceptance,
+complete parity and measured superiority remain separate gates. No APK/AAB.
 
 ## What works in the isolated Kotlin core
 

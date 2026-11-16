@@ -252,7 +252,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 require(p.type!=DraftSetType.WARMUP || p.amplifier==null)
                 fun checkLoad(load:DraftSetLoad) {
                     if(load is DraftSetLoad.Verified)require(
-                        load.value>zero && load.value<=maxWeight &&
+                        (load.value>zero || load.basis.permitsZeroAddedLoad && load.value.signum()==0) &&
+                        load.value<=maxWeight &&
                         load.value.stripTrailingZeros().scale()<=3)
                 }
                 checkLoad(p.load)

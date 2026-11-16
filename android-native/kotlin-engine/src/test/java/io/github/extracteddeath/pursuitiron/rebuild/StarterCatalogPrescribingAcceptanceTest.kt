@@ -40,6 +40,8 @@ class StarterCatalogPrescribingAcceptanceTest {
             basis,listOf(n("20"),n("25"),n("30")))
         LoadBasis.KETTLEBELL_EACH->VerifiedLoadStock.Totals(LoadUnit.LB,
             basis,listOf(n("20"),n("25"),n("30")))
+        LoadBasis.LANDMINE_ADDED_PLATES->VerifiedLoadStock.Totals(LoadUnit.LB,
+            basis,listOf(n("0"),n("20"),n("25"),n("30")))
         LoadBasis.EXERCISE_OVERRIDE->selectorized
     }
     private fun calibratedLoad(spec:CatalogMovement):BigDecimal?=when(

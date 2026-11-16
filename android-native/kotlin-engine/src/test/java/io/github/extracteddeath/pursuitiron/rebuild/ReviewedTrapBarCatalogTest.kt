@@ -46,7 +46,7 @@ class ReviewedTrapBarCatalogTest {
 
     @Test fun seventeenExactIdentitiesAppendWithoutAliasesOrLoadTransfers() {
         assertEquals(ids,added.map{it.legacyCuratedId})
-        assertEquals(322,all.size)
+        assertEquals(325,all.size)
         assertEquals(all.size,all.map{it.movement.exerciseId}.distinct().size)
         assertEquals(all.size,all.map{it.movement.familyId to it.movement.variantId}.distinct().size)
         assertTrue(added.none{it.mayTransferPreviousLoad})

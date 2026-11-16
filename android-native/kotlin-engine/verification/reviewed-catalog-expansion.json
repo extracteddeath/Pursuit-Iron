@@ -8314,6 +8314,101 @@
         "note": "Unweighted tibialis raise uses the explicitly confirmed stable wall for support and ankle dorsiflexion. Tibialis anterior has its own ledger, independent of plantar-flexion calf work. No machine, band or external load is inferred; credit is provisional."
       },
       "sourceSubregion": "tibialis"
+    },
+    {
+      "id": "meadows-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "landmine"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "landmine_row",
+        "variant": "meadows-overhand-row",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "landmine-station",
+        "basis": "LANDMINE_ADDED_PLATES",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "FRONT_DELTS:0.25",
+          "TRAPS:0.25",
+          "REAR_DELTS:0.25"
+        ],
+        "attachment": null,
+        "note": "Meadows row requires the confirmed landmine bar and anchored pivot. Log only added plates at the loaded end, never the full bar or an estimated lever resistance. Broad source back credit is provisionally upper back, with no duplicate full lat credit; its calibration and history stay independent."
+      }
+    },
+    {
+      "id": "landmine-press",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "landmine"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "landmine_press",
+        "variant": "standing-landmine-press",
+        "pattern": "VERTICAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "landmine-station",
+        "basis": "LANDMINE_ADDED_PLATES",
+        "fixtures": [],
+        "direct": "FRONT_DELTS",
+        "indirect": [
+          "TRICEPS:0.25",
+          "CHEST:0.25"
+        ],
+        "attachment": null,
+        "note": "Landmine press uses the confirmed bar and anchored pivot, with only added plates at the loaded end recorded. Bar mass, pivot mass and inferred effective resistance are excluded. Its angled press and exercise-specific calibration do not count as a free-bar overhead press baseline."
+      }
+    },
+    {
+      "id": "lm-squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "landmine"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "landmine_squat",
+        "variant": "front-loaded-landmine-squat",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "landmine-station",
+        "basis": "LANDMINE_ADDED_PLATES",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "Landmine squat requires the confirmed bar and anchored pivot. Record only added plates at the loaded end; zero means no added plates, not bodyweight or zero total resistance. Source muscle credits remain provisional; no free-bar squat load, practice identity or history transfers."
+      }
     }
   ]
 }

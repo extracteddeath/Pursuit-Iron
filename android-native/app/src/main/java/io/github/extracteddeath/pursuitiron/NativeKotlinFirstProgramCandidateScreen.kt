@@ -246,7 +246,7 @@ internal fun NativeFirstProgramCalibrationPanel(
         val parsed=runCatching{BigDecimal(raw.trim())}.getOrNull()
         val inspection=if(option!=null && parsed!=null)
             EquipmentLoadDomain.inspect(stock,parsed,option.unit) else null
-        parsed==null || parsed<=BigDecimal.ZERO ||
+        !kotlinWorkingLoadEntered(parsed,option?.basis) ||
             inspection !is LoadInspection.Confirmed || !inspection.exact ||
             inspection.basis!=option?.basis
     }.keys
@@ -334,7 +334,7 @@ internal fun NativeFirstProgramCalibrationPanel(
                 val inspection=if(typed!=null)
                     EquipmentLoadDomain.inspect(stock,typed,option.unit)
                     else null
-                val exact=typed!=null && typed>BigDecimal.ZERO &&
+                val exact=kotlinWorkingLoadEntered(typed,option.basis) &&
                     inspection is LoadInspection.Confirmed &&
                     inspection.exact && inspection.basis==option.basis
                 Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
@@ -355,8 +355,10 @@ internal fun NativeFirstProgramCalibrationPanel(
                                         Text("Exact verified gym load. This does not guarantee achievable reps.")
                                     typed==null ->
                                         Text("Enter a valid number.",color=MaterialTheme.colorScheme.error)
-                                    typed<=BigDecimal.ZERO ->
-                                        Text("Working load must be greater than zero.",
+                                    !kotlinWorkingLoadEntered(typed,option.basis) ->
+                                        Text(if(option.basis?.permitsZeroAddedLoad==true)
+                                            "Added plates must be zero or greater."
+                                            else "Working load must be greater than zero.",
                                             color=MaterialTheme.colorScheme.error)
                                     inspection is LoadInspection.Confirmed -> {
                                         Text("This load is not in your verified equipment inventory.",
@@ -373,7 +375,7 @@ internal fun NativeFirstProgramCalibrationPanel(
                             inspection is LoadInspection.Confirmed) {
                             val choices=listOfNotNull(
                                 inspection.atOrBelow,inspection.nextAbove)
-                                .distinct().filter{it>BigDecimal.ZERO}
+                                .distinct().filter{kotlinWorkingLoadEntered(it,option.basis)}
                             choices.forEach{choice->
                                 TextButton(
                                     enabled=!state.busy,

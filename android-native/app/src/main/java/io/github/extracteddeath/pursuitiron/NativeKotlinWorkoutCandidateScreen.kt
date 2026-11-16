@@ -705,7 +705,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             } else if((review as? CurrentWorkoutLevelingReview.Unavailable)?.reason==
                 CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
-                levelRows.count{row->row.load?.let{it>BigDecimal.ZERO}==true}>=2) {
+                levelRows.count{row->kotlinWorkingLoadEntered(row.load,row.basis)}>=2) {
                 Text("To level loads, confirm the equipment increments or "+
                     "available stack weights in My gym. Your entered sets "+
                     "remain editable and nothing has been changed.",
@@ -860,11 +860,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         set.target.exerciseId==levelExerciseId &&
                         recordedMachineId==levelMachineId &&
                         levelWeight.isNotBlank() && levelReps>0 &&
-                        (currentEditors[levelEditorKey(
+                        kotlinWorkingLoadEntered((currentEditors[levelEditorKey(
                             set.target.setKey,recordedMachineId)]?.weight
                             ?:initialMachineScopedLoad(
                                 set.target.load,null,recordedMachineId))
-                            .toBigDecimalOrNull()?.let{it>BigDecimal.ZERO}==true)
+                            .toBigDecimalOrNull(),
+                            (set.target.load as? DraftSetLoad.Verified)?.basis))
                         CurrentWorkoutLevelingDraft(levelVersion,levelWeight,levelReps)
                     else null,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&

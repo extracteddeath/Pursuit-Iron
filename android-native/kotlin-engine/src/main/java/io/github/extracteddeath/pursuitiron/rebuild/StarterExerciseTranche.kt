@@ -2030,12 +2030,35 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
             null,null,setOf("wall-support"),15..25,
             "Unweighted tibialis raise uses the explicitly confirmed stable wall for support and ankle dorsiflexion. Tibialis anterior has its own ledger, independent of plantar-flexion calf work. No machine, band or external load is inferred; credit is provisional.",
-            direct(TrainingMuscle.TIBIALIS_ANTERIOR))
+            direct(TrainingMuscle.TIBIALIS_ANTERIOR)),
+        entry("meadows-row","landmine_row","meadows-overhand-row",
+            ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
+            "landmine-station",LoadBasis.LANDMINE_ADDED_PLATES,emptySet(),8..12,
+            "Meadows row requires the confirmed landmine bar and anchored pivot. Log only added plates at the loaded end, never the full bar or an estimated lever resistance. Broad source back credit is provisionally upper back, with no duplicate full lat credit; its calibration and history stay independent.",
+            direct(TrainingMuscle.UPPER_BACK),
+            indirect(TrainingMuscle.BICEPS,"0.25"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.25"),
+            indirect(TrainingMuscle.TRAPS,"0.25"),
+            indirect(TrainingMuscle.REAR_DELTS,"0.25")),
+        entry("landmine-press","landmine_press","standing-landmine-press",
+            ComposerPattern.VERTICAL_PRESS,ComposerRole.SECONDARY,press,
+            "landmine-station",LoadBasis.LANDMINE_ADDED_PLATES,emptySet(),8..12,
+            "Landmine press uses the confirmed bar and anchored pivot, with only added plates at the loaded end recorded. Bar mass, pivot mass and inferred effective resistance are excluded. Its angled press and exercise-specific calibration do not count as a free-bar overhead press baseline.",
+            direct(TrainingMuscle.FRONT_DELTS),
+            indirect(TrainingMuscle.TRICEPS,"0.25"),
+            indirect(TrainingMuscle.CHEST,"0.25")),
+        entry("lm-squat","landmine_squat","front-loaded-landmine-squat",
+            ComposerPattern.SQUAT,ComposerRole.SECONDARY,lower,
+            "landmine-station",LoadBasis.LANDMINE_ADDED_PLATES,emptySet(),8..12,
+            "Landmine squat requires the confirmed bar and anchored pivot. Record only added plates at the loaded end; zero means no added plates, not bodyweight or zero total resistance. Source muscle credits remain provisional; no free-bar squat load, practice identity or history transfers.",
+            direct(TrainingMuscle.QUADS),
+            indirect(TrainingMuscle.GLUTES,"0.25"),
+            indirect(TrainingMuscle.HAMSTRINGS,"0.25"))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==322)
+        require(definitions.size==325)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

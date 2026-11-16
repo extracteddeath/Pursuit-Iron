@@ -127,6 +127,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var dumbbells by rememberSaveable {mutableStateOf("")}
     var kettlebells by rememberSaveable {mutableStateOf("")}
     var kettlebellPairs by rememberSaveable {mutableStateOf("")}
+    var landmineLoads by rememberSaveable {mutableStateOf("")}
     var cable by rememberSaveable {mutableStateOf("")}
     var barEquipmentId by rememberSaveable{mutableStateOf("straight-bar")}
     var barWeight by rememberSaveable {mutableStateOf("")}
@@ -141,6 +142,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var showExclusions by rememberSaveable {mutableStateOf(false)}
     var showExtraEquipment by rememberSaveable {mutableStateOf(false)}
     var showKettlebells by rememberSaveable {mutableStateOf(false)}
+    var showLandmine by rememberSaveable {mutableStateOf(false)}
     var showAdvancedAttachments by rememberSaveable {mutableStateOf(false)}
     var showAdvancedMachineId by rememberSaveable {mutableStateOf(false)}
     var onboardingMachineSearch by rememberSaveable {mutableStateOf("")}
@@ -173,7 +175,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     }
     val gymInventory=onboardingStock(chosenUnit,dumbbells,cable,
         barWeight,plates,machineId,machineLoads,
-        savedMachines,nonMachineEquipmentIds,barEquipmentId,kettlebells,kettlebellPairs)
+        savedMachines,nonMachineEquipmentIds,barEquipmentId,kettlebells,kettlebellPairs,landmineLoads)
     val stagedMachines=OnboardingMachineStockDomain.parse(savedMachines)
     val machineToAdd=OnboardingMachineStockDomain.add(
         savedMachines,machineId,machineLoads,nonMachineEquipmentIds)
@@ -230,7 +232,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     val existing=sourceState.source
     fun changeUnit(next:String) {
         if(unit.isNotBlank() && unit!=next) {
-            dumbbells="";kettlebells="";kettlebellPairs="";cable="";barWeight="";plates=""
+            dumbbells="";kettlebells="";kettlebellPairs="";landmineLoads="";cable="";barWeight="";plates=""
             machineId="";machineLoads=""
             savedMachines=""
         }
@@ -432,7 +434,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     // Switching units always clears the ENTIRE provisional
                     // inventory; these numbers must never be converted.
                     if(unit!=it.name) {
-                        if(unit.isNotBlank() && listOf(dumbbells,kettlebells,kettlebellPairs,cable,barWeight,
+                        if(unit.isNotBlank() && listOf(dumbbells,kettlebells,kettlebellPairs,landmineLoads,cable,barWeight,
                                     plates,machineLoads,savedMachines)
                                 .any{raw->raw.isNotBlank()})pendingUnit=it.name
                         else changeUnit(it.name)
@@ -469,6 +471,12 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                         supportingText={Text("Weight of each bell in a matching pair. A single bell does not confirm a pair.")},
                         modifier=Modifier.fillMaxWidth())
                 } else TextButton(onClick={showKettlebells=true}) {Text("Add kettlebells")}
+                if(showLandmine || landmineLoads.isNotBlank()) {
+                    OutlinedTextField(landmineLoads,{landmineLoads=it.take(900);gymConfirmed=false},
+                        label={Text("Landmine · added plate weights")},
+                        supportingText={Text("Confirm a bar secured in a landmine pivot. Enter attainable plate totals at the loaded end, separated by commas. Exclude the bar and base; enter 0 only for no added plates.")},
+                        modifier=Modifier.fillMaxWidth())
+                } else TextButton(onClick={showLandmine=true}) {Text("Add a landmine station")}
                 val barChoices=remember{ kotlinGymStockChoices(StarterExerciseTranche.movements())
                     .filter{KotlinVerifiedPlateLayoutDomain.supportsBasis(it.basis)} }
                 NativeSetupChoice("Bar type",barChoices,

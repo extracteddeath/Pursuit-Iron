@@ -121,7 +121,7 @@ object CoachAthleteCatalogCandidateDomain {
                 add("choices",AthleteCandidateIssueKind.BODYWEIGHT_DISABLED,
                     "The athlete disabled unweighted bodyweight movements.")
             if(profile.maxBarbellExercisesPerDay==0 &&
-                movement.expectedLoadBasis==LoadBasis.BARBELL_TOTAL)
+                movement.expectedLoadBasis?.countsTowardBarbellLimit==true)
                 add("choices",AthleteCandidateIssueKind.BARBELL_LIMIT,
                     "No barbell exercises are allowed by this gym profile.")
         }
@@ -167,7 +167,7 @@ object CoachAthleteCatalogCandidateDomain {
                 movementById[it.exerciseId]
             }
             if(movements.count {
-                it.expectedLoadBasis==LoadBasis.BARBELL_TOTAL
+                it.expectedLoadBasis?.countsTowardBarbellLimit==true
             }>profile.maxBarbellExercisesPerDay)
                 add("day."+day.calendarDay+".barbell",
                     AthleteCandidateIssueKind.BARBELL_LIMIT,

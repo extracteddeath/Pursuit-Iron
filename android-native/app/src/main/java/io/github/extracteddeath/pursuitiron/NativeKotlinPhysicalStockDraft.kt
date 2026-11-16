@@ -10,11 +10,12 @@ internal enum class PhysicalStockEditorKind {
     EXACT_LOADS, VERIFIED_STACK, BARBELL_WITH_PAIRS, SMITH_WITH_PAIRS
 }
 
-private fun exactLoadList(text:String):List<BigDecimal>? =
+private fun exactLoadList(text:String,allowZero:Boolean=false):List<BigDecimal>? =
     runCatching {
         val values=text.split(",").map{BigDecimal(it.trim())}
         values.takeIf {it.isNotEmpty() &&
-            values.size<=250 && values.all{it>BigDecimal.ZERO}}
+            values.size<=250 && values.all{
+                if(allowZero)it>=BigDecimal.ZERO else it>BigDecimal.ZERO}}
     }.getOrNull()
 
 private fun barbellPairs(text:String):Map<BigDecimal,Int>? =
@@ -40,7 +41,8 @@ internal fun parseVerifiedStock(
     when(kind) {
         PhysicalStockEditorKind.EXACT_LOADS -> {
             require(basis!=LoadBasis.BARBELL_TOTAL)
-            VerifiedLoadStock.Totals(unit,basis,requireNotNull(exactLoadList(weights)))
+            VerifiedLoadStock.Totals(unit,basis,requireNotNull(exactLoadList(weights,
+                allowZero=basis.permitsZeroAddedLoad)))
         }
         PhysicalStockEditorKind.VERIFIED_STACK -> {
             require(basis in listOf(LoadBasis.CABLE_STACK,
@@ -85,6 +87,7 @@ internal data class KotlinGymStockChoice(
         "dumbbell-rack" -> "Dumbbells"
         "single-kettlebell" -> "Kettlebell (single)"
         "matched-kettlebell-pair" -> "Kettlebells (matching pair)"
+        "landmine-station" -> "Landmine (bar and anchored pivot)"
         "cable-station" -> "Cable station"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}
@@ -118,7 +121,7 @@ internal fun onboardingStock(
     machineId:String,machineLoads:String,
     savedMachines:String,nonMachineEquipmentIds:Set<String>,
     barEquipmentId:String="straight-bar",
-    kettlebells:String="",kettlebellPairs:String=""
+    kettlebells:String="",kettlebellPairs:String="",landmineLoads:String=""
 ):Map<String,VerifiedLoadStock>? {
     if(unit==null) return null
     return runCatching {
@@ -131,6 +134,8 @@ internal fun onboardingStock(
         if(kettlebellPairs.isNotBlank())stock["matched-kettlebell-pair"]=VerifiedLoadStock.Totals(
             unit,LoadBasis.KETTLEBELL_EACH,exactPhysicalLoads(kettlebellPairs).also {
                 require(it.all{weight->weight>BigDecimal.ZERO}) })
+        if(landmineLoads.isNotBlank())stock["landmine-station"]=VerifiedLoadStock.Totals(
+            unit,LoadBasis.LANDMINE_ADDED_PLATES,exactPhysicalLoads(landmineLoads))
         if(cable.isNotBlank()) {
             val parts=cable.split(",").map{BigDecimal(it.trim())}
             require(parts.size==3)

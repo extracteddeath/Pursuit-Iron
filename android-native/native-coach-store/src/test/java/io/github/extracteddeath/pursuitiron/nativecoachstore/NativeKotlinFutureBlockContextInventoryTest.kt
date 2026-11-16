@@ -67,7 +67,7 @@ class NativeKotlinFutureBlockContextInventoryTest {
         val setup=setup()
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,setup.status)
         val source=NativeCustomAuthoringSnapshot(
-            "owner-1","athlete-1",1,setup,emptyList())
+            "owner-1","athlete-1",1,setup,listOf(StarterExerciseTranche.movements().first{it.exerciseId=="bodyweight_crunch"}))
         val future=ProspectiveBlockCoachingContext(setup,policy(),
             mapOf(0 to 900,1 to 900,3 to 900,5 to 900))
         val receipt=NativeFutureBlockContextReceipt(

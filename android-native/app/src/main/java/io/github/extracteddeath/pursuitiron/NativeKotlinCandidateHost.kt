@@ -602,12 +602,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
             // Existing or legacy roster entries cannot authorize creating
             // new physical stations for a barbell, dumbbell or other non-stack
             // exercise. The CURRENT reviewed source must prove this basis.
-            if(source.catalog.none {
-                it.exerciseId==exerciseId &&
-                it.expectedLoadBasis in setOf(
-                    LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
-            })return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
-                "EXERCISE_HAS_NO_MACHINE_STACK")
+            if(source.catalog.singleOrNull {it.exerciseId==exerciseId}
+                ?.expectedLoadBasis !in setOf(
+                    LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK))
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "EXERCISE_HAS_NO_MACHINE_STACK")
             if(previous.machines.size>=32 ||
                 previous.machines.any{it.label.equals(name,ignoreCase=true)})
                 return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(

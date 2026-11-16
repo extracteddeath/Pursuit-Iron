@@ -67,6 +67,8 @@ internal fun NativeKotlinCoachSettingsScreen(
     var problemSteps by rememberSaveable { mutableStateOf("") }
     var problemExpected by rememberSaveable { mutableStateOf("") }
     var problemActual by rememberSaveable { mutableStateOf("") }
+    var feedbackShareError by remember { mutableStateOf<String?>(null) }
+    var problemShareError by remember { mutableStateOf<String?>(null) }
     var current by remember(host) {
         mutableStateOf<NativeCoachAssistanceSettings?>(null)
     }
@@ -287,12 +289,20 @@ internal fun NativeKotlinCoachSettingsScreen(
         ) {
             Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 OutlinedButton(
-                    onClick={feedbackOpen=true;problemOpen=false},
+                    onClick={
+                        feedbackShareError=null
+                        feedbackOpen=true
+                        problemOpen=false
+                    },
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                     Text("Share beta feedback")
                 }
                 OutlinedButton(
-                    onClick={problemOpen=true;feedbackOpen=false},
+                    onClick={
+                        problemShareError=null
+                        problemOpen=true
+                        feedbackOpen=false
+                    },
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                     Text("Report a problem")
                 }
@@ -335,6 +345,10 @@ internal fun NativeKotlinCoachSettingsScreen(
                     Text("Only your message and app version are shared after you choose an app. This does not send anything automatically.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    feedbackShareError?.let{
+                        Text(it,color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    }
                 }
             },
             confirmButton={
@@ -346,7 +360,7 @@ internal fun NativeKotlinCoachSettingsScreen(
                         val launched=shareWithChosenApp(NativeBetaFeedbackDraft(
                             NativeBetaFeedbackKind.GENERAL,message=feedbackDraft))
                         if(launched)feedbackOpen=false
-                        else notice="No app could open the feedback share sheet."
+                        else feedbackShareError="No app could open the feedback share sheet."
                     }
                 ) {Text("Choose app to send")}
             },
@@ -370,7 +384,7 @@ internal fun NativeKotlinCoachSettingsScreen(
                     enabled=NativeKotlinBetaFeedbackFormat.canShare(draft),
                     onClick={
                         if(shareWithChosenApp(draft))problemOpen=false
-                        else notice="No app could open the problem report share sheet."
+                        else problemShareError="No app could open the problem report share sheet."
                     },
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
                 ) {Text("Choose app to share report")}
@@ -425,6 +439,10 @@ internal fun NativeKotlinCoachSettingsScreen(
             Text("Choose an app to send this report. Opening the chooser does not submit it. No profile IDs, logs, workouts or medical details are attached; include personal information only if you want to.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            problemShareError?.let{
+                Text(it,color=MaterialTheme.colorScheme.error,
+                    style=MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

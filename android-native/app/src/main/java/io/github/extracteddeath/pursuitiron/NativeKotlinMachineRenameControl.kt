@@ -37,6 +37,7 @@ internal fun NativeKotlinMachineRenameControl(
     }
 
     TextButton(onClick={
+        if(editing) draft=machine.label // Cancel must discard unsaved text.
         editing=!editing
         pendingName=null
     },enabled=!busy,modifier=Modifier.heightIn(min=48.dp)) {

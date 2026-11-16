@@ -17,6 +17,14 @@ assert.match(picker,/min=52\.dp/);
 assert.match(picker,/config\.machines\.filter \{it\.active \|\| it\.id==selectedId\}/);
 assert.match(picker,/enabled=enabled && machine\.active && !current/);
 assert.match(picker,/onSelect\(machine\.id\)/);
+const selectingOption=picker.slice(picker.indexOf('active.forEach {machine->'),
+    picker.indexOf('if(onCreate!=null)'));
+assert.doesNotMatch(selectingOption,/open=false/,
+  'never dismiss picker before the machine choice is verified by the writer');
+const creatingOption=picker.slice(picker.indexOf('onCreate(newMachineName.trim()'),
+    picker.indexOf('enabled=enabled && config.machines.size<32'));
+assert.doesNotMatch(creatingOption,/newMachineName=""|makeDefault=false/,
+  'retain unsaved input when roster or workout-choice save fails');
 assert.match(picker,/Different machine not saved/);
 assert.doesNotMatch(picker,/FilterChip\(selected=/);
 assert.doesNotMatch(picker,/journalStore\.save\(|machineRosters\.save\(|KotlinJournalOperation\./);

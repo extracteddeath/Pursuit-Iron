@@ -1,11 +1,13 @@
 // Shared Workout presentation. The session owns timer, prescription, logging,
 // saved notes, exercise order and edits; these controls dispatch callbacks only.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { useRef, useLayoutEffect } from 'react';
-import { Check } from 'lucide-react';
-import { UiCard, UiField } from './ui-primitives.js';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { Check, ChevronDown, Repeat2, Plus } from 'lucide-react';
+import { createPortal } from '../vendor/react-dom.js';
+import { SessionChoiceDialog } from './session-choice-dialog.js';
+import { UiField } from './ui-primitives.js';
 import { latestMachineSet, LEGACY_MACHINE_ID, resolveMachineVariant } from './next-engine/machine-instances.js';
-import { EX_BY_ID, isWorkSet } from './engine-api.js';
+import { EX_BY_ID, isMachineLike, isWorkSet } from './engine-api.js';
 import { workoutNavLabel } from './workout-nav-labels.js';
 import { navigateChoiceRow } from './ui-choice-navigation.js';
 
@@ -84,49 +86,159 @@ export function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) 
 }
 
 /**
- * A/B machine switch within the workout. The owning WorkoutSession performs
- * data mutation; this presentation never changes completed sets or histories.
+ * Machine identity is selected at the machine, not in a program-edit screen.
+ * The compact chip is always discoverable for machine-compatible movements.
+ * One focused sheet provides existing physical machines, their own last
+ * performances, quick machine creation, or the existing exercise swap.
+ *
+ * This is PRESENTATION ONLY. WorkoutSession owns all workout mutations and
+ * the app shell owns the per-gym saved machine catalog. No history or program
+ * write occurs inside this component.
  */
-export function WorkoutMachineVariantControl({
-    gym, exerciseId, selectedId, dayId, history = [], unit, onSelect
-}) {
-    const config=gym?.machineVariants?.[exerciseId];
-    if (!gym) return null;
-    if (!Array.isArray(config?.instances) || !config.instances.length) {
-        // The selector previously vanished without explanation. A user in
-        // their first machine workout needs an explicit setup path, not a
-        // silent null that makes A/B seem unimplemented.
-        if (!isMachineLike(EX_BY_ID[exerciseId]?.equip)) return null;
-        return _jsxs('details',{className:'wpb-machine-choice wpb-gym-section',
-            'data-noswipe':true,children:[
-                _jsx('summary',{children:'Machine A/B · Set up alternatives'}),
-                _jsx('p',{children:'No physical machines are saved for this exercise in the current gym. Go to Settings → Your gyms, expand this gym, open Machine A/B, select this exercise, add Machine A and Machine B, then tap Done. Return to your workout to choose the machine above the exercise name. Existing completed sets will not change.'})
-            ]});
+export function nextPhysicalMachineLabel(instances=[]) {
+    const names=new Set(instances.map(item=>String(item.label||'').trim().toLowerCase()));
+    for(let n=0;n<26;n++) {
+        const candidate='Machine '+String.fromCharCode(65+n);
+        if(!names.has(candidate.toLowerCase()))return candidate;
     }
-    const current=resolveMachineVariant(gym,exerciseId,selectedId ?? null,{forNewWorkout:false});
-    const last=latestMachineSet(history,{
-        gymId:gym.id,exerciseId,machineInstanceId:current.id,dayId
-    });
-    const options=config.instances.filter(instance=>instance.active!==false ||
-        instance.id===current.id);
-    const unknown=current.missing ? [{id:current.id,label:current.label}] : [];
-    if (current.legacy) unknown.push({id:LEGACY_MACHINE_ID,label:'Legacy (unassigned)'});
-    return _jsxs(UiCard,{className:'wpb-session-note-editor wpb-machine-choice',
+    return 'Other machine';
+}
+
+export function WorkoutMachineVariantControl({
+    gym,exerciseId,selectedId,dayId,history=[],unit,onSelect,onCreate,onSwap
+}) {
+    const isMachine=isMachineLike(EX_BY_ID[exerciseId]?.equip);
+    const [open,setOpen]=useState(false);
+    const [name,setName]=useState('');
+    const [makeDefault,setMakeDefault]=useState(false);
+    const [message,setMessage]=useState('');
+    const trigger=useRef(null);
+    useEffect(()=>{
+        // Switching exercise or gym must not carry a machine-create draft
+        // into a different movement (nor keep an old confirmation open).
+        setOpen(false);setName('');setMessage('');setMakeDefault(false);
+    },[exerciseId,gym?.id]);
+
+    if(!isMachine)return null;
+    const config=gym?.machineVariants?.[exerciseId];
+    const instances=Array.isArray(config?.instances)?config.instances:[];
+    const selected=gym
+        ? resolveMachineVariant(gym,exerciseId,selectedId??null,{forNewWorkout:false})
+        : {id:LEGACY_MACHINE_ID,label:'Gym unavailable',active:false,legacy:true};
+    const available=instances.filter(instance=>instance.active!==false ||
+        instance.id===selected.id);
+    const additional=selected.missing||selected.legacy ?
+        [{id:selected.id,label:selected.legacy?'Unassigned legacy sets':selected.label,
+            active:false,legacy:true}]:[];
+    const choices=[...additional,...available.filter(item=>item.id!==selected.id ||
+        !additional.some(old=>old.id===item.id))];
+    const hint=nextPhysicalMachineLabel(instances);
+    const describeLast=instance=>{
+        const prior=gym?latestMachineSet(history,{
+            gymId:gym.id,exerciseId,machineInstanceId:instance.id,dayId
+        }):null;
+        return prior
+            ? `Last: ${prior.weight} ${prior.unit??unit} × ${prior.reps} reps`
+            : 'No comparable sets yet · enter a starting weight';
+    };
+    const close=()=>{setOpen(false);setMessage('');};
+    const choose=id=>{
+        if(id===selected.id){close();return;}
+        try {
+            const result=onSelect?.(id);
+            if(result?.ok===false)throw new Error(result.message||'Cannot use that machine');
+            close();
+        } catch(error){setMessage(error?.message||'Cannot change this machine');}
+    };
+    const add=event=>{
+        event.preventDefault();
+        const label=String(name||hint).trim();
+        if(!label){setMessage('Give this machine a short name.');return;}
+        if(!gym || !onCreate){
+            setMessage('Select the workout gym before adding a machine.');return;
+        }
+        try {
+            const result=onCreate(label,makeDefault);
+            if(result?.ok!==true)throw new Error(result?.message||'Could not save this machine');
+            close();setName('');setMakeDefault(false);
+        } catch(error){setMessage(error?.message||'Could not add this machine');}
+    };
+    const modal=open && createPortal(_jsx(SessionChoiceDialog,{
+        title:`Choose machine · ${EX_BY_ID[exerciseId]?.name||'Exercise'}`,
+        className:'wpb-machine-switch-sheet',
+        onClose:close,
+        children:_jsxs('div',{className:'wpb-machine-switch-content',children:[
+            _jsx('p',{className:'wpb-machine-switch-intro',children:
+                'Same exercise, different physical machine. Each keeps its own weights, Last, PRs and progression. Your completed sets never move.'}),
+            !gym && _jsx('p',{role:'alert',className:'wpb-machine-switch-error',
+                children:'Your saved workout uses a different gym. Select that gym before creating or switching machines.'}),
+            !!gym && _jsxs('div',{role:'group','aria-label':'Existing physical machines',
+                className:'wpb-machine-switch-options',children:[
+                    _jsx('h3',{children:'Use a machine at this gym'}),
+                    !choices.length && _jsx('p',{className:'wpb-machine-switch-empty',
+                        children:'No machine saved yet. Add the one in front of you below.'}),
+                    ...choices.map(machine=>_jsxs('button',{
+                        type:'button',
+                        className:'pressable wpb-machine-switch-option',
+                        'data-selected':machine.id===selected.id?'true':'false',
+                        'aria-pressed':machine.id===selected.id,
+                        disabled:machine.id===selected.id || machine.active===false,
+                        onClick:()=>choose(machine.id),
+                        children:[
+                            _jsxs('span',{className:'wpb-machine-switch-option-copy',children:[
+                                _jsx('strong',{children:machine.label}),
+                                _jsx('small',{children:describeLast(machine)})
+                            ]}),
+                            machine.id===selected.id
+                                ? _jsx(Check,{size:20,'aria-hidden':true})
+                                : _jsx(Repeat2,{size:18,'aria-hidden':true})
+                        ]
+                    },machine.id))
+                ]}),
+            !!gym && _jsxs('form',{className:'wpb-machine-switch-create',onSubmit:add,
+                children:[
+                    _jsxs('div',{className:'wpb-machine-switch-create-heading',children:[
+                        _jsx('h3',{children:'Different machine here?'}),
+                        _jsx('p',{children:'Add it now without leaving your workout.'})
+                    ]}),
+                    _jsxs('label',{children:[
+                        _jsx('span',{children:'Machine name'}),
+                        _jsx(UiField,{as:'input',value:name,maxLength:80,
+                            placeholder:hint,'aria-label':'Name of physical machine to add',
+                            onChange:event=>{setName(event.target.value);setMessage('');}})
+                    ]}),
+                    _jsxs('label',{className:'wpb-machine-switch-default',children:[
+                        _jsx('input',{type:'checkbox',checked:makeDefault,
+                            onChange:event=>setMakeDefault(event.target.checked)}),
+                        _jsx('span',{children:'Use as the default for this exercise at this gym'})
+                    ]}),
+                    _jsxs('button',{type:'submit',className:'pressable wpb-machine-switch-add',
+                        children:[_jsx(Plus,{size:18,'aria-hidden':true}),
+                            _jsx('span',{children:`Add ${name.trim()||hint} & use now`})]})
+                ]}),
+            !!onSwap && _jsx('button',{type:'button',
+                className:'pressable wpb-machine-switch-swap',
+                onClick:()=>{close();onSwap();},
+                children:'No suitable machine? Swap to another exercise'}),
+            message && _jsx('p',{role:'alert',className:'wpb-machine-switch-error',
+                children:message})
+        ]})
+    }),document.querySelector('#root .wpb')||document.body);
+
+    return _jsxs('div',{className:'wpb-machine-switch',
         'data-noswipe':true,children:[
-        _jsxs('label',{children:[
-            _jsx('strong',{children:'Machine A/B · Choose physical machine'}),
-            _jsx(UiField,{as:'select',value:current.id,
-                'aria-label':'Physical machine used for this exercise',
-                onChange:event=>onSelect(event.target.value),
-                children:[...unknown,...options].map(instance=>
-                    _jsx('option',{value:instance.id,children:instance.label},instance.id))
-            })
-        ]}),
-        _jsx('p',{children:last
-            ? `Last on this machine: ${last.weight} ${last.unit??unit} × ${last.reps} reps`
-            : 'No comparable history for this machine. Enter an initial load.'}),
-        _jsx('small',{children:
-            'Switching machines only changes unfinished sets; completed sets keep their original machine. '+
-            'This choice is for this workout. Change your usual machine under Settings → Your gyms → Machine A/B.'})
+        _jsxs('button',{type:'button',ref:trigger,
+            className:'pressable wpb-machine-switch-trigger',
+            'aria-label':`Machine for ${EX_BY_ID[exerciseId]?.name||'exercise'}: ${selected.label}. Choose or add machine`,
+            'aria-haspopup':'dialog','aria-expanded':open,
+            onClick:()=>{setOpen(true);setMessage('');},
+            children:[
+                _jsx(Repeat2,{size:16,'aria-hidden':true}),
+                _jsx('span',{className:'wpb-machine-switch-kicker',children:'Machine'}),
+                _jsx('strong',{className:'wpb-machine-switch-name',children:
+                    !gym?'Unavailable':instances.length?selected.label:'Choose / add'}),
+                _jsx(ChevronDown,{size:16,'aria-hidden':true})
+            ]}),
+        modal
     ]});
 }

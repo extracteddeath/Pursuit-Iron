@@ -61,7 +61,8 @@ internal fun NativeKotlinProfileSharePanel(
                     Text("Include my display name")
                 }
                 Row(Modifier.fillMaxWidth().heightIn(min=48.dp)
-                    .toggleable(includeFavorites,role=Role.Checkbox,
+                    .toggleable(value=includeFavorites,
+                        enabled=verifiedFavoriteLabels.isNotEmpty(),role=Role.Checkbox,
                         onValueChange={includeFavorites=it}),
                     verticalAlignment=Alignment.CenterVertically) {
                     Checkbox(checked=includeFavorites,onCheckedChange=null,

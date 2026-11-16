@@ -41,6 +41,6 @@ internal object NativeKotlinProfileShareSummary {
                 result += "Favorite logged exercises: " + safe.joinToString(", ")
         }
         result += "Historical activity only — not a verified competition record or workout recommendation."
-        return result.joinToString("\\n")
+        return result.joinToString("\n")
     }
 }

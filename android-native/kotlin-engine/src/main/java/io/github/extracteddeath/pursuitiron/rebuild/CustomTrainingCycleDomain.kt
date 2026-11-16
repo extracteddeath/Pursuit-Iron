@@ -171,7 +171,8 @@ object CustomTrainingCycleDomain {
             if (available.bodyweightApproved) null
             else CustomCycleIssueKind.UNAVAILABLE_EXERCISE
         is DraftSetLoad.Verified -> {
-            if (load.value <= zero || load.value > max ||
+            if (load.value < zero ||
+                load.value.signum()==0 && !load.basis.permitsZeroAddedLoad || load.value > max ||
                 load.value.stripTrailingZeros().scale() > 3)
                 CustomCycleIssueKind.INVALID_SET
             else if (available.stock == null)

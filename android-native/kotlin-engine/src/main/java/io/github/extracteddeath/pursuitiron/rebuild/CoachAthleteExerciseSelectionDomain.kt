@@ -124,7 +124,7 @@ object CoachAthleteExerciseSelectionDomain {
         if(stock.basis!=spec.expectedLoadBasis ||
             stock.unit!=athlete.gym.unit)
             return "This movement uses a different implement weight basis or unit."
-        if(stock.basis==LoadBasis.BARBELL_TOTAL &&
+        if(stock.basis.countsTowardBarbellLimit &&
             athlete.maxBarbellExercisesPerDay==0)
             return "The athlete permits zero barbell exercises per day."
         val load=choice.selectedLoad

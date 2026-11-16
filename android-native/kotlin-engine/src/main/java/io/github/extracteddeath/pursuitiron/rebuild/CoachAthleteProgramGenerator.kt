@@ -276,7 +276,7 @@ object CoachAthleteProgramGenerator {
         val stock=athlete.gym.confirmedStock[spec.equipmentId] ?:return false
         if(stock.basis!=spec.expectedLoadBasis ||
             stock.unit!=athlete.gym.unit ||
-            (stock.basis==LoadBasis.BARBELL_TOTAL &&
+            (stock.basis.countsTowardBarbellLimit &&
                 athlete.maxBarbellExercisesPerDay==0))
             return false
         val load=choice.selectedLoad ?:return false

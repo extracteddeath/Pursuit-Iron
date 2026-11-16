@@ -59,27 +59,29 @@ sealed interface CurrentWorkoutLevelingReview {
  */
 object DoubleProgressionLevelingDomain {
     /**
-     * Shared, inventory-only rounding for current and prior Leveling. Never
-     * infer a usable working load from an unloaded zero, nor jump above the
-     * lowest confirmed positive load when every historical/current entry is
-     * below the equipment's actual range. Ties round up in both paths.
+     * Shared, inventory-only rounding for current and prior Leveling. A zero
+     * is usable only for an explicitly confirmed landmine added-plate basis.
+     * Never jump above the confirmed range floor. Ties round up in both paths.
      */
-    private fun nearestPositiveWorkingLoad(
+    private fun nearestVerifiedWorkingLoad(
         inspection:LoadInspection.Confirmed,mean:BigDecimal
     ):BigDecimal? {
-        val atOrBelow=inspection.atOrBelow?.takeIf{it>BigDecimal.ZERO}
+        val addedPlates=inspection.basis.permitsZeroAddedLoad
+        val atOrBelow=inspection.atOrBelow?.takeIf{
+            it>BigDecimal.ZERO || addedPlates && it.signum()==0}
             ?:return null
         return listOfNotNull(atOrBelow,inspection.nextAbove)
-            .filter{it>BigDecimal.ZERO}
+            .filter{it>BigDecimal.ZERO || addedPlates && it.signum()==0}
             .minWithOrNull(compareBy<BigDecimal>{it.subtract(mean).abs()}
                 .thenByDescending{it})
     }
 
     /**
-     * Web parity: average all positive, entered, same-station WORKING loads
+     * Web parity: average entered, same-station WORKING loads (including
+     * explicit landmine added-plate zeros)
      * and reps from TODAY. Offer the nearest physically verified load. A
      * rising pyramid (not an already-level or descending session) is required.
-     * The returned keys cover only unfinished, positive-load working rows;
+     * The returned keys cover only unfinished eligible working rows;
      * nothing is ever journaled, auto-completed or changed for a future week.
      *
      * A real inventory is essential: the unit alone cannot establish an
@@ -97,8 +99,10 @@ object DoubleProgressionLevelingDomain {
                     it.load.stripTrailingZeros().scale()>3) ||
                 it.reps!=null && it.reps !in 1..100})
             return refuse(CurrentWorkoutLevelingReview.Reason.INVALID_ENTRY)
-        // Unweighted/blank rows and sub-sets are not part of the average.
-        val working=rows.filter {it.load!=null && it.load>BigDecimal.ZERO}
+        // A zero added-plate landmine row still represents the real bar.
+        // Other unweighted/blank rows and sub-sets remain outside the average.
+        val working=rows.filter {it.load!=null && (it.load>BigDecimal.ZERO ||
+            it.basis.permitsZeroAddedLoad && it.load.signum()==0)}
         if(working.size<2)
             return refuse(CurrentWorkoutLevelingReview.Reason.INSUFFICIENT_ENTERED_SETS)
         if(working.any{it.reps==null || it.completed && it.reps<1})
@@ -126,7 +130,7 @@ object DoubleProgressionLevelingDomain {
             verifiedStock,mean,working.first().unit)
                 as? LoadInspection.Confirmed
                 ?:return refuse(CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK)
-        val rounded=nearestPositiveWorkingLoad(inspection,mean)
+        val rounded=nearestVerifiedWorkingLoad(inspection,mean)
             ?:return refuse(CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD)
         return CurrentWorkoutLevelingReview.Ready(
             mean.stripTrailingZeros(),rounded,averageReps,eligible,working.size)
@@ -209,7 +213,7 @@ object DoubleProgressionLevelingDomain {
             .divide(BigDecimal(facts.size), 3, RoundingMode.HALF_UP)
         val inspection = EquipmentLoadDomain.inspect(verifiedStock, mean, verifiedStock.unit)
             as? LoadInspection.Confirmed ?: return reject(LevelingRefusal.UNVERIFIED_STOCK)
-        val closest = nearestPositiveWorkingLoad(inspection,mean)
+        val closest = nearestVerifiedWorkingLoad(inspection,mean)
             ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         // Never use the rounded mean as a guarantee: each set's capacity,
         // fatigue, and actual RIR still need the athlete's review.

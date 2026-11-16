@@ -331,7 +331,7 @@ object CoachFirstProgramStartDomain {
                 val stock=athlete.gym.confirmedStock[spec.equipmentId]
                 stock!=null && stock.unit==athlete.gym.unit &&
                     stock.basis==spec.expectedLoadBasis &&
-                    !(stock.basis==LoadBasis.BARBELL_TOTAL &&
+                    !(stock.basis.countsTowardBarbellLimit &&
                         athlete.maxBarbellExercisesPerDay==0)
             }
             if(!usable)continue
@@ -376,7 +376,8 @@ object CoachFirstProgramStartDomain {
                 val checked=chosenLoad?.let {
                     EquipmentLoadDomain.inspect(stock,it,athlete.gym.unit)
                 }
-                if(chosenLoad==null || chosenLoad<=zero ||
+                if(chosenLoad==null || chosenLoad<zero ||
+                    chosenLoad.signum()==0 && movement.expectedLoadBasis?.permitsZeroAddedLoad!=true ||
                     checked !is LoadInspection.Confirmed || !checked.exact) {
                     issues+="The selected starting load for ${id} is not an exact, confirmed physical weight. Review the actual equipment; nothing was rounded."
                     return output(FirstProgramStartStatus.INVALID_CALIBRATION)
@@ -557,7 +558,8 @@ object CoachFirstProgramStartDomain {
                 val lighter=(EquipmentLoadDomain.inspect(stock,
                     working*BigDecimal("0.8"),athlete.gym.unit)
                     as? LoadInspection.Confirmed)?.atOrBelow
-                if(lighter!=null && lighter>zero && lighter<working)
+                if(lighter!=null && lighter<working && (lighter>zero ||
+                    stock?.basis?.permitsZeroAddedLoad==true && lighter.signum()==0))
                     listOf(DeclaredWarmupStep(lighter,
                         if(input.phase==TrainingPhase.HYPERTROPHY)5 else 3,30,60))
                 else emptyList()

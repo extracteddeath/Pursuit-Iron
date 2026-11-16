@@ -138,7 +138,11 @@ object ConservativeProgressionReview {
             return result(IncreaseReviewReason.TOO_CLOSE_TO_FAILURE)
 
         val observed=checkNotNull(currentLoad)
-        if(observed.compareTo(zero)==0)
+        // A confirmed landmine zero is an unloaded bar, not zero resistance.
+        // Only this explicit added-plates convention supplies that meaning;
+        // all other historical zero-load cases retain their original refusal.
+        if(observed.compareTo(zero)==0 &&
+            verifiedStock?.basis?.permitsZeroAddedLoad!=true)
             return result(IncreaseReviewReason.ZERO_LOAD_NEEDS_EXERCISE_SEMANTICS)
 
         // A lifter may deliberately use less (or more) than the session's

@@ -225,7 +225,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     it==PhysicalStockEditorKind.BARBELL_WITH_PAIRS
                 LoadBasis.SMITH_TOTAL -> it in listOf(
                     PhysicalStockEditorKind.SMITH_WITH_PAIRS,PhysicalStockEditorKind.EXACT_LOADS)
-                LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH ->
+                LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH,
+                    LoadBasis.LANDMINE_ADDED_PLATES ->
                     it==PhysicalStockEditorKind.EXACT_LOADS
                 null -> true
                 else -> it !in listOf(PhysicalStockEditorKind.BARBELL_WITH_PAIRS,
@@ -277,7 +278,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                                 PhysicalStockEditorKind.BARBELL_WITH_PAIRS
                                             LoadBasis.SMITH_TOTAL ->
                                                 PhysicalStockEditorKind.SMITH_WITH_PAIRS
-                                            LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH ->
+                                            LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH,
+                                            LoadBasis.LANDMINE_ADDED_PLATES ->
                                                 PhysicalStockEditorKind.EXACT_LOADS
                                             else -> PhysicalStockEditorKind.VERIFIED_STACK
                                         }
@@ -367,6 +369,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                     { Text(if(equipmentId=="matched-kettlebell-pair")
                                         "Enter each bell's weight only when two matching bells are available."
                                         else "Enter the weight of one bell, including a two-handed swing.") }
+                                } else if(actualBasis==LoadBasis.LANDMINE_ADDED_PLATES) {
+                                    { Text("Confirm the bar and anchored pivot. Enter added plate totals at the loaded end, excluding bar and base. Enter 0 only when no plates are added; these are not free-bar totals.") }
                                 } else null,
                                 modifier=Modifier.fillMaxWidth())
                         PhysicalStockEditorKind.VERIFIED_STACK -> {

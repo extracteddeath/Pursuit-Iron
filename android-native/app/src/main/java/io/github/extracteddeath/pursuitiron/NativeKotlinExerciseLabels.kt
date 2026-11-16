@@ -323,7 +323,10 @@ private val kotlinExerciseNames=mapOf(
     "kb-swing" to "Kettlebell Swing",
     "kb-gorilla-row" to "Kettlebell Gorilla Row",
     "serratus-pushup" to "Serratus Push-Up",
-    "tibialis-raise" to "Tibialis Raise"
+    "tibialis-raise" to "Tibialis Raise",
+    "meadows-row" to "Meadows Row",
+    "landmine-press" to "Landmine Press",
+    "lm-squat" to "Landmine Squat"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

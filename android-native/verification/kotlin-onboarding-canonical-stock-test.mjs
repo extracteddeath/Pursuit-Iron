@@ -27,7 +27,7 @@ assert.doesNotMatch(stockInput,/stock\["cable-1"\]/);
 assert.match(onboarding,/var barEquipmentId by rememberSaveable/);
 assert.match(onboarding,/NativeSetupChoice\("Bar type",barChoices/);
 assert.match(onboarding,/if\(barEquipmentId!=chosen\.equipmentId\)[\s\S]*?barWeight="";plates="";gymConfirmed=false/);
-assert.match(onboarding,/savedMachines,nonMachineEquipmentIds,barEquipmentId,kettlebells,kettlebellPairs\)/);
+assert.match(onboarding,/savedMachines,nonMachineEquipmentIds,barEquipmentId,kettlebells,kettlebellPairs,landmineLoads\)/);
 for(const name of ['kettlebells','kettlebellPairs']) {
     assert.ok(onboarding.includes('var '+name+' by rememberSaveable'));
     assert.ok(onboarding.includes(name+'=""'), 'unit changes clear each bell convention');
@@ -35,7 +35,7 @@ for(const name of ['kettlebells','kettlebellPairs']) {
 for(const id of ['single-kettlebell','matched-kettlebell-pair'])
     assert.ok(stockInput.includes('stock["'+id+'"]'), 'explicit bell stock remains separate');
 assert.ok(stockInput.includes('LoadBasis.KETTLEBELL_EACH'));
-assert.match(gymEditor,/LoadBasis\.DUMBBELL_PER_HAND,LoadBasis\.KETTLEBELL_EACH ->/,
+assert.match(gymEditor,/LoadBasis\.DUMBBELL_PER_HAND,LoadBasis\.KETTLEBELL_EACH,\s*LoadBasis\.LANDMINE_ADDED_PLATES ->/,
     'discrete bells use exact masses, never an assumed stack increment');
 assert.match(stockInput,/stock\[barEquipmentId\]=checkNotNull\(parseVerifiedStock/);
 assert.match(stockInput,/it\.equipmentId==barEquipmentId/);
@@ -87,3 +87,22 @@ assert.match(facilities,/if\(checked\)selected\+id else selected-id/,
     'named choices must preserve all other saved/advanced IDs');
 assert.match(facilities,/Additional saved IDs are preserved/);
 console.log(`PASS exact cable stock and all ${required.size} reviewed fixture names in onboarding and gym editing`);
+
+// A landmine is a confirmed bar + pivot, with a distinct added-plate convention.
+assert.match(onboarding,/landmineLoads by rememberSaveable/);
+assert.match(onboarding,/landmineLoads=""/);
+assert.match(onboarding,/listOf\(dumbbells,kettlebells,kettlebellPairs,landmineLoads,cable/);
+assert.match(onboarding,/Landmine · added plate weights/);
+assert.match(stockInput,/"landmine-station".*VerifiedLoadStock\.Totals/);
+assert.match(stockInput,/LoadBasis\.LANDMINE_ADDED_PLATES,exactPhysicalLoads\(landmineLoads\)/);
+
+const firstProgram=readFileSync(join(root,
+    'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinFirstProgramCandidateScreen.kt'),'utf8');
+assert.match(firstProgram,/!kotlinWorkingLoadEntered\(parsed,option\?\.basis\)/);
+assert.match(firstProgram,/val exact=kotlinWorkingLoadEntered\(typed,option\.basis\)/);
+for(const file of ['NativeKotlinCustomJournalScreen.kt','NativeKotlinWorkoutCandidateScreen.kt']) {
+    const journal=readFileSync(join(root,
+        'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/'+file),'utf8');
+    assert.ok(journal.includes('kotlinWorkingLoadEntered((currentEditors[levelEditorKey('),
+        'Explicit unloaded landmine rows must receive the same optional Leveling draft: '+file);
+}

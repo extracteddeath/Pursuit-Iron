@@ -908,7 +908,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         } else if(review is CurrentWorkoutLevelingReview.Unavailable &&
                             (review as CurrentWorkoutLevelingReview.Unavailable).reason==
                                 CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK &&
-                            currentRows.count{row->row.load?.let{it>BigDecimal.ZERO}==true}>=2)
+                            currentRows.count{row->kotlinWorkingLoadEntered(row.load,row.basis)}>=2)
                             Text("Confirm available weights in My gym "+
                                 "to use Leveling on this machine.",
                                 style=MaterialTheme.typography.bodySmall,
@@ -1123,12 +1123,12 @@ internal fun NativeKotlinCustomJournalScreen(
                                     slot.slotId==levelSlotId &&
                                     mainMachineId==levelMachineId &&
                                     levelWeight.isNotBlank() && levelReps>0 &&
-                                    (currentEditors[levelEditorKey(
+                                    kotlinWorkingLoadEntered((currentEditors[levelEditorKey(
                                         set.setKey,mainMachineId)]?.weight
                                         ?:initialMachineScopedLoad(
                                             set.prescription.load,null,mainMachineId))
-                                        .toBigDecimalOrNull()
-                                        ?.let{it>BigDecimal.ZERO}==true)
+                                        .toBigDecimalOrNull(),
+                                        (set.prescription.load as? DraftSetLoad.Verified)?.basis))
                                     CurrentWorkoutLevelingDraft(
                                         levelVersion,levelWeight,levelReps)
                                 else null,

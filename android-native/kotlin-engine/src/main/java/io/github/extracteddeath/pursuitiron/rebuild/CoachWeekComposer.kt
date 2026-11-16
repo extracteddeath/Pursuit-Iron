@@ -83,7 +83,8 @@ data class ComposerRequest(
     /** Missing entries are unassigned, not inferred from phase. */
     val sessionIntents:List<ComposerSessionIntent> = emptyList(),
     /**
-     * Athlete-owned cap on distinct BARBELL_TOTAL exercise visits each day.
+     * Athlete-owned cap on distinct free-bar exercise visits each day,
+     * including landmines whose logged weight excludes the bar mass.
      * Null means this legacy/unbound composer caller declared no cap.
      * Zero is an explicit prohibition, not an absent preference.
      */
@@ -289,8 +290,8 @@ object CoachWeekComposer {
         visits.count {it.exerciseId==option.exerciseId}).coerceAtLeast(0)
 
     private fun isBarbell(option:ComposerExerciseOption):Boolean =
-        (option.equipment as? ComposerEquipment.Verified)?.inventory?.basis==
-            LoadBasis.BARBELL_TOTAL
+        (option.equipment as? ComposerEquipment.Verified)?.inventory?.basis
+            ?.countsTowardBarbellLimit==true
 
     private fun directTriceps(option:ComposerExerciseOption):Boolean =
         option.credits.any {it.muscle==TrainingMuscle.TRICEPS &&

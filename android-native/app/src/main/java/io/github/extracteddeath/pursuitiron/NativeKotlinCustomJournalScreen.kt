@@ -85,6 +85,7 @@ internal fun NativeKotlinCustomJournalScreen(
     val referenceMode=display.referenceMode
     var historyExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var infoSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var infoWarmupsOnly by rememberSaveable(workoutId){mutableStateOf(false)}
     var plateRequest by remember(workoutId){
         mutableStateOf<NativeCustomPlateRequest?>(null)
     }
@@ -713,7 +714,10 @@ internal fun NativeKotlinCustomJournalScreen(
                         }?.let {slot->{reviewSwap(slot)}},
                         onWarmup=upcoming?.first?.takeIf {slot->
                             slot.sets.any{it.prescription.type==DraftSetType.WARMUP}
-                        }?.let {slot->{infoSlotId=slot.slotId}}
+                        }?.let {slot->{
+                            infoWarmupsOnly=true
+                            infoSlotId=slot.slotId
+                        }}
                     )
                     // Review recorded work, then return to the actual next
                     // visit with one tap. A pending amplifier follow-up is
@@ -1385,11 +1389,25 @@ internal fun NativeKotlinCustomJournalScreen(
                         (if(slot.pinned)" · pinned" else ""),
                     sets=customWorkoutInfoSets(slot.sets),
                     note=slot.coachNote.takeIf{it.isNotBlank()},
+                    warmupsOnly=infoWarmupsOnly,
+                    outcomes=journal?.effectiveVisits.orEmpty().mapNotNull { (key,receipt)->
+                        if(key.part!=CustomWorkoutVisitPart.MAIN)null
+                        else (receipt.operation as? CustomWorkoutJournalOperation.Record)?.let{key.setKey to it.outcome}
+                    }.toMap(),
+                    onSelectWarmup=if(busy || finished)null else ({key->
+                        // Enter this exact main-set editor without logging it.
+                        reviewSetKey=key
+                        reviewPart=CustomWorkoutVisitPart.MAIN.name
+                        focusOnNext=true
+                        infoSlotId=null
+                        infoWarmupsOnly=false
+                    }),
                     onHistory={
                         infoSlotId=null
+                        infoWarmupsOnly=false
                         historyExerciseId=slot.exerciseId
                     },
-                    onDismiss={infoSlotId=null}
+                    onDismiss={infoSlotId=null;infoWarmupsOnly=false}
                 )
             }
     }

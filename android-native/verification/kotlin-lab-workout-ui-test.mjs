@@ -641,7 +641,8 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   composer.includes('showFieldHelp=false') &&
   journal.includes('showFieldHelp=false'),
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
-const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt');
+const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')+
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutInfoPresentation.kt');
 assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   sharedFocus.includes('contentDescription="Exercise details"') &&
   sharedFocus.includes('val stacked=maxWidth<520.dp ||') &&
@@ -658,7 +659,7 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   infoSheet.includes('internal fun composerWorkoutInfoSets(') &&
   infoSheet.includes('internal fun customWorkoutInfoSets(') &&
   infoSheet.includes('infoTitle(target.type,target.ordinal+1)') &&
-  infoSheet.includes('infoTitle(target.type,snapshot.ordinalInSlot)') &&
+  infoSheet.includes('infoTitle(target.type,position)') &&
   infoSheet.includes('targetRir?.toString() ?: "Not set"') &&
   infoSheet.includes('NativeEditSheet(busy=false,onDismiss=onDismiss)') &&
   infoSheet.includes('Text("Open full exercise history")') &&

@@ -15,6 +15,10 @@ const workflow=read('.github/workflows/android-kotlin-rebuild.yml');
 
 assert.match(day,/onMoveToDay:\(String\)->Unit/);
 assert.match(day,/Text\("Move to another training day"\)/);
+assert.match(day,/key\(slot\.slotId\)/);
+assert.match(day,/PursuitDisclosureRow\(/);
+assert.match(day,/if\(moreActionsExpanded\) \{/);
+
 assert.match(plan,/crossDayMoveScope=NativeKotlinPlanCrossDayMoveScope\(/);
 assert.match(plan,/val matching=current\.athleteId==scope\.athleteId/);
 assert.match(plan,/NativeKotlinPlanCrossDayMove\.inspect\(/);

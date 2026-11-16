@@ -77,6 +77,7 @@ export const contractGroups = Object.freeze({
         // Draft PRs run this group, so approved fixes receive early runnable evidence.
         'm378-web-approved-regressions-test.mjs',
         'machine-instances-test.mjs',
+        'b1012-machine-ab-discoverability-test.mjs',
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
         'home-utility-owner-test.mjs',

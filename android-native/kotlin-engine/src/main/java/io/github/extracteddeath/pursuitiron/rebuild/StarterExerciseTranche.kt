@@ -2064,12 +2064,29 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
             "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
             "Source-listed cable serratus pull requires a confirmed single cable handle and exact cable-stack calibration. Legacy generic core credit is provisionally mapped only to the serratus subregion; no abdominal-set double credit or transfer from other cable exercises.",
-            direct(TrainingMuscle.SERRATUS_ANTERIOR),attachmentId="single-handle")
+            direct(TrainingMuscle.SERRATUS_ANTERIOR),attachmentId="single-handle"),
+        entry("decline-situp","trunk_flexion","decline-unweighted-situp",
+            ComposerPattern.CORE,ComposerRole.ACCESSORY,all,
+            null,null,setOf("decline-bench"),12..20,
+            "This reviewed version is an unweighted, repetition-based decline sit-up only. Require a confirmed decline bench and explicit bodyweight permission; never infer a loaded sit-up or reuse cable-crunch history.",
+            direct(TrainingMuscle.ABS)),
+        entry("back-ext-45","back_extension","forty-five-degree-unweighted",
+            ComposerPattern.HINGE,ComposerRole.ACCESSORY,lower,
+            null,null,setOf("45-degree-back-extension-station"),12..20,
+            "The broad legacy bench metadata is narrowed to an explicitly confirmed 45-degree back-extension station. Only controlled unweighted repetitions are represented; weighted plates, machine stacks and copied deadlift history are prohibited. Spinal erectors are directly credited with limited glute and hamstring contribution.",
+            direct(TrainingMuscle.SPINAL_ERECTORS),
+            indirect(TrainingMuscle.GLUTES,"0.5"),
+            indirect(TrainingMuscle.HAMSTRINGS,"0.25")),
+        entry("prone-y-raise","scapular_y_raise","prone-unweighted-incline",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            null,null,setOf("incline-bench"),12..20,
+            "Only the unweighted controlled prone Y-raise on a verified incline bench is included. It targets upward scapular rotation/lower-trap practice, rather than blindly copying legacy side-delt credit. No dumbbell is inferred and no other raise history transfers.",
+            direct(TrainingMuscle.TRAPS))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==327)
+        require(definitions.size==330)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

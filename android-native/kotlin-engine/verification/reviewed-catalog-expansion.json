@@ -8468,6 +8468,99 @@
         "indirect": [],
         "note": "Source-listed cable serratus pull requires a confirmed single cable handle and exact cable-stack calibration. Legacy generic core credit is provisionally mapped only to the serratus subregion; no abdominal-set double credit or transfer from other cable exercises."
       }
+    },
+    {
+      "id": "decline-situp",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "declinebench"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "trunk_flexion",
+        "variant": "decline-unweighted-situp",
+        "pattern": "CORE",
+        "role": "ACCESSORY",
+        "focus": "all",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "decline-bench"
+        ],
+        "direct": "ABS",
+        "indirect": [],
+        "attachment": null,
+        "note": "This reviewed version is an unweighted, repetition-based decline sit-up only. Require a confirmed decline bench and explicit bodyweight permission; never infer a loaded sit-up or reuse cable-crunch history."
+      }
+    },
+    {
+      "id": "back-ext-45",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "bench"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "back_extension",
+        "variant": "forty-five-degree-unweighted",
+        "pattern": "HINGE",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "45-degree-back-extension-station"
+        ],
+        "direct": "SPINAL_ERECTORS",
+        "indirect": [
+          "GLUTES:0.5",
+          "HAMSTRINGS:0.25"
+        ],
+        "attachment": null,
+        "note": "The broad legacy bench metadata is narrowed to an explicitly confirmed 45-degree back-extension station. Only controlled unweighted repetitions are represented; weighted plates, machine stacks and copied deadlift history are prohibited. Spinal erectors are directly credited with limited glute and hamstring contribution."
+      }
+    },
+    {
+      "id": "prone-y-raise",
+      "source": {
+        "movementFamily": "vertical_press",
+        "equipment": [
+          "inclinebench"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_y_raise",
+        "variant": "prone-unweighted-incline",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "incline-bench"
+        ],
+        "direct": "TRAPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Only the unweighted controlled prone Y-raise on a verified incline bench is included. It targets upward scapular rotation/lower-trap practice, rather than blindly copying legacy side-delt credit. No dumbbell is inferred and no other raise history transfers."
+      }
     }
   ]
 }

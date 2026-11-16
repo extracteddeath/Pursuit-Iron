@@ -784,4 +784,57 @@ class StarterExerciseTrancheTest {
         assertFalse(crunch.mayOverwriteAuthoredProgram)
     }
 
+    @Test fun newlyReviewedBenchAccessoriesRequireSpecificFixturesAndNoPhantomLoading() {
+        val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
+        val ids=listOf("decline-situp","back-ext-45","prone-y-raise")
+        assertEquals(330,byId.size)
+        assertTrue(ids.all{it in byId})
+        assertEquals(listOf(RepBand(12,20),RepBand(12,20),RepBand(12,20)),
+            ids.map{byId.getValue(it).practicalRepBand})
+        val expectedFacilities=mapOf(
+            "decline-situp" to "decline-bench",
+            "back-ext-45" to "45-degree-back-extension-station",
+            "prone-y-raise" to "incline-bench")
+        val muscles=mapOf("decline-situp" to TrainingMuscle.ABS,
+            "back-ext-45" to TrainingMuscle.SPINAL_ERECTORS,
+            "prone-y-raise" to TrainingMuscle.TRAPS)
+        ids.forEach{id->
+            val entry=byId.getValue(id)
+            val movement=entry.movement
+            assertNull(movement.equipmentId)
+            assertNull(movement.expectedLoadBasis)
+            assertEquals(setOf(expectedFacilities.getValue(id)),
+                movement.requiredFacilityIds)
+            assertEquals(muscles.getValue(id),
+                movement.credits.single{it.role==MuscleCreditRole.DIRECT}.muscle)
+            assertFalse(entry.mayTransferPreviousLoad)
+            val missing=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(template(),
+                    listOf(choice(id,null)),
+                    CatalogGym(emptyMap(),emptySet(),emptySet())))
+            assertTrue("Missing fixture must block $id",
+                missing.issues.any{it.exerciseId==id &&
+                    it.kind==CatalogIssueType.FACILITY_UNAVAILABLE})
+            val noPhantomWeight=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(template(),
+                    listOf(choice(id,n("5"))),
+                    CatalogGym(emptyMap(),emptySet(),
+                        setOf(expectedFacilities.getValue(id)))))
+            assertTrue("Unweighted $id must reject made-up external resistance",
+                noPhantomWeight.issues.any{it.exerciseId==id &&
+                    it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY})
+            val available=CoachExerciseCatalogDomain.review(
+                StarterExerciseTranche.forGym(template(),
+                    listOf(choice(id,null)),
+                    CatalogGym(emptyMap(),emptySet(),
+                        setOf(expectedFacilities.getValue(id)))))
+            assertFalse("Verified fixture is available for $id",
+                available.issues.any{it.exerciseId==id &&
+                    it.kind==CatalogIssueType.FACILITY_UNAVAILABLE})
+        }
+        val extension=byId.getValue("back-ext-45").movement
+        assertEquals(setOf(TrainingMuscle.SPINAL_ERECTORS,TrainingMuscle.GLUTES,
+            TrainingMuscle.HAMSTRINGS),extension.credits.map{it.muscle}.toSet())
+    }
+
 }

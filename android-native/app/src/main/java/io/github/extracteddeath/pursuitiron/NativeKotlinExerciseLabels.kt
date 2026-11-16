@@ -328,7 +328,10 @@ private val kotlinExerciseNames=mapOf(
     "prone-rear-delt-raise" to "Prone Rear Delt Raise",
     "meadows-row" to "Meadows Row",
     "landmine-press" to "Landmine Press",
-    "lm-squat" to "Landmine Squat"
+    "lm-squat" to "Landmine Squat",
+    "decline-situp" to "Decline Sit-Up",
+    "back-ext-45" to "45° Back Extension (unweighted)",
+    "prone-y-raise" to "Prone Y-Raise (unweighted)"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

@@ -35,7 +35,8 @@ internal val kotlinGymFacilityGroups=listOf(
         "pullup-bar" to "Pull-up bar",
         "dip-station" to "Dip station",
         "glute-ham-developer" to "Glute-ham developer",
-        "reverse-hyper" to "Reverse hyper")),
+        "reverse-hyper" to "Reverse hyper",
+        "45-degree-back-extension-station" to "45° back-extension bench")),
     KotlinGymFacilityGroup("Cables & general machines",listOf(
         "cable-machine" to "Cable machine",
         "smith-machine" to "Smith machine",

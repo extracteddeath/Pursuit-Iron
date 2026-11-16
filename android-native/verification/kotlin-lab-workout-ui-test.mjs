@@ -576,10 +576,27 @@ assert.ok(sharedFocus.includes('onReportConcern:(()->Unit)?=null') &&
   sharedFocus.includes('You still choose Skip or Swap') &&
   sharedFocus.includes('modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)'),
   'The shared injury entry needs a large accessible action and truthful, nonautomatic semantics');
-assert.match(journal,/onReportConcern=\{\s*(?:\/\/[^\n]*\n\s*)*movementRestricted=true\s*readiness=CoachReadiness.LOW\s*noteError=null\s*showSessionNote=true\s*\}/,
-  'Custom injury entry must restrict coaching and open its durable note editor');
-assert.match(composer,/onReportConcern=if\(journal!=null\) \(\{[\s\S]*?movementRestricted=true\s*readiness=CoachReadiness.LOW\s*showSessionNote=true\s*\}\) else null/,
-  'Generated injury entry must require a verified journal and open its own note editor');
+// The safety guide now requires a separate athlete choice: open a note
+// editor with explicit Save, or open a second independently verified skip
+// dialog. Selection alone MUST NOT record skipped sets or claim an injury.
+for(const [source,label] of [[journal,'custom'],[composer,'generated']]) {
+  const start=source.indexOf('onReportConcern=');
+  assert.ok(start>=0,label+' concern action is missing');
+  const handler=source.slice(start,start+1100);
+  for(const phrase of [
+    'movementRestricted=true',
+    'readiness=CoachReadiness.LOW',
+    'pendingConcern=NativeMovementConcernRequest('
+  ])assert.ok(handler.includes(phrase),
+    label+' concern must restrict coaching without mutating targets: '+phrase);
+  assert.ok(!handler.includes('showSessionNote=true'),
+    label+' must offer explicit note/skip choice instead of auto-opening notes');
+  assert.ok(source.includes('onWriteNote={') &&
+    source.includes('showSessionNote=true') &&
+    source.includes('onReviewSkip={') &&
+    source.includes('pendingExerciseSkip=selectedRequest'),
+    label+' concern must hand off to the existing note and confirmed skip owners');
+}
 assert.ok(journal.includes('host.saveIssuedCustomSessionNote(workoutId,operation)') &&
   composer.includes('onSave={controller.saveSessionNote(it)}') &&
   journal.includes('CustomWorkoutJournalOperation.SessionNote('),

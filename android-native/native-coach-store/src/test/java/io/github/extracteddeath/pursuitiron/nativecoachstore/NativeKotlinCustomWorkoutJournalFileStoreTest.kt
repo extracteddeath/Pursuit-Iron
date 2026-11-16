@@ -1198,4 +1198,68 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             as NativeCustomJournalResult.Durable).issued.journal.revision)
     }
 
+
+    @Test fun remainingExerciseSkipUsesExactCustomSlotAndKeepsRepeatedMovement() {
+        initializeShortenedCycle();enroll();prepareWeek()
+        val original=issueWeek().issued.journal
+        val result=issued.skipRemainingExercise("owner-1","workout-2",0,"slot-0")
+        assertTrue(result.toString(),result is NativeCustomJournalResult.Durable)
+        val saved=(result as NativeCustomJournalResult.Durable).issued.journal
+        assertEquals(original.snapshot,saved.snapshot)
+        assertEquals(1,saved.effectiveVisits.size)
+        assertEquals(KotlinJournalSetOutcome.SKIPPED,(saved.effectiveVisits.values.single().operation as CustomWorkoutJournalOperation.Record).outcome)
+        val other=saved.snapshot.slots.single{it.slotId=="optional-0"}
+        assertEquals("bodyweight_crunch",other.exerciseId)
+        assertFalse(saved.effectiveVisits.containsKey(CustomWorkoutVisitKey(other.sets.single().setKey,CustomWorkoutVisitPart.MAIN)))
+        val cold=NativeKotlinCustomWorkoutJournalFileStore(temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,prepared,preflight,history,composerJournal)
+        assertEquals(saved,(cold.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal)
+        assertTrue(cold.skipRemainingExercise("owner-1","workout-2",0,"optional-0") is NativeCustomJournalResult.Rejected)
+        val last=cold.skipRemainingExercise("owner-1","workout-2",1,"optional-0") as NativeCustomJournalResult.Durable
+        assertTrue(last.issued.journal.canProposeFinish)
+        assertNull(last.issued.journal.finishedByEventId)
+        assertEquals(saved.effectiveVisits.values.single(),last.issued.journal.effectiveVisits.values.first())
+        assertEquals(last.issued,(cold.skipRemainingExercise("owner-1","workout-2",2,"optional-0") as NativeCustomJournalResult.Durable).issued)
+    }
+    @Test fun customRemainingSkipRejectsForeignOwnerAndPreservesLoggedActual() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        val before=issued.record("owner-1","workout-2",recordSet("actual",0)) as NativeCustomJournalResult.Durable
+        val result=issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0") as NativeCustomJournalResult.Durable
+        assertEquals(before.issued,result.issued)
+        current=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertTrue(issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0") is NativeCustomJournalResult.Rejected)
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(before.issued,(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued)
+    }
+
+    @Test fun remainingCustomSkipKeepsActualAndSkipsAmplifierPlusLaterSetAtomicallyPerReceipt() {
+        val base=cycle()
+        val sets=listOf(set(16).copy(amplifier=CustomSetAmplifier(
+            CustomAmplifierKind.MYO_REPS,5,15,followUpActiveSeconds=50)),set(16))
+        val authored=base.copy(
+            blocks=base.blocks.map{block->block.copy(days=block.days.map{day->
+                if(day.weekday!=0)day else day.copy(slots=day.slots.map{it.copy(sets=sets)})
+            })},
+            weekOverrides=base.weekOverrides.mapValues { (_,rows)->
+                rows.map{row->if(row.weekInBlock!=2 || row.weekday!=0)row else row.copy(sets=sets)}
+            })
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),sources.publish("owner-1",0,source()))
+        assertEquals(NativeCustomDraftWriteResult.Committed(1),drafts.save("owner-1","cycle-1",0,authored))
+        val audit=CustomCycleCoachAuditDomain.review(authored,setup(),source().catalog,input())
+        assertEquals(audit.issues.toString(),CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        approve();enroll();prepareWeek();issueWeek()
+        val actual=issued.record("owner-1","workout-2",recordSet("done",0)) as NativeCustomJournalResult.Durable
+        val result=issued.skipRemainingExercise("owner-1","workout-2",1,"slot-0") as NativeCustomJournalResult.Durable
+        val saved=result.issued.journal
+        assertEquals(3L,saved.revision)
+        assertTrue(saved.canProposeFinish)
+        assertNull(saved.finishedByEventId)
+        assertEquals(actual.issued.journal.snapshot,saved.snapshot)
+        val first=CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN)
+        assertEquals(actual.issued.journal.effectiveVisits[first],saved.effectiveVisits[first])
+        assertEquals(2,saved.effectiveVisits.values.count{(it.operation as CustomWorkoutJournalOperation.Record).outcome==KotlinJournalSetOutcome.SKIPPED})
+        assertFalse(saved.effectiveVisits.containsKey(CustomWorkoutVisitKey("cycle-1:w2:d0:slot-0:s2",CustomWorkoutVisitPart.FOLLOW_UP)))
+        assertEquals(saved,(issued.open("owner-1","workout-2") as NativeCustomJournalResult.Durable).issued.journal)
+    }
+
 }

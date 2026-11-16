@@ -219,6 +219,20 @@ internal class NativeKotlinSessionController(
         },recoverOnReject=true)
     }
 
+    /** The confirmation is bound to the revision the athlete reviewed.
+     * A stale dialog must not expand to newly changed/replaced sets. */
+    fun skipRemainingExercise(exerciseId:String,expectedRevision:Long) {
+        val prior=mutable.value
+        val workoutId=prior.workoutId ?:return
+        val journal=prior.journal ?:return
+        if(prior.busy || journal.revision!=expectedRevision ||
+            journal.finishedByEventId!=null)return
+        run(workoutId,{
+            host.skipRemainingGeneratedExercise(
+                workoutId,expectedRevision,exerciseId)
+        },recoverOnReject=true)
+    }
+
     /** A single confirmed Composer exercise replacement is workout-only;
      * future program edits remain a separately reviewed transaction. */
     fun swapExercise(

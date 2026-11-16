@@ -720,6 +720,45 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
     }
 
+    /** Confirmed skips for ONE authored slot, including already-unlocked
+     * amplifier entries. Existing observations are never corrected here.
+     * Individual atomic receipts survive partial writes or process death. */
+    fun skipRemainingExercise(
+        ownerKey:String,workoutId:String,expectedRevision:Long,slotId:String
+    ):NativeCustomJournalResult {
+        if(!id.matches(workoutId))return NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.INVALID_ID)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val opened=read(ownerKey,workoutId,current)
+                if(opened !is NativeCustomJournalResult.Durable)
+                    return@withOwnerTransaction opened
+                val review=WorkoutRemainingExerciseDomain.custom(opened.issued.journal,slotId)
+                if(review==null || review.journalRevision!=expectedRevision)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        if(review==null)CustomWorkoutJournalRefusal.UNKNOWN_VISIT
+                        else CustomWorkoutJournalRefusal.STALE_REVISION)
+                var saved:NativeCustomJournalResult.Durable=opened
+                for(visit in review.entries) {
+                    val result=record(ownerKey,workoutId,
+                        CustomWorkoutJournalOperation.Record(
+                            "skip-"+java.util.UUID.randomUUID(),
+                            saved.issued.journal.revision,visit,
+                            KotlinJournalSetOutcome.SKIPPED,null))
+                    if(result !is NativeCustomJournalResult.Durable)
+                        return@withOwnerTransaction result
+                    saved=result
+                }
+                saved
+            }
+        }.getOrElse{NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     /**
      * Durable actual set / amplifier receipt; explicitly excludes Finish.
      * The shared history transaction coordinator commits Finish through

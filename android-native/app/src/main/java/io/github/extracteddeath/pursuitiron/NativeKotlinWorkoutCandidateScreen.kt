@@ -191,6 +191,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pinnedExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var pendingSkip by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var pendingExerciseSkip by remember(workoutId) {
+        mutableStateOf<NativeExerciseSkipRequest?>(null)
+    }
     var pendingFail by remember(workoutId) {
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
     }
@@ -944,6 +947,14 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             if(showAll || touched || swapReceipt!=null || swapError!=null)PursuitCard {
                 Text("Exercise options",
                     style=MaterialTheme.typography.titleMedium)
+                val remaining=WorkoutRemainingExerciseDomain.generated(journal,chosenExerciseId)
+                if(remaining!=null && remaining.entries.isNotEmpty()) {
+                    OutlinedButton(onClick={
+                        pendingExerciseSkip=NativeExerciseSkipRequest(chosenExerciseId,journal.revision)
+                    },enabled=!state.busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                        Text("Skip remaining exercise")
+                    }
+                }
                 Text("Swap only this workout. The future program, "+
                     "other saved sets and past weights stay unchanged.",
                     style=MaterialTheme.typography.bodySmall)
@@ -1111,10 +1122,28 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})
     }
+    pendingExerciseSkip?.let {request->
+        val review=journal?.let {
+            WorkoutRemainingExerciseDomain.generated(it,request.scopeId)
+        }
+        NativeKotlinRemainingExerciseSkipDialog(request,review,state.busy,
+            onConfirm={
+                controller.skipRemainingExercise(request.scopeId,request.revision)
+                pendingExerciseSkip=null
+            },onDismiss={pendingExerciseSkip=null})
+    }
     val skip=allSets.firstOrNull{it.target.setKey==pendingSkip}
     if(skip!=null)AlertDialog(onDismissRequest={pendingSkip=null},
         title={Text("Skip this set?")},
-        text={Text("Skipping records an explicit outcome. You can correct it before finishing.")},
+        text={Column {
+            Text("Skipping records an explicit outcome. You can correct it before finishing.")
+            if(!skip.isResolved && journal!=null && journal.finishedByEventId==null) {
+                TextButton(enabled=!state.busy,onClick={
+                    pendingExerciseSkip=NativeExerciseSkipRequest(skip.target.exerciseId,journal.revision)
+                    pendingSkip=null
+                }) {Text("Skip remaining exercise…")}
+            }
+        }},
         confirmButton={Button(onClick={
             controller.record(skip.target.setKey,KotlinJournalSetOutcome.SKIPPED,null)
             pendingSkip=null

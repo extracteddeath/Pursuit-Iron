@@ -638,4 +638,65 @@ class NativeKotlinTrackedWorkoutGatewayTest {
             as NativeHistoryLedgerResult.Durable).ledger.completions.isEmpty())
     }
 
+
+    @Test fun confirmedExerciseSkipColdReopensThenFinishesThroughHistory() {
+        enroll();val initial=issue()
+        val first=gateway().append("owner-1","athlete-1","workout-1",set(0,0))
+            as NativeJournalFileResult.Durable
+        val saved=gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",1,"bench")
+        assertTrue(saved.toString(),saved is NativeJournalFileResult.Durable)
+        val cold=(gateway().open("owner-1","athlete-1","workout-1") as NativeJournalFileResult.Durable).journal
+        assertEquals(initial.snapshot,cold.snapshot)
+        assertEquals(first.journal.effectiveSets["set-0"],cold.effectiveSets["set-0"])
+        val skipped=cold.effectiveSets["set-1"]!!.operation as KotlinJournalOperation.RecordSet
+        assertEquals(KotlinJournalSetOutcome.SKIPPED,skipped.outcome)
+        assertNull(skipped.performed)
+        assertNull(skipped.correctsEventId)
+        assertNull(cold.finishedByEventId)
+        assertEquals(2L,cold.revision)
+        assertTrue(gateway().append("owner-1","athlete-1","workout-1",finish()) is NativeJournalFileResult.Durable)
+        assertEquals(1,(ledger().open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable).ledger.completions.size)
+        assertTrue(gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",3,"bench") is NativeJournalFileResult.Rejected)
+    }
+    @Test fun skipRestRequiresCurrentRevisionAndCannotCorrectPartialSavedWork() {
+        enroll();issue()
+        val partial=gateway().append("owner-1","athlete-1","workout-1",
+            KotlinJournalOperation.RecordSet("partial-skip",0,"set-0",KotlinJournalSetOutcome.SKIPPED,null))
+            as NativeJournalFileResult.Durable
+        assertTrue(gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") is NativeJournalFileResult.Rejected)
+        assertEquals(partial.journal,original())
+        val saved=gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",1,"bench") as NativeJournalFileResult.Durable
+        assertEquals(2,saved.journal.receipts.size)
+        assertEquals(partial.journal.effectiveSets["set-0"],saved.journal.effectiveSets["set-0"])
+        assertEquals(saved.journal,(gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",2,"bench") as NativeJournalFileResult.Durable).journal)
+        assertTrue(gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",2,"unknown") is NativeJournalFileResult.Rejected)
+    }
+    @Test fun remainingSkipRefusesMissingHistoryAndForeignOrRevokedAthlete() {
+        issue()
+        assertTrue(gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") is NativeJournalFileResult.Rejected)
+        assertEquals(0,original().receipts.size)
+        enroll()
+        assertTrue(gateway().skipRemainingExercise("owner-1","other","workout-1",0,"bench") is NativeJournalFileResult.Rejected)
+        active=false
+        assertTrue(gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") is NativeJournalFileResult.Rejected)
+        active=true
+        assertEquals(0,original().receipts.size)
+    }
+
+    @Test fun multiEntrySkipAppendsOnlySkipsAndLeavesFinishExplicit() {
+        enroll();val initial=issue()
+        val saved=gateway().skipRemainingExercise("owner-1","athlete-1","workout-1",0,"bench") as NativeJournalFileResult.Durable
+        assertEquals(2L,saved.journal.revision)
+        assertTrue(saved.journal.canProposeFinish)
+        assertNull(saved.journal.finishedByEventId)
+        assertEquals(initial.snapshot,saved.journal.snapshot)
+        assertEquals(2,saved.journal.receipts.size)
+        assertTrue(saved.journal.receipts.all {
+            val operation=it.operation as KotlinJournalOperation.RecordSet
+            operation.outcome==KotlinJournalSetOutcome.SKIPPED &&
+                operation.performed==null && operation.correctsEventId==null
+        })
+        assertTrue((ledger().open("owner-1","athlete-1") as NativeHistoryLedgerResult.Durable).ledger.completions.isEmpty())
+    }
+
 }

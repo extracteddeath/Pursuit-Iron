@@ -8254,6 +8254,66 @@
         ],
         "note": "Alternating gorilla row with an explicitly confirmed matched pair; log the mass of each bell and repetitions per arm. Single bells or a dumbbell rack do not verify this pair, and no related row load or history transfers. Muscle credits remain provisional."
       }
+    },
+    {
+      "id": "serratus-pushup",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "scapular_protraction",
+        "variant": "bodyweight-serratus-pushup",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "direct": "SERRATUS_ANTERIOR",
+        "indirect": [],
+        "attachment": null,
+        "note": "Unweighted serratus push-up uses scapular protraction with no invented external load. Serratus anterior is tracked separately from abdominal work; these provisional set credits are not an EMG-derived dose or a promise of training effect."
+      },
+      "sourceSubregion": "serratus"
+    },
+    {
+      "id": "tibialis-raise",
+      "source": {
+        "movementFamily": "dorsiflexion",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "ankle_dorsiflexion",
+        "variant": "wall-supported-bodyweight-tibialis",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": null,
+        "basis": null,
+        "fixtures": [
+          "wall-support"
+        ],
+        "direct": "TIBIALIS_ANTERIOR",
+        "indirect": [],
+        "attachment": null,
+        "note": "Unweighted tibialis raise uses the explicitly confirmed stable wall for support and ankle dorsiflexion. Tibialis anterior has its own ledger, independent of plantar-flexion calf work. No machine, band or external load is inferred; credit is provisional."
+      },
+      "sourceSubregion": "tibialis"
     }
   ]
 }

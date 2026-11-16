@@ -504,3 +504,23 @@ its earlier persistence and removes the screen-owned writeback; training
 journals, rest receipt projections, actuals and approvals remain separate.
 Source/policy and Android compilation evidence do not close physical-device,
 foldable, 200% text, TalkBack or full UI acceptance. No APK/AAB.
+
+## Serratus and tibialis accounting — 2026-11-15
+
+Two exact web identities (`serratus-pushup`, `tibialis-raise`) now have distinct
+serratus-anterior / tibialis-anterior targets. The reviewed native convention
+for tibialis work requires explicit wall support and no external weight. New
+policy v11 declares 22 groups; saved v10 / v9 / v1-v8 preserve their exact 20 /
+18 / 16 rows and signed meaning. The custom-policy editor retains those scopes;
+adding current targets requires complete explicit values and renewed review.
+
+Real generation, every converted week and native approval, logging, retries,
+corrections, Finish, verified History, week-two selection and seed replay cover
+the new bodyweight movements. An independent pre-change v10 store pins all 21
+files, four completed workouts and original consent. Old v8/v9/v10 readers must
+also regenerate the exact saved cycle without writing any file. Current source
+inventory is 322/376, with 54 absent identities. Primary anatomical/function
+sources and the limits of provisional set/dose accounting are documented in
+[kotlin-engine/verification/serratus-tibialis-review.md](kotlin-engine/verification/serratus-tibialis-review.md).
+Full functional parity, superiority, complete UI and device acceptance remain
+open. Cable, banded, weighted and timed variants are separate work. No APK/AAB.

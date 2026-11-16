@@ -139,6 +139,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         return when(version) {
             1 -> TrainingMuscleCoverage.legacyV1
             2 -> TrainingMuscleCoverage.legacyV2
+            3 -> TrainingMuscleCoverage.legacyV3
             else -> TrainingMuscleCoverage.current
         }
     }
@@ -259,7 +260,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         Text("This saved policy retains its original muscle coverage. Adding current muscle targets requires your own reviewed values.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedButton(enabled=!busy,onClick={put("$phaseKey:muscleScope","v3")},
+        OutlinedButton(enabled=!busy,onClick={put("$phaseKey:muscleScope","v${TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)}")},
             modifier=Modifier.heightIn(min=48.dp)) {Text("Add current muscle targets")}
     }
     Text("Enter a complete baseline and selected MEV/MAV/MRV for each group, including an explicitly entered 0 when that is your reviewed target. Direct-frequency days are separate from set volume. Focused and reduced muscles require a real authored change from baseline.",

@@ -189,6 +189,31 @@ wrong-type/future fields. Source checks require the shared owner and recording
 boundaries. Device rotation, background, TalkBack, touch and actual foldable
 visual acceptance remain open; this does not finish the full UI gate.
 
+## Explicit muscle-scope upgrades and wall-supported bodyweight work — 2026-11-15
+
+The ordinary setup / first-program flow offers the named Serratus Push-Up and
+Tibialis Raise identities. Tibialis Raise uses the reviewed unweighted,
+wall-supported convention; Wall support is a named physical-fixture choice in
+onboarding and Gym. Fixture selection never creates an external weight grant.
+Bodyweight set entry and history keep their no-external-load convention; no 0
+weight, RIR observation or unrelated calf/ab result is invented.
+
+New policies track 22 groups, with separate serratus anterior and tibialis
+anterior targets. Existing custom-policy editors retain the exact 16-, 18- or
+20-group scope. Add current muscle targets is explicit and exposes missing
+rows for complete athlete-entered values; it never fills zeros or changes an
+old approval on opening. Source guards preserve the 20-row restore marker and
+select the new scope only through that explicit action. Normal preview, review,
+save, Undo, issuance, logging, correction, Finish and History owners are reused.
+
+The actual web metadata groups serratus under core and tibialis under calves
+while retaining their subregion identifiers. Native uses distinct declared
+ledgers and leaves existing exercise credits intact. Real program/cycle and
+native-file task tests verify this bounded change, including old-store byte
+identity and regenerated old programs. This is not a measured task-speed,
+physiological, visual or device improvement verdict; full UI approval remains
+open. No APK/AAB.
+
 ## Persistent information architecture
 
 ### Authored superset execution

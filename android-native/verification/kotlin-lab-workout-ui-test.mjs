@@ -471,11 +471,12 @@ assert.ok(starterVariantRetention.includes('val calibratedPrimaryFamilies=select
   starterVariantRetention.includes('it.familyId in calibratedPrimaryFamilies') &&
   starterVariantRetention.includes('choices[index]=choices[index].copy(requiredVisits=1)') &&
   starterVariantRetention.includes('if(input.policyVersion in setOf(') &&
-  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,V8_POLICY_VERSION,V9_POLICY_VERSION,POLICY_VERSION') &&
+  starterVariantRetention.includes('V6_POLICY_VERSION,V7_POLICY_VERSION,V8_POLICY_VERSION,V9_POLICY_VERSION,V10_POLICY_VERSION,POLICY_VERSION') &&
   starterVariantRetention.includes('V7_POLICY_VERSION->"v7"') &&
   starterVariantRetention.includes('V8_POLICY_VERSION->"v8"') &&
   starterVariantRetention.includes('V9_POLICY_VERSION->"v9"') &&
-  starterVariantRetention.includes('else->"v10"'),
+  starterVariantRetention.includes('V10_POLICY_VERSION->"v10"') &&
+  starterVariantRetention.includes('else->"v11"'),
   'V6/V7 replay and V8 strength/peak policies must retain calibrated related incline presses');
 const machineLast=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/WorkoutLastReferenceDomain.kt');
 assert.ok(machineLast.includes('data class WorkoutMachineReferenceKey(') &&
@@ -900,6 +901,12 @@ assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
   betaScope.includes('one Kotlin engine'),
   'Early beta release must refuse the legacy JS engine and document single-policy ownership');
 
+const musclePolicyEditor=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCoachPolicyEditor.kt');
+for(const phrase of ['1 -> TrainingMuscleCoverage.legacyV1',
+  '2 -> TrainingMuscleCoverage.legacyV2','3 -> TrainingMuscleCoverage.legacyV3',
+  'TrainingMuscleCoverage.versionOf(it)',
+  'put("$phaseKey:muscleScope","v${TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)}")'])
+  assert.ok(musclePolicyEditor.includes(phrase),'saved policy scope or explicit current-scope upgrade lost: '+phrase);
 console.log('PASS native workout recording and verified Finish-to-History/Coach navigation and safe Last draft');
 
 

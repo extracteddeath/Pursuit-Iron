@@ -25,7 +25,7 @@ class ReviewedKettlebellCatalogTest {
         assertEquals(listOf("single-kettlebell","matched-kettlebell-pair"),entries.map{it.movement.equipmentId})
         assertEquals(TrainingMuscle.HAMSTRINGS,entries[0].movement.credits.single{it.role==MuscleCreditRole.DIRECT}.muscle)
         assertEquals(TrainingMuscle.UPPER_BACK,entries[1].movement.credits.single{it.role==MuscleCreditRole.DIRECT}.muscle)
-        assertEquals(320,StarterExerciseTranche.entries().size)
+        assertEquals(322,StarterExerciseTranche.entries().size)
     }
 
     @Test fun oneBellNeverConfirmsAMatchedPairAndNeitherCanBorrowDumbbells() {

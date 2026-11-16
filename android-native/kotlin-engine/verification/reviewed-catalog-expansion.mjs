@@ -27,7 +27,8 @@ const END='        // END REVIEWED_WEB_EXPANSION_V2';
 const allowedMuscles=new Set(['CHEST','LATS','UPPER_BACK','FRONT_DELTS',
  'SIDE_DELTS','REAR_DELTS','TRICEPS','BICEPS','BRACHIALIS','WRIST_FLEXORS',
  'WRIST_EXTENSORS','QUADS','HAMSTRINGS','GLUTES','CALVES','ABS',
- 'HIP_ABDUCTORS','HIP_ADDUCTORS','SPINAL_ERECTORS','TRAPS']);
+ 'HIP_ABDUCTORS','HIP_ADDUCTORS','SPINAL_ERECTORS','TRAPS',
+ 'SERRATUS_ANTERIOR','TIBIALIS_ANTERIOR']);
 const focusTypes=new Set(['press','pull','lower','all']);
 const patterns=new Set(['HORIZONTAL_PRESS','VERTICAL_PRESS','HORIZONTAL_PULL',
  'VERTICAL_PULL','SQUAT','HINGE','ISOLATION','CORE']);
@@ -89,6 +90,11 @@ function validateRows(manifest,web=EXERCISES) {
    assert.ok(focusTypes.has(a.focus));
    assert.ok(a.note?.length>=45 && !/[<>\r]/.test(a.note),'missing authored physical/muscle rationale '+row.id);
    assert.ok(allowedMuscles.has(a.direct),'unsupported anatomy '+row.id);
+   const subregion=({'SERRATUS_ANTERIOR':'serratus','TIBIALIS_ANTERIOR':'tibialis'})[a.direct];
+   if(subregion) {
+     assert.equal(row.sourceSubregion,subregion,'explicit subregion evidence missing '+row.id);
+     assert.equal(live.legacySubregion,subregion,'live anatomical subregion drift '+row.id);
+   } else assert.equal(row.sourceSubregion??null,null,'subregion evidence must match the declared target '+row.id);
    assert.ok(Array.isArray(a.indirect));
    const credits=new Set([a.direct]);
    for(const credit of a.indirect) {
@@ -202,10 +208,18 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,320);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,322);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);
+ const wrongAnatomy=structuredClone(m);
+ wrongAnatomy.records.find(x=>x.id==='tibialis-raise').sourceSubregion='calves';
+ assert.throws(()=>validateReviewedCatalogExpansion(wrongAnatomy,src),/subregion evidence/);
+ const broadCore=structuredClone(m);
+ broadCore.records.find(x=>x.id==='serratus-pushup').review.direct='ABS';
+ assert.throws(()=>validateReviewedCatalogExpansion(broadCore,src),/declared target/);
+ const drift=EXERCISES.map(x=>x.id==='serratus-pushup'?{...x,legacySubregion:'abs'}:x);
+ assert.throws(()=>validateReviewedCatalogExpansion(m,src,drift),/anatomical subregion drift/);
  const wrongBell=structuredClone(m);
  wrongBell.records.find(x=>x.id==='kb-gorilla-row').review.implement='single-kettlebell';
  assert.throws(()=>validateReviewedCatalogExpansion(wrongBell,src));

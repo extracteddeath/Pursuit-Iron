@@ -46,7 +46,7 @@ class ReviewedTrapBarCatalogTest {
 
     @Test fun seventeenExactIdentitiesAppendWithoutAliasesOrLoadTransfers() {
         assertEquals(ids,added.map{it.legacyCuratedId})
-        assertEquals(320,all.size)
+        assertEquals(322,all.size)
         assertEquals(all.size,all.map{it.movement.exerciseId}.distinct().size)
         assertEquals(all.size,all.map{it.movement.familyId to it.movement.variantId}.distinct().size)
         assertTrue(added.none{it.mayTransferPreviousLoad})
@@ -137,7 +137,7 @@ class ReviewedTrapBarCatalogTest {
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,old.status)
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,fresh.status)
         assertEquals("v9",old.policy?.revision)
-        assertEquals("v10",fresh.policy?.revision)
+        assertEquals("v11",fresh.policy?.revision)
         assertEquals(TrainingMuscleCoverage.legacyV2,old.policy?.selectedBounds?.map{it.muscle})
         assertEquals(TrainingMuscleCoverage.current,fresh.policy?.selectedBounds?.map{it.muscle})
         assertEquals(old.prescription?.sessions,fresh.prescription?.sessions)

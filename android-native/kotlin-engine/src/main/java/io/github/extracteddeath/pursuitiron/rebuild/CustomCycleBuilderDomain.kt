@@ -343,6 +343,19 @@ object CustomCycleBuilderDomain {
             orderedSlotIds.toSet() != day.slots.map { it.slotId }.toSet())
             return CustomCycleBuilderResult.Rejected(
                 CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT)
+        // Superset members execute as one ordered round. A reorder cannot
+        // silently scatter two/three linked slots or turn unrelated work
+        // into an apparent member of a round. Pre-existing noncontiguous
+        // authored groups must be explicitly unlinked/rebuilt first.
+        val lookup=day.slots.associateBy{it.slotId}
+        val proposed=orderedSlotIds.map{lookup.getValue(it)}
+        val grouped=proposed.withIndex().filter{it.value.supersetGroup!=null}
+            .groupBy{it.value.supersetGroup}
+        if(grouped.values.any{members->
+            members.size !in 2..3 ||
+                members.last().index-members.first().index+1!=members.size
+        })return CustomCycleBuilderResult.Rejected(
+            CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT)
         return edit(current, expectedRevision, "reorder-slots") {
             val lookup = day.slots.associateBy { it.slotId }
             current.copy(blocks = current.blocks.map { candidate ->

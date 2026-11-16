@@ -41,7 +41,10 @@ internal fun nativePlanExerciseActions(
     }
     return NativePlanExerciseActions(
         edit=true,swap=!hasWeekOverride && slot.supersetGroup==null,
-        earlier=index>0,later=index<day.slots.lastIndex,
+        earlier=NativeKotlinPlanSupersetOrdering.proposed(
+            day,slot.slotId,-1)!=null,
+        later=NativeKotlinPlanSupersetOrdering.proposed(
+            day,slot.slotId,1)!=null,
         weekOverride=hasWeekOverride,superset=slot.supersetGroup!=null,
         remove=slot.supersetGroup==null)
 }

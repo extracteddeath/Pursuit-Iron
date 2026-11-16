@@ -51,6 +51,7 @@ on:
       - 'android-native/verification/kotlin-plan-exercise-removal-test.mjs'
       - 'android-native/verification/kotlin-plan-cross-day-move-test.mjs'
       - 'android-native/verification/kotlin-plan-structure-removal-test.mjs'
+      - 'android-native/verification/kotlin-plan-superset-atomic-reorder-test.mjs'
       - 'android-native/verification/kotlin-weekly-swap-coverage-test.mjs'
       - 'android-native/verification/kotlin-train-resume-test.mjs'
       - 'android-native/verification/kotlin-plan-hierarchy-test.mjs'
@@ -177,6 +178,7 @@ jobs:
           node android-native/verification/kotlin-plan-exercise-removal-test.mjs
           node android-native/verification/kotlin-plan-cross-day-move-test.mjs
           node android-native/verification/kotlin-plan-structure-removal-test.mjs
+          node android-native/verification/kotlin-plan-superset-atomic-reorder-test.mjs
           node android-native/verification/kotlin-weekly-swap-coverage-test.mjs
           node android-native/verification/kotlin-train-resume-test.mjs
           node android-native/verification/kotlin-plan-hierarchy-test.mjs

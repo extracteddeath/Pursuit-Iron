@@ -37,6 +37,12 @@ internal fun NativeKotlinSupersetEditorSheet(
         (slot.supersetGroup==null || slot.supersetGroup==request.groupId) &&
             slot.sets.any{it.type==DraftSetType.WORKING}
     }.map{it.slotId}.toSet()
+    val positions=day?.slots.orEmpty().withIndex().filter{
+        it.value.slotId in selected
+    }.map{it.index}
+    val selectionContiguous=selected.size in 2..3 &&
+        positions.size==selected.size &&
+        positions.last()-positions.first()+1==positions.size
     val anchorSlotId=selected.singleOrNull()
     val partnerIdeas=remember(day,available,anchorSlotId,request.groupId,allowSupersets,ideasEnabled) {
         if(day==null || anchorSlotId==null)null else CustomSupersetPartnerRankingDomain.rank(
@@ -89,6 +95,13 @@ internal fun NativeKotlinSupersetEditorSheet(
             style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text("${selected.size} of 2–3 movements selected. Cancel keeps the saved program.",
             style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(selected.size>=2 && !selectionContiguous)Text(
+            "These linked movements are separated in the training-day order. "+
+                "They can still alternate as a superset, but moving that "+
+                "group earlier or later is unavailable until you unlink "+
+                "and rearrange its members. Their sets are not changed.",
+            style=MaterialTheme.typography.bodyMedium,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick={val chosen=selected.toList();submitted=ArrayList(chosen);onSave(chosen)},
             enabled=!busy && !stale && allowSupersets && selected.size in 2..3 &&
                 eligible.containsAll(selected) && selected.toSet()!=existing.toSet(),

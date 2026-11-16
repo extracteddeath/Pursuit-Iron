@@ -117,10 +117,26 @@ function validateRows(manifest,web=EXERCISES) {
      // Current canonical web source uses "pullup" and "dip" for
     // unweighted bar/station exercises. Accept those ONLY with verified
     // physical fixture IDs, never a guessed stack or a generic machine.
+    // Legacy bench-only metadata cannot prove a load or a specific bench.
+    // These three reviewed variants are explicitly unweighted and demand
+    // the precise supported physical station, not an inferred machine/plate.
+    // Do not loosen this to ALL bench-family source entries: loaded benches,
+    // Smith variants and future unknowns must fail closed.
+    const reviewedUnweightedFacility=({
+      'decline-situp':['declinebench','decline-bench'],
+      'back-ext-45':['bench','45-degree-back-extension-station'],
+      'prone-y-raise':['inclinebench','incline-bench']
+    })[row.id];
+    const confirmedFacilityVariant=reviewedUnweightedFacility!=null &&
+      equipment.length===1 &&
+      equipment[0]===reviewedUnweightedFacility[0] &&
+      a.fixtures.includes(reviewedUnweightedFacility[1]) &&
+      a.fixtures.length===1;
     const unweightedSource=equipment.length===1 && (
       equipment[0]==='bodyweight' ||
       equipment[0]==='pullup' && a.fixtures.includes('pullup-bar') ||
-      equipment[0]==='dip' && a.fixtures.includes('dip-station')
+      equipment[0]==='dip' && a.fixtures.includes('dip-station') ||
+      confirmedFacilityVariant
     );
     assert.ok(unweightedSource,
        'do not infer unweighted loading from an ambiguous web equipment list: '+row.id);
@@ -212,7 +228,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,327);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,330);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

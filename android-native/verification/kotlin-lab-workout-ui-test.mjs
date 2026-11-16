@@ -1016,6 +1016,16 @@ assert.ok(!priorLeveling.includes('DoubleProgressionLevelingDomain.reviewLastFor
   'No expensive verified equipment review on the generated Compose UI thread');
 
 const waveSixFixtures=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt');
+assert.match(waveSixFixtures,/"45-degree-back-extension-station" to /);
+for(const fragment of [
+  '"decline-situp" to "Decline Sit-Up"',
+  '"back-ext-45" to "45° Back Extension (unweighted)"',
+  '"prone-y-raise" to "Prone Y-Raise (unweighted)"'
+])assert.ok(waveSixLabelsGuard().includes(fragment),
+  'Bench accessory must be named in native Kotlin exercise UI: '+fragment);
+function waveSixLabelsGuard() {
+  return read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseLabels.kt');
+}
 for(const id of ['squat-box','heel-wedge','step-platform','exercise-sliders','ab-wheel']) {
   assert.ok(waveSixFixtures.includes('"'+id+'" to '),
     'Workout accessory must be selectable in real Kotlin gym UI: '+id);

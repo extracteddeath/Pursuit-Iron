@@ -595,3 +595,22 @@ correction, Finish and verified History after preferences change. Source tests
 verify History/Plan handoffs and saveable filter/edit scope. Runtime restoration,
 visuals, goals, comparisons, custom exercise creation and device acceptance remain
 open. No APK/AAB.
+
+
+## Additional source-verified conservative bench accessories (2026-11-16, pending CI)
+Three **exact active web identities** are appended after the immutable 327-ID
+Kotlin catalog prefix: `decline-situp`, `back-ext-45`, and `prone-y-raise`.
+They are intentionally **unweighted repetition** variants, not copies of
+loaded dumbbell, plate, machine or isometric/hold exercises. Decline, genuine
+45-degree back-extension, and incline benches are required as confirmed
+physical facilities; they do not imply load stock. Lower-trap/scapular
+training uses conservative provisional TRAPS credit for prone Y-raise rather
+than copying legacy side-deltoid metadata without independent evidence.
+Spinal erectors receive the direct credit for back extensions, with modest
+glute/hamstring indirect dose, and sit-ups map generic core to ABS only.
+The source-linked review manifest and generated Kotlin definitions, gym
+availability and athlete labels have to pass CI, with no weight/history
+transfer, machine sharing or invented provenance. **The remaining 46 IDs
+are still excluded** pending correct calibration for bands, assistance,
+grip tools, plate conventions, unloaded/loaded holds, carries and others.
+No Kotlin-engine web parity or beta readiness is claimed.

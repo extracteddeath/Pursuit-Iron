@@ -54,3 +54,18 @@ assert.match(candidate,/!available\.alreadyIssued &&\s*changedImpacts\.isNotEmpt
 assert.doesNotMatch(candidate,/review\.omittedExerciseIds\.joinToString/);
 console.log('PASS native Train owner-scoped minimize, reverified resume, save-state retention, and complete unfinished-workout pagination');
 console.log('PASS native shorter-session impact evidence, exact counts and readable Train review');
+
+// The custom signed-cycle path must expose equally exact changes to authored
+// slots, without importing raw internal IDs into the athlete-facing summary.
+const customCycle=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt','utf8');
+const customDomain=readFileSync(
+ 'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomShorterSessionReviewDomain.kt','utf8');
+assert.match(customDomain,/data class CustomShortSessionSlotImpact/);
+assert.match(customDomain,/Collections\.unmodifiableList\(impacts\)/);
+assert.match(customCycle,/val changedSlots=timeReview\.slotImpacts\.filter/);
+assert.match(customCycle,/kotlinExerciseLabel\(impact\.exerciseId\)/);
+assert.match(customCycle,/impact\.omittedWarmupSets>0/);
+assert.match(customCycle,/impact\.supersetGroup!=null/);
+assert.doesNotMatch(customCycle,/timeReview\.omittedSlotIds\.joinToString/);
+console.log('PASS exact custom shorter-session slot review, warmups and linked supersets');

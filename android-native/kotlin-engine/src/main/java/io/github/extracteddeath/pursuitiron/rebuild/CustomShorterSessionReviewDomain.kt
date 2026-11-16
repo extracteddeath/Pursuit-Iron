@@ -22,6 +22,23 @@ enum class CustomShortSessionStatus {
     PROTECTED_WORK_EXCEEDS_LIMIT
 }
 
+/**
+ * A source-ordered, per-slot accounting of precisely retained and omitted
+ * authored work. Multiple visits of the same exercise remain separate; a
+ * superset group remains identifiable without turning its label into a load
+ * or progression authority.
+ */
+data class CustomShortSessionSlotImpact(
+    val slotId:String,
+    val exerciseId:String,
+    val originalPosition:Int,
+    val supersetGroup:String?,
+    val originalWorkingSets:Int,
+    val retainedWorkingSets:Int,
+    val omittedWorkingSets:Int,
+    val omittedWarmupSets:Int
+)
+
 data class CustomShortSessionReview(
     val status: CustomShortSessionStatus,
     val requestedMinutes: Int,
@@ -35,7 +52,9 @@ data class CustomShortSessionReview(
     /** Supersets are never split, and their members keep original order. */
     val retainedSupersetGroups: List<String>,
     val omittedWorkingSets: Int,
-    val explanation: String
+    val explanation: String,
+    /** Display-only impact from the reviewed exact custom snapshot. */
+    val slotImpacts:List<CustomShortSessionSlotImpact> = emptyList()
 ) {
     val changesPrescription: Boolean get() = omittedSetKeys.isNotEmpty()
     val canIssueWorkout: Boolean get() = false
@@ -230,6 +249,24 @@ object CustomShorterSessionReviewDomain {
                 "The protected custom work exceeds this time limit. Keep Full or choose a longer limit; the coach cannot silently change pinned exercises, strength work, supersets or rest."
         }
         val retainedKeys=retained.map{it.setKey}
+        val impacts=source.slots.mapIndexed {index,slot->
+            val originalWork=slot.sets.filter {
+                it.prescription.type==DraftSetType.WORKING
+            }
+            val keepCount=originalWork.count {it.setKey in keys}
+            CustomShortSessionSlotImpact(
+                slot.slotId,slot.exerciseId,index+1,slot.supersetGroup,
+                originalWork.size,keepCount,originalWork.size-keepCount,
+                slot.sets.count {
+                    it.prescription.type==DraftSetType.WARMUP &&
+                        it.setKey !in keys
+                }
+            )
+        }
+        require(impacts.sumOf {it.omittedWorkingSets}==
+            omitted.count{it.prescription.type==DraftSetType.WORKING})
+        require(impacts.sumOf {it.omittedWarmupSets}==
+            omitted.count{it.prescription.type==DraftSetType.WARMUP})
         return CustomShortSessionReview(
             status,requestedMinutes,source.stamp,original,after,
             Collections.unmodifiableList(retainedKeys),
@@ -241,7 +278,7 @@ object CustomShorterSessionReviewDomain {
                 slot.supersetGroup!=null && slot.sets.any{it.setKey in keys}
             }.mapNotNull{it.supersetGroup}.distinct()),
             omitted.count{it.prescription.type==DraftSetType.WORKING},
-            explain
+            explain,Collections.unmodifiableList(impacts)
         )
     }
 

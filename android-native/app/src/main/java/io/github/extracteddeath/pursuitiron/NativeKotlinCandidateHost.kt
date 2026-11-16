@@ -296,6 +296,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
                         prior.snapshot.configurations,configurations,
                         reviewed.gym.gymId))
                     NativeMachineRosterResult.Rejected("CROSS_GYM_EDIT")
+                else if(!nativeMachineRosterSourceEligible(
+                    reviewed.gym.gymId,
+                    // Only one exact, currently reviewed catalog identity with a
+                    // real machine/cable stack can authorize new roster facts.
+                    source.catalog.groupBy {it.exerciseId}.filterValues {entries->
+                        entries.size==1 && entries.single().expectedLoadBasis in
+                            setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
+                    }.keys,
+                    prior.snapshot.configurations,configurations))
+                    NativeMachineRosterResult.Rejected("EXERCISE_HAS_NO_MACHINE_STACK")
                 else if(configurations.any { config ->
                     config.gymId==reviewed.gym.gymId &&
                     config.machines.any { candidate ->
@@ -409,6 +419,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 as? NativeMachineRosterResult.Saved
                 ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
                     "MACHINE_ROSTER_UNAVAILABLE")
+            // Only the CURRENT owner-reviewed catalog may introduce gym
+            // defaults into a fresh workout machine-choice file. Older
+            // issued machine bindings and actual receipts remain intact.
+            val source=(authoringSourceStore.read(signed.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            val eligible=if(source!=null && source.ownerKey==signed.ownerKey &&
+                source.athleteId==signed.athleteId &&
+                source.setup.reviewed?.gym?.gymId==scope.gymId)
+                source.catalog.groupBy{it.exerciseId}.filterValues {entries->
+                    entries.size==1 && entries.single().expectedLoadBasis in
+                        setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
+                }.keys
+            else emptySet()
             // The signed, immutable issued custom snapshot is authority
             // for a slot-bound station. A new gym default cannot overwrite
             // a prior A/B choice after app restart or a program edit.
@@ -431,8 +454,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
             scope.exerciseIds.sorted().forEach{exercise->
                 val config=KotlinMachineAlternativesDomain.forGymExercise(
                     rosters.snapshot.configurations,scope.gymId,exercise)
-                val machine=bound[exercise] ?:config?.defaultMachineId
-                    ?:config?.machines?.firstOrNull{it.active}?.id
+                val machine=bound[exercise] ?: if(exercise in eligible)
+                    (config?.defaultMachineId
+                        ?:config?.machines?.firstOrNull{it.active}?.id)
+                    else null
                 if(machine!=null)defaults[exercise]=machine
             }
             scope.observedMachines.forEach { (exercise,machine)->
@@ -465,6 +490,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
             if(scope.finished || exerciseId !in scope.exerciseIds)
                 return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
                     "WORKOUT_NOT_EDITABLE")
+            val source=(authoringSourceStore.read(signed.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            if(source==null || source.ownerKey!=signed.ownerKey ||
+                source.athleteId!=signed.athleteId ||
+                source.setup.reviewed?.gym?.gymId!=scope.gymId ||
+                source.catalog.singleOrNull{it.exerciseId==exerciseId}
+                    ?.expectedLoadBasis !in setOf(
+                        LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK))
+                return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
+                    "EXERCISE_HAS_NO_MACHINE_STACK")
             val rosters=machineRosters.read(signed.ownerKey)
                 as? NativeMachineRosterResult.Saved
                 ?:return@withOwnerTransaction NativeWorkoutMachineChoiceResult.Rejected(
@@ -509,11 +544,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 source.athleteId!=signed.athleteId ||
                 source.setup.reviewed?.gym?.gymId!=scope.gymId)
                 return@withOwnerTransaction emptySet<String>()
-            source.catalog.asSequence().filter {
-                it.exerciseId in scope.exerciseIds &&
-                it.expectedLoadBasis in setOf(
+            source.catalog.groupBy{it.exerciseId}.filterValues {entries->
+                entries.size==1 && entries.single().expectedLoadBasis in setOf(
                     LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
-            }.map {it.exerciseId}.toSet()
+            }.keys.intersect(scope.exerciseIds)
         }}.getOrDefault(emptySet())
     }
 
@@ -568,12 +602,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
             // Existing or legacy roster entries cannot authorize creating
             // new physical stations for a barbell, dumbbell or other non-stack
             // exercise. The CURRENT reviewed source must prove this basis.
-            if(source.catalog.none {
-                it.exerciseId==exerciseId &&
-                it.expectedLoadBasis in setOf(
-                    LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)
-            })return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
-                "EXERCISE_HAS_NO_MACHINE_STACK")
+            if(source.catalog.singleOrNull {it.exerciseId==exerciseId}
+                ?.expectedLoadBasis !in setOf(
+                    LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK))
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "EXERCISE_HAS_NO_MACHINE_STACK")
             if(previous.machines.size>=32 ||
                 previous.machines.any{it.label.equals(name,ignoreCase=true)})
                 return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(

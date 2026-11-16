@@ -86,12 +86,20 @@ internal fun NativeKotlinMachineAlternativesPanel(
         (increment!=null && increment>BigDecimal.ZERO &&
             increment<=BigDecimal("100000") &&
             increment.stripTrailingZeros().scale()<=3)
+    val verifiedMachineIds=catalog.groupBy {it.exerciseId}.filterValues {records->
+        records.size==1 && records.single().expectedLoadBasis in setOf(
+            io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.MACHINE_STACK,
+            io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.CABLE_STACK)
+    }.keys
     val matches=catalog.asSequence().filter {ex->
-        query.isNotBlank() && (ex.exerciseId.contains(query.trim(),ignoreCase=true) ||
+        ex.exerciseId in verifiedMachineIds &&
+            query.isNotBlank() &&
+            (ex.exerciseId.contains(query.trim(),ignoreCase=true) ||
             kotlinExerciseLabel(ex.exerciseId).contains(query.trim(),ignoreCase=true))
-    }.distinctBy {it.exerciseId}.take(6).toList()
+    }.take(6).toList()
     val config=roster?.configurations?.firstOrNull{
-        it.gymId==gymId && it.exerciseId==exerciseId
+        it.gymId==gymId && it.exerciseId==exerciseId &&
+            it.exerciseId in verifiedMachineIds
     }
     // Plan -> Gym focus may resolve before roster data is loaded. Once the
     // exact gym is available, avoid suggesting an already existing Machine A.
@@ -109,8 +117,13 @@ internal fun NativeKotlinMachineAlternativesPanel(
     // A saved group must be discoverable without guessing the logical
     // exercise name. The roster is already the verified current gym snapshot.
     val savedGroups=roster?.configurations.orEmpty().filter {
-        it.gymId==gymId && it.machines.isNotEmpty()
+        it.gymId==gymId && it.exerciseId in verifiedMachineIds &&
+            it.machines.isNotEmpty()
     }.sortedBy { kotlinExerciseLabel(it.exerciseId) }
+    val historicalGroups=roster?.configurations.orEmpty().filter {
+        it.gymId==gymId && it.exerciseId !in verifiedMachineIds &&
+            it.machines.isNotEmpty()
+    }
     var showAllSaved by rememberSaveable(gymId) { mutableStateOf(false) }
 
     PursuitCard {
@@ -121,6 +134,20 @@ internal fun NativeKotlinMachineAlternativesPanel(
                 "at this gym. Search current equipment instead.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.error)
+        if(historicalGroups.isNotEmpty()) {
+            Text("${historicalGroups.size} historical machine groups retained",
+                style=MaterialTheme.typography.titleSmall)
+            Text("Their physical records remain separate in History, but the "+
+                "current reviewed catalog does not qualify these exercises "+
+                "for Machine A/B editing.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            historicalGroups.take(5).forEach {old->
+                Text(kotlinExerciseLabel(old.exerciseId)+" · History only",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         if(savedGroups.isNotEmpty()) {
             Text("Saved Machine A/B groups at this gym",
                 style=MaterialTheme.typography.titleMedium)
@@ -180,7 +207,13 @@ internal fun NativeKotlinMachineAlternativesPanel(
         if(exerciseId.isNotBlank()) {
             Text("Exercise: ${kotlinExerciseLabel(exerciseId)}",
                 style=MaterialTheme.typography.titleMedium)
-            if(config==null||config.machines.isEmpty()) {
+            if(exerciseId !in verifiedMachineIds) {
+                Text("This exercise is not currently verified as a machine "+
+                    "or cable-stack movement. Its old Machine A/B records "+
+                    "are read-only and never reclassified.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
+            } else if(config==null||config.machines.isEmpty()) {
                 Text("No physical machine alternatives saved.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -329,7 +362,8 @@ internal fun NativeKotlinMachineAlternativesPanel(
                     label=('A'..'Z').map{"Machine $it"}
                         .firstOrNull{it.lowercase() !in usedNames} ?:"Other machine"
                 },
-                enabled=!busy && roster!=null && label.isNotBlank() &&
+                enabled=!busy && roster!=null &&
+                    exerciseId in verifiedMachineIds && label.isNotBlank() &&
                     (!showNewStackCalibration || (incrementValid && stackValid)) &&
                     (config?.machines?.size?:0)<32,
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)

@@ -226,7 +226,10 @@ internal class NativeKotlinGymSourceController(
     fun addPhysicalMachine(exerciseId:String,label:String,increment:BigDecimal?=null,
         minimum:BigDecimal?=null,maximum:BigDecimal?=null)=
         mutateMachineRoster {roster,source->
-            require(source.catalog.any{it.exerciseId==exerciseId})
+            require(source.catalog.singleOrNull{it.exerciseId==exerciseId}
+                ?.expectedLoadBasis in setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)) {
+                "Only reviewed machine or cable-stack exercises can have physical Machine A/B."
+            }
             val gymId=checkNotNull(source.setup.reviewed).gym.gymId
             val current=roster.configurations.firstOrNull{
                 it.gymId==gymId && it.exerciseId==exerciseId

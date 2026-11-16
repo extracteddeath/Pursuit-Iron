@@ -210,6 +210,7 @@ export const browserShards = Object.freeze({
         'shorter-session-browser-test.mjs',
         'b896-expressive-workout-browser-test.mjs',
         'b993-workout-info-browser-test.mjs',
+        'b1013-workout-machine-quick-switch-browser-test.mjs',
         'b994-workout-finish-browser-test.mjs',
         'b889-injury-journal-browser-test.mjs',
         'b886-set-number-options-browser-test.mjs',

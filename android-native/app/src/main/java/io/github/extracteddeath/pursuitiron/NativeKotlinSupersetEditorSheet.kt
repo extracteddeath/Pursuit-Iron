@@ -96,13 +96,14 @@ internal fun NativeKotlinSupersetEditorSheet(
         Text("${selected.size} of 2–3 movements selected. Cancel keeps the saved program.",
             style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(selected.size>=2 && !selectionContiguous)Text(
-            "Superset partners must be adjacent in your training-day order. "+
-                "Close this sheet and use More exercise actions to reorder "+
-                "the movements before creating this superset.",
+            "These linked movements are separated in the training-day order. "+
+                "They can still alternate as a superset, but moving that "+
+                "group earlier or later is unavailable until you unlink "+
+                "and rearrange its members. Their sets are not changed.",
             style=MaterialTheme.typography.bodyMedium,
-            color=MaterialTheme.colorScheme.error)
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick={val chosen=selected.toList();submitted=ArrayList(chosen);onSave(chosen)},
-            enabled=!busy && !stale && allowSupersets && selectionContiguous &&
+            enabled=!busy && !stale && allowSupersets && selected.size in 2..3 &&
                 eligible.containsAll(selected) && selected.toSet()!=existing.toSet(),
             modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
             Text(if(busy)"Saving superset…" else "Save superset")

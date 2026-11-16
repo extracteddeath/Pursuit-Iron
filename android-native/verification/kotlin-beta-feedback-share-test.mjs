@@ -32,4 +32,16 @@ assert.doesNotMatch(screen,/host\.reviewVerifiedKotlinHistory\(/);
 assert.doesNotMatch(domain,/ownerKey|athleteId|journal\./);
 assert.match(domain,/fun canShare\(draft:NativeBetaFeedbackDraft\)/);
 assert.match(domain,/fun format\(draft:NativeBetaFeedbackDraft,installedVersion:String\)/);
+const generalSheet=screen.slice(screen.indexOf('if(feedbackOpen) {'),screen.indexOf('if(problemOpen) {'));
+assert.match(generalSheet,/NativeEditSheet\(/,
+  'General feedback must use the same scrolling, keyboard-aware sheet as problem reporting');
+assert.doesNotMatch(generalSheet,/AlertDialog\(/,
+  'General feedback cannot use a fixed-size dialog that clips actions at large font');
+assert.match(generalSheet,/footer=\{/);
+assert.match(generalSheet,/Modifier\.fillMaxWidth\(\)\.heightIn\(min=48\.dp\)/);
+assert.match(generalSheet,/feedbackDraft=it\.take\(2000\)/);
+assert.match(generalSheet,/feedbackShareError=null/);
+assert.match(generalSheet,/NativeKotlinBetaFeedbackFormat\.canShare\(draft\)/);
+assert.match(generalSheet,/if\(shareWithChosenApp\(draft\)\)feedbackOpen=false/);
+assert.match(generalSheet,/Opening the chooser does not send anything automatically/);
 console.log('PASS accessible structured beta problem feedback with user-selected destination and no implicit training-data attachment');

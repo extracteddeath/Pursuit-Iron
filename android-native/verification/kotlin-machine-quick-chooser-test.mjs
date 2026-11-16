@@ -14,6 +14,7 @@ assert.match(picker,/OutlinedButton\([\s\S]*?Physical machine · \$display/);
 assert.match(picker,/min=48\.dp/);
 assert.match(picker,/if\(open\)ModalBottomSheet\(onDismissRequest=\{open=false\}\)/);
 assert.match(picker,/verticalScroll\(rememberScrollState\(\)\)/);
+assert.match(picker,/import androidx\.compose\.foundation\.verticalScroll/);
 assert.match(picker,/min=52\.dp/);
 assert.match(picker,/config\.machines\.filter \{it\.active \|\| it\.id==selectedId\}/);
 assert.match(picker,/enabled=enabled && machine\.active && !current/);

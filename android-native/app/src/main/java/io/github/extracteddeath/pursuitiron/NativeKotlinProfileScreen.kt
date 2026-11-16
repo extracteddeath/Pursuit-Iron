@@ -172,6 +172,19 @@ internal fun NativeKotlinProfileScreen(
                 it.completions.size,verifiedWorkingCount(it))
         }
     }
+    // This chart uses only completed, owner-verified History timestamps.
+    // Undated legacy workouts remain visible in History but never acquire
+    // invented calendar dates or training-streak credit.
+    val consistencyZone=java.time.ZoneId.systemDefault()
+    val consistencyToday=java.time.LocalDate.now(consistencyZone)
+    val profileConsistency=remember(timeline,consistencyZone,consistencyToday) {
+        timeline?.let { verified ->
+            NativeKotlinProfileConsistency.fromVerifiedFinishTimes(
+                verified.completions.map { entry ->
+                    entry.manifest.completedAtEpochMillis
+                },consistencyToday,consistencyZone)
+        }
+    }
     PursuitScreenContent {
         Text("Your profile",style=MaterialTheme.typography.headlineSmall)
         PursuitCard(highlighted=true) {
@@ -272,6 +285,7 @@ internal fun NativeKotlinProfileScreen(
                     PursuitSectionHeading("Your progress",
                         "Strength Standards and workout records from your verified training.")
                     NativeKotlinProfileMilestonesPanel(profileProgress,current?.athleteProfileId)
+                    NativeKotlinProfileConsistencyPanel(profileConsistency)
                     NativeKotlinStrengthClubPanel(strengthClub,onOpenStandards=onProgress)
                     }
                     NativeProfileSection.SHARE -> {

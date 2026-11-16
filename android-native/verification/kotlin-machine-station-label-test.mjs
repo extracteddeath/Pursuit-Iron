@@ -35,5 +35,7 @@ assert.match(gymEditor,/if\(showNewStackCalibration\) minimum else null/);
 assert.match(gymEditor,/if\(showNewStackCalibration\) maximum else null/);
 assert.match(gymEditor,/!showNewStackCalibration \|\| \(incrementValid && stackValid\)/);
 assert.match(gymEditor,/val used=saved\.machines\.map/);
+assert.match(gymEditor,/LaunchedEffect\(gymId,exerciseId,roster\?\.revision\)/);
+assert.match(gymEditor,/if\(label\.trim\(\)\.lowercase\(\) in existing\)/);
 assert.match(gymEditor,/Text\("Add physical machine"\)/);
 console.log('PASS machine stations: saved labels or stable private ID aliases, same-gym scope');

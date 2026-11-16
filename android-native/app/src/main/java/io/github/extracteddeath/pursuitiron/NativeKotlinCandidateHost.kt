@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
+import java.util.UUID
 
 /**
  * First REAL Android module integration of the independent Kotlin coaching
@@ -51,6 +52,24 @@ internal data class NativeKotlinTimeLimitChoiceReview(
 )
 
 /** Read-only preview and explicit pre-issuance approval are separate actions. */
+/**
+ * Two independent durable owners are affected by creating a station mid-workout:
+ * the reviewed gym roster, then this workout's machine choice. The latter may
+ * fail after the roster commits; never hide that partial result or invent a
+ * successful switch. No journal, issued load or completed set is rewritten.
+ */
+internal sealed interface NativeWorkoutMachineCreationResult {
+    data class Created(
+        val roster:NativeMachineRosterSnapshot,
+        val choice:NativeWorkoutMachineChoiceSnapshot
+    ):NativeWorkoutMachineCreationResult
+    data class AddedNeedsSelection(
+        val roster:NativeMachineRosterSnapshot,
+        val reason:String
+    ):NativeWorkoutMachineCreationResult
+    data class Rejected(val reason:String):NativeWorkoutMachineCreationResult
+}
+
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -430,6 +449,89 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 prior.snapshot.machines+(exerciseId to machineId))
         }}.getOrElse{
             NativeWorkoutMachineChoiceResult.Rejected("STORAGE_UNAVAILABLE")
+        }
+    }
+
+    /**
+     * Only an athlete action during an actually issued workout can register a
+     * new physical machine at its ORIGINAL gym. The live gym source, roster
+     * revision and choice revision are independently verified under one owner
+     * fence. A successful machine-specific choice never changes issued targets.
+     */
+    fun addWorkoutPhysicalMachine(
+        workoutId:String,custom:Boolean,exerciseId:String,label:String,
+        makeDefault:Boolean,expectedRosterRevision:Long,
+        expectedChoiceRevision:Long
+    ):NativeWorkoutMachineCreationResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeWorkoutMachineCreationResult.Rejected("NOT_AUTHORIZED")
+        val name=label.trim()
+        if(name.length !in 1..80)
+            return NativeWorkoutMachineCreationResult.Rejected("INVALID_MACHINE_NAME")
+        return runCatching {revisionFence.withOwnerTransaction(signed.ownerKey) {
+            val scope=issuedMachineWorkoutScope(signed,workoutId,custom)
+                ?:return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "ISSUED_WORKOUT_UNAVAILABLE")
+            if(scope.finished || exerciseId !in scope.exerciseIds)
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "WORKOUT_NOT_EDITABLE")
+            val source=(authoringSourceStore.read(signed.ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+            val reviewed=source?.setup?.reviewed
+            if(source==null || source.ownerKey!=signed.ownerKey ||
+                source.athleteId!=signed.athleteId ||
+                reviewed?.gym?.gymId!=scope.gymId ||
+                source.catalog.none{it.exerciseId==exerciseId})
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "WORKOUT_GYM_OR_EXERCISE_CHANGED")
+            val rosters=machineRosters.read(signed.ownerKey)
+                as? NativeMachineRosterResult.Saved
+                ?:return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "MACHINE_ROSTER_UNAVAILABLE")
+            if(rosters.snapshot.revision!=expectedRosterRevision)
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "STALE_GYM_REVISION")
+            val prior=workoutMachineChoices.read(signed.ownerKey,workoutId,
+                custom,scope.gymId)
+            if(prior !is NativeWorkoutMachineChoiceResult.Saved ||
+                prior.snapshot.revision!=expectedChoiceRevision)
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "STALE_WORKOUT_CHOICE")
+            val previous=KotlinMachineAlternativesDomain.forGymExercise(
+                rosters.snapshot.configurations,scope.gymId,exerciseId)
+                ?:KotlinGymMachineAlternatives(scope.gymId,exerciseId,null,emptyList())
+            if(previous.machines.size>=32 ||
+                previous.machines.any{it.label.equals(name,ignoreCase=true)})
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "MACHINE_NAME_ALREADY_USED_OR_LIMIT_REACHED")
+            val machine=KotlinPhysicalMachine(
+                id="machine_"+UUID.randomUUID().toString().replace("-","").take(16),
+                label=name,unit=reviewed.gym.unit)
+            val next=KotlinMachineAlternativesDomain.add(previous,machine,
+                makeDefault=makeDefault || previous.machines.isEmpty())
+            val configurations=rosters.snapshot.configurations.filterNot{
+                it.gymId==scope.gymId && it.exerciseId==exerciseId
+            }+next
+            if(!KotlinMachineAlternativesDomain.preservesOtherGyms(
+                    rosters.snapshot.configurations,configurations,scope.gymId))
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "CROSS_GYM_EDIT")
+            val written=machineRosters.save(signed.ownerKey,
+                expectedRosterRevision,configurations)
+            if(written !is NativeMachineRosterResult.Saved)
+                return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
+                    "MACHINE_ROSTER_SAVE_FAILED")
+            val chosen=workoutMachineChoices.save(signed.ownerKey,workoutId,
+                custom,scope.gymId,expectedChoiceRevision,
+                prior.snapshot.machines+(exerciseId to machine.id))
+            if(chosen is NativeWorkoutMachineChoiceResult.Saved)
+                NativeWorkoutMachineCreationResult.Created(
+                    written.snapshot,chosen.snapshot)
+            else NativeWorkoutMachineCreationResult.AddedNeedsSelection(
+                written.snapshot,"Saved machine, but workout selection was not committed. "+
+                    "Choose the new machine again; existing sets are unchanged.")
+        }}.getOrElse{
+            NativeWorkoutMachineCreationResult.Rejected("MACHINE_CREATE_UNAVAILABLE")
         }
     }
 

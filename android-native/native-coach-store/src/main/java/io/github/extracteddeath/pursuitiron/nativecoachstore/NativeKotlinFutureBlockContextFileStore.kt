@@ -58,6 +58,21 @@ internal data class NativeFutureBlockRecord(
     val sourceSha:String
 )
 
+/** Physical recovery census; an archived context is NOT a valid current consent. */
+internal data class NativeFutureContextInventoryFact(
+    val cycleId:String,
+    val blockId:String,
+    val draftRevision:Long,
+    val sourceRevision:Long,
+    val reviewedFingerprint:String
+)
+
+internal sealed interface NativeFutureContextInventory {
+    data class Verified(val records:List<NativeFutureContextInventoryFact>):
+        NativeFutureContextInventory
+    data object InvalidOrForeign:NativeFutureContextInventory
+}
+
 internal object NativeFutureBlockContextCodec {
     private const val MAGIC=0x50494642 // PIFB
     private const val VERSION=1
@@ -327,6 +342,58 @@ class NativeKotlinFutureBlockContextFileStore(
             }
         }.getOrElse{false}
     }
+    /**
+     * Recovery only: inventory EVERY physical context, including a retired or
+     * superseded future proposal. A current draft/source need not exist, so
+     * read() is intentionally NOT used (it correctly refuses stale contexts).
+     *
+     * Never infer active approval from a checksum-valid archive. The exact
+     * owner + cycle + block filename, historical source and future policy
+     * identities, physical file type and digest must all agree.
+     * Interrupted temp files and unknown future-block variants fail closed.
+     */
+    internal fun inventoryOwner(ownerKey:String):NativeFutureContextInventory =
+        runCatching {fence.withOwnerTransaction(ownerKey) {
+            val signed=owner(ownerKey)
+                ?:return@withOwnerTransaction NativeFutureContextInventory.InvalidOrForeign
+            val noFollow=java.nio.file.LinkOption.NOFOLLOW_LINKS
+            if(!Files.exists(directory,noFollow))
+                return@withOwnerTransaction NativeFutureContextInventory.Verified(emptyList())
+            require(!Files.isSymbolicLink(directory) && Files.isDirectory(directory,noFollow))
+            val physical=Files.list(directory).use {stream->
+                stream.filter {
+                    it.fileName.toString().startsWith("future-block-")
+                }.limit(4097).toList()
+            }
+            require(physical.size<=4096)
+            val names=Regex("^future-block-[a-f0-9]{64}\\.bin$")
+            val seen=mutableSetOf<Pair<String,String>>()
+            val records=physical.sortedBy{it.fileName.toString()}.map {file->
+                require(names.matches(file.fileName.toString()) &&
+                    !Files.isSymbolicLink(file) &&
+                    Files.isRegularFile(file,noFollow) &&
+                    Files.size(file) in 44L..NativeFutureBlockContextCodec.MAX_BYTES.toLong())
+                val (stored,futureSource)=NativeFutureBlockContextCodec.decode(
+                    Files.readAllBytes(file))
+                val receipt=stored.receipt
+                require(receipt.ownerKey==ownerKey &&
+                    receipt.athleteId==signed.athleteId &&
+                    receipt.future.policy.athleteId==signed.athleteId &&
+                    receipt.future.setup.reviewed?.athleteProfileId==signed.athleteId &&
+                    receipt.future.setup.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
+                    futureSource.ownerKey==ownerKey &&
+                    futureSource.athleteId==signed.athleteId &&
+                    futureSource.setup==receipt.future.setup &&
+                    path(ownerKey,receipt.cycleId,receipt.blockId)==file &&
+                    seen.add(receipt.cycleId to receipt.blockId))
+                NativeFutureContextInventoryFact(
+                    receipt.cycleId,receipt.blockId,receipt.draftRevision,
+                    receipt.sourceRevision,receipt.reviewedFingerprint)
+            }
+            require(owner(ownerKey)==signed)
+            NativeFutureContextInventory.Verified(records)
+        }}.getOrElse{NativeFutureContextInventory.InvalidOrForeign}
+
     fun read(ownerKey:String,cycleId:String,blockId:String):NativeFutureBlockContextRead {
         if(owner(ownerKey)==null || !listOf(cycleId,blockId).all(id::matches))
             return NativeFutureBlockContextRead.Rejected(

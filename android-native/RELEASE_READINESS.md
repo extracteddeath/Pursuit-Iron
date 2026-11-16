@@ -123,6 +123,16 @@ Source/JVM and full CI are required. Device/back/keyboard/TalkBack and full
 visual acceptance remain open, as do movement visuals, exercise goals,
 comparison, custom exercise creation and broader library parity. No APK/AAB.
 
+**Future-block recovery inventory (2026-11-16, pending CI):** the
+development-only staged audit now checks every physical future-block context
+record, including inactive/stale proposals that the normal current-draft
+reader must not discard or reactivate. It binds checksum, hashed filename,
+athlete, embedded future setup and policy to the same verified owner, refusing
+tampered/foreign/renamed/pending files. Native-file tests exercise preservation
+and refusal. This does **not** complete production backup/restore or enable an
+import UI. Full coverage, interrupted restore, Android device acceptance,
+migration and the no-APK gate remain open.
+
 ## What works in the isolated Kotlin core
 
 **Responsive Plan editor (2026-11-15):** the full-program editor keeps an

@@ -140,6 +140,14 @@ supported plan/day/cycle may use an incomplete or weaker engine silently.
    barrier and verify that new issuance remains blocked. Recovered consent
    never activates a block or bypasses current production preflight.
 
+   The owner-fenced staged audit now additionally inventories ALL physical
+   prospective future-block coaching contexts (including stale/retired draft
+   companions) without renewing their authority. A corrupted, foreign,
+   renamed, symbolic-linked or pending context prevents restore publication.
+   This is a separate private-store preservation check, not approval to
+   activate any prospective block. Native-file tests assert that verified
+   archived records survive scanning and bad bytes are rejected.
+
    **No user-facing backup or restore exists yet.** This core audit is
    not the final production verifier: orphan/foreign files outside the
    covered inventories, future block contexts, applied-activation intents and signoffs,

@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.compose.material3.HorizontalDivider
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope

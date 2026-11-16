@@ -883,6 +883,29 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             "${prepared.snapshot.shortSessionOmittedSetKeys.size} original set(s) omitted before issuance. Saved targets remain reviewable.",
                         style=MaterialTheme.typography.bodySmall
                     )
+                    // Only a saved, exact-week unissued short preparation
+                    // can offer this two-step return to the original Full.
+                    if(timeChoice!=null && prepared.snapshot.stamp.cycleId==draft.cycleId &&
+                        prepared.snapshot.stamp.cycleRevision==draft.revision &&
+                        prepared.snapshot.absoluteWeek==weekNumber &&
+                        prepared.snapshot.weekday==inspectedWeekday) {
+                        OutlinedButton(
+                            onClick=controller::reviewCustomTimeUndo,
+                            enabled=!busy,
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                        ) {Text("Restore original Full workout")}
+                        state.customTimeUndo?.takeIf {
+                            it.shortened==prepared &&
+                                it.full.stamp==prepared.snapshot.stamp &&
+                                it.full.absoluteWeek==prepared.snapshot.absoluteWeek &&
+                                it.full.weekday==prepared.snapshot.weekday
+                        }?.let {ready->
+                            NativeKotlinCustomTimeRestorePanel(
+                                ready,busy,
+                                onConfirm=controller::acceptCustomTimeUndo,
+                                onCancel=controller::dismissCustomTimeUndoReview)
+                        }
+                    }
                 }
                 state.authoredPreviewRefusal?.let {
                     Text("Cannot preview · ${pretty(it)}",

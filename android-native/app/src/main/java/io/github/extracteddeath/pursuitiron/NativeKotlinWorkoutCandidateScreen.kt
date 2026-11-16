@@ -314,11 +314,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val issuedGymId=journal?.originalSnapshot?.source?.gymId
     val activeMachineConfig=selected?.target?.exerciseId?.let {exerciseId->
         issuedGymId?.let {gymId->
-            KotlinMachineAlternativesDomain.forGymExercise(
-                machineRoster?.configurations.orEmpty(),gymId,exerciseId)
-                ?:if(exerciseId in eligibleMachineExercises)
-                    KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
-                else null
+            if(exerciseId in eligibleMachineExercises)
+                KotlinMachineAlternativesDomain.forGymExercise(
+                    machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+                    ?:KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+            else null
         }
     }
     val currentMachine=selected?.target?.exerciseId?.let{
@@ -852,11 +852,16 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 color=MaterialTheme.colorScheme.error)
         }
         activeKeys.forEach{set->
-            val perSetMachineConfig=issuedGymId?.let {gymId->
-                KotlinMachineAlternativesDomain.forGymExercise(
-                    machineRoster?.configurations.orEmpty(),gymId,
-                    set.target.exerciseId)
-            }
+            // Obsolete non-stack physical groups are History-only. Never
+            // let them impose a machine-selection gate on live barbell/
+            // dumbbell sets when the picker itself is correctly unavailable.
+            val perSetMachineConfig=if(set.target.exerciseId in eligibleMachineExercises)
+                issuedGymId?.let {gymId->
+                    KotlinMachineAlternativesDomain.forGymExercise(
+                        machineRoster?.configurations.orEmpty(),gymId,
+                        set.target.exerciseId)
+                }
+            else null
             val perSetMachineId=perSetMachineConfig?.let {
                 workoutMachineChoice(machineChoices.encoded,set.target.exerciseId,null)
             }

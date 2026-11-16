@@ -571,12 +571,49 @@ manual phone/tablet/foldable visual sweeps at large font sizes, TalkBack
 semantics, keyboard and focus handling, actual back navigation and a real
 long-cycle editing session. A green compilation is not final design approval.
 
-**Remaining high-impact design work:** responsive dual-pane Plan/editor,
+**Remaining high-impact design work:** device acceptance of responsive Plan/editor,
 fully guided adaptive split/exercise suggestions across blocks, improved
 next-day coaching summary, richer arbitrary exercise chart favorites and
 equipment/variant-specific Strength Standards with trustworthy source tables.
 All of this is still subject to explicit athlete approval for saved training
 changes; no APK or AAB should be created from this source-only milestone.
+
+## Responsive full-program editor — 2026-11-15
+
+Plan remains the single home for authoring a cycle. Its full editor now keeps
+a separately scrolling block/day outline beside the selected day's exercises
+when the available body width is at least 900dp and both panes can accommodate
+the current text scale. Compact windows and enlarged text retain inline day
+disclosures. This uses the actual content constraints after the navigation
+rail, shared Material cards, selected destination rows, typography and spacing.
+
+Both layouts render the same stateless day controls and call the same existing
+controller actions for sets, swaps, supersets, reorder, add and edit. Program
+Undo, review, calibration and exact-week preview remain in the same workspace.
+The detail retains one keyed composition parent when the outline moves, keeping
+policy draft fields and their saveable-state owner in place. Selection is scoped
+to athlete/program, survives revisions and reordering, and resolves against the
+current draft. A removed or ambiguous day shows an explicit choice prompt rather
+than an editor for remembered exercises. Selecting a day brings its heading into
+view; its title is a polite accessibility announcement, without moving focus to
+an unrelated action.
+
+**Source comparison:** web `ProgramView` in `modules/App.js` (verified main
+`12e2bd37258c56255c687cc6abed78d1921f6c07`) uses an
+`openDay` selection, expandable day cards and a day-jump menu calling
+`scrollToDay`. The previous native editor nested every exercise beneath that
+same scrolling block/day outline. The deliberate wide-layout change keeps the
+outline available during day editing. Source checks verify shared control wiring,
+independent scroll owners and a stable detail composition. JVM tests verify
+selected-day resolution through real saved edits, cold reads and Undo without
+changing loads, amplifiers, notes, week overrides or source files. These checks
+do not measure faster editing, runtime state restoration or visual superiority.
+
+**Acceptance still required:** resizing/folding with partially entered policy
+and dialog fields; compact and wide light/dark layouts; 200% text; TalkBack
+selection/heading feedback; keyboard and Back behavior; long-cycle editing,
+empty/loading/error/retry states and actual save/Undo/review. No APK/AAB until
+the entire app design is finished.
 
 ## Direct Plan editing and next-session focus — 2026-11-08 continuation
 

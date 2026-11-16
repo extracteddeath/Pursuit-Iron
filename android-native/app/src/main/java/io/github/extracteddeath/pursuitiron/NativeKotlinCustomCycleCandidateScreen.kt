@@ -3,6 +3,8 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -10,6 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,14 +33,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val customWeekdays = listOf(
-    "Monday", "Tuesday", "Wednesday", "Thursday",
-    "Friday", "Saturday", "Sunday"
-)
-
-/** An editor disclosure key, not a durable workout or exercise ID. */
-private fun programDayKey(blockId:String,weekday:Int)="$blockId:$weekday"
-
 @Composable
 private fun <T> CycleChoiceRow(
     label: String, values: List<T>, selected: T,
@@ -53,11 +50,6 @@ private fun <T> CycleChoiceRow(
 
 private fun pretty(value: Enum<*>) =
     value.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
-
-private fun splitLabel(split: CustomSplitIdentity): String = when (split) {
-    is CustomSplitIdentity.Freeform -> split.label
-    is CustomSplitIdentity.Named -> pretty(split.split)
-}
 
 /**
  * Plan's actual return-to-workout path. Only a cold-opened, still issued and
@@ -126,10 +118,8 @@ private fun NativeVerifiedGeneratedWorkoutResumeCard(
 }
 
 /**
- * Preview of the genuinely athlete-authored, offline native custom cycle
- * workflow. Uses ONLY NativeKotlinCustomCycleController and its verified
- * durable drafts. This screen is deliberately NOT connected to the legacy
- * MainActivity route or the existing JavaScript engine.
+ * The native Plan workspace for athlete-authored and generated Kotlin cycles.
+ * Uses NativeKotlinCustomCycleController and its verified durable drafts.
  *
  * Training decisions and exercise prescriptions are not created from this
  * UI. A saved draft cannot issue a session or change history.
@@ -155,8 +145,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var openId by rememberSaveable { mutableStateOf(initialCycleId.orEmpty()) }
     var showAdvancedId by rememberSaveable {mutableStateOf(false)}
     var creatingBlank by rememberSaveable {mutableStateOf(false)}
-    var showProgramEditor by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
-    var showProgramMetadata by rememberSaveable(draft?.cycleId) {mutableStateOf(false)}
+    var showProgramEditor by rememberSaveable(draft?.athleteId,draft?.cycleId) {mutableStateOf(false)}
+    var showProgramMetadata by rememberSaveable(draft?.athleteId,draft?.cycleId) {mutableStateOf(false)}
     var supersetEditor by rememberSaveable(stateSaver=NativeKotlinSupersetRequestSaver) {
         mutableStateOf<NativeKotlinSupersetEditRequest?>(null)
     }
@@ -164,10 +154,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         if(draft!=null && supersetEditor?.let{it.cycleId!=draft.cycleId || it.athleteId!=draft.athleteId}==true)
             supersetEditor=null
     }
-    var expandedBlockId by rememberSaveable(draft?.cycleId) {
+    var expandedBlockId by rememberSaveable(draft?.athleteId,draft?.cycleId) {
         mutableStateOf(draft?.blocks?.firstOrNull()?.blockId)
     }
-    var expandedDayKey by rememberSaveable(draft?.cycleId) {
+    var expandedDayKey by rememberSaveable(draft?.athleteId,draft?.cycleId) {
         mutableStateOf(draft?.blocks?.firstOrNull()?.let { block ->
             block.days.minByOrNull{it.weekday}?.let{day->
                 programDayKey(block.blockId,day.weekday)
@@ -199,7 +189,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     val currentSelection=state.nextCycleSlot?.takeIf{
         state.nextSlotCycleRevision==draft?.revision && policyReady && signed
     }
-    var offeredInitialPolicyEditor by rememberSaveable(draft?.cycleId){mutableStateOf(false)}
+    var offeredInitialPolicyEditor by rememberSaveable(draft?.athleteId,draft?.cycleId){mutableStateOf(false)}
     LaunchedEffect(draft?.cycleId,busy,policyReady) {
         // Offer missing rules once when opening a program. A read-only browse
         // or Cancel must not reopen an editor the athlete deliberately closed.
@@ -296,7 +286,62 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         }
     }
 
-    PursuitScreenContent(scrollState=pageScroll) {
+    val dayEditorAnchor=remember { BringIntoViewRequester() }
+    val renderDayEditor:@Composable (CustomTrainingBlock,CustomTrainingDay)->Unit={block,day->
+        draft?.let { current ->
+            NativeKotlinPlanDayEditor(current,block,day,busy,
+                allowSupersets=state.reviewedSourceSetup?.reviewed?.allowSupersets==true,
+                onEditExercise={slot->exerciseEditor=Triple(block.blockId,day.weekday,slot)},
+                onSwapExercise={slot->swapExerciseEditor=Triple(block.blockId,day.weekday,slot)},
+                onMoveExercise={slot,direction->
+                    controller.moveExercise(block.blockId,day.weekday,slot,direction)
+                },
+                onEditSuperset={group->
+                    supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday,group)
+                },
+                onEditDay={editingDay=block.blockId to day.weekday},
+                onAddExercise={exerciseEditor=Triple(block.blockId,day.weekday,null)})
+        }
+    }
+    val renderNavigator:@Composable (Boolean)->Unit={wide->
+        draft?.let { current ->
+            NativeKotlinPlanEditorNavigator(current,busy,expandedBlockId,expandedDayKey,wide,
+                onToggleBlock={blockId->
+                    if(expandedBlockId==blockId)expandedBlockId=null else {
+                        expandedBlockId=blockId
+                        val block=current.blocks.singleOrNull { it.blockId==blockId }
+                        if(block?.days?.none {
+                            programDayKey(blockId,it.weekday)==expandedDayKey
+                        }==true)expandedDayKey=block.days.minByOrNull { it.weekday }?.let {
+                            programDayKey(blockId,it.weekday)
+                        }
+                    }
+                },
+                onSelectDay={expandedDayKey=it},
+                onEditBlock={editingBlock=it},
+                onDuplicateBlock=controller::duplicateBlock,
+                onMoveBlock=controller::reorderBlock,
+                onAddDay={addingDayFor=it},onAddBlock={addingBlock=true},
+                dayContent=renderDayEditor)
+        }
+    }
+    NativeKotlinPlanWorkspace(
+        showNavigator=showProgramEditor && draft!=null,
+        navigationKey=draft?.let { it.athleteId to it.cycleId },
+        scrollState=pageScroll,
+        navigator={
+            PursuitSectionHeading("Program outline","Choose a day to edit")
+            renderNavigator(true)
+        }
+    ) { twoPane ->
+        LaunchedEffect(twoPane,expandedDayKey,showProgramEditor) {
+            if(twoPane && showProgramEditor && resolveNativePlanEditorDay(draft,expandedDayKey)!=null) {
+                // Wait until the new heading has been laid out after a selection
+                // or a window resize. Do not scroll on every draft revision.
+                withFrameNanos { }
+                dayEditorAnchor.bringIntoView()
+            }
+        }
         PageHeading("YOUR TRAINING PLAN",
             if (draft == null) "Your programs" else draft.title,
             if(draft==null)"Build a program around the way you train."
@@ -629,145 +674,23 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         enabled = !busy) { Text("Reload") }
                 }
             }
-            draft.blocks.forEachIndexed { index, block ->
-                key(block.blockId) {
-                    val blockExpanded=expandedBlockId==block.blockId
-                    PursuitCard {
-                        PursuitDisclosureRow(
-                            title="${index+1}. ${block.label}",
-                            subtitle="${pretty(block.phase)} · ${block.weeks} weeks · " +
-                                "${splitLabel(block.split)} · ${block.days.size} training days",
-                            expanded=blockExpanded,
-                            onToggle={
-                                if(blockExpanded) expandedBlockId=null else {
-                                    expandedBlockId=block.blockId
-                                    if(block.days.none{
-                                        programDayKey(block.blockId,it.weekday)==expandedDayKey
-                                    }) expandedDayKey=block.days.minByOrNull{it.weekday}?.let{
-                                        programDayKey(block.blockId,it.weekday)
-                                    }
-                                }
-                            }
-                        )
-                        if(blockExpanded) {
-                        Text("${pretty(block.purpose)} · changes require renewed review",
-                            style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { editingBlock = block.blockId },
-                                enabled = !busy) { Text("Edit block") }
-                            TextButton(onClick = { controller.duplicateBlock(block.blockId) },
-                                enabled = !busy) { Text("Duplicate") }
-                            TextButton(onClick = { controller.reorderBlock(block.blockId, -1) },
-                                enabled = !busy && index > 0) { Text("Earlier") }
-                            TextButton(onClick = { controller.reorderBlock(block.blockId, 1) },
-                                enabled = !busy && index < draft.blocks.lastIndex) {
-                                Text("Later")
-                            }
+            if(!twoPane)renderNavigator(false) else {
+                val selected=resolveNativePlanEditorDay(draft,expandedDayKey)
+                PursuitCard {
+                    if(selected==null) {
+                        PursuitSectionHeading("Choose a training day",
+                            "Select a day in the program outline to edit its exercises.")
+                    } else {
+                        Box(Modifier.fillMaxWidth()
+                            .bringIntoViewRequester(dayEditorAnchor)
+                            .semantics { liveRegion=LiveRegionMode.Polite }) {
+                            PursuitSectionHeading(
+                                "${customWeekdays.getOrElse(selected.day.weekday) { "Day" }} · ${selected.day.label}",
+                                "${selected.block.label} · ${pretty(selected.day.purpose)}")
                         }
-                        block.days.sortedBy { it.weekday }.forEach { day ->
-                            val dayKey=programDayKey(block.blockId,day.weekday)
-                            val dayExpanded=expandedDayKey==dayKey
-                            HorizontalDivider()
-                            PursuitDisclosureRow(
-                                title="${customWeekdays.getOrElse(day.weekday) { "Day" }} · ${day.label}",
-                                subtitle="${pretty(day.purpose)} · ${day.slots.size} exercises · " +
-                                    "${day.slots.sumOf { it.sets.count { set->set.type==DraftSetType.WORKING } }} working sets",
-                                expanded=dayExpanded,
-                                onToggle={expandedDayKey=if(dayExpanded)null else dayKey}
-                            )
-                            if(dayExpanded) {
-                            val supersetGroups=day.slots.mapNotNull{it.supersetGroup}.distinct()
-                            if(day.slots.size>=2 || supersetGroups.isNotEmpty()) {
-                                TextButton(onClick={supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday)},
-                                    enabled=!busy && state.reviewedSourceSetup?.reviewed?.allowSupersets==true &&
-                                        day.slots.count{it.supersetGroup==null && it.sets.any{set->set.type==DraftSetType.WORKING}}>=2,
-                                    modifier=Modifier.heightIn(min=48.dp)){Text("Create superset")}
-                                supersetGroups.forEach{group->
-                                    OutlinedButton(onClick={supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday,group)},
-                                        enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-                                        Text("Edit superset · "+day.slots.filter{it.supersetGroup==group}
-                                            .joinToString(" / "){kotlinExerciseLabel(it.exerciseId)})
-                                    }
-                                }
-                            }
-                            if (day.slots.isNotEmpty()) {
-                                day.slots.forEachIndexed { slotIndex, slot ->
-                                    Text("${kotlinExerciseLabel(slot.exerciseId)} · ${slot.sets.size} sets" +
-                                        if (slot.pinned) " · Pinned" else "",
-                                        style = MaterialTheme.typography.bodyMedium)
-                                    val hasProtectedWeekEdit=draft.weekOverrides[
-                                        block.blockId].orEmpty().any {
-                                        it.weekday==day.weekday && it.slotId==slot.slotId
-                                    }
-                                    Row(Modifier.fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(
-                                            onClick = { exerciseEditor = Triple(
-                                                block.blockId, day.weekday, slot.slotId) },
-                                            enabled = !busy
-                                        ) { Text("Edit sets") }
-                                        TextButton(
-                                            onClick={swapExerciseEditor=Triple(
-                                                block.blockId,day.weekday,slot.slotId)},
-                                            enabled=!busy && slot.supersetGroup==null &&
-                                                !hasProtectedWeekEdit
-                                        ) {Text("Swap")}
-                                        TextButton(onClick = {
-                                            controller.moveExercise(
-                                                block.blockId, day.weekday,
-                                                slot.slotId, -1)
-                                        }, enabled = !busy && slotIndex > 0) {
-                                            Text("Earlier")
-                                        }
-                                        TextButton(onClick = {
-                                            controller.moveExercise(
-                                                block.blockId, day.weekday,
-                                                slot.slotId, 1)
-                                        }, enabled = !busy &&
-                                            slotIndex < day.slots.lastIndex) {
-                                            Text("Later")
-                                        }
-                                    }
-                                    if(hasProtectedWeekEdit || slot.supersetGroup!=null)
-                                        Text(if(hasProtectedWeekEdit)
-                                            "Swap requires reviewing this exercise's week-specific overrides first."
-                                            else "Swap requires unlinking this supersetted exercise first.",
-                                            style=MaterialTheme.typography.bodySmall,
-                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            } else {
-                                Text("No exercises yet. This day is an unfinished draft.",
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                            Row(Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = {
-                                    editingDay = block.blockId to day.weekday
-                                }, enabled = !busy) { Text("Edit day") }
-                                TextButton(onClick = {
-                                    exerciseEditor = Triple(
-                                        block.blockId, day.weekday, null)
-                                }, enabled = !busy && day.slots.size < 32) {
-                                    Text("Add exercise")
-                                }
-                            }
-                            } // Collapsed day: no hidden edit controls are lost.
-                        }
-                        OutlinedButton(onClick = { addingDayFor = block.blockId },
-                            enabled = !busy && block.days.size < 7,
-                            modifier = Modifier.fillMaxWidth()) {
-                            Text("Add a custom training day")
-                        }
-                        } // Collapsed block: its label and schedule remain visible.
+                        renderDayEditor(selected.block,selected.day)
                     }
                 }
-            }
-            OutlinedButton(onClick = { addingBlock = true },
-                enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                Text("Add a training block")
             }
             PursuitCard {
                 Text("Exact native week and workout preview",
@@ -1757,7 +1680,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 mutableStateOf(existing?.weeks?.toString() ?: "4")
             }
             var customSplit by remember(editingBlock, addingBlock) {
-                mutableStateOf(existing?.split?.let(::splitLabel).orEmpty())
+                mutableStateOf(existing?.split?.let(::nativePlanSplitLabel).orEmpty())
             }
             AlertDialog(onDismissRequest = {
                 if (!busy) { addingBlock = false; editingBlock = null }

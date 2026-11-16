@@ -59,6 +59,8 @@ const exerciseTrendDomain=read('android-native/native-coach-store/src/main/java/
 const favorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeStrengthFavorites.kt');
 const exerciseFavorites=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeExerciseFavorites.kt');
 const plan=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const planNavigator=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanEditorNavigator.kt');
+const planWorkspace=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanWorkspace.kt');
 const authoringSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt');
 const swapRank=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseSwapRankingDomain.kt');
 const customAuthoring=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
@@ -382,7 +384,8 @@ assert.ok(
   cycleController.includes('CustomExerciseAuthoringDomain.replaceSelectedExercise(') &&
   cycleController.includes('lastUndo = result.receipt') &&
   plan.includes('var swapExerciseEditor by remember') &&
-  plan.includes('Text("Swap")') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanDayEditor.kt').includes('Text("Swap")') &&
+  plan.includes('onSwapExercise={slot->swapExerciseEditor=Triple(block.blockId,day.weekday,slot)}') &&
   plan.includes('controller.swapReviewedExercise('),
   'Reviewed gym-backed program swaps must be ranked, independently reauthored, confirmed, scoped, source-fenced, and undoable');
 
@@ -442,16 +445,16 @@ assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
   shared.includes('onClick=onToggle') &&
   shared.includes('.semantics { stateDescription=if(expanded)"Expanded" else "Collapsed" }') &&
   outline.includes('PursuitDisclosureRow(') &&
-  plan.includes('PursuitDisclosureRow(') &&
-  plan.includes('var expandedBlockId by rememberSaveable(draft?.cycleId)') &&
-  plan.includes('var expandedDayKey by rememberSaveable(draft?.cycleId)') &&
-  plan.includes('val blockExpanded=expandedBlockId==block.blockId') &&
-  plan.includes('val dayExpanded=expandedDayKey==dayKey') &&
-  plan.includes('if(blockExpanded) {') &&
-  plan.includes('if(dayExpanded) {') &&
-  plan.includes('controller.reorderBlock(') &&
+  planNavigator.includes('PursuitDisclosureRow(') &&
+  plan.includes('var expandedBlockId by rememberSaveable(draft?.athleteId,draft?.cycleId)') &&
+  plan.includes('var expandedDayKey by rememberSaveable(draft?.athleteId,draft?.cycleId)') &&
+  planNavigator.includes('val blockExpanded=expandedBlockId==block.blockId') &&
+  planNavigator.includes('val dayExpanded=expandedDayKey==dayKey') &&
+  planNavigator.includes('if(blockExpanded) {') &&
+  planNavigator.includes('if(dayExpanded && !twoPane) {') &&
+  plan.includes('onMoveBlock=controller::reorderBlock') &&
   plan.includes('controller.moveExercise(') &&
-  plan.includes('exerciseEditor = Triple(') &&
+  plan.includes('onEditExercise={slot->exerciseEditor=Triple(block.blockId,day.weekday,slot)}') &&
   plan.includes('controller.previewAuthoredDay(') &&
   plan.includes('if(!showProgramEditor) {') &&
   plan.includes('NativeKotlinCustomCycleOverview(draft,currentSelection,') &&
@@ -462,7 +465,8 @@ assert.ok(shared.includes('fun PursuitDisclosureRow(') &&
   'Program editor must have accessible collapsed block/day hierarchy without losing real authoring controls');
 assert.ok(shared.includes('scrollState:ScrollState=rememberScrollState()') &&
   shared.includes('.verticalScroll(scrollState)') &&
-  plan.includes('PursuitScreenContent(scrollState=pageScroll)') &&
+  plan.includes('NativeKotlinPlanWorkspace(') &&
+  planWorkspace.includes('scrollState=scrollState') &&
   plan.includes('pageScroll.scrollTo(0)') &&
   plan.includes('expandedBlockId=blockId') &&
   plan.includes('expandedDayKey=programDayKey(blockId,weekday)') &&
@@ -574,7 +578,8 @@ for(const screen of [
   const content=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/'+screen);
   assert.ok(content.includes('PursuitScreenContent {') ||
     screen==='NativeKotlinCustomCycleCandidateScreen.kt' &&
-    content.includes('PursuitScreenContent(scrollState=pageScroll) {'),
+    content.includes('NativeKotlinPlanWorkspace(') &&
+    planWorkspace.includes('PursuitScreenContent(modifier=Modifier.weight(1f),scrollState=scrollState)'),
     'Responsive shared Material layout is missing in '+screen);
   assert.ok(!content.includes('PageHeading("KOTLIN COACH · ISOLATED"'),
     'Raw development jargon reached a published screen in '+screen);

@@ -119,6 +119,9 @@ internal fun NativeKotlinMachineAlternativesPanel(
                     onClick={
                         exerciseId=saved.exerciseId
                         query=kotlinExerciseLabel(saved.exerciseId)
+                        val used=saved.machines.map {it.label.trim().lowercase()}.toSet()
+                        label=('A'..'Z').map {"Machine $it"}
+                            .firstOrNull {it.lowercase() !in used} ?: "Other machine"
                     },
                     enabled=!busy,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
@@ -156,6 +159,7 @@ internal fun NativeKotlinMachineAlternativesPanel(
             OutlinedButton(onClick={
                 exerciseId=ex.exerciseId
                 query=kotlinExerciseLabel(ex.exerciseId)
+                label="Machine A"
             },modifier=Modifier.fillMaxWidth(),enabled=!busy) {
                 Text(kotlinExerciseLabel(ex.exerciseId))
             }
@@ -228,6 +232,15 @@ internal fun NativeKotlinMachineAlternativesPanel(
                             (stepEdit.isBlank()||
                                 (stepValue!=null && stepValue>BigDecimal.ZERO &&
                                     stepValue.stripTrailingZeros().scale()<=3))
+                        var showStackEditor by rememberSaveable(gymId,machine.id) {
+                            mutableStateOf(false)
+                        }
+                        TextButton(
+                            onClick={showStackEditor=!showStackEditor},
+                            enabled=!busy,
+                            modifier=Modifier.heightIn(min=48.dp)
+                        ) { Text(if(showStackEditor) "Hide stack calibration" else "Edit verified weight stack") }
+                        if(showStackEditor) {
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
                             modifier=Modifier.fillMaxWidth()) {
                             OutlinedTextField(value=minEdit,onValueChange={minEdit=it.take(16)},
@@ -248,7 +261,7 @@ internal fun NativeKotlinMachineAlternativesPanel(
                             onClick={controller.calibratePhysicalMachine(
                                 exerciseId,machine.id,minValue,stepValue,maxValue)}
                         ) {Text("Save this machine's confirmed stack")}
-
+                        }
                     }
                 }
             }
@@ -256,6 +269,15 @@ internal fun NativeKotlinMachineAlternativesPanel(
                 label={Text("New machine name")},
                 supportingText={Text("For example: Machine A, Hammer Strength, or Upstairs press.")},
                 singleLine=true,modifier=Modifier.fillMaxWidth())
+            var showNewStackCalibration by rememberSaveable(gymId,exerciseId) {
+                mutableStateOf(false)
+            }
+            TextButton(onClick={showNewStackCalibration=!showNewStackCalibration},
+                enabled=!busy,modifier=Modifier.heightIn(min=48.dp)) {
+                Text(if(showNewStackCalibration) "Hide optional stack details"
+                    else "Add verified stack details (optional)")
+            }
+            if(showNewStackCalibration) {
             OutlinedTextField(
                 value=incrementText,
                 onValueChange={incrementText=it.take(16)},
@@ -279,9 +301,15 @@ internal fun NativeKotlinMachineAlternativesPanel(
             Text("Specify minimum, increment and maximum only if you have checked this physical machine's stack. Otherwise its first working weight remains manual.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Button(
                 onClick={
-                    controller.addPhysicalMachine(exerciseId,label,increment,minimum,maximum)
+                    // A newly encountered machine can be logged without guessing
+                    // a resistance conversion or requiring a calibration form.
+                    controller.addPhysicalMachine(exerciseId,label,
+                        if(showNewStackCalibration) increment else null,
+                        if(showNewStackCalibration) minimum else null,
+                        if(showNewStackCalibration) maximum else null)
                     val usedNames=config?.machines.orEmpty().map {
                         it.label.trim().lowercase()
                     }.toSet()+label.trim().lowercase()
@@ -289,9 +317,10 @@ internal fun NativeKotlinMachineAlternativesPanel(
                         .firstOrNull{it.lowercase() !in usedNames} ?:"Other machine"
                 },
                 enabled=!busy && roster!=null && label.isNotBlank() &&
-                    incrementValid && stackValid && (config?.machines?.size?:0)<32,
-                modifier=Modifier.fillMaxWidth()
-            ) {Text("Add machine")}
+                    (!showNewStackCalibration || (incrementValid && stackValid)) &&
+                    (config?.machines?.size?:0)<32,
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+            ) {Text("Add physical machine")}
             Text("Each machine keeps its own weight history and progression. A different machine is not a strength loss.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

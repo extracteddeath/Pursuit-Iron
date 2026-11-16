@@ -839,3 +839,22 @@ existing Info tests exercise these distinctions. History ownership, machine
 isolation, correction receipts, issued targets and numeric inputs retain their
 existing owners. Android compilation and device/accessibility acceptance
 remain separate gates; no APK/AAB is produced by this source milestone.
+
+## Responsive Plan exercise cards — 2026-11-16 (pending CI)
+
+The same inline/two-pane selected-day editor now uses numbered Material
+exercise cards with working/warm-up counts, pinned and week-override state,
+and human-readable superset partners. Set editing and exercise swaps use
+one existing responsive action pair; reorder buttons are always reachable
+without horizontal scrolling and keep 48dp minimum touch height. At large
+font scales buttons stack rather than compress or hide off-screen.
+Superset creation/editing is grouped once at day level; Add exercise and
+Edit day remain visible beneath the movements.
+
+A pure, source-bound UI projection rejects stale, ambiguous and busy draft
+coordinates and preserves week-override and linked-superset swap guards.
+Independent JVM tests verify those states and that viewing action eligibility
+never writes to stored programs. This changes no engine prescription,
+written workout, approval or draft-store authority. Android CI and actual
+phone/foldable/large-font/TalkBack review remain separate acceptance gates.
+No APK or AAB.

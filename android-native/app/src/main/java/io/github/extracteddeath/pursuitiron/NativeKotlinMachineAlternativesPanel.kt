@@ -229,6 +229,12 @@ internal fun NativeKotlinMachineAlternativesPanel(
                             ) {
                                 Text(if(machine.active)"Deactivate" else "Reactivate")
                             }
+                        NativeKotlinMachineRenameControl(
+                            gymId=gymId,machine=machine,peers=config.machines,
+                            busy=busy,onRename={newLabel->
+                                controller.renamePhysicalMachine(exerciseId,machine.id,newLabel)
+                            }
+                        )
                         val calibrated=machine.minimum!=null &&
                             machine.maximum!=null && machine.increment!=null &&
                             machine.unit!=null

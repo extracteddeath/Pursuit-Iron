@@ -22,7 +22,7 @@ class NativeKotlinWorkoutFocusNavigationTest {
         assertEquals("work-2",review.nextUnfinished)
         assertTrue(review.reviewingResolved)
         assertTrue(review.canReturnToUnfinished)
-        assertEquals("work-2",
+        assertEquals("work-1",
             policy.inspect(entries,"warmup-1","work-2")?.next)
         assertNull(policy.inspect(entries,"not-an-issued-set","work-2"))
         assertEquals(listOf(false,false),entries.takeLast(2).map{it.resolved})

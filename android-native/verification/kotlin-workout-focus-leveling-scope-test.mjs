@@ -61,13 +61,14 @@ console.log('PASS Focus, machine-scoped Leveling and source-keyed retryable Last
 
 // Both workout routes must allow typed browsing and return to source-owned
 // next unfinished entries; no program mutation or journal write is implied.
-const focusNavigation=readFileSync('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutFocusNavigation.kt','utf8');
+const focusNavigation=readFileSync(join(root,
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutFocusNavigation.kt'),'utf8');
 assert.match(focusNavigation,/object NativeKotlinWorkoutFocusNavigationPolicy/);
 assert.match(focusNavigation,/nextUnfinished!=null && steps.none/);
 assert.match(focusNavigation,/Jump to next unfinished set/);
-assert.match(generated,/NativeKotlinWorkoutFocusNavigation\(/);
-assert.match(generated,/steps=allSets.map/);
-assert.match(generated,/nextUnfinished=presentation.firstUnresolvedSetKey/);
+assert.match(screen,/NativeKotlinWorkoutFocusNavigation\(/);
+assert.match(screen,/steps=allSets.map/);
+assert.match(screen,/nextUnfinished=presentation.firstUnresolvedSetKey/);
 assert.match(custom,/NativeKotlinWorkoutFocusNavigation\(/);
 assert.match(custom,/steps=availableVisits.map/);
 assert.match(custom,/visit,current.effectiveVisits.containsKey\(visit\)/);

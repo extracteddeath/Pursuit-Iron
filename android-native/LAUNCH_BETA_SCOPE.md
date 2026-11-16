@@ -148,7 +148,17 @@ supported plan/day/cycle may use an incomplete or weaker engine silently.
    activate any prospective block. Native-file tests assert that verified
    archived records survive scanning and bad bytes are rejected.
 
-   **No user-facing backup or restore exists yet.** This core audit is
+   **No user-facing backup or restore exists yet.
+
+**Recovery audit increment (2026-11-16):** the staged native verifier now
+physically inventories custom-program consent and revocation records,
+including historical V1 receipts and signed V2 policy inputs. It refuses
+orphaned, renamed, pending, foreign, linked, corrupted or mismatched signoff
+files rather than silently treating them as missing. These are read-only
+recovery checks, **not** authority to reactivate a program, import an archive,
+or distribute a beta backup. Other private record families, device/power-cut
+rollback and whole-store coverage remain open.
+** This core audit is
    not the final production verifier: orphan/foreign files outside the
    covered inventories, future block contexts, applied-activation intents and signoffs,
    remaining private records and all supported storage versions still

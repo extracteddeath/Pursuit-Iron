@@ -10,10 +10,25 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
+
+/** Recovery-only facts for every physical signed or revoked program consent.
+ * A historical receipt is not an active signoff or a workout issuance grant. */
+internal data class NativeCustomSignoffInventoryFact(
+    val cycleId:String,
+    val revision:Long,
+    val revoked:Boolean,
+    val hasReviewedInputs:Boolean
+)
+internal sealed interface NativeCustomSignoffInventory {
+    data class Verified(val records:List<NativeCustomSignoffInventoryFact>):
+        NativeCustomSignoffInventory
+    data object InvalidOrForeign:NativeCustomSignoffInventory
+}
 
 private data class SignoffFileRecord(
     val ownerKey:String,
@@ -329,6 +344,59 @@ class NativeKotlinCustomCycleSignoffFileStore(
         }}.getOrElse {NativeCustomSavedCoachReview.Rejected(
             NativeCustomSignoffRefusal.STORAGE_UNAVAILABLE)}
     }
+
+    /**
+     * Recovery-only full physical inventory: include revoked and retired
+     * cycle receipts without reviving their authority. Ordinary read(cycle)
+     * rightly ignores unrelated records; a complete backup audit cannot.
+     * Check every filename, envelope, checksum, embedded identity, receipt
+     * revision and original owner-scoped hashed path under the owner fence.
+     *
+     * Interruptions, symbolic links, foreign records and renamed duplicates
+     * fail closed rather than disappearing from a restored athlete's data.
+     * No draft, source, policy audit, consent or workout is changed here.
+     */
+    internal fun inventoryOwner(ownerKey:String):NativeCustomSignoffInventory =
+        runCatching {fence.withOwnerTransaction(ownerKey) {
+            val signed=current(ownerKey)
+                ?:return@withOwnerTransaction NativeCustomSignoffInventory.InvalidOrForeign
+            if(!Files.exists(directory,LinkOption.NOFOLLOW_LINKS))
+                return@withOwnerTransaction NativeCustomSignoffInventory.Verified(emptyList())
+            require(Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS) &&
+                !Files.isSymbolicLink(directory))
+            val physical=Files.list(directory).use {stream->
+                stream.filter{it.fileName.toString().startsWith("custom-consent-")}
+                    .limit(4097).toList()
+            }
+            require(physical.size<=4096)
+            val validName=Regex("^custom-consent-[a-f0-9]{64}\\.bin$")
+            val seen=mutableSetOf<String>()
+            val records=physical.sortedBy{it.fileName.toString()}.map{file->
+                require(validName.matches(file.fileName.toString()) &&
+                    !Files.isSymbolicLink(file) &&
+                    Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS) &&
+                    Files.size(file) in 44L..maxFileSize.toLong())
+                val stored=decode(file) ?:error("Missing physical signoff")
+                val consent=stored.consent
+                require(stored.ownerKey==ownerKey &&
+                    stored.athleteId==signed.athleteId &&
+                    path(ownerKey,stored.cycleId)==file &&
+                    seen.add(stored.cycleId) &&
+                    (consent==null || (
+                        consent.ownerKey==ownerKey &&
+                        consent.athleteId==signed.athleteId &&
+                        consent.cycleId==stored.cycleId &&
+                        consent.recordRevision==stored.revision
+                    )) &&
+                    (consent!=null || stored.reviewedInputs==null))
+                NativeCustomSignoffInventoryFact(
+                    stored.cycleId,stored.revision,
+                    revoked=consent==null,
+                    hasReviewedInputs=stored.reviewedInputs!=null)
+            }
+            require(current(ownerKey)==signed)
+            NativeCustomSignoffInventory.Verified(records)
+        }}.getOrElse{NativeCustomSignoffInventory.InvalidOrForeign}
 
     /** An old receipt can be VIEWED, but is current only after recomputing
      * audit and checking all content, including coaching inputs. */

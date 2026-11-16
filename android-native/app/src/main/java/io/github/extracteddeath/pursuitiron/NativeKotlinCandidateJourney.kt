@@ -821,11 +821,36 @@ private fun NativeKotlinCandidateTrainEntry(
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if(review.omittedExerciseIds.isNotEmpty() &&
-                        selectedTimeBudget!=null && !available.alreadyIssued)
-                        Text("Removed optional exercises: " +
-                            review.omittedExerciseIds.joinToString(", "),
-                            style=MaterialTheme.typography.bodySmall)
+                    // Review exact counts from staged native targets,
+                    // not raw source IDs or an inferred plan.
+                    val changedImpacts=review.exerciseImpacts.filter {
+                        it.omittedWorkingSets>0
+                    }
+                    if(selectedTimeBudget!=null && !available.alreadyIssued &&
+                        changedImpacts.isNotEmpty()) {
+                        HorizontalDivider()
+                        PursuitSectionHeading("Review omitted working sets",
+                            if(mayStart)
+                                "Nothing is saved yet. Remaining weights, reps and rest stay unchanged."
+                            else "Even with these proposed removals, this time limit cannot be met.")
+                        val originalWorking=review.exerciseImpacts.sumOf {
+                            it.originalWorkingSets
+                        }
+                        val remainingWorking=review.exerciseImpacts.sumOf {
+                            it.retainedWorkingSets
+                        }
+                        Text("$" + "{remainingWorking} of $" + "{originalWorking} working sets retained · $" + "{review.omittedWorkingSets} omitted",
+                            style=MaterialTheme.typography.labelLarge)
+                        changedImpacts.forEach {impact->
+                            Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                                Text(kotlinExerciseLabel(impact.exerciseId),
+                                    style=MaterialTheme.typography.titleSmall)
+                                Text("$" + "{impact.retainedWorkingSets} of $" + "{impact.originalWorkingSets} sets kept · $" + "{impact.omittedWorkingSets} omitted",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                     val selection=selectedTimeBudget
                     PursuitPrimaryAction(
                         if(available.alreadyIssued)"Resume saved workout"

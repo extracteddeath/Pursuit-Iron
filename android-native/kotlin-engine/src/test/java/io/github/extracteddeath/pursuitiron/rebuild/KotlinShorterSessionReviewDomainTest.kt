@@ -90,6 +90,17 @@ class KotlinShorterSessionReviewDomainTest {
         assertEquals(full,stage.targets.map {it.setKey})
         assertTrue(at45.keptSetKeys.all {it in full})
         assertEquals(full.size-at45.keptSetKeys.size,at45.omittedSetKeys.size)
+        assertEquals(listOf("press","row","curl"),
+            at45.exerciseImpacts.map {it.exerciseId})
+        assertEquals(at45.omittedWorkingSets,
+            at45.exerciseImpacts.sumOf {it.omittedWorkingSets})
+        assertTrue(at45.exerciseImpacts.filter {it.exerciseId!="curl"}.all {
+            it.retainedWorkingSets==it.originalWorkingSets &&
+                it.omittedWorkingSets==0
+        })
+        assertEquals(4,at45.exerciseImpacts.last().originalWorkingSets)
+        assertEquals(4-at45.omittedWorkingSets,
+            at45.exerciseImpacts.last().retainedWorkingSets)
         assertFalse(at45.canStartWorkout)
         assertFalse(at45.canModifyJournal)
         assertFalse(at45.canSaveProgram)
@@ -110,6 +121,10 @@ class KotlinShorterSessionReviewDomainTest {
             it.exerciseId=="row"})
         assertTrue(targets.none {it.exerciseId=="curl"})
         assertEquals(listOf("curl"),reviewed.omittedExerciseIds)
+        val omittedCurl=reviewed.exerciseImpacts.single {it.exerciseId=="curl"}
+        assertEquals(4,omittedCurl.originalWorkingSets)
+        assertEquals(0,omittedCurl.retainedWorkingSets)
+        assertEquals(4,omittedCurl.omittedWorkingSets)
         assertEquals(targets.map {it.setKey},reviewed.keptSetKeys)
         assertTrue(targets.all {it.targetRir==2 ||
             it.type==DraftSetType.WARMUP})
@@ -177,6 +192,10 @@ class KotlinShorterSessionReviewDomainTest {
         assertTrue(review.omittedSetKeys.isEmpty())
         assertFalse(review.changesPrescription)
         assertEquals(0,review.omittedWorkingSets)
+        assertTrue(review.exerciseImpacts.all {
+            it.originalWorkingSets==it.retainedWorkingSets &&
+                it.omittedWorkingSets==0
+        })
     }
 
     @Test fun publicReviewRecomputesRealKotlinProgramBeforePreview() {
@@ -227,6 +246,7 @@ class KotlinShorterSessionReviewDomainTest {
         assertEquals(KotlinShortSessionStatus.SOURCE_OR_PROGRAM_UNRESOLVED,rejected.status)
         assertNull(rejected.estimatedSeconds)
         assertTrue(rejected.keptSetKeys.isEmpty())
+        assertTrue(rejected.exerciseImpacts.isEmpty())
         assertFalse(rejected.canStartWorkout)
         assertEquals(KotlinShortSessionStatus.INVALID_LIMIT,
             KotlinShorterSessionReviewDomain.review(stale,32).status)

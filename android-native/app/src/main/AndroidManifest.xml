@@ -5,5 +5,15 @@
         <!-- One Kotlin-owned beta launcher. Debug uses a separate
              subclass and install identity, but the same Compose journey. -->
         <activity android:name=".MainActivity" android:exported="true" />
+        <!-- Private, time-limited image URIs; no external file-system access. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.profile-share"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/profile_share_paths"/>
+        </provider>
     </application>
 </manifest>

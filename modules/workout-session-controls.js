@@ -2,7 +2,7 @@
 // saved notes, exercise order and edits; these controls dispatch callbacks only.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { Check, ChevronDown, Repeat2, Plus } from 'lucide-react';
+import { Check, ChevronDown, Repeat, Plus } from 'lucide-react';
 import { createPortal } from '../vendor/react-dom.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { UiField } from './ui-primitives.js';
@@ -191,7 +191,7 @@ export function WorkoutMachineVariantControl({
                             ]}),
                             machine.id===selected.id
                                 ? _jsx(Check,{size:20,'aria-hidden':true})
-                                : _jsx(Repeat2,{size:18,'aria-hidden':true})
+                                : _jsx(Repeat,{size:18,'aria-hidden':true})
                         ]
                     },machine.id))
                 ]}),
@@ -233,7 +233,7 @@ export function WorkoutMachineVariantControl({
             'aria-haspopup':'dialog','aria-expanded':open,
             onClick:()=>{setOpen(true);setMessage('');},
             children:[
-                _jsx(Repeat2,{size:16,'aria-hidden':true}),
+                _jsx(Repeat,{size:16,'aria-hidden':true}),
                 _jsx('span',{className:'wpb-machine-switch-kicker',children:'Machine'}),
                 _jsx('strong',{className:'wpb-machine-switch-name',children:
                     !gym?'Unavailable':instances.length?selected.label:'Choose / add'}),

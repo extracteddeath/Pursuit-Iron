@@ -2053,12 +2053,23 @@ object StarterExerciseTranche {
             "Landmine squat requires the confirmed bar and anchored pivot. Record only added plates at the loaded end; zero means no added plates, not bodyweight or zero total resistance. Source muscle credits remain provisional; no free-bar squat load, practice identity or history transfers.",
             direct(TrainingMuscle.QUADS),
             indirect(TrainingMuscle.GLUTES,"0.25"),
-            indirect(TrainingMuscle.HAMSTRINGS,"0.25"))
+            indirect(TrainingMuscle.HAMSTRINGS,"0.25")),
+        entry("prone-rear-delt-raise","rear_delt","prone-unweighted-floor",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            null,null,emptySet(),12..25,
+            "Source-defined prone rear-delt raises are unweighted controlled repetitions, not dumbbell, cable or machine sets. Optional provisional trap contribution remains separate and no phantom external load or machine history is inferred.",
+            direct(TrainingMuscle.REAR_DELTS),
+            indirect(TrainingMuscle.TRAPS,"0.25")),
+        entry("cable-serratus","scapular_protraction","cable-single-handle-serratus-pull",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
+            "Source-listed cable serratus pull requires a confirmed single cable handle and exact cable-stack calibration. Legacy generic core credit is provisionally mapped only to the serratus subregion; no abdominal-set double credit or transfer from other cable exercises.",
+            direct(TrainingMuscle.SERRATUS_ANTERIOR),attachmentId="single-handle")
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==325)
+        require(definitions.size==327)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

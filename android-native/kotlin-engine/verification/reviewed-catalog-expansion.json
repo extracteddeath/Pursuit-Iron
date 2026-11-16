@@ -8409,6 +8409,65 @@
         "attachment": null,
         "note": "Landmine squat requires the confirmed bar and anchored pivot. Record only added plates at the loaded end; zero means no added plates, not bodyweight or zero total resistance. Source muscle credits remain provisional; no free-bar squat load, practice identity or history transfers."
       }
+    },
+    {
+      "id": "prone-rear-delt-raise",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "bodyweight"
+        ],
+        "practicalReps": [
+          12,
+          25
+        ],
+        "source": "builtin"
+      },
+      "review": {
+        "family": "rear_delt",
+        "variant": "prone-unweighted-floor",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": null,
+        "basis": null,
+        "fixtures": [],
+        "attachment": null,
+        "direct": "REAR_DELTS",
+        "indirect": [
+          "TRAPS:0.25"
+        ],
+        "note": "Source-defined prone rear-delt raises are unweighted controlled repetitions, not dumbbell, cable or machine sets. Optional provisional trap contribution remains separate and no phantom external load or machine history is inferred."
+      }
+    },
+    {
+      "id": "cable-serratus",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "sourceSubregion": "serratus",
+      "review": {
+        "family": "scapular_protraction",
+        "variant": "cable-single-handle-serratus-pull",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "attachment": "single-handle",
+        "direct": "SERRATUS_ANTERIOR",
+        "indirect": [],
+        "note": "Source-listed cable serratus pull requires a confirmed single cable handle and exact cable-stack calibration. Legacy generic core credit is provisionally mapped only to the serratus subregion; no abdominal-set double credit or transfer from other cable exercises."
+      }
     }
   ]
 }

@@ -324,6 +324,8 @@ private val kotlinExerciseNames=mapOf(
     "kb-gorilla-row" to "Kettlebell Gorilla Row",
     "serratus-pushup" to "Serratus Push-Up",
     "tibialis-raise" to "Tibialis Raise",
+    "cable-serratus" to "Cable Serratus Pull",
+    "prone-rear-delt-raise" to "Prone Rear Delt Raise",
     "meadows-row" to "Meadows Row",
     "landmine-press" to "Landmine Press",
     "lm-squat" to "Landmine Squat"

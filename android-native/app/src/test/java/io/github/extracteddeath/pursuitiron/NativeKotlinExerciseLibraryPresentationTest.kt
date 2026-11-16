@@ -15,8 +15,9 @@ internal class NativeKotlinExerciseLibraryPresentationTest:NativeKotlinProgramFi
 
     @Test fun entireCatalogIsSearchableBeforePagingAndPhysicalEligibilityIsNotInferred() {
         val all=records()
-        assertEquals(325,all.size)
-        assertEquals(325,all.map{it.movement.exerciseId}.distinct().size)
+        val expected=StarterExerciseTranche.entries().size
+        assertEquals(expected,all.size)
+        assertEquals(expected,all.map{it.movement.exerciseId}.distinct().size)
         assertTrue(find("landmine").map{it.movement.exerciseId}.containsAll(setOf("meadows-row","landmine-press","lm-squat")))
         assertTrue(find("landmine").none{it.eligible})
         assertTrue(find("landmine",mode=NativeLibraryAvailability.ELIGIBLE).isEmpty())

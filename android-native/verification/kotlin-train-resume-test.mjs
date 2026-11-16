@@ -69,3 +69,21 @@ assert.match(customCycle,/impact\.omittedWarmupSets>0/);
 assert.match(customCycle,/impact\.supersetGroup!=null/);
 assert.doesNotMatch(customCycle,/timeReview\.omittedSlotIds\.joinToString/);
 console.log('PASS exact custom shorter-session slot review, warmups and linked supersets');
+
+// Expose the already existing owner-checked Full restore as a real two-stage
+// custom Plan action; never suggest that a read-only Full preview is issued.
+const restore=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomTimeRestorePanel.kt','utf8');
+const customController=readFileSync(
+ 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleController.kt','utf8');
+assert.match(customCycle,/onClick=controller::reviewCustomTimeUndo/);
+assert.match(customCycle,/NativeKotlinCustomTimeRestorePanel\(/);
+assert.match(customCycle,/onConfirm=controller::acceptCustomTimeUndo/);
+assert.match(customCycle,/onCancel=controller::dismissCustomTimeUndoReview/);
+assert.match(customCycle,/prepared\.snapshot\.absoluteWeek==weekNumber/);
+assert.match(restore,/NativeKotlinCustomRestorePresentation\.inspect\(shorter,full\)/);
+assert.match(restore,/shorter\.shortSessionOmittedSetKeys/);
+assert.match(restore,/Confirm restore Full/);
+assert.match(restore,/Inspect every original set target/);
+assert.match(customController,/fun dismissCustomTimeUndoReview\(\)/);
+console.log('PASS custom Full-restoration preview, explicit confirmation and stale-view fences');

@@ -1125,6 +1125,12 @@ internal class NativeKotlinCustomCycleController(
 
     /** Show exact authored Full sets for a shortened custom preparation.
      * A read-only preview cannot undo an already-issued or logged workout. */
+    /** Cancelling the read-only restore preview never touches native files. */
+    fun dismissCustomTimeUndoReview() {
+        if(pending.get())return
+        current.value=current.value.copy(customTimeUndo=null)
+    }
+
     fun reviewCustomTimeUndo() = run {
         val prepared=current.value.preparedWorkout ?:return@run
         val inputs=auditedInputs ?:return@run

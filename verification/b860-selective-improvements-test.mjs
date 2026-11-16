@@ -93,8 +93,10 @@ const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8
 const themeCss = fs.readFileSync(new URL('../app.css', import.meta.url), 'utf8');
 assert.match(themeCss, /--pi-color-feature:light-dark\(var\(--pi-m3e-primary-container\),color-mix\(in srgb,var\(--wpb-theme-card\) 84%,var\(--wpb-theme-accent\) 16%\)\)/,
     'R78 derives strong containers from the selected card and accent instead of the legacy saturated feature');
-assert.match(app, /className: "wpb-program-amplifier", style: \{ margin: "2px 0 10px"/,
-    'R78 amplifier attaches to exercise slot without the old 34px horizontal offset');
+assert.match(app, /className: "wpb-program-amplifier wpb-b973-amp-panel"/,
+    'R78 amplifier retains its exercise-attached semantic class');
+assert.match(themeCss, /#root \.wpb-program \.wpb-b973-amp-panel\{margin:2px 0 10px;/,
+    'R78 amplifier still attaches to exercise slot without the old 34px horizontal offset');
 assert.doesNotMatch(app, /margin: "-3px 8px 8px 34px"/,
     'the legacy amplifier stagger must not return');
 assert.match(app, /className: "wpb-training-calendar"/,
@@ -107,7 +109,8 @@ assert.doesNotMatch(app, /title: "Workouts this week"/,
     'R78 removes the unexplained extra calendar column');
 assert.match(themeCss, /\.wpb-program-amplifier>button:focus-visible/,
     'amplifier disclosure keeps a visible focus ring');
-assert.match(app, /prBaseline\[e.id\] > 0 && est > prBaseline\[e.id\]/);
+assert.ok(app.includes('completedSetPR(set, prBaseline[data[ei].id], e1rm)'), 'PR gate belongs to the user completion gesture');
+assert.ok(!app.includes('prBaseline[e.id] > 0 && est > prBaseline[e.id]'), 'Never fire PR from React state updater');
 assert.match(app, /const prior = priorBests\[e.id\]\?\.e1rm \?\? null/);
 assert.match(app, /const nextHistory = history\.map[\s\S]{0,160}\.sort/);
 console.log('PASS Build 860: saved kg template and warm-ups; custom/empty inventory safety; normalized PR revisions/units/working sets; two-family dose conservation; useful day titles and 20-theme feature ink.');

@@ -14,7 +14,7 @@ export const history=[{id:'source',date:Date.now()-604800000,programId:program.i
  perf:Object.fromEntries(['bb-bench','bb-row'].map(id=>[id,{weight:id==='bb-bench'?80:90,reps:8,sets:[1,2,3].map(()=>({w:id==='bb-bench'?80:90,r:8,rir:2,rirReported:true,tr:2}))}]))}];
 const day=program.days[0],before=JSON.stringify({program,history});
 const review=buildSessionReview(program,day,2,'kg',history),bench=review.exercises[0];
-assert.equal(review.changes.length,2);assert.equal(bench.proposed[0].weight,'82.5');assert.equal(bench.proposed[0].reps,'6');
+assert.equal(review.changes.length,1,'routine rep gains are not plan changes');assert.equal(review.changes[0].id,'bb-bench');assert.equal(review.exercises[1].change.changed,false,'row earned just a rep');assert.equal(bench.proposed[0].weight,'82.5');assert.equal(bench.proposed[0].reps,'6');
 assert.match(bench.reason,/top of the rep range/);assert.equal(bench.change.canUndo,true);assert.equal(bench.opportunity,null,'planned RIR never inflates estimated record');
 assert.equal(review.exercises[1].opportunity.type,'e1rm');assert.equal(review.exercises[1].opportunity.estimated,117);
 const held=JSON.parse(JSON.stringify(withSessionPlanChoice(program,bench.change,true)));
@@ -22,7 +22,7 @@ const rereview=buildSessionReview(held,day,2,'kg',history);
 assert.equal(rereview.exercises[0].change.undone,true);
 assert.equal(rereview.exercises[0].proposedReason,bench.reason,'undo retains the original reason in the audit');
 assert.equal(buildSessionReview(held,day,2,'kg',history.map(h=>({...h,updatedAt:Date.now()}))).exercises[0].change.undone,true,'sync revision metadata does not consume undo');
-assert.equal(rereview.exercises[0].effective[0].weight,'80');assert.equal(rereview.exercises[0].effective[0].reps,'8');
+assert.equal(rereview.exercises[0].effective[0].weight,'80');assert.equal(rereview.exercises[0].effective[0].reps,'6','a load hold keeps current rep targets');
 assert.equal(rereview.exercises[0].effective[0].valueOwner,'user');
 assert.deepEqual(rereview.exercises[1].effective,review.exercises[1].effective,'undo is exercise-local');
 assert.equal(JSON.stringify({program,history}),before,'history and program are immutable inputs');
@@ -40,17 +40,35 @@ assert.ok(buildSessionReview(program,day,1,'kg',[]).exercises.every(row=>!row.op
 assert.equal(buildSessionReview(program,day,2,'kg',history.map(h=>({...h,programId:'other'}))).changes.length,0,'other programs are not progression evidence');
 assert.equal(buildSessionReview(program,day,2,'kg',history.map(h=>({...h,dayId:'elsewhere',dayLabel:'Other'}))).changes.length,0,'other days are not progression evidence');
 const partial=structuredClone(history);partial[0].perf['bb-row'].sets=[{w:90,r:12,rir:2,rirReported:true},{w:90,r:8,rir:2,rirReported:true},{w:87.5,r:8,rir:2,rirReported:true}];
+const sparseReview=structuredClone(history);
+sparseReview[0].perf['bb-bench'].sets=[
+  {w:80,r:8,rir:2,rirReported:true,tr:2,workingSetIndex:0},
+  {w:77.5,r:7,rir:2,rirReported:true,tr:2,workingSetIndex:2}
+];
+const positional=buildSessionReview(program,day,2,'kg',sparseReview).exercises[0].change.previous;
+assert.deepEqual(positional.map(row=>row?.weight??null),[80,null,77.5],
+  'Plan Review must not move a completed third set into skipped set two');
 const dd=buildSessionReview(program,day,2,'kg',partial).exercises[1];
 assert.ok(dd.proposed[0].weight>90);assert.equal(dd.proposed[1].weight,'90');
 const heldDD=buildSessionReview(withSessionPlanChoice(program,dd.change,true),day,2,'kg',partial).exercises[1];
-assert.deepEqual(heldDD.effective.map(s=>[Number(s.weight),Number(s.reps)]),[[90,12],[90,8],[87.5,8]],'positional dynamic-double undo');
+assert.deepEqual(heldDD.effective.map(s=>Number(s.weight)),[90,90,87.5],'positional dynamic-double load hold');
+assert.deepEqual(heldDD.effective.map(s=>Number(s.reps)),dd.proposed.map(s=>Number(s.reps)),'current per-set reps remain prescribed');
 const percentage={...program,config:{...program.config,percentScheme:'531'},tm:{'bb-bench':100}};
 const percentReview=buildSessionReview(percentage,day,2,'kg',history);
 assert.equal(percentReview.exercises[0].change.canUndo,false,'authored percentage lift remains owned');
-assert.equal(percentReview.exercises[1].change.canUndo,true,'independently progressing accessories still support undo');
+assert.equal(percentReview.exercises[1].change.canUndo,percentReview.exercises[1].change.loadChanged,'accessories can decline material load adjustments, not rep-only gains');
 const deload={...program,weeks:1};assert.ok(buildSessionReview(deload,day,2,'kg',history).exercises.every(row=>!row.change.canUndo));
 const short=planShorterSession(program,day,2,20,{history});const shortDay={...day,sessionLengthPlan:short};
 const shortReview=buildSessionReview(program,shortDay,2,'kg',history);
+const heldShortReview=buildSessionReview(held,shortDay,2,'kg',history);
+console.log('B994_SHORT_REVIEW_DIAG',JSON.stringify({
+ fullChoice:held.sessionPlanChoices, shortPlan:{sets:shortReview.exercises.map(row=>[row.id,row.cell.sets])},
+ bench:heldShortReview.exercises.filter(row=>row.id==='bb-bench').map(row=>({
+  change:row.change.changed,kind:row.change.kind,canUndo:row.change.canUndo,
+  undone:row.change.undone,reason:row.reason,proposed:row.proposed.map(x=>x.weight),
+  effective:row.effective.map(x=>x.weight),previous:row.change.previous
+ }))
+}));
 for(const row of shortReview.exercises)assert.equal(row.effective.length,computeCell(program,shortDay,row.id,row.slot,2).sets);
 const low=structuredClone(history);low[0].perf['bb-bench'].sets=low[0].perf['bb-bench'].sets.map(s=>({...s,r:3}));
 assert.equal(buildSessionReview(program,day,2,'kg',low).exercises[0].change.canUndo,false,'undo cannot reintroduce reps outside the planned range');
@@ -108,7 +126,7 @@ assert.equal(alternateBench.change.source.id,'alternate-source');
 const alternateHeld=JSON.parse(JSON.stringify(withSessionPlanChoice(alternate,alternateBench.change,true)));
 const heldAlternateReview=buildSessionReview(alternateHeld,alternateDay,4,'lb',alternateHistory);
 assert.equal(heldAlternateReview.exercises[0].change.undone,true);
-assert.deepEqual(heldAlternateReview.exercises[0].effective.map(s=>[s.weight,s.reps]),[['50','8'],['50','8'],['50','8']]);
+assert.deepEqual(heldAlternateReview.exercises[0].effective.map(s=>[s.weight,s.reps]),[['50','6'],['50','6'],['50','6']]);
 const alternateSuggestion=sessionSuggestion(alternateHeld,alternateDay,0,{},'lb',4,alternateHistory);
 const alternateLogged=prescribeSets(alternateHeld,alternateDay,EX_BY_ID['db-bench'],0,4,'lb',alternateSuggestion,{}, {},alternateHistory,false);
 assert.deepEqual(alternateLogged.filter(s=>!s.warm&&!s.sub),heldAlternateReview.exercises[0].effective,'review choice is the logger prescription');

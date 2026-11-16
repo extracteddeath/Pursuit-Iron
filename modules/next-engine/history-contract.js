@@ -31,9 +31,19 @@ export function completedHistorySets(perf) {
 export function previousWorkoutSet(perf, index) {
     if (!Number.isInteger(index) || index < 0) return null;
     const hasRows = Array.isArray(perf?.sets) && perf.sets.length > 0;
-    const row = hasRows ? completedHistorySets(perf)[index]
+    // Newly logged history records the ORIGINAL working-set position even if
+    // an earlier set was skipped. Never compress set 3 into the display for set 2.
+    const completed = hasRows ? completedHistorySets(perf) : [];
+    const positioned = completed.some(set => Number.isInteger(set.workingSetIndex) && set.workingSetIndex >= 0);
+    // Pre-index legacy snapshots sometimes retain an unfinished working row.
+    // Preserve its original working ordinal rather than compressing the completed
+    // list and displaying set 3 as LAST for skipped set 2. Malformed null rows
+    // still do not occupy working ordinals; completed-only history is unchanged.
+    const rawWorking = hasRows ? perf.sets.filter(set => set && !set.warm && !set.sub) : [];
+    const row = hasRows ? positioned
+        ? completed.find(set => set.workingSetIndex === index) : rawWorking[index]
         : perf ? { w: perf.weight, r: perf.reps, summary: true } : null;
-    if (!row) return null;
+    if (!row || row.done === false) return null;
     const w = historyNumber(row.w), r = historyNumber(row.r);
     if (!(w > 0) || !(r > 0 || row.summary && r === null)) return null;
     return { ...row, w, r, rir: observedHistoryRIR(row) };

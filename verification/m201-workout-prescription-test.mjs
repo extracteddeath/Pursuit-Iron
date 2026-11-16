@@ -19,9 +19,12 @@ const history = [{ id: 'm201-history', programId: program.id, dayId: day.id, dat
 } }];
 const sug = sessionSuggestion(program, day, 1, null, 'lb', 4, history);
 assert.equal(sug.target, 8);
-assert.equal(sug.action, "decrease_load");
-assert.equal(sug.weight, 25, 'Classic double can normalize mixed loads using the weaker set position');
-assert.match(sug.reason, /later sets under fatigue/);
+assert.equal(sug.action, "hold_load");
+assert.equal(sug.weight, 30, 'Double progression retains the first set load rather than silently cutting it');
+assert.deepEqual(sug.setTargets.map(t=>t.weight),[30,30,30,25],
+    'Each prior set keeps its own weight while the workout builds reps');
+assert.equal(sug.optionalLowerLoad,25,'The fatigue-reduced load is a separate opt-in suggestion');
+assert.match(sug.reason,/Keep your previous working-set loads and build reps/);
 const fresh = prescribeSets(program, day, curl, 1, 4, 'lb', sug, null, {}, history, false);
 assert.ok(fresh.length > 0);
 assert.ok(fresh.every(s => Number(s.reps) >= 8 && Number(s.reps) <= 12));

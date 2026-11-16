@@ -17,6 +17,7 @@ export function holdWorkoutScreenAwake(nav = globalThis.navigator, doc = globalT
     if (!nav?.wakeLock?.request || !doc?.addEventListener)
         return () => {};
     let disposed = false;
+    let pageHidden = false;
     let pending = false;
     let lock = null;
     const release = sentinel => {
@@ -24,12 +25,12 @@ export function holdWorkoutScreenAwake(nav = globalThis.navigator, doc = globalT
         catch {}
     };
     const acquire = async () => {
-        if (disposed || pending || doc.visibilityState !== 'visible' || (lock && !lock.released))
+        if (disposed || pageHidden || pending || doc.visibilityState !== 'visible' || (lock && !lock.released))
             return;
         pending = true;
         try {
             const sentinel = await nav.wakeLock.request('screen');
-            if (disposed || doc.visibilityState !== 'visible') {
+            if (disposed || pageHidden || doc.visibilityState !== 'visible') {
                 release(sentinel);
                 return;
             }
@@ -39,23 +40,29 @@ export function holdWorkoutScreenAwake(nav = globalThis.navigator, doc = globalT
         catch {} // Unsupported, battery-saving, and denied requests must not interrupt a workout.
         finally { pending = false; }
     };
-    const onVisibility = () => {
-        if (doc.visibilityState === 'visible')
-            acquire();
-        else if (lock) {
-            const previous = lock;
-            lock = null;
-            release(previous);
-        }
+    const releaseCurrent = () => {
+        if (!lock) return;
+        const previous = lock;
+        lock = null;
+        release(previous);
     };
+    const onVisibility = () => {
+        if (doc.visibilityState === 'visible') acquire();
+        else releaseCurrent();
+    };
+    // A page can enter the back/forward cache without a visibilitychange. Do not
+    // keep its screen lock, or accept a late request, until pageshow resumes it.
+    const onPageHide = () => { pageHidden = true; releaseCurrent(); };
+    const onPageShow = () => { pageHidden = false; acquire(); };
     doc.addEventListener('visibilitychange', onVisibility);
-    win?.addEventListener('pageshow', acquire);
+    win?.addEventListener('pagehide', onPageHide);
+    win?.addEventListener('pageshow', onPageShow);
     acquire();
     return () => {
         disposed = true;
         doc.removeEventListener('visibilitychange', onVisibility);
-        win?.removeEventListener('pageshow', acquire);
-        release(lock);
-        lock = null;
+        win?.removeEventListener('pagehide', onPageHide);
+        win?.removeEventListener('pageshow', onPageShow);
+        releaseCurrent();
     };
 }

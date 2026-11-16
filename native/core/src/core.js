@@ -1026,7 +1026,9 @@ function setView(s, i, ex, prBase, prev = null) {
         type: s.typeOverride || (s.target?.failure ? 'failure' : 'standard'),
         prev: prev ? { w: prev.w, r: prev.r ?? null } : null,
         // live-autoregulation.js: a pending set the engine eased after a harder-than-planned one
-        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : s.liveAdjustment.action === 'set_backoffs_from_top' ? 'backoff' : null) : null
+        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : s.liveAdjustment.action === 'set_backoffs_from_top' ? 'backoff' : s.liveAdjustment.action === 'suggest_pending_load_reduction' ? 'suggest' : null) : null,
+        // live-autoregulation.js: two missed accessory sets suggest a lower load; the lifter applies it or not
+        suggestedLoad: !s.done && s.loadAdvice?.toLoad > 0 ? String(s.loadAdvice.toLoad) : null
     };
 }
 

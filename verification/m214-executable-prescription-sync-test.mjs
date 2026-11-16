@@ -14,6 +14,17 @@ const fixture = JSON.parse(fs.readFileSync('verification/m205-generation-parity-
 const original = generateNextProgramForShell({ config: fixture.config, legacyExercises: EXERCISES,
     seed: fixture.seed, makeId: () => 'm214-executable' }).program;
 const clone = value => structuredClone(value);
+// Corrupt explicit and immutable rep bounds cannot produce guessed working sets.
+for (const owner of ['user','engine']) {
+    const bad=clone(original),d=bad.days[0],id=d.exercises[0],key=`${d.id}:0`;
+    if(owner==='user') bad.overrides[key]=markUserPrescriptionOverride(bad.overrides[key],'reps','10-20oops');
+    else bad.nextWeekPrescriptions[key][1].reps='10-20oops';
+    assert.equal(getNextShellCell(bad,d,0,1).prescriptionInvalid,true);
+    assert.equal(computeCell(bad,d,id,0,1).missing,true);
+    assert.equal(nextWorkoutSuggestionForShell(bad,[],EXERCISES,d,0,1,'lb'),null);
+    assert.deepEqual(prescribeSets(bad,d,EX_BY_ID[id],0,1,'lb',null,{}, {},[],false),[]);
+}
+
 const keyOf = (day, slot) => `${day.id}:${slot}`;
 const historyFor = (program, day, id, reps, extra = []) => ({ id: 'm214-log', programId: program.id,
     dayId: day.id, weekIndex: 1, date: 1, unit: 'lb', perf: { [id]: { weight: 100, reps,

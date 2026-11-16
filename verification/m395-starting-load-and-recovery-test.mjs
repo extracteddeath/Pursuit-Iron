@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import { startingEstimate, startingWorkLoad, setLifterProfile, startingEstimateText } from '../modules/training-domain/starting-load.js';
+import { prescribeSets, muscleRecoveryUncached, setGymLimits } from '../modules/training-domain/prescriptions.js';
+import { EX_BY_ID } from '../modules/training-domain/catalog.js';
+
+const now=Date.now(), day={id:'upper',primaryIndex:0,exercises:['db-bench']};
+const program={id:'first-load',custom:true,weeks:4,days:[day],config:{unit:'lb',experience:'intermediate',progression:'double'},
+    overrides:{'upper:0':{sets:3,reps:'8-12',rir:'2'}}};
+const history=(id,weight,date=now-3600000,sets=1)=>({id,programId:'other',unit:'lb',date,
+    perf:{'bb-bench':{sets:Array.from({length:sets},()=>({w:weight,r:8,rir:2,rirReported:true,tr:2,done:true}))}}});
+const prior=[history('older-pr',300,now-2*86400000),history('recent',120)];
+setLifterProfile(null);
+const related=startingEstimate('db-bench',{history:prior,unit:'lb'});
+assert.equal(related.from.id,'bb-bench');
+assert.ok(related.e1rm<100,'a recent lower exposure takes precedence over an old maximum');
+const converted=startingEstimate('db-bench',{history:prior,unit:'kg'});
+assert.ok(Math.abs(related.e1rm/converted.e1rm-2.2046226218487757)<1e-9);
+const revision={...prior[1],updatedAt:now,perf:{'bb-bench':{sets:[{w:60,r:8,done:true}]}}};
+assert.ok(startingEstimate('db-bench',{history:[...prior,revision],unit:'lb'}).e1rm<related.e1rm,'corrected history replaces the obsolete high load');
+const incomplete={...prior[1],perf:{'bb-bench':{sets:[{w:500,r:8,done:false}]}}};
+assert.equal(startingEstimate('db-bench',{history:[incomplete],unit:'lb'}),null);
+assert.equal(startingEstimate('db-bench',{history:[history('stale',500,now-91*86400000)],unit:'lb'}),null);
+assert.equal(startingEstimate('pullup',{history:prior,unit:'lb'}),null,'bodyweight/assistance loads are not inferred');
+assert.equal(startingEstimate('missing',{history:null}),null);
+assert.ok(startingWorkLoad(related,8,0)>startingWorkLoad(related,8,2),'reported RIR zero remains zero');
+assert.equal(startingWorkLoad({e1rm:Infinity},8,2),null);
+setLifterProfile({bodyweight:180,bwUnit:'lb',sex:'male',experience:'novice'});
+const bodyweight=startingEstimate('inc-curl',{unit:'lb'});
+assert.equal(bodyweight.from.kind,'bodyweight');
+assert.match(startingEstimateText(bodyweight,'lb'),/Approximate/);
+assert.ok(startingEstimate('inc-curl',{unit:'lb',experience:'advanced'}).e1rm>bodyweight.e1rm);
+const make=(suggestion=null,exercise=EX_BY_ID['db-bench'])=>prescribeSets(program,day,exercise,0,1,'lb',suggestion,{}, {},prior,false);
+const seeded=make();
+assert.ok(seeded.length===3&&seeded.every(row=>Number(row.weight)>0&&Number(row.weight)%5===0));
+assert.equal(seeded[0].target.nextAction,'estimate');
+assert.equal(seeded[0].target.estimate.from.id,'bb-bench');
+const prescribed=make({weight:45,target:10,action:'hold'});
+assert.equal(prescribed[0].weight,'45');assert.equal(prescribed[0].target.estimate,undefined,'normal progression remains authoritative');
+assert.ok(make(null,EX_BY_ID['inc-curl']).every(row=>row.weight===''),'a session replacement cannot borrow a planned-slot estimate');
+const held=make({weight:null,action:'user_hold'});
+assert.ok(held.every(row=>row.target.estimate===undefined),'a declined target is not filled with a new estimate');
+const percentageProgram={...program,config:{...program.config,percentScheme:'531'}};
+const missingMax=prescribeSets(percentageProgram,day,EX_BY_ID['db-bench'],0,1,'lb',null,{}, {},prior,false);
+assert.ok(missingMax.every(row=>row.weight===''&&row.target.estimate===undefined),'a missing percentage training max cannot be replaced with an estimate');
+setGymLimits({limitUnit:'lb',limits:{dumbbell:20}});
+assert.ok(make().every(row=>Number(row.weight)<=20),'starting estimates respect the selected gym ceiling');
+setGymLimits(null);setLifterProfile({bodyweight:Infinity});
+assert.equal(startingEstimate('inc-curl'),null);
+
+const light=muscleRecoveryUncached([history('light',120,now,1)]).find(row=>row.part==='chest');
+const full=muscleRecoveryUncached([history('full',120,now,6)]).find(row=>row.part==='chest');
+assert.ok(light.readiness>=80&&light.readiness<=90,'one on-plan set does not read as exhausted');
+assert.equal(full.readiness,0,'a full six-set dose keeps the original recovery depth');
+const later=muscleRecoveryUncached([history('later',120,now-12*3600000,1)]).find(row=>row.part==='chest');
+assert.ok(later.readiness>light.readiness,'elapsed recovery still raises readiness');
+const overshot=history('grind',120,now,1);overshot.perf['bb-bench'].sets[0].rir=0;
+assert.ok(muscleRecoveryUncached([overshot]).find(row=>row.part==='chest').readiness<light.readiness,'effort still increases the recovery cost');
+console.log('PASS M395: history revisions, recent evidence, lb/kg, RIR zero, load grids/ceilings, protected prescriptions/swaps and recovery dose.');

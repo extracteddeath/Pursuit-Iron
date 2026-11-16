@@ -51,6 +51,10 @@ try{
  await page.waitForSelector('[data-step-key="goal"]');
  await page.$$eval('.wpb-wizard-option',ns=>ns.find(n=>/strength/i.test(n.textContent)&&!/both/i.test(n.textContent)).click());
  for(let step=0;step<20&&!await page.evaluate(()=>!!window.built);step++){
+  // A deliberately failed build can temporarily unmount the step. Synchronize with
+  // its visible outcome rather than querying a disappearing element.
+  await page.waitForFunction(()=>!!window.built||!!window.failed||!!document.querySelector('[data-step-key]'),{timeout:60000});
+  if(await page.evaluate(()=>!!window.built||!!window.failed))break;
   const key=await page.$eval('[data-step-key]',n=>n.dataset.stepKey);
   if(key==='deload')await page.evaluate(()=>window.failNextBuild=true);
   if(key==='name')await page.type('input[aria-label="Cycle name"]','Custom phase probe');

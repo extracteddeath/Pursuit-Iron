@@ -16,7 +16,10 @@ assert.match(app,/function ProfileCustomization\(\{ prefs, onChange, onClose \}\
 assert.match(app,/localStorage\.setItem\(PROFILE_PREFERENCE_KEY, JSON\.stringify\(safe\)\)/,'same persisted preferences');
 assert.doesNotMatch(region,/@keyframes|animation:/,'no competing row transition or screen animation');
 
-const b912=css.slice(css.lastIndexOf('/* B912 — Prototype-informed Profile hierarchy'));
+// Profile cannot acquire an extra motion owner; later independent overlays are not Profile.
+const b961Start=css.indexOf('/* B961: 25 existing dialog overlays');
+assert.ok(b961Start>css.indexOf('/* B912 — Prototype-informed Profile hierarchy'),'Overlay section follows Profile');
+const b912=css.slice(css.lastIndexOf('/* B912 — Prototype-informed Profile hierarchy'),b961Start);
 assert.ok(b912.startsWith('/* B912 — Prototype-informed Profile hierarchy'),'scoped visual pass is present');
 assert.match(b912,/\.wpb-profile-strength-grid\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important/,'strength compares actual patterns in compact rows');
 // M332: B907 browser coverage owns toolbar geometry and reading order; the retired

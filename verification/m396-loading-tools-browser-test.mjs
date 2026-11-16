@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import path from 'node:path';import http from 'node:http';import puppeteer from 'puppeteer-core';
+const root=path.resolve(new URL('../',import.meta.url).pathname);
+const server=http.createServer((req,res)=>{const name=new URL(req.url,'http://localhost').pathname;
+ const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
+ if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}
+ res.setHeader('Content-Type',({'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.webmanifest':'application/manifest+json'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+let browser;
+try{
+ browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ for(const [width,height,theme,enlarged] of [[320,740,'rose',true],[393,852,'rosewater',false],[834,900,'rose',true],[1280,600,'rosewater',true]]){
+  const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.setViewport({width,height,isMobile:width<600,hasTouch:true});await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+  const gym={id:'load-tools',name:'Load tools gym',equipment:['barbell','smith','dumbbell'],barWeights:{unit:'lb',barbell:45,smith:0},limits:{dumbbell:50},inventory:{machine:[10,15,20]},limitUnit:'kg',updatedAt:123};
+  const store={v:13,savedAt:1,saved:[],history:[],cycles:[],perf:{},drafts:{},tombs:{},theme,unit:'lb',unitChosen:true,experience:'intermediate',gyms:[gym],activeGymId:gym.id,seenIntro:999,seenWhatsNew:999,lastBackup:Date.now(),installDismissedAt:Date.now()};
+  await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('m396')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('m396','1');}},store);
+  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle0'});await page.waitForSelector('[aria-label="Calculators"]');
+  const original=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
+  await page.click('[aria-label="Calculators"]');
+  const target='input[placeholder="Target weight (lb)"]';
+  const type=async(selector,value)=>{await page.$eval(selector,node=>{node.focus();node.select();});await page.keyboard.type(value);};
+  await page.waitForSelector(target);await type(target,'92..5');
+  assert.equal(await page.$('.wpb-visual-plate-bar'),null,'a malformed target must not become a lower valid load');
+  await page.waitForSelector('.wpb-calculator-error');assert.equal(await page.$eval(target,node=>node.value),'92..5','invalid typing remains available to correct');
+  await type(target,'135');await page.waitForSelector('.wpb-visual-plate-bar');
+  assert.deepEqual(await page.$$eval('.wpb-visual-plate',nodes=>nodes.map(node=>Number(node.dataset.plate))),[45]);
+  assert.match(await page.$eval('[data-load-result]',node=>node.textContent),/135/);
+  await type(target,'10');assert.match(await page.$eval('[data-load-result]',node=>node.textContent),/below.*45/i);
+  await page.evaluate(()=>[...document.querySelectorAll('.wpb-loading-calculator button')].find(node=>node.textContent.trim()==='1RM estimate').click());
+  await type('#calculator-orm-weight','200');await type('#calculator-orm-reps','8.5');
+  assert.equal(await page.$('[data-estimated-max]'),null,'fractional reps cannot silently become 85 reps');
+  assert.equal(await page.$eval('#calculator-orm-reps',node=>node.value),'8.5');
+  await type('#calculator-orm-reps','8');await page.waitForSelector('[data-estimated-max]');
+  assert.equal(await page.$eval('[data-estimated-max]',node=>Number(node.dataset.estimatedMax)),253);
+  await page.click('[data-calculator-percent="85"]');
+  assert.equal(await page.$eval(target,node=>node.value),'215','one tap sends the rounded percentage to the plate view');
+  await page.waitForSelector('.wpb-visual-plate-bar');
+  if(enlarged)await page.evaluate(()=>{document.documentElement.style.fontSize='200%';window.dispatchEvent(new Event('resize'));});
+  await page.screenshot({path:`verification/m396-calculator-${width}-phone.png`});
+  const geometry=await page.$eval('.wpb-loading-calculator',node=>{const r=node.getBoundingClientRect(),close=node.querySelector('button[aria-label="Close Calculators"]'),body=node.querySelector('.wpb-calculator-body'),c=close.getBoundingClientRect();return {left:r.left,right:r.right,viewport:innerWidth,overflow:body.scrollWidth-body.clientWidth,closeHeight:c.height,heading:parseFloat(getComputedStyle(node.querySelector('h2')).fontSize),input:parseFloat(getComputedStyle(node.querySelector('input')).fontSize)};});
+  assert.ok(geometry.left>=-1&&geometry.right<=width+1&&geometry.overflow<=1&&geometry.closeHeight>=44,'calculator remains contained and operable: '+JSON.stringify(geometry));
+  if(enlarged)assert.ok(geometry.heading>=38&&geometry.input>=36,'calculator typography follows actual text enlargement');
+  await page.$eval('.wpb-calculator-body',node=>node.scrollTop=node.scrollHeight);
+  assert.ok(await page.$eval('[aria-label="Close Calculators"]',node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return hit===node||node.contains(hit);}), 'Close stays reachable after scrolling');
+  await page.keyboard.press('Escape');await page.waitForSelector('.wpb-loading-calculator',{hidden:true});
+  assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Calculators','dismissal restores the opener');
+  await page.click('[aria-label="Calculators"]');await page.waitForSelector('.wpb-loading-calculator[data-sheet-drag]');
+  const box=await page.$eval('.wpb-loading-calculator',node=>node.getBoundingClientRect().toJSON()),cdp=await page.createCDPSession();
+  const point={x:box.x+box.width/2,y:box.y+20};
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+  for(const distance of [30,70,120,150])await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...point,y:point.y+distance}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForSelector('.wpb-loading-calculator',{hidden:true});await cdp.detach();
+  assert.deepEqual(await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:d.saved,history:d.history,gyms:d.gyms};}),{saved:original.saved,history:original.history,gyms:original.gyms},'calculator use is read-only');
+  await page.evaluate(()=>{document.documentElement.style.fontSize='';const state=JSON.parse(localStorage.getItem('wpb:v1'));state.gyms[0].platePairs={lb:{}};localStorage.setItem('wpb:v1',JSON.stringify(state));});
+  await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[aria-label="Calculators"]');await page.click('[aria-label="Calculators"]');await type(target,'135');
+  assert.match(await page.$eval('[data-load-result]',node=>node.textContent),/45.*lb/,'an empty inventory still reports the empty-bar load');
+  assert.match(await page.$eval('[data-load-result]',node=>node.textContent),/no.*plate/i,'an empty inventory explains why the target cannot be loaded');
+  assert.deepEqual(errors,[]);await context.close();console.log(`PASS M396 calculator ${width}/${theme}: strict input, available loads, percentages, enlarged text, dismissal and immutable training.`);
+ }
+}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

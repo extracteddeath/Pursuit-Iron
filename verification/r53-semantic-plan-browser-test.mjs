@@ -204,7 +204,7 @@ async function verifyTaskHierarchy(browser){
         'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
       const outlineState=()=>page.$eval('.wpb-home-session-preview',panel=>{
         const button=panel.querySelector('button[aria-expanded]');
-        const content=panel.querySelector('#wpb-home-outline-exercises');
+        const content=button?.getAttribute('aria-controls') ? document.getElementById(button.getAttribute('aria-controls')) : null;
         return {button:!!button,label:button?.getAttribute('aria-label'),controls:button?.getAttribute('aria-controls'),
           expanded:button?.getAttribute('aria-expanded'),buttonHeight:button?.getBoundingClientRect().height,
           rows:content?.querySelectorAll('.wpb-m3-outline-row').length||0,hidden:content?.hidden,
@@ -212,7 +212,7 @@ async function verifyTaskHierarchy(browser){
       });
       const outlineOpen=await outlineState();
       assert.ok(outlineOpen.button&&outlineOpen.expanded==='true'&&
-        outlineOpen.controls==='wpb-home-outline-exercises'&&
+        !!outlineOpen.controls&&
         outlineOpen.label?.includes('Hide all 4 session exercises')&&
         outlineOpen.buttonHeight>=44&&!outlineOpen.hidden&&outlineOpen.rows===4&&!outlineOpen.overflow,
         'B876 Home shows every session exercise by default, with accessible optional collapse: '+JSON.stringify(outlineOpen));
@@ -299,7 +299,7 @@ async function verifyTaskHierarchy(browser){
         named:el.getAttribute('aria-label'),style:getComputedStyle(el).fontSize
       }));
       assert.equal(rowBefore.expanded,'false');
-      assert.ok(rowBefore.named?.includes('Volume contributors for')&&parseFloat(rowBefore.style)>=12,
+      assert.ok(rowBefore.named?.includes('weekly sets')&&rowBefore.named?.includes('Show contributors')&&parseFloat(rowBefore.style)>=12,
         'M380: muscle-volume header has readable accessible name');
       await page.focus('.wpb-plan button[data-vol-part]');
       await page.keyboard.press('Enter');
@@ -590,9 +590,10 @@ try{
         },tab);
         const density=await measure();
         assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
-        // M270 gives every root the same 26px title role; retain each
-        // destination's compact geometry and full-size action checks below.
-        assert.equal(density.titleSize,26,'Root destination uses the shared title size: '+JSON.stringify({tab,density}));
+        // The root title follows one responsive clamp(1.75rem,1.55rem + 1vw,2.125rem) role.
+        // Compare the computed value across destinations rather than pinning obsolete 26px.
+        const expectedRootTitle=Math.min(34,Math.max(28,24.8+density.viewport/100));
+        assert.ok(Math.abs(density.titleSize-expectedRootTitle)<.7,'Root destination uses the canonical responsive title: '+JSON.stringify({tab,density,expectedRootTitle}));
         if(tab==='plan'){
           assert.ok(density.row&&!density.back&&density.title&&density.title.top>=density.row.top,
             'Plan root has no Back action and keeps its title in the shared row: '+JSON.stringify(density));
@@ -686,7 +687,7 @@ try{
           const sc=home.querySelector('.wpb-page-scroll');
           const rect=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
           const buttons=[...tools.querySelectorAll('button')];
-          return {compact:home.dataset.homeCompact,
+          return {compact:home.querySelector('.wpb-home-context').getBoundingClientRect().bottom<=sc.getBoundingClientRect().top+1?'1':'0',
             header:rect(head),brand:rect(brand),tools:rect(tools),
             buttons:buttons.map(b=>({label:b.getAttribute('aria-label'),...rect(b)})),
             long:getComputedStyle(home.querySelector('.wpb-home-brand-long')).display,
@@ -699,10 +700,10 @@ try{
         assert.ok(expanded.maxScroll>180,'Seeded Home can actually scroll: '+JSON.stringify(expanded));
         assert.notEqual(expanded.long,'none','Full brand shown before scrolling');
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
-        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
+        await page.waitForFunction(()=>(()=>{const home=document.querySelector('.wpb-home');return home&&home.querySelector('.wpb-home-context').getBoundingClientRect().bottom<=home.querySelector('.wpb-page-scroll').getBoundingClientRect().top+1;})());
         const compact=await measure();
-        assert.ok(compact.header.h<=70&&expanded.header.h-compact.header.h>=24,
-          'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
+        assert.ok(compact.header.h<=70&&Math.abs(expanded.header.h-compact.header.h)<=1,
+          'Scrolled context leaves a stable compact app bar without reserved blank space: '+JSON.stringify({expanded,compact}));
         assert.notEqual(compact.long,'none','Full Pursuit Iron identity remains in DOM while its context collapses');
         assert.equal(compact.short,null,'Home no longer substitutes the incorrect Iron-only label');
         assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
@@ -712,7 +713,7 @@ try{
         captures[theme].homeCompact=Buffer.from(await page.screenshot({type:'png'}));
         await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
-        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
+        await page.waitForFunction(()=>(()=>{const home=document.querySelector('.wpb-home');return home&&home.querySelector('.wpb-home-context').getBoundingClientRect().bottom<=home.querySelector('.wpb-page-scroll').getBoundingClientRect().top+1;})());
         const small=await measure();
         assert.ok(small.header.h<=70&&small.brand.right+4<=small.tools.x&&!small.overflow,
           '320dp Home compact header has no collision or overflow: '+JSON.stringify(small));
@@ -720,7 +721,7 @@ try{
           'Small-screen actions retain 48px targets: '+JSON.stringify(small));
         await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=0;});
-        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='0');
+        await page.waitForFunction(()=>(()=>{const home=document.querySelector('.wpb-home');return home&&home.querySelector('.wpb-home-context').getBoundingClientRect().bottom>home.querySelector('.wpb-page-scroll').getBoundingClientRect().top+1;})());
         const restored=await measure();
         assert.notEqual(restored.long,'none','Full masthead returns on scroll-to-top');
         await page.click('.wpb-home-tools button[aria-label="Exercise library"]');
@@ -789,6 +790,7 @@ try{
         metaContrast:contrast(css('.wpb-program-exercise-meta').color,getComputedStyle(row).backgroundColor),
         nameWrap:css('.wpb-program-exercise-name').whiteSpace,
         chips:chips.length,
+        chipTargets:chips.map(chip=>({height:chip.getBoundingClientRect().height,width:chip.getBoundingClientRect().width})),
         chipContrast:chips.length?contrast(getComputedStyle(chips[0]).color,getComputedStyle(chips[0]).backgroundColor):0,
         overflow:el('.wpb-program').scrollWidth>el('.wpb-program').clientWidth+1
       };
@@ -797,6 +799,8 @@ try{
       'Program exercise card must use a distinct tonal elevation: '+JSON.stringify(nested));
     assert.ok(nested.chips>0&&nested.nameWrap==='normal',
       'Muscle chips remain visible and exercise names wrap: '+JSON.stringify(nested));
+    assert.ok(nested.chipTargets.every(target=>target.width>=44&&target.height>=44),
+      'B977 muscle chips keep 44px hit areas in both saved themes: '+JSON.stringify(nested));
     assert.ok(nested.nameContrast>=4.5&&nested.metaContrast>=4.5&&nested.chipContrast>=4.5,
       'Program name, metadata and chip labels meet WCAG AA contrast: '+JSON.stringify(nested));
     assert.ok(!nested.overflow,'No horizontal clipping with expanded exercises: '+JSON.stringify(nested));

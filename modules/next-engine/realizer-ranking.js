@@ -68,6 +68,10 @@ function maxBarbells(session, request) {
 export /* M230:PRESERVE:top.strengthCandidate:BEGIN */
 function strengthCandidate(a, session, request, chosen, catalog) {
     const barbells = chosen.filter(e => e.flags.barbell).length;
+    const preferred = request.preferences?.preferredExercises ?? [];
+    const athleteChoseBench = request.preferences?.powerbuildingInclineVolume
+        && preferred.some(id => catalog.some(e => e.id === id &&
+            (e.liftSpecificity?.bench_press ?? 0) > .45));
     const compare = (x, y) => {
         const xs = x.liftSpecificity?.[a.lift] ?? 0, ys = y.liftSpecificity?.[a.lift] ?? 0;
         if (a.role === 'secondary_strength') {
@@ -75,8 +79,18 @@ function strengthCandidate(a, session, request, chosen, catalog) {
             // competition lift. This makes paused bench / RDL-style secondary work viable when specificity
             // remains meaningful, while exact competition lifts still dominate primary-strength slots.
             const fatigue = (e) => e.fatigue.systemic + e.fatigue.axial * .8 + e.fatigue.lowerBack;
-            const xScore = xs * 5 + x.loadability * .12 + x.suitability.strength * .1 - fatigue(x) * .13;
-            const yScore = ys * 5 + y.loadability * .12 + y.suitability.strength * .1 - fatigue(y) * .13;
+            // A five-day Both/ULPPL strength block should have a real
+            // incline-biased second chest day, not have OHP or a second flat
+            // barbell bench silently replace it. Athlete-chosen exercises
+            // override this default, and all options still pass equipment
+            // and strength-specificity eligibility before comparison.
+            const inclineBonus = e => request.preferences?.powerbuildingInclineVolume
+                && a.lift === 'bench_press' && session.intent === 'push'
+                ? (athleteChoseBench ? (preferred.includes(e.id) ? 4 : 0)
+                    : e.id === 'incline_db_press' ? 3.7
+                    : e.id === 'incline_smith' ? 3.0 : 0) : 0;
+            const xScore = xs * 5 + x.loadability * .12 + x.suitability.strength * .1 - fatigue(x) * .13 + inclineBonus(x);
+            const yScore = ys * 5 + y.loadability * .12 + y.suitability.strength * .1 - fatigue(y) * .13 + inclineBonus(y);
             if (Math.abs(yScore - xScore) > .02)
                 return yScore - xScore;
         }

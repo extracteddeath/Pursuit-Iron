@@ -60,7 +60,7 @@ try{
      live:JSON.parse(localStorage.getItem('wpb:live'))}));
  const button=async label=>{
      const found=await page.evaluate(label=>{const b=[...document.querySelectorAll('button')]
-         .find(b=>b.textContent.trim()===label || b.textContent.trim().startsWith(label));if(b)b.click();return !!b;},label);
+         .find(b=>b.getAttribute('aria-label')===label || b.textContent.trim()===label || b.textContent.trim().startsWith(label));if(b)b.click();return !!b;},label);
      assert.ok(found,'expected button '+label);
  };
  const openSwap=async()=>{

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { waitForRouteOrDiagnose, assertNavigationTapClear } from './browser-route-diagnostics.mjs';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 // M3E 2026 design contract: colored surfaces stay tonal, never decorative
@@ -529,8 +530,11 @@ try {
         }, selectors);
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
+            await assertNavigationTapClear(page, tab);
             await page.click(`[data-tab="${tab}"]`);
-            await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+            await waitForRouteOrDiagnose(page, `[data-view-frame="${tab}"]`, {label:'b831 navigation '+tab, errors});
+            // Root frames are the stable render owner; data-pi-surface is reserved for actual
+            // moving cards/sheets, not the entire route. Keep the entrance-count assertion below.
             // M377: ordinary root navigation must not set five cards moving.
             // Preserve the measured indicator and real route while only one
             // meaningful card can arrive. The chosen nav icon does not bounce.
@@ -544,6 +548,25 @@ try {
                 [...bar.querySelectorAll('button[data-tab] svg')]
                     .filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
             assert.equal(bouncingIcons,0,'M377 tab icons do not bounce in addition to the indicator');
+
+            if (tab === 'plan' && width <= 360) {
+                const narrowPlan = await page.$eval('.wpb-plan-panes', rail => {
+                    const buttons=[...rail.querySelectorAll('.wpb-plan-pane-tab')];
+                    const rows=[...new Set(buttons.map(b => Math.round(b.getBoundingClientRect().top)))];
+                    const text=buttons.find(b => b.textContent.includes('Progression'))
+                        ?.querySelector('.wpb-plan-pane-label');
+                    const selection=document.createRange();
+                    if(text) selection.selectNodeContents(text);
+                    const lines=text ? [...selection.getClientRects()].filter(r => r.width>0 && r.height>0).length : 0;
+                    return { buttons:buttons.length,rows:rows.length,lines,
+                        minTouch:Math.min(...buttons.map(b => b.getBoundingClientRect().height)),
+                        overflow:rail.scrollWidth>rail.clientWidth+1 };
+                });
+                assert.ok(narrowPlan.buttons===4 && narrowPlan.rows===2 &&
+                    narrowPlan.lines===1 && narrowPlan.minTouch>=48 && !narrowPlan.overflow,
+                    'B937 Plan pane labels stay intact in a reachable 2×2 narrow grid: '+
+                    JSON.stringify(narrowPlan));
+            }
 
             if (tab === 'settings') {
                 const r52=await page.evaluate(()=>{
@@ -580,23 +603,24 @@ try {
                     'R52 Intermediate label fits as one word at regular width: '+JSON.stringify(r52));
                 if(width===430)await page.screenshot({path:path.join(root,'verification/r52-settings-phone.png')});
             }
-            // The mounted destination receives a linked entrance sourced from
-            // the actual tapped navigation control. No duplicate views, no
-            // animation on workout rows, and no change to navigation state.
+            // B937: A bottom-tab change already has a moving selected indicator.
+            // Do not add a second, diagonally source-linked card animation. The
+            // one lead card keeps the short horizontal route cue and the
+            // same React-mounted page. Library detail retains its own link.
             if (tab === 'plan' || tab === 'progress') {
-                const linked = await page.$eval(`[data-view-frame="${tab}"]`, el => {
-                    const lead = el.querySelector('[data-pi-connected="source"]');
+                const motion = await page.$eval(`[data-view-frame="${tab}"]`, el => {
+                    const cards=[...el.querySelectorAll('[data-pi-reveal="1"]')];
                     return { count:el.querySelectorAll('[data-pi-connected="source"]').length,
                         quick:el.dataset.piNavQuick==='1',
-                        x:lead?.style.getPropertyValue('--pi-connected-x'),
-                        y:lead?.style.getPropertyValue('--pi-connected-y') };
+                        reveals:cards.length,
+                        duration:cards[0] ? getComputedStyle(cards[0]).animationDuration : null,
+                        axis:el.style.getPropertyValue('--pi-page-reveal-x') };
                 });
-                assert.ok(linked.quick ? linked.count===0 :
-                    linked.count===1 && Number.isFinite(parseFloat(linked.x)) &&
-                    Number.isFinite(parseFloat(linked.y)) &&
-                    Math.abs(parseFloat(linked.x)) <= 24.01 &&
-                    Math.abs(parseFloat(linked.y)) <= 18.01,
-                    'R9/R33 deliberate transitions connect once; quick ones omit card jumps: '+JSON.stringify(linked));
+                assert.ok(motion.count===0 && motion.reveals<=1 &&
+                    (motion.quick || motion.reveals===1 && motion.duration==='0.2s' &&
+                    Math.abs(parseFloat(motion.axis))<=8.01),
+                    'B937 tab indicator owns navigation; one short horizontal lead, no diagonal duplicate: '+
+                    JSON.stringify(motion));
             }
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
@@ -876,12 +900,15 @@ try {
                     const raised=role('--pi-r11-raised');
                     const control=role('--pi-color-control');
                     const hero=role('--pi-r11-hero');
+                     // Home preview is intentionally mixed from these two shared materials.
+                     probe.style.backgroundColor='color-mix(in srgb,var(--pi-color-control) 78%,var(--pi-color-feature) 22%)';
+                     const expectedPreview=bg(probe);
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
                     const redundantStrip=home.querySelector('.wpb-metric-strip');
                     const preview=home.querySelector('.wpb-home-session-preview');
-                    return {quiet,raised,hero,control,appBar,
+                    return {quiet,raised,hero,control,appBar,expectedPreview,
                         header:bg(header),feature:bg(feature),hasRedundantStrip:!!redundantStrip,
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
@@ -890,7 +917,7 @@ try {
                 assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
                     !homeTonesR45.hasRedundantStrip&&
                     homeTonesR45.feature===homeTonesR45.hero&&
-                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
+                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.expectedPreview)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
                     homeTonesR45.hero!==homeTonesR45.quiet&&
@@ -1009,7 +1036,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(state.count===3 && state.size===26 && state.firstRadius>=26 &&
+                assert.ok(state.count===3 && state.size>=28 && state.size<=34 && state.firstRadius>=26 &&
                     state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
@@ -1082,7 +1109,7 @@ try {
                         pickerBackground:picker ? getComputedStyle(picker).backgroundImage : '',
                         overflow:el.scrollWidth>el.clientWidth+1 };
                 });
-                assert.ok(heading.titleSize===26 && heading.pickerHeight>=44 &&
+                assert.ok(heading.titleSize>=28 && heading.titleSize<=34 && heading.pickerHeight>=44 &&
                     heading.selectHeight>=44 && heading.headerHeight<115 &&
                     heading.pickerBackground==='none' && !heading.overflow,
                     'R18 Settings keeps a compact header and functional section jump: '+JSON.stringify(heading));
@@ -1118,6 +1145,7 @@ try {
                         radius:parseFloat(cs(cards[0])?.borderTopLeftRadius||0),
                         rowMinimum:rows.length?Math.min(...rows.map(el=>el.getBoundingClientRect().height)):0,
                         segmentHeight:seg?.getBoundingClientRect().height||0,
+                        segmentButtonHeights:[...(seg?.querySelectorAll('button')||[])].map(x=>x.getBoundingClientRect().height),
                         pickerHeight:picker?.getBoundingClientRect().height||0,
                         overflow:root.scrollWidth>root.clientWidth+1,
                         selected:!!seg?.querySelector('[aria-pressed="true"]')};
@@ -1127,6 +1155,7 @@ try {
                     r42.listImage==='none' && r42.railImage==='none' &&
                     r42.radius>=19 && r42.rowMinimum>=48 &&
                     r42.segmentHeight>=48 && r42.pickerHeight>=48 &&
+                    r42.segmentButtonHeights.length>=2 && r42.segmentButtonHeights.every(x=>x>=48) &&
                     r42.selected && !r42.overflow,
                     'R42 Settings grouped surfaces and active choices stay usable at '+width+'px: '+
                     JSON.stringify(r42));
@@ -1140,8 +1169,8 @@ try {
                         actionHeight: actions.getBoundingClientRect().height,
                         scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                // M270: the five root titles share the same 1.625rem role.
-                const expectedSize=homeType.size===26;
+                // M270: root destinations share the same responsive 1.75–2.125rem title scale.
+                const expectedSize=homeType.size>=28&&homeType.size<=34;
                 assert.ok(expectedSize && homeType.weight >= 700,
                     'Home title keeps a stable expressive type scale while clipping smoothly: '+JSON.stringify(homeType));
                 assert.ok(homeType.actionHeight >= 48, 'Home root actions retain full-size targets');
@@ -1201,7 +1230,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(profileR17.title===26 && profileR17.headerHeight<=112 &&
+                assert.ok(profileR17.title>=28 && profileR17.title<=34 && profileR17.headerHeight<=112 &&
                     profileR17.identityHeight<=40 && profileR17.identityBorder==='0px' &&
                     profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
                     profileR17.editHeight>=44 && !profileR17.overflow,
@@ -1316,8 +1345,8 @@ try {
             rapidNavR32.progress.connected===0 && rapidNavR32.home.connected===0 &&
             !rapidNavR32.progress.cascade && !rapidNavR32.home.cascade &&
             rapidNavR32.progress.reveal===0 && rapidNavR32.home.reveal===0 &&
-            rapidNavR32.progress.travel==='6px' &&
-            rapidNavR32.home.travel==='-6px' &&
+            rapidNavR32.progress.travel==='3px' &&
+            rapidNavR32.home.travel==='-3px' &&
             rapidNavR32.home.active==='page' && rapidNavR32.visibleViews===1,
             'R32 rapid tabs preserve direction and suppress repeated entrance cascades: '+
                 JSON.stringify(rapidNavR32));
@@ -1722,6 +1751,7 @@ try {
         // instead of navigating or calling the destructive Delete item.
         await page.click('button[aria-haspopup="menu"]');
         await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        assert.ok(await page.$eval('.wpb-context-menu',el=>document.activeElement===el.querySelector('[role="menuitem"]')),'Opening a context menu focuses its first action');
         const menuR36=await contrastAuditR36([['menuAction','.wpb-context-menu [role="menuitem"]']]);
         console.log('R36 MENU '+JSON.stringify(menuR36));
         assert.ok(menuR36.every(x=>x.absent||x.ratio>=4.5),'R36 contextual actions remain readable: '+JSON.stringify(menuR36));
@@ -1759,13 +1789,13 @@ try {
         // remeasurement of the open anchored menu; the menu still clears dock.
         const resizeR28=await page.evaluate(async()=>{
             const menu=document.querySelector('.wpb-context-menu');
-            const original=menu.getBoundingClientRect, dock=document.querySelector('.wpb-live-dock');
+            const original=Object.getOwnPropertyDescriptor(HTMLElement.prototype,'offsetHeight'),dock=document.querySelector('.wpb-live-dock');
             let reads=0;
-            menu.getBoundingClientRect=function(...args){reads++;return original.apply(this,args);};
+            Object.defineProperty(menu,'offsetHeight',{configurable:true,get(){reads++;return original.get.call(this);}});
             try{
                 for(let i=0;i<6;i++) window.dispatchEvent(new Event('resize'));
                 await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            }finally{menu.getBoundingClientRect=original;}
+            }finally{delete menu.offsetHeight;}
             const box=menu.getBoundingClientRect(),dockBox=dock.getBoundingClientRect();
             return {reads,clearsDock:box.bottom<=dockBox.top-3,overflow:box.right>innerWidth+1};
         });
@@ -1775,6 +1805,8 @@ try {
 
         // 2026 expressive menu group: rounded outside corners without a
         // wider popup, extra item height, lost keyboard order or new React state.
+        await page.focus('.wpb-context-menu');
+        await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-context-menu-item')).borderTopLeftRadius)>=20);
         const menuGroupShape = await page.$eval('.wpb-context-menu', menu => {
             const items = [...menu.querySelectorAll(':scope > .wpb-context-menu-item')];
             return { count: items.length,
@@ -1983,6 +2015,15 @@ try {
         assert.equal(await page.evaluate(() =>
             JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1')||'{}').saved)),programBeforeOptions,
             'R22 opening and dismissing exercise options preserves the entire program');
+        // Spec v1: actual Program header touch targets must fit the phone.
+        const programHeaderTargets=await page.$$eval('.wpb-program .wpb-program-header-back,.wpb-program .wpb-program-icon-change',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {name:el.className,w:r.width,h:r.height,left:r.left,right:r.right};
+            }));
+        assert.ok(programHeaderTargets.length>=1 && programHeaderTargets.every(x=>
+            x.w>=48&&x.h>=48&&x.left>=-1&&x.right<=width+1),
+            'Program header touch targets are unclipped: '+JSON.stringify({width,programHeaderTargets}));
         const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
             touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,
             panel:el.querySelector(':scope > .wpb-expand')?.getBoundingClientRect().height,
@@ -2003,6 +2044,32 @@ try {
             'disclosure motion preserves the complete saved prescription');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
+        // Spec v1: confirm Workout header sizes and lack of overlap by
+        // measuring the real controls, not just static CSS declarations.
+        const workoutHeaderTargets=await page.$$eval(
+            '.wpb-workout-header .wpb-workout-close,.wpb-workout-header .wpb-workout-timer,.wpb-workout-header .wpb-workout-header-action',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {name:el.className,action:el.getAttribute('aria-label'),
+                    w:r.width,h:r.height,l:r.left,r:r.right,t:r.top,b:r.bottom};
+            }));
+        const overlappingHeaders=workoutHeaderTargets.some((a,i)=>workoutHeaderTargets.slice(i+1)
+            .some(b=>Math.min(a.r,b.r)-Math.max(a.l,b.l)>1&&Math.min(a.b,b.b)-Math.max(a.t,b.t)>1));
+        assert.ok(workoutHeaderTargets.length>=3 &&
+            workoutHeaderTargets.every(x=>x.w>=48&&x.h>=48&&x.l>=-1&&x.r<=width+1) &&
+            !overlappingHeaders,
+            'Workout header touch targets are distinct: '+JSON.stringify({width,workoutHeaderTargets}));
+        // The exercise rail is independently scrollable. Its buttons still
+        // use complete 48px hit targets, even when some extend offscreen.
+        const exerciseRailTargets=await page.$$eval('.wpb-workout .wpb-ex-nav .wpb-ex-nav-step',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {width:r.width,height:r.height,name:el.getAttribute('aria-label')||el.textContent.trim()};
+            }));
+        assert.ok(exerciseRailTargets.length>=2 &&
+            exerciseRailTargets.every(x=>x.width>=48&&x.height>=48),
+            'Exercise rail uses the shared 48px owner rather than legacy runtime sizing: '+
+            JSON.stringify({width,exerciseRailTargets}));
         // R23: actual on-screen tool controls stay touch-safe; do not touch
         // the compact weight/reps grid, navigation ownership or log state.
         const liveToolsR23=await page.$$eval('.wpb-workout-tools .wpb-workout-tool', controls =>
@@ -2013,6 +2080,14 @@ try {
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
             x.w>=48 && x.h>=48 && x.image==='none' && x.touch==='manipulation'),
             'R23/R63 live tools retain stable 48px targets without enlarging their visual controls: '+JSON.stringify(liveToolsR23));
+        // Spec v1: workout session-context choices must remain reachable by
+        // touch without forcing a different prescription or editing typed sets.
+        const liveContextTargets=await page.$$eval('.wpb-workout .wpb-session-context>button',
+            buttons=>buttons.filter(el=>el.getClientRects().length)
+                .map(el=>({label:el.getAttribute('aria-label')||el.textContent.trim(),
+                    w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height})));
+        assert.ok(liveContextTargets.every(x=>x.w>=48&&x.h>=48),
+            'Workout session choices meet 48px tap targets: '+JSON.stringify(liveContextTargets));
         // R49: screenshot-led real workout hierarchy. A skipped exercise
         // remains reachable, but navigation never competes with logging an
         // unfinished set. The training grid and Focus mode are untouched.
@@ -2139,7 +2214,7 @@ try {
         assert.equal(barDiagram.side,'one');
         assert.deepEqual(barDiagram.plates,barDiagram.expected,'one sleeve shows each per-side denomination once, inner to outer');
         assert.ok(barDiagram.label?.includes('One side of the barbell'),JSON.stringify(barDiagram));
-        await page.click('.wpb-backdrop button[aria-label="Close"]');
+        await page.click('.wpb-loading-calculator button[aria-label="Close Calculators"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-visual-plate-bar'));
         // B877 keeps the dock optional on phones and default on expanded screens.
         // Exercise the real toggle in either state without hiding the tested dock.
@@ -2768,7 +2843,7 @@ try {
         await page.waitForSelector('[data-exercisedetail]',{hidden:true});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'exercise detail view and charts do not change saved training programs');
-        // R21: temporarily introduce a second *valid* program to exercise
+        // R21/M388: introduce valid programs to exercise the searchable
         // the real Home switcher. Never tap Switch; check selection/disabled
         // semantics, close without altering ownership, then restore the
         // fixture before closing the browser context.
@@ -2776,7 +2851,7 @@ try {
             const copy={...seed.saved[0],id:'r21-secondary',name:
                 'Secondary customized strength and hypertrophy development program'};
             localStorage.setItem('wpb:v1',JSON.stringify({
-                ...seed,saved:[seed.saved[0],copy]
+                ...seed,saved:[seed.saved[0],copy,...Array.from({length:5},(_,i)=>({...copy,id:'m388-search-'+i,name:'Searchable program '+i}))]
             }));
             localStorage.removeItem('wpb:live');
         },initial);
@@ -2784,6 +2859,12 @@ try {
         await page.waitForSelector('button[aria-label="Switch program"]');
         await page.click('button[aria-label="Switch program"]');
         await page.waitForSelector('.wpb-switcher-sheet .wpb-switcher-row');
+        // The shared spring briefly scales rows below their resting size.
+        // Retain the 70px layout requirement and wait for entrance to settle.
+        // Translated DOMRects can differ by a floating-point fraction of a
+        // pixel; offsetHeight still enforces the full, untransformed target.
+        await page.waitForFunction(() => [...document.querySelectorAll('.wpb-switcher-row')]
+            .every(row => row.offsetHeight >= 70 && row.getBoundingClientRect().height >= 70 - .001), { timeout: 5000 });
         console.log('R36 DISABLED '+JSON.stringify(await contrastAuditR36([
             ['disabledProgram','.wpb-switcher-row[data-state="active"]'],
             ['enabledProgram','.wpb-switcher-row[data-state="available"]']
@@ -2808,15 +2889,43 @@ try {
                 clipped:sheet.scrollWidth>sheet.clientWidth+1};
         });
         assert.ok(switcherR21.alpha===255 && switcherR21.image==='none' &&
-            switcherR21.doneHeight>=44 && switcherR21.rows===2 &&
+            switcherR21.doneHeight>=44 && switcherR21.rows===7 &&
             switcherR21.activeDisabled===true && switcherR21.availableDisabled===false &&
-            switcherR21.minRowHeight>=70 && switcherR21.titleWhiteSpace==='normal' &&
+            switcherR21.minRowHeight>=70-.001 && switcherR21.titleWhiteSpace==='normal' &&
             switcherR21.titleTextOverflow!=='ellipsis' && !switcherR21.clipped,
             'R21 switcher retains working program-state semantics with readable names: '+JSON.stringify(switcherR21));
         if (width===430) await page.screenshot({path:path.join(root,'verification/b831-m3-program-switcher-phone.png')});
+        await page.$eval('.wpb-switcher-sheet',sheet=>{
+            const sizes=[sheet,...sheet.querySelectorAll('*')].filter(el=>el instanceof HTMLElement)
+                .map(el=>[el,parseFloat(getComputedStyle(el).fontSize)]);
+            sizes.forEach(([el,size])=>el.style.setProperty('font-size',size*2+'px','important'));
+        });
+        const switcherHeading=await page.$eval('.wpb-switcher-sheet',sheet=>{
+            const heading=sheet.querySelector('.wpb-selection-heading'),title=sheet.querySelector('.wpb-selection-title');
+            const done=sheet.querySelector('.wpb-switcher-done').getBoundingClientRect();
+            const description=sheet.querySelector('.wpb-selection-intro').getBoundingClientRect();
+            const range=document.createRange();range.selectNodeContents(title);
+            return {fits:[...range.getClientRects()].every(r=>r.right<=done.left-2),
+                fullRow:description.width>=heading.getBoundingClientRect().width-1,
+                overflow:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(switcherHeading.fits&&switcherHeading.fullRow&&!switcherHeading.overflow,
+            'M388 enlarged title and Done stay separate; guidance uses the full row: '+JSON.stringify(switcherHeading));
+        await page.focus('.wpb-switcher-search');
+        await page.keyboard.type('Secondary customized');
+        await page.waitForFunction(()=>document.querySelectorAll('.wpb-switcher-row').length===1);
+        assert.match(await page.$eval('.wpb-switcher-row',row=>row.getAttribute('aria-label')),/Switch to Secondary/);
+        await page.keyboard.down('Control');await page.keyboard.press('a');await page.keyboard.up('Control');
+        await page.keyboard.type('no program with this name');
+        await page.waitForFunction(()=>!document.querySelector('.wpb-switcher-row'));
+        assert.match(await page.$eval('.wpb-switcher-sheet',sheet=>sheet.textContent),/No programs match/);
+        await page.keyboard.down('Control');await page.keyboard.press('a');await page.keyboard.up('Control');
+        await page.keyboard.press('Backspace');
+        await page.waitForFunction(()=>document.querySelectorAll('.wpb-switcher-row').length===7);
+
         await page.click('.wpb-switcher-sheet>div:first-child>button');
         await page.waitForSelector('.wpb-switcher-sheet',{hidden:true});
-        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved.length),2,
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved.length),7,
             'closing the switcher must not change saved programs');
         await page.evaluate(seed => {
             localStorage.setItem('wpb:v1',JSON.stringify(seed));

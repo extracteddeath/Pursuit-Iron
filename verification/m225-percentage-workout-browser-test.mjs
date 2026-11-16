@@ -47,7 +47,7 @@ async function verifyTrainingMaxEditing(browser) {
         const initial=await state();
         const openProgram=async()=>{await page.$eval('[aria-label="Open M225 percentage editor"]',b=>b.click());await page.waitForSelector('.wpb-program');};
         await openProgram();
-        const open=async()=>{await page.$eval('[aria-label="Edit training maxes"]',b=>{b.scrollIntoView({block:'center'});b.focus();b.click();});await page.waitForSelector('.wpb-training-max-sheet',{visible:true});};
+        const open=async()=>{await page.$eval('.wpb-training-max-summary[aria-label*="Edit training maxes"]',b=>{b.scrollIntoView({block:'center'});b.focus();b.click();});await page.waitForSelector('.wpb-training-max-sheet',{visible:true});};
         const input=()=>page.$('.wpb-training-max-controls input');
         const type=async(handle,value)=>{await handle.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');if(value)await page.keyboard.type(value);else await page.keyboard.press('Backspace');};
         const click=label=>page.$$eval('.wpb-training-max-sheet button',(buttons,label)=>buttons.find(b=>b.textContent.trim()===label).click(),label);
@@ -94,7 +94,7 @@ async function verifyTrainingMaxEditing(browser) {
         await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await cdp.detach();
         await close();assert.deepEqual(await state(),initial,'Cancel discards the complete max draft');
         await open();await type(await input(),entered);await page.keyboard.press('Escape');await page.waitForSelector('.wpb-training-max-sheet',{hidden:true});
-        await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Edit training maxes');
+        await page.waitForFunction(()=>document.activeElement?.matches('.wpb-training-max-summary[aria-label*="Edit training maxes"]'));
         assert.deepEqual(await state(),initial,'Escape discards changes and restores the entry action');
         await open();await click('Use 1RM');
         await type(await page.$('.wpb-training-max-conversion input'),'12..5');

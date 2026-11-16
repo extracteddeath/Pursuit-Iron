@@ -84,7 +84,7 @@ for(const [field,value] of [['sets',4],['reps','8-12'],['rir','2'],['progression
     roundedProgram.overrides[roundedKey]=markUserPrescriptionOverride(roundedProgram.overrides[roundedKey]||{},field,value);
 const roundedEntry={id:'m361-history',programId:roundedProgram.id,dayId:roundedDay.id,weekIndex:1,date:1700000000000,unit:'lb',
     perf:{[roundedId]:{weight:115,reps:8,sets:[100,105,110,115].map((w,i)=>({w,r:[12,10,8,8][i],rir:2,rirReported:true,done:true}))}}};
-for(const [unit,step,expected] of [['lb',10,100],['kg',5,45]]){
+for(const [unit,step,expected] of [['lb',10,[100,100,110,110]],['kg',5,[45,45,45,50]]]){
     const context=await browser.createBrowserContext(), probe=await context.newPage();
     try{
         await probe.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
@@ -101,28 +101,28 @@ for(const [unit,step,expected] of [['lb',10,100],['kg',5,45]]){
         await probe.waitForSelector('.wpb-backdrop',{hidden:true});
         await probe.click(`.wpb-ex-nav-step:nth-child(${roundedSlot+1})`);
         const weights=()=>probe.$$eval(`[data-testid^="set-${roundedSlot}-"][data-warm="0"][data-sub="0"] input[aria-label="weight"]`,ns=>ns.map(n=>Number(n.value)));
-        assert.deepEqual(await weights(),[expected,expected,expected,expected]);
+        assert.deepEqual(await weights(),expected);
         await probe.click('.wpb-load-explanation summary');
-        assert.match(await probe.$eval('.wpb-load-explanation',el=>el.textContent),new RegExp(`Use ${expected} ${unit} for all 4 working sets`));
+        assert.match(await probe.$eval('.wpb-load-explanation',el=>el.textContent),/Keep your previous working-set loads and build reps/);
         await probe.click('[data-why-target]');
         const explanation=await probe.waitForSelector('xpath/.//div[contains(@class,"wpb-backdrop")][.//*[contains(., "Why this prescription?")]]');
-        assert.match(await explanation.evaluate(el=>el.textContent),new RegExp(`Use ${expected} ${unit} for all 4 working sets`));
+        assert.match(await explanation.evaluate(el=>el.textContent),/Keep your previous working-set loads and build reps/);
         if(unit==='kg')assert.match(await explanation.evaluate(el=>el.textContent),/52\.16 kg × 8/,'Historical evidence converts once without long decimal tails');
         await (await explanation.$('button[aria-label="Close"]')).click();
         await probe.waitForSelector('.wpb-backdrop',{hidden:true});
         await probe.click('button[aria-label="Focused mode"]');
-        assert.equal(await probe.$eval('[data-focus-hero] input[aria-label="weight"]',el=>Number(el.value)),expected);
+        assert.equal(await probe.$eval('[data-focus-hero] input[aria-label="weight"]',el=>Number(el.value)),expected[0]);
         assert.match(await probe.$eval('[data-focus-hero]',el=>el.innerText),new RegExp(`\\b${unit}\\b`));
         await probe.click('button[aria-label="Exit focused mode"]');
         const historyBefore=await probe.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history);
         await probe.reload({waitUntil:'networkidle0'});
         await (await probe.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]')).click();
         await probe.waitForSelector('.wpb-workout');
-        assert.deepEqual(await weights(),[expected,expected,expected,expected]);
+        assert.deepEqual(await weights(),expected);
         await probe.click('.wpb-load-explanation summary');
-        assert.match(await probe.$eval('.wpb-load-explanation',el=>el.textContent),new RegExp(`Use ${expected} ${unit} for all 4 working sets`));
+        assert.match(await probe.$eval('.wpb-load-explanation',el=>el.textContent),/Keep your previous working-set loads and build reps/);
         assert.deepEqual(await probe.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).history),historyBefore);
-        console.log(`PASS M361 browser ${unit}: equipment target, all four prefills, expanded reason, Why, Focus and reload agree at ${expected}; history unchanged.`);
+        console.log(`PASS M361 browser ${unit}: equipment target, all four prefills, expanded reason, Why, Focus and reload retain set-position loads ${expected.join(',')}; history unchanged.`);
     }finally{await context.close();}
 }
 assert.deepEqual(errors,[],'No runtime errors in rounded-target journeys');

@@ -1,3 +1,11 @@
+## Build 942 — Loading calculator and gym settings
+
+Calculators opens from Home or the current Workout/Focus plate action. Workout entry passes the actual typed set weight and selected bar. Plates and 1RM estimate are explicit choices; numeric fields have connected labels and retain raw text. Invalid input shows a field message without calculating a different value. The 1RM calculator accepts 1–12 completed reps. Selecting a percentage opens Plates with that rounded load; the plate view states what the selected gym can actually load. Below-bar targets and no usable plate combination have explicit outcomes. Calculator use never writes program, history or workout values.
+
+The shared dialog keeps Close in a persistent heading and puts controls/results in one scrolling body. Escape, backdrop and the existing drag gesture dismiss it and restore the opener. Enlarged text reflows choices instead of clipping labels. Preserve current Workout/Focus geometry and dock behavior.
+
+Gym changes remain staged until Done. Invalid bar weights, whole plate counts, limits or rack tokens remain raw and block Done; focus moves to the field, opening its disclosure when necessary. Changing rack/limit units converts all of those physical values together; bar-weight units remain separate. Conversion, Save/Cancel, reload and the source edit timestamp retain their existing persistence owners. Temporary input strings are removed before saved gym normalization.
+
 # Pursuit Iron interaction standard
 
 Build 831 applies the approved compact workout prototype's interaction language to the app.

@@ -213,6 +213,155 @@ async function backupContracts(browser, url, width, theme) {
     } finally { await context.close(); }
 }
 
+// M389: the same history records can be corrected after import or on-device logging.
+// Exercise the real persistence boundary, not an isolated form renderer.
+async function historyCorrectionContracts(browser, url, width, height, theme, enlarged, historyUnit) {
+    const date = Date.now() - 86400000;
+    const entry = { id: 'm389-correct', programId: 'earlier-program', dayId: 'upper', weekIndex: 3,
+        programName: 'Earlier authored program', dayLabel: 'Upper strength and muscle training', date, updatedAt: 10,
+        unit: historyUnit, durationMin: 55, setsDone: 4, volume: 1695,
+        perf: { 'bb-bench': { unit: historyUnit, weight: 92.5, reps: 6, date, sets: [
+            { w: 90, r: 6, tr: 2 }, { w: 92.5, r: 6, tr: 2 }, { w: 95, r: 5, rir: 1, tr: 2 }, { w: 50, r: 3, sub: true, tr: 2 }
+        ] }, 'inc-curl': { unit: historyUnit, weight: 12.5, reps: 10, date, sets: [{ w: 12.5, r: 10, rir: 2 }] } } };
+    const other = { ...entry, id: 'm389-other', dayId: 'other-day', date: date - 86400000 };
+    const context = await browser.createBrowserContext(), page = await context.newPage(), errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+        await page.setViewport({ width, height, isMobile: width < 600, hasTouch: width < 600 });
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+        await page.evaluateOnNewDocument(seed => {
+            if (localStorage.getItem('m389-seeded')) return;
+            localStorage.setItem('m389-seeded', '1');localStorage.setItem('wpb:v1', JSON.stringify(seed));
+        }, { ...initial, theme, unit: 'lb', history: [entry, other], perf: entry.perf });
+        await page.goto(url, { waitUntil: 'networkidle0' });
+        await page.click('[data-tab="progress"]');await page.waitForSelector('[data-history-id="m389-correct"]');
+        await page.click('[data-history-id="m389-correct"] .wpb-history-session-toggle');
+        const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')));
+        const before = await read();
+        const open = async () => {
+            await page.click('[data-history-id="m389-correct"] .wpb-history-edit');
+            await page.waitForSelector('.wpb-history-editor-sheet', { visible: true });
+            if (enlarged) await page.evaluate(() => document.documentElement.style.fontSize = '200%');
+            await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+        };
+        const action = async label => {
+            const button = await page.waitForSelector('xpath/.//button[normalize-space(.)="' + label + '"]');
+            await button.click();await button.dispose();
+        };
+        const type = async (selector, value) => {
+            await page.$eval(selector, input => { input.focus();input.select(); });
+            await page.keyboard.press('Backspace');if (value) await page.keyboard.type(value);
+        };
+        const original = before.history.find(item => item.id === entry.id);
+        const facts = item => { const copy = structuredClone(item);delete copy.updatedAt;return copy; };
+        const layout = async visibleHeight => {
+            const result = await page.$eval('.wpb-history-editor-sheet', sheet => {
+                const rect = element => element.getBoundingClientRect().toJSON();
+                const footer = sheet.querySelector('.wpb-history-editor-footer');
+                const buttons = [sheet.querySelector('[aria-label="Close history editor"]'), ...footer.querySelectorAll('button')];
+                return { sheet: rect(sheet), parent: rect(sheet.parentElement), insideRow: !!sheet.closest('[data-history-id]'),
+                    body: rect(sheet.querySelector('.wpb-history-editor-body')),
+                    overflow: sheet.scrollWidth > sheet.clientWidth + 1,
+                    named: sheet.parentElement.getAttribute('aria-labelledby') === sheet.querySelector('h2').id,
+                    buttons: buttons.map(button => { const r = rect(button), hit = document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+                        return { ...r, hit: !!hit && (hit === button || button.contains(hit)) }; }) };
+            });
+            assert.ok(!result.insideRow && result.named && !result.overflow && result.sheet.x >= -1 && result.sheet.right <= width + 1,
+                'named history modal escapes virtualized rows and fits the window: ' + JSON.stringify(result));
+            assert.ok(result.sheet.y >= -1 && result.sheet.bottom <= visibleHeight + 1 && result.body.height >= 40 &&
+                result.buttons.every(button => button.hit && button.width >= 44 && button.height >= 44 && button.y >= -1 && button.bottom <= visibleHeight + 1),
+                'Close/Cancel/Save remain visible and pointer-reachable above navigation/keyboard: ' + JSON.stringify(result));
+        };
+        await open();await layout(height);
+        await page.screenshot({ path: path.join(root, `verification/m389-history-${width}-${theme}-phone.png`) });
+        const footerTop = await page.$eval('.wpb-history-editor-footer', element => element.getBoundingClientRect().top);
+        await page.$eval('.wpb-history-editor-body', element => element.scrollTop = element.scrollHeight);
+        assert.ok(Math.abs(await page.$eval('.wpb-history-editor-footer', element => element.getBoundingClientRect().top) - footerTop) < 1,
+            'scrolling set fields never displaces the correction actions');
+        const load = '#history-editor-bb-bench-0-load', reps = '#history-editor-bb-bench-0-reps', rir = '#history-editor-bb-bench-0-rir';
+        assert.match(await page.$eval('.wpb-history-editor-load', label => label.textContent), new RegExp('Load ' + historyUnit));
+        for (const [selector, invalid, valid] of [[load, '92..5', '212.5'], [load, '100kg', '212.5'], [load, '1e308', '212.5'],
+            [reps, '', '7'], [reps, '7.5', '7'], [rir, '2..5', '2.5'], [rir, '11', '2.5'], ['#history-editor-minutes', '5.5', '60']]) {
+            await type(selector, invalid);await action('Save correction');await page.waitForSelector('#history-editor-error');
+            assert.deepEqual((await read()).history, before.history, 'invalid/incomplete values never silently remove, round or rewrite stored sets');
+            assert.equal(await page.$eval(selector, input => input.value), invalid, 'the typed value remains available to fix');
+            await type(selector, valid);
+        }
+        const glyphFits = await page.$eval(load, input => {
+            const style = getComputedStyle(input), canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+            ctx.font = style.font;
+            return ctx.measureText(input.value).width <= input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) + 1;
+        });
+        assert.ok(glyphFits, 'the entire decimal load is visible at normal/enlarged text');
+        const previousViewport = await page.evaluate(() => ({ value: document.documentElement.style.getPropertyValue('--visual-h'),
+            priority: document.documentElement.style.getPropertyPriority('--visual-h') }));
+        const visibleHeight = Math.max(300, Math.round(height * .55));
+        await page.evaluate(height => document.documentElement.style.setProperty('--visual-h', height + 'px', 'important'), visibleHeight);
+        await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+        await layout(visibleHeight);
+        await page.evaluate(previous => previous.value ? document.documentElement.style.setProperty('--visual-h', previous.value, previous.priority)
+            : document.documentElement.style.removeProperty('--visual-h'), previousViewport);
+        await action('Cancel');await page.waitForSelector('.wpb-history-editor-backdrop', { hidden: true });
+        assert.deepEqual((await read()).history, before.history, 'Cancel discards all staged valid and invalid edits');
+        await page.waitForFunction(() => document.activeElement === document.querySelector('[data-history-id="m389-correct"] .wpb-history-edit'));
+        await open();
+        // Exit retains the closing child for motion. A rapid new opening must
+        // start from persisted history rather than revive that discarded draft.
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+        await type(load, '999');
+        await page.$$eval('.wpb-history-editor-actions button', buttons => buttons.find(button => button.textContent === 'Cancel').click());
+        await page.$eval('[data-history-id="m389-correct"] .wpb-history-edit', button => button.click());
+        await page.waitForFunction(() => document.querySelector('#history-editor-bb-bench-0-load')?.value === '90');
+        assert.equal(await page.$eval(load, input => input.value), '90', 'rapid reopening discards the canceled draft during ordinary exit motion');
+        assert.deepEqual((await read()).history, before.history, 'interrupted closing never writes the canceled draft');
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+        await type(load, '212.5');await type(reps, '7');await type(rir, '2.5');await type('#history-editor-minutes', '60');
+        const changedDate = await page.$eval('#history-editor-date', input => {
+            const date = new Date(new Date(input.value).getTime() - 3600000);
+            const value = new Date(date.getTime() - date.getTimezoneOffset()*60000).toISOString().slice(0,16);
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+            input.dispatchEvent(new Event('input', { bubbles: true }));return new Date(value).getTime();
+        });
+        await action('Save correction');await page.waitForSelector('.wpb-history-editor-backdrop', { hidden: true });
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.find(item => item.id === 'm389-correct').perf['bb-bench'].sets[0].w === 212.5);
+        const after = await read(), corrected = after.history.find(item => item.id === entry.id);
+        assert.deepEqual([corrected.programId,corrected.dayId,corrected.weekIndex,corrected.unit],
+            [original.programId,original.dayId,original.weekIndex,original.unit], 'correction preserves structural ownership and the historical unit');
+        assert.equal(corrected.perf['bb-bench'].sets.length, 4);assert.equal(corrected.perf['bb-bench'].sets[3].sub, true);
+        assert.equal(corrected.perf['bb-bench'].sets[0].tr, 2);assert.equal(corrected.perf['bb-bench'].sets[0].rir, 2.5);
+        assert.equal(corrected.setsDone, 4);assert.equal(corrected.volume, 2643);assert.equal(corrected.durationMin, 60);assert.equal(corrected.date, changedDate);
+        assert.ok(corrected.updatedAt > original.updatedAt, 'the existing shared stamped setter revisions the correction');
+        assert.deepEqual(after.perf['bb-bench'].sets, corrected.perf['bb-bench'].sets, 'the derived performance mirror follows the corrected raw sets');
+        assert.deepEqual(after.history.find(item => item.id === other.id), before.history.find(item => item.id === other.id));
+        assert.equal(after.unit, 'lb');
+        await action('Undo');
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.find(item => item.id === 'm389-correct').perf['bb-bench'].sets[0].w === 90);
+        assert.deepEqual(facts((await read()).history.find(item => item.id === entry.id)), facts(original), 'Undo restores the original facts using the shared revision owner');
+        await open();
+        await page.click('.wpb-history-editor-exercise .wpb-history-editor-remove-set');
+        await action('Save correction');await page.waitForSelector('.wpb-history-editor-backdrop', { hidden: true });
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.find(item => item.id === 'm389-correct').perf['bb-bench'].sets.length === 3);
+        assert.equal((await read()).history.find(item => item.id === entry.id).setsDone, 3, 'an explicit set removal remains supported');
+        await action('Undo');await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).history.find(item => item.id === 'm389-correct').perf['bb-bench'].sets.length === 4);
+        await open();
+        await page.click('.wpb-history-editor-add-set');
+        assert.equal(await page.$$eval('.wpb-history-editor-set', rows => rows.length), 6, 'set additions remain staged');
+        await page.$$eval('.wpb-history-editor-remove-lift', buttons => buttons.forEach(button => button.click()));
+        await page.waitForSelector('.wpb-history-editor-empty');
+        assert.equal(await page.$eval('.wpb-history-editor-actions button:last-child', button => button.disabled), true, 'the correction form cannot erase a whole workout');
+        await page.keyboard.press('Escape');await page.waitForSelector('.wpb-history-editor-backdrop', { hidden: true });
+        assert.deepEqual(facts((await read()).history.find(item => item.id === entry.id)), facts(original), 'Escape discards lift removals and added sets');
+        await open();await type(load, '200');
+        await page.goBack();await page.waitForSelector('.wpb-history-editor-backdrop', { hidden: true });
+        assert.ok(await page.$('.wpb-progress'), 'browser Back closes only the correction form');
+        assert.deepEqual(facts((await read()).history.find(item => item.id === entry.id)), facts(original), 'browser Back discards the staged correction');
+        await page.reload({ waitUntil: 'networkidle0' });
+        assert.deepEqual(facts((await read()).history.find(item => item.id === entry.id)), facts(original), 'reload retains restored historical facts');
+        assert.deepEqual(errors, []);
+        console.log('PASS M389 history correction ' + JSON.stringify({width,height,theme,enlarged,historyUnit}));
+    } finally { await context.close(); }
+}
+
 const mime = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
     const file = path.resolve(root, '.' + (new URL(req.url, 'http://localhost').pathname.replace(/^\/$/, '/index.html')));
@@ -224,6 +373,7 @@ const url = `http://127.0.0.1:${server.address().port}/`;
 let browser;
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+    for (const args of [[320,740,'rose',true,'kg'],[393,852,'rosewater',false,'lb'],[900,480,'rosewater',true,'kg'],[1280,850,'rose',true,'lb']]) await historyCorrectionContracts(browser, url, ...args);
     for (const [width, theme] of [[320, 'rosewater'], [393, 'rose'], [834, 'rosewater']]) await backupContracts(browser, url, width, theme);
     for (const width of [360, 1280]) {
         const context = await browser.createBrowserContext();

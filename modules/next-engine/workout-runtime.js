@@ -86,7 +86,14 @@ export function buildRuntimeSetTargets(args) {
     }
     for (let i = 0; i < count; i++) {
         const target = args.setTargets?.[i];
-        const weight = Number.isFinite(target?.weight) ? target.weight : workingLoad;
+        const rawWeight = Number.isFinite(target?.weight) ? target.weight : workingLoad;
+        // Every automatic WORK row must pass the same physical equipment boundary
+        // as warmups. Previously dynamic per-set targets bypassed this step and
+        // leaked 115.5 / 99 lb onto a machine configured for 5 lb increments.
+        const snapped = rawWeight > 0 ? (args.snapLoad
+            ? args.snapLoad(rawWeight)
+            : availableLoadAtOrBelow(exerciseId, rawWeight, loadingInventory, equipmentAvailable)) : null;
+        const weight = Number.isFinite(snapped) && snapped > 0 ? snapped : null;
         const repTarget = Number.isFinite(target?.reps) ? Math.max(reps[0], Math.min(reps[1], Math.round(target.reps))) : workReps;
         targets.push({ kind: 'work', weight, reps: repTarget, repRange: reps, rir });
     }

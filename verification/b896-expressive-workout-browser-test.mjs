@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs'; import http from 'node:http'; import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { EX_BY_ID } from '../modules/engine-api.js';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const program={id:'b888',name:'Session choices',custom:true,weeks:4,config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',deload:false},
  days:[{id:'test',label:'Push',primaryIndex:0,exercises:['bb-bench','inc-curl']}],overrides:{'test:0':{sets:3,reps:'5-8',rir:'2',rest:90},'test:1':{sets:2,reps:'8-12',rir:'2',rest:90}}};
@@ -97,6 +98,41 @@ try {
   assert.ok(heading.meta.left<heading.tags.left,'Working-set context remains under the lift name');
   assert.ok(heading.set.top>=heading.name.bottom-2,'Set count follows the lift name');
   assert.ok(heading.progression.top>=heading.set.bottom-2,'Progression action follows working-set count');
+  assert.equal(heading.meta.display,'contents','Meta must not stretch the tags row');
+  assert.ok(Math.abs(heading.tags.top-heading.set.top)<=10,
+    'Tags and set context share a row: '+JSON.stringify(heading));
+  assert.ok(heading.progression.top-heading.set.bottom<=9,
+    'Progression immediately follows set context: '+JSON.stringify(heading));
+  const stripGap=await page.evaluate(()=>{
+    const progression=document.querySelector('.wpb-progression-label')?.getBoundingClientRect();
+    const tools=document.querySelector('.wpb-workout-tools')?.getBoundingClientRect();
+    return progression&&tools?tools.top-progression.bottom:null;
+  });
+  assert.ok(stripGap!==null&&stripGap>=0&&stripGap<=4,
+    'No empty gap between progression and action strip: '+stripGap);
+  // Border boxes alone missed the reported empty space: both labels were
+  // centered inside tall controls. Measure the text the lifter actually sees.
+  const visibleSpacing=await page.evaluate(()=>{
+    const textBox=el=>{
+      const text=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());
+      if(!text)return null;
+      const range=document.createRange();range.selectNodeContents(text);
+      return range.getBoundingClientRect();
+    };
+    const progression=textBox(document.querySelector('.wpb-progression-label'));
+    const tools=[...document.querySelectorAll('.wpb-workout-tool')];
+    const first=tools[0]?.querySelector('svg')?.getBoundingClientRect();
+    const name=document.querySelector('.wpb-exercise-name').getBoundingClientRect();
+    const context=document.querySelector('.wpb-exercise-set-context').getBoundingClientRect();
+    return {glyphGap:first.top-progression.bottom,titleGap:context.top-name.bottom,
+      targets:tools.map(el=>el.getBoundingClientRect().height)};
+  });
+  assert.ok(visibleSpacing.glyphGap>=0&&visibleSpacing.glyphGap<=26,
+    'Progression and tool labels have compact visible spacing: '+JSON.stringify(visibleSpacing));
+  assert.ok(visibleSpacing.titleGap>=0&&visibleSpacing.titleGap<=14,
+    'The set context stays close to the short exercise name: '+JSON.stringify(visibleSpacing));
+  assert.ok(visibleSpacing.targets.every(height=>height>=48),
+    'Compact tool presentation retains 48px targets: '+JSON.stringify(visibleSpacing));
   const loadRepHeaders=await page.evaluate(()=>{
     const heading=document.querySelector('.wpb-set-head');
     const first=document.querySelector('.wpb-set-controls');
@@ -114,6 +150,29 @@ try {
       labelRects:labels.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width})),
       fieldRects:fields.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width,flex:getComputedStyle(x).flex}))};
   });
+  const headerLayout=await page.$eval('.wpb-workout-header',el=>{
+    const progress=el.querySelector('[role="progressbar"]');
+    const close=el.querySelector('[aria-label="Leave workout"]');
+    const summary=el.querySelector('.wpb-workout-summary');
+    const nav=summary?.querySelector('[aria-label="Show today\'s exercises"]');
+    const p=progress?.getBoundingClientRect(),c=close?.getBoundingClientRect(),s=summary?.getBoundingClientRect();
+    return {progressHeight:p?.height,progressCssHeight:progress&&parseFloat(getComputedStyle(progress).height),
+      progressOverflow:progress&&getComputedStyle(progress).overflow,
+      border:getComputedStyle(el).borderBottomStyle,
+      closeWidth:c?.width,closeHeight:c?.height,closeCssWidth:close&&parseFloat(getComputedStyle(close).width),
+      summaryDisplay:summary&&getComputedStyle(summary).display,
+      summaryWidth:s?.width,summaryScrollWidth:summary?.scrollWidth,
+      navLabel:nav?.getAttribute('aria-label')};
+  });
+  assert.ok(headerLayout.progressCssHeight>=3&&headerLayout.progressHeight>=2.5&&
+    headerLayout.progressHeight<=headerLayout.progressCssHeight+1&&headerLayout.progressOverflow==='hidden',
+    'Completion bar remains compact and visible through responsive layout: '+JSON.stringify(headerLayout));
+  assert.ok(headerLayout.closeCssWidth>=38&&headerLayout.closeWidth>=37&&headerLayout.closeHeight>=37&&headerLayout.border==='solid',
+    'Leave workout retains its compact hit area without clipping: '+JSON.stringify(headerLayout));
+  assert.equal(headerLayout.summaryDisplay,'flex','Workout summary retains flex layout');
+  assert.ok(headerLayout.summaryScrollWidth<=headerLayout.summaryWidth+2,
+    'Workout summary should not overflow its header: '+JSON.stringify(headerLayout));
+  assert.equal(headerLayout.navLabel,"Show today's exercises",'Exercise-list action is preserved');
   assert.ok(loadRepHeaders,'Workout set headings and inputs remain mounted');
   if(loadRepHeaders.compact){
     assert.equal(loadRepHeaders.load,'center','Compact LOAD heading centered over load inputs');
@@ -134,18 +193,65 @@ try {
   assert.ok(toolbar.rows.every(y=>Math.abs(y)<=2),'Warm-up/Superset/Swap/Notes/Plates remain in one line: '+JSON.stringify(toolbar));
   assert.equal(toolbar.overflow,'auto','Toolbar must be horizontally scrollable');
   assert.ok(toolbar.top-heading.progression.bottom<=16,'Remove unused space below progression: '+JSON.stringify({heading,toolbar}));
-  if(width<=393){
-   assert.ok(toolbar.scrollWidth>toolbar.clientWidth+8,'Phone action strip should be wider than viewport and swipeable');
+  // Compact icon controls scroll only when needed, without unused horizontal space.
+  if(toolbar.scrollWidth>toolbar.clientWidth+8){
    const scroll=await page.$eval('.wpb-workout-tools',el=>{el.scrollLeft=el.scrollWidth;return el.scrollLeft;});
-   assert.ok(scroll>0,'Swiping across the action strip reveals hidden actions');
+   assert.ok(scroll>0,'Overflowing icon actions remain horizontally reachable');
   }
+  const actionSemantics=await page.$$eval('.wpb-workout-tool',buttons=>buttons.map(button=>{
+   const box=button.getBoundingClientRect();
+   return {name:button.getAttribute('aria-label'),hint:button.title,visibleText:button.textContent.trim(),
+     icons:button.querySelectorAll('svg[aria-hidden="true"]').length,
+     pressed:button.getAttribute('aria-pressed'),height:box.height,width:box.width};
+  }));
+  assert.equal(actionSemantics.length,toolbar.count,'Every available action keeps its accessible name');
+  assert.ok(actionSemantics.every(a=>a.name&&a.hint===a.name&&a.visibleText===''&&a.icons===1),
+    'Icon-only actions retain accessible labels and native browser hints: '+JSON.stringify(actionSemantics));
+  assert.ok(actionSemantics.every(a=>a.width>=48&&a.height>=48),
+    'All icon actions own real 48px hit targets: '+JSON.stringify(actionSemantics));
+  assert.ok(actionSemantics.some(a=>a.name==='Warm-up'&&a.pressed==='false'),
+    'Warm-up control exposes its toggle state');
+  assert.ok(actionSemantics.some(a=>a.name==='Superset'&&a.pressed==='false'),
+    'Superset control exposes its toggle state');
+  assert.ok(actionSemantics.some(a=>a.name==='Session note'),
+    'Session notes remain reachable from the compact workout toolbar');
+  assert.equal(await page.$$eval('.wpb-exercise-heading .wpb-session-choice',els=>els.length),0,
+    'No extra note row separates the workout name and set context');
 
   const nav=await page.$$eval('.wpb-ex-nav-step',els=>els.map(el=>({name:el.querySelector('.wpb-ex-nav-name')?.textContent,count:el.querySelector('.wpb-ex-nav-count')?.textContent,label:el.getAttribute('aria-label')})));
-  assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every(x=>x.name&&x.label.includes(x.name)));
+  assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every((x,i)=>x.name&&x.label.startsWith(EX_BY_ID[program.days[0].exercises[i]].name)));
   const navigate=async i=>page.evaluate(i=>document.querySelectorAll('.wpb-ex-nav-step')[i].click(),i);
   await navigate(1);await page.waitForSelector('[data-testid="set-1-0"]');
   const visible=await page.$eval('.wpb-ex-nav',rail=>{const r=rail.getBoundingClientRect(),a=rail.querySelector('[aria-current="step"]').getBoundingClientRect();return !r.width||a.left>=r.left-1&&a.right<=r.right+1;});
   assert.ok(visible,'selected chip is revealed without scrolling the workout');
+  // B986: orientation, split-screen and text reflow must keep the selected
+  // exercise visible even when the user has not switched exercises.
+  if(width===393 && theme==='amethyst'){
+    // Enforce actual overflow in the two-exercise fixture, rather than
+    // silently passing when both compact chips fit in the viewport.
+    const clipped=await page.$eval('.wpb-ex-nav',el=>{
+      el.style.width='170px';
+      el.style.maxWidth='170px';
+      el.scrollLeft=0;
+      const outer=el.getBoundingClientRect();
+      const chosen=el.querySelector('[aria-current="step"]').getBoundingClientRect();
+      return {offscreen:chosen.right>outer.right+4,scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+    });
+    assert.ok(clipped.offscreen&&clipped.scrollWidth>clipped.clientWidth,
+      'resize regression fixture must actually clip the active exercise: '+JSON.stringify(clipped));
+    await page.setViewport({width:320,height:740,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.waitForFunction(()=>{
+      const rail=document.querySelector('.wpb-ex-nav');
+      const current=rail?.querySelector('[aria-current="step"]');
+      if(!rail||!current)return false;
+      const r=rail.getBoundingClientRect(),a=current.getBoundingClientRect();
+      return a.left>=r.left-1&&a.right<=r.right+1;
+    },{timeout:4000});
+    assert.equal(await page.$eval('.wpb-ex-nav [aria-current="step"]',el=>el.getAttribute('aria-label').startsWith('Incline Dumbbell Curl')),true,
+      'reflow keeps the selected original exercise and full accessible name');
+    await page.$eval('.wpb-ex-nav',el=>{el.style.width='';el.style.maxWidth='';});
+    await page.setViewport({width,height,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  }
   await navigate(0);await page.waitForSelector('[data-testid="set-0-1"]');
   assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]',el=>el.value),'175','manual load survives navigation');
   assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="reps"]',el=>el.value),'7','manual reps survive navigation');
@@ -167,6 +273,16 @@ try {
   const rest=await page.$eval('[data-rest-card]',el=>({label:el.getAttribute('aria-label'),ring:el.querySelector('.wpb-rest-ring circle[pathLength]')?.getAttribute('stroke-dashoffset'),value:el.querySelector('[role="progressbar"]').getAttribute('aria-valuenow')}));
   const fits=await page.$eval('[data-rest-card]',el=>{const time=el.querySelector('.mono'),actions=el.querySelector('.wpb-rest-actions'),t=time.getBoundingClientRect(),a=actions.getBoundingClientRect();return time.scrollWidth<=time.clientWidth+1&&(t.bottom<=a.top+1||t.right<=a.left+1)&&el.scrollHeight<=el.clientHeight+1;});
   assert.ok(fits,'rest countdown and actions fit without overlap or clipping');
+  const restButtons=await page.$$eval('[data-rest-card] .wpb-rest-action',buttons=>buttons.map(button=>{
+    const r=button.getBoundingClientRect();const cs=getComputedStyle(button);
+    return {width:r.width,height:r.height,border:cs.borderStyle,foreground:cs.color};
+  }));
+  assert.equal(restButtons.length,5,'One shared rest control owner for normal and Focus timers');
+  assert.ok(restButtons.every(b=>b.width>=47.5&&b.height>=47.5),
+    'Rest controls retain physical 48px targets: '+JSON.stringify(restButtons));
+  assert.equal(await page.$eval('[data-rest-card]',el=>el.dataset.paused),'true',
+    'Timer pause state should paint via a CSS state flag');
+
   assert.match(rest.label,/paused/);assert.equal(Number(rest.value),60);assert.ok(Math.abs(Number(rest.ring)-100/3)<.1,'ring and progressbar read the same remaining time');
   await page.waitForFunction(()=>{const el=document.querySelector('[data-rest-card] [aria-label="Add 15 seconds to rest"]'),r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return el===hit||el.contains(hit);});
   await page.click('[data-rest-card] [aria-label="Add 15 seconds to rest"]');
@@ -176,6 +292,25 @@ try {
   assert.ok(await page.$('[aria-label="Next exercise"]'),'Next remains available during rest');
   assert.ok(await page.$('[aria-label="Restart rest"]'));assert.ok(await page.$('[aria-label="Skip rest"]'));
   if(width>=600) await page.click('[aria-label="Exit focused mode"]');
+  // Real hit boxes, not invisible pseudo-elements: all exercise actions remain
+  // reachable on the smallest phone and the destructive second tap cannot clip.
+  const actionBoxes=await page.$$eval('.wpb-exercise-head-actions>button',buttons=>buttons.map(button=>{
+    const r=button.getBoundingClientRect();return {width:r.width,height:r.height,
+      left:r.left,right:r.right,aria:button.getAttribute('aria-label')};
+  }));
+  assert.equal(actionBoxes.length,3,'Info, History and Skip remain separate exercise controls');
+  assert.ok(actionBoxes.every(b=>b.width>=48&&b.height>=48),
+    'Exercise header icons must have 48px real hit targets: '+JSON.stringify(actionBoxes));
+  assert.ok(actionBoxes.every(b=>b.left>=-1&&b.right<=width+1),
+    'Exercise header actions stay within the phone viewport: '+JSON.stringify(actionBoxes));
+  await page.click('button[aria-label="Skip this exercise for today"]');
+  const confirmation=await page.$eval('[aria-label="Confirm skip exercise for today"]',button=>{
+    const r=button.getBoundingClientRect();return {width:r.width,height:r.height,
+      scrollWidth:button.scrollWidth,clientWidth:button.clientWidth,
+      label:button.getAttribute('aria-label')};
+  });
+  assert.ok(confirmation.width>=80&&confirmation.height>=48&&confirmation.scrollWidth<=confirmation.clientWidth+1,
+    'Destructive skip confirmation must remain readable and accessible: '+JSON.stringify(confirmation));
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false,'no page overflow '+width);
   if(process.env.B896_SCREENSHOTS) await page.screenshot({path:`${process.env.B896_SCREENSHOTS}/b896-${width}-${theme}.png`});
   assert.deepEqual(errors,[]);console.log(`PASS B896 ${width} ${theme}: named live progress, navigation ownership, preserved controls and shared rest state`);

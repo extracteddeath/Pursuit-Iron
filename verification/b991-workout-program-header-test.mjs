@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync('modules/App.js','utf8');
+const css=fs.readFileSync('app.css','utf8');
+const workout=app.slice(app.indexOf('function WorkoutSession('),app.indexOf('function shareSession('));
+const program=app.slice(app.indexOf('className: "wpb-page-header wpb-program-header"'),app.indexOf('className: "wpb-program-meta-line"'));
+for(const feature of ['"data-paused": runPaused ? "true" : "false"','"data-focus": focus ? "1" : "0"','"data-compact": narrowSet ? "true" : "false"','wpb-workout-timer-value','wpb-workout-save-error','wpb-workout-empty-icon','wpb-workout-empty-copy','wpb-workout-empty-add'])
+  assert.ok(workout.includes(feature),'Workout role/state missing: '+feature);
+for(const feature of ['wpb-program-header-back','wpb-program-icon-change','wpb-program-rename-input','wpb-program-rename-save'])
+  assert.ok(program.includes(feature),'Program role missing: '+feature);
+assert.ok(!workout.includes('className: "pressable wpb-workout-timer", style:'),'Timer palette must not recompute inline');
+assert.ok(!workout.includes('wpb-workout-header-action", style: narrowSet'),'Finish state must stay in CSS');
+assert.ok(!program.includes('style: { ...iconBtn(), width: 36, height: 36'),'Program name controls must stay CSS-owned');
+for(const selector of ['.wpb-workout-timer[data-paused="true"]','.wpb-workout-header-action[data-focus="1"]','.wpb-workout-finish[data-compact="true"]','.wpb-program-rename-input','.wpb-program-icon-change'])
+  assert.ok(css.includes(selector),'Missing CSS role '+selector);
+// Spec v1: the active header must retain actual 48px touch controls, rather
+// than shrinking its clickable box to the icon's visual geometry.
+for (const [selector,property] of [
+  ['#root .wpb-workout .wpb-workout-timer','min-height:48px'],
+  ['#root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]','width:48px'],
+  ['#root .wpb-program .wpb-program-header-back','min-height:48px'],
+  ['#root .wpb-program .wpb-program-icon-change','height:48px'],
+  ['#root .wpb-program .wpb-program-rename-save','height:48px']
+]){
+  const start=css.indexOf(selector+'{');
+  assert.ok(start>=0 && css.slice(start,css.indexOf('}',start)).includes(property),
+    'Header hit area must use its existing CSS owner: '+selector);
+}
+// Shared Workout button sizing is still measured, with no narrower hit area.
+const headerShared=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
+for(const prop of ['width:48px','height:48px','align-items:center','justify-content:center','padding:0'])
+  assert.ok(headerShared.includes(prop),'Workout header shared geometry missing '+prop);
+for(const [selector,paint] of [
+  ['#root .wpb-workout .wpb-workout-close{','display:flex;border:0;border-radius:11px'],
+  ['#root .wpb-workout .wpb-workout-header-action{','display:inline-flex;gap:6px;border:1px solid transparent;border-radius:12px']])
+  assert.ok((css.split(selector)[1]?.split('}')[0]||'').includes(paint),
+    'Workout header retains its feature-specific shape '+selector);
+// Design-spec one-owner rule: the dynamic theme must never shrink the
+// Workout header or exercise navigation underneath the CSS-owned hit area.
+for(const obsolete of [
+ '.wpb-workout-actions>button{',
+ '.wpb-workout-header-action,.wpb-workout-close{min-width:38px!important',
+ '.wpb-workout .wpb-ex-nav>button{border-radius:10px!important;min-width:40px!important',
+ 'min-width:34px!important;height:34px!important;min-height:34px!important;',
+ '.wpb-ex-nav-step{height:38px!important'
+]) assert.ok(!app.includes(obsolete),'Retired runtime sizing must stay retired: '+obsolete);
+assert.ok(css.includes('#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{') &&
+  css.includes('height:48px!important;min-height:48px!important;'),
+  'Exercise navigation uses the single CSS-owned 48px geometry');
+assert.ok(!css.slice(css.indexOf('/* B991:')).includes('!important'),'No priority overrides in new CSS');
+assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority-debt increase');
+assert.ok((app.match(/style: \\{/g)||[]).length<=1101,'No new inline presentation');
+console.log('PASS B991: Workout and Program header controls retain callback ownership and CSS styling.');

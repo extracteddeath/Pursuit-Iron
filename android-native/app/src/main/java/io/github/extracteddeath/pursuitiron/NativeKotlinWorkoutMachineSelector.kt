@@ -178,6 +178,31 @@ internal fun NativeKotlinWorkoutMachineSelector(
     var makeDefault by remember(config.gymId,config.exerciseId){
         mutableStateOf(false)
     }
+    // A request is not proof of a saved physical-machine change. Close only
+    // after the owner-fenced writer has published the selected station.
+    var pendingChoice by remember(config.gymId,config.exerciseId) {
+        mutableStateOf<String?>(null)
+    }
+    var pendingCreation by remember(config.gymId,config.exerciseId) {
+        mutableStateOf<Pair<String?,Int>?>(null)
+    }
+    LaunchedEffect(selectedId,config.machines) {
+        if(pendingChoice!=null && selectedId==pendingChoice) {
+            pendingChoice=null
+            open=false
+        }
+        val creation=pendingCreation
+        if(creation!=null && config.machines.size>creation.second &&
+            selectedId!=null && selectedId!=creation.first &&
+            config.machines.any{it.id==selectedId}) {
+            // Both durable source owners must already have acknowledged this
+            // new physical machine before selectedId can change.
+            pendingCreation=null
+            newMachineName=""
+            makeDefault=false
+            open=false
+        }
+    }
     OutlinedButton(
         onClick={open=true},
         enabled=true, // inspection remains available on finished/paused workouts
@@ -213,6 +238,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
                         // Keep the sheet visible until the source-backed choice
                         // revision returns. A failed save must remain actionable
                         // here, not be hidden behind a prematurely closed sheet.
+                        pendingCreation=null
+                        pendingChoice=machine.id
                         onSelect(machine.id)
                     },
                     enabled=enabled && machine.active && !current,
@@ -259,6 +286,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
                         // Do not erase the draft before the owner-fenced roster
                         // and workout-choice writes are both confirmed. On partial
                         // save the athlete can see the new machine and select it.
+                        pendingChoice=null
+                        pendingCreation=selectedId to config.machines.size
                         onCreate(newMachineName.trim().ifEmpty{suggestedName},makeDefault)
                     },
                     enabled=enabled && config.machines.size<32,

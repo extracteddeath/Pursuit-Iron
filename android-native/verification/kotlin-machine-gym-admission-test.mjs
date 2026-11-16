@@ -51,6 +51,11 @@ assert.match(recovery,/val machine=bound\[exercise\] \?: if\(exercise in eligibl
 assert.match(recovery,/scope\.observedMachines\.forEach/);
 assert.match(custom,/val config=if\(slot\.exerciseId in eligibleMachineExercises\)/);
 assert.match(generated,/if\(exerciseId in eligibleMachineExercises\)/);
+// The same live-source qualification must guard EACH working-set gate;
+// otherwise a historical fake barbell Machine A/B can make set completion
+// impossible when its picker has (correctly) been hidden.
+assert.match(generated,/val perSetMachineConfig=if\(set\.target\.exerciseId in eligibleMachineExercises\)/);
+assert.match(generated,/else null\s+val perSetMachineId=/);
 assert.match(panel,/val verifiedMachineIds=catalog\.groupBy/);
 assert.match(panel,/records\.size==1/);
 assert.match(panel,/ex\.exerciseId in verifiedMachineIds/);

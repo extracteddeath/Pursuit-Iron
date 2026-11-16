@@ -123,16 +123,29 @@ for(const fragment of [
   'if(activeFocus?.part==CustomWorkoutVisitPart.FOLLOW_UP)',
   'onSkip=activeFocus?.takeIf {',
   'it==nextVisit && machineChoices.ready',
-  'availableVisits.indexOf(activeFocus)',
-  'Text("Previous set")','Text("Next set")',
-  'Text("Jump to next unlogged")',
-  'reviewSetKey=previous.setKey',
-  'reviewPart=following.part.name',
+  'steps=availableVisits.map{visit->',
+  'NativeKotlinFocusStep(',
+  'visit,current.effectiveVisits.containsKey(visit)',
+  'nextUnfinished=nextVisit',
+  'reviewSetKey=visit.setKey',
+  'reviewPart=visit.part.name',
   'initiallyExpanded=activeFocus==mainKey',
   'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
   'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name)'
 ])assert.ok(journal.includes(fragment),
   'Custom Focus must not steal or skip another visit: '+fragment);
+const sharedNavigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutFocusNavigation.kt');
+for(const fragment of [
+  'Text("Previous set")','Text("Next set")',
+  'Text("Jump to next unfinished set")',
+  'steps.map{it.key}.distinct().size!=steps.size',
+  'it.key==nextUnfinished && !it.resolved'
+])assert.ok(sharedNavigation.includes(fragment),
+  'Shared Focus navigation must keep real issued visit identity: '+fragment);
+assert.ok(journal.includes('onReturnToNextUnfinished={') &&
+  journal.includes('reviewSetKey=null') &&
+  journal.includes('reviewPart=null'),
+  'Return to the saved next visit must clear stale manual Focus, not a journal entry');
 for(const fragment of [
   'fun visibleOrder(journal:CustomWorkoutJournalDraft)',
   'CustomWorkoutExecutionDomain.orderedSets(journal.snapshot)',

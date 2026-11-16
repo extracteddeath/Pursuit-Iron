@@ -507,11 +507,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     )
 }
 
-private fun kotlinHistoryLoadLabel(load:DraftSetLoad):String=when(load) {
-    is DraftSetLoad.Verified ->
-        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"
-    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-}
+private fun kotlinHistoryLoadLabel(load:DraftSetLoad):String=kotlinIssuedLoadLabel(load)
 
 @Composable
 private fun KotlinHistoryActualRow(
@@ -527,11 +523,7 @@ private fun KotlinHistoryActualRow(
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)
     val performed=actual?.let{
-        // Local snapshot is required: Kotlin cannot smart-cast a public
-        // property exposed from the independent engine module.
-        val observedLoad=it.load
-        val weight=if(observedLoad==null) "Bodyweight" else
-            "${observedLoad.stripTrailingZeros().toPlainString()} ${it.unit?.name?.lowercase() ?: "unit unreported"}"
+        val weight=kotlinActualLoadLabel(it,issuedLoad)
         "$weight × ${it.reps} reps · "+
             (it.actualRir?.let{rir->"$rir actual RIR"} ?: "Actual RIR not logged")
     } ?: "No performed values available"
@@ -612,8 +604,11 @@ private fun NativeKotlinSavedComposerHistorySetRow(
             }
         }
         if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
+            val convention=fact.issuedLoad as? DraftSetLoad.Verified
             OutlinedTextField(value=load,onValueChange={load=it},
-                label={Text("Actual weight (blank for bodyweight)")},
+                label={Text(convention?.let{"Actual weight (${it.unit.name.lowercase()})"}
+                    ?: "Actual weight (blank for bodyweight)")},
+                supportingText={Text(kotlinLoadBasisLabel(convention?.basis))},
                 singleLine=true,modifier=Modifier.fillMaxWidth())
             OutlinedTextField(value=reps,onValueChange={reps=it},
                 label={Text("Actual reps")},
@@ -730,8 +725,11 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
             }
         }
         if(outcome!=KotlinJournalSetOutcome.SKIPPED) {
+            val convention=fact.prescribedLoad as? DraftSetLoad.Verified
             OutlinedTextField(value=load,onValueChange={load=it},
-                label={Text("Actual weight (blank for bodyweight)")},
+                label={Text(convention?.let{"Actual weight (${it.unit.name.lowercase()})"}
+                    ?: "Actual weight (blank for bodyweight)")},
+                supportingText={Text(kotlinLoadBasisLabel(convention?.basis))},
                 singleLine=true,modifier=Modifier.fillMaxWidth())
             OutlinedTextField(value=reps,onValueChange={reps=it},
                 label={Text("Actual reps")},

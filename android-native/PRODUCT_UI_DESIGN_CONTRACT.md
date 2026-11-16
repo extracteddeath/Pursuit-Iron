@@ -822,3 +822,20 @@ matching Focus and the logger while preserving immutable receipt ordinals;
 six JVM presentation tests cover numbering, slots, physical units and timing. Missing work duration is shown as unknown.
 This source change still requires Android compilation and physical-device,
 large-font and TalkBack acceptance; the whole-app design gate remains open.
+
+
+## Recorded loading conventions — 2026-11-16
+
+Saved-workout details and full exercise History now show the saved physical
+loading convention beside each target and comparable actual: per hand, per
+kettlebell, landmine added plates, total barbell/Smith, or the recorded stack.
+Both saved-set correction editors disclose their unit and convention. Use
+Last uses the same actual-value formatter, while Info shares the target
+formatter. Values remain exact; no dumbbell/bell doubling, added bar mass,
+rounding or unit conversion occurs in presentation. Missing actual load/unit
+stays explicitly unreported, and only an explicitly bodyweight prescription
+can label an unweighted actual as Bodyweight. Six focused JVM cases and the
+existing Info tests exercise these distinctions. History ownership, machine
+isolation, correction receipts, issued targets and numeric inputs retain their
+existing owners. Android compilation and device/accessibility acceptance
+remain separate gates; no APK/AAB is produced by this source milestone.

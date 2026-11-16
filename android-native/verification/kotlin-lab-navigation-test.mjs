@@ -384,7 +384,9 @@ assert.ok(
   cycleController.includes('CustomExerciseAuthoringDomain.replaceSelectedExercise(') &&
   cycleController.includes('lastUndo = result.receipt') &&
   plan.includes('var swapExerciseEditor by remember') &&
-  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanDayEditor.kt').includes('Text("Swap")') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanDayEditor.kt').includes('Text("Swap exercise")') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanDayEditor.kt').includes('enabled=actions.swap') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlanDayEditor.kt').includes('nativePlanExerciseActions(') &&
   plan.includes('onSwapExercise={slot->swapExerciseEditor=Triple(block.blockId,day.weekday,slot)}') &&
   plan.includes('controller.swapReviewedExercise('),
   'Reviewed gym-backed program swaps must be ranked, independently reauthored, confirmed, scoped, source-fenced, and undoable');

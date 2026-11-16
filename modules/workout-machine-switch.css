@@ -113,6 +113,13 @@
 @media(max-width:340px){
   #root .wpb .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-num-input.wpb-num-input{padding-left:1px!important;padding-right:1px!important}
 }
+/* Tablet/landscape workout columns may still give decimal weights only 57px.
+   Preserve readable 16px text and fixed steppers, reclaim input side padding. */
+@media(min-width:421px){
+  #root .wpb .wpb-workout[data-focus-mode="false"] .wpb-set-controls .wpb-num-input.wpb-num-input{
+    padding-left:1px!important;padding-right:1px!important;
+  }
+}
 @media(forced-colors:active){
   #root .wpb .wpb-machine-switch-option[data-selected="true"]{outline:2px solid Highlight}
 }

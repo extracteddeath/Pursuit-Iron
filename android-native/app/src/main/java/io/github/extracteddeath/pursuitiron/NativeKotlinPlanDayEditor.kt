@@ -14,7 +14,8 @@ internal data class NativePlanExerciseActions(
     val earlier:Boolean=false,
     val later:Boolean=false,
     val weekOverride:Boolean=false,
-    val superset:Boolean=false
+    val superset:Boolean=false,
+    val remove:Boolean=false
 )
 
 internal fun nativePlanDayIsCurrent(
@@ -40,7 +41,8 @@ internal fun nativePlanExerciseActions(
     return NativePlanExerciseActions(
         edit=true,swap=!hasWeekOverride && slot.supersetGroup==null,
         earlier=index>0,later=index<day.slots.lastIndex,
-        weekOverride=hasWeekOverride,superset=slot.supersetGroup!=null)
+        weekOverride=hasWeekOverride,superset=slot.supersetGroup!=null,
+        remove=slot.supersetGroup==null)
 }
 
 internal fun nativePlanCanCreateSuperset(
@@ -59,6 +61,7 @@ internal fun NativeKotlinPlanDayEditor(
     busy:Boolean,allowSupersets:Boolean,
     onEditExercise:(String)->Unit,onSwapExercise:(String)->Unit,
     onMoveExercise:(String,Int)->Unit,onEditSuperset:(String?)->Unit,
+    onRemoveExercise:(String)->Unit,
     onEditDay:()->Unit,onAddExercise:()->Unit
 ) {
     if(!nativePlanDayIsCurrent(draft,block,day)) {
@@ -122,10 +125,15 @@ internal fun NativeKotlinPlanDayEditor(
                         }
                     }
                 )
+                if(actions.remove)TextButton(
+                    onClick={onRemoveExercise(slot.slotId)},
+                    enabled=!busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Remove exercise from program")}
                 if(actions.weekOverride || actions.superset)Text(
-                    if(actions.weekOverride)
-                        "Review this exercise's week-specific overrides before swapping."
-                    else "Unlink this exercise in its superset before swapping.",
+                    if(actions.superset)
+                        "Unlink this exercise from its superset before swapping or removing."
+                    else "Review this exercise's week-specific overrides before swapping. Removing it will show every affected week first.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

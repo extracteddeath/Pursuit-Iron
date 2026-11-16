@@ -477,10 +477,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     "WORKOUT_NOT_EDITABLE")
             val source=(authoringSourceStore.read(signed.ownerKey)
                 as? NativeAuthoringSourceRead.Found)?.source
-            val reviewed=source?.setup?.reviewed
+            val reviewedGym=source?.setup?.reviewed?.gym
             if(source==null || source.ownerKey!=signed.ownerKey ||
                 source.athleteId!=signed.athleteId ||
-                reviewed?.gym?.gymId!=scope.gymId ||
+                reviewedGym==null || reviewedGym.gymId!=scope.gymId ||
                 source.catalog.none{it.exerciseId==exerciseId})
                 return@withOwnerTransaction NativeWorkoutMachineCreationResult.Rejected(
                     "WORKOUT_GYM_OR_EXERCISE_CHANGED")
@@ -506,7 +506,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     "MACHINE_NAME_ALREADY_USED_OR_LIMIT_REACHED")
             val machine=KotlinPhysicalMachine(
                 id="machine_"+UUID.randomUUID().toString().replace("-","").take(16),
-                label=name,unit=reviewed.gym.unit)
+                label=name,unit=reviewedGym.unit)
             val next=KotlinMachineAlternativesDomain.add(previous,machine,
                 makeDefault=makeDefault || previous.machines.isEmpty())
             val configurations=rosters.snapshot.configurations.filterNot{

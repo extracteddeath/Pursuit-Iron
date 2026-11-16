@@ -142,6 +142,7 @@ const SHELL=[
   "./modules/workout-nav-labels.js",
   "./modules/workout-pr.js",
   "./modules/workout-readiness.js",
+  "./modules/workout-machine-switch.css",
   "./modules/workout-session-controls.js",
   "./privacy.html",
   "./vendor/lucide-react.js",

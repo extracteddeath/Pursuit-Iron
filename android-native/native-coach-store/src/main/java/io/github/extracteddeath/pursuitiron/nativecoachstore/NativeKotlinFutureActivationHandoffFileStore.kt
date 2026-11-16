@@ -197,6 +197,28 @@ class NativeKotlinFutureActivationHandoffFileStore(
     fun blocksNewIssuance(ownerKey:String):Boolean =
         read(ownerKey)!=NativeFutureHandoffReview.Missing
 
+    /** Restore cannot ignore a barrier filed under another owner, a renamed
+     * file, or interrupted temporary bytes. Exactly one current-owner path
+     * is allowed; reading it never consumes or clears the issuance barrier. */
+    internal fun inventoryOwner(ownerKey:String):NativeFutureHandoffReview =
+        runCatching {fence.withOwnerTransaction(ownerKey) {
+            if(owner(ownerKey)==null)
+                return@withOwnerTransaction NativeFutureHandoffReview.Rejected(
+                    NativeFutureHandoffRefusal.NOT_AUTHORIZED)
+            require(!Files.isSymbolicLink(directory) &&
+                Files.isDirectory(directory,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            val physical=Files.list(directory).use {stream->
+                stream.filter{it.fileName.toString().startsWith("future-handoff-")}.limit(2).toList()
+            }
+            if(physical.size>1 || physical.any {file->
+                file!=path(ownerKey) || Files.isSymbolicLink(file) ||
+                    !Files.isRegularFile(file,java.nio.file.LinkOption.NOFOLLOW_LINKS)
+            })return@withOwnerTransaction NativeFutureHandoffReview.Rejected(
+                NativeFutureHandoffRefusal.RECORD_CORRUPT)
+            readFenced(ownerKey)
+        }}.getOrElse{NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.STORAGE_UNAVAILABLE)}
+
     /**
      * Re-read the EXACT athlete-confirmed second consent under the OS lock.
      * A UI fingerprint or a cached preview alone can never stage this gate.

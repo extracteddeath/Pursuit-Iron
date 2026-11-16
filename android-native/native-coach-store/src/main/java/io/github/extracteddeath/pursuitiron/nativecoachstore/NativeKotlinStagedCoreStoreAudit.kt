@@ -11,8 +11,7 @@ import java.nio.file.Path
  * bytes as believable training results.
  *
  * This is a milestone toward a full beta restore verifier, NOT the final
- * release gate. Advanced future-block approvals, workout-machine-choice
- * orphans, every retained legacy format, advanced approvals/signoffs
+ * release gate. Every retained legacy format, other advanced approvals/signoffs
  * and remaining independent files still need explicit coverage before UI
  * import is permitted. Machine choices, pinned notes and coaching settings
  * use their existing native readers with complete physical file scans.
@@ -27,6 +26,8 @@ enum class NativeKotlinStagedCoreRefusal {
     MACHINE_CHOICES_UNVERIFIED,
     PINNED_NOTES_UNVERIFIED,
     ADAPTIVE_PERMISSIONS_UNVERIFIED,
+    FUTURE_APPROVALS_UNVERIFIED,
+    FUTURE_HANDOFF_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
     GENERATED_INVENTORY_UNVERIFIED,
@@ -48,7 +49,10 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val coachingSettingsRevision:Long=0,
         val pinnedExerciseNotes:Int=0,
         val adaptivePermissionRecords:Int=0,
-        val revokedAdaptivePermissions:Int=0
+        val revokedAdaptivePermissions:Int=0,
+        val futureActivationApprovals:Int=0,
+        val revokedFutureActivationApprovals:Int=0,
+        val stagedFutureHandoffs:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -114,6 +118,14 @@ object NativeKotlinStagedCoreStoreAudit {
                 identity,fence,customCorrections)
             val outstanding=NativeKotlinCustomOutstandingWorkoutInventory(
                 prepared,custom)
+            val contexts=NativeKotlinFutureBlockContextFileStore(
+                stagedRoot,fence,identity,drafts,sources)
+            val boundary=NativeKotlinFutureBlockActivationPreflight(
+                fence,identity,drafts,contexts,mixed,custom,outstanding,
+                NativeKotlinComposerActivationInventory(generated,approvals))
+            val futureApprovals=NativeKotlinFutureActivationApprovalFileStore(
+                stagedRoot,fence,identity,boundary,contexts,drafts,sources,
+                adaptivePermissions)
             fence.withOwnerTransaction(expected.ownerKey) {
                 val activeSource=sources.read(expected.ownerKey)
                     as? NativeAuthoringSourceRead.Found
@@ -152,6 +164,33 @@ object NativeKotlinStagedCoreStoreAudit {
                     as? NativeAdaptivePermissionInventory.Verified
                     ?:return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.ADAPTIVE_PERMISSIONS_UNVERIFIED)
+                val secondConsents=futureApprovals.inventoryOwner(expected.ownerKey)
+                    as? NativeFutureApprovalInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.FUTURE_APPROVALS_UNVERIFIED)
+                val switchBarrier=handoff.inventoryOwner(expected.ownerKey)
+                if(switchBarrier !is NativeFutureHandoffReview.Missing &&
+                    switchBarrier !is NativeFutureHandoffReview.Staged)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.FUTURE_HANDOFF_UNVERIFIED)
+                if(switchBarrier is NativeFutureHandoffReview.Staged) {
+                    val receipt=switchBarrier.receipt
+                    val stored=secondConsents.records.singleOrNull {
+                        it.cycleId==receipt.cycleId && it.blockId==receipt.blockId
+                    }
+                    // Later revocation/reconfirmation does not erase an
+                    // unresolved barrier. Missing/older consent is invalid;
+                    // the same revision must describe the exact staged grant.
+                    val grant=stored?.approval
+                    if(stored==null || stored.revision<receipt.approvalRevision ||
+                        stored.revision==receipt.approvalRevision &&
+                        (grant==null || grant.reviewedFingerprint!=receipt.approvalFingerprint ||
+                            grant.sourceRevision!=receipt.sourceRevision ||
+                            grant.firstWeek!=receipt.firstWeek ||
+                            grant.historyManifestRevision!=receipt.historyManifestRevision))
+                        return@withOwnerTransaction reject(
+                            NativeKotlinStagedCoreRefusal.FUTURE_HANDOFF_UNVERIFIED)
+                }
                 // Mixed History fully replays every manifest-backed
                 // generated/custom completion and all saved corrections.
                 val verifiedHistory=mixed.read(
@@ -248,7 +287,10 @@ object NativeKotlinStagedCoreStoreAudit {
                     customScan.outstanding.count{it.issued},
                     choices.choices.size,settings.settings.revision,
                     notes.notes.size,permissions.records.size,
-                    permissions.records.count{it.revoked})
+                    permissions.records.count{it.revoked},
+                    secondConsents.records.size,
+                    secondConsents.records.count{it.revoked},
+                    if(switchBarrier is NativeFutureHandoffReview.Staged)1 else 0)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

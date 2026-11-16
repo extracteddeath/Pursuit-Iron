@@ -27,7 +27,8 @@ internal data class NativeWorkoutMachineChoicesUi(
     val ready:Boolean,
     val busy:Boolean,
     val error:String?,
-    val onSelect:(String,String)->Unit
+    val onSelect:(String,String)->Unit,
+    val onCreate:(String,String,Boolean)->Unit
 )
 
 @Composable
@@ -36,7 +37,9 @@ internal fun rememberNativeWorkoutMachineChoices(
     workoutId:String,
     custom:Boolean,
     ready:Boolean,
-    exerciseSignature:String
+    exerciseSignature:String,
+    roster:NativeMachineRosterSnapshot?,
+    onRosterChanged:(NativeMachineRosterSnapshot)->Unit
 ):NativeWorkoutMachineChoicesUi {
     val scope=rememberCoroutineScope()
     var saved by remember(host,workoutId,custom) {
@@ -75,6 +78,35 @@ internal fun rememberNativeWorkoutMachineChoices(
                     if(result is NativeWorkoutMachineChoiceResult.Saved)
                         saved=result.snapshot
                     else error="Machine selection was not saved. Reopen this workout to verify the current choice."
+                    busy=false
+                }
+            }
+        },
+        onCreate={exerciseId,label,makeDefault->
+            val current=saved
+            val confirmedRoster=roster
+            if(current!=null && confirmedRoster!=null && ready && !busy) {
+                busy=true
+                error=null
+                scope.launch {
+                    val result=withContext(Dispatchers.IO) {
+                        host.addWorkoutPhysicalMachine(workoutId,custom,
+                            exerciseId,label,makeDefault,
+                            confirmedRoster.revision,current.revision)
+                    }
+                    when(result) {
+                        is NativeWorkoutMachineCreationResult.Created -> {
+                            onRosterChanged(result.roster)
+                            saved=result.choice
+                        }
+                        is NativeWorkoutMachineCreationResult.AddedNeedsSelection -> {
+                            onRosterChanged(result.roster)
+                            error=result.reason
+                        }
+                        is NativeWorkoutMachineCreationResult.Rejected ->
+                            error="Could not add that machine: ${result.reason}. "+
+                                "Your logged sets were not changed."
+                    }
                     busy=false
                 }
             }
@@ -126,13 +158,23 @@ internal fun NativeKotlinWorkoutMachineSelector(
     config:KotlinGymMachineAlternatives?,
     selectedId:String?,
     enabled:Boolean,
-    onSelect:(String)->Unit
+    onSelect:(String)->Unit,
+    onCreate:((String,Boolean)->Unit)?=null
 ) {
     if(config==null || config.machines.isEmpty())return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
     val selected=config.machines.firstOrNull {it.id==selectedId}
     val display=selected?.label ?: "Choose machine"
     val active=config.machines.filter {it.active || it.id==selectedId}
+    val existingNames=config.machines.map{it.label.trim().lowercase()}.toSet()
+    val suggestedName=('A'..'Z').map{"Machine $it"}
+        .firstOrNull{it.lowercase() !in existingNames} ?: "Other machine"
+    var newMachineName by remember(config.gymId,config.exerciseId){
+        mutableStateOf("")
+    }
+    var makeDefault by remember(config.gymId,config.exerciseId){
+        mutableStateOf(false)
+    }
     OutlinedButton(
         onClick={open=true},
         enabled=true, // inspection remains available on finished/paused workouts
@@ -182,7 +224,39 @@ internal fun NativeKotlinWorkoutMachineSelector(
                     }
                 }
             }
-            Text(
+            if(onCreate!=null) {
+                HorizontalDivider()
+                Text("Different machine here?",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Add it now without leaving the workout. Each physical "+
+                    "machine keeps its own loads and performance history.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value=newMachineName,onValueChange={newMachineName=it.take(80)},
+                    label={Text("Machine name")},
+                    placeholder={Text(suggestedName)},
+                    singleLine=true,modifier=Modifier.fillMaxWidth(),
+                    enabled=enabled
+                )
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Checkbox(checked=makeDefault,
+                        onCheckedChange={makeDefault=it},
+                        enabled=enabled)
+                    Text("Use as the default for this exercise at this gym",
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                Button(
+                    onClick={
+                        onCreate(newMachineName.trim().ifEmpty{suggestedName},makeDefault)
+                        newMachineName=""
+                        makeDefault=false
+                    },
+                    enabled=enabled && config.machines.size<32,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Add machine & use now")}
+            } else Text(
                 "Different machine not saved? Add it under Your gym → "+
                     "Physical machines A/B. Existing sets are not reassigned.",
                 style=MaterialTheme.typography.bodySmall,

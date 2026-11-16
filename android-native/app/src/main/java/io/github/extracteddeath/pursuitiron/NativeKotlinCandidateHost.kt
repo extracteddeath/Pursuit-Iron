@@ -526,7 +526,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
             val previous=KotlinMachineAlternativesDomain.forGymExercise(
                 rosters.snapshot.configurations,scope.gymId,exerciseId)
                 ?:KotlinGymMachineAlternatives(scope.gymId,exerciseId,null,emptyList())
-            if(previous.machines.isEmpty() && source.catalog.none {
+            // Existing or legacy roster entries cannot authorize creating
+            // new physical stations for a barbell, dumbbell or other non-stack
+            // exercise. The CURRENT reviewed source must prove this basis.
+            if(source.catalog.none {
                 it.exerciseId==exerciseId &&
                 it.expectedLoadBasis in setOf(
                     LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK)

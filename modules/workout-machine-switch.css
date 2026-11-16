@@ -108,6 +108,11 @@
 @media(prefers-reduced-motion:reduce){
   #root .wpb-workout .wpb-machine-switch-trigger{transition:none}
 }
+/* The build-1011 baseline's 320px decimal input clipped "125.5" by 3.6px.
+   Keep the 16px type and 48px touch row; reclaim only inner padding. */
+@media(max-width:340px){
+  #root .wpb-workout .wpb-set-controls .wpb-num-input{padding-inline:2px!important}
+}
 @media(forced-colors:active){
   #root .wpb .wpb-machine-switch-option[data-selected="true"]{outline:2px solid Highlight}
 }

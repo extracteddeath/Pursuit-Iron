@@ -62,6 +62,11 @@ internal fun NativeKotlinCoachSettingsScreen(
     val context=LocalContext.current
     var feedbackOpen by rememberSaveable { mutableStateOf(false) }
     var feedbackDraft by rememberSaveable { mutableStateOf("") }
+    var problemOpen by rememberSaveable { mutableStateOf(false) }
+    var problemWorkflow by rememberSaveable { mutableStateOf("") }
+    var problemSteps by rememberSaveable { mutableStateOf("") }
+    var problemExpected by rememberSaveable { mutableStateOf("") }
+    var problemActual by rememberSaveable { mutableStateOf("") }
     var current by remember(host) {
         mutableStateOf<NativeCoachAssistanceSettings?>(null)
     }
@@ -122,6 +127,27 @@ internal fun NativeKotlinCoachSettingsScreen(
             }
             saving=false
         }
+    }
+
+    // A chooser is not a submission. No background API, upload, email
+    // address, training journal, owner ID or diagnostics attachment exists.
+    fun shareWithChosenApp(draft:NativeBetaFeedbackDraft):Boolean {
+        val version=runCatching {
+            context.packageManager.getPackageInfo(
+                context.packageName,0).versionName
+        }.getOrNull().orEmpty().ifBlank{"unknown"}
+        val report=NativeKotlinBetaFeedbackFormat.format(draft,version)
+            ?:return false
+        val send=Intent(Intent.ACTION_SEND).apply {
+            type="text/plain"
+            putExtra(Intent.EXTRA_SUBJECT,
+                NativeKotlinBetaFeedbackFormat.subject(draft.kind))
+            putExtra(Intent.EXTRA_TEXT,report)
+        }
+        return runCatching {
+            context.startActivity(Intent.createChooser(
+                send,"Choose where to share with your team"))
+        }.isSuccess
     }
 
     val policy=current?.policy
@@ -259,11 +285,20 @@ internal fun NativeKotlinCoachSettingsScreen(
             "Early beta feedback",
             "Tell us which workout or screen felt wrong. You decide what to share."
         ) {
-            OutlinedButton(onClick={feedbackOpen=true}) {
-                Text("Share beta feedback")
+            Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                OutlinedButton(
+                    onClick={feedbackOpen=true;problemOpen=false},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                    Text("Share beta feedback")
+                }
+                OutlinedButton(
+                    onClick={problemOpen=true;feedbackOpen=false},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                    Text("Report a problem")
+                }
             }
             Text(
-                "Opens an app you choose. No training records, injury notes or diagnostics are attached automatically.",
+                "Opens an app you choose. Only what you type and the installed app version are included; no training records, injury notes or diagnostics are attached automatically.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -304,26 +339,13 @@ internal fun NativeKotlinCoachSettingsScreen(
             },
             confirmButton={
                 TextButton(
-                    enabled=feedbackDraft.isNotBlank(),
+                    enabled=NativeKotlinBetaFeedbackFormat.canShare(
+                        NativeBetaFeedbackDraft(
+                            NativeBetaFeedbackKind.GENERAL,message=feedbackDraft)),
                     onClick={
-                        val version=runCatching {
-                            context.packageManager.getPackageInfo(
-                                context.packageName,0).versionName
-                        }.getOrNull().orEmpty().ifBlank { "unknown" }
-                        val report="Pursuit Iron early beta feedback\n"+
-                            "App version: $version\n\n"+
-                            feedbackDraft.trim()
-                        val send=Intent(Intent.ACTION_SEND).apply {
-                            type="text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT,
-                                "Pursuit Iron early beta feedback")
-                            putExtra(Intent.EXTRA_TEXT,report)
-                        }
-                        val launched=runCatching {
-                            context.startActivity(Intent.createChooser(
-                                send,"Choose where to share feedback"))
-                        }.isSuccess
-                        if(launched) feedbackOpen=false
+                        val launched=shareWithChosenApp(NativeBetaFeedbackDraft(
+                            NativeBetaFeedbackKind.GENERAL,message=feedbackDraft))
+                        if(launched)feedbackOpen=false
                         else notice="No app could open the feedback share sheet."
                     }
                 ) {Text("Choose app to send")}
@@ -332,5 +354,77 @@ internal fun NativeKotlinCoachSettingsScreen(
                 TextButton(onClick={feedbackOpen=false}) {Text("Cancel")}
             }
         )
+    }
+    if(problemOpen) {
+        val draft=NativeBetaFeedbackDraft(
+            kind=NativeBetaFeedbackKind.PROBLEM,
+            workflow=problemWorkflow,
+            steps=problemSteps,
+            expected=problemExpected,
+            actual=problemActual
+        )
+        NativeEditSheet(
+            busy=false,onDismiss={problemOpen=false},
+            footer={
+                Button(
+                    enabled=NativeKotlinBetaFeedbackFormat.canShare(draft),
+                    onClick={
+                        if(shareWithChosenApp(draft))problemOpen=false
+                        else notice="No app could open the problem report share sheet."
+                    },
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Choose app to share report")}
+                TextButton(
+                    onClick={problemOpen=false},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Cancel")}
+            }
+        ) {
+            Text("Report a problem",
+                style=MaterialTheme.typography.titleLarge)
+            Text("What happened, where, and how could someone reproduce it? Only the information you type is included.",
+                style=MaterialTheme.typography.bodyMedium)
+            OutlinedTextField(
+                value=problemWorkflow,
+                onValueChange={
+                    problemWorkflow=it.take(NativeKotlinBetaFeedbackFormat.MAX_FIELD_CHARS)
+                },
+                label={Text("Screen or workout step (optional)")},
+                modifier=Modifier.fillMaxWidth(),
+                minLines=1,maxLines=3
+            )
+            OutlinedTextField(
+                value=problemSteps,
+                onValueChange={
+                    problemSteps=it.take(NativeKotlinBetaFeedbackFormat.MAX_FIELD_CHARS)
+                },
+                label={Text("Steps to reproduce (optional)")},
+                modifier=Modifier.fillMaxWidth(),
+                minLines=2,maxLines=5
+            )
+            OutlinedTextField(
+                value=problemExpected,
+                onValueChange={
+                    problemExpected=it.take(NativeKotlinBetaFeedbackFormat.MAX_FIELD_CHARS)
+                },
+                label={Text("What should have happened? (optional)")},
+                modifier=Modifier.fillMaxWidth(),
+                minLines=2,maxLines=5
+            )
+            OutlinedTextField(
+                value=problemActual,
+                onValueChange={
+                    problemActual=it.take(NativeKotlinBetaFeedbackFormat.MAX_FIELD_CHARS)
+                },
+                label={Text("What actually happened? (required)")},
+                modifier=Modifier.fillMaxWidth(),
+                minLines=2,maxLines=5,
+                isError=problemActual.isNotEmpty() &&
+                    !NativeKotlinBetaFeedbackFormat.canShare(draft)
+            )
+            Text("Choose an app to send this report. Opening the chooser does not submit it. No profile IDs, logs, workouts or medical details are attached; include personal information only if you want to.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

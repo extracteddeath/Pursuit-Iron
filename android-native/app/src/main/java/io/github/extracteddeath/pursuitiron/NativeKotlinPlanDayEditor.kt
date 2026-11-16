@@ -2,7 +2,8 @@ package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
@@ -83,6 +84,8 @@ internal fun NativeKotlinPlanDayEditor(
                 day.slots.filter{it.supersetGroup==group && it.slotId!=slot.slotId}
                     .map{kotlinExerciseLabel(it.exerciseId)}
             }.orEmpty()
+            key(slot.slotId) {
+            var moreActionsExpanded by rememberSaveable { mutableStateOf(false) }
             PursuitCard {
                 Text((index+1).toString()+". "+kotlinExerciseLabel(slot.exerciseId),
                     style=MaterialTheme.typography.titleMedium)
@@ -111,36 +114,44 @@ internal fun NativeKotlinPlanDayEditor(
                         }
                     }
                 )
-                if(day.slots.size>1)PursuitResponsiveActionPair(
-                    primary={m->
-                        TextButton(onClick={onMoveExercise(slot.slotId,-1)},
-                            enabled=actions.earlier,modifier=m.heightIn(min=48.dp)) {
-                            Text("Move earlier")
-                        }
-                    },
-                    secondary={m->
-                        TextButton(onClick={onMoveExercise(slot.slotId,1)},
-                            enabled=actions.later,modifier=m.heightIn(min=48.dp)) {
-                            Text("Move later")
-                        }
-                    }
+                PursuitDisclosureRow(
+                    "More exercise actions",
+                    "Reorder, move to another day or remove from this draft",
+                    moreActionsExpanded,{moreActionsExpanded=!moreActionsExpanded}
                 )
-                if(block.days.size>1 && actions.edit)OutlinedButton(
-                    onClick={onMoveToDay(slot.slotId)},
-                    enabled=!busy,
-                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
-                ) {Text("Move to another training day")}
-                if(actions.remove)TextButton(
-                    onClick={onRemoveExercise(slot.slotId)},
-                    enabled=!busy,
-                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
-                ) {Text("Remove exercise from program")}
-                if(actions.weekOverride || actions.superset)Text(
-                    if(actions.superset)
-                        "Move this entire superset together, or unlink it before swapping or removing."
-                    else "Review this exercise's week-specific overrides before swapping. Removing it will show every affected week first.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(moreActionsExpanded) {
+                    if(day.slots.size>1)PursuitResponsiveActionPair(
+                        primary={m->
+                            TextButton(onClick={onMoveExercise(slot.slotId,-1)},
+                                enabled=actions.earlier,modifier=m.heightIn(min=48.dp)) {
+                                Text("Move earlier")
+                            }
+                        },
+                        secondary={m->
+                            TextButton(onClick={onMoveExercise(slot.slotId,1)},
+                                enabled=actions.later,modifier=m.heightIn(min=48.dp)) {
+                                Text("Move later")
+                            }
+                        }
+                    )
+                    if(block.days.size>1 && actions.edit)OutlinedButton(
+                        onClick={onMoveToDay(slot.slotId)},
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Move to another training day")}
+                    if(actions.remove)TextButton(
+                        onClick={onRemoveExercise(slot.slotId)},
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                    ) {Text("Remove exercise from program")}
+                    if(actions.weekOverride || actions.superset)Text(
+                        if(actions.superset)
+                            "Move this entire superset together, or unlink it before swapping or removing."
+                        else "Review this exercise's week-specific overrides before swapping. Removing it will show every affected week first.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             }
         }
     }

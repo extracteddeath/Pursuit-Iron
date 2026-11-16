@@ -22,7 +22,7 @@ import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutli
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
-import { latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { addMachineVariant, latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
@@ -10828,7 +10828,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
                 resolved.length>0 && _jsxs('details',{className:'wpb-injury-resolved',children:[_jsx('summary',{children:'Resolved · '+resolved.length}),resolved.map(card)]})]})]})});
 }
 
-function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourceProgram, injuryLog = [], gymEquipment = null, gymProfile = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
+function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourceProgram, injuryLog = [], gymEquipment = null, gymProfile = null, onSaveGymMachineVariant = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
     const [sessionProgressionState, setSessionProgressionState] = useState(() => {
         try { const snap = JSON.parse(localStorage.getItem(LIVE_KEY) || 'null');
             if (snap?.programId === sourceProgram.id && snap.dayId === rawDay.id && snap.weekIndex === weekIndex
@@ -11007,18 +11007,25 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         });
         return changed ? out : next;
     });
-    const switchPhysicalMachine=(ei,nextId)=>{
+    const switchPhysicalMachine=(ei,nextId,sourceGym=gymProfile)=>{
         const row=dataRef.current[ei];
-        if(!row||!gymProfile||gymProfile.id!==sessionGymId)return;
-        const chosen=resolveMachineVariant(gymProfile,row.id,nextId);
-        if(chosen.active===false||chosen.missing)return;
+        if(!row || !sourceGym || sourceGym.id!==sessionGymId)
+            return {ok:false,message:'The workout gym is unavailable. Choose the correct gym first.'};
+        let chosen;
+        try {chosen=resolveMachineVariant(sourceGym,row.id,nextId);}
+        catch(error){return {ok:false,message:String(error?.message||'Unknown machine')};}
+        if(chosen.active===false || chosen.missing)
+            return {ok:false,message:'This machine is no longer active at this gym.'};
+        if(row.machineInstanceId===nextId)return {ok:true};
         const last=latestMachineSet(history,{
             gymId:sessionGymId,exerciseId:row.id,machineInstanceId:nextId,dayId:day.id});
         const reference=last?toUnit(last.weight,last.unit||unit,unit):null;
         setData(rows=>rows.map((item,i)=>{
             if(i!==ei)return item;
             return {...item,machineInstanceId:nextId,sets:item.sets.map(set=>{
-                if(set.done)return set; // completed set retains original machine forever
+                if(set.done)return set; // completed set retains its original physical machine
+                // A different weight stack must never inherit another machine's
+                // attempted load or silently lower a future program target.
                 const weight=set.warm||set.sub?'':reference==null?''
                     :String(Math.round(reference*1000)/1000);
                 return {...set,machineInstanceId:nextId,weight,auto:false,
@@ -11026,6 +11033,28 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                     target:{...set.target,w:weight}};
             })};
         }));
+        return {ok:true};
+    };
+    const addPhysicalMachineNow=(ei,name,makeDefault=false)=>{
+        const row=dataRef.current[ei];
+        if(!row || !gymProfile || gymProfile.id!==sessionGymId ||
+            !isMachineLike(EX_BY_ID[row.id]?.equip) || !onSaveGymMachineVariant)
+            return {ok:false,message:'Choose your workout gym before adding a machine.'};
+        const instance={
+            id:`machine_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,10)}`,
+            label:String(name||'').trim(),active:true
+        };
+        let nextGym;
+        try { nextGym=addMachineVariant(gymProfile,row.id,instance,makeDefault); }
+        catch(error){return {ok:false,message:String(error?.message||'Invalid machine')};}
+        // Gym state is owned by the root persisted store, not by a second
+        // workout-only catalog. Save its exact exercise-specific config first.
+        const written=onSaveGymMachineVariant(
+            sessionGymId,row.id,nextGym.machineVariants[row.id]);
+        if(!written)return {ok:false,message:'Could not save this machine at the active gym.'};
+        // The newly added machine isn't present in gymProfile until the parent
+        // rerenders. Resolve it from our validated NEXT gym, not stale props.
+        return switchPhysicalMachine(ei,instance.id,nextGym);
     };
     const [exIdx, setExIdx] = useState(() => Math.max(0, Math.min(data.length - 1, Number.isInteger(liveMatch?.exIdx) ? liveMatch.exIdx : 0)));
     const workoutRoot = useRef(null);
@@ -12474,12 +12503,15 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             if (!moves)
                                 return null;
                             return (_jsxs("div", { "data-noswipe": true, className: "wpb-workout-card wpb-warmup-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Flame, { size: 15, color: C.accentInk }), _jsx("span", { className: "wpb-layout-strong-15", children: "Warm-up & mobility" }), _jsx("button", { onClick: () => { setShowWarmup(false); onSetWarmupCard?.(false); setSnack({ msg: "Warm-up card hidden — Settings can bring it back", undo: () => { onSetWarmupCard?.(true); setSnack(null); } }); }, "aria-label": "Hide the warm-up card from now on", className: "pressable hit wpb-warmup-hide", children: "Hide" })] }), moves.map((m, i) => (_jsxs("div", { className: "wpb-warmup-step", children: [_jsx("span", { className: "wpb-warmup-number", children: i + 1 }), _jsx("span", { className: "wpb-warmup-instruction", children: m })] }, i))), _jsx("button", { onClick: () => setShowWarmup(false), className: "pressable wpb-warmup-finish", children: "Warmed up \u2014 let\u2019s train" })] }));
-                        })(), _jsx(WorkoutMachineVariantControl, {
-                            gym:gymProfile?.id===sessionGymId ? gymProfile : null,
-                            exerciseId:e.id,selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
-                            dayId:day.id,history,unit,onSelect:id=>switchPhysicalMachine(ei,id)
-                        }), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
-    children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [e.added && !focus && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: wTotal }), children: `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
+                        })(), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
+    children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [_jsx(WorkoutMachineVariantControl, {
+    key:`${day.id}:${e.slot}:${e.id}`,
+    gym:gymProfile?.id===sessionGymId ? gymProfile : null,
+    exerciseId:e.id,selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
+    dayId:day.id,history,unit,onSelect:id=>switchPhysicalMachine(ei,id),
+    onCreate:(name,makeDefault)=>addPhysicalMachineNow(ei,name,makeDefault),
+    onSwap:()=>setSwap(true)
+}), e.added && !focus && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: wTotal }), children: `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
                                             // name the progression style for EVERY exercise (not just dynamic double), so it's
                                             // always clear how this lift advances week to week.
                                             /* ⚠ ONE OWNER: THE LABEL NAMES THE METHOD THAT SETS THE LOADS. For a Pursuit Next program the loads come
@@ -21738,6 +21770,21 @@ function App() {
                                                ones the room actually has. */
                                             gymEquipment: gymEquipment,
                                             gymProfile:activeGym,
+                                            onSaveGymMachineVariant:(gymId,exerciseId,config)=>{
+                                                // Avoid overwriting other gyms or exercises.
+                                                // The canonical central gym persistence effect
+                                                // owns the durable save and offline merge.
+                                                if(!activeGym || activeGym.id!==gymId ||
+                                                    !EX_BY_ID[exerciseId] || !config?.instances?.length)
+                                                    return false;
+                                                setGyms(current=>current.map(g=>g.id!==gymId?g:{
+                                                    ...g,updatedAt:Date.now(),
+                                                    machineVariants:{
+                                                        ...g.machineVariants,[exerciseId]:config
+                                                    }
+                                                }));
+                                                return true;
+                                            },
                                             /* ⚠ THE DAY IS LOOKED UP FROM THE PROGRAM, NOT HELD AS A SECOND COPY. `sessionDay` is
                                                captured when the workout starts and is NOT updated by the things that legitimately
                                                change the day mid-workout — `updateProgramExercise` (the "Update my program" scope

@@ -44,7 +44,8 @@ internal class NativeKotlinMovementSwapEligibilityTest {
         assertFalse(NativeMovementSwapEligibility.generated(original,null))
         val operation=KotlinJournalOperation.RecordSet(
             "r1",original.revision,"db-press:working-1",
-            KotlinJournalSetOutcome.SKIPPED,null)
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("30"),LoadUnit.LB,8,2))
         val saved=(KotlinWorkoutJournalDomain.reduce(original,operation)
             as KotlinJournalDecision.Proposed).state
         assertFalse(NativeMovementSwapEligibility.generated(saved,"db-press"))

@@ -48,7 +48,7 @@ internal object NativeMovementSwapEligibility {
         return targets.none{it.setKey in journal.effectiveSets} &&
             journal.receipts.none{receipt->
                 (receipt.operation as? KotlinJournalOperation.RecordSet)
-                    ?.setKey in keys
+                    ?.setKey?.let{it in keys}==true
             }
     }
     fun custom(journal:CustomWorkoutJournalDraft?,slotId:String?):Boolean {
@@ -60,7 +60,7 @@ internal object NativeMovementSwapEligibility {
         val keys=slot.sets.map{it.setKey}.toSet()
         return journal.receipts.none {receipt->
             (receipt.operation as? CustomWorkoutJournalOperation.Record)
-                ?.visit?.setKey in keys
+                ?.visit?.setKey?.let{it in keys}==true
         }
     }
 }

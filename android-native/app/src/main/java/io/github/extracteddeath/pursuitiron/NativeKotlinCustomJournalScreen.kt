@@ -1500,7 +1500,7 @@ internal fun NativeKotlinCustomJournalScreen(
                 val target=latest?.snapshot?.slots?.singleOrNull{
                     it.slotId==candidate
                 }
-                if(target!=null && latest.revision==request.journalRevision &&
+                if(target!=null && latest?.revision==request.journalRevision &&
                     !busy && !finished &&
                     NativeMovementSwapEligibility.custom(latest,candidate)) {
                     pendingConcern=null

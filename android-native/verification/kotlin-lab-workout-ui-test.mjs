@@ -81,9 +81,7 @@ for(const [source,label] of [[generatedFocus,'generated'],[journal,'custom']]) {
       label+' must use exact unfinished journal to determine replacement eligibility');
   assert.ok(source.includes('onReviewReplacement={') &&
       source.includes('val candidate=options.replacementScopeId') &&
-      source.includes('latest.revision==request.journalRevision') ||
-      (label==='generated' &&
-      source.includes('latest?.revision==request.journalRevision')),
+      source.includes('latest?.revision==request.journalRevision'),
       label+' must revalidate journal before invoking existing reviewed swap');
 }
 assert.match(generatedFocus,/reviewSwap\(candidate\)/);

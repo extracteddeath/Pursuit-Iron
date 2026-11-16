@@ -94,17 +94,29 @@ class CustomCycleBuilderDomainTest {
                 as CustomCycleBuilderResult.Rejected).reason)
     }
 
-    @Test fun canonicalSupersetRoundCannotBeScatteredOrAuthoredAcrossGaps() {
+    @Test fun canonicalSupersetReorderCannotScatterRoundButRetainsLegacyMembership() {
         val initial=draft()
         val third=initial.blocks.single().days.single().slots.last()
             .copy(slotId="bench-c",pinned=false)
         val added=accepted(CustomCycleBuilderDomain.addSlot(
             initial,1,"base",0,third))
-        val scatteredCreate=CustomCycleBuilderDomain.setSupersetMembers(
+        val scatteredCreate=accepted(CustomCycleBuilderDomain.setSupersetMembers(
             added.draft,2,"base",0,"pair",
-            listOf("bench-a","bench-c"),true)
-        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
-            (scatteredCreate as CustomCycleBuilderResult.Rejected).reason)
+            listOf("bench-a","bench-c"),true))
+        assertEquals(listOf("pair",null,"pair"),
+            scatteredCreate.draft.blocks.single().days.single().slots
+                .map{it.supersetGroup})
+        val scatteredOrder=CustomCycleBuilderDomain.reorderSlots(
+            scatteredCreate.draft,3,"base",0,
+            listOf("bench-a","bench-b","bench-c"))
+        assertEquals(CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT,
+            (scatteredOrder as CustomCycleBuilderResult.Rejected).reason)
+        val repaired=accepted(CustomCycleBuilderDomain.reorderSlots(
+            scatteredCreate.draft,3,"base",0,
+            listOf("bench-a","bench-c","bench-b")))
+        assertEquals(listOf("pair","pair",null),
+            repaired.draft.blocks.single().days.single().slots
+                .map{it.supersetGroup})
         val grouped=accepted(CustomCycleBuilderDomain.setSupersetMembers(
             added.draft,2,"base",0,"pair",
             listOf("bench-a","bench-b"),true))

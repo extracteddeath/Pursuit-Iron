@@ -10,10 +10,10 @@ internal class NativeKotlinPlanDayEditorPresentationTest:
     @Test fun weekOverridesAndSupersetsProtectSwapButNotSetEditing() {
         val draft=cycle("actions-a")
         val block=draft.blocks.single()
-        val protected=nativePlanExerciseActions(draft,block,block.days.first(),0,false)
-        assertTrue(protected.edit)
-        assertFalse(protected.swap)
-        assertTrue(protected.weekOverride)
+        val blocked=nativePlanExerciseActions(draft,block,block.days.first(),0,false)
+        assertTrue(blocked.edit)
+        assertFalse(blocked.swap)
+        assertTrue(blocked.weekOverride)
         val ordinary=block.days[1]
         val open=nativePlanExerciseActions(draft,block,ordinary,0,false)
         assertTrue(open.edit)

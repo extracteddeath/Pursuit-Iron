@@ -34,13 +34,13 @@ internal fun nativePlanExerciseActions(
     val slot=day.slots.getOrNull(index) ?:return NativePlanExerciseActions()
     if(day.slots.count{it.slotId==slot.slotId}!=1)
         return NativePlanExerciseActions()
-    val protected=draft.weekOverrides[block.blockId].orEmpty().any {
+    val hasWeekOverride=draft.weekOverrides[block.blockId].orEmpty().any {
         it.weekday==day.weekday && it.slotId==slot.slotId
     }
     return NativePlanExerciseActions(
-        edit=true,swap=!protected && slot.supersetGroup==null,
+        edit=true,swap=!hasWeekOverride && slot.supersetGroup==null,
         earlier=index>0,later=index<day.slots.lastIndex,
-        weekOverride=protected,superset=slot.supersetGroup!=null)
+        weekOverride=hasWeekOverride,superset=slot.supersetGroup!=null)
 }
 
 internal fun nativePlanCanCreateSuperset(

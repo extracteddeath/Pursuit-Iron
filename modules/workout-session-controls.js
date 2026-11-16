@@ -91,7 +91,18 @@ export function WorkoutMachineVariantControl({
     gym, exerciseId, selectedId, dayId, history = [], unit, onSelect
 }) {
     const config=gym?.machineVariants?.[exerciseId];
-    if (!Array.isArray(config?.instances) || !config.instances.length) return null;
+    if (!gym) return null;
+    if (!Array.isArray(config?.instances) || !config.instances.length) {
+        // The selector previously vanished without explanation. A user in
+        // their first machine workout needs an explicit setup path, not a
+        // silent null that makes A/B seem unimplemented.
+        if (!isMachineLike(EX_BY_ID[exerciseId]?.equip)) return null;
+        return _jsxs('details',{className:'wpb-machine-choice wpb-gym-section',
+            'data-noswipe':true,children:[
+                _jsx('summary',{children:'Machine A/B · Set up alternatives'}),
+                _jsx('p',{children:'No physical machines are saved for this exercise in the current gym. Go to Settings → Your gyms, expand this gym, open Machine A/B, select this exercise, add Machine A and Machine B, then tap Done. Return to your workout to choose the machine above the exercise name. Existing completed sets will not change.'})
+            ]});
+    }
     const current=resolveMachineVariant(gym,exerciseId,selectedId ?? null,{forNewWorkout:false});
     const last=latestMachineSet(history,{
         gymId:gym.id,exerciseId,machineInstanceId:current.id,dayId
@@ -100,9 +111,10 @@ export function WorkoutMachineVariantControl({
         instance.id===current.id);
     const unknown=current.missing ? [{id:current.id,label:current.label}] : [];
     if (current.legacy) unknown.push({id:LEGACY_MACHINE_ID,label:'Legacy (unassigned)'});
-    return _jsxs(UiCard,{className:'wpb-session-note-editor wpb-machine-choice',children:[
+    return _jsxs(UiCard,{className:'wpb-session-note-editor wpb-machine-choice',
+        'data-noswipe':true,children:[
         _jsxs('label',{children:[
-            _jsx('strong',{children:'Physical machine'}),
+            _jsx('strong',{children:'Machine A/B · Choose physical machine'}),
             _jsx(UiField,{as:'select',value:current.id,
                 'aria-label':'Physical machine used for this exercise',
                 onChange:event=>onSelect(event.target.value),
@@ -113,6 +125,8 @@ export function WorkoutMachineVariantControl({
         _jsx('p',{children:last
             ? `Last on this machine: ${last.weight} ${last.unit??unit} × ${last.reps} reps`
             : 'No comparable history for this machine. Enter an initial load.'}),
-        _jsx('small',{children:'Changing machines keeps completed sets with their original machine. Only future sets change.'})
+        _jsx('small',{children:
+            'Switching machines only changes unfinished sets; completed sets keep their original machine. '+
+            'This choice is for this workout. Change your usual machine under Settings → Your gyms → Machine A/B.'})
     ]});
 }

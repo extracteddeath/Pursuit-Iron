@@ -845,7 +845,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 val exerciseId=selected?.target?.exerciseId
                 if(exerciseId!=null)
                     machineChoices.onCreate(exerciseId,label,makeDefault)
-            })
+            },error=machineChoices.error)
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)

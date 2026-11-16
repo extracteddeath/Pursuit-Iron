@@ -34,6 +34,8 @@ assert.match(picker,/host\.addWorkoutPhysicalMachine\(/);
 assert.match(picker,/NativeWorkoutMachineCreationResult\.AddedNeedsSelection/);
 assert.match(picker,/onRosterChanged\(result\.roster\)/);
 assert.match(picker,/Add machine & use now/);
+assert.match(picker,/error\?\.let \{Text\(it/);
+for(const call of [generated,custom])assert.match(call,/error=machineChoices\.error/);
 assert.match(picker,/makeDefault/);
 for(const call of [generated,custom]) {
   assert.match(call,/onRosterChanged=\{machineRoster=it\}/);

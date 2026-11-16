@@ -160,7 +160,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
     selectedId:String?,
     enabled:Boolean,
     onSelect:(String)->Unit,
-    onCreate:((String,Boolean)->Unit)?=null
+    onCreate:((String,Boolean)->Unit)?=null,
+    error:String?=null
 ) {
     if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
@@ -196,6 +197,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
                 "progression and records stay with each physical machine.",
                 style=MaterialTheme.typography.bodyMedium,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            error?.let {Text(it,style=MaterialTheme.typography.bodyMedium,
+                color=MaterialTheme.colorScheme.error)}
             if(selected!=null && !selected.active)Text(
                 "The previously selected machine is inactive. Select an active "+
                     "machine before recording another set.",

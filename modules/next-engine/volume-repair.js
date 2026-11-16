@@ -1028,6 +1028,12 @@ function withSourcePrescriptions(candidate, source) {
     candidate.nextEngine.program = { ...candidate.nextEngine.program, sessions };
     return candidate;
 }
+/* A generated program is plain JSON (the app saves and reloads it). A rebuilt engine source holds fresh objects
+   whose optional fields are present as undefined, so the same program compared before and after a save would
+   differ. Store it as the data a save would produce. */
+const asSavedEngineSource = program => ({ ...program, nextEngine: { ...program.nextEngine,
+    program: JSON.parse(JSON.stringify(program.nextEngine.program)),
+    ...(program.nextEngine.audit ? { audit: JSON.parse(JSON.stringify(program.nextEngine.audit)) } : {}) } });
 const regressedCounts = (counts, baseline) => Object.entries(counts).some(([key, n]) => n > (baseline[key] || 0));
 
 export function fillSessionsTowardBand(program, legacyExercises = [], skipDayIds = null, generatedRegions = null) {
@@ -1174,7 +1180,7 @@ export function moveLiftsOffOverDays(program, legacyExercises = [], maxMinutes =
             displayMoves: [...(accepted.candidate.nextEngine.displayMoves ?? []), { exercise: accepted.lift, from: accepted.from, to: accepted.to }] } };
         shown = accepted.after;
     }
-    return current;
+    return current === program ? program : asSavedEngineSource(current);
 }
 
 /** `extend`: a new plan (a standalone program or a cycle's entry block) may also take a lift on a short day.
@@ -1226,7 +1232,7 @@ export function finalizeGeneratedShellVolume(program, legacyExercises = [], { ex
         if (!findings) { chosen = candidate; break; }
     }
     chosen ??= plain ?? finish(asGenerated, false);
-    const finished = attachRegionalDose(chosen.program, legacyExercises, chosen.changes);
+    const finished = attachRegionalDose(chosen.added.length ? asSavedEngineSource(chosen.program) : chosen.program, legacyExercises, chosen.changes);
     if (!chosen.added.length && !chosen.sets.length) return finished;
     const guards = bandFillGuards(finished, legacyExercises, null, { anyBand: true });
     if (!guards) return finished;

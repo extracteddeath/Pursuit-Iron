@@ -94,17 +94,7 @@ object CustomCycleBuilderDomain {
             ?:return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_SLOT)
         val selected=slotIds.toSet()
         val previous=day.slots.filter{it.supersetGroup==groupId}.map{it.slotId}.toSet()
-        val selectedPositions=day.slots.withIndex().filter{
-            it.value.slotId in selected
-        }.map{it.index}
-        val noncontiguous=selected.isNotEmpty() &&
-            (selectedPositions.size!=selected.size ||
-                selectedPositions.last()-selectedPositions.first()+1!=
-                    selectedPositions.size)
-        // Future rounds cannot start in an order that separates their
-        // members. An old scattered group can still be explicitly unlinked.
         if(!id.matches(groupId) || selected.size!=slotIds.size ||
-            noncontiguous ||
             (selected.isNotEmpty() && (selected.size !in 2..3 || !allowSupersets)) ||
             selected==previous || selected.any{chosen->
                 day.slots.none {it.slotId==chosen &&

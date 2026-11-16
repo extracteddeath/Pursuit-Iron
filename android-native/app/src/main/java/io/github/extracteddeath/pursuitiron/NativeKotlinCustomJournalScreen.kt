@@ -763,45 +763,27 @@ internal fun NativeKotlinCustomJournalScreen(
                             )
                         }
                     }
-                    // Review recorded work, then return to the actual next
-                    // visit with one tap. A pending amplifier follow-up is
-                    // navigable only after its main was completed.
-                    val visitIndex=availableVisits.indexOf(activeFocus)
-                    if(visitIndex>=0) {
-                        Row(
-                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
-                            verticalAlignment=Alignment.CenterVertically
-                        ) {
-                            OutlinedButton(
-                                enabled=!busy && visitIndex>0,
-                                modifier=Modifier.heightIn(min=48.dp),
-                                onClick={
-                                    val previous=availableVisits[visitIndex-1]
-                                    reviewSetKey=previous.setKey
-                                    reviewPart=previous.part.name
-                                }
-                            ) {Text("Previous set")}
-                            OutlinedButton(
-                                enabled=!busy && visitIndex<availableVisits.lastIndex,
-                                modifier=Modifier.heightIn(min=48.dp),
-                                onClick={
-                                    val following=availableVisits[visitIndex+1]
-                                    reviewSetKey=following.setKey
-                                    reviewPart=following.part.name
-                                }
-                            ) {Text("Next set")}
-                            if(requestedFocus!=null && nextVisit!=null) {
-                                TextButton(
-                                    enabled=!busy,
-                                    modifier=Modifier.heightIn(min=48.dp),
-                                    onClick={
-                                        reviewSetKey=null
-                                        reviewPart=null
-                                    }
-                                ) {Text("Jump to next unlogged")}
+                    // Both journal types use the same typed, read-only
+                    // navigation. A follow-up is a separate visit identity:
+                    // it cannot become eligible just by swiping to its parent.
+                    if(focusOnNext && activeFocus!=null) {
+                        NativeKotlinWorkoutFocusNavigation(
+                            steps=availableVisits.map{visit->
+                                NativeKotlinFocusStep(
+                                    visit,current.effectiveVisits.containsKey(visit))
+                            },
+                            selected=activeFocus,
+                            nextUnfinished=nextVisit,
+                            enabled=!busy,
+                            onChoose={visit->
+                                reviewSetKey=visit.setKey
+                                reviewPart=visit.part.name
+                            },
+                            onReturnToNextUnfinished={
+                                reviewSetKey=null
+                                reviewPart=null
                             }
-                        }
+                        )
                     }
                 }
                 if(!finished && current.finishedByEventId==null) {

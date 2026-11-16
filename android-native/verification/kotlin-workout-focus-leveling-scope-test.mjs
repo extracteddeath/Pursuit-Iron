@@ -58,3 +58,18 @@ for(const source of [screen,custom]) {
 }
 assert.match(reference,/Text\("Retry Last"\)/);
 console.log('PASS Focus, machine-scoped Leveling and source-keyed retryable Last references');
+
+// Both workout routes must allow typed browsing and return to source-owned
+// next unfinished entries; no program mutation or journal write is implied.
+const focusNavigation=readFileSync('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutFocusNavigation.kt','utf8');
+assert.match(focusNavigation,/object NativeKotlinWorkoutFocusNavigationPolicy/);
+assert.match(focusNavigation,/nextUnfinished!=null && steps.none/);
+assert.match(focusNavigation,/Jump to next unfinished set/);
+assert.match(generated,/NativeKotlinWorkoutFocusNavigation\(/);
+assert.match(generated,/steps=allSets.map/);
+assert.match(generated,/nextUnfinished=presentation.firstUnresolvedSetKey/);
+assert.match(custom,/NativeKotlinWorkoutFocusNavigation\(/);
+assert.match(custom,/steps=availableVisits.map/);
+assert.match(custom,/visit,current.effectiveVisits.containsKey\(visit\)/);
+assert.doesNotMatch(custom,/val visitIndex=availableVisits.indexOf\(activeFocus\)/);
+console.log('PASS same typed Focus browsing and return-to-next across both Kotlin journal routes');

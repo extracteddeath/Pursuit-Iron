@@ -94,7 +94,9 @@ internal fun NativeKotlinProfileScreen(
     var sectionLayoutOwner by remember(host) {mutableStateOf<String?>(null)}
     var editingSections by rememberSaveable {mutableStateOf(false)}
     var editSectionsOwner by remember {mutableStateOf<String?>(null)}
-    var draftSections by remember {mutableStateOf(NativeProfileLayout.DEFAULT)}
+    // Keep a versioned text draft across rotation; saving remains explicit.
+    var draftLayoutRaw by rememberSaveable {mutableStateOf(NativeProfileLayout.DEFAULT.encode())}
+    val draftSections=NativeProfileLayout.decode(draftLayoutRaw)
     LaunchedEffect(host,refresh) {
         setup=null
         history=null
@@ -111,6 +113,7 @@ internal fun NativeKotlinProfileScreen(
         sectionLayoutOwner=null
         editingSections=false
         editSectionsOwner=null
+        draftLayoutRaw=NativeProfileLayout.DEFAULT.encode()
         val owner=current?.athleteProfileId
         sectionLayout=if(owner==null) NativeProfileLayout.DEFAULT
             else NativeProfileLayout.decode(prefs.getString("layout:$owner",null))
@@ -221,7 +224,7 @@ internal fun NativeKotlinProfileScreen(
         )
         OutlinedButton(
             onClick={
-                draftSections=visibleLayout
+                draftLayoutRaw=visibleLayout.encode()
                 editSectionsOwner=current?.athleteProfileId
                 editingSections=true
             },
@@ -367,7 +370,7 @@ internal fun NativeKotlinProfileScreen(
                             Switch(
                                 checked=section !in draftSections.hidden,
                                 onCheckedChange={
-                                    draftSections=draftSections.setVisible(section,it)
+                                    draftLayoutRaw=draftSections.setVisible(section,it).encode()
                                 }
                             )
                             Spacer(Modifier.width(PursuitSpace.xs))
@@ -377,12 +380,12 @@ internal fun NativeKotlinProfileScreen(
                         Row(Modifier.fillMaxWidth(),
                             horizontalArrangement=Arrangement.End) {
                             TextButton(
-                                onClick={draftSections=draftSections.move(section,-1)},
+                                onClick={draftLayoutRaw=draftSections.move(section,-1).encode()},
                                 enabled=index>0,
                                 modifier=Modifier.heightIn(min=48.dp)
                             ) {Text("Move up")}
                             TextButton(
-                                onClick={draftSections=draftSections.move(section,1)},
+                                onClick={draftLayoutRaw=draftSections.move(section,1).encode()},
                                 enabled=index<draftSections.order.lastIndex,
                                 modifier=Modifier.heightIn(min=48.dp)
                             ) {Text("Move down")}

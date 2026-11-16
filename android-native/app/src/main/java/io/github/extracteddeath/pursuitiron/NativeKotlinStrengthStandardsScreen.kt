@@ -733,6 +733,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 if(viewedExercise!=null && verifiedTimeline!=null)
                     NativeKotlinExercisePerformanceTrend(
                         verifiedTimeline,viewedExercise,displayUnit,
+                        machineRoster=machineRoster,
                         onOpenHistory={historyExerciseId=viewedExercise})
             }
         }

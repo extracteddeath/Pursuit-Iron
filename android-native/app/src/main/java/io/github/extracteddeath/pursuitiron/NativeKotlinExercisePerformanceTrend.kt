@@ -26,6 +26,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
     timeline:NativeKotlinMixedHistoryTimeline,
     exerciseId:String,
     displayUnit:LoadUnit,
+    machineRoster:NativeMachineRosterSnapshot?=null,
     onOpenHistory:()->Unit
 ) {
     var basisChoice by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
@@ -100,9 +101,8 @@ internal fun NativeKotlinExercisePerformanceTrend(
                                 windowChoice=null
                                 showValues=false
                             },
-                            label={Text(if(item.first==null)
-                                "Portable / unassigned"
-                                else "${item.first} · ${item.second ?: "Older unassigned machine"}")})
+                            label={Text(NativeKotlinMachineStationLabels.label(
+                                exerciseId,item.first,item.second,stations,machineRoster))})
                     }
                 }
             }

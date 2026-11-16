@@ -16,6 +16,9 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import java.time.ZoneId
+import java.util.Locale
 
 /**
  * Exercise history uses ONLY the complete correction-aware, owner-verified
@@ -91,6 +94,9 @@ internal fun NativeKotlinExerciseHistorySheet(
     var history by remember(host,exerciseId) {
         mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)
     }
+    var refreshVersion by remember(host,exerciseId) { mutableIntStateOf(0) }
+    val historyZone=remember { ZoneId.systemDefault() }
+    val historyLocale=remember { Locale.getDefault() }
     var favoriteIds by remember(host,exerciseId) {
         mutableStateOf<List<String>>(emptyList())
     }
@@ -103,21 +109,34 @@ internal fun NativeKotlinExerciseHistorySheet(
     var machineRoster by remember(host,exerciseId) {
         mutableStateOf<NativeMachineRosterSnapshot?>(null)
     }
-    LaunchedEffect(host,exerciseId) {
+    LaunchedEffect(host,exerciseId,refreshVersion) {
+        // Refresh is read-only. Clear previous athlete evidence before any IO.
+        history=null
+        machineRoster=null
+        favoriteNotice=null
         val verified=withContext(Dispatchers.IO) {
-            runCatching {host.reviewVerifiedKotlinHistory()}.getOrElse {
+            try { host.reviewVerifiedKotlinHistory() }
+            catch(cancelled:CancellationException) { throw cancelled }
+            catch(_:Exception) {
                 NativeKotlinMixedHistoryReadResult.Rejected(
                     NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
             }
         }
+        // Failure to load optional gym labels cannot trap verified History
+        // indefinitely in its loading state.
         machineRoster=withContext(Dispatchers.IO) {
-            (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+            try {
+                (host.readMachineRoster() as? NativeMachineRosterResult.Saved)?.snapshot
+            } catch(cancelled:CancellationException) { throw cancelled }
+            catch(_:Exception) { null }
         }
         val loadedFavorites=if(verified is NativeKotlinMixedHistoryReadResult.Review) {
             withContext(Dispatchers.IO) {
-                NativeExerciseFavorites.read(preferences,
-                    verified.timeline.athleteId,
-                    NativeExerciseFavorites.loggedIds(verified.timeline).toSet())
+                runCatching {
+                    NativeExerciseFavorites.read(preferences,
+                        verified.timeline.athleteId,
+                        NativeExerciseFavorites.loggedIds(verified.timeline).toSet())
+                }.getOrDefault(emptyList())
             }
         } else emptyList()
         // Publish the matching history and its current preference together;
@@ -132,6 +151,20 @@ internal fun NativeKotlinExerciseHistorySheet(
             verticalArrangement=Arrangement.spacedBy(PursuitSpace.md)) {
             PageHeading("EXERCISE HISTORY",kotlinExerciseLabel(exerciseId),
                 "Full training history · corrections included")
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+                TextButton(
+                    enabled=history!=null && !favoriteSaving,
+                    onClick={
+                        history=null
+                        machineRoster=null
+                        refreshVersion++
+                    },
+                    modifier=Modifier.heightIn(min=48.dp)
+                ) {
+                    Text(if(history is NativeKotlinMixedHistoryReadResult.Rejected)
+                        "Retry history" else "Refresh history")
+                }
+            }
             when(val result=history) {
                 null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 is NativeKotlinMixedHistoryReadResult.Rejected ->
@@ -193,6 +226,12 @@ internal fun NativeKotlinExerciseHistorySheet(
                     val rows=remember(result.timeline.athleteId,
                         result.timeline.manifestRevision,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
+                    }
+                    val sessionManifests=remember(result.timeline.athleteId,
+                        result.timeline.manifestRevision) {
+                        result.timeline.completions.associate {
+                            it.manifest.completionOrder to it.manifest
+                        }
                     }
                     fun historyMachine(row:ExerciseVisitDisplay)=
                         PhysicalMachineHistoryKey(row.gymId,
@@ -290,9 +329,12 @@ internal fun NativeKotlinExerciseHistorySheet(
                                     val failed=visits.count {
                                         it.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT
                                     }
+                                    val sessionTitle=sessionManifests[row.sessionOrder]?.let {
+                                        nativeExerciseHistorySessionTitle(it,historyZone,historyLocale)
+                                    } ?: "Session ${row.sessionOrder} · Date not recorded"
                                     PursuitHistoryStatus(
-                                        "Session ${row.sessionOrder} · ${visits.size} entries shown",
-                                        "$completed completed · $skipped skipped · $failed failed"
+                                        sessionTitle,
+                                        "${visits.size} entries shown · $completed completed · $skipped skipped · $failed failed"
                                     )
                                 }
                                 PursuitCard {

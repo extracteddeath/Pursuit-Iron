@@ -48,6 +48,17 @@ class NativeKotlinHistoryDatesTest {
         assertEquals(listOf(2L,1L),sections[1].sessions.map{it.manifest.completionOrder})
         assertEquals(listOf(3L),sections.last().sessions.map{it.manifest.completionOrder})
     }
+    @Test fun exerciseVisitHeadersUseRecordedLocalFinishTimesAndPreserveUndatedSessions() {
+        val dated=entry(17,"2026-11-01T00:30:00Z").manifest
+        val ny=nativeExerciseHistorySessionTitle(dated,ZoneId.of("America/New_York"),Locale.US)
+        val utc=nativeExerciseHistorySessionTitle(dated,ZoneId.of("UTC"),Locale.US)
+        assertTrue(ny.startsWith("Session 17 · "))
+        assertTrue(ny.contains("Oct 31"))
+        assertTrue(utc.contains("Nov 1"))
+        assertEquals("Session 18 · Date not recorded",
+            nativeExerciseHistorySessionTitle(entry(18).manifest,ZoneId.of("UTC"),Locale.US))
+        assertNotEquals(ny,utc)
+    }
     @Test fun displayUsesTheRequestedLocaleAndEverySessionRemainsReachable() {
         val sessions=(1L..512L).map{entry(it,"2026-11-14T17:30:00Z")}
         val section=nativeHistoryMonths(sessions,ZoneId.of("UTC")).single()

@@ -30,6 +30,22 @@ jobs:
         run: find verification -name '*-browser-test.mjs' -print0 | xargs -0 -n 1 node --check
       - name: Syntax-check app module before any browser work
         run: node --check modules/App.js
+      - name: Certify Machine A/B shell in a disposable draft checkout
+        if: ${{ github.event.pull_request.number == 649 }}
+        run: |
+          # Full machine-domain tests insist on a hash-certified immutable
+          # PWA shell. This temporary copy is NOT pushed or released.
+          # Finalization of the actual branch happens only if *all* browser
+          # and source gates pass, in the stage-monotonic-build job below.
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file='RELEASE_MANIFEST.json';
+          const manifest=JSON.parse(fs.readFileSync(file,'utf8'));
+          manifest.uiMilestone=`Build ${manifest.build} · In-workout Machine A/B switching`;
+          fs.writeFileSync(file,JSON.stringify(manifest,null,2)+'\n');
+          NODE
+          node scripts/finalize-release.mjs --next-build
+          node scripts/verify-release.mjs
       - name: Verify all UI integration source contracts
         run: node scripts/verify-engine-contracts.mjs integration
 
@@ -72,7 +88,7 @@ jobs:
     # A single release identity is generated ONLY after all seven Chromium
     # shards and the full integration source group pass on the same PR head.
     needs: [source-contracts, ui-browser]
-    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430 || github.event.pull_request.number == 433 || github.event.pull_request.number == 434 || github.event.pull_request.number == 435 || github.event.pull_request.number == 438 || github.event.pull_request.number == 440) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430 || github.event.pull_request.number == 433 || github.event.pull_request.number == 434 || github.event.pull_request.number == 435 || github.event.pull_request.number == 438 || github.event.pull_request.number == 440 || github.event.pull_request.number == 649) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -100,7 +116,9 @@ jobs:
           import fs from 'node:fs';
           const file = 'RELEASE_MANIFEST.json';
           const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-          manifest.uiMilestone = process.env.TARGET_BRANCH === 'ux/b1007-native-choice-navigation'
+          manifest.uiMilestone = process.env.TARGET_BRANCH === 'feature/web-machine-ab-switch-discoverability-20261116'
+            ? `Build ${manifest.build} · In-workout Machine A/B switching and new gym equipment`
+            : process.env.TARGET_BRANCH === 'ux/b1007-native-choice-navigation'
             ? `Build ${manifest.build} · Native workout and shared choice navigation`
             : process.env.TARGET_BRANCH === 'fix/b1006-replay-sparse-history'
             ? `Build ${manifest.build} · Sparse historical progression replay parity`

@@ -4297,4 +4297,202 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
 
+    private fun recoveryOwnerFile() {
+        val payload=java.io.ByteArrayOutputStream().also{stream->
+            java.io.DataOutputStream(stream).use{out->
+                out.writeInt(0x50494F31);out.writeInt(1)
+                out.writeUTF("owner-1");out.writeUTF("athlete-1")
+            }
+        }.toByteArray()
+        Files.write(temp.root.toPath().resolve("local-athlete.bin"),
+            payload+java.security.MessageDigest.getInstance("SHA-256").digest(payload))
+    }
+    private fun futurePhysical(prefix:String)=Files.list(temp.root.toPath()).use {stream->
+        stream.filter{it.fileName.toString().startsWith(prefix) &&
+            it.fileName.toString().endsWith(".bin")}.findFirst().get()
+    }
+    private fun acceptedFutureForRecovery(
+        checkpoint:NativeKotlinFutureActivationApprovalFileStore=approvalCheckpoint()
+    ):NativeFutureActivationApproval {
+        val shown=checkpoint.preview("owner-1","cycle-1","build") as NativeFutureApprovalPreview.Ready
+        return (checkpoint.confirm("owner-1","cycle-1","build",0,shown.fingerprint,true)
+            as NativeFutureApprovalWrite.Committed).approval
+    }
+    private fun approvalInventoryAt(root:java.nio.file.Path):NativeFutureApprovalInventory {
+        val lock=NativeKotlinApprovalRevisionFence(root)
+        val ds=NativeCustomCycleDraftFileStore(root,lock,identity)
+        val src=NativeKotlinCustomAuthoringSourceFileStore(root,lock,identity)
+        val contexts=NativeKotlinFutureBlockContextFileStore(root,lock,identity,ds,src)
+        val rights=NativeKotlinAdaptiveCyclePermissionFileStore(root,lock,identity)
+        val reader=NativeKotlinFutureActivationApprovalFileStore(root,lock,identity,
+            {_,_,_->error("Inventory must never refresh activation evidence")},contexts,ds,src,rights)
+        return reader.inventoryOwner("owner-1")
+    }
+    @Test fun futureRecoveryInventoryKeepsStaleGrantsAndRevisionedRevocations() {
+        readyFutureForSecondConsent()
+        val original=acceptedFutureForRecovery()
+        val saved=approvalInventoryAt(temp.root.toPath()) as NativeFutureApprovalInventory.Verified
+        assertEquals(original,saved.records.single().approval)
+        assertFalse(saved.records.single().revoked)
+        assertEquals(NativeAdaptivePermissionWrite.Committed(3),permissionStore.revoke("owner-1","cycle-1",2))
+        assertFalse((approvalCheckpoint().read("owner-1","cycle-1","build") as NativeFutureApprovalRead.Found).isCurrent)
+        assertEquals(saved,approvalInventoryAt(temp.root.toPath()))
+        assertEquals(NativeFutureApprovalWrite.Revoked(2),approvalCheckpoint().revoke("owner-1","cycle-1","build",1))
+        val revoked=approvalInventoryAt(temp.root.toPath()) as NativeFutureApprovalInventory.Verified
+        assertTrue(revoked.records.single().revoked)
+        assertEquals(2L,revoked.records.single().revision)
+        assertNull(revoked.records.single().approval)
+        active=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertEquals(NativeFutureApprovalInventory.InvalidOrForeign,approvalInventoryAt(temp.root.toPath()))
+    }
+    @Test fun futureRecoveryInventoryRejectsCorruptRenamedPendingAndForeignRecords() {
+        readyFutureForSecondConsent();acceptedFutureForRecovery()
+        val original=futurePhysical("future-activation-")
+        val bytes=Files.readAllBytes(original)
+        for(name in listOf("future-activation-orphan.pending","future-activation-"+"0".repeat(64)+".bin")) {
+            val extra=temp.root.toPath().resolve(name)
+            Files.write(extra,bytes)
+            assertEquals(name,NativeFutureApprovalInventory.InvalidOrForeign,approvalInventoryAt(temp.root.toPath()))
+            Files.delete(extra)
+        }
+        val bad=bytes.copyOf().also{it[it.lastIndex]=(it.last().toInt() xor 1).toByte()}
+        Files.write(original,bad)
+        assertEquals(NativeFutureApprovalInventory.InvalidOrForeign,approvalInventoryAt(temp.root.toPath()))
+        Files.write(original,bytes)
+        // A foreign record with a valid checksum must also fail, even with
+        // the correct hash-based filename for its foreign owner.
+        val input=java.io.DataInputStream(java.io.ByteArrayInputStream(bytes))
+        val raw=ByteArray(input.readInt()).also{input.readFully(it)}
+        val old="owner-1".toByteArray();val foreign="owner-2".toByteArray()
+        val index=(0..raw.size-old.size).first{offset->old.indices.all{raw[offset+it]==old[it]}}
+        foreign.copyInto(raw,index)
+        val forged=java.io.ByteArrayOutputStream().also{stream->java.io.DataOutputStream(stream).use{out->
+            out.writeInt(raw.size);out.write(raw)
+            out.write(java.security.MessageDigest.getInstance("SHA-256").digest(raw))
+        }}.toByteArray()
+        val hash=java.security.MessageDigest.getInstance("SHA-256")
+            .digest("owner-2\u0000cycle-1\u0000build".toByteArray()).joinToString(""){"%02x".format(it.toInt() and 255)}
+        val extra=temp.root.toPath().resolve("future-activation-$hash.bin")
+        Files.write(extra,forged)
+        assertEquals(NativeFutureApprovalInventory.InvalidOrForeign,approvalInventoryAt(temp.root.toPath()))
+        Files.delete(extra)
+        assertTrue(approvalInventoryAt(temp.root.toPath()) is NativeFutureApprovalInventory.Verified)
+        assertArrayEquals(bytes,Files.readAllBytes(original))
+    }
+    @Test fun futureHandoffRecoveryInventoryRequiresEveryPhysicalBarrierToMatchOwner() {
+        assertEquals(NativeFutureHandoffReview.Missing,newHandoff().inventoryOwner("owner-1"))
+        readyFutureForSecondConsent()
+        val approval=acceptedFutureForRecovery()
+        val staged=newHandoff().stage("owner-1","cycle-1","build",1,
+            approval.reviewedFingerprint,approvalCheckpoint(),true)
+        assertTrue(staged.toString(),staged is NativeFutureHandoffReview.Staged)
+        val original=futurePhysical("future-handoff-");val bytes=Files.readAllBytes(original)
+        assertEquals(staged,newHandoff().inventoryOwner("owner-1"))
+        for(name in listOf("future-handoff-"+"0".repeat(64)+".bin","future-handoff-interrupted.pending")) {
+            val extra=temp.root.toPath().resolve(name);Files.write(extra,bytes)
+            assertTrue(newHandoff().inventoryOwner("owner-1") is NativeFutureHandoffReview.Rejected)
+            Files.delete(extra)
+        }
+        Files.write(original,bytes.copyOf().also{it[it.lastIndex]=(it.last().toInt() xor 1).toByte()})
+        assertTrue(newHandoff().inventoryOwner("owner-1") is NativeFutureHandoffReview.Rejected)
+        Files.write(original,bytes)
+        assertTrue(newHandoff().blocksNewIssuance("owner-1"))
+        assertArrayEquals(bytes,Files.readAllBytes(original))
+    }
+    @Test fun stagedCoreRejectsAnOrphanBarrierAndPendingSecondConsent() {
+        readyFutureForSecondConsent();recoveryOwnerFile()
+        val approval=acceptedFutureForRecovery()
+        assertTrue(newHandoff().stage("owner-1","cycle-1","build",1,
+            approval.reviewedFingerprint,approvalCheckpoint(),true) is NativeFutureHandoffReview.Staged)
+        val original=futurePhysical("future-activation-");val bytes=Files.readAllBytes(original)
+        Files.delete(original)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(NativeKotlinStagedCoreRefusal.FUTURE_HANDOFF_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),NativeKotlinOwnerIdentity("owner-1","athlete-1")))
+        Files.write(original,bytes)
+        Files.write(temp.root.toPath().resolve("future-activation-interrupted.pending"),bytes)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(NativeKotlinStagedCoreRefusal.FUTURE_APPROVALS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),NativeKotlinOwnerIdentity("owner-1","athlete-1")))
+    }
+    private fun productionRecoveryCheckpoint():NativeKotlinFutureActivationApprovalFileStore {
+        val root=temp.root.toPath()
+        val ledger=NativeKotlinHistoryManifestFileStore(root)
+        val composer=KotlinNativeJournalFileStore(root)
+        val authority=NativeKotlinApprovalFileAuthority(root,fence,identity)
+        val preflight=NativeKotlinCustomWorkoutPreflight(fence,identity,drafts,sources,store())
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(root,fence,identity,preflight)
+        val issued=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,
+            prepared,preflight,ledger,composer,null,sources)
+        val edits=NativeKotlinCustomSavedCorrectionFileStore(root,fence,identity,issued,ledger)
+        val mixed=NativeKotlinMixedHistoryReadCoordinator(ledger,composer,
+            KotlinNativeSavedCorrectionFileStore(root,composer),issued,authority,identity,fence,edits)
+        val boundary=NativeKotlinFutureBlockActivationPreflight(fence,identity,drafts,
+            futureStore(),mixed,issued,NativeKotlinCustomOutstandingWorkoutInventory(prepared,issued),
+            NativeKotlinComposerActivationInventory(composer,authority))
+        return NativeKotlinFutureActivationApprovalFileStore(root,fence,identity,boundary,
+            futureStore(),drafts,sources,permissionStore)
+    }
+    private fun futureRecoveryRoundTrip(revoked:Boolean) {
+        readyFutureForSecondConsent(realPriorHistory=true);recoveryOwnerFile()
+        val checkpoint=productionRecoveryCheckpoint()
+        val original=acceptedFutureForRecovery(checkpoint)
+        assertEquals(10L,original.historyManifestRevision)
+        assertTrue(newHandoff().stage("owner-1","cycle-1","build",1,
+            original.reviewedFingerprint,checkpoint,true) is NativeFutureHandoffReview.Staged)
+        if(revoked)assertEquals(NativeFutureApprovalWrite.Revoked(2),
+            checkpoint.revoke("owner-1","cycle-1","build",1))
+        val expected=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val before=NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected)
+        assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
+        val facts=before as NativeKotlinStagedCoreAuditResult.Verified
+        assertEquals(9,facts.finishedWorkouts)
+        assertEquals(1,facts.futureActivationApprovals)
+        assertEquals(if(revoked)1 else 0,facts.revokedFutureActivationApprovals)
+        assertEquals(1,facts.stagedFutureHandoffs)
+        val password="future-block-private-recovery-passphrase".toCharArray()
+        val backup=NativeKotlinEncryptedTrainingSnapshot.capture(temp.root.toPath(),fence,expected,
+            {active},{NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected) is NativeKotlinStagedCoreAuditResult.Verified},password)
+        assertTrue(backup.toString(),backup is NativeKotlinTrainingSnapshotResult.Ready)
+        val target=temp.newFolder("clean-future-install").toPath().resolve("kotlin-coach-v1")
+        val result=NativeKotlinCleanStoreRestore.restoreToAbsentStore(target,
+            (backup as NativeKotlinTrainingSnapshotResult.Ready).encrypted,password,expected,
+            {stage,who->NativeKotlinStagedCoreStoreAudit.inspect(stage,who) is NativeKotlinStagedCoreAuditResult.Verified})
+        password.fill('\u0000')
+        assertTrue(result.toString(),result is NativeKotlinCleanRestoreResult.Committed)
+        assertEquals(before,NativeKotlinStagedCoreStoreAudit.inspect(target,expected))
+        assertEquals(approvalInventoryAt(temp.root.toPath()),approvalInventoryAt(target))
+        val coldLock=NativeKotlinApprovalRevisionFence(target)
+        val restored=NativeKotlinFutureActivationHandoffFileStore(target,coldLock,identity,
+            NativeKotlinCustomAuthoringSourceFileStore(target,coldLock,identity))
+        assertTrue(restored.blocksNewIssuance("owner-1"))
+        assertEquals(newHandoff().read("owner-1"),restored.read("owner-1"))
+        if(revoked)assertTrue((approvalInventoryAt(target) as NativeFutureApprovalInventory.Verified).records.single().revoked)
+    }
+    @Test fun encryptedRecoveryKeepsFutureApprovalAndUnresolvedSwitchBarrier()=futureRecoveryRoundTrip(false)
+    @Test fun encryptedRecoveryKeepsRevokedFutureConsentAndUnresolvedSwitchBarrier()=futureRecoveryRoundTrip(true)
+
+    @Test fun stagedCoreRejectsAValidlyEncodedBarrierForDifferentSecondConsent() {
+        readyFutureForSecondConsent();recoveryOwnerFile()
+        val approval=acceptedFutureForRecovery()
+        assertTrue(newHandoff().stage("owner-1","cycle-1","build",1,
+            approval.reviewedFingerprint,approvalCheckpoint(),true) is NativeFutureHandoffReview.Staged)
+        val file=futurePhysical("future-handoff-")
+        val bytes=Files.readAllBytes(file)
+        val input=java.io.DataInputStream(java.io.ByteArrayInputStream(bytes))
+        val raw=ByteArray(input.readInt()).also{input.readFully(it)}
+        val old=approval.reviewedFingerprint.toByteArray()
+        val index=(0..raw.size-old.size).first{offset->old.indices.all{raw[offset+it]==old[it]}}
+        raw[index]=if(raw[index]=='a'.code.toByte())'b'.code.toByte() else 'a'.code.toByte()
+        val changed=java.io.ByteArrayOutputStream().also{stream->java.io.DataOutputStream(stream).use{out->
+            out.writeInt(raw.size);out.write(raw)
+            out.write(java.security.MessageDigest.getInstance("SHA-256").digest(raw))
+        }}.toByteArray()
+        Files.write(file,changed)
+        // The native reader accepts the checksum and grammar; the core audit
+        // must additionally bind that barrier to its real consent record.
+        assertTrue(newHandoff().read("owner-1") is NativeFutureHandoffReview.Staged)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(NativeKotlinStagedCoreRefusal.FUTURE_HANDOFF_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),NativeKotlinOwnerIdentity("owner-1","athlete-1")))
+        assertArrayEquals(changed,Files.readAllBytes(file))
+    }
+
 }

@@ -129,9 +129,20 @@ supported plan/day/cycle may use an incomplete or weaker engine silently.
    revocations with the issued workout, notes, Machine A and coaching
    opt-outs unchanged.
 
+   The staged audit now also inventories every physical future-block second
+   consent and issuance barrier through the normal native decoders. It
+   preserves stale approvals and revisioned revocations without refreshing
+   their authority, refuses foreign/renamed/pending/corrupt files, and checks
+   an unresolved barrier against its exact saved second consent. A later
+   revocation keeps that barrier blocking rather than silently releasing it.
+   Native-file tests encrypt and restore nine actual completed custom
+   workouts with both granted and revoked future consent, cold-reopen the
+   barrier and verify that new issuance remains blocked. Recovered consent
+   never activates a block or bypasses current production preflight.
+
    **No user-facing backup or restore exists yet.** This core audit is
    not the final production verifier: orphan/foreign files outside the
-   covered inventories, future block activation approvals and signoffs,
+   covered inventories, future block contexts, applied-activation intents and signoffs,
    remaining private records and all supported storage versions still
    need full coverage. A future production restore must
    run before constructing an active app host, require explicit user

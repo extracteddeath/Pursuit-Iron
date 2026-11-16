@@ -84,6 +84,23 @@ private data class NativeFutureApprovalDiskRecord(
     val approval:NativeFutureActivationApproval?
 )
 
+/** Stored consent facts only. A recovered approval is never a fresh grant;
+ * read/preview and the activation transaction must still revalidate it. */
+internal data class NativeFutureApprovalInventoryFact(
+    val cycleId:String,
+    val blockId:String,
+    val revision:Long,
+    val approval:NativeFutureActivationApproval?
+) {
+    val revoked:Boolean get()=approval==null
+}
+
+internal sealed interface NativeFutureApprovalInventory {
+    data class Verified(val records:List<NativeFutureApprovalInventoryFact>):
+        NativeFutureApprovalInventory
+    data object InvalidOrForeign:NativeFutureApprovalInventory
+}
+
 /** Scoped, checksummed and atomic. The owner-fence serializes all CAS writers. */
 class NativeKotlinFutureActivationApprovalFileStore internal constructor(
     private val directory:Path,
@@ -394,6 +411,38 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
         }.getOrElse{NativeFutureApprovalRead.Rejected(
             NativeFutureApprovalRefusal.STORAGE_UNAVAILABLE)}
     }
+    /** Scan every physical second-consent record, including stale approvals
+     * and revoked records from retired cycles. Never call evidence() here:
+     * restore must preserve decisions without making them current again. */
+    internal fun inventoryOwner(ownerKey:String):NativeFutureApprovalInventory =
+        runCatching {fence.withOwnerTransaction(ownerKey) {
+            val signed=owner(ownerKey)
+                ?:return@withOwnerTransaction NativeFutureApprovalInventory.InvalidOrForeign
+            if(!Files.exists(directory,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                return@withOwnerTransaction NativeFutureApprovalInventory.Verified(emptyList())
+            require(!Files.isSymbolicLink(directory) &&
+                Files.isDirectory(directory,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+            val physical=Files.list(directory).use {stream->
+                stream.filter{it.fileName.toString().startsWith("future-activation-")}.limit(4097).toList()
+            }
+            require(physical.size<=4096)
+            val names=Regex("^future-activation-[a-f0-9]{64}\\.bin$")
+            val seen=mutableSetOf<Pair<String,String>>()
+            val records=physical.sortedBy{it.fileName.toString()}.map {file->
+                require(names.matches(file.fileName.toString()) &&
+                    !Files.isSymbolicLink(file) &&
+                    Files.isRegularFile(file,java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                val stored=decode(file) ?:error("Missing physical future consent")
+                require(stored.owner==ownerKey && stored.athlete==signed.athleteId &&
+                    path(ownerKey,stored.cycle,stored.block)==file &&
+                    seen.add(stored.cycle to stored.block))
+                NativeFutureApprovalInventoryFact(stored.cycle,stored.block,
+                    stored.revision,stored.approval)
+            }
+            require(owner(ownerKey)==signed)
+            NativeFutureApprovalInventory.Verified(records)
+        }}.getOrElse{NativeFutureApprovalInventory.InvalidOrForeign}
+
     /** Revisioned tombstone prevents stale user callbacks restoring consent. */
     fun revoke(
         ownerKey:String,cycleId:String,blockId:String,expectedRevision:Long

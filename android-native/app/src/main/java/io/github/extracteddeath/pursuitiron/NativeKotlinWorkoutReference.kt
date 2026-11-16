@@ -109,9 +109,7 @@ internal fun PursuitUseLastCompletedSet(
     if(mode!=WorkoutReferenceMode.LAST)return
     val actual=WorkoutLastDraftDomain.reviewedActual(history,key,currentLoad)
         ?:return
-    val weight=actual.load?.let{
-        "${it.stripTrailingZeros().toPlainString()} ${actual.unit?.name?.lowercase().orEmpty()}"
-    } ?: "bodyweight"
+    val weight=kotlinActualLoadLabel(actual,currentLoad)
     OutlinedButton(
         modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
         enabled=enabled,

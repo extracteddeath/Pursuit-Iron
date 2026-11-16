@@ -21,9 +21,7 @@ internal data class NativeWorkoutInfoSet(
 
 private fun infoLoad(load:DraftSetLoad):String=when(load) {
     DraftSetLoad.ExplicitBodyweight -> "Bodyweight · no external load"
-    is DraftSetLoad.Verified ->
-        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"+
-            " · ${kotlinLoadBasisLabel(load.basis)}"
+    is DraftSetLoad.Verified -> kotlinIssuedLoadLabel(load)
 }
 
 private fun infoReps(reps:RepBand):String =

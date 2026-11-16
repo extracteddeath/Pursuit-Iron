@@ -66,17 +66,11 @@ private fun exerciseHistoryRows(
     }
 }
 
-private fun historyLoadLabel(load:DraftSetLoad):String=when(load) {
-    is DraftSetLoad.Verified ->
-        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()}"
-    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-}
+private fun historyLoadLabel(load:DraftSetLoad):String=kotlinIssuedLoadLabel(load)
 
-private fun actualLabel(actual:KotlinPerformedSet?):String {
+private fun actualLabel(actual:KotlinPerformedSet?,issuedLoad:DraftSetLoad):String {
     if(actual==null)return "No performed value"
-    val weight=actual.load?.let {
-        "${it.stripTrailingZeros().toPlainString()} ${actual.unit?.name?.lowercase().orEmpty()}"
-    } ?: "Bodyweight"
+    val weight=kotlinActualLoadLabel(actual,issuedLoad)
     return "$weight × ${actual.reps} reps · "+
         (actual.actualRir?.let{"$it RIR"} ?: "RIR not reported")
 }
@@ -327,9 +321,9 @@ internal fun NativeKotlinExerciseHistorySheet(
                                     Text(when(row.outcome) {
                                         KotlinJournalSetOutcome.SKIPPED -> "Skipped · no performed set"
                                         KotlinJournalSetOutcome.FAILED_ATTEMPT ->
-                                            "Failed attempt · ${actualLabel(row.actual)}"
+                                            "Failed attempt · ${actualLabel(row.actual,row.issuedLoad)}"
                                         KotlinJournalSetOutcome.COMPLETED ->
-                                            "Actual · ${actualLabel(row.actual)}"
+                                            "Actual · ${actualLabel(row.actual,row.issuedLoad)}"
                                     },style=MaterialTheme.typography.bodyMedium)
                                     Text(machineLabel(historyMachine(row)),
                                         style=MaterialTheme.typography.bodySmall,

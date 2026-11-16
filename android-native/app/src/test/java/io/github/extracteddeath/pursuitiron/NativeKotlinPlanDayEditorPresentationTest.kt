@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftReadResult
 import org.junit.Assert.*
 import org.junit.Test
 

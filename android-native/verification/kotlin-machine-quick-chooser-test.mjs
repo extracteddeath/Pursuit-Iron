@@ -22,11 +22,15 @@ assert.match(picker,/onSelect\(machine\.id\)/);
 // Selection and add-now remain visible when the CAS save rejects or partially
 // commits; only a newly published, verified station choice dismisses the sheet.
 const savedAcknowledgement=picker.slice(
-    picker.indexOf('LaunchedEffect(selectedId,config.machines)'),
-    picker.indexOf('    OutlinedButton(',picker.indexOf('LaunchedEffect(selectedId,config.machines)')));
+    picker.indexOf('LaunchedEffect(selectedId,config.machines,acknowledgedCreatedMachineId)'),
+    picker.indexOf('    OutlinedButton(',picker.indexOf('LaunchedEffect(selectedId,config.machines,acknowledgedCreatedMachineId)')));
 assert.match(savedAcknowledgement,/pendingChoice!=null && selectedId==pendingChoice/);
 assert.match(savedAcknowledgement,/config\.machines\.size>creation\.second/);
 assert.match(savedAcknowledgement,/selectedId!=creation\.first/);
+assert.match(savedAcknowledgement,/acknowledgedCreatedMachineId==selectedId/);
+assert.match(picker,/createdMachineId=result\.choice\.machines\[exerciseId\]/);
+for(const screen of [generated,custom])
+  assert.match(screen,/acknowledgedCreatedMachineId=machineChoices\.createdMachineId/);
 assert.match(savedAcknowledgement,/config\.machines\.any\{it\.id==selectedId\}/);
 assert.match(savedAcknowledgement,/open=false/);
 assert.match(savedAcknowledgement,/pendingCreation=null/);

@@ -22,10 +22,17 @@ internal object NativeSupersetRoundReview {
 
     fun reviewVisit(journal:CustomWorkoutJournalDraft,
         set:CustomWorkoutSetSnapshot):CustomWorkoutVisitKey? {
-        val unresolved=CustomWorkoutExecutionDomain.unresolvedVisit(journal,set)
+        // The engine owns which visits can actually appear. Only an
+        // already-triggered, still-unrecorded follow-up supersedes the
+        // main-set review target; do not call an engine-internal helper
+        // across module boundaries or fabricate future amplifier visits.
+        val visible=CustomWorkoutVisitFocusDomain.visibleOrder(journal).toSet()
         val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
-        return (unresolved ?:main).takeIf {
-            it in CustomWorkoutVisitFocusDomain.visibleOrder(journal)
+        val follow=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)
+        return when {
+            follow in visible && follow !in journal.effectiveVisits -> follow
+            main in visible -> main
+            else -> null
         }
     }
 

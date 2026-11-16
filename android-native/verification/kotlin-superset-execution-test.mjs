@@ -75,6 +75,6 @@ assert.match(screen,/CustomWorkoutVisitFocusDomain\.visibleOrder\(current\)/);
 assert.match(supersetSheet,/CustomWorkoutExecutionDomain\.orderedSets\(journal\.snapshot\)/);
 assert.match(supersetSheet,/CustomWorkoutExecutionDomain\.roundIsResolved\(journal,round\)/);
 assert.match(supersetSheet,/CustomWorkoutVisitFocusDomain\.visibleOrder\(journal\)/);
-assert.match(supersetSheet,/CustomWorkoutExecutionDomain\.unresolvedVisit\(journal,set\)/);
+assert.match(supersetSheet,/follow in visible && follow !in journal\.effectiveVisits/);
 assert.doesNotMatch(supersetSheet,/host\.|\.finish\(|\.record\(|\.save\(/);
 console.log('PASS Kotlin superset execution, source/revision-checked editing and optional read-only partner ideas');

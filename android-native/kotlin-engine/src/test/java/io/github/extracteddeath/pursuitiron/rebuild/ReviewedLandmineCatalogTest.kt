@@ -21,7 +21,7 @@ class ReviewedLandmineCatalogTest {
 
     @Test fun exactSourceIdsRequireTheirAnchoredStationAndKeepIndependentPracticeIdentity() {
         assertEquals(ids,entries.map{it.legacyCuratedId}.toSet())
-        assertEquals(329,StarterExerciseTranche.entries().size)
+        assertEquals(327,StarterExerciseTranche.entries().size)
         for(entry in entries) {
             assertEquals(RepBand(8,12),entry.practicalRepBand)
             assertEquals("landmine-station",entry.movement.equipmentId)

@@ -8411,95 +8411,6 @@
       }
     },
     {
-      "id": "lat-raise",
-      "source": {
-        "movementFamily": "lateral_raise",
-        "equipment": [
-          "dumbbell"
-        ],
-        "practicalReps": [
-          12,
-          20
-        ],
-        "source": "legacy_v661"
-      },
-      "review": {
-        "family": "lateral_raise",
-        "variant": "legacy-dumbbell-raise",
-        "pattern": "ISOLATION",
-        "role": "ACCESSORY",
-        "focus": "press",
-        "implement": "dumbbell-rack",
-        "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [],
-        "attachment": null,
-        "direct": "SIDE_DELTS",
-        "indirect": [],
-        "note": "Source legacy dumbbell lateral raise uses independently calibrated per-hand dumbbells. It retains a separate exact web exercise ID from the curated dumbbell variant; no historical weights or credits are transferred."
-      }
-    },
-    {
-      "id": "db-curl",
-      "source": {
-        "movementFamily": "elbow_flexion",
-        "equipment": [
-          "dumbbell"
-        ],
-        "practicalReps": [
-          8,
-          12
-        ],
-        "source": "legacy_v661"
-      },
-      "review": {
-        "family": "elbow_flexion",
-        "variant": "legacy-dumbbell-curl",
-        "pattern": "ISOLATION",
-        "role": "ACCESSORY",
-        "focus": "pull",
-        "implement": "dumbbell-rack",
-        "basis": "DUMBBELL_PER_HAND",
-        "fixtures": [],
-        "attachment": null,
-        "direct": "BICEPS",
-        "indirect": [],
-        "note": "The legacy dumbbell-curl source ID requires separately confirmed per-hand dumbbell mass. Biceps receive direct provisional credit without silently crediting brachialis or reusing another curl exercise's progression."
-      }
-    },
-    {
-      "id": "bw-pullup",
-      "source": {
-        "movementFamily": "vertical_pull",
-        "equipment": [
-          "pullup"
-        ],
-        "practicalReps": [
-          5,
-          12
-        ],
-        "source": "legacy_v661"
-      },
-      "review": {
-        "family": "vertical_pull",
-        "variant": "legacy-overhand-bodyweight",
-        "pattern": "VERTICAL_PULL",
-        "role": "PRIMARY",
-        "focus": "pull",
-        "implement": null,
-        "basis": null,
-        "fixtures": [
-          "pullup-bar"
-        ],
-        "attachment": null,
-        "direct": "LATS",
-        "indirect": [
-          "BICEPS:0.5",
-          "TRAPS:0.25"
-        ],
-        "note": "Legacy pull-up requires an explicitly verified stable pull-up bar and opted-in unweighted repetitions. An assisted or externally weighted version needs a separate physical load basis, and previous pull-up identities never grant shared progression."
-      }
-    },
-    {
       "id": "prone-rear-delt-raise",
       "source": {
         "movementFamily": "rear_delt",
@@ -8527,6 +8438,35 @@
           "TRAPS:0.25"
         ],
         "note": "Source-defined prone rear-delt raises are unweighted controlled repetitions, not dumbbell, cable or machine sets. Optional provisional trap contribution remains separate and no phantom external load or machine history is inferred."
+      }
+    },
+    {
+      "id": "cable-serratus",
+      "source": {
+        "movementFamily": "core",
+        "equipment": [
+          "cable"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661"
+      },
+      "sourceSubregion": "serratus",
+      "review": {
+        "family": "scapular_protraction",
+        "variant": "cable-single-handle-serratus-pull",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "cable-station",
+        "basis": "CABLE_STACK",
+        "fixtures": [],
+        "attachment": "single-handle",
+        "direct": "SERRATUS_ANTERIOR",
+        "indirect": [],
+        "note": "Source-listed cable serratus pull requires a confirmed single cable handle and exact cable-stack calibration. Legacy generic core credit is provisionally mapped only to the serratus subregion; no abdominal-set double credit or transfer from other cable exercises."
       }
     }
   ]

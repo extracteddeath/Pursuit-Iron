@@ -27,7 +27,6 @@ import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeR
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeApprovalWriteResult
-import io.github.extracteddeath.pursuitiron.rebuild.KotlinShortSessionStatus
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -518,7 +517,9 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedTimeBudget by rememberSaveable {mutableStateOf<Int?>(45)}
+    var selectedTimeBudget by rememberSaveable {
+        mutableStateOf<Int?>(NativeKotlinTimeBudgetPolicy.initialSelectionMinutes)
+    }
     var timePreview by remember(host) {
         mutableStateOf<NativeKotlinTimeLimitChoiceReview?>(null)
     }
@@ -556,7 +557,7 @@ private fun NativeKotlinCandidateTrainEntry(
                     val id=host.currentlyApprovedKotlinWorkoutId()
                     if(id==null)null
                     else host.reviewCurrentKotlinShortSession(
-                        id,selectedTimeBudget?:45)
+                        id,NativeKotlinTimeBudgetPolicy.previewMinutes(selectedTimeBudget))
                 }.getOrNull()
             }
             // A locked issued session displays ITS saved choice, not the
@@ -776,13 +777,16 @@ private fun NativeKotlinCandidateTrainEntry(
                         )
                     }
                 }
-                val available=timePreview
-                val status=available?.proposal?.status
-                val mayStart=available?.alreadyIssued==true ||
-                    selectedTimeBudget==null ||
-                    status==KotlinShortSessionStatus.ALREADY_FITS ||
-                    status==KotlinShortSessionStatus.READY_FOR_ATHLETE_REVIEW
-                if(timePreviewBusy) {
+                // A budget switch must never show or accept a preview
+                // fetched for a different selection (including a late reply).
+                val available=timePreview?.takeIf {
+                    NativeKotlinTimeBudgetPolicy.reviewMatchesSelection(
+                        selectedTimeBudget,it.previewedMinutes)
+                }
+                val mayStart=NativeKotlinTimeBudgetPolicy.mayOpen(
+                    selectedTimeBudget,available?.proposal?.status,
+                    available?.alreadyIssued==true)
+                if(timePreviewBusy || (timePreview!=null && available==null)) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     Text("Checking the current approved workout…",
                         style=MaterialTheme.typography.bodySmall)

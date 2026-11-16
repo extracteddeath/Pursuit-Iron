@@ -1631,6 +1631,16 @@ internal class NativeKotlinCustomCycleController(
             draft, draft.revision, blockId, weekday, label, purpose)
     }
 
+    /** User-confirmed draft-only removal with existing owner-CAS, revoke
+     * prior consent, persist Undo and invalidate all former coach reviews. */
+    fun removeReviewedDay(review:NativePlanDayRemovalReview) = edit { draft ->
+        NativeKotlinPlanStructureRemoval.confirmedDay(draft,review)
+    }
+
+    fun removeReviewedBlock(review:NativePlanBlockRemovalReview) = edit { draft ->
+        NativeKotlinPlanStructureRemoval.confirmedBlock(draft,review)
+    }
+
     fun renameDay(blockId: String, weekday: Int, label: String) = edit { draft ->
         CustomCycleBuilderDomain.renameDay(
             draft, draft.revision, blockId, weekday, label)

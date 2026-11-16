@@ -63,7 +63,7 @@ internal fun NativeKotlinPlanDayEditor(
     onEditExercise:(String)->Unit,onSwapExercise:(String)->Unit,
     onMoveExercise:(String,Int)->Unit,onEditSuperset:(String?)->Unit,
     onRemoveExercise:(String)->Unit,onMoveToDay:(String)->Unit,
-    onEditDay:()->Unit,onAddExercise:()->Unit
+    onEditDay:()->Unit,onAddExercise:()->Unit,onRemoveDay:()->Unit
 ) {
     if(!nativePlanDayIsCurrent(draft,block,day)) {
         PursuitEmptyState("Program changed",
@@ -191,4 +191,8 @@ internal fun NativeKotlinPlanDayEditor(
                 modifier=m.heightIn(min=48.dp)){Text("Edit day")}
         }
     )
+    TextButton(onClick=onRemoveDay,enabled=!busy,
+        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+        Text("Remove training day")
+    }
 }

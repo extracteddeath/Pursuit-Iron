@@ -20,7 +20,7 @@ internal fun NativeKotlinPlanEditorNavigator(
     onToggleBlock:(String)->Unit,onSelectDay:(String?)->Unit,
     onEditBlock:(String)->Unit,onDuplicateBlock:(String)->Unit,
     onMoveBlock:(String,Int)->Unit,onAddDay:(String)->Unit,
-    onAddBlock:()->Unit,
+    onRemoveBlock:(String)->Unit,onAddBlock:()->Unit,
     dayContent:@Composable (CustomTrainingBlock,CustomTrainingDay)->Unit
 ) {
     draft.blocks.forEachIndexed { index, block ->
@@ -50,6 +50,11 @@ internal fun NativeKotlinPlanEditorNavigator(
                             enabled = !busy && index < draft.blocks.lastIndex) {
                             Text("Later")
                         }
+                        if(draft.blocks.size>1)TextButton(
+                            onClick={onRemoveBlock(block.blockId)},
+                            enabled=!busy,
+                            modifier=Modifier.heightIn(min=48.dp)
+                        ) {Text("Remove block")}
                     }
                     block.days.sortedBy { it.weekday }.forEach { day ->
                         val dayKey=programDayKey(block.blockId,day.weekday)

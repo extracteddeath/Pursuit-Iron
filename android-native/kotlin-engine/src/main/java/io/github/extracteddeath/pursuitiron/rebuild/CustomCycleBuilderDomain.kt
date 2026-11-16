@@ -544,6 +544,65 @@ object CustomCycleBuilderDomain {
         }
     }
 
+    /**
+     * Explicit deletion of one AUTHORING day, not an issued-workout action.
+     * Exactly that day's future week overrides are removed, never reassigned
+     * by ordinal to the next day. An incomplete empty block remains an editable
+     * draft but cannot be approved until it passes the normal full review.
+     * A saved draft revision and undo receipt guard concurrent writers.
+     */
+    fun removeDay(
+        current:CustomTrainingCycle,
+        expectedRevision:Long,
+        blockId:String,
+        weekday:Int
+    ):CustomCycleBuilderResult {
+        val block=current.blocks.singleOrNull{it.blockId==blockId}
+            ?:return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_BLOCK)
+        if(block.days.count{it.weekday==weekday}!=1)
+            return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_SLOT)
+        val overrides=current.weekOverrides[blockId].orEmpty()
+        if(overrides.any{it.weekInBlock !in 1..block.weeks})
+            return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current,expectedRevision,"remove-training-day") {
+            current.copy(
+                blocks=current.blocks.map{candidate->
+                    if(candidate.blockId!=blockId)candidate
+                    else candidate.copy(days=candidate.days.filterNot{
+                        it.weekday==weekday
+                    })
+                },
+                weekOverrides=current.weekOverrides+
+                    (blockId to overrides.filterNot{it.weekday==weekday})
+            )
+        }
+    }
+
+    /**
+     * Explicit removal of a complete authored phase. The last block cannot
+     * be removed: a saved cycle must retain a viable editing root. All of
+     * its author-only override receipts are deleted with that exact block ID.
+     * Remaining block IDs, rules, days, sets, notes and week exceptions remain
+     * byte-for-byte equal. Global future week indices are recalculated only
+     * by the existing cycle scheduler, never rewritten on old issued records.
+     */
+    fun removeBlock(
+        current:CustomTrainingCycle,
+        expectedRevision:Long,
+        blockId:String
+    ):CustomCycleBuilderResult {
+        if(current.blocks.size<=1)
+            return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.INVALID_INPUT)
+        if(current.blocks.count{it.blockId==blockId}!=1)
+            return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_BLOCK)
+        return edit(current,expectedRevision,"remove-training-block") {
+            current.copy(
+                blocks=current.blocks.filterNot{it.blockId==blockId},
+                weekOverrides=current.weekOverrides.filterKeys{it!=blockId}
+            )
+        }
+    }
+
     /** Rename one author's day without changing its stable schedule or slots. */
     fun renameDay(
         current: CustomTrainingCycle,

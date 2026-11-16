@@ -164,6 +164,22 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             }
         })
     }
+    LaunchedEffect(draft?.cycleId,draft?.revision) {
+        val latest=draft ?:return@LaunchedEffect
+        if(expandedBlockId!=null && latest.blocks.none{
+            it.blockId==expandedBlockId
+        }) {
+            expandedBlockId=latest.blocks.firstOrNull()?.blockId
+            expandedDayKey=latest.blocks.firstOrNull()?.days
+                ?.minByOrNull{it.weekday}?.let{day->
+                    programDayKey(checkNotNull(expandedBlockId),day.weekday)
+                }
+        } else if(expandedDayKey!=null && latest.blocks.none{block->
+            block.days.any{day->
+                programDayKey(block.blockId,day.weekday)==expandedDayKey
+            }
+        })expandedDayKey=null
+    }
     val pageScroll=rememberScrollState()
     LaunchedEffect(draft?.cycleId,showProgramEditor) {
         // Same page, distinct tasks: the full editor should start at its top
@@ -218,6 +234,14 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var editingBlock by remember { mutableStateOf<String?>(null) }
     var editingDay by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var deleteConfirm by remember { mutableStateOf(false) }
+    // Destructive preview state is transient. It is not an approval token,
+    // and cannot survive a different athlete or custom program selection.
+    var removeDayReview by remember(draft?.athleteId,draft?.cycleId) {
+        mutableStateOf<NativePlanDayRemovalReview?>(null)
+    }
+    var removeBlockReview by remember(draft?.athleteId,draft?.cycleId) {
+        mutableStateOf<NativePlanBlockRemovalReview?>(null)
+    }
     var confirmConsent by remember { mutableStateOf(false) }
     var inspectedWeek by rememberSaveable { mutableStateOf("1") }
     var inspectedWeekday by rememberSaveable { mutableIntStateOf(0) }
@@ -317,7 +341,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     supersetEditor=controller.supersetEditRequest(block.blockId,day.weekday,group)
                 },
                 onEditDay={editingDay=block.blockId to day.weekday},
-                onAddExercise={exerciseEditor=Triple(block.blockId,day.weekday,null)})
+                onAddExercise={exerciseEditor=Triple(block.blockId,day.weekday,null)},
+                onRemoveDay={
+                    removeDayReview=NativeKotlinPlanStructureRemoval.day(
+                        current,block.blockId,day.weekday)
+                })
         }
     }
     val renderNavigator:@Composable (Boolean)->Unit={wide->
@@ -339,6 +367,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 onDuplicateBlock=controller::duplicateBlock,
                 onMoveBlock=controller::reorderBlock,
                 onAddDay={addingDayFor=it},onAddBlock={addingBlock=true},
+                onRemoveBlock={blockId->
+                    removeBlockReview=NativeKotlinPlanStructureRemoval.block(
+                        current,blockId)
+                },
                 dayContent=renderDayEditor)
         }
     }
@@ -1500,6 +1532,30 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
 
     val current = draft
     if (current != null) {
+        removeDayReview?.let{review->
+            val stillCurrent=NativeKotlinPlanStructureRemoval.day(
+                current,review.blockId,review.weekday)==review
+            NativeKotlinPlanDayRemovalSheet(
+                review,busy,stillCurrent,
+                onConfirm={
+                    if(stillCurrent && !busy)controller.removeReviewedDay(review)
+                    removeDayReview=null
+                },
+                onDismiss={removeDayReview=null}
+            )
+        }
+        removeBlockReview?.let{review->
+            val stillCurrent=NativeKotlinPlanStructureRemoval.block(
+                current,review.blockId)==review
+            NativeKotlinPlanBlockRemovalSheet(
+                review,busy,stillCurrent,
+                onConfirm={
+                    if(stillCurrent && !busy)controller.removeReviewedBlock(review)
+                    removeBlockReview=null
+                },
+                onDismiss={removeBlockReview=null}
+            )
+        }
         state.weekEditReview?.let {review ->
             NativeKotlinCustomCycleWeekEditSheet(review,busy,
                 onSave={controller.acceptWeekEdit()},

@@ -22,7 +22,8 @@ import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutli
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
-import { addMachineVariant, latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
@@ -11008,53 +11009,23 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         return changed ? out : next;
     });
     const switchPhysicalMachine=(ei,nextId,sourceGym=gymProfile)=>{
-        const row=dataRef.current[ei];
-        if(!row || !sourceGym || sourceGym.id!==sessionGymId)
-            return {ok:false,message:'The workout gym is unavailable. Choose the correct gym first.'};
-        let chosen;
-        try {chosen=resolveMachineVariant(sourceGym,row.id,nextId);}
-        catch(error){return {ok:false,message:String(error?.message||'Unknown machine')};}
-        if(chosen.active===false || chosen.missing)
-            return {ok:false,message:'This machine is no longer active at this gym.'};
-        if(row.machineInstanceId===nextId)return {ok:true};
-        const last=latestMachineSet(history,{
-            gymId:sessionGymId,exerciseId:row.id,machineInstanceId:nextId,dayId:day.id});
-        const reference=last?toUnit(last.weight,last.unit||unit,unit):null;
-        setData(rows=>rows.map((item,i)=>{
-            if(i!==ei)return item;
-            return {...item,machineInstanceId:nextId,sets:item.sets.map(set=>{
-                if(set.done)return set; // completed set retains its original physical machine
-                // A different weight stack must never inherit another machine's
-                // attempted load or silently lower a future program target.
-                const weight=set.warm||set.sub?'':reference==null?''
-                    :String(Math.round(reference*1000)/1000);
-                return {...set,machineInstanceId:nextId,weight,auto:false,
-                    valueOwner:'user',suggested:undefined,hint:undefined,
-                    target:{...set.target,w:weight}};
-            })};
-        }));
+        const scope={gym:sourceGym,sessionGymId,nextId,history,dayId:day.id,unit};
+        const check=chooseWorkoutPhysicalMachine(dataRef.current[ei],scope);
+        if(!check.ok)return check;
+        setData(rows=>rows.map((row,i)=>i!==ei?row:
+            chooseWorkoutPhysicalMachine(row,scope).row??row));
         return {ok:true};
     };
     const addPhysicalMachineNow=(ei,name,makeDefault=false)=>{
         const row=dataRef.current[ei];
-        if(!row || !gymProfile || gymProfile.id!==sessionGymId ||
-            !isMachineLike(EX_BY_ID[row.id]?.equip) || !onSaveGymMachineVariant)
+        if(!gymProfile || gymProfile.id!==sessionGymId || !onSaveGymMachineVariant)
             return {ok:false,message:'Choose your workout gym before adding a machine.'};
-        const instance={
-            id:`machine_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,10)}`,
-            label:String(name||'').trim(),active:true
-        };
-        let nextGym;
-        try { nextGym=addMachineVariant(gymProfile,row.id,instance,makeDefault); }
-        catch(error){return {ok:false,message:String(error?.message||'Invalid machine')};}
-        // Gym state is owned by the root persisted store, not by a second
-        // workout-only catalog. Save its exact exercise-specific config first.
-        const written=onSaveGymMachineVariant(
-            sessionGymId,row.id,nextGym.machineVariants[row.id]);
-        if(!written)return {ok:false,message:'Could not save this machine at the active gym.'};
-        // The newly added machine isn't present in gymProfile until the parent
-        // rerenders. Resolve it from our validated NEXT gym, not stale props.
-        return switchPhysicalMachine(ei,instance.id,nextGym);
+        const result=createWorkoutPhysicalMachine(gymProfile,row?.id,name,makeDefault);
+        if(!result.ok)return result;
+        if(!onSaveGymMachineVariant(sessionGymId,row.id,
+            result.nextGym.machineVariants[row.id]))
+            return {ok:false,message:'Could not save this machine at the active gym.'};
+        return switchPhysicalMachine(ei,result.id,result.nextGym);
     };
     const [exIdx, setExIdx] = useState(() => Math.max(0, Math.min(data.length - 1, Number.isInteger(liveMatch?.exIdx) ? liveMatch.exIdx : 0)));
     const workoutRoot = useRef(null);

@@ -839,13 +839,13 @@ private fun NativeKotlinCandidateTrainEntry(
                         val remainingWorking=review.exerciseImpacts.sumOf {
                             it.retainedWorkingSets
                         }
-                        Text("$" + "{remainingWorking} of $" + "{originalWorking} working sets retained · $" + "{review.omittedWorkingSets} omitted",
+                        Text("$remainingWorking of $originalWorking working sets retained · ${review.omittedWorkingSets} omitted",
                             style=MaterialTheme.typography.labelLarge)
                         changedImpacts.forEach {impact->
                             Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
                                 Text(kotlinExerciseLabel(impact.exerciseId),
                                     style=MaterialTheme.typography.titleSmall)
-                                Text("$" + "{impact.retainedWorkingSets} of $" + "{impact.originalWorkingSets} sets kept · $" + "{impact.omittedWorkingSets} omitted",
+                                Text("${impact.retainedWorkingSets} of ${impact.originalWorkingSets} sets kept · ${impact.omittedWorkingSets} omitted",
                                     style=MaterialTheme.typography.bodySmall,
                                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }

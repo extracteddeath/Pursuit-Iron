@@ -23,4 +23,19 @@ assert.doesNotMatch(history,/Machine \$\{key\.machineId\}|\$\{row\.gymId\}|\$\{k
 assert.doesNotMatch(records,/Machine \$\{key\.machineInstanceId\}|Text\("\$\{key\.gymId\}/);
 assert.match(standards,/machineRoster=machineRoster,\s*onOpenHistory/);
 assert.match(workflow,/node android-native\/verification\/kotlin-machine-station-label-test\.mjs/);
+const gymEditor=readFileSync(root+'NativeKotlinMachineAlternativesPanel.kt','utf8');
+// Gym setup should foreground adding or selecting a physical station, not
+// force three advanced calibration inputs per saved machine onto every screen.
+assert.match(gymEditor,/var showStackEditor by rememberSaveable\(gymId,machine\.id\)/);
+assert.match(gymEditor,/if\(showStackEditor\) \{\s*Row\(/);
+assert.match(gymEditor,/var showNewStackCalibration by rememberSaveable\(gymId,exerciseId\)/);
+assert.match(gymEditor,/if\(showNewStackCalibration\) \{\s*OutlinedTextField\(/);
+assert.match(gymEditor,/if\(showNewStackCalibration\) increment else null/);
+assert.match(gymEditor,/if\(showNewStackCalibration\) minimum else null/);
+assert.match(gymEditor,/if\(showNewStackCalibration\) maximum else null/);
+assert.match(gymEditor,/!showNewStackCalibration \|\| \(incrementValid && stackValid\)/);
+assert.match(gymEditor,/val used=saved\.machines\.map/);
+assert.match(gymEditor,/LaunchedEffect\(gymId,exerciseId,roster\?\.revision\)/);
+assert.match(gymEditor,/if\(label\.trim\(\)\.lowercase\(\) in existing\)/);
+assert.match(gymEditor,/Text\("Add physical machine"\)/);
 console.log('PASS machine stations: saved labels or stable private ID aliases, same-gym scope');

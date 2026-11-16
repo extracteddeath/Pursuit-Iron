@@ -1,6 +1,8 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Insights
@@ -88,6 +90,13 @@ internal fun NativeKotlinProfileScreen(
     var editNameOwner by rememberSaveable{mutableStateOf<String?>(null)}
     var draftName by rememberSaveable{mutableStateOf("")}
     var editingName by rememberSaveable{mutableStateOf(false)}
+    var sectionLayout by remember(host) {mutableStateOf(NativeProfileLayout.DEFAULT)}
+    var sectionLayoutOwner by remember(host) {mutableStateOf<String?>(null)}
+    var editingSections by rememberSaveable {mutableStateOf(false)}
+    var editSectionsOwner by remember {mutableStateOf<String?>(null)}
+    // Keep a versioned text draft across rotation; saving remains explicit.
+    var draftLayoutRaw by rememberSaveable {mutableStateOf(NativeProfileLayout.DEFAULT.encode())}
+    val draftSections=NativeProfileLayout.decode(draftLayoutRaw)
     LaunchedEffect(host,refresh) {
         setup=null
         history=null
@@ -98,6 +107,20 @@ internal fun NativeKotlinProfileScreen(
         history=results.second
     }
     val current=(setup as? NativeSavedSetupResume.Ready)?.setup
+    // Local display preference only. The athlete's workout and program
+    // history are independent of this custom layout.
+    LaunchedEffect(current?.athleteProfileId) {
+        sectionLayoutOwner=null
+        editingSections=false
+        editSectionsOwner=null
+        draftLayoutRaw=NativeProfileLayout.DEFAULT.encode()
+        val owner=current?.athleteProfileId
+        sectionLayout=if(owner==null) NativeProfileLayout.DEFAULT
+            else NativeProfileLayout.decode(prefs.getString("layout:$owner",null))
+        sectionLayoutOwner=owner
+    }
+    val visibleLayout=if(sectionLayoutOwner==current?.athleteProfileId)
+        sectionLayout else NativeProfileLayout.DEFAULT
     LaunchedEffect(current?.athleteProfileId) {
         displayNameOwner=null
         val athleteId=current?.athleteProfileId
@@ -192,87 +215,113 @@ internal fun NativeKotlinProfileScreen(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        when(val read=setup) {
-            null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-            is NativeSavedSetupResume.Rejected ->
-                PursuitEmptyState("Training setup unavailable",read.reason,
-                    "Open Plan",onPlan)
-            is NativeSavedSetupResume.Ready -> {
-                val athlete=read.setup
-                PursuitCard {
-                    PursuitSectionHeading("Training preferences",
-                        "Your saved, reviewed setup · changes belong in program review.")
-                    PursuitMetricStrip(listOf(
-                        "Goal" to profileText(athlete.goal),
-                        "Experience" to profileText(athlete.experience),
-                        "Schedule" to athlete.trainingWeekdays.sorted().joinToString(" / ") {
-                            weekdays.getOrElse(it){"Day"}
-                        }
-                    ))
-                    Text("Split · ${profileSplit(athlete.split)}",
-                        style=MaterialTheme.typography.bodyMedium)
-                    Text("Session preference · ${athlete.sessionTimeBucket.minimumMinutes}"+
-                        (athlete.sessionTimeBucket.preferredMaximumMinutes?.let{
-                            "–$it min"
-                        }?:" min or longer"),
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Gym · ${athlete.gym.confirmedStock.size} verified load sources · "+
-                        "${athlete.gym.availableFacilities.size} facilities",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        PursuitSectionHeading("Your progress",
-            "Strength Standards and workout records from your verified training.")
-        NativeKotlinProfileMilestonesPanel(profileProgress,current?.athleteProfileId)
-        NativeKotlinStrengthClubPanel(strengthClub,onOpenStandards=onProgress)
-        if(current!=null && timeline?.athleteId==current.athleteProfileId &&
-            profileProgress!=null) {
-            val shareFavoriteLabels=if(favoriteExercisesOwner==current.athleteProfileId)
-                favoriteExercises.map(::kotlinExerciseLabel)
-            else emptyList()
-            NativeKotlinProfileSharePanel(
-                current.athleteProfileId,profileProgress,displayNameForCurrentAthlete,
-                shareFavoriteLabels,strengthClub?.hasLoggedThousandPoundTotal==true)
-        }
+        // Strength Standards and core training controls cannot be hidden.
         PursuitDestinationRow(
             title="Strength Standards",
             description="Compare your recorded lifts with sourced community benchmarks.",
             onClick=onProgress,
             icon={Icon(Icons.Filled.Insights,contentDescription=null)}
         )
-        if(current!=null) {
-            PursuitSectionHeading("Pinned strength charts",
-                "Your saved favorites are shortcuts, not personal records or achievements.")
-            if(favoriteLifts.isEmpty())Text(
-                "No favorite lifts pinned yet. Open Strength Standards and pin the lifts you follow.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            favoriteLifts.forEach { liftId ->
-                PursuitDestinationRow(
-                    title=NativeStrengthFavorites.title(liftId),
-                    description="Open this lift's verified estimated strength trend.",
-                    onClick={onProgressLift(liftId)},
-                    icon={Icon(Icons.Filled.Star,contentDescription=null)}
-                )
-            }
-        }
-        if(current!=null && timeline?.athleteId==current.athleteProfileId) {
-            PursuitSectionHeading("Pinned exercise histories",
-                "Your ordered favorite movements from completed, verified sessions.")
-            if(favoriteExercises.isEmpty())Text(
-                "Pin any logged exercise in Progress to keep its history here.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            favoriteExercises.forEach {exerciseId ->
-                PursuitDestinationRow(
-                    title=kotlinExerciseLabel(exerciseId),
-                    description="Open full recorded sets, including corrections.",
-                    onClick={onProgressLift(exerciseId)},
-                    icon={Icon(Icons.Filled.Star,contentDescription=null)}
-                )
+        OutlinedButton(
+            onClick={
+                draftLayoutRaw=visibleLayout.encode()
+                editSectionsOwner=current?.athleteProfileId
+                editingSections=true
+            },
+            enabled=current!=null,
+            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+        ) {Text("Customize profile sections")}
+        visibleLayout.order.forEach {section ->
+            if(section !in visibleLayout.hidden) {
+                when(section) {
+                    NativeProfileSection.TRAINING -> {
+                    when(val read=setup) {
+                        null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                        is NativeSavedSetupResume.Rejected ->
+                            PursuitEmptyState("Training setup unavailable",read.reason,
+                                "Open Plan",onPlan)
+                        is NativeSavedSetupResume.Ready -> {
+                            val athlete=read.setup
+                            PursuitCard {
+                                PursuitSectionHeading("Training preferences",
+                                    "Your saved, reviewed setup · changes belong in program review.")
+                                PursuitMetricStrip(listOf(
+                                    "Goal" to profileText(athlete.goal),
+                                    "Experience" to profileText(athlete.experience),
+                                    "Schedule" to athlete.trainingWeekdays.sorted().joinToString(" / ") {
+                                        weekdays.getOrElse(it){"Day"}
+                                    }
+                                ))
+                                Text("Split · ${profileSplit(athlete.split)}",
+                                    style=MaterialTheme.typography.bodyMedium)
+                                Text("Session preference · ${athlete.sessionTimeBucket.minimumMinutes}"+
+                                    (athlete.sessionTimeBucket.preferredMaximumMinutes?.let{
+                                        "–$it min"
+                                    }?:" min or longer"),
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Gym · ${athlete.gym.confirmedStock.size} verified load sources · "+
+                                    "${athlete.gym.availableFacilities.size} facilities",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    }
+                    NativeProfileSection.PROGRESS -> {
+                    PursuitSectionHeading("Your progress",
+                        "Strength Standards and workout records from your verified training.")
+                    NativeKotlinProfileMilestonesPanel(profileProgress,current?.athleteProfileId)
+                    NativeKotlinStrengthClubPanel(strengthClub,onOpenStandards=onProgress)
+                    }
+                    NativeProfileSection.SHARE -> {
+                    if(current!=null && timeline?.athleteId==current.athleteProfileId &&
+                        profileProgress!=null) {
+                        val shareFavoriteLabels=if(favoriteExercisesOwner==current.athleteProfileId)
+                            favoriteExercises.map(::kotlinExerciseLabel)
+                        else emptyList()
+                        NativeKotlinProfileSharePanel(
+                            current.athleteProfileId,profileProgress,displayNameForCurrentAthlete,
+                            shareFavoriteLabels,strengthClub?.hasLoggedThousandPoundTotal==true)
+                    }
+                    }
+                    NativeProfileSection.STRENGTH_FAVORITES -> {
+                    if(current!=null) {
+                        PursuitSectionHeading("Pinned strength charts",
+                            "Your saved favorites are shortcuts, not personal records or achievements.")
+                        if(favoriteLifts.isEmpty())Text(
+                            "No favorite lifts pinned yet. Open Strength Standards and pin the lifts you follow.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        favoriteLifts.forEach { liftId ->
+                            PursuitDestinationRow(
+                                title=NativeStrengthFavorites.title(liftId),
+                                description="Open this lift's verified estimated strength trend.",
+                                onClick={onProgressLift(liftId)},
+                                icon={Icon(Icons.Filled.Star,contentDescription=null)}
+                            )
+                        }
+                    }
+                    }
+                    NativeProfileSection.EXERCISE_FAVORITES -> {
+                    if(current!=null && timeline?.athleteId==current.athleteProfileId) {
+                        PursuitSectionHeading("Pinned exercise histories",
+                            "Your ordered favorite movements from completed, verified sessions.")
+                        if(favoriteExercises.isEmpty())Text(
+                            "Pin any logged exercise in Progress to keep its history here.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        favoriteExercises.forEach {exerciseId ->
+                            PursuitDestinationRow(
+                                title=kotlinExerciseLabel(exerciseId),
+                                description="Open full recorded sets, including corrections.",
+                                onClick={onProgressLift(exerciseId)},
+                                icon={Icon(Icons.Filled.Star,contentDescription=null)}
+                            )
+                        }
+                    }
+                    }
+                }
             }
         }
         PursuitSectionHeading("Training and preferences")
@@ -304,6 +353,62 @@ internal fun NativeKotlinProfileScreen(
             Text("Refresh verified profile")
         }
     }
+    if(editingSections && current!=null &&
+        editSectionsOwner==current.athleteProfileId) AlertDialog(
+        onDismissRequest={editingSections=false},
+        title={Text("Customize profile sections")},
+        text={
+            Column(
+                Modifier.heightIn(max=460.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)
+            ) {
+                Text("Choose and reorder the sections on this device. Your level, Strength Standards and training settings always remain accessible.",
+                    style=MaterialTheme.typography.bodySmall)
+                draftSections.order.forEachIndexed {index,section ->
+                    key(section) {
+                        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Switch(
+                                checked=section !in draftSections.hidden,
+                                onCheckedChange={
+                                    draftLayoutRaw=draftSections.setVisible(section,it).encode()
+                                }
+                            )
+                            Spacer(Modifier.width(PursuitSpace.xs))
+                            Text(section.label,modifier=Modifier.weight(1f),
+                                style=MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement=Arrangement.End) {
+                            TextButton(
+                                onClick={draftLayoutRaw=draftSections.move(section,-1).encode()},
+                                enabled=index>0,
+                                modifier=Modifier.heightIn(min=48.dp)
+                            ) {Text("Move up")}
+                            TextButton(
+                                onClick={draftLayoutRaw=draftSections.move(section,1).encode()},
+                                enabled=index<draftSections.order.lastIndex,
+                                modifier=Modifier.heightIn(min=48.dp)
+                            ) {Text("Move down")}
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton={
+            TextButton(onClick={
+                val owner=current?.athleteProfileId
+                if(owner!=null && editSectionsOwner==owner) {
+                    prefs.edit().putString("layout:$owner",draftSections.encode()).apply()
+                    sectionLayout=draftSections
+                    sectionLayoutOwner=owner
+                }
+                editingSections=false
+            },enabled=editSectionsOwner==current.athleteProfileId) {
+                Text("Save layout")
+            }
+        },
+        dismissButton={TextButton(onClick={editingSections=false}){Text("Discard")}}
+    )
     if(editingName && current!=null && editNameOwner==current.athleteProfileId)AlertDialog(
         onDismissRequest={editingName=false},
         title={Text("Customize profile name")},

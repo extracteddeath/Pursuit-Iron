@@ -27,7 +27,12 @@ data class CustomSwapRankedOption(
     val uniqueDayCoverage: Set<TrainingMuscle>,
     /** Potential overlap from candidate credits, NOT assured without authored working sets. */
     val preservedDayCoverage: Set<TrainingMuscle>,
-    val explanation: String
+    val explanation: String,
+    /** Only source-proven per-week DIRECT exposure. These are observed day
+     * counts, not evidence of effective sets, MEV, MRV or load equivalence. */
+    val otherDirectWeekdaysByMuscle: Map<TrainingMuscle,Int> = emptyMap(),
+    val preservedWeekMuscles: Set<TrainingMuscle> = emptySet(),
+    val weeklyRetentionPriority: Int = 0
 ) {
     val mayTransferWeight:Boolean get()=false
     val mayApplyWithoutReview:Boolean get()=false
@@ -63,7 +68,11 @@ object CustomExerciseSwapRankingDomain {
          * Null = unavailable context; never invent day-wide muscle coverage. */
         otherDayExerciseIds:List<String>?=null,
         /** Explicit working-set evidence for the original slot is required. */
-        sourceHasWorkingSets:Boolean=false
+        sourceHasWorkingSets:Boolean=false,
+        /** Each entry contains working-set exercises on ONE OTHER weekday
+         * in an unchanged, source-reviewed program block. Null means unknown.
+         * Never infer a missing training day from a changed-week override. */
+        otherWeekdayExerciseIds:List<List<String>>?=null
     ):List<CustomSwapRankedOption> {
         // Fail closed on duplicate catalog identities. Do not build a
         // shortlist from invented or unresolved source metadata.
@@ -83,6 +92,21 @@ object CustomExerciseSwapRankingDomain {
             }.toSet()
             directCredits(checkNotNull(source))-otherDirect
         } else emptySet()
+        // A changed gym may no longer offer an older workout movement.
+        // Unknown movement IDs mean no trustworthy weekly coverage facts.
+        val weekKnown=dayCoverageKnown &&
+            otherWeekdayExerciseIds!=null &&
+            otherWeekdayExerciseIds.size<=6 &&
+            otherWeekdayExerciseIds.all{day->
+                day.size<=128 && day.all{it in byId}
+            }
+        val otherWeekDirectDays=if(weekKnown) {
+            uniqueDirect.associateWith{muscle->
+                checkNotNull(otherWeekdayExerciseIds).count{day->
+                    day.any{id->muscle in directCredits(checkNotNull(byId[id]))}
+                }
+            }
+        } else emptyMap()
         val needle=search.trim().take(80)
         val sorted=available.asSequence()
             .filter{it.exerciseId!=sourceExerciseId}
@@ -117,6 +141,17 @@ object CustomExerciseSwapRankingDomain {
                     else -> CustomSwapFit.OTHER_VERIFIED_OPTION
                 }
                 val retained=uniqueDirect.intersect(directCredits(candidate))
+                val weekPreserved=retained.intersect(otherWeekDirectDays.keys)
+                // Factual protection of an observed direct-training day.
+                // More scarcity means a higher ordering priority within
+                // equal movement-family/pattern and day-coverage tiers.
+                val weekPriority=weekPreserved.sumOf{muscle->
+                    when(otherWeekDirectDays.getValue(muscle)) {
+                        0 -> 3
+                        1 -> 2
+                        else -> 1
+                    }
+                }
                 val reasons=mutableListOf<String>()
                 if(samePattern)reasons+="Same reviewed movement pattern"
                 if(sameFamily)reasons+="Same exercise family"
@@ -137,11 +172,27 @@ object CustomExerciseSwapRankingDomain {
                     if(lost.isNotEmpty())reasons+=
                         "Not directly covered by this candidate: "+names(lost)
                 }
+                if(otherWeekDirectDays.isNotEmpty()) {
+                    val sole=weekPreserved.filter{
+                        otherWeekDirectDays.getValue(it)==0
+                    }.toSet()
+                    val repeated=weekPreserved-sole
+                    fun names(muscles:Set<TrainingMuscle>)=muscles.sortedBy{
+                        it.name
+                    }.joinToString(", "){it.name.lowercase().replace('_',' ')}
+                    if(sole.isNotEmpty())reasons+=
+                        "Preserves this week's only observed direct training day for: "+
+                            names(sole)
+                    if(repeated.isNotEmpty())reasons+=
+                        "Keeps one direct training day alongside others for: "+
+                            names(repeated)
+                }
                 if(reasons.isEmpty())reasons+=if(source==null)
                     "Source pattern unavailable; alphabetical verified options"
                 else "Different pattern; review muscle coverage and the session"
                 CustomSwapRankedOption(candidate,fit,shared,sameRole,
-                    uniqueDirect,retained,reasons.joinToString(" · "))
+                    uniqueDirect,retained,reasons.joinToString(" · "),
+                    otherWeekDirectDays,weekPreserved,weekPriority)
             }
             .filter {option->
                 (!samePatternOnly || option.fit in setOf(
@@ -156,6 +207,7 @@ object CustomExerciseSwapRankingDomain {
             .sortedWith(compareBy<CustomSwapRankedOption>{
                 it.fit.ordinal
             }.thenByDescending {it.preservedDayCoverage.size}
+                .thenByDescending {it.weeklyRetentionPriority}
                 .thenByDescending {it.sameRole}
                 .thenByDescending {it.sharedMuscles.size}
                 .thenBy{it.choice.exerciseId})

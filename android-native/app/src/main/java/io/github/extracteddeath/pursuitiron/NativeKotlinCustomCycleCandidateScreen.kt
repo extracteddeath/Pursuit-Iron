@@ -1570,6 +1570,21 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 set.type==DraftSetType.WORKING
                             }
                         }?.map{it.exerciseId},
+                        // Only use the exact unchanged saved block. One
+                        // week-specific override makes future frequency
+                        // uncertain, so revert to the day-only ranking.
+                        otherWeekdayExerciseIds=current.blocks
+                            .singleOrNull{it.blockId==blockId}
+                            ?.takeIf{block->
+                                current.weekOverrides[blockId].orEmpty().isEmpty() &&
+                                    block.days.map{it.weekday}.distinct().size==
+                                        block.days.size
+                            }?.days?.filter{it.weekday!=weekday}
+                            ?.map{otherDay->
+                                otherDay.slots.filter{slot->
+                                    slot.sets.any{set->set.type==DraftSetType.WORKING}
+                                }.map{it.exerciseId}
+                            },
                         scopeLabel="Program day · ${customWeekdays[weekday]} · ${blockId}",
                         onSave={exerciseId,sets,note->
                             controller.swapReviewedExercise(

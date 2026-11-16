@@ -209,8 +209,10 @@ internal fun NativeKotlinWorkoutMachineSelector(
                 OutlinedButton(
                     onClick={
                         // Existing owner-fenced Kotlin writer confirms this choice.
+                        // Keep the sheet visible until the source-backed choice
+                        // revision returns. A failed save must remain actionable
+                        // here, not be hidden behind a prematurely closed sheet.
                         onSelect(machine.id)
-                        open=false
                     },
                     enabled=enabled && machine.active && !current,
                     modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
@@ -253,9 +255,10 @@ internal fun NativeKotlinWorkoutMachineSelector(
                 }
                 Button(
                     onClick={
+                        // Do not erase the draft before the owner-fenced roster
+                        // and workout-choice writes are both confirmed. On partial
+                        // save the athlete can see the new machine and select it.
                         onCreate(newMachineName.trim().ifEmpty{suggestedName},makeDefault)
-                        newMachineName=""
-                        makeDefault=false
                     },
                     enabled=enabled && config.machines.size<32,
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)

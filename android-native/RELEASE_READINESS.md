@@ -133,6 +133,16 @@ and refusal. This does **not** complete production backup/restore or enable an
 import UI. Full coverage, interrupted restore, Android device acceptance,
 migration and the no-APK gate remain open.
 
+**In-workout movement concern replacement (2026-11-16, pending CI):**
+generated/custom Train now exposes a direct replacement-review action
+when the exact current exercise is wholly unstarted. The action uses
+existing owner/gym-verified swap authority and rechecks the journal
+revision before leaving the guide. Historical set records and linked
+custom supersets block swap eligibility; original actuals remain
+untouched. This is not a post-injury auto-prescription or medical diagnosis.
+Source/JVM tests and full Android compile are merge gates; on-device
+acceptance remains open. No APK/AAB.
+
 ## What works in the isolated Kotlin core
 
 **Responsive Plan editor (2026-11-15):** the full-program editor keeps an

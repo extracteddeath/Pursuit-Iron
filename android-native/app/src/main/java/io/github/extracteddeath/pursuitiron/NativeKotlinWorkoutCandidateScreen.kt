@@ -195,6 +195,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var pendingExerciseSkip by remember(workoutId) {
         mutableStateOf<NativeExerciseSkipRequest?>(null)
     }
+    // A temporary navigation choice, not an automatic skip or an injury
+    // diagnosis. Never persist a stale saved-journal revision across relaunch.
+    var pendingConcern by remember(workoutId) {
+        mutableStateOf<NativeMovementConcernRequest?>(null)
+    }
     var pendingFail by remember(workoutId) {
         mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
     }
@@ -571,7 +576,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     // was saved before athlete confirmation.
                     movementRestricted=true
                     readiness=CoachReadiness.LOW
-                    showSessionNote=true
+                    pendingConcern=NativeMovementConcernRequest(
+                        selected?.target?.exerciseId,journal.revision)
                 }) else null
             )
         }
@@ -1137,6 +1143,34 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})
+    }
+    pendingConcern?.let{request->
+        val remaining=journal?.let{verified->
+            request.scopeId?.let{
+                WorkoutRemainingExerciseDomain.generated(verified,it)
+            }
+        }
+        val options=NativeMovementConcernPresentation.review(
+            request,journal?.revision,
+            journal!=null && journal.finishedByEventId==null,remaining)
+        NativeKotlinMovementConcernDialog(
+            options=options,busy=state.busy,
+            onWriteNote={
+                if(options.current && !state.busy &&
+                    journal?.revision==request.journalRevision) {
+                    pendingConcern=null
+                    showSessionNote=true
+                }
+            },
+            onReviewSkip={
+                val selectedRequest=options.skipRequest
+                if(selectedRequest!=null && !state.busy &&
+                    journal?.revision==request.journalRevision) {
+                    pendingConcern=null
+                    pendingExerciseSkip=selectedRequest
+                }
+            },onDismiss={pendingConcern=null}
+        )
     }
     pendingExerciseSkip?.let {request->
         val review=journal?.let {

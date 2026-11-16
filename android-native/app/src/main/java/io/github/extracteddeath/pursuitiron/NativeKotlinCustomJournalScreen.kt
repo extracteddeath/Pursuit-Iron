@@ -125,6 +125,11 @@ internal fun NativeKotlinCustomJournalScreen(
     var pendingExerciseSkip by remember(workoutId) {
         mutableStateOf<NativeExerciseSkipRequest?>(null)
     }
+    // One session-only safety guide; the durable custom journal remains
+    // the sole owner of any later confirmed set outcome.
+    var pendingConcern by remember(workoutId) {
+        mutableStateOf<NativeMovementConcernRequest?>(null)
+    }
     var verifiedFinishedInHistory by remember(host,workoutId){
         mutableStateOf(false)
     }
@@ -813,7 +818,12 @@ internal fun NativeKotlinCustomJournalScreen(
                             movementRestricted=true
                             readiness=CoachReadiness.LOW
                             noteError=null
-                            showSessionNote=true
+                            val visit=activeFocus ?:nextVisit
+                            val scope=current.snapshot.slots.singleOrNull{slot->
+                                slot.sets.any{it.setKey==visit?.setKey}
+                            }?.slotId
+                            pendingConcern=NativeMovementConcernRequest(
+                                scope,current.revision)
                         }
                     )
                 }
@@ -1453,6 +1463,36 @@ internal fun NativeKotlinCustomJournalScreen(
     historyExerciseId?.let { exerciseId ->
         NativeKotlinExerciseHistorySheet(host,exerciseId,
             onDismiss={historyExerciseId=null})
+    }
+    pendingConcern?.let{request->
+        val remaining=journal?.let{verified->
+            request.scopeId?.let{
+                WorkoutRemainingExerciseDomain.custom(verified,it)
+            }
+        }
+        val options=NativeMovementConcernPresentation.review(
+            request,journal?.revision,
+            journal?.let{it.finishedByEventId==null}==true && !finished,
+            remaining)
+        NativeKotlinMovementConcernDialog(
+            options=options,busy=busy,
+            onWriteNote={
+                if(options.current && !busy &&
+                    journal?.revision==request.journalRevision) {
+                    pendingConcern=null
+                    noteError=null
+                    showSessionNote=true
+                }
+            },
+            onReviewSkip={
+                val selectedRequest=options.skipRequest
+                if(selectedRequest!=null && !busy &&
+                    journal?.revision==request.journalRevision) {
+                    pendingConcern=null
+                    pendingExerciseSkip=selectedRequest
+                }
+            },onDismiss={pendingConcern=null}
+        )
     }
     pendingExerciseSkip?.let {request->
         val review=journal?.let{WorkoutRemainingExerciseDomain.custom(it,request.scopeId)}

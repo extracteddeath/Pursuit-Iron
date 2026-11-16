@@ -55,6 +55,24 @@ for(const phrase of [
 // a previous set should be able to return directly to the journal's next
 // unresolved set without affecting source load or receipt ownership.
 const generatedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+const concernGuide=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMovementConcernDialog.kt');
+for(const [screen,label] of [[generatedFocus,'generated'],[journal,'custom']]) {
+  for(const required of [
+    'pendingConcern=NativeMovementConcernRequest(',
+    'NativeMovementConcernPresentation.review(',
+    'NativeKotlinMovementConcernDialog(',
+    'pendingExerciseSkip=selectedRequest',
+    'showSessionNote=true',
+    'movementRestricted=true',
+    'readiness=CoachReadiness.LOW'
+  ])assert.ok(screen.includes(required),label+' concern must reach safe note/skip choices: '+required);
+}
+assert.match(concernGuide,/request.journalRevision!=currentRevision/);
+assert.match(concernGuide,/it.journalRevision==currentRevision/);
+assert.match(concernGuide,/if\(count>0\)/);
+assert.match(concernGuide,/Write session note/);
+assert.match(concernGuide,/Review skipping remaining exercise/);
+assert.doesNotMatch(concernGuide,/host\.|\.record\(|\.finish\(|\.save\(/);
 const m3focus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const fragment of [
   'exerciseLabel ?: if(focusOnNext)',
@@ -554,14 +572,31 @@ assert.ok(sharedFocus.includes('internal fun PursuitWorkoutReadinessPanel(') &&
 // context, not a durable set result or a signed program prescription.
 assert.ok(sharedFocus.includes('onReportConcern:(()->Unit)?=null') &&
   sharedFocus.includes('onClick=onReportConcern') &&
-  sharedFocus.includes('Text("Injury or discomfort · add a note")') &&
+  sharedFocus.includes('Text("Injury or discomfort · review options")') &&
   sharedFocus.includes('You still choose Skip or Swap') &&
   sharedFocus.includes('modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)'),
   'The shared injury entry needs a large accessible action and truthful, nonautomatic semantics');
-assert.match(journal,/onReportConcern=\{\s*(?:\/\/[^\n]*\n\s*)*movementRestricted=true\s*readiness=CoachReadiness.LOW\s*noteError=null\s*showSessionNote=true\s*\}/,
-  'Custom injury entry must restrict coaching and open its durable note editor');
-assert.match(composer,/onReportConcern=if\(journal!=null\) \(\{[\s\S]*?movementRestricted=true\s*readiness=CoachReadiness.LOW\s*showSessionNote=true\s*\}\) else null/,
-  'Generated injury entry must require a verified journal and open its own note editor');
+// The safety guide now requires a separate athlete choice: open a note
+// editor with explicit Save, or open a second independently verified skip
+// dialog. Selection alone MUST NOT record skipped sets or claim an injury.
+for(const [source,label] of [[journal,'custom'],[composer,'generated']]) {
+  const start=source.indexOf('onReportConcern=');
+  assert.ok(start>=0,label+' concern action is missing');
+  const handler=source.slice(start,start+1100);
+  for(const phrase of [
+    'movementRestricted=true',
+    'readiness=CoachReadiness.LOW',
+    'pendingConcern=NativeMovementConcernRequest('
+  ])assert.ok(handler.includes(phrase),
+    label+' concern must restrict coaching without mutating targets: '+phrase);
+  assert.ok(!handler.includes('showSessionNote=true'),
+    label+' must offer explicit note/skip choice instead of auto-opening notes');
+  assert.ok(source.includes('onWriteNote={') &&
+    source.includes('showSessionNote=true') &&
+    source.includes('onReviewSkip={') &&
+    source.includes('pendingExerciseSkip=selectedRequest'),
+    label+' concern must hand off to the existing note and confirmed skip owners');
+}
 assert.ok(journal.includes('host.saveIssuedCustomSessionNote(workoutId,operation)') &&
   composer.includes('onSave={controller.saveSessionNote(it)}') &&
   journal.includes('CustomWorkoutJournalOperation.SessionNote('),

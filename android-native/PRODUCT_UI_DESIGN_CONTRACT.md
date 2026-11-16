@@ -876,3 +876,26 @@ linked group is represented in its issued snapshot.
 Source tests and independent app JVM tests cover actual grouped sets,
 missing follow-ups, failed/skipped outcomes and invalid group sizes.
 This is not phone/foldable, 200% text or TalkBack acceptance. No APK/AAB.
+
+## In-workout movement concern: safe note and exercise-skip handoff — 2026-11-16 (pending CI)
+
+Both generated and custom native Train now connect **Report concern** to
+a shared source-verified movement concern guide, rather than immediately
+opening only the session note. The guide explains that a low-readiness
+movement restriction affects optional coaching, not any issued target.
+The athlete can choose **Write session note**, which opens the existing
+explicit Save flow, or **Review skipping remaining exercise**, which opens
+the existing separately confirmed, revision-fenced bulk skip workflow.
+Already recorded actuals and past exercise history remain untouched.
+For custom sessions the selection is scoped by immutable authored slot,
+not by an exercise ID that might appear twice in the same workout.
+
+An outdated/finished journal disables both actions; a no-selection guide
+still permits a written note but cannot fabricate an exercise to skip.
+The guide is not an injury diagnosis, does not persist a medical record,
+and never silently reduces weight, logs a skipped set, edits a program,
+or creates the next session. One pure Kotlin action projection plus
+four JVM tests and exact-source navigation contracts cover revision
+changes, preserved recorded work, absent selections and already-complete
+exercises. Android source and phone accessibility acceptance remain
+separate gates. No APK/AAB.

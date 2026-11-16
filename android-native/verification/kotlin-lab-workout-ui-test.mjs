@@ -55,6 +55,24 @@ for(const phrase of [
 // a previous set should be able to return directly to the journal's next
 // unresolved set without affecting source load or receipt ownership.
 const generatedFocus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+const concernGuide=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMovementConcernDialog.kt');
+for(const [screen,label] of [[generatedFocus,'generated'],[journal,'custom']]) {
+  for(const required of [
+    'pendingConcern=NativeMovementConcernRequest(',
+    'NativeMovementConcernPresentation.review(',
+    'NativeKotlinMovementConcernDialog(',
+    'pendingExerciseSkip=selectedRequest',
+    'showSessionNote=true',
+    'movementRestricted=true',
+    'readiness=CoachReadiness.LOW'
+  ])assert.ok(screen.includes(required),label+' concern must reach safe note/skip choices: '+required);
+}
+assert.match(concernGuide,/request.journalRevision!=currentRevision/);
+assert.match(concernGuide,/it.journalRevision==currentRevision/);
+assert.match(concernGuide,/if\(count>0\)/);
+assert.match(concernGuide,/Write session note/);
+assert.match(concernGuide,/Review skipping remaining exercise/);
+assert.doesNotMatch(concernGuide,/host\.|\.record\(|\.finish\(|\.save\(/);
 const m3focus=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitDesignComponents.kt');
 for(const fragment of [
   'exerciseLabel ?: if(focusOnNext)',

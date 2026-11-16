@@ -104,7 +104,8 @@ internal fun NativeKotlinCustomJournalScreen(
     val machineChoices=rememberNativeWorkoutMachineChoices(
         host,workoutId,custom=true,ready=journal!=null,
         exerciseSignature=journal?.snapshot?.slots
-            ?.map{it.exerciseId}?.distinct()?.joinToString(";").orEmpty())
+            ?.map{it.exerciseId}?.distinct()?.joinToString(";").orEmpty(),
+        roster=machineRoster,onRosterChanged={machineRoster=it})
     var busy by remember(host,workoutId){mutableStateOf(false)}
     // The system Back gesture and visible Minimize are the same navigation.
     // Consume Back during an in-flight disk write instead of dropping the
@@ -836,6 +837,9 @@ internal fun NativeKotlinCustomJournalScreen(
                             machineChoices.ready && !machineChoices.busy,
                         onSelect={machineId->
                             machineChoices.onSelect(slot.exerciseId,machineId)
+                        },
+                        onCreate={label,makeDefault->
+                            machineChoices.onCreate(slot.exerciseId,label,makeDefault)
                         })
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,

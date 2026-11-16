@@ -153,6 +153,7 @@ internal fun initialMachineScopedLoad(
  * It only selects an existing verified gym machine; a tap never rewrites the
  * issued prescription, a completed set, another station's Last, or gym defaults.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NativeKotlinWorkoutMachineSelector(
     config:KotlinGymMachineAlternatives?,

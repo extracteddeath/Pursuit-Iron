@@ -27,6 +27,7 @@ enum class NativeKotlinStagedCoreRefusal {
     PINNED_NOTES_UNVERIFIED,
     ADAPTIVE_PERMISSIONS_UNVERIFIED,
     FUTURE_APPROVALS_UNVERIFIED,
+    FUTURE_CONTEXTS_UNVERIFIED,
     FUTURE_HANDOFF_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
@@ -52,7 +53,8 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val revokedAdaptivePermissions:Int=0,
         val futureActivationApprovals:Int=0,
         val revokedFutureActivationApprovals:Int=0,
-        val stagedFutureHandoffs:Int=0
+        val stagedFutureHandoffs:Int=0,
+        val savedFutureBlockContexts:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -164,6 +166,13 @@ object NativeKotlinStagedCoreStoreAudit {
                     as? NativeAdaptivePermissionInventory.Verified
                     ?:return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.ADAPTIVE_PERMISSIONS_UNVERIFIED)
+                // A staged snapshot must account for stale context records
+                // as well as the currently approved future block. Inspect
+                // all physical files without refreshing their authority.
+                val futureContexts=contexts.inventoryOwner(expected.ownerKey)
+                    as? NativeFutureContextInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.FUTURE_CONTEXTS_UNVERIFIED)
                 val secondConsents=futureApprovals.inventoryOwner(expected.ownerKey)
                     as? NativeFutureApprovalInventory.Verified
                     ?:return@withOwnerTransaction reject(
@@ -290,7 +299,8 @@ object NativeKotlinStagedCoreStoreAudit {
                     permissions.records.count{it.revoked},
                     secondConsents.records.size,
                     secondConsents.records.count{it.revoked},
-                    if(switchBarrier is NativeFutureHandoffReview.Staged)1 else 0)
+                    if(switchBarrier is NativeFutureHandoffReview.Staged)1 else 0,
+                    futureContexts.records.size)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

@@ -246,6 +246,18 @@ function selfTest() {
  const wrongLandmine=structuredClone(m);
  wrongLandmine.records.find(x=>x.id==='landmine-press').review.implement='straight-bar';
  assert.throws(()=>validateReviewedCatalogExpansion(wrongLandmine,src));
+ const wrongFixture=structuredClone(m);
+ wrongFixture.records.find(x=>x.id==='back-ext-45').review.fixtures=['flat-bench'];
+ assert.throws(()=>validateReviewedCatalogExpansion(wrongFixture,src),
+   /do not infer unweighted loading/);
+ const missingIncline=structuredClone(m);
+ missingIncline.records.find(x=>x.id==='prone-y-raise').review.fixtures=[];
+ assert.throws(()=>validateReviewedCatalogExpansion(missingIncline,src),
+   /do not infer unweighted loading/);
+ const missingDecline=structuredClone(m);
+ missingDecline.records.find(x=>x.id==='decline-situp').review.fixtures=['flat-bench'];
+ assert.throws(()=>validateReviewedCatalogExpansion(missingDecline,src),
+   /do not infer unweighted loading/);
  const forged=structuredClone(m);
  forged.records[0].review.basis=null;
  assert.throws(()=>validateReviewedCatalogExpansion(forged,src),/unweighted cannot/);

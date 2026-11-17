@@ -1,0 +1,87 @@
+package io.github.extracteddeath.pursuitiron
+
+import io.github.extracteddeath.pursuitiron.rebuild.*
+import java.math.BigDecimal
+import org.junit.Assert.*
+import org.junit.Test
+
+class NativeKotlinPendingWorkoutDraftsTest {
+    private fun identity(
+        athlete:String="athlete",workout:String="workout",gym:String="gym",
+        exercise:String="machine_press",set:String="working-1",
+        part:String="MAIN",machine:String?="machine-A",
+        load:DraftSetLoad=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,BigDecimal("200")),
+        reps:RepBand=RepBand(8,12),rir:Int?=2
+    )=NativePendingWorkoutDraftIdentity.make(
+        athlete,workout,gym,exercise,set,part,machine,load,reps,rir)
+
+    @Test fun exactIssuedIdentityIsStableAndMachineChangesNeverAlias() {
+        val original=identity()
+        assertEquals(original,identity())
+        assertTrue(original.value.startsWith("input:"))
+        assertEquals(70,original.value.length)
+        assertNotEquals(original,identity(machine="machine-B"))
+        assertNotEquals(original,identity(machine=null))
+        assertNotEquals(original,identity(gym="other-gym"))
+        assertNotEquals(original,identity(workout="new-workout"))
+        assertNotEquals(original,identity(athlete="new-athlete"))
+    }
+
+    @Test fun swappedExerciseDifferentVisitOrChangedPrescriptionCannotResurrectDraft() {
+        val first=identity()
+        assertNotEquals(first,identity(exercise="incline_press"))
+        assertNotEquals(first,identity(set="working-2"))
+        assertNotEquals(first,identity(part="FOLLOW_UP"))
+        assertNotEquals(first,identity(load=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,BigDecimal("190"))))
+        assertNotEquals(first,identity(load=DraftSetLoad.Verified(
+            LoadUnit.KG,LoadBasis.MACHINE_STACK,BigDecimal("200"))))
+        assertNotEquals(first,identity(load=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal("200"))))
+        assertNotEquals(first,identity(reps=RepBand(6,10)))
+        assertNotEquals(first,identity(rir=null))
+        assertNotEquals(first,identity(load=DraftSetLoad.ExplicitBodyweight))
+    }
+
+    @Test fun lengthPrefixSeparatesUntrustedSourceParts() {
+        assertNotEquals(identity(athlete="a:b",workout="c"),
+            identity(athlete="a",workout="b:c"))
+        assertNotEquals(identity(set="a:b",part="c"),
+            identity(set="a",part="b:c"))
+    }
+
+    @Test fun codecRoundTripsPartialTypingAndUnknownActualRir() {
+        for(draft in listOf(
+            NativePendingWorkoutDraft("200","8",""),
+            NativePendingWorkoutDraft("2.","1",""),
+            NativePendingWorkoutDraft("","", ""),
+            NativePendingWorkoutDraft("140.5","12","3"),
+            NativePendingWorkoutDraft("120","8","unreported"))) {
+            val encoded=NativePendingWorkoutDraftCodec.encode(draft)
+            assertNotNull(encoded)
+            assertEquals(draft,NativePendingWorkoutDraftCodec.decode(encoded))
+        }
+    }
+
+    @Test fun corruptOversizeAndForeignVersionDraftsFailClosed() {
+        assertNull(NativePendingWorkoutDraftCodec.decode(null))
+        assertNull(NativePendingWorkoutDraftCodec.decode(""))
+        assertNull(NativePendingWorkoutDraftCodec.decode("v2:MTIz:OAo=:"))
+        assertNull(NativePendingWorkoutDraftCodec.decode("v1:%%%%:Mg==:"))
+        assertNull(NativePendingWorkoutDraftCodec.decode("v1:MTIz:NA=="))
+        assertNull(NativePendingWorkoutDraftCodec.decode("v1:MTIz:NA==:NA==:extra"))
+        assertNull(NativePendingWorkoutDraftCodec.decode("z".repeat(513)))
+        assertNull(NativePendingWorkoutDraftCodec.encode(
+            NativePendingWorkoutDraft("1".repeat(65),"8","")))
+    }
+
+    @Test fun codecDoesNotPretendToBeJournalOrAutoFillActuals() {
+        val draft=NativePendingWorkoutDraft("135.5","8","")
+        val encoded=NativePendingWorkoutDraftCodec.encode(draft)
+        assertNotNull(encoded)
+        // These are raw UI strings, NOT the domain's KotlinPerformedSet.
+        assertEquals("",NativePendingWorkoutDraftCodec.decode(encoded)?.rir)
+        assertFalse(encoded!!.contains("machine-A"))
+    }
+}

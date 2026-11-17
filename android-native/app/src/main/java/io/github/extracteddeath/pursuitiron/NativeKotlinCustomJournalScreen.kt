@@ -1838,7 +1838,9 @@ private fun NativeKotlinCustomVisitEditor(
             val skipButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked,modifier=buttonModifier,onClick={
                     pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
-                }){Text("Skip")}
+                }){Text(if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
+                    follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+                    "End sequence" else "Skip")}
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked && failedActual!=null,modifier=buttonModifier,
@@ -1890,6 +1892,11 @@ private fun NativeKotlinCustomVisitEditor(
                         (if(stageTotal>1)" · stage $stageOrdinal/$stageTotal" else ""),
                         style=MaterialTheme.typography.labelLarge,
                         color=MaterialTheme.colorScheme.primary)
+                    if(stageTotal>1) {
+                        LinearProgressIndicator(
+                            progress={(stageOrdinal-1).toFloat()/stageTotal},
+                            modifier=Modifier.fillMaxWidth())
+                    }
                     Text(protocol.techniqueCue,
                         style=MaterialTheme.typography.bodySmall)
                     Text(
@@ -1952,9 +1959,18 @@ private fun NativeKotlinCustomVisitEditor(
     val pending=pendingExceptionalOutcome
     if(pending!=null && !locked) AlertDialog(
         onDismissRequest={pendingExceptionalOutcome=null},
-        title={Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+        title={Text(if(pending==KotlinJournalSetOutcome.SKIPPED &&
+            part==CustomWorkoutVisitPart.FOLLOW_UP &&
+            follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+            "End myo-reps early?"
+        else if(pending==KotlinJournalSetOutcome.SKIPPED)
             "Skip this visit?" else "Log a failed attempt?")},
-        text={Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+        text={Text(if(pending==KotlinJournalSetOutcome.SKIPPED &&
+            part==CustomWorkoutVisitPart.FOLLOW_UP &&
+            follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+            "End this sequence if technique or recovery is declining. " +
+                "This stage is saved as skipped and no later mini-sets are created."
+        else if(pending==KotlinJournalSetOutcome.SKIPPED)
             "Skipping records an explicit outcome. It is not a completed set, and you can correct it before Finish."
         else
             "A failed attempt records zero completed reps at your entered attempted load. It does not count as successful work or earned progression.")},

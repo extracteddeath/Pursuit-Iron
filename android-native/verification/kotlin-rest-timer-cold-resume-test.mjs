@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+
+const dir='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
+const rest=readFileSync(dir+'NativeRestTimer.kt','utf8');
+const policy=readFileSync(dir+'NativeKotlinRestCountdownStore.kt','utf8');
+const bridge=readFileSync(dir+'NativeKotlinWorkoutRestTimer.kt','utf8');
+const generated=readFileSync(dir+'NativeKotlinWorkoutCandidateScreen.kt','utf8');
+const custom=readFileSync(dir+'NativeKotlinCustomJournalScreen.kt','utf8');
+const tests=readFileSync('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinRestCountdownPolicyTest.kt','utf8');
+
+assert.match(policy,/getSharedPreferences\("kotlin-workout-rest-v1",Context.MODE_PRIVATE\)/);
+assert.match(policy,/athleteId,workoutId/);
+assert.match(policy,/MessageDigest\.getInstance\("SHA-256"\)/);
+assert.match(policy,/receiptStamp\(receiptEventId\)/);
+assert.match(policy,/raw\?\.takeIf\{it\.startsWith\("\$stamp:"\)\}/);
+assert.doesNotMatch(policy,/SystemClock|System\.currentTimeMillis/); // Pure policy receives clock samples
+assert.match(policy,/remaining\(checkpoint,elapsed,wall\)/);
+assert.match(policy,/if\(elapsedAge>MAX_SECONDS\*1000L\+CLOCK_TOLERANCE_MILLIS\)return false/);
+assert.match(policy,/abs\(wallAge-elapsedAge\)<=CLOCK_TOLERANCE_MILLIS/);
+assert.match(policy,/fun adjust\(/);
+assert.match(policy,/fun decode\(raw:String\?\)/);
+assert.doesNotMatch(policy,/RecordSet\(|recordIssuedCustomSet\(|approve\(|issueWorkout\(|KotlinPerformedSet\(/);
+
+assert.match(rest,/ownerId: String\? = null/);
+assert.match(rest,/scopeKey=remember\(workoutId,ownerId\)/);
+assert.match(rest,/recovered=remember\(scopeKey,latestReceiptOperationId\)/);
+assert.match(rest,/var deadline by rememberSaveable\(workoutId,ownerId\)/);
+assert.doesNotMatch(rest,/rememberSaveable\(workoutId,ownerId,latestReceiptOperationId\)/);
+assert.match(rest,/restStore\.read\(it,latestReceiptOperationId,/);
+assert.match(rest,/mutableLongStateOf\(recovered\?\.deadlineElapsed \?:0L\)/);
+assert.match(rest,/restStore\.save\(scopeKey,latestReceiptOperationId,checkpoint\)/);
+assert.match(rest,/NativeRestCountdownPolicy\.valid\(/);
+assert.match(rest,/NativeRestCountdownPolicy\.adjust\(/);
+assert.match(rest,/onLongClick = \{publish\(null\)\}/);
+assert.match(rest,/Text\("−30 s"\)/);
+assert.match(rest,/Text\("\+30 s"\)/);
+assert.match(rest,/Text\("Clear"\)/);
+assert.match(rest,/observedEvent=latestReceiptOperationId/);
+assert.match(rest,/if\(autoCue.seconds==0\)publish\(null\)/);
+
+assert.match(bridge,/ownerId=athleteId/);
+assert.match(bridge,/if\(!rest.hasRemainingWork\)return/);
+assert.match(bridge,/rest\.manualRestSeconds/);
+assert.match(bridge,/latestReceiptOperationId=rest\.latestReceiptEventId/);
+assert.match(generated,/athleteId=journal\.snapshot\.source\.athleteId/);
+assert.match(custom,/athleteId=current\.originalSnapshot\.stamp\.athleteId/);
+assert.match(generated,/KotlinWorkoutRestDomain\.inspect\(journal/);
+assert.match(custom,/KotlinWorkoutRestDomain\.inspect\(current/);
+
+assert.match(tests,/normalCountdownRecoversAfterWorkoutMinimizeAndColdReopen/);
+assert.match(tests,/quickAdjustChangesRemainingRestWithoutChangingAuthorisedTargets/);
+assert.match(tests,/clockChangesRebootsAndHistoricalRestAlwaysFailClosed/);
+assert.match(tests,/rejectsCorruptAndImpossiblePersistedSnapshots/);
+console.log('PASS native rest timer: scoped cold recovery, real clock guard, receipt-only auto cue, accessible adjustments; no coach writes.');

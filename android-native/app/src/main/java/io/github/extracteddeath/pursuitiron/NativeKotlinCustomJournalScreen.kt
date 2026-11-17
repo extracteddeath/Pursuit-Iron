@@ -1367,7 +1367,8 @@ internal fun NativeKotlinCustomJournalScreen(
             .align(Alignment.CenterHorizontally)
             .padding(horizontal=16.dp,vertical=8.dp)) {
             NativeKotlinWorkoutRestTimer(workoutId,
-                KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy)
+                KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy,
+                athleteId=current.originalSnapshot.stamp.athleteId)
         }
     }
     swapSlotId?.let {slotId ->

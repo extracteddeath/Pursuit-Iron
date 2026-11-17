@@ -344,24 +344,26 @@ assert.ok(runtimeStartup.includes('val loaded=try { PackagedReadOnlySchemaVerifi
   runtimeStartup.includes('Your saved workouts were not changed.'),
   'Broken packaged engine assets must end startup loading and fail closed without overwriting private workout recovery');
 const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
+const restClock=fs.readFileSync(root+'NativeKotlinRestCountdownStore.kt','utf8');
 assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,') &&
-  rest.includes('rememberSaveable(workoutId)') &&
+  rest.includes('rememberSaveable(workoutId,ownerId)') &&
   rest.includes('SystemClock.elapsedRealtime()') &&
   rest.includes('LaunchedEffect(deadline, startedElapsed, startedWall)') &&
   rest.includes('delay(250L)') &&
   rest.includes('onLongClickLabel = "Reset rest timer"') &&
-  rest.includes('onLongClick = {') && rest.includes('deadline = 0L') &&
+  rest.includes('onLongClick = {publish(null)}') &&
   rest.includes('enabled = enabled') &&
-  !rest.includes('onRecord(') && !rest.includes('store.') && !rest.includes('journal.'),
-  'The rest countdown must be a session-scoped manual M3 control, not an unacknowledged set write or engine re-prescription');
-assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
-  rest.includes('var startedWall by rememberSaveable(workoutId)') &&
-  rest.includes('var activeSeconds by rememberSaveable(workoutId)') &&
-  rest.includes('elapsed < startedElapsed || wall < startedWall') &&
-  rest.includes('abs(wallAge - monotonicAge) <= 60_000L') &&
-  rest.includes('activeSeconds=seconds') &&
-  rest.includes('activeSeconds = 0') &&
-  rest.includes('var observedEvent by rememberSaveable(workoutId)') &&
+  rest.includes('ownerId: String? = null') && 
+  !rest.includes('onRecord(') && !rest.includes('journal.'),
+  'Legacy preview rest remains an unscoped manual M3 control; owned Kotlin rest is presentation-only and never writes training outcomes');
+assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId,ownerId)') &&
+  rest.includes('var startedWall by rememberSaveable(workoutId,ownerId)') &&
+  rest.includes('var activeSeconds by rememberSaveable(workoutId,ownerId)') &&
+  restClock.includes('elapsed<checkpoint.startedElapsed || wall<checkpoint.startedWall') &&
+  restClock.includes('abs(wallAge-elapsedAge)<=CLOCK_TOLERANCE_MILLIS') &&
+  rest.includes('activeSeconds=checkpoint?.activeSeconds ?:0') &&
+  rest.includes('restStore.save(scopeKey,latestReceiptOperationId,checkpoint)') &&
+  rest.includes('var observedEvent by rememberSaveable(workoutId,ownerId)') &&
   rest.includes('LaunchedEffect(latestReceiptOperationId,enabled)') &&
   rest.includes('latestReceiptOperationId!=observedEvent') &&
   rest.includes('autoCue?.operationId==latestReceiptOperationId') &&
@@ -374,8 +376,8 @@ assert.ok(!rest.includes('if (prescribedSeconds <= 0) return') &&
   rest.includes('if(!manualRestTarget && (!valid || remaining==0L)) return') &&
   rest.includes('!manualRestTarget -> "Rest from last saved set') &&
   rest.includes('else Modifier.fillMaxWidth().heightIn(min = 64.dp)') &&
-  rest.includes('if(!manualRestTarget && enabled) TextButton(onClick = {') &&
-  rest.includes('Text("Clear rest")') &&
+  rest.includes('if(valid && remaining>0L)') &&
+  rest.includes('Text("Clear")') &&
   rest.includes('begin(autoCue.seconds)'),
   'An acknowledged rest survives Focus switching to an exercise with zero prescribed seconds; no inert manual-start action');
 

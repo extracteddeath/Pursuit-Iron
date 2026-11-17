@@ -74,6 +74,21 @@ object CustomWorkoutExecutionDomain {
             val recorded=journal.effectiveVisits[key]?.operation
                 as? CustomWorkoutJournalOperation.Record ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
+            if(amp.kind==CustomAmplifierKind.DROP_SET &&
+                amp.followUpRounds==2) {
+                // A second reduction is offered only after the first
+                // physically planned drop was actually performed, on the
+                // activation station. If the athlete entered a different
+                // weight, keep the factual receipt but do not invent the
+                // next lower weight or assume it is safe.
+                val activation=main.performed ?:break
+                val observed=recorded.performed ?:break
+                val planned=AdvancedAmplifierProtocolDomain.dropStageLoad(amp,stage)
+                    as? DraftSetLoad.Verified ?:break
+                if(observed.machineInstanceId!=activation.machineInstanceId ||
+                    observed.unit!=planned.unit ||
+                    observed.load?.compareTo(planned.value)!=0)break
+            }
             if(amp.followUpRounds>1 &&
                 (amp.kind==CustomAmplifierKind.MYO_REPS ||
                  amp.kind==CustomAmplifierKind.REST_PAUSE ||

@@ -31,6 +31,19 @@ const protocolPreview=read('android-native/app/src/main/java/io/github/extracted
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageNoun\(amp.kind,plural=true\)/);
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageReviewCue\(amp\)/);
 assert.doesNotMatch(protocolPreview,/Each myo mini-set saves separately/);
+assert.match(protocolPreview,/private fun NativeKotlinSetTechniqueSummary\(/);
+assert.match(protocolPreview,/key\(set.setKey\)/);
+assert.match(protocolPreview,/rememberSaveable\(setKey\)/);
+assert.match(protocolPreview,/modifier=Modifier.heightIn\(min=48.dp\).semantics/);
+assert.match(protocolPreview,/if\(showDetails\) Surface\(/);
+assert.match(protocolPreview,/Text\(if\(showDetails\)"Less" else "Details"\)/);
+assert.match(protocolPreview,/NativeKotlinSetTechniqueSummary\(/);
+const customTechniqueExcerpt=protocolPreview.slice(
+  protocolPreview.indexOf('private fun NativeKotlinSetTechniqueSummary('),
+  protocolPreview.indexOf('private fun pretty(value: Enum<*>)'));
+assert.ok(!customTechniqueExcerpt.includes('Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,'),
+  'Native amp no longer requires permanent large preview card');
+
 assert.match(journal,/Each performed stage is logged separately/);
 assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}"'),
   "stage identity must survive Focus/All and cold resume");

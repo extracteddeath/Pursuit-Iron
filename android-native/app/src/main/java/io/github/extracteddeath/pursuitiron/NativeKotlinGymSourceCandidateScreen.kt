@@ -278,6 +278,15 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                             LoadBasis.DUMBBELL_PER_HAND,LoadBasis.KETTLEBELL_EACH,
                                             LoadBasis.LANDMINE_ADDED_PLATES ->
                                                 PhysicalStockEditorKind.EXACT_LOADS
+                                            // Portable physical implements use discrete actual
+                                            // weights, not an invented continuous machine stack.
+                                            LoadBasis.EXERCISE_OVERRIDE ->
+                                                if(choice.equipmentId in setOf(
+                                                    "wrist-lever-hammer",
+                                                    "wrist-roller-handle",
+                                                    "single-weight-plate"))
+                                                    PhysicalStockEditorKind.EXACT_LOADS
+                                                else PhysicalStockEditorKind.VERIFIED_STACK
                                             else -> PhysicalStockEditorKind.VERIFIED_STACK
                                         }
                                     },

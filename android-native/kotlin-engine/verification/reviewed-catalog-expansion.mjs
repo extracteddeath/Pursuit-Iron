@@ -34,6 +34,20 @@ const requestedWebVariants=[
   ['ad-press-smith','AD Press (Smith Machine)',['smith','inclinebench'],[6,12]]
 ];
 const requestedIds=requestedWebVariants.map(x=>x[0]);
+// Every entry below is a concrete SOURCE fact from the active web roster.
+// Kotlin separately reviews resistance units, physical implements and muscles;
+// old "bodyweight" / "dumbbell" source tokens can be inaccurate and MUST NOT
+// automatically authorize bodyweight or transferable loading.
+const waveEightWebSource=[
+  ['dumbbell_crunch','Dumbbell Crunch',['dumbbell'],[8,30],null,null],
+  ['cable-radial-dev','Cable Radial Wrist Deviation',['cable'],[12,20],'legacy_v661','wrist_deviators'],
+  ['hammer-radial-dev','Hammer Radial Wrist Deviation',['bodyweight'],[12,20],'legacy_v661','wrist_deviators'],
+  ['hammer-ulnar-dev','Hammer Ulnar Wrist Deviation',['bodyweight'],[12,20],'legacy_v661','wrist_deviators'],
+  ['wrist-roller','Wrist Roller',['bodyweight'],[10,15],'legacy_v661','wrist_extensors'],
+  ['plate-front-raise','Plate Front Raise',['dumbbell'],[12,20],'legacy_v661','front_delts']
+];
+const waveEightIds=waveEightWebSource.map(x=>x[0]);
+
 const requestedFixture=JSON.parse(readFileSync(join(root,
  'android-native/kotlin-engine/verification/requested-web-variants-20261117.json'),'utf8'));
 assert.equal(requestedFixture.schemaVersion,1,'reviewed request fixture schema drift');
@@ -219,8 +233,10 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.deepEqual(declarations.slice(49,49+count),
    manifest.records.map(x=>x.id),
    'generated reviewed catalog must preserve its exact 49-ID prefix and review registry');
- assert.deepEqual(declarations.slice(49+count),requestedIds,
-   'only the seven explicitly reviewed newly requested web identities may append');
+ assert.deepEqual(declarations.slice(49+count,49+count+requestedIds.length),
+   requestedIds,'original seven reviewed request IDs must be append-stable');
+ assert.deepEqual(declarations.slice(49+count+requestedIds.length),waveEightIds,
+   'only six explicitly source-reviewed physical-implement identities may follow');
  // A new source catalog ID is not evidence of identical mechanics.
  // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
@@ -243,7 +259,19 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
          'live web source drift from separately reviewed Kotlin exercise: '+id+'/'+key);
    }
  }
- const total=49+count+requestedIds.length;
+ // The new six IDs are present in live source, but source equipment
+ // labels are NOT assumed to be accurate physical loading conventions.
+ for(const [id,name,equipment,reps,origin,subregion] of waveEightWebSource) {
+   const ex=liveById.get(id);
+   assert.ok(ex,'wave-eight reviewed ID is absent from active web source: '+id);
+   assert.equal(ex.name,name,'wave-eight exercise name drift: '+id);
+   assert.deepEqual(ex.equipment,equipment,'wave-eight source equipment drift: '+id);
+   assert.deepEqual(ex.practicalReps,reps,'wave-eight source rep range drift: '+id);
+   assert.equal(ex.source??null,origin,'wave-eight source version drift: '+id);
+   assert.equal(ex.legacySubregion??null,subregion,
+     'wave-eight forearm/anatomical subregion drift: '+id);
+ }
+ const total=49+count+requestedIds.length+waveEightIds.length;
  assert.ok(source.includes('require(definitions.size=='+total+')'),
    'Kotlin exact source count must include independently reviewed additions');
  assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
@@ -251,7 +279,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false')&&
    !expected.includes('mayTransferPreviousLoad'),
    'reviewed IDs may never implicitly transfer historical loading');
- return {originalStablePrefixCount:49,additions:count+requestedIds.length,total};
+ return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length,total};
 }
 
 export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
@@ -262,7 +290,7 @@ export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
  const previous=requireCount(source);
  return source.slice(0,from)+replacement+source.slice(to+END.length)
    .replace('require(definitions.size=='+previous+')',
-     'require(definitions.size=='+(49+count+requestedIds.length)+')');
+     'require(definitions.size=='+(49+count+requestedIds.length+waveEightIds.length)+')');
 }
 function requireCount(source) {
  const m=source.match(/require\(definitions\.size==(\d+)\)/);
@@ -272,7 +300,11 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,337);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,343);
+ const changedWeb=EXERCISES.map(ex=>ex.id==='cable-radial-dev'
+   ?{...ex,practicalReps:[8,12]}:ex);
+ assert.throws(()=>validateReviewedCatalogExpansion(m,src,changedWeb),
+   /wave-eight source rep range drift/);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

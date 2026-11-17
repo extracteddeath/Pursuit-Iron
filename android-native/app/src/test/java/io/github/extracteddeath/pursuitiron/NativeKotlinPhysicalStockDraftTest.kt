@@ -19,6 +19,33 @@ internal class NativeKotlinPhysicalStockDraftTest:NativeKotlinProgramFilesFixtur
         assertNotEquals(choices.single{it.equipmentId=="straight-bar"}.equipmentId,trap.equipmentId)
     }
 
+    @Test fun newForearmAndPlateStockAreNamedAndIndependentlyVerified() {
+        val catalog=StarterExerciseTranche.movements()
+        val choice=kotlinGymStockChoices(catalog).associateBy{it.equipmentId}
+        for((id,label,muscles) in listOf(
+            Triple("wrist-lever-hammer","Wrist lever hammer (verified resistance)",
+                setOf("Hammer Radial Wrist Deviation","Hammer Ulnar Wrist Deviation")),
+            Triple("wrist-roller-handle","Wrist roller (verified added load)",
+                setOf("Wrist Roller")),
+            Triple("single-weight-plate","Individual weight plate",
+                setOf("Plate Front Raise"))
+        )) {
+            val verified=checkNotNull(choice[id])
+            assertEquals(label,verified.displayName)
+            assertEquals(LoadBasis.EXERCISE_OVERRIDE,verified.basis)
+            assertEquals(muscles,verified.exerciseNames.toSet())
+        }
+        val plate=checkNotNull(parseVerifiedStock(LoadUnit.LB,
+            PhysicalStockEditorKind.EXACT_LOADS,LoadBasis.EXERCISE_OVERRIDE,
+            "5,10,25","","","","",""))
+        assertTrue((EquipmentLoadDomain.inspect(plate,n("25"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        assertFalse((EquipmentLoadDomain.inspect(plate,n("20"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        assertNotEquals(choice.getValue("dumbbell-rack").equipmentId,
+            choice.getValue("single-weight-plate").equipmentId)
+    }
+
     @Test fun explicitBarMassAndSymmetricPairsDetermineAttainableLoads() {
         val trap=checkNotNull(bar()) as VerifiedLoadStock.Barbell
         val straight=checkNotNull(bar("45")) as VerifiedLoadStock.Barbell

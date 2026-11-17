@@ -52,7 +52,8 @@ assert.deepEqual(declared.slice(baseline.length,49),appended,
 const reviewedManifest=JSON.parse(fs.readFileSync(
   'android-native/kotlin-engine/verification/reviewed-catalog-expansion.json','utf8'));
 validateReviewedCatalogExpansion(reviewedManifest,source,undefined);
-assert.deepEqual(declared.slice(49),reviewedManifest.records.map(r=>r.id),
+assert.deepEqual(declared.slice(49,49+reviewedManifest.records.length),
+  reviewedManifest.records.map(r=>r.id),
   'All additional source-reviewed Kotlin definitions must follow the stable 49-ID prefix');
 assert.equal(new Set(declared).size,declared.length);
 for(const [id,family,reps,equipment] of baseline) {

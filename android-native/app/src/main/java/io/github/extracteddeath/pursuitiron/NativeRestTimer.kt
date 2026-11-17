@@ -50,16 +50,16 @@ internal fun NativeRestTimer(
         scopeKey?.let {restStore.read(it,latestReceiptOperationId,
             SystemClock.elapsedRealtime(),System.currentTimeMillis())}
     }
-    var deadline by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
+    var deadline by rememberSaveable(workoutId,ownerId) {
         mutableLongStateOf(recovered?.deadlineElapsed ?:0L)
     }
-    var startedElapsed by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
+    var startedElapsed by rememberSaveable(workoutId,ownerId) {
         mutableLongStateOf(recovered?.startedElapsed ?:0L)
     }
-    var startedWall by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
+    var startedWall by rememberSaveable(workoutId,ownerId) {
         mutableLongStateOf(recovered?.startedWall ?:0L)
     }
-    var activeSeconds by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
+    var activeSeconds by rememberSaveable(workoutId,ownerId) {
         mutableIntStateOf(recovered?.activeSeconds ?:0)
     }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }

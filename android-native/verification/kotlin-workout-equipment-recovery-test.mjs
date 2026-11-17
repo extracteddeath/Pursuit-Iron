@@ -62,7 +62,7 @@ const copyStart=customSheet.indexOf('forms=forms.mapIndexed {otherIndex,other->'
 const copyEnd=customSheet.indexOf('Use these NEW targets for other working sets',copyStart);
 assert.ok(copyStart>=0 && copyEnd>copyStart);
 const newTargetCopy=customSheet.slice(copyStart,copyEnd);
-assert.match(newTargetCopy,/rest=fields\\.rest\\)/);
+assert.match(newTargetCopy,/rest=fields\.rest\)/);
 assert.doesNotMatch(newTargetCopy,/amplifier=null|extraReps=""|extraLoad=""/);
 assert.match(customSheet,/Each set keeps its own amplifier and follow-up edits/);
 assert.match(customSheet,/if\(replacing!=null && !swapConfirmation\)/);

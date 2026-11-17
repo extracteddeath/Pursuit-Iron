@@ -337,17 +337,17 @@ class CustomTrainingCycleDomainTest {
         assertEquals(2,observed?.followUpRounds)
         assertEquals(observed,CustomTrainingCycleDomain.week(reviewed,3)
             ?.days?.single()?.slots?.single()?.sets?.single()?.amplifier)
-        assertTrue(review(program(two.copy(secondDropLoad=null))).issues.any{
+        assertTrue(reviewed(program(two.copy(secondDropLoad=null))).issues.any{
             it.kind==CustomCycleIssueKind.INVALID_SET})
-        assertTrue(review(program(two.copy(secondDropLoad=load(155)))).issues.any{
+        assertTrue(reviewed(program(two.copy(secondDropLoad=load(155)))).issues.any{
             it.kind==CustomCycleIssueKind.INVALID_SET})
-        assertTrue(review(program(two.copy(secondDropLoad=load(175)))).issues.any{
+        assertTrue(reviewed(program(two.copy(secondDropLoad=load(175)))).issues.any{
             it.kind==CustomCycleIssueKind.INVALID_SET})
-        assertTrue(review(program(two.copy(secondDropLoad=load(150)))).issues.any{
+        assertTrue(reviewed(program(two.copy(secondDropLoad=load(150)))).issues.any{
             it.kind==CustomCycleIssueKind.INATTAINABLE_LOAD})
-        assertTrue(review(program(two.copy(followUpRounds=3))).issues.any{
+        assertTrue(reviewed(program(two.copy(followUpRounds=3))).issues.any{
             it.kind==CustomCycleIssueKind.INVALID_SET})
-        assertTrue(review(program(two.copy(followUpRestSeconds=20))).issues.any{
+        assertTrue(reviewed(program(two.copy(followUpRestSeconds=20))).issues.any{
             it.kind==CustomCycleIssueKind.INVALID_SET})
         val one=two.copy(followUpRounds=1,secondDropLoad=null)
         val historic=valid(program(one))

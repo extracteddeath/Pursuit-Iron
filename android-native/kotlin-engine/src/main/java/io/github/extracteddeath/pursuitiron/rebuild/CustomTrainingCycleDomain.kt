@@ -283,12 +283,7 @@ object CustomTrainingCycleDomain {
                 if (amplifier != null) {
                     if (amplifier.followUpReps !in 1..100 ||
                         amplifier.followUpRestSeconds !in 0..3600 ||
-                        (amplifier.followUpRounds != 1 &&
-                            (amplifier.kind != CustomAmplifierKind.MYO_REPS ||
-                             amplifier.followUpRounds !in 3..5 ||
-                             amplifier.followUpReps !in 3..5 ||
-                             amplifier.followUpRestSeconds !in 10..30 ||
-                             amplifier.followUpLoad!=null)) ||
+                        !AdvancedAmplifierProtocolDomain.validStagedFollowUps(amplifier) ||
                         amplifier.followUpActiveSeconds?.let{
                             it !in 1..3600
                         }==true)

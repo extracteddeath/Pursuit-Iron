@@ -102,6 +102,7 @@ object CustomExerciseAuthoringDomain {
                     ?: return@mapNotNull null
                 if (stock.unit != gym.unit ||
                     stock.basis != move.expectedLoadBasis ||
+                    !RatedResistanceBandDomain.confirmedDiscreteStock(move.equipmentId,stock) ||
                     (stock.basis.countsTowardBarbellLimit &&
                         athlete.maxBarbellExercisesPerDay == 0))
                     return@mapNotNull null

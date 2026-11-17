@@ -255,7 +255,8 @@ object CustomWorkoutJournalDomain {
                         if(main!=null && target.prescription.amplifier?.let{
                                 it.followUpRounds>1 &&
                                     (it.kind==CustomAmplifierKind.MYO_REPS ||
-                                     it.kind==CustomAmplifierKind.REST_PAUSE)
+                                     it.kind==CustomAmplifierKind.REST_PAUSE ||
+                                     it.kind==CustomAmplifierKind.CLUSTER)
                             }==true && nextEffective.keys.any {
                                 it.setKey==operation.visit.setKey &&
                                     it.part==CustomWorkoutVisitPart.FOLLOW_UP

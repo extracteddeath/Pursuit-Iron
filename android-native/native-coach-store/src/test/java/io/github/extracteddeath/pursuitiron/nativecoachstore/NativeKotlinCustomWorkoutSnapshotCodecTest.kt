@@ -206,4 +206,54 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
         }
     }
 
+    @Test fun stagedRestPauseAndClustersRoundTripFullSnapshotsAndSwapsWithoutVersionDrift() {
+        val legacy=fixture()
+        val legacyBytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(legacy)
+        for((kind,reps,rest,rounds) in listOf(
+            listOf(CustomAmplifierKind.REST_PAUSE,3,20,3),
+            listOf(CustomAmplifierKind.CLUSTER,2,30,4))) {
+            val method=kind as CustomAmplifierKind
+            val count=reps as Int
+            val restSeconds=rest as Int
+            val planned=rounds as Int
+            val old=legacy.slots.last().sets.single().prescription.amplifier!!
+            val new=CustomSetAmplifier(method,count,restSeconds,
+                followUpActiveSeconds=60,followUpRounds=planned)
+            val staged=legacy.copy(slots=legacy.slots.map{slot->
+                slot.copy(sets=slot.sets.map{set->
+                    if(set.prescription.amplifier?.kind!=CustomAmplifierKind.MYO_REPS)set
+                    else set.copy(prescription=set.prescription.copy(amplifier=new))
+                })
+            },knownSetAndRestSeconds=legacy.knownSetAndRestSeconds-
+                old.followUpRestSeconds*old.followUpRounds+
+                restSeconds*planned+60)
+            val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(staged)
+            assertEquals(5,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+            assertEquals(staged,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
+            assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+                NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
+            val slot=staged.slots.last()
+            val swapped=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(slot)
+            assertEquals(slot,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(swapped))
+            val invalid=new.copy(followUpRounds=if(method==CustomAmplifierKind.REST_PAUSE)4 else 6)
+            val invalidSnapshot=staged.copy(
+                slots=staged.slots.map{row->row.copy(sets=row.sets.map{set->
+                    if(set.prescription.amplifier==new)
+                        set.copy(prescription=set.prescription.copy(amplifier=invalid))
+                    else set
+                })},
+                knownSetAndRestSeconds=staged.knownSetAndRestSeconds-
+                    restSeconds*planned+restSeconds*invalid.followUpRounds)
+            assertThrows(IllegalArgumentException::class.java) {
+                NativeKotlinCustomWorkoutSnapshotCodec.encode(invalidSnapshot)
+            }
+            assertThrows(IOException::class.java) {
+                NativeKotlinCustomWorkoutSnapshotCodec.decode(
+                    bytes.copyOf(bytes.size-1))
+            }
+        }
+        assertArrayEquals(legacyBytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(legacyBytes)))
+    }
+
 }

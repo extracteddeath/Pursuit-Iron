@@ -69,6 +69,33 @@ assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.CLUSTER/);
 assert.match(journal,/follower\?\.kind==CustomAmplifierKind.CLUSTER/);
 assert.match(journal,/CustomAmplifierKind.CLUSTER\)/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(/);
+
+// Lengthened partials are a separately logged, optional FULL-ROM final-set
+// extension. They must be visible on the exact row, in Target and Last, after
+// completion; storage and the domain must reject early-set or changed loads.
+const partialProtocol=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/AdvancedAmplifierProtocolDomain.kt');
+const partialCycle=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomTrainingCycleDomain.kt');
+const partialAuthor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
+const partialStore=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutSnapshotCodec.kt');
+const partialHistory=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
+assert.match(partialProtocol,/CustomAmplifierKind.LENGTHENED_PARTIALS -> AdvancedAmplifierTemplate/);
+assert.match(partialProtocol,/amp.followUpRounds==1 && amp.followUpReps in 1\.\.8/);
+assert.match(partialProtocol,/amp.followUpRestSeconds==0 && amp.followUpLoad==null/);
+assert.match(restPauseSheet,/technique!=CustomAmplifierKind.LENGTHENED_PARTIALS/);
+assert.match(restPauseSheet,/index==forms.indexOfLast\{it.type==DraftSetType.WORKING\}/);
+assert.match(restPauseSheet,/CustomAmplifierKind.LENGTHENED_PARTIALS -> "3"/);
+assert.match(restPauseSheet,/CustomAmplifierKind.LENGTHENED_PARTIALS -> "0"/);
+assert.match(restPauseSheet,/Partial reps \(not full ROM\)/);
+assert.match(partialCycle,/setIndex!=lastWorkingSet/);
+assert.match(partialAuthor,/validateSelectedSets\(/);
+assert.match(partialStore,/index==lastWorking/);
+assert.match(journal,/Last working set · Lengthened partials/);
+assert.match(journal,/position==setCount/);
+assert.match(journal,/sameLoadActivation/);
+assert.match(journal,/follower\?\.kind==CustomAmplifierKind.LENGTHENED_PARTIALS/);
+assert.match(partialHistory,/Lengthened partials · partial reps/);
+assert.match(partialHistory,/final-set partial extension/);
+
 const protocolPreview=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageNoun\(amp.kind,plural=true\)/);
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageReviewCue\(amp\)/);

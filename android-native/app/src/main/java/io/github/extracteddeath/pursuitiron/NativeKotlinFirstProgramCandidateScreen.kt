@@ -42,7 +42,9 @@ internal data class NativeFirstProgramState(
     val selectedBodyweightIds:Set<String> =emptySet(),
     val phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
     val extraFocuses:List<ComposerFocus> =emptyList(),
-    val setupMinutes:Int=15
+    val setupMinutes:Int=15,
+    /** No automatic advanced techniques; consent is for one exact review. */
+    val includeMyoFinisher:Boolean=false
 )
 internal class NativeKotlinFirstProgramController(
     private val host:NativeKotlinCandidateHost
@@ -89,6 +91,7 @@ internal class NativeKotlinFirstProgramController(
                         else emptySet(),
                     extraFocuses=if(retained)before.extraFocuses else emptyList(),
                     preview=null,reviewedInput=null,canSaveDraft=false,
+                    includeMyoFinisher=false,
                     savedProgramId=null,eligibleMovements=emptyList(),
                     message="Verified setup loaded. Choose your own initial working weights; equipment inventory is not a strength test.")
                 val first=CoachFirstProgramStartDomain.review(
@@ -109,7 +112,7 @@ internal class NativeKotlinFirstProgramController(
             enteredLoads=if(raw.isBlank())s.enteredLoads-id
                 else s.enteredLoads+(id to raw),
             preview=null,reviewedInput=null,canSaveDraft=false,
-            savedProgramId=null,message=null)
+            savedProgramId=null,includeMyoFinisher=false,message=null)
     }
     fun toggleBodyweight(id:String) {
         val s=current.value
@@ -118,32 +121,32 @@ internal class NativeKotlinFirstProgramController(
             selectedBodyweightIds=if(id in s.selectedBodyweightIds)
                 s.selectedBodyweightIds-id else s.selectedBodyweightIds+id,
             preview=null,reviewedInput=null,canSaveDraft=false,
-            savedProgramId=null,message=null)
+            savedProgramId=null,includeMyoFinisher=false,message=null)
     }
     fun choosePhase(value:TrainingPhase) {
         val s=current.value
         if(!s.busy)current.value=s.copy(phase=value,preview=null,
-            reviewedInput=null,canSaveDraft=false,savedProgramId=null,message=null)
+            reviewedInput=null,canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,message=null)
     }
     fun chooseSetupMinutes(value:Int) {
         val s=current.value
         if(!s.busy && value in setOf(10,15,20,30))
             current.value=s.copy(setupMinutes=value,preview=null,reviewedInput=null,
-                canSaveDraft=false,savedProgramId=null,message=null)
+                canSaveDraft=false,savedProgramId=null,includeMyoFinisher=false,message=null)
     }
     fun addFocus(value:ComposerFocus) {
         val s=current.value
         if(!s.busy && s.extraFocuses.size<2)
             current.value=s.copy(extraFocuses=s.extraFocuses+value,
                 preview=null,reviewedInput=null,canSaveDraft=false,
-                savedProgramId=null,message=null)
+                savedProgramId=null,includeMyoFinisher=false,message=null)
     }
     fun removeLastFocus() {
         val s=current.value
         if(!s.busy && s.extraFocuses.isNotEmpty())
             current.value=s.copy(extraFocuses=s.extraFocuses.dropLast(1),
                 preview=null,reviewedInput=null,canSaveDraft=false,
-                savedProgramId=null,message=null)
+                savedProgramId=null,includeMyoFinisher=false,message=null)
     }
     fun preview()=run {
         val initial=current.value
@@ -174,7 +177,8 @@ internal class NativeKotlinFirstProgramController(
             FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
             CoachFirstProgramDraftConversionDomain.propose(
                 result,source.setup,source.catalog,
-                "first-preview","My first program",4)
+                "first-preview","My first program",4,
+                includeMyoFinisher=initial.includeMyoFinisher)
         else null
         val after=(host.readCustomAuthoringSource()
             as? NativeAuthoringSourceRead.Found)?.source
@@ -187,7 +191,10 @@ internal class NativeKotlinFirstProgramController(
             reviewedInput=input,
             canSaveDraft=conversion?.status==
                 FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
-            message=when(result.status) {
+            message=if(initial.includeMyoFinisher &&
+                conversion?.status!=FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT)
+                    conversion?.reason ?: "Optional myo-reps cannot pass the current review."
+                else when(result.status) {
                 FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW ->
                     "An auditable first-program draft was generated. It is not saved or approved; review its muscle coverage, sets and intended effort."
                 FirstProgramStartStatus.CALIBRATION_REQUIRED ->
@@ -195,6 +202,40 @@ internal class NativeKotlinFirstProgramController(
                 else -> "Your choices need review before this draft can become a program."
             })
     }
+    /**
+     * New consent is scoped to the exact verified preview; the host will
+     * recompute both baseline and optional technique at durable save.
+     */
+    fun chooseMyoFinisher(enabled:Boolean)=run {
+        val original=current.value
+        val source=original.source ?:return@run
+        val preview=original.preview ?:return@run
+        if(original.savedProgramId!=null ||
+            preview.status!=FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
+            return@run
+        val live=(host.readCustomAuthoringSource()
+            as? NativeAuthoringSourceRead.Found)?.source
+        if(live!=source) {
+            current.value=original.copy(source=null,preview=null,
+                canSaveDraft=false,includeMyoFinisher=false,
+                message="Your saved gym or athlete changed. Reload the program review.")
+            return@run
+        }
+        val conversion=CoachFirstProgramDraftConversionDomain.propose(
+            preview,source.setup,source.catalog,
+            "first-preview","My first program",4,
+            includeMyoFinisher=enabled)
+        current.value=original.copy(
+            includeMyoFinisher=enabled,
+            canSaveDraft=conversion.status==
+                FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
+            message=if(conversion.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT)
+                if(enabled)
+                    "One reviewed myo-reps finisher is included in this draft. No extra reps are logged until you perform them."
+                else "Straight sets restored; no advanced technique will be included."
+            else conversion.reason)
+    }
+
     /** Explicit create-only save: the host recomputes the exact shown week. */
     fun saveReviewedDraft()=run {
         val before=current.value
@@ -204,7 +245,8 @@ internal class NativeKotlinFirstProgramController(
         if(!before.canSaveDraft || before.savedProgramId!=null)return@run
         val id="first-"+UUID.randomUUID().toString().replace("-","")
         val result=host.saveReviewedFirstProgramDraft(
-            input,shown,source.revision,id,"My first program",4,true)
+            input,shown,source.revision,id,"My first program",4,true,
+            includeMyoFinisher=before.includeMyoFinisher)
         if(result is NativeCustomDraftWriteResult.Committed &&
             host.readCustomCycleDraft(id) is NativeCustomDraftReadResult.Found) {
             current.value=before.copy(savedProgramId=id,canSaveDraft=false,

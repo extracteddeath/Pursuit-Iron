@@ -72,8 +72,8 @@ internal object NativeKotlinTrainingArchiveDomain {
                 return NativeTrainingArchiveResult.Rejected(
                     NativeTrainingArchiveRefusal.TOO_LARGE)
         }
-        val measurements=bodyweightCsv(ledger) ?:return
-            NativeTrainingArchiveResult.Rejected(
+        val measurements=bodyweightCsv(ledger)
+            ?:return NativeTrainingArchiveResult.Rejected(
                 NativeTrainingArchiveRefusal.MEASUREMENTS_UNVERIFIED)
         val readme=(
             "Pursuit Iron — portable records, not a restorable app backup\n"+

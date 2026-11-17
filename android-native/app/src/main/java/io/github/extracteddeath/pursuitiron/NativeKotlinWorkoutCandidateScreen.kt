@@ -848,9 +848,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 it.exerciseId==exercise
             }.any{it.setKey in journal.effectiveSets}
             val options=NativeKotlinEquipmentRecoveryPolicy.review(
-                activeWorkout=!state.busy && !swapLoading &&
+                activeWorkout=!state.busy && !swapLoading,
+                hasPhysicalMachineConfig=activeMachineConfig!=null &&
                     machineChoices.ready && !machineChoices.busy,
-                hasPhysicalMachineConfig=activeMachineConfig!=null,
                 hasRecordedExerciseWork=recorded
             )
             NativeKotlinEquipmentRecoveryControl(

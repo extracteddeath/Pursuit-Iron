@@ -1424,15 +1424,8 @@ private fun NativeKotlinSetCard(
             physicalMachineLastReferences(lastReferences,machineInstanceId),
             WorkoutReferenceKey(target.setKey))
         if(set.isResolved) {
-            Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
-                (existing?.let{" · ${it.reps} reps"+
-                    (it.load?.let{amount->" at ${amount.stripTrailingZeros().toPlainString()}"}?:"")+
-                    (it.actualRir?.let{rir->" · ${rir} actual RIR"}?: " · actual RIR unknown")
-                } ?: "")+
-                (existing?.machineInstanceId?.let {storedMachine->
-                    workoutPhysicalStationName(target.exerciseId,issuedGymId,
-                        storedMachine,machineRoster)?.let{" · $it"}
-                } ?: ""),
+            Text(nativeSavedSetCaption("Saved",set.outcome,existing,
+                target.exerciseId,issuedGymId,machineRoster),
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                 style=MaterialTheme.typography.bodyMedium)
         }

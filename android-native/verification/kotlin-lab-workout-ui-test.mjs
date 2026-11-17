@@ -1216,3 +1216,29 @@ for(const id of ['smith-hip-thrust','pinwheel-curl','pjr-pullover','single-cable
   assert.ok(waveSixLabels.includes('"'+id+'" to '),
     'New reviewed physical equipment variants require proper athlete-facing names: '+id);
 }
+
+
+// Generated first-program advanced techniques are a strictly opt-in,
+// revalidated native draft transformation. The old straight-set output and
+// all v1 first-program seed bytes remain unchanged when disabled.
+const myoFirst=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachFirstProgramMyoFinisherDomain.kt');
+const firstConversion=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachFirstProgramDraftConversionDomain.kt');
+const firstUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinFirstProgramCandidateScreen.kt');
+const firstHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const firstSeed=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinFirstProgramSeedFileStore.kt');
+assert.match(myoFirst,/experience==AthleteExperience\.BEGINNER/);
+assert.match(myoFirst,/movement\.pattern!=ComposerPattern\.ISOLATION/);
+assert.match(myoFirst,/set\.targetRir/);
+assert.match(myoFirst,/if\(working\.any\{it\.value\.load!=set\.load\}\)continue/);
+assert.match(firstConversion,/includeMyoFinisher:Boolean=false/);
+assert.match(firstConversion,/finisher\.setKey==set\.stableSetKey/);
+assert.match(firstConversion,/CustomCycleCoachAuditDomain\.review\(next,setup,curatedCatalog,inputs\)/);
+assert.match(firstUi,/includeMyoFinisher:Boolean=false/);
+assert.match(firstUi,/fun chooseMyoFinisher\(enabled:Boolean\)/);
+assert.match(firstUi,/Optional myo-reps finisher/);
+assert.match(firstUi,/includeMyoFinisher=before\.includeMyoFinisher/);
+assert.match(firstHost,/includeMyoFinisher=seed\.includeMyoFinisher/);
+assert.match(firstHost,/includeMyoFinisher=includeMyoFinisher/);
+assert.match(firstSeed,/if\(seed\.includeMyoFinisher\)version else originalVersion/);
+assert.match(firstSeed,/if\(storedVersion>=2\)data\.readBoolean\(\) else false/);
+assert.doesNotMatch(firstUi,/includeMyoFinisher:Boolean=true/);

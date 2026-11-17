@@ -128,4 +128,28 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertFalse(response.mayIssueWorkout)
     }
 
+    @Test fun oldDefaultConversionStaysStraightAndUnsafeTechniqueFailsClosed() {
+        val candidate=reviewed()
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        val old=CoachFirstProgramDraftConversionDomain.propose(candidate,
+            source.setup,source.catalog,"first-safe","First program",4)
+        val explicitOff=CoachFirstProgramDraftConversionDomain.propose(candidate,
+            source.setup,source.catalog,"first-safe","First program",4,
+            includeMyoFinisher=false)
+        assertEquals(old,explicitOff)
+        assertEquals(FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,old.status)
+        assertTrue(checkNotNull(old.cycle).blocks.flatMap{it.days}
+            .flatMap{it.slots}.flatMap{it.sets}.all{it.amplifier==null})
+        // The fixture's primary lifts and unsuited accessories cannot
+        // magically become staged failure-oriented myo prescriptions.
+        val unsafe=CoachFirstProgramDraftConversionDomain.propose(candidate,
+            source.setup,source.catalog,"first-safe","First program",4,
+            includeMyoFinisher=true)
+        assertEquals(FirstProgramDraftStatus.UNRESOLVED_PRESCRIPTION,
+            unsafe.status)
+        assertNull(unsafe.cycle)
+        assertFalse(unsafe.mayApproveProgram)
+        assertFalse(unsafe.mayIssueWorkout)
+    }
+
 }

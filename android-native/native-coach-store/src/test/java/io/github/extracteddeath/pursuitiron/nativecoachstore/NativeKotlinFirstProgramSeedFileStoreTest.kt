@@ -94,4 +94,45 @@ class NativeKotlinFirstProgramSeedFileStoreTest {
                 store().create("owner-1",input))
         }
     }
+    @Test fun optInUsesDistinctVersionAndExactColdRecoveredTechniqueConsent() {
+        val legacy=seed().copy(cycleId="legacy")
+        val enabled=seed().copy(cycleId="opted-in",includeMyoFinisher=true)
+        assertEquals(NativeFirstProgramSeedWrite.Committed,
+            store().create("owner-1",legacy))
+        assertEquals(NativeFirstProgramSeedWrite.Committed,
+            store().create("owner-1",enabled))
+        val recovered=(store().read("owner-1","opted-in")
+            as NativeFirstProgramSeedRead.Found).seed
+        assertTrue(recovered.includeMyoFinisher)
+        assertEquals(enabled.copy(startingLoads=mapOf(
+            "db_bench" to BigDecimal("25"),"db_row" to BigDecimal("30"))),
+            recovered)
+        assertFalse((store().read("owner-1","legacy")
+            as NativeFirstProgramSeedRead.Found).seed.includeMyoFinisher)
+        val wireVersions=Files.list(temp.root.toPath()).use{stream->
+            stream.filter{
+                it.fileName.toString().startsWith("first-program-") &&
+                    it.fileName.toString().endsWith(".bin")
+            }.map { path ->
+                val bytes=Files.readAllBytes(path)
+                java.io.DataInputStream(java.io.ByteArrayInputStream(bytes)).use { input ->
+                    input.readInt() // authenticated payload length
+                    assertEquals(0x50494653,input.readInt())
+                    input.readInt()
+                }
+            }.toList()
+        }
+        assertEquals(setOf(1,2),wireVersions.toSet())
+    }
+
+    @Test fun changingOnlyOptInFlagDoesNotOverwritePriorSeed() {
+        assertEquals(NativeFirstProgramSeedWrite.Committed,
+            store().create("owner-1",seed()))
+        assertEquals(NativeFirstProgramSeedWrite.Rejected(
+            NativeFirstProgramSeedRefusal.ALREADY_EXISTS),
+            store().create("owner-1",seed().copy(includeMyoFinisher=true)))
+        assertFalse((store().read("owner-1","my-first")
+            as NativeFirstProgramSeedRead.Found).seed.includeMyoFinisher)
+    }
+
 }

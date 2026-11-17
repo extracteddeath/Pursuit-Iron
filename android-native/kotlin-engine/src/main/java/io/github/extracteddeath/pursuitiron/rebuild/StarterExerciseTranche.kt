@@ -2081,12 +2081,58 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
             null,null,setOf("incline-bench"),12..20,
             "Only the unweighted controlled prone Y-raise on a verified incline bench is included. It targets upward scapular rotation/lower-trap practice, rather than blindly copying legacy side-delt credit. No dumbbell is inferred and no other raise history transfers.",
-            direct(TrainingMuscle.TRAPS))
+            direct(TrainingMuscle.TRAPS)),
+        // Canonical web catalog additions from requested variant tranche (2026-11-17).
+        // Each remains provisional until physical gym stock and its own target load
+        // are verified; no history or next-set load is copied from a sibling.
+        entry("high-inc-db-press","bench_press","high-incline-dumbbell",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("incline-bench"),8..12,
+            "High-incline dumbbell press uses a confirmed adjustable incline bench and independently verified per-hand dumbbells; no normal incline press baseline transfers.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.5")),
+        entry("bottom-half-db-fly","chest_adduction","bottom-half-flat-dumbbell",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("flat-bench"),12..18,
+            "Bottom-half dumbbell fly is deliberately partial-range and requires confirmed flat bench support. It must not inherit a full-range fly prescription or rep history.",
+            direct(TrainingMuscle.CHEST)),
+        entry("deficit-pendlay-row","row","deficit-pendlay-barbell",
+            ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
+            BAR,LoadBasis.BARBELL_TOTAL,emptySet(),5..8,
+            "Deficit Pendlay row is a distinct floor-reset, altered-range barbell lift; its deficit setup must be checked by the athlete, not inferred from gym equipment. Do not reuse standard Pendlay row weights.",
+            direct(TrainingMuscle.UPPER_BACK),
+            indirect(TrainingMuscle.LATS,"0.5"),
+            indirect(TrainingMuscle.BICEPS,"0.25"),
+            indirect(TrainingMuscle.REAR_DELTS,"0.25"),
+            indirect(TrainingMuscle.TRAPS,"0.25")),
+        entry("low-to-high-face-pull","rear_delt_fly","low-to-high-cable-face-pull",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
+            "Low-to-high face pull has a separate cable trajectory and load history. The web source does not specify a mandatory attachment, so no rope or handle is silently assumed.",
+            direct(TrainingMuscle.REAR_DELTS)),
+        entry("leaning-cable-ohext","elbow_extension","leaning-overhead-cable",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),10..15,
+            "Leaning cable overhead triceps extension uses calibrated cable resistance, not straight-bar or rope assumptions; attachment selection remains athlete-verified.",
+            direct(TrainingMuscle.TRICEPS)),
+        entry("ad-press-barbell","overhead_press","near-upright-ad-barbell",
+            ComposerPattern.VERTICAL_PRESS,ComposerRole.SECONDARY,press,
+            BAR,LoadBasis.BARBELL_TOTAL,setOf("incline-bench","rack"),6..12,
+            "AD press with a free bar requires a confirmed near-upright adjustable bench, real rack and verified bar/plate total. It never inherits strict OHP or Smith press loads.",
+            direct(TrainingMuscle.FRONT_DELTS),
+            indirect(TrainingMuscle.TRICEPS,"0.5")),
+        entry("ad-press-smith","overhead_press","near-upright-ad-smith",
+            ComposerPattern.VERTICAL_PRESS,ComposerRole.SECONDARY,press,
+            "incline-smith-station",LoadBasis.SMITH_TOTAL,setOf("incline-bench"),6..12,
+            "AD press on Smith uses a gym-confirmed incline Smith station and its separately calibrated total-weight convention; no free-bar or other Smith station weight transfer.",
+            direct(TrainingMuscle.FRONT_DELTS),
+            indirect(TrainingMuscle.TRICEPS,"0.25"))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==330)
+        require(definitions.size==337)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

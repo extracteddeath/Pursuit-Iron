@@ -775,6 +775,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                         currentVisit && sameIssuedGroup) {
                                         reviewSetKey=visit.setKey
                                         reviewPart=visit.part.name
+                                        reviewStage=visit.stage
                                         focusOnNext=true
                                         displayPreferences.layout(WorkoutStartLayout.FOCUS)
                                         supersetRoundGroup=null
@@ -798,6 +799,7 @@ internal fun NativeKotlinCustomJournalScreen(
                             onChoose={visit->
                                 reviewSetKey=visit.setKey
                                 reviewPart=visit.part.name
+                                reviewStage=visit.stage
                             },
                             onReturnToNextUnfinished={
                                 reviewSetKey=null

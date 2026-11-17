@@ -242,6 +242,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             } != false)
             require(slot.coachNote.length<=1000)
             require(slot.sets.isNotEmpty() && slot.sets.size<=20)
+            val lastWorking=slot.sets.indexOfLast{
+                it.prescription.type==DraftSetType.WORKING
+            }
             for((index,set) in slot.sets.withIndex()) {
                 require(set.slotId==slot.slotId)
                 require(set.ordinalInSlot==index+1)
@@ -254,6 +257,10 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 require(p.activeSeconds in 1..3600 &&
                     p.restSeconds in 0..3600)
                 require(p.type!=DraftSetType.WARMUP || p.amplifier==null)
+                require(p.amplifier?.kind!=CustomAmplifierKind.LENGTHENED_PARTIALS ||
+                    (p.type==DraftSetType.WORKING && index==lastWorking)) {
+                    "Partial repetition extension must stay on the final working set"
+                }
                 fun checkLoad(load:DraftSetLoad) {
                     if(load is DraftSetLoad.Verified)require(
                         (load.value>zero || load.basis.permitsZeroAddedLoad && load.value.signum()==0) &&

@@ -362,6 +362,8 @@ const SET_ROW_BLEED = 16;
 const REDUCE_FRACTION = 0.6;
 
 const EX_FAMILY = {
+    // AD Press variations use different implements and independent loading.
+    "ad-press-barbell": "ad-press", "ad-press-smith": "ad-press",
     // triceps pushdowns (cable, vertical pressdown — swap the handle)
     "pushdown": "tri-pushdown", "rope-pushdown": "tri-pushdown", "ez-pushdown": "tri-pushdown",
     "v-bar-pushdown": "tri-pushdown", "straight-bar-pushdown": "tri-pushdown",

@@ -18,7 +18,7 @@ assert.match(journey,/onViewFinishedHistory\(completedId\)/);
 assert.match(history,/NativeKotlinHistoryFocusPolicy\.admit\(/);
 assert.match(history,/verified\?\.completions\?\.map\{it\.manifest\.workoutId\}/);
 assert.match(history,/verified\?\.completions\?\.singleOrNull/);
-assert.match(history,/if\(focusedWorkoutId!=null\)visibleSessions/);
+assert.match(history,/if\(preferredWorkoutId!=null\)visibleSessions/);
 assert.match(history,/if\(entry\.manifest\.workoutId==focusedWorkoutId\)\s*expanded=true/);
 assert.match(history,/Show all workout history/);
 assert.match(policy,/verifiedWorkoutIds\.count \{ verified->verified==it \}==1/);

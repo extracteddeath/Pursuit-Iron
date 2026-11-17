@@ -249,6 +249,23 @@ object CustomWorkoutJournalDomain {
                     as? CustomWorkoutJournalOperation.Record)
                 val plan=when(operation.visit.part) {
                     CustomWorkoutVisitPart.MAIN -> {
+                        // A correction to the activation load or physical
+                        // station after mini-sets exist would retroactively
+                        // invalidate their same-load lineage. Keep the actual
+                        // observations and refuse that correction instead.
+                        if(main!=null && target.prescription.amplifier?.let{
+                                it.kind==CustomAmplifierKind.MYO_REPS &&
+                                    it.followUpRounds>1
+                            }==true && nextEffective.keys.any {
+                                it.setKey==operation.visit.setKey &&
+                                    it.part==CustomWorkoutVisitPart.FOLLOW_UP
+                            } &&
+                            (main.performed?.load!=operation.performed?.load ||
+                             main.performed?.unit!=operation.performed?.unit ||
+                             main.performed?.machineInstanceId!=
+                                operation.performed?.machineInstanceId))
+                            return CustomWorkoutJournalDecision.Rejected(
+                                CustomWorkoutJournalRefusal.INVALID_CORRECTION)
                         if(operation.outcome!=KotlinJournalSetOutcome.COMPLETED &&
                             nextEffective.any{ (key,receipt)->
                                 key.setKey==operation.visit.setKey &&

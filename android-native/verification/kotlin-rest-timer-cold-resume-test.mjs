@@ -12,6 +12,8 @@ const tests=readFileSync('android-native/app/src/test/java/io/github/extractedde
 assert.match(policy,/getSharedPreferences\("kotlin-workout-rest-v1",Context.MODE_PRIVATE\)/);
 assert.match(policy,/athleteId,workoutId/);
 assert.match(policy,/MessageDigest\.getInstance\("SHA-256"\)/);
+assert.match(policy,/receiptStamp\(receiptEventId\)/);
+assert.match(policy,/raw\?\.takeIf\{it\.startsWith\("\$stamp:"\)\}/);
 assert.doesNotMatch(policy,/SystemClock|System\.currentTimeMillis/); // Pure policy receives clock samples
 assert.match(policy,/remaining\(checkpoint,elapsed,wall\)/);
 assert.match(policy,/if\(elapsedAge>MAX_SECONDS\*1000L\+CLOCK_TOLERANCE_MILLIS\)return false/);
@@ -22,9 +24,10 @@ assert.doesNotMatch(policy,/RecordSet\(|recordIssuedCustomSet\(|approve\(|issueW
 
 assert.match(rest,/ownerId: String\? = null/);
 assert.match(rest,/scopeKey=remember\(workoutId,ownerId\)/);
-assert.match(rest,/restStore\.read\(it,/);
+assert.match(rest,/recovered=remember\(scopeKey,latestReceiptOperationId\)/);
+assert.match(rest,/restStore\.read\(it,latestReceiptOperationId,/);
 assert.match(rest,/mutableLongStateOf\(recovered\?\.deadlineElapsed \?:0L\)/);
-assert.match(rest,/restStore\.save\(scopeKey,checkpoint\)/);
+assert.match(rest,/restStore\.save\(scopeKey,latestReceiptOperationId,checkpoint\)/);
 assert.match(rest,/NativeRestCountdownPolicy\.valid\(/);
 assert.match(rest,/NativeRestCountdownPolicy\.adjust\(/);
 assert.match(rest,/onLongClick = \{publish\(null\)\}/);

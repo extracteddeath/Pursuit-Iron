@@ -179,8 +179,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
     val displayedSessions=remember(visibleSessions,dateSelection,historyZone,
         preferredWorkoutId) {
         if(preferredWorkoutId!=null)visibleSessions
-        else nativeHistorySessionsInSelection(
-            visibleSessions,dateSelection,historyZone)
+        else nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)
     }
     val monthSections=remember(displayedSessions,historyZone){nativeHistoryMonths(displayedSessions,historyZone)}
     var visibleExerciseCount by rememberSaveable(exerciseSearch){mutableStateOf(12)}

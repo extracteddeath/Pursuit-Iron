@@ -117,6 +117,16 @@ internal fun NativeKotlinCandidateJourney(
     var selectedGeneratedWorkoutId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    // One-shot in-process History navigation request. This is NOT an
+    // authenticated record, may not survive process death and is cleared on
+    // leaving History; History independently verifies the current athlete.
+    var finishedHistoryWorkoutId by remember(host) {
+        mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(destination) {
+        if(destination!=KotlinCandidateDestination.HISTORY)
+            finishedHistoryWorkoutId=null
+    }
     // Navigation-only request. No workout permission or machine default is
     // granted by this ephemeral exercise focus.
     var pendingMachineExerciseId by rememberSaveable {
@@ -392,6 +402,8 @@ internal fun NativeKotlinCandidateJourney(
                             })
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
+                            preferredWorkoutId=finishedHistoryWorkoutId,
+                            onClearWorkoutFocus={finishedHistoryWorkoutId=null},
                             onOpenProgram={navigate(KotlinCandidateDestination.PROGRAM)},
                             onOpenCoach={exerciseId->
                                 navigationTouched=true
@@ -413,7 +425,11 @@ internal fun NativeKotlinCandidateJourney(
                             },
                             onClearGeneratedWorkout={selectedGeneratedWorkoutId=null},
                             onActiveWorkoutChanged={trainScreenExpanded=it},
-                            onViewFinishedHistory={
+                            onViewFinishedHistory={finishedWorkoutId->
+                                // A navigation ID cannot select another
+                                // athlete's history without History rechecking
+                                // its full owner-verified timeline.
+                                finishedHistoryWorkoutId=finishedWorkoutId
                                 selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
                                 navigate(KotlinCandidateDestination.HISTORY)
@@ -466,7 +482,7 @@ private fun NativeKotlinCandidateTrainEntry(
     onOpenCustomWorkout:(String?)->Unit,
     onClearGeneratedWorkout:()->Unit,
     onActiveWorkoutChanged:(Boolean)->Unit,
-    onViewFinishedHistory:()->Unit,
+    onViewFinishedHistory:(String)->Unit,
     onReviewNext:(String)->Unit,
     onReturnToProgram:()->Unit,
     onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit
@@ -598,7 +614,7 @@ private fun NativeKotlinCandidateTrainEntry(
         workoutScreens.SaveableStateProvider("custom:$customWorkoutId") {
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
             onClose={onOpenCustomWorkout(null)},
-            onViewHistory=onViewFinishedHistory,
+            onViewHistory={onViewFinishedHistory(customWorkoutId)},
             onReturnToProgram=onReturnToProgram,
             onReviewSwapInProgram=onReviewSwapInProgram)
         }
@@ -966,10 +982,13 @@ private fun NativeKotlinCandidateTrainEntry(
                 NativeKotlinWorkoutCandidateScreen(
                     controller,checkNotNull(selectedId),host,
                     onViewHistory={
+                        // Capture the completed ID before Train minimizes its
+                        // in-memory logger; History still verifies the record.
+                        val completedId=selectedId
                         controller.clear()
                         minimizedGeneratedId=null
                         selectedId=null
-                        onViewFinishedHistory()
+                        if(completedId!=null)onViewFinishedHistory(completedId)
                     },
                     onReviewNext={exerciseId->
                         controller.clear()

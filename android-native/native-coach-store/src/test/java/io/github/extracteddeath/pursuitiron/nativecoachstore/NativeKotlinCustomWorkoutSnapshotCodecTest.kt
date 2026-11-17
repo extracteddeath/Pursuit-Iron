@@ -332,8 +332,8 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             slot.copy(sets=slot.sets.map{set->
                 val p=set.prescription
                 if(p.amplifier?.kind!=CustomAmplifierKind.DROP_SET)set
-                else set.copy(prescription=p.copy(amplifier=p.amplifier.copy(
-                    secondDropLoad=weight("15"))))
+                else set.copy(prescription=p.copy(amplifier=checkNotNull(
+                    p.amplifier).copy(secondDropLoad=weight("15"))))
             })
         })
         assertThrows(IllegalArgumentException::class.java){

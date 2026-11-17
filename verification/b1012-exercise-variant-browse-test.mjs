@@ -38,10 +38,14 @@ assert.ok(facets.attachments.some(x=>x.id==='dual-rope'));
 assert.ok(facets.attachments.some(x=>x.id==='v-bar'));
 
 const app=readFileSync('modules/App.js','utf8');
-assert.match(app,/const allMatches = useMemo\(\(\) => candidatePool\.filter/);
-assert.match(app,/const list = allMatches\.slice\(0, visibleCount\)/);
+const picker=readFileSync('modules/exercise-picker-sheet.js','utf8');
+assert.match(picker,/const matches=useMemo\(\(\)=>pool\.filter/);
+assert.match(picker,/const visible=matches\.slice\(0,visibleCount\)/);
 assert.doesNotMatch(app,/EXERCISES\.filter\(e =>[^\n]+\.slice\(0, 100\)/);
-assert.match(app,/disabled: blocked\.has\(ex\.id\)/);
+assert.match(picker,/disabled:blocked\.has\(ex\.id\)/);
+assert.match(picker,/UiAction/);
+assert.match(picker,/UiChoice/);
+assert.match(app,/VariantExercisePickerSheet/);
 assert.match(app,/const familyAlts = filtered\.filter\(a => familyIds\.has\(a\.id\)\)/);
 assert.match(app,/const generalAlts = filtered\.filter\(a => !familyIds\.has\(a\.id\)\)/);
 assert.match(app,/candidates: alts, level, onLevel: setLevel/);

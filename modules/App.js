@@ -1,5 +1,6 @@
 import { GymLoadFields } from './gym-load-fields.js';
-import { exerciseBenchLevel, exerciseAttachmentFacet, availableVariantFacets, matchesVariantFacets } from './exercise-variant-browse.js';
+import { exerciseBenchLevel, exerciseAttachmentFacet, matchesVariantFacets } from './exercise-variant-browse.js';
+import { ExercisePickerSheet as VariantExercisePickerSheet, ExerciseVariantFacetFilters } from './exercise-picker-sheet.js';
 import { PlateCalcSheet } from './loading-calculator.js';
 import { HistoryEditSheet } from './history-editor.js';
 import { BackupRestorePanel } from './backup-restore-panel.js';
@@ -8454,32 +8455,6 @@ function SessionExerciseListSheet({ data, exIdx, onJump, onMove, onSkip, onAdd, 
                     }) }), _jsx("div", { className: "wpb-s960-padding-10px-18px-0", children: _jsxs("button", { onClick: onAdd, className: "pressable", style: { width: "100%", padding: "12px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Plus, { size: 16 }), " Add exercise"] }) })] }) }));
 }
 
-/** Read-only facets. They narrow already allowed exercise choices, never
- * authorize equipment, transfer a set's load, or select a physical A/B station. */
-function ExerciseVariantFacetFilters({ candidates, level, onLevel, attachment, onAttachment }) {
-    const facets = useMemo(() => availableVariantFacets(candidates), [candidates]);
-    const chips = (label, options, selected, onSelect) => options.length > 0
-        && _jsxs("div", { className: "wpb-hscroll wpb-b964-layout-10",
-            role: "group", "aria-label": label, children: [
-                _jsx("span", { className: "wpb-type-caption-faint",
-                    children: label }),
-                _jsx("button", { type: "button", className: "pressable",
-                    "aria-pressed": selected === "all",
-                    onClick: () => onSelect("all"),
-                    children: label === "Bench incline" ? "Any angle" : "Any attachment" }),
-                ...options.map(option => _jsx("button", {
-                    type: "button", className: "pressable",
-                    "aria-pressed": selected === option.id,
-                    onClick: () => onSelect(option.id),
-                    children: option.label
-                }, option.id))
-            ] });
-    return _jsxs("div", { className: "wpb-variant-facets", children: [
-        chips("Bench incline", facets.levels, level, onLevel),
-        chips("Cable attachment", facets.attachments, attachment, onAttachment)
-    ] });
-}
-
 function variantSearchMatches(ex, input) {
     const terms = String(input || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) return true;
@@ -8491,92 +8466,16 @@ function variantSearchMatches(ex, input) {
         exMatches(ex, String(input).trim().toLowerCase());
 }
 
-function ExercisePickerSheet({ onPick, onClose, banned = [], title = "Add exercise" }) {
-    const [q, setQ] = useState("");
-    const [part, setPart] = useState("all");
-    const [level, setLevel] = useState("all");
-    const [attachment, setAttachment] = useState("all");
-    const [visibleCount, setVisibleCount] = useState(40);
-    const candidatePool = useMemo(() => EXERCISES.filter(ex =>
-        part === "all" || ex.part === part), [part]);
-    const allMatches = useMemo(() => candidatePool.filter(ex =>
-        variantSearchMatches(ex, q) &&
-        matchesVariantFacets(ex, { level, attachment })),
-    [candidatePool, q, level, attachment]);
-    useEffect(() => { setVisibleCount(40); }, [q, part, level, attachment]);
-    const list = allMatches.slice(0, visibleCount);
-    const blocked = new Set(banned);
-    return _jsx("div", { className: "wpb-backdrop wpb-b961-overlay-06",
-        onClick: onClose, children: _jsxs("div", {
-            ref: sheetDragRef,
-            onClick: event => event.stopPropagation(),
-            className: "wpb-ui-sheet-panel",
-            style: { width: "100%", maxHeight: "88%", display: "flex",
-                flexDirection: "column", background: C.bg2,
-                borderTopLeftRadius: 24, borderTopRightRadius: 24,
-                paddingTop: 8, borderTop: `1px solid ${C.border}` },
-            children: [
-                _jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-justifycontent-space-between wpb-s956-marginbottom-8",
-                    children: [
-                        _jsx("div", { className: "wpb-s956-fontsize-18 wpb-s956-fontweight-700", children: title }),
-                        _jsx("button", { type: "button", className: "pressable hit",
-                            onClick: onClose, "aria-label": "Close", style: iconBtn(),
-                            children: _jsx(X, { size: 18 }) })
-                    ] }),
-                _jsx("label", { className: "wpb-s960-padding-0-18px",
-                    children: _jsx("input", { value: q,
-                        onChange: event => setQ(event.target.value.slice(0, 80)),
-                        placeholder: `Search all ${EXERCISES.length} exercises, attachments, or inclines`,
-                        "aria-label": "Search exercises, variants and attachments",
-                        style: { width: "100%", background: C.card,
-                            border: `1px solid ${C.border}`, borderRadius: 12,
-                            padding: "11px 12px", boxSizing: "border-box", color: C.text } })
-                }),
-                _jsx("div", { className: "wpb-hscroll wpb-b964-layout-10",
-                    role: "group", "aria-label": "Target muscle", children:
-                    ["all", ...PART_ORDER].map(p => _jsx("button", {
-                        type: "button", className: "pressable",
-                        "aria-pressed": part === p,
-                        onClick: () => setPart(p),
-                        children: p === "all" ? "All" : PART_LABEL[p]
-                    }, p)) }),
-                _jsx(ExerciseVariantFacetFilters, {
-                    candidates: candidatePool, level, onLevel: setLevel,
-                    attachment, onAttachment: setAttachment }),
-                _jsx("div", { className: "wpb-type-caption-faint wpb-s960-padding-0-18px",
-                    role: "status",
-                    children: `${allMatches.length} matching exercise setups · ${EXERCISES.length} catalog entries. Each setup keeps its own loading history.` }),
-                _jsxs("div", { className: "wpb-scroll wpb-b965-layout-09",
-                    children: [
-                        ...list.map(ex => _jsxs("button", {
-                            type: "button", className: "pressable",
-                            disabled: blocked.has(ex.id),
-                            onClick: () => onPick(ex.id),
-                            "aria-label": `Choose ${variantDisplayName(ex)}`,
-                            style: { width: "100%", minHeight: 56,
-                                padding: "11px 12px", marginBottom: 6,
-                                background: C.card, border: `1px solid ${C.border}`,
-                                borderRadius: 12, textAlign: "left", color: C.text,
-                                cursor: blocked.has(ex.id) ? "not-allowed" : "pointer",
-                                opacity: blocked.has(ex.id) ? .5 : 1 },
-                            children: [
-                                _jsx("span", { className: "wpb-type-value",
-                                    children: variantDisplayName(ex) +
-                                        (blocked.has(ex.id) ? " · banned" : "") }),
-                                _jsx("span", { className: "wpb-type-subline",
-                                    children: friendlyEquipment(ex) })
-                            ]
-                        }, ex.id)),
-                        allMatches.length > list.length &&
-                            _jsx("button", { type: "button", className: "pressable",
-                                onClick: () => setVisibleCount(n =>
-                                    Math.min(allMatches.length, n + 40)),
-                                children: `Show more (${allMatches.length - list.length} remaining)` }),
-                        allMatches.length === 0 && _jsx("div", {
-                            role: "status", className: "wpb-type-support-muted",
-                            children: "No matching exercise setups. Clear a filter or search term." })
-                    ] })
-            ] })
+
+function ExercisePickerSheet(props) {
+    return _jsx(VariantExercisePickerSheet, { ...props,
+        exercises: EXERCISES,
+        parts: PART_ORDER,
+        partLabels: PART_LABEL,
+        displayName: variantDisplayName,
+        equipmentDescription: friendlyEquipment,
+        searchable: variantSearchMatches,
+        sheetDragRef
     });
 }
 function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, day, sessionExerciseIds = null, scopeMode = "workout" }) {

@@ -172,7 +172,7 @@ object CustomWorkoutSnapshotDomain {
                     return CustomWorkoutSnapshotResult.Rejected(
                         CustomWorkoutSnapshotRefusal.DUPLICATE_SET_IDENTITY)
                 knownSeconds+=set.activeSeconds.toLong()+set.restSeconds+
-                    (set.amplifier?.followUpRestSeconds ?:0)+
+                    (set.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)+
                     (set.amplifier?.followUpActiveSeconds ?:0)
                 CustomWorkoutSetSnapshot(key,slot.slotId,index+1,
                     set.copy(amplifier=set.amplifier?.copy()))

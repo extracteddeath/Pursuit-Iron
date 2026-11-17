@@ -8,6 +8,17 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Exact observed RIR in native Progress (2026-11-17):**
+The per-exercise corrected History trend now carries the actual RIR from
+the same best completed working set displayed in each factual point, for
+generated and custom workouts. Unknown RIR stays unreported; no issued
+target RIR is borrowed. The chart's TalkBack semantics, single-session,
+first/latest, and expanded point labels state reported effort separately
+from exact weights/reps. The original best-set ranking, gym/Machine A/B
+and rep-window boundaries, PR permissions, progression and saved records
+are unchanged. This requires JVM and Compose CI plus later physical-device
+accessibility sign-off, not an APK/AAB.
+
 **Canonical History/Finish performance checkpoint (2026-11-17):**
 Post-Finish and History now display the SAME existing Kotlin History
 working-set rep-range and reported-actual-RIR calculation. A source-verified

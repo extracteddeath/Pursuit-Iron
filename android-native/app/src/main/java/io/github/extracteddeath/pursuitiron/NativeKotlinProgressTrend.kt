@@ -191,7 +191,10 @@ internal fun PursuitStrengthTrendChart(
 internal data class PursuitFactualTrendPoint(
     val sessionOrder:Long,
     val value:BigDecimal,
-    val completedAtEpochMillis:Long?=null
+    val completedAtEpochMillis:Long?=null,
+    /** Only a specific recorded working set may attach reported effort. */
+    val actualRir:Int?=null,
+    val showActualEffort:Boolean=false
 )
 
 @Composable
@@ -214,7 +217,10 @@ internal fun PursuitFactualLinePlot(
     val spoken=ordered.joinToString("; ") {
         NativeKotlinTrendAxisPolicy.sessionLabel(
             it.sessionOrder,it.completedAtEpochMillis,recordedZone,
-            recordedLocale) + ", ${formatValue(it.value)}"
+            recordedLocale) + ", ${formatValue(it.value)}" +
+            (if(it.showActualEffort)
+                ", "+(it.actualRir?.let{rir->"$rir actual RIR"}
+                    ?: "actual RIR not reported") else "")
     }
     Canvas(Modifier.fillMaxWidth().height(164.dp)
         .semantics {contentDescription="$measureLabel trend. $spoken"}) {

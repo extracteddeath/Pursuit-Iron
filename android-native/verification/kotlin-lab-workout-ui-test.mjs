@@ -132,7 +132,7 @@ for(const fragment of [
   'initiallyExpanded=activeFocus==mainKey',
   'initiallyExpanded=activeFocus==followKey',
   'reviewStage=visit.stage',
-  'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name)'
+  'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name &&'
 ])assert.ok(journal.includes(fragment),
   'Custom Focus must not steal or skip another visit: '+fragment);
 const sharedNavigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutFocusNavigation.kt');

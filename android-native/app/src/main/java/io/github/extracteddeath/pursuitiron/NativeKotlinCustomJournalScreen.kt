@@ -1248,6 +1248,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                 ) {
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
+                                amplifierSummary=CustomAmplifierSetSummaryDomain.review(current,set),
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
@@ -1694,7 +1695,8 @@ private fun NativeKotlinCustomVisitEditor(
     onCurrentDraftChanged:(String,String)->Unit={_,_->},
     stageOrdinal:Int=1,
     stageTotal:Int=1,
-    activationPerformed:KotlinPerformedSet?=null
+    activationPerformed:KotlinPerformedSet?=null,
+    amplifierSummary:CustomAmplifierSetSummary?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1902,19 +1904,25 @@ private fun NativeKotlinCustomVisitEditor(
             AdvancedAmplifierProtocolDomain.stageLabel(it,stageOrdinal)
         } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
-        // Belongs to the actual LAST working set even after the main set
-        // is completed or Target/Last reference mode changes. Never only
-        // put this prescription in an exercise-wide floating banner.
-        if(part==CustomWorkoutVisitPart.MAIN &&
-            follower?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
-            prescription.type==DraftSetType.WORKING &&
-            position==setCount)
+        // Every optional technique is discoverable at the ACTUAL working
+        // set before it is performed, remains attached after completion,
+        // and reflects journaled stage receipts instead of invented work.
+        // Keep it compact; no exercise-wide amplifier banner.
+        if(part==CustomWorkoutVisitPart.MAIN && amplifierSummary!=null)
             Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
                 shape=MaterialTheme.shapes.small) {
-                Text("Last working set · Lengthened partials",
-                    modifier=Modifier.padding(PursuitSpace.xs),
-                    style=MaterialTheme.typography.labelMedium,
-                    color=MaterialTheme.colorScheme.primary)
+                Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
+                    verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                    Text((if(position==setCount)"Last working set" else "Set $position")+
+                        " · ${amplifierSummary.title}",
+                        style=MaterialTheme.typography.labelMedium,
+                        color=MaterialTheme.colorScheme.primary)
+                    Text(amplifierSummary.planned,
+                        style=MaterialTheme.typography.bodySmall)
+                    Text(amplifierSummary.progress,
+                        style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
             val protocol=AdvancedAmplifierProtocolDomain.template(follower.kind)

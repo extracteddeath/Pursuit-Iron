@@ -48,11 +48,8 @@ object CustomWorkoutVisitFocusDomain {
                 add(main)
                 val saved=(journal.effectiveVisits[main]?.operation
                     as? CustomWorkoutJournalOperation.Record)
-                if(set.prescription.amplifier!=null &&
-                    saved?.outcome==KotlinJournalSetOutcome.COMPLETED) {
-                    add(CustomWorkoutVisitKey(
-                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP))
-                }
+                if(saved?.outcome==KotlinJournalSetOutcome.COMPLETED)
+                    addAll(CustomWorkoutExecutionDomain.followUpVisits(journal,set))
             }
         }
 }

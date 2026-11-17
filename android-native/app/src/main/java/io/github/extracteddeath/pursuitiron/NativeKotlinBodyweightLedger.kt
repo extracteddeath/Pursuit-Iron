@@ -159,6 +159,10 @@ internal object NativeBodyweightLedgerDomain {
  * The athlete ID is supplied only from the host's verified current setup.
  */
 internal class NativeKotlinBodyweightStore(context:Context) {
+    // Multiple Compose destinations may instantiate the store concurrently.
+    // Compare/read/commit must be atomic across ALL local store instances,
+    // not merely synchronized on one transient screen-owned object.
+    private companion object { val writeLock=Any() }
     private val prefs:SharedPreferences=context.applicationContext
         .getSharedPreferences("pursuit-bodyweight-ledger-v1",Context.MODE_PRIVATE)
     private fun key(owner:String)="ledger:"+NativeBodyweightLedgerDomain.hash(owner)
@@ -172,17 +176,19 @@ internal class NativeKotlinBodyweightStore(context:Context) {
             NativeBodyweightRead.Rejected(NativeBodyweightRefusal.STORAGE_UNAVAILABLE)
         }
 
-    @Synchronized
     fun save(owner:String,expectedRevision:Long,record:NativeBodyweightEntry,
              today:LocalDate,replaceExisting:Boolean):NativeBodyweightWrite =
-        write(owner,expectedRevision) {
-            NativeBodyweightLedgerDomain.replace(it,record,today,replaceExisting)
+        synchronized(writeLock) {
+            write(owner,expectedRevision) {
+                NativeBodyweightLedgerDomain.replace(it,record,today,replaceExisting)
+            }
         }
 
-    @Synchronized
     fun delete(owner:String,expectedRevision:Long,date:LocalDate):NativeBodyweightWrite =
-        write(owner,expectedRevision) {
-            NativeBodyweightLedgerDomain.delete(it,date)
+        synchronized(writeLock) {
+            write(owner,expectedRevision) {
+                NativeBodyweightLedgerDomain.delete(it,date)
+            }
         }
 
     private fun write(

@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -44,6 +45,69 @@ private fun <T> CycleChoiceRow(
         values.forEach { option ->
             FilterChip(selected = option == selected,
                 onClick = { onSelect(option) }, label = { Text(caption(option)) })
+        }
+    }
+}
+
+/**
+ * Keep an optional advanced technique visibly attached to its issued set
+ * without repeating an open, full-width protocol card for every set. The
+ * small summary is factual prescription, not a logged follow-up or consent.
+ * Expanded advice is read-only and keyed to the issued set identity.
+ */
+@Composable
+private fun NativeKotlinSetTechniqueSummary(
+    amp: CustomSetAmplifier,
+    ordinal: Int,
+    setKey: String
+) {
+    var showDetails by rememberSaveable(setKey) { mutableStateOf(false) }
+    val technique=AdvancedAmplifierProtocolDomain.template(amp.kind)
+    val count=if(amp.followUpRounds>1)
+        "${amp.followUpRounds} ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,plural=true)}"
+    else "1 follow-up"
+    val label="${technique.title} · $count · ${amp.followUpReps} reps · ${amp.followUpRestSeconds}s rest"
+    Column(Modifier.fillMaxWidth(),
+        verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+        Row(Modifier.fillMaxWidth(),
+            verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+            Text(label,modifier=Modifier.weight(1f),
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.primary)
+            TextButton(onClick={showDetails=!showDetails},
+                modifier=Modifier.heightIn(min=48.dp).semantics {
+                    contentDescription=(if(showDetails)"Hide" else "Show")+
+                        " ${technique.title} details for set $ordinal"
+                }) {
+                Text(if(showDetails)"Less" else "Details")
+            }
+        }
+        if(showDetails) Surface(
+            color=MaterialTheme.colorScheme.surfaceContainerLow,
+            shape=MaterialTheme.shapes.medium) {
+            Column(Modifier.fillMaxWidth().padding(PursuitSpace.s),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                Text("Set $ordinal · ${technique.title}",
+                    style=MaterialTheme.typography.labelLarge)
+                Text(when(val extra=amp.followUpLoad) {
+                    null -> "Same confirmed load"
+                    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+                    is DraftSetLoad.Verified ->
+                        "${extra.value.toPlainString()} ${extra.unit} · "+
+                            kotlinLoadBasisLabel(extra.basis)
+                },style=MaterialTheme.typography.bodySmall)
+                Text(amp.followUpActiveSeconds?.let{
+                    "${it}s added work planned"
+                } ?: "Additional work time not authored",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(technique.techniqueCue,
+                    style=MaterialTheme.typography.bodySmall)
+                Text(AdvancedAmplifierProtocolDomain.stageReviewCue(amp),
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -1041,39 +1105,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 style=MaterialTheme.typography.bodyMedium)
                             Text("${target.activeSeconds}s work · ${target.restSeconds}s rest",
                                 style=MaterialTheme.typography.bodySmall)
-                            target.amplifier?.let {amp ->
-                                val technique = AdvancedAmplifierProtocolDomain.template(amp.kind)
-                                Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
-                                    shape=MaterialTheme.shapes.medium,
-                                    modifier=Modifier.fillMaxWidth()) {
-                                    Column(Modifier.padding(12.dp),
-                                        verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                        Text(technique.title + " · Set ${set.ordinalInSlot}",
-                                            style=MaterialTheme.typography.labelLarge,
-                                            color=MaterialTheme.colorScheme.primary)
-                                        Text((if(amp.followUpRounds>1)
-                                                "${amp.followUpRounds} ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,plural=true)} · ${amp.followUpReps} reps each · "
-                                            else "${amp.followUpReps} follow-up reps · ") +
-                                            "${amp.followUpRestSeconds}s short rest · " +
-                                            (when(val extra=amp.followUpLoad) {
-                                                null -> "Same confirmed load"
-                                                DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-                                                is DraftSetLoad.Verified ->
-                                                    "${extra.value.toPlainString()} ${extra.unit} · " +
-                                                        kotlinLoadBasisLabel(extra.basis)
-                                            }),
-                                            style=MaterialTheme.typography.bodyMedium)
-                                        Text(amp.followUpActiveSeconds?.let{
-                                            "${it}s added work planned"
-                                        } ?: "Additional work time not authored",
-                                            style=MaterialTheme.typography.bodySmall,
-                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(technique.techniqueCue,
-                                            style=MaterialTheme.typography.bodySmall)
-                                        Text(AdvancedAmplifierProtocolDomain.stageReviewCue(amp),
-                                            style=MaterialTheme.typography.bodySmall,
-                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
+                            target.amplifier?.let { amp ->
+                                key(set.setKey) {
+                                    NativeKotlinSetTechniqueSummary(
+                                        amp=amp,ordinal=set.ordinalInSlot,setKey=set.setKey)
                                 }
                             }
                         }

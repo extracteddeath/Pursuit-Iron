@@ -10,7 +10,16 @@ const gym=readFileSync(root+'NativeKotlinMachineAlternativesPanel.kt','utf8');
 // existing owner-verified, revision-fenced set-selection authority.
 for(const call of [generated,custom])
   assert.match(call,/NativeKotlinWorkoutMachineSelector\(/);
-assert.match(picker,/OutlinedButton\([\s\S]*?Physical machine · \$display/);
+assert.match(picker,/TextButton\([\s\S]*?Machine · \$display/);
+const action=picker.slice(picker.indexOf('    TextButton('),
+    picker.indexOf('    if(open)ModalBottomSheet('));
+assert.doesNotMatch(action,/fillMaxWidth\(\)/,
+  'physical machine choice must not occupy a full-width banner in Train');
+assert.match(action,/heightIn\(min=48\.dp\)/);
+assert.match(action,/widthIn\(max=260\.dp\)/);
+assert.match(action,/contentDescription="Current physical machine: \$display\. Choose or add machine"/);
+assert.match(action,/TextOverflow\.Ellipsis/);
+assert.match(action,/enabled=true/);
 assert.match(picker,/min=48\.dp/);
 assert.match(picker,/if\(open\)ModalBottomSheet\(onDismissRequest=\{open=false\}\)/);
 assert.match(picker,/verticalScroll\(rememberScrollState\(\)\)/);
@@ -23,7 +32,7 @@ assert.match(picker,/onSelect\(machine\.id\)/);
 // commits; only a newly published, verified station choice dismisses the sheet.
 const savedAcknowledgement=picker.slice(
     picker.indexOf('LaunchedEffect(selectedId,config.machines,acknowledgedCreatedMachineId)'),
-    picker.indexOf('    OutlinedButton(',picker.indexOf('LaunchedEffect(selectedId,config.machines,acknowledgedCreatedMachineId)')));
+    picker.indexOf('    TextButton(',picker.indexOf('LaunchedEffect(selectedId,config.machines,acknowledgedCreatedMachineId)')));
 assert.match(savedAcknowledgement,/pendingChoice!=null && selectedId==pendingChoice/);
 assert.match(savedAcknowledgement,/config\.machines\.size>creation\.second/);
 assert.match(savedAcknowledgement,/selectedId!=creation\.first/);

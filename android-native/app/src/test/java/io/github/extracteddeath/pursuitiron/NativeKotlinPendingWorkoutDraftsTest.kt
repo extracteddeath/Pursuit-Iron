@@ -44,6 +44,11 @@ class NativeKotlinPendingWorkoutDraftsTest {
         assertNotEquals(first,identity(load=DraftSetLoad.ExplicitBodyweight))
     }
 
+    @Test fun decimalScaleChangesDuringJournalReplayDoNotLoseTypedDraft() {
+        assertEquals(identity(),identity(load=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.MACHINE_STACK,BigDecimal("200.000"))))
+    }
+
     @Test fun lengthPrefixSeparatesUntrustedSourceParts() {
         assertNotEquals(identity(athlete="a:b",workout="c"),
             identity(athlete="a",workout="b:c"))

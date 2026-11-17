@@ -1922,6 +1922,10 @@ private fun NativeKotlinCustomVisitEditor(
                     Text(amplifierSummary.progress,
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    amplifierSummary.actuals?.let { observed ->
+                        Text(observed,style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurface)
+                    }
                 }
             }
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {

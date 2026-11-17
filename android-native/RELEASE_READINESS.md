@@ -8,6 +8,22 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Portable native-records checkpoint (2026-11-17):** Profile now
+exposes an explicit Android Save As ZIP containing TWO owner-verified,
+read-only CSVs: completed generated/custom native workouts with corrected
+set actuals and original targets, plus dated bodyweight records retaining
+their entered numeric amounts and lb/kg units. A README states exactly what
+is missing: this is **NOT** a restorable backup, excludes unfinished sessions,
+signed programs, gym calibration, coach settings, notes and prior web data.
+The export rechecks the same active athlete, current verified native
+History/manifest revision and private bodyweight ledger revision AFTER
+returning from the file picker; it refuses changed/unverified facts rather
+than substituting stale data or zero records. ZIP encoding is bounded, with
+no app journal/coach write, network transmission or implicit sharing.
+These source/JVM/Compose CI checks still require separate real Android
+file-picker, accessibility and storage-failure acceptance. A complete
+restore-capable data backup remains OPEN. APK/AAB release remains frozen.
+
 **Train equipment-recovery checkpoint (2026-11-17):** the Kotlin generated
 and custom workout UIs now surface a clear, workout-local "Equipment
 unavailable?" route from the current exercise in Focus and All Sets.

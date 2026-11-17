@@ -298,4 +298,46 @@ class NativeCustomWorkoutJournalCodecTest {
             NativeCustomWorkoutJournalCodec.encode(record(invalid))
         }
     }
+    @Test fun myoStagesRoundTripAsDistinctV5ReceiptsWithoutRewritingV1History() {
+        val legacy=initial()
+        val legacyBytes=NativeCustomWorkoutJournalCodec.encode(record(legacy))
+        assertEquals(1,java.nio.ByteBuffer.wrap(legacyBytes,4,4).int)
+        val source=snapshot()
+        val amended=source.copy(
+            slots=source.slots.map { slot -> slot.copy(
+                sets=slot.sets.map { set -> set.copy(
+                    prescription=set.prescription.copy(
+                        amplifier=set.prescription.amplifier!!.copy(followUpRounds=5))
+                ) }
+            ) },
+            knownSetAndRestSeconds=source.knownSetAndRestSeconds+80L
+        )
+        var journal=CustomWorkoutJournalDomain.begin(
+            "workout-myo",amended,"a".repeat(64))
+        journal=accept(journal,CustomWorkoutJournalOperation.Record(
+            "main",0,CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(16,1)))
+        for((index,reps) in listOf(5,4,3).withIndex()) {
+            val visit=CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP,index+1)
+            assertEquals(visit,CustomWorkoutJournalDomain.nextUnresolvedVisit(journal))
+            journal=accept(journal,CustomWorkoutJournalOperation.Record(
+                "stage-${index+1}",journal.revision,visit,
+                KotlinJournalSetOutcome.COMPLETED,actual(reps,2)))
+            val cold=NativeCustomWorkoutJournalCodec.encode(record(journal))
+            assertEquals(5,java.nio.ByteBuffer.wrap(cold,4,4).int)
+            assertEquals(journal,NativeCustomWorkoutJournalCodec.decode(cold).journal)
+            assertArrayEquals(cold,NativeCustomWorkoutJournalCodec.encode(
+                NativeCustomWorkoutJournalCodec.decode(cold)))
+        }
+        assertEquals(null,CustomWorkoutJournalDomain.nextUnresolvedVisit(journal))
+        assertTrue(journal.canProposeFinish)
+        assertEquals(listOf(5,4,3),journal.effectiveVisits
+            .filterKeys{it.part==CustomWorkoutVisitPart.FOLLOW_UP}
+            .values.map{
+                (it.operation as CustomWorkoutJournalOperation.Record).performed!!.reps
+            })
+        assertArrayEquals(legacyBytes,NativeCustomWorkoutJournalCodec.encode(
+            NativeCustomWorkoutJournalCodec.decode(legacyBytes)))
+    }
+
 }

@@ -10,7 +10,7 @@ const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 for(const phrase of [
   'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',
   'initiallyExpanded=activeFocus==mainKey',
-  'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
+  'initiallyExpanded=activeFocus==followKey',
   'mutableStateOf(saved==null && initiallyExpanded)',
   'initialMachineScopedLoad(target,saved?.performed,machineInstanceId)',
   'prescription.reps.minimum',
@@ -35,7 +35,7 @@ for(const phrase of [
   'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
   '"main:${set.setKey}:station:"',
-  'editorStates.SaveableStateProvider("follow:${set.setKey}")',
+  '"follow:${set.setKey}:stage:${followKey.stage}"',
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);
@@ -130,8 +130,9 @@ for(const fragment of [
   'reviewSetKey=visit.setKey',
   'reviewPart=visit.part.name',
   'initiallyExpanded=activeFocus==mainKey',
-  'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
-  'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name)'
+  'initiallyExpanded=activeFocus==followKey',
+  'reviewStage=visit.stage',
+  'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name &&'
 ])assert.ok(journal.includes(fragment),
   'Custom Focus must not steal or skip another visit: '+fragment);
 const sharedNavigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutFocusNavigation.kt');
@@ -150,7 +151,7 @@ for(const fragment of [
   'fun visibleOrder(journal:CustomWorkoutJournalDraft)',
   'CustomWorkoutExecutionDomain.orderedSets(journal.snapshot)',
   'saved?.outcome==KotlinJournalSetOutcome.COMPLETED',
-  'set.prescription.amplifier!=null',
+  'CustomWorkoutExecutionDomain.followUpVisits(journal,set)',
   'CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(focusDomain.includes(fragment),
   'Read-only focus order must preserve main/amplifier causality: '+fragment);
@@ -205,7 +206,8 @@ for(const phrase of [
   'val canSkip=stillNext && !busy && !finished',
   'if(latest==quickSkip && !busy && !finished',
   'record(quickSkip.setKey,quickSkip.part,',
-  'KotlinJournalSetOutcome.SKIPPED,null)',
+  'KotlinJournalSetOutcome.SKIPPED,null,',
+  'stage=quickSkip.stage',
   'Text("Keep training")'
 ])assert.ok(journal.includes(phrase),'Custom next-set shortcut must be revision-checked: '+phrase);
 assert.ok(!header.includes('onClick=onSkip,enabled=enabled,modifier=Modifier.fillMaxWidth()'),
@@ -217,8 +219,14 @@ assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') 
   localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
+assert.ok(journal.includes('activationPerformed=main?.performed') &&
+  journal.includes('val sameLoadActivation=if(') &&
+  journal.includes('activationPerformed?.machineInstanceId==machineInstanceId') &&
+  journal.includes('sameLoadActivation ?:') &&
+  journal.includes('Your issued target remains unchanged.'),
+  'Myo mini-set prefill must use observed same-machine activation without editing prescription');
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
-  journal.includes('set.setKey,part.name,machineInstanceId,target,expectedReps,') &&
+  journal.includes('set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,') &&
   localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('if(committed)store.discard(identity)'),
@@ -362,7 +370,7 @@ assert.ok(machineSelector.includes('internal fun initialMachineScopedLoad(') &&
   composer.includes('initialMachineScopedLoad(target.load,existing,machineInstanceId)') &&
   journal.includes('initialMachineScopedLoad(target,saved?.performed,machineInstanceId)') &&
   composer.includes('target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId') &&
-  journal.includes('set.setKey,part.name,existing?.appliedRevision,machineInstanceId') &&
+  journal.includes('set.setKey,part.name,stageOrdinal,existing?.appliedRevision,machineInstanceId') &&
   !composer.includes('LaunchedEffect(machineInstanceId)') &&
   !journal.includes('LaunchedEffect(machineInstanceId)'),
   'Machine identity changes must not silently overwrite pending native set weight edits');
@@ -644,7 +652,8 @@ assert.ok(composer.includes('val coach=state.liveCoach?.takeIf {') &&
 assert.ok(journal.includes('val sameType=slot.sets.filter {') &&
   journal.includes('it.prescription.type==set.prescription.type') &&
   journal.includes('val number=sameType.indexOfFirst {') &&
-  journal.includes('"Amplifier follow-up · $label $number of ${sameType.size}"') &&
+  journal.includes('stage ${activeFocus.stage} of ${it.followUpRounds}') &&
+  journal.includes('val method=AdvancedAmplifierProtocolDomain.template(it.kind)') &&
   journal.includes('"$label $number of ${sameType.size}"') &&
   !journal.includes('entry $number of ${slot.sets.size}') &&
   composer.includes('"Set"} $number of ${typeSets.size}"'),

@@ -70,6 +70,7 @@ internal fun NativeKotlinCustomJournalScreen(
     // set key can never be promoted into a valid active focus.
     var reviewSetKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var reviewPart by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var reviewStage by rememberSaveable(workoutId){mutableIntStateOf(1)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pinnedSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     // Only a read-only navigation destination, scoped to this issued workout.
@@ -243,11 +244,12 @@ internal fun NativeKotlinCustomJournalScreen(
 
     fun record(
         setKey:String,part:CustomWorkoutVisitPart,
-        outcome:KotlinJournalSetOutcome,performed:KotlinPerformedSet?
+        outcome:KotlinJournalSetOutcome,performed:KotlinPerformedSet?,
+        stage:Int=1
     ) {
         if(busy || !machineChoices.ready || machineChoices.busy)return
         val current=journal ?:return
-        val visit=CustomWorkoutVisitKey(setKey,part)
+        val visit=CustomWorkoutVisitKey(setKey,part,stage)
         val prior=current.effectiveVisits[visit]
         val correction=prior?.operation?.eventId
         busy=true
@@ -266,7 +268,8 @@ internal fun NativeKotlinCustomJournalScreen(
                 // Follow the next unlogged visit after a manually focused
                 // entry was actually saved. Rejected disk writes retain
                 // both the selected visit and the editable draft.
-                if(reviewSetKey==visit.setKey && reviewPart==visit.part.name) {
+                if(reviewSetKey==visit.setKey && reviewPart==visit.part.name &&
+                    reviewStage==visit.stage) {
                     reviewSetKey=null
                     reviewPart=null
                 }
@@ -507,7 +510,7 @@ internal fun NativeKotlinCustomJournalScreen(
                 }
                 val requestedFocus=reviewSetKey?.let{key->
                     requestedPart?.let{part->
-                        CustomWorkoutVisitKey(key,part)
+                        CustomWorkoutVisitKey(key,part,reviewStage)
                     }
                 }?.takeIf{it in availableVisits}
                 val activeFocus=(requestedFocus ?: nextVisit).takeIf {
@@ -667,7 +670,11 @@ internal fun NativeKotlinCustomJournalScreen(
                         val label=if(set.prescription.type==DraftSetType.WARMUP)
                             "Warm-up" else "Set"
                         if(activeFocus?.part==CustomWorkoutVisitPart.FOLLOW_UP)
-                            "Amplifier follow-up · $label $number of ${sameType.size}"
+                            set.prescription.amplifier?.let {
+                                val method=AdvancedAmplifierProtocolDomain.template(it.kind)
+                                "${method.title} · stage ${activeFocus.stage} of ${it.followUpRounds}"
+                            } ?: "Amplifier follow-up"
+
                         else
                             "$label $number of ${sameType.size}"
                     }
@@ -768,6 +775,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                         currentVisit && sameIssuedGroup) {
                                         reviewSetKey=visit.setKey
                                         reviewPart=visit.part.name
+                                        reviewStage=visit.stage
                                         focusOnNext=true
                                         displayPreferences.layout(WorkoutStartLayout.FOCUS)
                                         supersetRoundGroup=null
@@ -791,6 +799,7 @@ internal fun NativeKotlinCustomJournalScreen(
                             onChoose={visit->
                                 reviewSetKey=visit.setKey
                                 reviewPart=visit.part.name
+                                reviewStage=visit.stage
                             },
                             onReturnToNextUnfinished={
                                 reviewSetKey=null
@@ -1296,12 +1305,18 @@ internal fun NativeKotlinCustomJournalScreen(
                             if(set.prescription.amplifier!=null &&
                                 main?.outcome==KotlinJournalSetOutcome.COMPLETED &&
                                 activeFocus?.part!=CustomWorkoutVisitPart.MAIN) {
-                                val follower=current.effectiveVisits[
-                                    CustomWorkoutVisitKey(
-                                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)]
-                                editorStates.SaveableStateProvider("follow:${set.setKey}") {
+                                val followKeys=CustomWorkoutExecutionDomain.followUpVisits(
+                                    current,set)
+                                followKeys.filter{activeFocus==null || it==activeFocus}
+                                    .forEach { followKey ->
+                                val follower=current.effectiveVisits[followKey]
+                                editorStates.SaveableStateProvider(
+                                    "follow:${set.setKey}:stage:${followKey.stage}") {
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
+                                    stageOrdinal=followKey.stage,
+                                    stageTotal=set.prescription.amplifier?.followUpRounds ?:1,
+                                    activationPerformed=main?.performed,
                                     existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                     saving=busy,saveError=error,
                                     machineInstanceId=if(follower!=null)
@@ -1319,8 +1334,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                         .indexOf(set)+1,
                                     setCount=slot.sets.count{it.prescription.type==set.prescription.type},
-                                    initiallyExpanded=activeFocus==CustomWorkoutVisitKey(
-                                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP),
+                                    initiallyExpanded=activeFocus==followKey,
                                     onRecord={outcome,actual->
                                         record(set.setKey,
                                             CustomWorkoutVisitPart.FOLLOW_UP,
@@ -1330,7 +1344,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                                         CustomWorkoutJournalOperation.Record)
                                                         ?.performed?.machineInstanceId
                                                 else if(main!=null)main.performed?.machineInstanceId
-                                                else selectedMachineId))
+                                                else selectedMachineId),
+                                            stage=followKey.stage)
                                     },
                                     onShowPlates={load,unit,basis->
                                         plateRequest=NativeCustomPlateRequest(
@@ -1338,6 +1353,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                             current.originalSnapshot.stamp,
                                             load,unit,basis)
                                     })
+                                }
                                 }
                             }
                         }
@@ -1600,7 +1616,8 @@ internal fun NativeKotlinCustomJournalScreen(
                     if(latest==quickSkip && !busy && !finished &&
                         machineChoices.ready && !machineChoices.busy)
                         record(quickSkip.setKey,quickSkip.part,
-                            KotlinJournalSetOutcome.SKIPPED,null)
+                            KotlinJournalSetOutcome.SKIPPED,null,
+                            stage=quickSkip.stage)
                 }) {Text("Confirm skip")}
             },
             dismissButton={
@@ -1674,7 +1691,10 @@ private fun NativeKotlinCustomVisitEditor(
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onShowPlates:(String,LoadUnit,LoadBasis)->Unit,
     levelingDraft:CurrentWorkoutLevelingDraft?=null,
-    onCurrentDraftChanged:(String,String)->Unit={_,_->}
+    onCurrentDraftChanged:(String,String)->Unit={_,_->},
+    stageOrdinal:Int=1,
+    stageTotal:Int=1,
+    activationPerformed:KotlinPerformedSet?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1683,19 +1703,19 @@ private fun NativeKotlinCustomVisitEditor(
     else prescription.load
     val verified=target as? DraftSetLoad.Verified
     val saved=existing?.operation as? CustomWorkoutJournalOperation.Record
-    var editing by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
+    var editing by rememberSaveable(set.setKey,part.name,stageOrdinal,existing?.appliedRevision) {
         mutableStateOf(saved==null && initiallyExpanded)
     }
     // Skips and failed attempts are durable factual observations, not
     // ordinary navigation. Confirm before writing to the owned journal.
     var pendingExceptionalOutcome by rememberSaveable(
-        set.setKey,part.name,existing?.appliedRevision
+        set.setKey,part.name,stageOrdinal,existing?.appliedRevision
     ) {mutableStateOf<KotlinJournalSetOutcome?>(null)}
     LaunchedEffect(locked) {
         if(locked)pendingExceptionalOutcome=null
     }
-    val reveal=remember(set.setKey,part){BringIntoViewRequester()}
-    LaunchedEffect(set.setKey,part,initiallyExpanded,locked,existing?.appliedRevision) {
+    val reveal=remember(set.setKey,part,stageOrdinal){BringIntoViewRequester()}
+    LaunchedEffect(set.setKey,part,stageOrdinal,initiallyExpanded,locked,existing?.appliedRevision) {
         if(initiallyExpanded && saved==null && !locked) {
             editing=true
             // A long workout can contain dozens of sets. Bring the next
@@ -1711,10 +1731,20 @@ private fun NativeKotlinCustomVisitEditor(
     else prescription.reps
     val draftIdentity=NativePendingWorkoutDraftIdentity.make(
         athleteId,workoutId,issuedGymId.orEmpty(),exerciseId,
-        set.setKey,part.name,machineInstanceId,target,expectedReps,
+        set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,
         if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
+    // The prescribed target never changes; an athlete-entered activation
+    // load may be different. A new myo mini-set should start from that
+    // recorded same-machine load, not silently revert to issued weight.
+    val sameLoadActivation=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1 &&
+        saved==null && activationPerformed?.machineInstanceId==machineInstanceId &&
+        activationPerformed?.unit==verified?.unit)
+        activationPerformed?.load?.stripTrailingZeros()?.toPlainString()
+    else null
     val draftBaseline=NativePendingWorkoutDraft(
-        initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
+        sameLoadActivation ?:
+            initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
         saved?.performed?.reps?.toString() ?:
             (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
                 follower?.followUpReps else prescription.reps.minimum)
@@ -1727,7 +1757,7 @@ private fun NativeKotlinCustomVisitEditor(
     val actualReps=draftEditor.reps
     val actualRir=draftEditor.rir
     var appliedLevelVersion by rememberSaveable(
-        set.setKey,part.name,existing?.appliedRevision,machineInstanceId
+        set.setKey,part.name,stageOrdinal,existing?.appliedRevision,machineInstanceId
     ) {mutableIntStateOf(-1)}
     LaunchedEffect(levelingDraft?.version,machineInstanceId,existing?.appliedRevision) {
         val draft=levelingDraft
@@ -1739,7 +1769,7 @@ private fun NativeKotlinCustomVisitEditor(
             appliedLevelVersion=draft.version
         }
     }
-    LaunchedEffect(set.setKey,part,machineInstanceId,actualLoad,actualReps,
+    LaunchedEffect(set.setKey,part,stageOrdinal,machineInstanceId,actualLoad,actualReps,
         saved,levelingDraft?.version,appliedLevelVersion) {
         val pendingLevel=levelingDraft?.let {
             saved==null && appliedLevelVersion!=it.version
@@ -1820,7 +1850,9 @@ private fun NativeKotlinCustomVisitEditor(
             val skipButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked,modifier=buttonModifier,onClick={
                     pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
-                }){Text("Skip")}
+                }){Text(if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
+                    follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+                    "End sequence" else "Skip")}
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked && failedActual!=null,modifier=buttonModifier,
@@ -1858,7 +1890,8 @@ private fun NativeKotlinCustomVisitEditor(
         val label=if(part==CustomWorkoutVisitPart.MAIN)
             "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
         else follower?.let { AdvancedAmplifierProtocolDomain.template(it.kind).title +
-            " · follow-up" } ?: "Amplifier follow-up"
+            (if(stageTotal>1)" · mini $stageOrdinal of $stageTotal" else " · follow-up")
+        } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
             val protocol=AdvancedAmplifierProtocolDomain.template(follower.kind)
@@ -1867,11 +1900,24 @@ private fun NativeKotlinCustomVisitEditor(
                 Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
                     verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                     Text("${follower.followUpReps} reps · " +
-                        "${follower.followUpRestSeconds}s short rest",
+                        "${follower.followUpRestSeconds}s short rest" +
+                        (if(stageTotal>1)" · stage $stageOrdinal/$stageTotal" else ""),
                         style=MaterialTheme.typography.labelLarge,
                         color=MaterialTheme.colorScheme.primary)
+                    if(stageTotal>1) {
+                        LinearProgressIndicator(
+                            progress={(stageOrdinal-1).toFloat()/stageTotal},
+                            modifier=Modifier.fillMaxWidth())
+                    }
                     Text(protocol.techniqueCue,
                         style=MaterialTheme.typography.bodySmall)
+                    if(sameLoadActivation!=null)Text(
+                        "Weight starts from the logged activation set ("+
+                            sameLoadActivation+" "+
+                            verified?.unit?.name?.lowercase().orEmpty()+
+                            "). Your issued target remains unchanged.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         (follower.followUpActiveSeconds?.let{
                             "$it s planned follow-up work"
@@ -1932,9 +1978,18 @@ private fun NativeKotlinCustomVisitEditor(
     val pending=pendingExceptionalOutcome
     if(pending!=null && !locked) AlertDialog(
         onDismissRequest={pendingExceptionalOutcome=null},
-        title={Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+        title={Text(if(pending==KotlinJournalSetOutcome.SKIPPED &&
+            part==CustomWorkoutVisitPart.FOLLOW_UP &&
+            follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+            "End myo-reps early?"
+        else if(pending==KotlinJournalSetOutcome.SKIPPED)
             "Skip this visit?" else "Log a failed attempt?")},
-        text={Text(if(pending==KotlinJournalSetOutcome.SKIPPED)
+        text={Text(if(pending==KotlinJournalSetOutcome.SKIPPED &&
+            part==CustomWorkoutVisitPart.FOLLOW_UP &&
+            follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+            "End this sequence if technique or recovery is declining. " +
+                "This stage is saved as skipped and no later mini-sets are created."
+        else if(pending==KotlinJournalSetOutcome.SKIPPED)
             "Skipping records an explicit outcome. It is not a completed set, and you can correct it before Finish."
         else
             "A failed attempt records zero completed reps at your entered attempted load. It does not count as successful work or earned progression.")},

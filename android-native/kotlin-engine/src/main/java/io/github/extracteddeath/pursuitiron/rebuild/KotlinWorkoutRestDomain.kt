@@ -78,8 +78,10 @@ object KotlinWorkoutRestDomain {
         // A completed main precedes the amplifier's SHORT intra-set rest.
         // Its completed follow-up precedes the parent's ordinary between-set
         // rest. Never substitute one duration for the other or add them.
-        val beforeFollowUp=operation?.visit?.part==CustomWorkoutVisitPart.MAIN &&
-            target?.prescription?.amplifier!=null
+        val beforeFollowUp=operation!=null && target!=null &&
+            CustomWorkoutExecutionDomain.unresolvedVisit(journal,target)
+                ?.let { it.part==CustomWorkoutVisitPart.FOLLOW_UP &&
+                    it.setKey==operation.visit.setKey } ==true
         val after=if(beforeFollowUp)
             target?.prescription?.amplifier?.followUpRestSeconds
         else if(round!=null && !CustomWorkoutExecutionDomain.roundIsResolved(journal,round))0

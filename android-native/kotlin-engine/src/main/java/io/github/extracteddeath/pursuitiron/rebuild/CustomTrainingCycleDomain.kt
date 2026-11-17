@@ -31,7 +31,11 @@ data class CustomSetAmplifier(
     val followUpLoad: DraftSetLoad? = null,
     /** Separately athlete-authored ACTIVE seconds for the complete
      * follow-up protocol, not its rest. Null is unknown, not zero. */
-    val followUpActiveSeconds: Int? = null
+    val followUpActiveSeconds: Int? = null,
+    /** Legacy plans have exactly one follow-up. New myo-reps may issue 3–5
+     * independently recorded mini-sets; this is a maximum, not a minimum
+     * that should be forced after fatigue or an early stop. */
+    val followUpRounds: Int = 1
 )
 
 data class CustomAuthoredSet(
@@ -279,6 +283,12 @@ object CustomTrainingCycleDomain {
                 if (amplifier != null) {
                     if (amplifier.followUpReps !in 1..100 ||
                         amplifier.followUpRestSeconds !in 0..3600 ||
+                        (amplifier.followUpRounds != 1 &&
+                            (amplifier.kind != CustomAmplifierKind.MYO_REPS ||
+                             amplifier.followUpRounds !in 3..5 ||
+                             amplifier.followUpReps !in 3..5 ||
+                             amplifier.followUpRestSeconds !in 10..30 ||
+                             amplifier.followUpLoad!=null)) ||
                         amplifier.followUpActiveSeconds?.let{
                             it !in 1..3600
                         }==true)

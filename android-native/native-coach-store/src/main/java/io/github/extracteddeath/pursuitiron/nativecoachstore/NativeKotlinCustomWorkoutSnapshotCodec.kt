@@ -20,7 +20,7 @@ import java.util.Collections
  */
 internal object NativeKotlinCustomWorkoutSnapshotCodec {
     private const val MAGIC=0x50494357 // PICW
-    private const val VERSION=4
+    private const val VERSION=5
     private const val SLOT_V3_MAGIC=0x50495333 // PIS3
     const val MAX_BYTES=256_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -84,6 +84,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             writeBoolean(amp.followUpLoad!=null)
             amp.followUpLoad?.let { load(it) }
             if(version>=3)optionalInt(amp.followUpActiveSeconds)
+            if(version>=5)writeInt(amp.followUpRounds)
         }
     }
     private fun DataInputStream.authored(version:Int):CustomAuthoredSet {
@@ -99,7 +100,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             val rest=readInt()
             val follow=if(readBoolean())load() else null
             CustomSetAmplifier(type,reps,rest,follow,
-                if(version>=3)optionalInt() else null)
+                if(version>=3)optionalInt() else null,
+                if(version>=5)readInt() else 1)
         } else null
         return CustomAuthoredSet(type,load,reps,rir,active,rest,amp)
     }
@@ -150,7 +152,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 val timed=value.sets.any {
                     it.prescription.amplifier?.followUpActiveSeconds!=null
                 }
-                val version=if(value.machineInstanceId!=null)VERSION
+                val version=if(value.sets.any{
+                    it.prescription.amplifier?.followUpRounds?.let{n->n>1}==true
+                })VERSION else if(value.machineInstanceId!=null)4
                     else if(timed)3 else 1
                 if(version>1){out.writeInt(SLOT_V3_MAGIC);out.writeInt(version)}
                 out.slot(value,version)
@@ -164,7 +168,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             val version=if(framed)input.readInt() else {
                 input.reset();1
             }
-            if(version !in listOf(1,3,VERSION))
+            if(version !in listOf(1,3,4,VERSION))
                 throw IOException("unsupported swap slot version")
             val slot=input.slot(version)
             if(input.available()!=0)throw IOException("trailing swap slot bytes")
@@ -260,6 +264,12 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 p.amplifier?.let{ amp ->
                     require(amp.followUpReps in 1..100 &&
                         amp.followUpRestSeconds in 0..3600 &&
+                        (amp.followUpRounds==1 ||
+                            amp.kind==CustomAmplifierKind.MYO_REPS &&
+                            amp.followUpRounds in 3..5 &&
+                            amp.followUpReps in 3..5 &&
+                            amp.followUpRestSeconds in 10..30 &&
+                            amp.followUpLoad==null) &&
                         amp.followUpActiveSeconds?.let{
                             it in 1..3600
                         }!=false)
@@ -274,7 +284,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                     }
                 }
                 duration+=p.activeSeconds+p.restSeconds+
-                    (p.amplifier?.followUpRestSeconds?:0)+
+                    (p.amplifier?.let{it.followUpRestSeconds * it.followUpRounds}?:0)+
                     (p.amplifier?.followUpActiveSeconds?:0)
             }
         }
@@ -287,9 +297,11 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         validate(snapshot)
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use{out->
-            val version=if(snapshot.slots.any{
+            val version=if(snapshot.slots.any{slot->slot.sets.any{
+                    it.prescription.amplifier?.followUpRounds?.let{n->n>1}==true
+                }})VERSION else if(snapshot.slots.any{
                     it.machineInstanceId!=null
-                })VERSION else if(snapshot.slots.any{slot->slot.sets.any{
+                })4 else if(snapshot.slots.any{slot->slot.sets.any{
                     it.prescription.amplifier?.followUpActiveSeconds!=null
                 }})3 else if(snapshot.shortSessionLimitMinutes!=null)2 else 1
             out.writeInt(MAGIC);out.writeInt(version)
@@ -359,7 +371,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                     }
                 }
                 val timeLimit=when(version){
-                    3,4->input.optionalInt()
+                    3,4,5->input.optionalInt()
                     2->input.readInt()
                     else->null
                 }

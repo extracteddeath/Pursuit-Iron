@@ -51,15 +51,56 @@ object CustomWorkoutExecutionDomain {
         }
     }
 
+    /** Read-only follow-up projection used by both the engine and the
+     * separate Compose app module. Saved mini-sets and the next permitted
+     * stage are shown; future unperformed stages are not observations.
+     * Never mutates the issued prescription or journal. */
+    fun followUpVisits(
+        journal:CustomWorkoutJournalDraft,
+        set:CustomWorkoutSetSnapshot
+    ):List<CustomWorkoutVisitKey> {
+        val main=journal.effectiveVisits[CustomWorkoutVisitKey(
+            set.setKey,CustomWorkoutVisitPart.MAIN)]?.operation
+            as? CustomWorkoutJournalOperation.Record
+        val amp=set.prescription.amplifier ?:return emptyList()
+        if(main?.outcome!=KotlinJournalSetOutcome.COMPLETED)return emptyList()
+        if(amp.followUpRounds !in 1..5)return emptyList()
+        val visits=mutableListOf<CustomWorkoutVisitKey>()
+        val actualMiniReps=mutableListOf<Int>()
+        for(stage in 1..amp.followUpRounds) {
+            val key=CustomWorkoutVisitKey(set.setKey,
+                CustomWorkoutVisitPart.FOLLOW_UP,stage)
+            visits+=key
+            val recorded=journal.effectiveVisits[key]?.operation
+                as? CustomWorkoutJournalOperation.Record ?:break
+            if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
+            if(amp.kind==CustomAmplifierKind.MYO_REPS && amp.followUpRounds>1) {
+                // Observations are never overwritten: a different physical
+                // load or station ends the same-load protocol at this stage.
+                // Do not unlock further mini-sets against changed equipment.
+                val activation=main.performed ?:break
+                val observed=recorded.performed ?:break
+                if(observed.load!=activation.load ||
+                    observed.unit!=activation.unit ||
+                    observed.machineInstanceId!=activation.machineInstanceId)break
+                actualMiniReps+=observed.reps
+                val step=AdvancedAmplifierProtocolDomain.nextMyoRepStep(
+                    amp.followUpReps,actualMiniReps,amp.followUpRounds)
+                if(step!=MyoRepNextStep.KEEP_GOING)break
+            }
+        }
+        return visits
+    }
+
     internal fun unresolvedVisit(journal:CustomWorkoutJournalDraft,
         set:CustomWorkoutSetSnapshot):CustomWorkoutVisitKey? {
         val main=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.MAIN)
         val recorded=journal.effectiveVisits[main]?.operation
             as? CustomWorkoutJournalOperation.Record ?:return main
-        if(recorded.outcome==KotlinJournalSetOutcome.COMPLETED && set.prescription.amplifier!=null) {
-            val follow=CustomWorkoutVisitKey(set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)
-            if(follow !in journal.effectiveVisits)return follow
-        }
+        if(recorded.outcome==KotlinJournalSetOutcome.COMPLETED)
+            return followUpVisits(journal,set).firstOrNull {
+                it !in journal.effectiveVisits
+            }
         return null
     }
 

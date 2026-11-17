@@ -64,4 +64,31 @@ class NativeCustomSavedCorrectionCodecTest {
         val bytes=NativeCustomSavedCorrectionCodec.encode(tagged)
         assertEquals(tagged,NativeCustomSavedCorrectionCodec.decode(bytes))
     }
+    @Test fun stageThreeCorrectionRoundTripsV3WithoutReencodingV1OrV2() {
+        val v1=envelope(receipt(1))
+        val v2=envelope(receipt(1),receipt(2,"A"))
+        val old1=NativeCustomSavedCorrectionCodec.encode(v1)
+        val old2=NativeCustomSavedCorrectionCodec.encode(v2)
+        val third=CustomSavedVisitCorrectionReceipt(3L,
+            CustomSavedVisitCorrection("myo-stage-3",2L,
+                CustomWorkoutVisitKey("cycle-1:w2:d0:extension-1:s1",
+                    CustomWorkoutVisitPart.FOLLOW_UP,3),
+                "myo-stage-3-original",KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("55"),LoadUnit.LB,3,2,"A")))
+        val staged=envelope(receipt(1),receipt(2,"A"),third)
+        val wire=NativeCustomSavedCorrectionCodec.encode(staged)
+        assertEquals(3,wire[11].toInt())
+        val cold=NativeCustomSavedCorrectionCodec.decode(wire)
+        assertEquals(staged,cold)
+        assertEquals(3,cold.receipts.last().correction.visit.stage)
+        assertArrayEquals(wire,NativeCustomSavedCorrectionCodec.encode(cold))
+        assertArrayEquals(old1,NativeCustomSavedCorrectionCodec.encode(
+            NativeCustomSavedCorrectionCodec.decode(old1)))
+        assertArrayEquals(old2,NativeCustomSavedCorrectionCodec.encode(
+            NativeCustomSavedCorrectionCodec.decode(old2)))
+        assertThrows(IOException::class.java) {
+            NativeCustomSavedCorrectionCodec.decode(wire.copyOf(wire.size-1))
+        }
+    }
+
 }

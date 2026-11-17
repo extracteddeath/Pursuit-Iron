@@ -286,4 +286,27 @@ class NativeCustomCycleDraftFileStoreTest {
             NativeCustomCycleDraftCodec.decode(v2.copyOf(v2.size-1))
         }
     }
+    @Test fun authoredMyoStageCountsSurviveV4DraftAndLegacyDraftBytesRemainStable() {
+        val original=original()
+        val bytes=NativeCustomCycleDraftCodec.encode(original)
+        val newBlocks=original.blocks.map { block -> block.copy(days=block.days.map {
+            day -> day.copy(slots=day.slots.map {slot ->
+                if(slot.slotId!="bench-1")slot else slot.copy(
+                    sets=slot.sets.mapIndexed{ index,set ->
+                        if(index!=1)set else set.copy(amplifier=CustomSetAmplifier(
+                            CustomAmplifierKind.MYO_REPS,4,20,
+                            followUpActiveSeconds=80,followUpRounds=5))
+                    })
+            })
+        })}
+        val configured=original.copy(blocks=newBlocks)
+        val wire=NativeCustomCycleDraftCodec.encode(configured)
+        assertEquals(4,wire[7].toInt())
+        assertEquals(configured,NativeCustomCycleDraftCodec.decode(wire))
+        assertArrayEquals(wire,NativeCustomCycleDraftCodec.encode(
+            NativeCustomCycleDraftCodec.decode(wire)))
+        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(
+            NativeCustomCycleDraftCodec.decode(bytes)))
+    }
+
 }

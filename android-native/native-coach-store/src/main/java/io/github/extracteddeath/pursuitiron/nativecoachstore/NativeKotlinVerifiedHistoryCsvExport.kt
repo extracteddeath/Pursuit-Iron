@@ -58,8 +58,14 @@ object NativeKotlinVerifiedHistoryCsvExport {
         var expectedOrder=1L
         var rows=0
         val dated=history.completions.any{it.manifest.completedAtEpochMillis!=null}
-        val header=columns+if(dated)listOf("completed_at_utc") else emptyList()
-        val format=if(dated)"pursuit-iron-history-v2" else VERSION
+        val staged=history.completions.filterIsInstance<
+            NativeKotlinMixedHistoryCompletion.Custom>().any {completion ->
+            completion.evidence.visits.any{it.stage>1}
+        }
+        val header=columns+(if(staged)listOf("amplifier_stage") else emptyList())+
+            (if(dated)listOf("completed_at_utc") else emptyList())
+        val format=if(staged)"pursuit-iron-history-v3"
+            else if(dated)"pursuit-iron-history-v2" else VERSION
         val csv=StringBuilder(header.joinToString(","){cell(it)}).append('\n')
 
         fun add(
@@ -67,7 +73,8 @@ object NativeKotlinVerifiedHistoryCsvExport {
             exerciseId:String,slotId:String,setKey:String,part:String,type:DraftSetType,
             outcome:KotlinJournalSetOutcome,prescription:DraftSetLoad,
             reps:RepBand,rir:Int?,actual:KotlinPerformedSet?,
-            amplifier:String="",completedAtEpochMillis:Long?=null
+            amplifier:String="",amplifierStage:Int=1,
+            completedAtEpochMillis:Long?=null
         ):Boolean {
             if(rows>=MAX_ROWS)return false
             val (targetLoad,targetUnit,targetBasis)=load(prescription)
@@ -82,8 +89,12 @@ object NativeKotlinVerifiedHistoryCsvExport {
                 actual?.actualRir?.toString().orEmpty(),
                 actual?.machineInstanceId.orEmpty(),amplifier
             )
-            val values=fields+if(dated)listOf(completedAtEpochMillis?.let{
-                java.time.Instant.ofEpochMilli(it).toString()}.orEmpty()) else emptyList()
+            val values=fields+
+                (if(staged)listOf(if(part=="FOLLOW_UP")amplifierStage.toString()
+                    else "") else emptyList())+
+                (if(dated)listOf(completedAtEpochMillis?.let{
+                    java.time.Instant.ofEpochMilli(it).toString()}.orEmpty())
+                else emptyList())
             csv.append(values.joinToString(","){cell(it)}).append('\n')
             rows++
             return csv.length<=MAX_CHARS
@@ -125,7 +136,9 @@ object NativeKotlinVerifiedHistoryCsvExport {
                         visit.part.name,visit.setType,visit.outcome,
                         visit.prescribedLoad,visit.prescribedReps,
                         visit.prescribedRir,visit.actual,
-                        visit.amplifierKind?.name.orEmpty(),manifest.completedAtEpochMillis))
+                        visit.amplifierKind?.name.orEmpty(),
+                        amplifierStage=visit.stage,
+                        completedAtEpochMillis=manifest.completedAtEpochMillis))
                         return NativeKotlinHistoryCsvResult.TooLarge
                 }
             }

@@ -125,6 +125,11 @@ object CustomSavedHistoryCorrectionDomain {
             ?: return reject(CustomSavedCorrectionRefusal.UNKNOWN_VISIT)
         val amplifier = target.prescription.amplifier
         val followed = current(state, followKey)
+        val savedFollowKeys=state.originalFinishedJournal.effectiveVisits.keys.filter{
+            it.setKey==operation.visit.setKey &&
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        }
+        val hasLaterStage=savedFollowKeys.any{it.stage>operation.visit.stage}
         val load = when (operation.visit.part) {
             CustomWorkoutVisitPart.MAIN -> {
                 if (operation.outcome == KotlinJournalSetOutcome.COMPLETED &&
@@ -133,15 +138,23 @@ object CustomSavedHistoryCorrectionDomain {
                 // To turn an originally completed main set into a skip/failure,
                 // the independent follow-up must FIRST be marked skipped.
                 if (operation.outcome != KotlinJournalSetOutcome.COMPLETED &&
-                    followed != null &&
-                    followed.outcome != KotlinJournalSetOutcome.SKIPPED)
+                    savedFollowKeys.any{current(state,it)?.outcome!=KotlinJournalSetOutcome.SKIPPED})
+                    return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                if(amplifier?.kind==CustomAmplifierKind.MYO_REPS &&
+                    amplifier.followUpRounds>1 && savedFollowKeys.isNotEmpty() &&
+                    (main.performed?.load!=operation.performed?.load ||
+                        main.performed?.unit!=operation.performed?.unit ||
+                        main.performed?.machineInstanceId!=
+                            operation.performed?.machineInstanceId))
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 target.prescription.load
             }
             CustomWorkoutVisitPart.FOLLOW_UP -> {
                 if (amplifier == null ||
                     main.outcome != KotlinJournalSetOutcome.COMPLETED ||
-                    original.visit.part != CustomWorkoutVisitPart.FOLLOW_UP)
+                    original.visit.part != CustomWorkoutVisitPart.FOLLOW_UP ||
+                    operation.visit.stage !in 1..amplifier.followUpRounds ||
+                    hasLaterStage)
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 amplifier.followUpLoad ?: target.prescription.load
             }
@@ -258,7 +271,7 @@ object CustomSavedHistoryEvidenceDomain {
                 mainByKey[fact.setKey] != KotlinJournalSetOutcome.COMPLETED)
                 return@mapNotNull null
             val op = state.effectiveCorrections[CustomWorkoutVisitKey(
-                fact.setKey, fact.part)]?.correction
+                fact.setKey, fact.part, fact.stage)]?.correction
             if (op == null) fact
             else fact.copy(
                 outcome = op.outcome,

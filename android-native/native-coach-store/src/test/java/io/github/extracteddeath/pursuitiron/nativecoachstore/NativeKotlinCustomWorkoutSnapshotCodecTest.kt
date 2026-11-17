@@ -181,4 +181,29 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
                 })},knownSetAndRestSeconds=old.knownSetAndRestSeconds))
         }
     }
+    @Test fun myoFiveRoundSnapshotUsesV5AndKeepsOldSnapshotsByteStable() {
+        val previous=fixture()
+        val legacy=NativeKotlinCustomWorkoutSnapshotCodec.encode(previous)
+        val upgraded=previous.copy(
+            slots=previous.slots.map{slot -> slot.copy(sets=slot.sets.map{set ->
+                val amp=set.prescription.amplifier
+                if(amp?.kind!=CustomAmplifierKind.MYO_REPS)set
+                else set.copy(prescription=set.prescription.copy(
+                    amplifier=amp.copy(followUpRounds=5)))
+            })},
+            knownSetAndRestSeconds=previous.knownSetAndRestSeconds+80L)
+        val wire=NativeKotlinCustomWorkoutSnapshotCodec.encode(upgraded)
+        assertEquals(5,java.nio.ByteBuffer.wrap(wire,4,4).int)
+        assertEquals(upgraded,NativeKotlinCustomWorkoutSnapshotCodec.decode(wire))
+        val selected=upgraded.slots.last()
+        val payload=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(selected)
+        assertEquals(selected,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(payload))
+        assertArrayEquals(legacy,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(legacy)))
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(upgraded.copy(
+                knownSetAndRestSeconds=previous.knownSetAndRestSeconds))
+        }
+    }
+
 }

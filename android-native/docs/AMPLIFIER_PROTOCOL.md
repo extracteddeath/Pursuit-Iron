@@ -1,6 +1,6 @@
 # Advanced set amplifiers — protocol, UX and beta acceptance
 
-**State on 2026-11-17:** Kotlin `AdvancedAmplifierProtocolDomain` supplies researched **guidance and a pure myo-reps stop evaluator**, NOT a completed multi-stage workout journal. Existing custom `CustomWorkoutVisitPart.FOLLOW_UP` has one persisted follow-up per main set. Do **not** advertise 3–5 individually saved mini-sets or count them as completed until the durable model, codecs, History, Focus, All Sets, rest, correction and resumed workout are updated and tested together. Web `modules/next-engine/techniques.js` currently only attaches a text note. Neither path is ready for multi-stage acceptance.
+**State on 2026-11-17 (PR #678, under review):** The Kotlin custom journal now has an **opt-in 3–5-stage myo-rep sequence**, with one owner/revision-fenced factual receipt per performed mini-set, early stop, stage-aware Focus/All, individual History facts, short rest and versioned disk replay. Existing single-follow-up workouts remain one stage and retain legacy binary encodings. **This is still under CI/device review, not a release declaration.** Multi-drop, cluster and rest-pause workflows, generated-program amp issuance, web runtime display/logging and full native device acceptance remain open.
 
 ## Evidence and selection
 
@@ -16,7 +16,7 @@
 - A cluster is a *planned* quality/intensity method with short rests and submaximal efforts. Do not portray clusters as failure-based myo-reps.
 - Retain weekly dose budget: one activation+mini-set sequence is one technique block. Extra mini-sets are **not** automatically 3–5 additional regular working sets, progression entries, or personal records.
 
-## Full sequence contracts (not yet implemented)
+## Full sequence contracts (myo slice in PR #678; other methods pending)
 
 | Technique | Issued protocol | Actuals and stopping |
 | --- | --- | --- |
@@ -28,11 +28,11 @@
 ## Native UI acceptance
 
 1. **Plan and Preview:** a tidy Material 3 Expressive accent row says `Myo-reps` / `Drop set` / `Rest-pause` / `Cluster`, with one-line intended sequence and expandable explanation. Active method visually belongs to the **specific last working set**, not a detached exercise footer. Avoid duplicated instruction blocks and oversized decorative labels.
-2. **Workout Focus:** activation set with normal weight/rep/RIR controls; after its *recorded* completion show a nested numbered sequence (`Mini 1 of 5`, etc.) with a slim progress strip, actual reps, same-machine weight, prominent Complete, and lightweight Stop technique. Compact and readable at 200% font. No needless full editor repeated five times.
+2. **Workout Focus:** activation set with normal weight/rep/RIR controls; after its *recorded* completion show a nested numbered sequence (`Mini 1 of 5`, etc.) with a slim progress strip, actual reps, same-machine weight, prominent Complete, and lightweight End sequence. Stage-specific entry state must survive Focus/All, rotation and cold restart. Large-font/TalkBack device acceptance remains pending.
 3. **Rest:** 20–30 s between myo mini-sets, counted from a **durably acknowledged** recorded mini-set. No normal 90–180s rest until the sequence is resolved. Resume timer after background/process death. Drops should not trigger long rests.
 4. **Early stop/undo:** a 5,5,4,4,3 sequence resolves without a sixth set; a 5,4,2 sequence stops at the missed floor without fake unperformed sets. Athlete may stop on form, Skip/Fail stages, correct actuals or undo according to existing journal authority without revising another exercise.
 5. **Record ownership:** append-only owner/revision-fenced events for each mini-stage, unique set/stage identity; proof on cold replay, correction and existing legacy one-follow-up journal data, with **versioned** backward-compatible file/source codecs. No made-up actuals or silent schema migration.
 6. **History and Progress:** show `Activation 14 · mini 5+5+4+3` or drops with **actual weights**, and distinguish technique stages from regular sets in volume/progression, PR and machine A/B history. Keep activation main-set progression and actual RIR provenance intact.
 7. **Tests:** pure stop-state/range/quality evaluator, stage identity and ordering in supersets, load rounding/decline for drops, time/rest cues, crash-safe persistence, correction/undo, source reissuance, custom/generated parity, accessibility + screenshots, no legacy JS dependency. No APK before full native UI acceptance.
 
-This contract deliberately separates a science-informed recommendation from an *issued and independently logged workout*. Until every item above is satisfied, **full multi-stage amplifier support is an open beta blocker**, not a completed feature.
+This contract deliberately separates a science-informed recommendation from an *issued and independently logged workout*. PR #678 implements the **custom myo-rep vertical slice**, while native-generated programs and multi-stage drop/rest-pause/cluster protocols and web parity remain open. Even after Kotlin CI passes, full multi-stage amplifier support is an **open beta acceptance item** pending device accessibility and end-to-end product checks.

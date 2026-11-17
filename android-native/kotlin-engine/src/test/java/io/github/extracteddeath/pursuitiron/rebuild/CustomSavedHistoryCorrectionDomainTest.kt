@@ -276,4 +276,60 @@ class CustomSavedHistoryCorrectionDomainTest {
             it.setKey == otherKey && it.part == CustomWorkoutVisitPart.MAIN
         }.effectiveEventId)
     }
+    @Test fun savedMyoStageCorrectionCannotAliasFirstMiniSetOrRewriteEarlierDependents() {
+        val work=CustomAuthoredSet(DraftSetType.WORKING,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                BigDecimal("20")),RepBand(12,20),2,60,90,
+            CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,5,20,
+                followUpActiveSeconds=80,followUpRounds=5))
+        val session=CustomWorkoutDaySnapshot(
+            CustomWorkoutSourceStamp("athlete-1","revision-1","cycle-1",
+                2,"gym-1",5),1,1,"block-1",TrainingPhase.HYPERTROPHY,
+            CustomBlockPurpose.TRAINING,CustomSplitIdentity.Freeform("My split"),
+            0,"Upper",ComposerSessionPurpose.HYPERTROPHY,
+            listOf(CustomWorkoutSlotSnapshot("slot-1","db_lateral_raise",
+                "lateral_raise","dumbbell",ComposerRole.ACCESSORY,
+                null,null,true,"Strict",listOf(CustomWorkoutSetSnapshot(
+                    setKey,"slot-1",1,work)))),330,180)
+        var j=CustomWorkoutJournalDomain.begin("myo-finish",session,"a".repeat(64))
+        fun save(visit:CustomWorkoutVisitKey,event:String,reps:Int) {
+            val next=CustomWorkoutJournalDomain.reduce(j,
+                CustomWorkoutJournalOperation.Record(event,j.revision,visit,
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,reps,2)))
+            assertTrue(next.toString(),next is CustomWorkoutJournalDecision.Proposed)
+            j=(next as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        save(main,"myo-main",15)
+        val stage1=CustomWorkoutVisitKey(setKey,CustomWorkoutVisitPart.FOLLOW_UP,1)
+        val stage2=CustomWorkoutVisitKey(setKey,CustomWorkoutVisitPart.FOLLOW_UP,2)
+        val stage3=CustomWorkoutVisitKey(setKey,CustomWorkoutVisitPart.FOLLOW_UP,3)
+        save(stage1,"myo-1",5)
+        save(stage2,"myo-2",4)
+        save(stage3,"myo-3",3)
+        j=(CustomWorkoutJournalDomain.reduce(j,
+            CustomWorkoutJournalOperation.Finish("finish-myo",j.revision))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val originals=CustomSavedHistoryCorrectionDomain.begin(j)
+        val finalCorrection=CustomSavedVisitCorrection("fix-myo-3",0,stage3,
+            "myo-3",KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2))
+        val corrected=accept(originals,finalCorrection)
+        val projected=CustomSavedHistoryEvidenceDomain.projectSaved(corrected)
+            as CustomSavedHistoryProjectionResult.Candidate
+        val minis=projected.corrected.evidence.visits.filter {
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        }
+        assertEquals(listOf(1,2,3),minis.map{it.stage})
+        assertEquals(listOf(5,4,2),minis.map{it.actual?.reps})
+        assertEquals(listOf("myo-1","myo-2","fix-myo-3"),
+            minis.map{it.effectiveEventId})
+        val impossible=CustomSavedVisitCorrection("fix-myo-1",1,stage1,
+            "myo-1",KotlinJournalSetOutcome.SKIPPED,null)
+        assertEquals(CustomSavedCorrectionDecision.Rejected(
+            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(corrected,impossible))
+        assertEquals(j,corrected.originalFinishedJournal)
+    }
+
 }

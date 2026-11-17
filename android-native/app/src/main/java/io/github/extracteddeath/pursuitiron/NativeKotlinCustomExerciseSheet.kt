@@ -553,6 +553,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (fields.amplifier == CustomAmplifierKind.MYO_REPS ||
+                                    fields.amplifier == CustomAmplifierKind.REST_PAUSE ||
                                     fields.amplifier == CustomAmplifierKind.DROP_SET) {
                                     Text("Myo-reps and rest-pause can log every short-rest " +
                                         "effort separately. Weight drops still require a " +

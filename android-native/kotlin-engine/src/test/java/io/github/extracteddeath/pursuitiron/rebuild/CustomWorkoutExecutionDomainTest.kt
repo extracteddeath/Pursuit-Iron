@@ -346,6 +346,74 @@ class CustomWorkoutExecutionDomainTest {
         assertNull(next(k))
     }
 
+    @Test fun restPauseEffortsAreRecordedIndividuallyWithShortRestsAndHardStageCap() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
+            3,20,followUpRounds=3)
+        var j=initial(slot("pause",1,null,amplifier=amp),slot("later",1,null))
+        j=record(j,"pause:s1",reps=12)
+        for(stage in 1..3) {
+            assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage),next(j))
+            assertEquals(20,rest(j).automaticCue?.seconds)
+            j=record(j,"pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                stage=stage,reps=3)
+        }
+        assertEquals(visit("later:s1"),next(j))
+        assertEquals(90,rest(j).automaticCue?.seconds)
+        assertEquals(3,CustomWorkoutVisitFocusDomain.progress(j).recordedFollowUps)
+        assertEquals(3,CustomWorkoutVisitFocusDomain.progress(j).requiredFollowUps)
+        assertEquals(3,j.effectiveVisits.keys.count {
+            it.setKey=="pause:s1" && it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+    }
+
+    @Test fun missedRestPauseRepTargetEndsOptionalWorkAndSurvivesColdReplay() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
+            3,20,followUpRounds=3)
+        var j=initial(slot("pause",1,null,amplifier=amp))
+        j=record(j,"pause:s1",reps=12)
+        j=record(j,"pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,reps=3)
+        assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
+        j=record(j,"pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=2,reps=2)
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        assertEquals(2,CustomWorkoutVisitFocusDomain.progress(j).requiredFollowUps)
+        var replay=CustomWorkoutJournalDomain.begin(j.workoutId,
+            j.originalSnapshot,j.preparedConsentFingerprint)
+        for(receipt in j.receipts) {
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        assertEquals(j,replay)
+        assertNull(next(replay))
+    }
+
+    @Test fun restPauseGuardsOutOfOrderAndMainLoadChangesAfterFollowUps() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
+            3,20,followUpRounds=3)
+        var j=initial(slot("pause",1,null,amplifier=amp))
+        j=record(j,"pause:s1",reps=12)
+        val future=CustomWorkoutJournalOperation.Record("invalid-stage",j.revision,
+            visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,3),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,3,2))
+        assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+            (CustomWorkoutJournalDomain.reduce(j,future)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        j=record(j,"pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=3)
+        val old=j.effectiveVisits.getValue(visit("pause:s1")).operation
+            as CustomWorkoutJournalOperation.Record
+        val corrected=CustomWorkoutJournalOperation.Record(
+            "changed-activation",j.revision,visit("pause:s1"),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,12,2),old.eventId)
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(j,corrected)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
+    }
+
     @Test fun activationLoadCannotChangeOnceMyoFollowUpsExist() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
             followUpRounds=5)

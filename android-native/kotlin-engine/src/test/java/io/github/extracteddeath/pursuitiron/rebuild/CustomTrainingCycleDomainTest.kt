@@ -281,4 +281,41 @@ class CustomTrainingCycleDomainTest {
             .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
     }
 
+    @Test fun lengthenedPartialsAreOnlyAllowedOnFinalWorkingSetAndNeverExtraFullSet() {
+        val partials=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,
+            3,0,followUpActiveSeconds=15)
+        fun proposed(sets:List<CustomAuthoredSet>)=cycle(listOf(block(days=listOf(
+            CustomTrainingDay(0,"Upper",ComposerSessionPurpose.HYPERTROPHY,
+                listOf(benchSlot(sets)))
+        ))))
+        val regular=weighted(185)
+        val last=weighted(185,amplifier=partials)
+        val review=valid(proposed(listOf(regular,last)))
+        val week=checkNotNull(CustomTrainingCycleDomain.week(review,1))
+        val actual=week.days.single().slots.single().sets
+        assertNull(actual.first().amplifier)
+        assertEquals(partials,actual.last().amplifier)
+        assertEquals(2,actual.count{it.type==DraftSetType.WORKING})
+        assertEquals(3,actual.last().amplifier?.followUpReps)
+        assertTrue(reviewed(proposed(listOf(last,regular))).issues.any{
+            it.kind==CustomCycleIssueKind.INVALID_SET
+        })
+        assertTrue(reviewed(proposed(listOf(
+            regular,weighted(185,amplifier=partials.copy(followUpRounds=2))
+        ))).issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+        assertTrue(reviewed(proposed(listOf(
+            regular,weighted(185,amplifier=partials.copy(followUpRestSeconds=10))
+        ))).issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+        val warmup=weighted(185,amplifier=partials).copy(type=DraftSetType.WARMUP)
+        assertTrue(reviewed(proposed(listOf(warmup,regular))).issues.any{
+            it.kind==CustomCycleIssueKind.INVALID_SET
+        })
+        val override=proposed(listOf(regular,last)).copy(
+            weekOverrides=mapOf("base" to listOf(
+                CustomWeekSlotOverride(2,0,"main-press",listOf(last,regular)))))
+        assertTrue(reviewed(override).issues.any{
+            it.kind==CustomCycleIssueKind.INVALID_SET
+        })
+    }
+
 }

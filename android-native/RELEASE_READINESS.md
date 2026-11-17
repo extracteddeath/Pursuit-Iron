@@ -8,6 +8,17 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Verified post-Finish recap checkpoint (2026-11-17):** the finished
+Kotlin generated and custom workout routes now share a compact read-only
+summary of outcomes from the COMPLETE owner-fenced native History, including
+its applied set corrections. Main working sets, warm-ups and amplifier
+follow-ups remain distinct; all skipped and failed entries are counted.
+The recap rechecks the current owner and active athlete, refuses a missing
+or wrong-kind workout, offers explicit refresh after corrections, and does
+not fabricate PRs, progression or session volume across incomparable machines.
+Source/JVM/Compose CI must pass; phone, TalkBack and full product cohesion
+acceptance are pending. No APK/AAB.
+
 **Progress chart time and exact-observation checkpoint (2026-11-17):**
 Both Strength and exercise-specific performance plots now scale their
 horizontal axis to actual recorded Finish timestamps when every displayed

@@ -796,6 +796,8 @@ class CustomWorkoutExecutionDomainTest {
         j=record(j,"a:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=3,reps=3)
         assertEquals("Sequence ended · 3 of 5 logged",
             CustomAmplifierSetSummaryDomain.review(j,set)!!.progress)
+        assertEquals("Performed mini-sets: 5 + 4 + 3 reps",
+            CustomAmplifierSetSummaryDomain.review(j,set)!!.actuals)
         assertEquals(3,j.effectiveVisits.keys.count{
             it.part==CustomWorkoutVisitPart.FOLLOW_UP
         })
@@ -825,6 +827,8 @@ class CustomWorkoutExecutionDomainTest {
         j=record(j,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=2,reps=8)
         assertEquals("Complete · 2 of 2 logged",
             CustomAmplifierSetSummaryDomain.review(j,set)!!.progress)
+        assertEquals("Performed drops: 15 lb × 8 → 10 lb × 8",
+            CustomAmplifierSetSummaryDomain.review(j,set)!!.actuals)
         assertEquals(3,j.effectiveVisits.size)
     }
 

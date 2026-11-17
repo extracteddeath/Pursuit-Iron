@@ -240,9 +240,7 @@ internal fun NativeKotlinCustomExerciseSheet(
             .associateBy { it.exerciseId }
     }
     fun verifiedAngleFor(exerciseId:String):NativeBenchAngle? =
-        reviewedVariantById[exerciseId]?.let {
-            nativeBenchAngle(it.variantId,it.requiredFacilityIds,it.familyId)
-        }
+        nativeReviewedChoiceAngle(exerciseId,reviewedVariantById)
     val selectedAngle=NativeBenchAngle.entries.firstOrNull {it.name==inclineLevel}
     val searched=ranked.filter { rankedChoice ->
         val choice=rankedChoice.choice

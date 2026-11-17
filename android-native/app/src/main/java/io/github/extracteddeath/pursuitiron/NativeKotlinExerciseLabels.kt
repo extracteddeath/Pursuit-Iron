@@ -338,7 +338,13 @@ private val kotlinExerciseNames=mapOf(
     "low-to-high-face-pull" to "Low-to-High Face Pull",
     "leaning-cable-ohext" to "Leaning Cable Overhead Triceps Extension",
     "ad-press-barbell" to "AD Press (Barbell)",
-    "ad-press-smith" to "AD Press (Smith Machine)"
+    "ad-press-smith" to "AD Press (Smith Machine)",
+    "dumbbell_crunch" to "Dumbbell Crunch",
+    "cable-radial-dev" to "Cable Radial Wrist Deviation",
+    "hammer-radial-dev" to "Hammer Radial Wrist Deviation",
+    "hammer-ulnar-dev" to "Hammer Ulnar Wrist Deviation",
+    "wrist-roller" to "Wrist Roller",
+    "plate-front-raise" to "Plate Front Raise"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

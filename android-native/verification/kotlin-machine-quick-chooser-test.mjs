@@ -86,7 +86,8 @@ assert.ok(createSection.length>1000);
 assert.doesNotMatch(createSection,/journalStore\.save\(|customIssuedStore\.save\(|\.finish\(/);
 assert.match(picker,/config==null \|\| \(config\.machines\.isEmpty\(\) && onCreate==null\)/);
 assert.match(host,/fun workoutMachineEligibleExerciseIds\(/);
-assert.match(host,/LoadBasis\.MACHINE_STACK,LoadBasis\.CABLE_STACK/);
+assert.match(host,/CatalogPhysicalMachineEligibility\.eligibleExerciseIds\(source\.catalog\)/);
+assert.match(host,/CatalogPhysicalMachineEligibility::eligible/);
 assert.match(host,/EXERCISE_HAS_NO_MACHINE_STACK/);
 const admission=host.slice(host.indexOf('fun addWorkoutPhysicalMachine('),
   host.indexOf('MACHINE_NAME_ALREADY_USED_OR_LIMIT_REACHED'));

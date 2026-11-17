@@ -69,6 +69,7 @@ on:
       - 'android-native/verification/kotlin-rest-timer-cold-resume-test.mjs'
       - 'android-native/verification/kotlin-bodyweight-progress-test.mjs'
       - 'android-native/verification/kotlin-workout-equipment-recovery-test.mjs'
+      - 'android-native/verification/kotlin-verified-training-archive-test.mjs'
       - 'android-native/verification/kotlin-machine-gym-admission-test.mjs'
       - 'android-native/verification/kotlin-plan-machine-ab-navigation-test.mjs'
       - 'android-native/verification/kotlin-profile-layout-test.mjs'
@@ -187,6 +188,7 @@ jobs:
           node android-native/verification/kotlin-rest-timer-cold-resume-test.mjs
           node android-native/verification/kotlin-bodyweight-progress-test.mjs
           node android-native/verification/kotlin-workout-equipment-recovery-test.mjs
+          node android-native/verification/kotlin-verified-training-archive-test.mjs
           node android-native/verification/kotlin-machine-gym-admission-test.mjs
           node android-native/verification/kotlin-plan-machine-ab-navigation-test.mjs
           node android-native/verification/kotlin-profile-layout-test.mjs

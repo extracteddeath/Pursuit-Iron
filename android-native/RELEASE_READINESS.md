@@ -8,6 +8,20 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Reviewed exact-equipment catalog milestone (2026-11-17):**
+Three missing active-web movement IDs are now explicitly source-reviewed
+and appended after all 330 preserved native definitions: machine
+chest-supported row, EZ-bar preacher curl (requires a preacher bench and
+verified paired plates), and the separate bilateral leg-press web variant.
+Physical station resistance, exercise identity and rep bands are independent,
+including the existing curated leg press and preacher *machine*. No historical
+load/PR is silently transferred. Broad-back and leg-hamstring muscle credits
+remain conservative and provisional. The reviewed source registry, Kotlin
+starter, verified stock, UI names and JVM tests must pass unchanged; matching
+IDs alone is not full engine parity. On-device, comprehensive cycle generation,
+all remaining missing movements and real beta acceptance are still open.
+No APK/AAB.
+
 **Verified post-Finish recap checkpoint (2026-11-17):** the finished
 Kotlin generated and custom workout routes now share a compact read-only
 summary of outcomes from the COMPLETE owner-fenced native History, including

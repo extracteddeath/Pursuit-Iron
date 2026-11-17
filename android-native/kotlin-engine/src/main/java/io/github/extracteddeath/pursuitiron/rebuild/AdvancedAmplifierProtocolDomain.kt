@@ -97,20 +97,28 @@ object AdvancedAmplifierProtocolDomain {
     /**
      * Evaluates observed mini-set reps without inventing observations.
      * Minimum planned rounds are NOT a requirement after fatigue or a miss.
-     * The targeted 3–5 reps must be maintained to continue.
+     * Continue while reps remain above the authored floor (usually 3),
+     * optionally stopping on the first drop below the preferred 4–5 target.
+     * A final mini-set reaching the floor ends the sequence.
      */
     fun nextMyoRepStep(
         targetReps: Int,
         observedMiniSets: List<Int>,
         plannedLimit: Int = 5,
-        techniqueCompromised: Boolean = false
+        techniqueCompromised: Boolean = false,
+        minimumAcceptableReps: Int = 3,
+        stopOnTargetDrop: Boolean = false
     ): MyoRepNextStep {
-        if (targetReps !in 3..5 || plannedLimit !in 3..5 ||
+        if (targetReps !in 3..5 || minimumAcceptableReps !in 3..targetReps ||
+            plannedLimit !in 3..5 ||
             observedMiniSets.size > plannedLimit ||
             observedMiniSets.any { it !in 0..100 })
             return MyoRepNextStep.INVALID_SEQUENCE
         if (techniqueCompromised) return MyoRepNextStep.STOP_TECHNIQUE
-        if (observedMiniSets.any { it < targetReps })
+        if (observedMiniSets.any { it < minimumAcceptableReps } ||
+            stopOnTargetDrop && observedMiniSets.any { it < targetReps } ||
+            targetReps > minimumAcceptableReps &&
+            observedMiniSets.lastOrNull() == minimumAcceptableReps)
             return MyoRepNextStep.STOP_REP_DROP
         if (observedMiniSets.size == plannedLimit)
             return MyoRepNextStep.PLANNED_LIMIT_REACHED

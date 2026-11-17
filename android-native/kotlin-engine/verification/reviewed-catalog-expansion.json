@@ -8561,6 +8561,99 @@
         "attachment": null,
         "note": "Only the unweighted controlled prone Y-raise on a verified incline bench is included. It targets upward scapular rotation/lower-trap practice, rather than blindly copying legacy side-delt credit. No dumbbell is inferred and no other raise history transfers."
       }
+    },
+    {
+      "id": "chest-row",
+      "source": {
+        "movementFamily": "horizontal_pull",
+        "equipment": [
+          "machinerow"
+        ],
+        "practicalReps": [
+          8,
+          12
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "chest_supported_row",
+        "variant": "chest-supported-physical-machine",
+        "pattern": "HORIZONTAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "chest-supported-row-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "UPPER_BACK",
+        "indirect": [
+          "BICEPS:0.25",
+          "REAR_DELTS:0.25",
+          "TRAPS:0.25"
+        ],
+        "attachment": null,
+        "note": "A chest-supported physical row machine needs its own verified stack. Broad-back source evidence maps provisionally to upper back; neither dumbbell row loads nor another physical A/B machine may supply this history."
+      }
+    },
+    {
+      "id": "preacher",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "ezbar",
+          "preacher"
+        ],
+        "practicalReps": [
+          10,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "preacher-ez-bar-bench",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "ez-curl-bar",
+        "basis": "BARBELL_TOTAL",
+        "fixtures": [
+          "preacher-bench"
+        ],
+        "direct": "BICEPS",
+        "indirect": [],
+        "attachment": null,
+        "note": "Preacher curl on a dedicated bench uses the real EZ curl bar and paired plates; it cannot borrow preacher MACHINE stack resistance, another bar weight or generic curl progression."
+      }
+    },
+    {
+      "id": "leg-press",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "legpress"
+        ],
+        "practicalReps": [
+          8,
+          15
+        ],
+        "source": "legacy_v661"
+      },
+      "review": {
+        "family": "leg_press",
+        "variant": "bilateral-web-leg-press",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "leg-press-machine",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "attachment": null,
+        "note": "The active-web bilateral leg-press identity needs a verified physical leg-press station and exact stock. It must not silently share a different leg-press ID, unilateral set, squat, or machine A/B load history."
+      }
     }
   ]
 }

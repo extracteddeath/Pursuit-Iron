@@ -2081,12 +2081,31 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
             null,null,setOf("incline-bench"),12..20,
             "Only the unweighted controlled prone Y-raise on a verified incline bench is included. It targets upward scapular rotation/lower-trap practice, rather than blindly copying legacy side-delt credit. No dumbbell is inferred and no other raise history transfers.",
-            direct(TrainingMuscle.TRAPS))
+            direct(TrainingMuscle.TRAPS)),
+        entry("chest-row","chest_supported_row","chest-supported-physical-machine",
+            ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
+            "chest-supported-row-machine",LoadBasis.EXERCISE_OVERRIDE,emptySet(),8..12,
+            "A chest-supported physical row machine needs its own verified stack. Broad-back source evidence maps provisionally to upper back; neither dumbbell row loads nor another physical A/B machine may supply this history.",
+            direct(TrainingMuscle.UPPER_BACK),
+            indirect(TrainingMuscle.BICEPS,"0.25"),
+            indirect(TrainingMuscle.REAR_DELTS,"0.25"),
+            indirect(TrainingMuscle.TRAPS,"0.25")),
+        entry("preacher","elbow_flexion","preacher-ez-bar-bench",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "ez-curl-bar",LoadBasis.BARBELL_TOTAL,setOf("preacher-bench"),10..15,
+            "Preacher curl on a dedicated bench uses the real EZ curl bar and paired plates; it cannot borrow preacher MACHINE stack resistance, another bar weight or generic curl progression.",
+            direct(TrainingMuscle.BICEPS)),
+        entry("leg-press","leg_press","bilateral-web-leg-press",
+            ComposerPattern.SQUAT,ComposerRole.SECONDARY,lower,
+            "leg-press-machine",LoadBasis.EXERCISE_OVERRIDE,emptySet(),8..15,
+            "The active-web bilateral leg-press identity needs a verified physical leg-press station and exact stock. It must not silently share a different leg-press ID, unilateral set, squat, or machine A/B load history.",
+            direct(TrainingMuscle.QUADS),
+            indirect(TrainingMuscle.GLUTES,"0.25"))
         // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {
-        require(definitions.size==330)
+        require(definitions.size==333)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

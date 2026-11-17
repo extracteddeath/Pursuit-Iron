@@ -150,7 +150,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
         }
     }
     val visibleSessions=remember(verified,filteredMovements,exerciseSearch,
-        focusedWorkoutId) {
+        focusedWorkoutId,preferredWorkoutId) {
         val query=exerciseSearch.trim()
         if(focusedWorkoutId!=null)verified?.completions.orEmpty().filter{
             it.manifest.workoutId==focusedWorkoutId

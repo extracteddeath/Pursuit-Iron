@@ -855,17 +855,16 @@ internal fun NativeKotlinCustomJournalScreen(
                             }
                         }
                         val options=NativeKotlinEquipmentRecoveryPolicy.review(
-                            activeWorkout=!busy && machineChoices.ready &&
-                                !machineChoices.busy,
-                            hasPhysicalMachineConfig=config!=null,
+                            activeWorkout=!busy,
+                            hasPhysicalMachineConfig=config!=null &&
+                                machineChoices.ready && !machineChoices.busy,
                             hasRecordedExerciseWork=recorded,
                             linkedSuperset=slot.supersetGroup!=null
                         )
                         NativeKotlinEquipmentRecoveryControl(
                             scopeKey="$workoutId:${slot.slotId}",
                             availability=options,
-                            busy=busy || !machineChoices.ready ||
-                                machineChoices.busy,
+                            busy=busy,
                             onChangeStation={openPhysicalMachineForSlot=slot.slotId},
                             onReplaceExercise={reviewSwap(slot)}
                         )

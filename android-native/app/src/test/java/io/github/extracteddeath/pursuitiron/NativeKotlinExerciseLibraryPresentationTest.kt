@@ -158,6 +158,33 @@ internal class NativeKotlinExerciseLibraryPresentationTest:NativeKotlinProgramFi
         assertNull(nativeBenchAngle("rope-cable-row"))
     }
 
+    @Test fun benchAngleRequiresVerifiedBenchFixtureAndExcludesBodyPosition() {
+        val movements=StarterExerciseTranche.movements()
+        val byId=movements.associateBy { it.exerciseId }
+        val records=records()
+        assertEquals(NativeBenchAngle.FLAT,
+            records.single { it.movement.exerciseId=="barbell_bench" }.angle)
+        assertEquals(NativeBenchAngle.HIGH_INCLINE,
+            records.single { it.movement.exerciseId=="high-inc-bb-bench" }.angle)
+        assertEquals(NativeBenchAngle.LOW_INCLINE,
+            records.single { it.movement.exerciseId=="low-inc-bb-bench" }.angle)
+        assertNull("An incline push-up is NOT a bench setting",
+            records.single { it.movement.exerciseId=="incline-pushup" }.angle)
+        assertNull("A decline push-up is NOT a decline bench setting",
+            records.single { it.movement.exerciseId=="decline-pushup" }.angle)
+        assertNull("A cable lateral raise only uses a seated support",
+            records.single { it.movement.exerciseId=="seated-cable-lat-raise" }.angle)
+        assertNull(nativeBenchAngle("high-incline-free-text",emptySet(),
+            "bench_press"))
+        assertNull(nativeBenchAngle("decline-bodyweight",
+            setOf("flat-bench"),"pushup"))
+        assertNull(nativeReviewedChoiceAngle("unknown-custom-incline",byId))
+        assertEquals(NativeBenchAngle.INCLINE,
+            nativeReviewedChoiceAngle("incline_db_press",byId))
+        assertEquals(NativeBenchAngle.FLAT,
+            nativeReviewedChoiceAngle("barbell_bench",byId))
+    }
+
     @Test fun attachmentAndFamilyFiltersPreserveExactMovementIdentity() {
         val all=records()
         val id="v-bar-pushdown"

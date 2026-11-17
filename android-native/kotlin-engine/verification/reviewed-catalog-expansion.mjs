@@ -24,6 +24,22 @@ const manifestPath=join(root,
  'android-native/kotlin-engine/verification/reviewed-catalog-expansion.json');
 const BEGIN='        // BEGIN REVIEWED_WEB_EXPANSION_V2';
 const END='        // END REVIEWED_WEB_EXPANSION_V2';
+const requestedWebVariants=[
+  ['high-inc-db-press','High-Incline Dumbbell Press',['dumbbell','inclinebench'],[8,12]],
+  ['bottom-half-db-fly','Bottom-Half Dumbbell Fly',['dumbbell','bench'],[12,18]],
+  ['deficit-pendlay-row','Deficit Pendlay Row',['barbell'],[5,8]],
+  ['low-to-high-face-pull','Low-to-High Face Pull',['cable'],[12,20]],
+  ['leaning-cable-ohext','Leaning Cable Overhead Triceps Extension',['cable'],[10,15]],
+  ['ad-press-barbell','AD Press (Barbell)',['barbell','inclinebench','rack'],[6,12]],
+  ['ad-press-smith','AD Press (Smith Machine)',['smith','inclinebench'],[6,12]]
+];
+const requestedIds=requestedWebVariants.map(x=>x[0]);
+const requestedFixture=JSON.parse(readFileSync(join(root,
+ 'android-native/kotlin-engine/verification/requested-web-variants-20261117.json'),'utf8'));
+assert.equal(requestedFixture.schemaVersion,1,'reviewed request fixture schema drift');
+assert.equal(requestedFixture.sourcePullRequest,671,'web provenance PR drift');
+assert.deepEqual(requestedFixture.records.map(x=>x.id),requestedIds,
+ 'seven-source provenance snapshot must retain exact order and IDs');
 const allowedMuscles=new Set(['CHEST','LATS','UPPER_BACK','FRONT_DELTS',
  'SIDE_DELTS','REAR_DELTS','TRICEPS','BICEPS','BRACHIALIS','WRIST_FLEXORS',
  'WRIST_EXTENSORS','QUADS','HAMSTRINGS','GLUTES','CALVES','ABS',
@@ -200,14 +216,42 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
    .map(x=>x[2]+'|'+x[3]);
  assert.equal(new Set(variants).size,variants.length,
    'preserved curated and reviewed extensions must have unique physical family/variant keys');
- assert.deepEqual(declarations.slice(49),manifest.records.map(x=>x.id),
-   'new source IDs must append after the preserved first 49');
- assert.ok(source.includes('require(definitions.size=='+(49+count)+')'),
-   'Kotlin exact source count must match reviewed registry');
+ assert.deepEqual(declarations.slice(49,49+count),
+   manifest.records.map(x=>x.id),
+   'generated reviewed catalog must preserve its exact 49-ID prefix and review registry');
+ assert.deepEqual(declarations.slice(49+count),requestedIds,
+   'only the seven explicitly reviewed newly requested web identities may append');
+ // A new source catalog ID is not evidence of identical mechanics.
+ // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
+ const liveById=new Map(web.map(ex=>[ex.id,ex]));
+ const fixtureById=new Map(requestedFixture.records.map(x=>[x.id,x]));
+ for(const [id,name,equipment,reps] of requestedWebVariants) {
+   const ex=fixtureById.get(id);
+   assert.ok(ex,'requested variant missing provenance fixture: '+id);
+   assert.equal(ex.name,name,'requested variant identity/name drift: '+id);
+   assert.deepEqual(ex.equipment,equipment,'requested variant physical source drift: '+id);
+   assert.deepEqual(ex.practicalReps,reps,'requested variant rep band drift: '+id);
+   assert.equal(ex.source,'pursuit_requested_variant_20261117',
+     'requested variant must retain explicit upstream provisional identity: '+id);
+   // The Kotlin rebuild branch intentionally does not change the legacy
+   // browser/JS execution catalog. If the upstream web source later contains
+   // this ID, it must agree exactly with the pinned review snapshot.
+   const live=liveById.get(id);
+   if(live) {
+     for(const key of ['name','equipment','movementFamily','practicalReps','source'])
+       assert.deepEqual(live[key],ex[key],
+         'live web source drift from separately reviewed Kotlin exercise: '+id+'/'+key);
+   }
+ }
+ const total=49+count+requestedIds.length;
+ assert.ok(source.includes('require(definitions.size=='+total+')'),
+   'Kotlin exact source count must include independently reviewed additions');
+ assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
+   'new requested definitions must remain separate from the generated reviewed registry');
  assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false')&&
    !expected.includes('mayTransferPreviousLoad'),
    'reviewed IDs may never implicitly transfer historical loading');
- return {originalStablePrefixCount:49,additions:count,total:49+count};
+ return {originalStablePrefixCount:49,additions:count+requestedIds.length,total};
 }
 
 export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
@@ -218,7 +262,7 @@ export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
  const previous=requireCount(source);
  return source.slice(0,from)+replacement+source.slice(to+END.length)
    .replace('require(definitions.size=='+previous+')',
-     'require(definitions.size=='+(49+count)+')');
+     'require(definitions.size=='+(49+count+requestedIds.length)+')');
 }
 function requireCount(source) {
  const m=source.match(/require\(definitions\.size==(\d+)\)/);
@@ -228,7 +272,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,330);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,337);
  const changed=structuredClone(m);
  changed.records[0].source.practicalReps=[1,100];
  assert.throws(()=>validateReviewedCatalogExpansion(changed,src),/source metadata drift/);

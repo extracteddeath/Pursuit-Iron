@@ -18,7 +18,13 @@ assert.equal(labelIds.length,ids.length,'every reviewed Kotlin exercise needs a 
 assert.equal(new Set(labelIds).size,labelIds.length,'duplicate native labels');
 assert.deepEqual([...new Set(labelIds)].sort(),[...new Set(ids)].sort(),
   'athlete-facing names must cover exact reviewed Kotlin IDs, not unrelated legacy ones');
-const activeIds=new Set(EXERCISES.map(ex=>ex.id));
+const reviewedRequestFixture=JSON.parse(readFileSync(
+  'android-native/kotlin-engine/verification/requested-web-variants-20261117.json','utf8'));
+assert.equal(reviewedRequestFixture.sourcePullRequest,671);
+const activeIds=new Set([
+  ...EXERCISES.map(ex=>ex.id),
+  ...reviewedRequestFixture.records.map(ex=>ex.id)
+]);
 for(const [id,label] of mappings.map(m=>[m[1],m[2]])) {
   assert.ok(activeIds.has(id),'label must match an active source ID: '+id);
   assert.ok(label.length>=4 && !label.includes('${') && !label.startsWith('"'),

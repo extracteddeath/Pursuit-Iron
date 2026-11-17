@@ -372,7 +372,10 @@ assert.ok(
   plan.includes('set.type==DraftSetType.WORKING') &&
   authoringSheet.includes('if(workoutOnlySwap) "Confirm workout-only replacement"') &&
   authoringSheet.includes('"Confirm workout swap" else "Confirm this program swap"') &&
-  authoringSheet.includes('forms=listOf(CustomSetFields())') &&
+  authoringSheet.includes('forms=freshReplacementStructure()') &&
+  authoringSheet.includes('.map{CustomSetFields(type=it.type)}') &&
+  authoringSheet.includes('Copy original timing ONLY (optional)') &&
+  authoringSheet.includes('Use these NEW targets for other working sets') &&
   customBuilder.includes('fun replaceExerciseSlot(') &&
   customBuilder.includes('newSlot.slotId==oldSlotId') &&
   customBuilder.includes('previous.supersetGroup!=null') &&

@@ -12,7 +12,8 @@ import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutRestPresentatio
 internal fun NativeKotlinWorkoutRestTimer(
     workoutId:String,
     rest:KotlinWorkoutRestPresentation,
-    enabled:Boolean
+    enabled:Boolean,
+    athleteId:String?=null
 ) {
     // Completing the last required visit removes the countdown immediately;
     // there is no artificial post-workout rest or timer on a finished workout.
@@ -25,5 +26,5 @@ internal fun NativeKotlinWorkoutRestTimer(
         latestReceiptOperationId=rest.latestReceiptEventId,
         autoCue=rest.automaticCue?.let {
             NativeRestCue(it.eventId,it.seconds,it.exerciseIndex)
-        })
+        },ownerId=athleteId)
 }

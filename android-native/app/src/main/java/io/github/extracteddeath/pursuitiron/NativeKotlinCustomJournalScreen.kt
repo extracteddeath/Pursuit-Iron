@@ -70,6 +70,7 @@ internal fun NativeKotlinCustomJournalScreen(
     // set key can never be promoted into a valid active focus.
     var reviewSetKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var reviewPart by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var reviewStage by rememberSaveable(workoutId){mutableIntStateOf(1)}
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pinnedSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     // Only a read-only navigation destination, scoped to this issued workout.
@@ -243,11 +244,12 @@ internal fun NativeKotlinCustomJournalScreen(
 
     fun record(
         setKey:String,part:CustomWorkoutVisitPart,
-        outcome:KotlinJournalSetOutcome,performed:KotlinPerformedSet?
+        outcome:KotlinJournalSetOutcome,performed:KotlinPerformedSet?,
+        stage:Int=1
     ) {
         if(busy || !machineChoices.ready || machineChoices.busy)return
         val current=journal ?:return
-        val visit=CustomWorkoutVisitKey(setKey,part)
+        val visit=CustomWorkoutVisitKey(setKey,part,stage)
         val prior=current.effectiveVisits[visit]
         val correction=prior?.operation?.eventId
         busy=true
@@ -266,7 +268,8 @@ internal fun NativeKotlinCustomJournalScreen(
                 // Follow the next unlogged visit after a manually focused
                 // entry was actually saved. Rejected disk writes retain
                 // both the selected visit and the editable draft.
-                if(reviewSetKey==visit.setKey && reviewPart==visit.part.name) {
+                if(reviewSetKey==visit.setKey && reviewPart==visit.part.name &&
+                    reviewStage==visit.stage) {
                     reviewSetKey=null
                     reviewPart=null
                 }
@@ -507,7 +510,7 @@ internal fun NativeKotlinCustomJournalScreen(
                 }
                 val requestedFocus=reviewSetKey?.let{key->
                     requestedPart?.let{part->
-                        CustomWorkoutVisitKey(key,part)
+                        CustomWorkoutVisitKey(key,part,reviewStage)
                     }
                 }?.takeIf{it in availableVisits}
                 val activeFocus=(requestedFocus ?: nextVisit).takeIf {
@@ -667,7 +670,11 @@ internal fun NativeKotlinCustomJournalScreen(
                         val label=if(set.prescription.type==DraftSetType.WARMUP)
                             "Warm-up" else "Set"
                         if(activeFocus?.part==CustomWorkoutVisitPart.FOLLOW_UP)
-                            "Amplifier follow-up · $label $number of ${sameType.size}"
+                            set.prescription.amplifier?.let {
+                                val method=AdvancedAmplifierProtocolDomain.template(it.kind)
+                                "${method.title} · stage ${activeFocus.stage} of ${it.followUpRounds}"
+                            } ?: "Amplifier follow-up"
+
                         else
                             "$label $number of ${sameType.size}"
                     }
@@ -1600,7 +1607,8 @@ internal fun NativeKotlinCustomJournalScreen(
                     if(latest==quickSkip && !busy && !finished &&
                         machineChoices.ready && !machineChoices.busy)
                         record(quickSkip.setKey,quickSkip.part,
-                            KotlinJournalSetOutcome.SKIPPED,null)
+                            KotlinJournalSetOutcome.SKIPPED,null,
+                            stage=quickSkip.stage)
                 }) {Text("Confirm skip")}
             },
             dismissButton={

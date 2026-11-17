@@ -287,7 +287,8 @@ object CustomTrainingCycleDomain {
                             (amplifier.kind != CustomAmplifierKind.MYO_REPS ||
                              amplifier.followUpRounds !in 3..5 ||
                              amplifier.followUpReps !in 3..5 ||
-                             amplifier.followUpRestSeconds !in 10..30)) ||
+                             amplifier.followUpRestSeconds !in 10..30 ||
+                             amplifier.followUpLoad!=null)) ||
                         amplifier.followUpActiveSeconds?.let{
                             it !in 1..3600
                         }==true)

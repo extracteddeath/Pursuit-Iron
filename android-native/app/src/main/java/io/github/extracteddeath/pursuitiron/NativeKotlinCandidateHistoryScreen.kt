@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -183,7 +184,14 @@ internal fun NativeKotlinCandidateHistoryScreen(
     }
     val monthSections=remember(displayedSessions,historyZone){nativeHistoryMonths(displayedSessions,historyZone)}
     var visibleExerciseCount by rememberSaveable(exerciseSearch){mutableStateOf(12)}
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),
+    val historyListState=rememberLazyListState()
+    // Opening an exact completed session must not reuse the old History
+    // browser's distant scroll position and hide the finished result.
+    LaunchedEffect(preferredWorkoutId,focusedWorkoutId) {
+        if(preferredWorkoutId!=null)historyListState.scrollToItem(0)
+    }
+    LazyColumn(Modifier.fillMaxSize(),state=historyListState,
+        contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
             PageHeading("TRAINING LOG","Workout history",

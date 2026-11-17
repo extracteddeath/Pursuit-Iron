@@ -66,7 +66,9 @@ private fun NativeKotlinSetTechniqueSummary(
     val count=if(amp.followUpRounds>1)
         "${amp.followUpRounds} ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,plural=true)}"
     else "1 follow-up"
-    val label="${technique.title} · $count · ${amp.followUpReps} reps · ${amp.followUpRestSeconds}s rest"
+    val label=if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+        "Last working set · Lengthened partials · ${amp.followUpReps} partial reps · no rest"
+    else "${technique.title} · $count · ${amp.followUpReps} reps · ${amp.followUpRestSeconds}s rest"
     Column(Modifier.fillMaxWidth(),
         verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         Row(Modifier.fillMaxWidth(),

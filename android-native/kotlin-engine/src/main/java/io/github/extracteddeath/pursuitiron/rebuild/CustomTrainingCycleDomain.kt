@@ -20,7 +20,7 @@ sealed interface CustomSplitIdentity {
 }
 
 enum class CustomBlockPurpose { TRAINING, RECOVERY, PERFORMANCE_TEST }
-enum class CustomAmplifierKind { DROP_SET, MYO_REPS, REST_PAUSE, CLUSTER }
+enum class CustomAmplifierKind { DROP_SET, MYO_REPS, REST_PAUSE, CLUSTER, LENGTHENED_PARTIALS }
 
 data class CustomSetAmplifier(
     val kind: CustomAmplifierKind,
@@ -273,8 +273,16 @@ object CustomTrainingCycleDomain {
                     slot.exerciseId,availability.stock))
                 issue(CustomCycleIssueKind.NO_VERIFIED_STOCK, at,
                     "This band exercise requires exact positive manufacturer-rated band settings, not a guessed stack.")
+            val lastWorkingSet=sets.indexOfLast { it.type==DraftSetType.WORKING }
             for ((setIndex, set) in sets.withIndex()) {
                 val here = "$at.set.$setIndex"
+                // Beyond-failure lengthened partials are an optional
+                // same-load extension of ONE final working set. Never place
+                // them on warmups, earlier work, or every set by default.
+                if(set.amplifier?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
+                    (set.type!=DraftSetType.WORKING || setIndex!=lastWorkingSet))
+                    issue(CustomCycleIssueKind.INVALID_SET, here,
+                        "Lengthened partials may only extend the final working set.")
                 if (set.activeSeconds !in 1..3600 ||
                     set.restSeconds !in 0..3600 ||
                     (set.targetRir != null && set.targetRir !in 0..10) ||

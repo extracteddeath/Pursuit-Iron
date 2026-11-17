@@ -182,6 +182,26 @@ object CustomExerciseAuthoringDomain {
     }
 
     /**
+     * A partial-repetition extension belongs only to the last full
+     * working set, independent of warmup or superset row numbering.
+     * Each entry remains independently validated against physical gym stock.
+     */
+    private fun validateSelectedSets(
+        sets:List<CustomAuthoredSet>,
+        option:CustomExercisePickerOption
+    ):CustomAuthoringRefusal? {
+        if(sets.isEmpty() || sets.size>20)
+            return CustomAuthoringRefusal.INVALID_SETS
+        val lastWorking=sets.indexOfLast{it.type==DraftSetType.WORKING}
+        if(sets.withIndex().any{(index,set)->
+                set.amplifier?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
+                (set.type!=DraftSetType.WORKING || index!=lastWorking)
+            })
+            return CustomAuthoringRefusal.INVALID_SETS
+        return sets.firstNotNullOfOrNull{validSet(it,option)}
+    }
+
+    /**
      * Read-only validation shared by program authoring and a proposed
      * in-session swap. This checks CURRENT reviewed gym stock, variants,
      * exact physical load, rep range and all advanced-set follow-ups.
@@ -199,9 +219,7 @@ object CustomExerciseAuthoringDomain {
         val option=picker(setup,catalog).firstOrNull{
             it.exerciseId==exerciseId
         } ?:return CustomAuthoringRefusal.EXERCISE_UNAVAILABLE
-        if(sets.isEmpty() || sets.size>20)
-            return CustomAuthoringRefusal.INVALID_SETS
-        return sets.firstNotNullOfOrNull{validSet(it,option)}
+        return validateSelectedSets(sets,option)
     }
 
     /**
@@ -236,7 +254,7 @@ object CustomExerciseAuthoringDomain {
         if (slot.sets.isEmpty() || slot.sets.size > 20)
             return CustomAuthoringResult.Rejected(
                 CustomAuthoringRefusal.INVALID_SETS)
-        val error = slot.sets.firstNotNullOfOrNull { validSet(it, option) }
+        val error = validateSelectedSets(slot.sets,option)
         if (error != null) return CustomAuthoringResult.Rejected(error)
         return when (val changed = CustomCycleBuilderDomain.addSlot(
             current, expectedRevision, blockId, weekday, slot)) {
@@ -303,9 +321,7 @@ object CustomExerciseAuthoringDomain {
         if(!athlete.allowSupersets && replacement.supersetGroup!=null)
             return CustomAuthoringResult.Rejected(
                 CustomAuthoringRefusal.AUTHORING_CONFLICT)
-        val invalid=replacement.sets.firstNotNullOfOrNull {
-            validSet(it,option)
-        }
+        val invalid=validateSelectedSets(replacement.sets,option)
         if(invalid!=null)return CustomAuthoringResult.Rejected(invalid)
         return when(val proposed=CustomCycleBuilderDomain.replaceExerciseSlot(
             current,expectedRevision,blockId,weekday,previousSlotId,
@@ -358,7 +374,7 @@ object CustomExerciseAuthoringDomain {
         if (newSets.isEmpty() || newSets.size > 20)
             return CustomAuthoringResult.Rejected(
                 CustomAuthoringRefusal.INVALID_SETS)
-        val invalid = newSets.firstNotNullOfOrNull { validSet(it, option) }
+        val invalid = validateSelectedSets(newSets,option)
         if (invalid != null) return CustomAuthoringResult.Rejected(invalid)
         val proposal = if (weekInBlock == null)
             CustomCycleBuilderDomain.replaceSlotSets(

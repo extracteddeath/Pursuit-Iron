@@ -253,10 +253,11 @@ object CustomWorkoutJournalDomain {
                         // after any same-load staged technique would invalidate
                         // its lineage. Never erase factual mini-set receipts.
                         if(main!=null && target.prescription.amplifier?.let{
-                                it.followUpRounds>1 &&
+                                (it.kind==CustomAmplifierKind.LENGTHENED_PARTIALS ||
+                                 it.followUpRounds>1 &&
                                     (it.kind==CustomAmplifierKind.MYO_REPS ||
                                      it.kind==CustomAmplifierKind.REST_PAUSE ||
-                                     it.kind==CustomAmplifierKind.CLUSTER)
+                                     it.kind==CustomAmplifierKind.CLUSTER))
                             }==true && nextEffective.keys.any {
                                 it.setKey==operation.visit.setKey &&
                                     it.part==CustomWorkoutVisitPart.FOLLOW_UP
@@ -304,6 +305,19 @@ object CustomWorkoutJournalDomain {
                             key.stage>operation.visit.stage
                         })return CustomWorkoutJournalDecision.Rejected(
                             CustomWorkoutJournalRefusal.INVALID_CORRECTION)
+                        // Partial-range extension cannot be performed on a
+                        // different physical station or load. This is a
+                        // separate factual partial count, never a full-ROM
+                        // regular working set or an invented load reduction.
+                        if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
+                            operation.outcome!=KotlinJournalSetOutcome.SKIPPED &&
+                            (main.performed==null ||
+                             operation.performed?.load!=main.performed.load ||
+                             operation.performed?.unit!=main.performed.unit ||
+                             operation.performed?.machineInstanceId!=
+                                main.performed.machineInstanceId))
+                            return CustomWorkoutJournalDecision.Rejected(
+                                CustomWorkoutJournalRefusal.INVALID_ACTUAL)
                         amp.followUpLoad ?:target.prescription.load
                     }
                 }

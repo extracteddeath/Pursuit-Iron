@@ -508,7 +508,10 @@ internal fun NativeKotlinCustomExerciseSheet(
                         FilterChip(selected = fields.amplifier == null,
                             onClick = { update(fields.copy(amplifier = null)) },
                             label = { Text("None") })
-                        CustomAmplifierKind.entries.forEach { technique ->
+                        CustomAmplifierKind.entries.filter { technique ->
+                            technique!=CustomAmplifierKind.LENGTHENED_PARTIALS ||
+                                index==forms.indexOfLast{it.type==DraftSetType.WORKING}
+                        }.forEach { technique ->
                             FilterChip(selected = fields.amplifier == technique,
                                 onClick = {
                                     update(fields.copy(
@@ -523,12 +526,14 @@ internal fun NativeKotlinCustomExerciseSheet(
                                             CustomAmplifierKind.MYO_REPS -> "4"
                                             CustomAmplifierKind.REST_PAUSE -> "3"
                                             CustomAmplifierKind.CLUSTER -> "2"
+                                            CustomAmplifierKind.LENGTHENED_PARTIALS -> "3"
                                             else -> fields.extraReps
                                         },
                                         extraRest = when(technique) {
                                             CustomAmplifierKind.MYO_REPS,
                                             CustomAmplifierKind.REST_PAUSE -> "20"
                                             CustomAmplifierKind.CLUSTER -> "30"
+                                            CustomAmplifierKind.LENGTHENED_PARTIALS -> "0"
                                             else -> fields.extraRest
                                         }
                                     ))
@@ -573,6 +578,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 when(fields.amplifier) {
                                     CustomAmplifierKind.MYO_REPS -> "Mini-set reps"
                                     CustomAmplifierKind.CLUSTER -> "Cluster reps"
+                                    CustomAmplifierKind.LENGTHENED_PARTIALS -> "Partial reps (not full ROM)"
                                     else -> "Follow-up reps"
                                 },
                                 { update(fields.copy(extraReps = it)) },
@@ -611,6 +617,14 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        if(fields.amplifier==CustomAmplifierKind.LENGTHENED_PARTIALS)
+                            Text("Final working set only. Continue with controlled " +
+                                "reps in the lengthened portion after the full-range " +
+                                "work; use the same load and machine. Skip if you " +
+                                "cannot maintain technique. Partial reps remain " +
+                                "separate in History and never earn full-ROM progression.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
                         AuthorNumberField(fields.extraWork,
                             "Extra working time (s)",
                             { update(fields.copy(extraWork = it)) },

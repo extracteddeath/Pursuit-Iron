@@ -573,4 +573,82 @@ class CustomWorkoutExecutionDomainTest {
             as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
     }
 
+    @Test fun finalSetLengthenedPartialsLogSeparateActualsWithoutNewRegularWork() {
+        val partial=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,3,0,
+            followUpActiveSeconds=15)
+        val original=slot("partials",2,null,amplifier=partial)
+        val configured=original.copy(sets=original.sets.mapIndexed{index,set->
+            if(index==0)set.copy(prescription=set.prescription.copy(amplifier=null))
+            else set
+        })
+        var j=initial(configured)
+        assertEquals(visit("partials:s1"),next(j))
+        j=record(j,"partials:s1")
+        assertEquals(visit("partials:s2"),next(j))
+        j=record(j,"partials:s2",reps=10)
+        assertEquals(visit("partials:s2",CustomWorkoutVisitPart.FOLLOW_UP),next(j))
+        assertFalse(j.canProposeFinish)
+        j=record(j,"partials:s2",CustomWorkoutVisitPart.FOLLOW_UP,reps=3)
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        assertEquals(3,j.effectiveVisits.size)
+        assertEquals(1,CustomWorkoutVisitFocusDomain.progress(j).recordedFollowUps)
+        val savedPartial=j.effectiveVisits.getValue(visit(
+            "partials:s2",CustomWorkoutVisitPart.FOLLOW_UP)).operation
+            as CustomWorkoutJournalOperation.Record
+        assertEquals(3,savedPartial.performed?.reps)
+        assertEquals(BigDecimal("20"),savedPartial.performed?.load)
+        assertEquals(CustomAmplifierKind.LENGTHENED_PARTIALS,
+            configured.sets.last().prescription.amplifier?.kind)
+        val closed=(CustomWorkoutJournalDomain.reduce(j,
+            CustomWorkoutJournalOperation.Finish("finish-partials",j.revision))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val evidence=CustomWorkoutHistoryEvidenceDomain.project(closed)
+            as CustomHistoryEvidenceResult.Candidate
+        assertEquals(3,evidence.evidence.visits.size)
+        assertEquals(2,evidence.evidence.visits.count{
+            it.part==CustomWorkoutVisitPart.MAIN
+        })
+        val partialHistory=evidence.evidence.visits.single{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        }
+        assertEquals(CustomAmplifierKind.LENGTHENED_PARTIALS,
+            partialHistory.amplifierKind)
+        assertEquals(3,partialHistory.actual?.reps)
+        assertFalse(evidence.evidence.canApplyProgression)
+    }
+
+    @Test fun partialExtensionCannotQuietlyChangeActivationLoadOrPhysicalMachine() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,3,0)
+        var journal=initial(slot("partial",1,null,amplifier=amp))
+        journal=record(journal,"partial:s1",reps=10)
+        val follow=visit("partial:s1",CustomWorkoutVisitPart.FOLLOW_UP)
+        val changedLoad=CustomWorkoutJournalOperation.Record(
+            "wrong-partial-load",journal.revision,follow,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,3,2))
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_ACTUAL,
+            (CustomWorkoutJournalDomain.reduce(journal,changedLoad)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        val wrongMachine=changedLoad.copy(eventId="wrong-partial-machine",
+            performed=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,3,2,"machine_B"))
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_ACTUAL,
+            (CustomWorkoutJournalDomain.reduce(journal,wrongMachine)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        journal=record(journal,"partial:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            reps=3)
+        val originalMain=journal.effectiveVisits.getValue(visit("partial:s1"))
+            .operation as CustomWorkoutJournalOperation.Record
+        val changeMain=CustomWorkoutJournalOperation.Record(
+            "main-after-partial",journal.revision,visit("partial:s1"),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,10,2),
+            originalMain.eventId)
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(journal,changeMain)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        assertNull(next(journal))
+        assertTrue(journal.canProposeFinish)
+    }
+
 }

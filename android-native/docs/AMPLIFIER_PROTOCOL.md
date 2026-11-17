@@ -20,6 +20,49 @@ cluster plans and real stage receipts through both snapshot and journal
 codecs, including restart, early stop, finish and historic byte stability.
 This does not replace physical Android cold-process and backup testing.
 
+## Final-set lengthened partials (native custom plans, 2026-11-17)
+
+**Athlete-facing contract:** Long-length or *lengthened* partial reps can be
+authored as an optional continuation of the **final regular working set only**.
+The main set stores the actual full-ROM repetitions first. A separate
+`LENGTHENED_PARTIALS` follow-up stores only **1–8 observed partial repetitions**,
+using the same logged load and physical machine, with no inserted rest.
+An athlete may Skip the optional extension, correcting observations remains
+explicit, and neither a skipped nor an unperformed partial becomes a receipt,
+extra normal working set, full-ROM PR, or earned progression. There is **no
+automatic last-set technique insertion** on every accessory.
+
+The source web app (Build 1015, PR #679) now attaches a compact
+`Last set · Lengthened partials` disclosure to the actual final working-set
+row in both Target and Last views, including after completion. Native custom
+Plan/Preview and Train mirror the set-level attachment: M3 authoring offers
+the technique **only on the final working set**; source and workout snapshot
+validators reject any earlier-set placement. In Train, the technique marker
+remains on the main working row even after logging; the optional partial
+follow-up is editable as a separate factual visit. Saved History must label it
+`Lengthened partials · partial reps` without folding the count into full reps.
+Use no extra equipment-based load conversion.
+
+**Evidence caution:** Studies comparing lengthened partials and full ROM
+sometimes find similar hypertrophy rather than universal superiority, and
+limited calf-specific research on extending a set beyond failure should not be
+generalized to all exercises. The appropriate ROM and load profile differ by
+movement; the partial extension is **optional**, on stable suitable exercises,
+and should stop when technique or comfort changes. Do not automatically
+place it on heavy technical lifts, in peak-strength sessions, or when
+readiness/injury concerns argue otherwise.
+Sources:
+- PeerJ (2025), trained individuals, partial vs full ROM:
+  https://pubmed.ncbi.nlm.nih.gov/39959841/
+- Calf past-failure partials (2025):
+  https://pubmed.ncbi.nlm.nih.gov/39995432/
+- Overview of resistance training prescription (2026):
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC12965823/
+
+This covers **athlete-authored custom cycles** and their durable native
+journal/history, not automatic generated-plan coaching or all multi-drop
+protocols. Every claim of beta safety still requires on-device acceptance.
+
 ## Evidence and selection
 
 - A 2026 systematic review/meta-analysis found that advanced systems did **not** produce a meaningful overall hypertrophy advantage; rest-pause may have a small advantage and drop sets/cluster systems were often comparable when effort/volume were matched. Use techniques to **save time**, for an optional finishing stimulus, or for a specific programming purpose, not as magic extra growth. https://pubmed.ncbi.nlm.nih.gov/41718208/

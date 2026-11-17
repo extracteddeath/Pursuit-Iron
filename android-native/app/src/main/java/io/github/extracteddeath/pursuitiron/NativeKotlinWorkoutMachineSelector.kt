@@ -12,6 +12,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
@@ -232,7 +235,7 @@ internal fun NativeKotlinWorkoutMachineSelector(
             open=false
         }
     }
-    OutlinedButton(
+    TextButton(
         onClick={
             open=true
             // The exact same-day source is fetched only when this picker
@@ -241,10 +244,16 @@ internal fun NativeKotlinWorkoutMachineSelector(
             onRequestHistory?.invoke()
         },
         enabled=true, // inspection remains available on finished/paused workouts
-        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+        modifier=Modifier.heightIn(min=48.dp).widthIn(max=260.dp)
+            .semantics {
+                contentDescription="Current physical machine: $display. Choose or add machine"
+            },
     ) {
-        Text("Physical machine · $display",
-            maxLines=2,style=MaterialTheme.typography.labelLarge)
+        // Selecting a station is occasional; don't make this a full-width
+        // headline card above the working set. The sheet retains full actions.
+        Text("Machine · $display",maxLines=1,
+            overflow=TextOverflow.Ellipsis,
+            style=MaterialTheme.typography.labelMedium)
     }
     if(open)ModalBottomSheet(onDismissRequest={open=false}) {
         Column(

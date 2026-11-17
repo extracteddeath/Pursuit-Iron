@@ -18,7 +18,9 @@ import java.math.RoundingMode
 
 internal data class StrengthTrendSample(
     val completionOrder:Long,
-    val estimatedOneRepMax:BigDecimal
+    val estimatedOneRepMax:BigDecimal,
+    // The recorded Finish clock, never an inferred calendar day.
+    val completedAtEpochMillis:Long?=null
 )
 
 /** Corrected, owner-verified working-set evidence. Never uses issued loads
@@ -54,7 +56,8 @@ internal fun verifiedStrengthTrend(
         StrengthStandardsMeasurementDomain.convert(
             estimate,loaded.unit,displayUnit)
     }.maxOrNull()
-    best?.let{StrengthTrendSample(entry.manifest.completionOrder,it)}
+    best?.let{StrengthTrendSample(
+        entry.manifest.completionOrder,it,entry.manifest.completedAtEpochMillis)}
 }.sortedBy {it.completionOrder}
 
 private fun estimatedStrengthLabel(value:BigDecimal,unit:LoadUnit):String =
@@ -74,6 +77,14 @@ internal fun PursuitStrengthTrendChart(
         PursuitSectionHeading("Estimated strength over time",
             "Your best qualifying working set per finished session; not a tested one-rep maximum.")
         val recent=samples.sortedBy{it.completionOrder}.takeLast(20)
+        val axis=NativeKotlinTrendAxisPolicy.project(
+            recent.map{it.completedAtEpochMillis})
+        val recordedZone=remember { java.time.ZoneId.systemDefault() }
+        val recordedLocale=remember { java.util.Locale.getDefault() }
+        fun sessionText(sample:StrengthTrendSample)=
+            NativeKotlinTrendAxisPolicy.sessionLabel(
+                sample.completionOrder,sample.completedAtEpochMillis,
+                recordedZone,recordedLocale)
         if(recent.isEmpty()) {
             PursuitHistoryStatus("No qualified sessions yet",
                 "Finish a 1–10-rep working set on this exact barbell lift to start a trend.")
@@ -82,7 +93,7 @@ internal fun PursuitStrengthTrendChart(
             val last=recent.last()
             if(recent.size==1) {
                 PursuitHistoryStatus("One qualifying session",
-                    "Session ${last.completionOrder} · estimated 1RM " +
+                    sessionText(last) + " · estimated 1RM " +
                     estimatedStrengthLabel(last.estimatedOneRepMax,unit) +
                     ". A second appearance is needed to show change.")
             } else {
@@ -100,7 +111,7 @@ internal fun PursuitStrengthTrendChart(
                 val lineColor=MaterialTheme.colorScheme.primary
                 val guideColor=MaterialTheme.colorScheme.outlineVariant
                 val description=recent.joinToString("; ") {
-                    "Session ${it.completionOrder}, estimated 1RM " +
+                    sessionText(it) + ", estimated 1RM " +
                         estimatedStrengthLabel(it.estimatedOneRepMax,unit)
                 }
                 Text("Highest shown: "+
@@ -119,7 +130,7 @@ internal fun PursuitStrengthTrendChart(
                             strokeWidth=1.dp.toPx())
                     }
                     fun point(index:Int):Offset {
-                        val ratio=index.toFloat()/(recent.size-1).toFloat()
+                        val ratio=axis.fractions[index]
                         val vertical=(recent[index].estimatedOneRepMax.toFloat()-low)/span
                         return Offset(left+(right-left)*ratio,
                             bottom-(bottom-top)*vertical)
@@ -131,13 +142,18 @@ internal fun PursuitStrengthTrendChart(
                         drawCircle(lineColor,radius=4.dp.toPx(),center=point(index))
                 }
                 // Separate lines avoid truncating session identifiers at 200% font.
-                Text("First shown · session ${first.completionOrder} · " +
+                Text("First shown · " + sessionText(first) + " · " +
                     estimatedStrengthLabel(first.estimatedOneRepMax,unit),
                     style=MaterialTheme.typography.labelSmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Latest · session ${last.completionOrder} · " +
+                Text("Latest · " + sessionText(last) + " · " +
                     estimatedStrengthLabel(last.estimatedOneRepMax,unit),
                     style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if(axis.calendarScaled)
+                    "Horizontal spacing follows recorded Finish times."
+                    else "Horizontal spacing follows session sequence because dates are missing, equal or out of order.",
+                    style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Difference is between displayed sessions, not a strength prediction or a certified PR.",
                     style=MaterialTheme.typography.bodySmall,
@@ -153,7 +169,7 @@ internal fun PursuitStrengthTrendChart(
             }
             if(showValues) {
                 recent.asReversed().forEach {sample ->
-                    Text("Session ${sample.completionOrder} · estimated 1RM " +
+                    Text(sessionText(sample) + " · estimated 1RM " +
                         estimatedStrengthLabel(sample.estimatedOneRepMax,unit),
                         style=MaterialTheme.typography.bodyMedium)
                 }
@@ -174,7 +190,8 @@ internal fun PursuitStrengthTrendChart(
  */
 internal data class PursuitFactualTrendPoint(
     val sessionOrder:Long,
-    val value:BigDecimal
+    val value:BigDecimal,
+    val completedAtEpochMillis:Long?=null
 )
 
 @Composable
@@ -185,13 +202,19 @@ internal fun PursuitFactualLinePlot(
 ) {
     if(points.size<2)return
     val ordered=points.sortedBy {it.sessionOrder}
+    val axis=NativeKotlinTrendAxisPolicy.project(
+        ordered.map{it.completedAtEpochMillis})
+    val recordedZone=remember { java.time.ZoneId.systemDefault() }
+    val recordedLocale=remember { java.util.Locale.getDefault() }
     val low=ordered.minOf {it.value}.toFloat()
     val high=ordered.maxOf {it.value}.toFloat()
     val span=(high-low).takeIf {it>0f} ?:1f
     val lineColor=MaterialTheme.colorScheme.primary
     val guideColor=MaterialTheme.colorScheme.outlineVariant
     val spoken=ordered.joinToString("; ") {
-        "Session ${it.sessionOrder}, ${formatValue(it.value)}"
+        NativeKotlinTrendAxisPolicy.sessionLabel(
+            it.sessionOrder,it.completedAtEpochMillis,recordedZone,
+            recordedLocale) + ", ${formatValue(it.value)}"
     }
     Canvas(Modifier.fillMaxWidth().height(164.dp)
         .semantics {contentDescription="$measureLabel trend. $spoken"}) {
@@ -205,7 +228,7 @@ internal fun PursuitFactualLinePlot(
                 strokeWidth=1.dp.toPx())
         }
         fun position(index:Int):Offset {
-            val x=index.toFloat()/(ordered.size-1).toFloat()
+            val x=axis.fractions[index]
             val y=(ordered[index].value.toFloat()-low)/span
             return Offset(left+(right-left)*x,
                 bottom-(bottom-top)*y)

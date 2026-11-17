@@ -8,6 +8,19 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Progress chart time and exact-observation checkpoint (2026-11-17):**
+Both Strength and exercise-specific performance plots now scale their
+horizontal axis to actual recorded Finish timestamps when every displayed
+session has a strictly increasing timestamp. If dates are missing, tied or
+out of order, the chart explicitly switches to sequence spacing instead of
+inventing dates or chronology. First/latest and expanded observations show
+recorded local dates or `Date not recorded`. Completed working load labels
+do not round away observed fractional plates or machine loads; estimated
+1RM remains explicitly identified as an estimate. Trends stay read-only,
+separate by physical machine/load basis and cannot change prescriptions.
+Kotlin unit/source and Compose CI are required; real phone TalkBack, chart
+readability and overall M3 review remain open. No APK/AAB is authorized.
+
 **Portable native-records checkpoint (2026-11-17):** Profile now
 exposes an explicit Android Save As ZIP containing TWO owner-verified,
 read-only CSVs: completed generated/custom native workouts with corrected

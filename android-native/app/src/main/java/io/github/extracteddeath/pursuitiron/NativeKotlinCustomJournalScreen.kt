@@ -1741,10 +1741,11 @@ private fun NativeKotlinCustomVisitEditor(
     // load may be different. Same-load myo, rest-pause and cluster stages
     // start from that recorded machine's activation, not the issued target.
     val sameLoadActivation=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
-        stageTotal>1 &&
+        (stageTotal>1 || follower?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS) &&
         (follower?.kind==CustomAmplifierKind.MYO_REPS ||
          follower?.kind==CustomAmplifierKind.REST_PAUSE ||
-         follower?.kind==CustomAmplifierKind.CLUSTER) &&
+         follower?.kind==CustomAmplifierKind.CLUSTER ||
+         follower?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS) &&
         saved==null && activationPerformed?.machineInstanceId==machineInstanceId &&
         activationPerformed?.unit==verified?.unit)
         activationPerformed?.load?.stripTrailingZeros()?.toPlainString()
@@ -1899,14 +1900,30 @@ private fun NativeKotlinCustomVisitEditor(
             AdvancedAmplifierProtocolDomain.stageLabel(it,stageOrdinal)
         } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
+        // Belongs to the actual LAST working set even after the main set
+        // is completed or Target/Last reference mode changes. Never only
+        // put this prescription in an exercise-wide floating banner.
+        if(part==CustomWorkoutVisitPart.MAIN &&
+            follower?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
+            prescription.type==DraftSetType.WORKING &&
+            position==setCount)
+            Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
+                shape=MaterialTheme.shapes.small) {
+                Text("Last working set · Lengthened partials",
+                    modifier=Modifier.padding(PursuitSpace.xs),
+                    style=MaterialTheme.typography.labelMedium,
+                    color=MaterialTheme.colorScheme.primary)
+            }
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
             val protocol=AdvancedAmplifierProtocolDomain.template(follower.kind)
             Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
                 shape=MaterialTheme.shapes.medium) {
                 Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
                     verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                    Text("${follower.followUpReps} reps · " +
-                        "${follower.followUpRestSeconds}s short rest" +
+                    Text("${follower.followUpReps} " +
+                        (if(follower.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+                            "partial reps · same load, no rest"
+                        else "reps · ${follower.followUpRestSeconds}s short rest") +
                         (if(stageTotal>1)" · stage $stageOrdinal/$stageTotal" else ""),
                         style=MaterialTheme.typography.labelLarge,
                         color=MaterialTheme.colorScheme.primary)

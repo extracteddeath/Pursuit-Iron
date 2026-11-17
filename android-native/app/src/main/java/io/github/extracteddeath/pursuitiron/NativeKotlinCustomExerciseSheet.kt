@@ -513,12 +513,21 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 onClick = {
                                     update(fields.copy(
                                         amplifier = technique,
-                                        extraRounds = if(technique==CustomAmplifierKind.MYO_REPS)
-                                            "5" else "1",
-                                        extraReps = if(technique==CustomAmplifierKind.MYO_REPS)
-                                            "4" else fields.extraReps,
-                                        extraRest = if(technique==CustomAmplifierKind.MYO_REPS)
-                                            "20" else fields.extraRest
+                                        extraRounds = when(technique) {
+                                            CustomAmplifierKind.MYO_REPS -> "5"
+                                            CustomAmplifierKind.REST_PAUSE -> "2"
+                                            else -> "1"
+                                        },
+                                        extraReps = when(technique) {
+                                            CustomAmplifierKind.MYO_REPS -> "4"
+                                            CustomAmplifierKind.REST_PAUSE -> "3"
+                                            else -> fields.extraReps
+                                        },
+                                        extraRest = when(technique) {
+                                            CustomAmplifierKind.MYO_REPS,
+                                            CustomAmplifierKind.REST_PAUSE -> "20"
+                                            else -> fields.extraRest
+                                        }
                                     ))
                                 },
                                 label = { Text(AdvancedAmplifierProtocolDomain.template(technique).title) })
@@ -545,9 +554,9 @@ internal fun NativeKotlinCustomExerciseSheet(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (fields.amplifier == CustomAmplifierKind.MYO_REPS ||
                                     fields.amplifier == CustomAmplifierKind.DROP_SET) {
-                                    Text("Myo-reps now have individually recorded mini-sets " +
-                                        "when configured with 3–5 rounds. Other techniques " +
-                                        "still use one logged follow-up stage.",
+                                    Text("Myo-reps and rest-pause can log every short-rest " +
+                                        "effort separately. Weight drops still require a " +
+                                        "verified reduced load and one authored follow-up.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -563,14 +572,20 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 { update(fields.copy(extraRest = it)) },
                                 Modifier.weight(1f))
                         }
-                        if(fields.amplifier==CustomAmplifierKind.MYO_REPS) {
+                        if(fields.amplifier==CustomAmplifierKind.MYO_REPS ||
+                            fields.amplifier==CustomAmplifierKind.REST_PAUSE) {
+                            val myo=fields.amplifier==CustomAmplifierKind.MYO_REPS
                             AuthorNumberField(fields.extraRounds,
-                                "Max mini-sets (3–5)",
+                                if(myo)"Max mini-sets (3–5)"
+                                else "Max rest-pause efforts (1–3)",
                                 {update(fields.copy(extraRounds=it))},
                                 Modifier.fillMaxWidth())
-                            Text("Mini-sets use the same load. Log every mini-set " +
-                                "separately; the sequence stops early when performance " +
-                                "reaches the planned rep floor or technique breaks down.",
+                            Text(if(myo)
+                                "Mini-sets use the same load. Log each one separately; " +
+                                    "stop when reps hit the planned floor or form deteriorates."
+                                else "Keep the same load and log each short-rest effort. " +
+                                    "Stop early if you miss the planned reps or form deteriorates; " +
+                                    "an unperformed effort is never recorded.",
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }

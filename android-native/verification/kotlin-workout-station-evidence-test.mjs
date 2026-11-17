@@ -22,11 +22,14 @@ for(const workout of [generated,custom]) {
     assert.match(workout,/var stationHistoryRequested by rememberSaveable\(workoutId\)/);
     assert.match(workout,/priorWorkingKeys=/);
     assert.match(workout,/onRequestHistory=\{stationHistoryRequested=true\}/);
-    assert.match(workout,/workoutPhysicalStationName\(/);
+    assert.match(workout,/nativeSavedSetCaption\(/);
 }
 assert.match(generated,/issuedGymId=issuedGymId,machineRoster=machineRoster/);
 assert.match(custom,/issuedGymId=current\.originalSnapshot\.stamp\.gymId/);
 assert.match(labels,/NativeKotlinMachineStationLabels\.label\(/);
+assert.match(labels,/fun nativeSavedSetCaption\(/);
+assert.match(labels,/workoutPhysicalStationName\(/);
+assert.match(labels,/parts\+=.*actual\.reps.*reps/);
 assert.match(labels,/it\.gymId==gymId && it\.exerciseId==exerciseId/);
 assert.match(labels,/\+ \(gymId to machineId\)/);
 assert.doesNotMatch(generated,/" · machine \$it"/);

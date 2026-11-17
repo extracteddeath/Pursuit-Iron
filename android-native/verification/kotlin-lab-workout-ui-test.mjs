@@ -900,10 +900,10 @@ assert.match(lastPicker,/Missing last RIR stays blank/);
 assert.match(lastPicker,/heightIn\(min=48\.dp\)/);
 assert.match(composer,/if\(!set\.isResolved\) PursuitUseLastCompletedSet\(/);
 assert.match(composer,/key=WorkoutReferenceKey\(target\.setKey\)/);
-assert.match(composer,/effort=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
+assert.match(composer,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
 assert.match(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
 assert.match(journal,/part==CustomWorkoutVisitPart\.FOLLOW_UP\)/);
-assert.match(journal,/actualRir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
+assert.match(journal,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
 const lastHelper=lastPicker.slice(
     lastPicker.indexOf('internal fun PursuitUseLastCompletedSet('),
     lastPicker.indexOf('internal fun kotlinLoadBasisLabel('));

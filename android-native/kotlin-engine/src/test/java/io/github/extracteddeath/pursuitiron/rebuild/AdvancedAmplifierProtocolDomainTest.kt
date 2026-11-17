@@ -154,4 +154,34 @@ class AdvancedAmplifierProtocolDomainTest {
             true,true,false,true,false))
     }
 
+    @Test fun lengthenedPartialsAreSeparateSameLoadFinalSetExtensionNotAutomaticFullRangeReps() {
+        val policy=AdvancedAmplifierProtocolDomain
+        val template=policy.template(CustomAmplifierKind.LENGTHENED_PARTIALS)
+        assertEquals("Lengthened partials",template.title)
+        assertEquals(1..8,template.followUpReps)
+        assertEquals(1..1,template.followUpRounds)
+        assertEquals(0..0,template.intraSetRestSeconds)
+        assertEquals(AmplifierLoadRule.SAME_LOAD,template.loadRule)
+        assertTrue(template.techniqueCue.contains("SAME load"))
+        assertTrue(template.techniqueCue.contains("partials are not full-range"))
+        assertTrue(template.selectionCue.contains("not automatic"))
+        val original=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,3,0)
+        assertTrue(policy.validStagedFollowUps(original))
+        assertTrue(policy.validStagedFollowUps(original.copy(followUpReps=1)))
+        assertTrue(policy.validStagedFollowUps(original.copy(followUpReps=8)))
+        assertFalse(policy.validStagedFollowUps(original.copy(followUpReps=0)))
+        assertFalse(policy.validStagedFollowUps(original.copy(followUpReps=9)))
+        assertFalse(policy.validStagedFollowUps(original.copy(followUpRestSeconds=1)))
+        assertFalse(policy.validStagedFollowUps(original.copy(followUpRounds=2)))
+        assertFalse(policy.validStagedFollowUps(original.copy(
+            followUpLoad=DraftSetLoad.ExplicitBodyweight)))
+        assertEquals("Lengthened partials · final-set extension",
+            policy.stageLabel(original,1))
+        assertTrue(policy.stageReviewCue(original).contains("final working set") ||
+            policy.stageReviewCue(original).contains("Final working set"))
+        assertFalse(policy.recommendedAsHypertrophyFinisher(
+            CustomAmplifierKind.LENGTHENED_PARTIALS,TrainingPhase.HYPERTROPHY,
+            true,true,false,true,false))
+    }
+
 }

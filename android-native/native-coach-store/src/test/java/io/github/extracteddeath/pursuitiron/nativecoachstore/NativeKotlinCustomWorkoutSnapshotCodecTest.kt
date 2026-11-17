@@ -351,8 +351,8 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             slot.copy(sets=slot.sets.map{set->
                 val p=set.prescription
                 if(p.amplifier?.kind!=CustomAmplifierKind.MYO_REPS)set
-                else set.copy(prescription=p.copy(amplifier=p.amplifier.copy(
-                    followUpRounds=5)))
+                else set.copy(prescription=p.copy(amplifier=checkNotNull(
+                    p.amplifier).copy(followUpRounds=5)))
             })
         },knownSetAndRestSeconds=old.knownSetAndRestSeconds+80L)
         val oldV5=NativeKotlinCustomWorkoutSnapshotCodec.encode(stagedOld)

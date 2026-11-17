@@ -1101,7 +1101,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             .padding(horizontal=16.dp,vertical=8.dp)) {
             NativeKotlinWorkoutRestTimer(workoutId,
                 KotlinWorkoutRestDomain.inspect(journal,selected?.target?.setKey),
-                enabled=!state.busy)
+                enabled=!state.busy,
+                athleteId=journal.snapshot.source.athleteId)
         }
     }
 

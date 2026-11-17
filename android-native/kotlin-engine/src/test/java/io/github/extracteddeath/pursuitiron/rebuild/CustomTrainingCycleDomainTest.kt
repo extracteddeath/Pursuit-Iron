@@ -129,6 +129,25 @@ class CustomTrainingCycleDomainTest {
         assertEquals(20, restored.amplifier!!.followUpRestSeconds)
     }
 
+    @Test fun restPauseStageIntentSurvivesCustomCycleReviewWithoutInventingLoads() {
+        fun program(amp:CustomSetAmplifier)=cycle(listOf(block(days=listOf(
+            CustomTrainingDay(0,"A",ComposerSessionPurpose.HYPERTROPHY,
+                listOf(benchSlot(listOf(weighted(185,8,amp)))))
+        ))))
+        val authored=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
+            3,20,followUpRounds=3)
+        val ready=valid(program(authored))
+        val restored=checkNotNull(CustomTrainingCycleDomain.week(ready,1))
+            .days.single().slots.single().sets.single()
+        assertEquals(authored,restored.amplifier)
+        assertNull(restored.amplifier?.followUpLoad)
+        assertTrue(reviewed(program(authored.copy(followUpRounds=4)))
+            .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+        assertTrue(reviewed(program(authored.copy(followUpLoad=
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(135)))))
+            .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+    }
+
     @Test fun unverifiedLoadAndImpossibleDropWeightAreRejected() {
         val missing = cycle(listOf(block(days = listOf(
             CustomTrainingDay(0, "A", ComposerSessionPurpose.HYPERTROPHY,

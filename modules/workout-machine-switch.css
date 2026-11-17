@@ -1,27 +1,23 @@
-/* Machine A/B — one compact workout affordance and a single M3-style choice
-   sheet. Never introduce a second tall card into the active set workspace. */
-#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child:has(.wpb-machine-switch){
-  grid-template-rows:auto auto auto auto;
-}
-#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-machine-switch{
-  grid-column:1/-1;grid-row:4;justify-self:start;min-width:0;margin-top:2px;
+/* Machine A/B is a secondary action inside workout tools, not a fourth
+   exercise-heading row or a large chip competing with the set editor. */
+#root .wpb-workout .wpb-workout-tools>.wpb-machine-switch{
+  display:inline-flex;flex:0 0 auto;min-width:0;max-width:148px;
 }
 #root .wpb-workout .wpb-machine-switch{display:inline-flex;max-width:100%;min-width:0}
 #root .wpb-workout .wpb-machine-switch-trigger{
-  display:inline-flex;align-items:center;gap:8px;box-sizing:border-box;
-  min-width:0;max-width:100%;min-height:48px;padding:7px 12px;
-  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
-  border-radius:var(--pi-shape-action,16px);
-  background:var(--pi-color-control,var(--wpb-theme-card));
-  color:var(--wpb-theme-text);font:inherit;font-size:.875rem;cursor:pointer;
-  transition:background-color .18s ease,border-color .18s ease;
+  display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;
+  min-width:44px;max-width:100%;min-height:44px;padding:7px 8px;
+  border:0;border-radius:var(--pi-shape-action,12px);
+  background:transparent;color:var(--wpb-theme-muted);
+  font:inherit;font-size:.78125rem;font-weight:600;cursor:pointer;
+  transition:background-color .18s ease,color .18s ease;
 }
 #root .wpb-workout .wpb-machine-switch-trigger:hover,
 #root .wpb-workout .wpb-machine-switch-trigger[aria-expanded="true"]{
-  border-color:var(--wpb-theme-accent);background:var(--pi-color-feature,var(--wpb-theme-card));
+  background:var(--pi-color-feature,var(--wpb-theme-card));
+  color:var(--wpb-theme-text);
 }
-#root .wpb-workout .wpb-machine-switch-kicker{font-weight:550;color:var(--wpb-theme-muted);white-space:nowrap}
-#root .wpb-workout .wpb-machine-switch-name{font-weight:750;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#root .wpb-workout .wpb-machine-switch-name{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #root .wpb-workout .wpb-machine-switch-trigger>svg{flex-shrink:0}
 #root .wpb-workout .wpb-machine-switch-trigger:focus-visible,
 #root .wpb .wpb-machine-switch-sheet button:focus-visible,

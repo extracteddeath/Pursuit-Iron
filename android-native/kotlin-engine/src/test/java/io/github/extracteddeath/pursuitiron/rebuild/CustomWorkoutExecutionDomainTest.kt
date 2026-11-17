@@ -310,4 +310,59 @@ class CustomWorkoutExecutionDomainTest {
                 as CustomWorkoutJournalDecision.Rejected).reason)
     }
 
+    @Test fun changingMachineOrLoadEndsTheMyoSequenceWithoutErasingFactualStage() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=5)
+        var j=initial(slot("myo",1,null,amplifier=amp))
+        val set="myo:s1"
+        val issued=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,16,1,"A")
+        val recordMain=CustomWorkoutJournalOperation.Record("main-load",0,
+            visit(set),KotlinJournalSetOutcome.COMPLETED,issued)
+        j=(CustomWorkoutJournalDomain.reduce(j,recordMain)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),next(j))
+        val differentMachine=CustomWorkoutJournalOperation.Record("change-machine",1,
+            visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,4,2,"B"))
+        j=(CustomWorkoutJournalDomain.reduce(j,differentMachine)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertTrue(j.canProposeFinish)
+        assertNull(next(j))
+        assertEquals("B",((j.effectiveVisits.getValue(
+            visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1)).operation
+            as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
+        // The same rule applies to a different logged load on the same machine.
+        var k=initial(slot("myo",1,null,amplifier=amp))
+        k=(CustomWorkoutJournalDomain.reduce(k,recordMain)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val changedWeight=CustomWorkoutJournalOperation.Record("change-load",1,
+            visit(set,CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,4,2,"A"))
+        k=(CustomWorkoutJournalDomain.reduce(k,changedWeight)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertTrue(k.canProposeFinish)
+        assertNull(next(k))
+    }
+
+    @Test fun activationLoadCannotChangeOnceMyoFollowUpsExist() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=5)
+        var j=initial(slot("myo",1,null,amplifier=amp))
+        j=record(j,"myo:s1",reps=16)
+        j=record(j,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=4)
+        val current=j.effectiveVisits.getValue(visit("myo:s1")).operation
+            as CustomWorkoutJournalOperation.Record
+        val correction=CustomWorkoutJournalOperation.Record(
+            "change-old-load",j.revision,visit("myo:s1"),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,16,2),
+            current.eventId)
+        val rejected=CustomWorkoutJournalDomain.reduce(j,correction)
+            as CustomWorkoutJournalDecision.Rejected
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,rejected.reason)
+        assertEquals(visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
+    }
+
 }

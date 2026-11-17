@@ -340,4 +340,101 @@ class NativeCustomWorkoutJournalCodecTest {
             NativeCustomWorkoutJournalCodec.decode(legacyBytes)))
     }
 
+    @Test fun ownerFencedStagedRestPauseAndClustersSurviveRealJournalDiskEncoding() {
+        val baseline=snapshot()
+        val baselineBytes=NativeCustomWorkoutJournalCodec.encode(
+            NativeCustomWorkoutJournalRecord("owner-1",
+                CustomWorkoutJournalDomain.begin("baseline",baseline,"a".repeat(64))))
+        for(amp in listOf(
+            CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,3,20,followUpRounds=3),
+            CustomSetAmplifier(CustomAmplifierKind.CLUSTER,2,30,followUpRounds=4))) {
+            val old=baseline.slots.single().sets.single().prescription.amplifier!!
+            val staged=baseline.copy(
+                slots=baseline.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                    set.copy(prescription=set.prescription.copy(amplifier=amp))
+                })},
+                knownSetAndRestSeconds=baseline.knownSetAndRestSeconds-
+                    old.followUpRestSeconds*old.followUpRounds+
+                    amp.followUpRestSeconds*amp.followUpRounds)
+            var j=CustomWorkoutJournalDomain.begin("workout-"+amp.kind.name,
+                staged,"a".repeat(64))
+            j=accept(j,CustomWorkoutJournalOperation.Record(
+                "main-"+amp.kind.name,j.revision,
+                CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,actual(10,2)))
+            for(stage in 1..amp.followUpRounds) {
+                assertEquals(CustomWorkoutVisitKey(
+                    key,CustomWorkoutVisitPart.FOLLOW_UP,stage),
+                    CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+                val bytes=NativeCustomWorkoutJournalCodec.encode(record(j))
+                assertEquals(5,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+                val reopened=NativeCustomWorkoutJournalCodec.decode(bytes)
+                assertEquals(record(j),reopened)
+                assertArrayEquals(bytes,NativeCustomWorkoutJournalCodec.encode(reopened))
+                j=accept(reopened.journal,CustomWorkoutJournalOperation.Record(
+                    "stage-"+amp.kind.name+"-"+stage,reopened.journal.revision,
+                    CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP,stage),
+                    KotlinJournalSetOutcome.COMPLETED,
+                    actual(amp.followUpReps,2)))
+            }
+            assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+            assertTrue(j.canProposeFinish)
+            val completed=accept(j,CustomWorkoutJournalOperation.Finish(
+                "finish-"+amp.kind.name,j.revision))
+            val bytes=NativeCustomWorkoutJournalCodec.encode(record(completed))
+            val cold=NativeCustomWorkoutJournalCodec.decode(bytes)
+            assertEquals(record(completed),cold)
+            assertEquals(amp.followUpRounds,cold.journal.effectiveVisits.keys.count{
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            })
+            assertEquals("finish-"+amp.kind.name,cold.journal.finishedByEventId)
+            assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(cold.journal))
+            assertArrayEquals(bytes,NativeCustomWorkoutJournalCodec.encode(cold))
+        }
+        assertArrayEquals(baselineBytes,NativeCustomWorkoutJournalCodec.encode(
+            NativeCustomWorkoutJournalCodec.decode(baselineBytes)))
+    }
+
+    @Test fun skippedStagedClusterAndRestPauseNeverCreatePhantomLaterReceiptsOnColdResume() {
+        val base=snapshot()
+        for(amp in listOf(
+            CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,3,20,followUpRounds=3),
+            CustomSetAmplifier(CustomAmplifierKind.CLUSTER,2,30,followUpRounds=5))) {
+            val staged=base.copy(
+                slots=base.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                    set.copy(prescription=set.prescription.copy(amplifier=amp))
+                })},
+                knownSetAndRestSeconds=base.knownSetAndRestSeconds-20+
+                    amp.followUpRestSeconds*amp.followUpRounds)
+            var j=CustomWorkoutJournalDomain.begin("stop-"+amp.kind.name,
+                staged,"a".repeat(64))
+            j=accept(j,CustomWorkoutJournalOperation.Record(
+                "main-stop-"+amp.kind.name,0,
+                CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,actual(10,2)))
+            j=accept(j,CustomWorkoutJournalOperation.Record(
+                "stage1-"+amp.kind.name,1,
+                CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP,1),
+                KotlinJournalSetOutcome.COMPLETED,actual(amp.followUpReps,2)))
+            val cold=NativeCustomWorkoutJournalCodec.decode(
+                NativeCustomWorkoutJournalCodec.encode(record(j)))
+            assertEquals(CustomWorkoutVisitKey(key,
+                CustomWorkoutVisitPart.FOLLOW_UP,2),
+                CustomWorkoutJournalDomain.nextUnresolvedVisit(cold.journal))
+            j=accept(cold.journal,CustomWorkoutJournalOperation.Record(
+                "skip-stage2-"+amp.kind.name,cold.journal.revision,
+                CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP,2),
+                KotlinJournalSetOutcome.SKIPPED,null))
+            assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+            assertEquals(2,j.effectiveVisits.keys.count{
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            })
+            assertTrue(j.canProposeFinish)
+            val replay=NativeCustomWorkoutJournalCodec.decode(
+                NativeCustomWorkoutJournalCodec.encode(record(j)))
+            assertEquals(record(j),replay)
+            assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(replay.journal))
+        }
+    }
+
 }

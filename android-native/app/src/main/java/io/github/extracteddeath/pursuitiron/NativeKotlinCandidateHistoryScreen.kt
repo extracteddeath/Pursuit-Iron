@@ -740,9 +740,18 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
 ) {
     KotlinHistoryActualRow(fact.exerciseId,
         if(fact.part==CustomWorkoutVisitPart.FOLLOW_UP)
-            (if(fact.amplifierKind==CustomAmplifierKind.MYO_REPS)
-                "Myo-reps · mini ${fact.stage}" else "Amplifier follow-up") else
-            fact.setType.name.lowercase().replaceFirstChar{it.uppercase()},
+            when(fact.amplifierKind) {
+                CustomAmplifierKind.MYO_REPS -> "Myo-reps · mini ${fact.stage}"
+                CustomAmplifierKind.REST_PAUSE -> "Rest-pause · effort ${fact.stage}"
+                CustomAmplifierKind.CLUSTER -> "Cluster · effort ${fact.stage}"
+                CustomAmplifierKind.DROP_SET -> "Drop set · weight drop ${fact.stage}"
+                CustomAmplifierKind.LENGTHENED_PARTIALS ->
+                    "Lengthened partials · partial reps"
+                null -> "Amplifier follow-up"
+            }
+        else fact.setType.name.lowercase().replaceFirstChar{it.uppercase()}+
+            (if(fact.amplifierKind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+                " · final-set partial extension" else ""),
         fact.prescribedLoad,fact.prescribedReps,fact.prescribedRir,
         fact.outcome,fact.actual)
     var editing by remember(entry.manifest.workoutId,fact.setKey,

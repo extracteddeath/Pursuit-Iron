@@ -284,7 +284,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                                 if(choice.equipmentId in setOf(
                                                     "wrist-lever-hammer",
                                                     "wrist-roller-handle",
-                                                    "single-weight-plate"))
+                                                    "single-weight-plate",
+                                                    "hand-gripper-device"))
                                                     PhysicalStockEditorKind.EXACT_LOADS
                                                 else PhysicalStockEditorKind.VERIFIED_STACK
                                             else -> PhysicalStockEditorKind.VERIFIED_STACK

@@ -20,6 +20,46 @@ cluster plans and real stage receipts through both snapshot and journal
 codecs, including restart, early stop, finish and historic byte stability.
 This does not replace physical Android cold-process and backup testing.
 
+## Two-stage physical drop sets — authored Kotlin and native Train (November 17, 2026)
+
+An athlete can now explicitly author **one or two drops** after a hard
+full-range activation set. Both reductions are separate **manufacturer/gym
+stock-verified physical weights**, with the same unit and loading basis as
+the activation set and a strictly declining sequence:
+
+- Activation: an example 185 lb Smith total
+- First drop: an athlete-confirmed 155 lb Smith total
+- Second drop: an athlete-confirmed 135 lb Smith total
+
+These values illustrate the protocol, not automatic weight selection.
+The engine never derives or duplicates a second weight by percentage.
+Without independently reviewed physical stock for **every** reduction,
+the program cannot be approved. The athlete may still perform fewer
+drops; the optional sequence is ended without inventing remaining reps
+or stage receipts. The **second reduction is not unlocked** unless the
+first drop was actually logged at its planned reduction and on the
+activation physical station. A changed first-drop observation stays in
+History without auto-authorizing drop 2. Corrections cannot silently
+rebase the main weight after logged drops.
+
+Native Plan keeps the two authored loads in an expandable set-attached
+technique disclosure. Train shows distinct drop 1 of 2 / drop 2 of 2
+weights and logs their actual reps and load independently. Saved History
+retains the two separately prescribed weights, distinct from actual
+observed loads. The extra work is *not* two additional normal sets.
+
+The new `CustomSetAmplifier.secondDropLoad` property is transported only
+in custom-cycle draft v5 and issued workout snapshot v6 (including
+swap slot payloads). Existing v1–v4 cycle files and v1–v5 workout
+snapshots keep their original byte identities. The journal's existing
+versioned stage-key storage can persist new two-drop actuals without
+altering legacy records. Cold replay, historical byte stability and
+fail-closed stock policy are regression tested.
+
+Stage-specific loads are **opt-in and custom-workout-only** in this
+milestone. Machine-agnostic generated-program presets, automated
+technique placement, and physical-device acceptance remain open. No APK.
+
 ## Final-set lengthened partials (native custom plans, 2026-11-17)
 
 **Athlete-facing contract:** Long-length or *lengthened* partial reps can be

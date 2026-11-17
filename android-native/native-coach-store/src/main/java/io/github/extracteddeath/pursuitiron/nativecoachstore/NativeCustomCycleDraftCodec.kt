@@ -18,7 +18,7 @@ import java.util.Collections
  */
 internal object NativeCustomCycleDraftCodec {
     private const val MAGIC = 0x50494344 // PICD
-    private const val VERSION = 3
+    private const val VERSION = 4
     const val MAX_BYTES = 2_500_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -83,6 +83,7 @@ internal object NativeCustomCycleDraftCodec {
             writeBoolean(amplifier.followUpLoad != null)
             amplifier.followUpLoad?.let { load(it) }
             if(version>=2)optionalInt(amplifier.followUpActiveSeconds)
+            if(version>=4)writeInt(amplifier.followUpRounds)
         }
     }
     private fun DataInputStream.set(version:Int): CustomAuthoredSet {
@@ -98,7 +99,8 @@ internal object NativeCustomCycleDraftCodec {
             val restExtra = readInt()
             val nextLoad=if(readBoolean())load() else null
             CustomSetAmplifier(kind,repsExtra,restExtra,nextLoad,
-                if(version>=2)optionalInt() else null)
+                if(version>=2)optionalInt() else null,
+                if(version>=4)readInt() else 1)
         } else null
         return CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier)
     }
@@ -235,6 +237,13 @@ internal object NativeCustomCycleDraftCodec {
                 }} || value.weekOverrides.values.any{entries->entries.any{row->
                     row.sets.any{it.amplifier?.followUpActiveSeconds!=null}
                 }}
+                val hasStages=value.blocks.any { block -> block.days.any { day ->
+                    day.slots.any { slot -> slot.sets.any {
+                        it.amplifier?.followUpRounds?.let{rounds->rounds>1}==true
+                    } }
+                } } || value.weekOverrides.values.any { edits -> edits.any { edit ->
+                    edit.sets.any { it.amplifier?.followUpRounds?.let{rounds->rounds>1}==true }
+                } }
                 val hasMachineBinding=value.blocks.any { block ->
                     block.days.any { day ->
                         day.slots.any { it.machineInstanceId!=null }
@@ -242,7 +251,8 @@ internal object NativeCustomCycleDraftCodec {
                 }
                 // Historical draft bytes (including signoff fingerprints)
                 // must not change until an authored machine choice exists.
-                val version=if(hasMachineBinding)VERSION else if(hasNewTime)2 else 1
+                val version=if(hasStages)VERSION else if(hasMachineBinding)3
+                    else if(hasNewTime)2 else 1
                 writeInt(MAGIC); writeInt(version)
                 writeUTF(value.cycleId); writeLong(value.revision)
                 writeUTF(value.athleteId); enum(value.goal)

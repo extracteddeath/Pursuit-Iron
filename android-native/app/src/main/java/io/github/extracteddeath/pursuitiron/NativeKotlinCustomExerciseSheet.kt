@@ -32,7 +32,8 @@ private data class CustomSetFields(
     val extraRest: String = "",
     /** Explicit total follow-up work time; blank means not yet reviewed. */
     val extraWork: String = "",
-    val extraLoad: String = ""
+    val extraLoad: String = "",
+    val extraRounds: String = "1"
 )
 
 // Only unsaved editor text is Bundle-restored. It never certifies physical
@@ -41,10 +42,11 @@ private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>
     save = { state -> state.value.flatMap { field ->
         listOf(field.type.name,field.weight,field.minimum,field.maximum,
             field.rir,field.seconds,field.rest,field.amplifier?.name.orEmpty(),
-            field.extraReps,field.extraRest,field.extraWork,field.extraLoad)
+            field.extraReps,field.extraRest,field.extraWork,field.extraLoad,
+            field.extraRounds)
     } },
     restore = { serialized ->
-        serialized.chunked(12).filter { it.size==12 }.take(20).map { row ->
+        serialized.chunked(13).filter { it.size==13 }.take(20).map { row ->
             CustomSetFields(
                 type=DraftSetType.entries.firstOrNull { it.name==row[0] }
                     ?:DraftSetType.WORKING,
@@ -54,7 +56,7 @@ private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>
                     it.name==row[7]
                 },
                 extraReps=row[8],extraRest=row[9],extraWork=row[10],
-                extraLoad=row[11])
+                extraLoad=row[11],extraRounds=row[12])
         }.ifEmpty { listOf(CustomSetFields()) }.let { mutableStateOf(it) }
     }
 )
@@ -74,7 +76,8 @@ private fun CustomAuthoredSet.toFields(): CustomSetFields =
         extraRest = amplifier?.followUpRestSeconds?.toString().orEmpty(),
         extraWork = amplifier?.followUpActiveSeconds?.toString().orEmpty(),
         extraLoad = (amplifier?.followUpLoad as? DraftSetLoad.Verified)
-            ?.value?.toPlainString().orEmpty()
+            ?.value?.toPlainString().orEmpty(),
+        extraRounds = amplifier?.followUpRounds?.toString() ?: "1"
     )
 
 private fun parsedSets(
@@ -101,7 +104,8 @@ private fun parsedSets(
                     weight(field.extraLoad)
                 else null,
                 if(field.extraWork.isBlank())null else
-                    requireNotNull(field.extraWork.toIntOrNull()))
+                    requireNotNull(field.extraWork.toIntOrNull()),
+                requireNotNull(field.extraRounds.toIntOrNull()))
             CustomAuthoredSet(
                 field.type,
                 weight(field.weight),
@@ -507,7 +511,15 @@ internal fun NativeKotlinCustomExerciseSheet(
                         CustomAmplifierKind.entries.forEach { technique ->
                             FilterChip(selected = fields.amplifier == technique,
                                 onClick = {
-                                    update(fields.copy(amplifier = technique))
+                                    update(fields.copy(
+                                        amplifier = technique,
+                                        extraRounds = if(technique==CustomAmplifierKind.MYO_REPS)
+                                            "5" else "1",
+                                        extraReps = if(technique==CustomAmplifierKind.MYO_REPS)
+                                            "4" else fields.extraReps,
+                                        extraRest = if(technique==CustomAmplifierKind.MYO_REPS)
+                                            "20" else fields.extraRest
+                                    ))
                                 },
                                 label = { Text(AdvancedAmplifierProtocolDomain.template(technique).title) })
                         }
@@ -533,9 +545,9 @@ internal fun NativeKotlinCustomExerciseSheet(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (fields.amplifier == CustomAmplifierKind.MYO_REPS ||
                                     fields.amplifier == CustomAmplifierKind.DROP_SET) {
-                                    Text("Current custom workouts save one follow-up entry. " +
-                                        "Multi-stage logging is not yet supported; " +
-                                        "these are protocol guidelines, not recorded rounds.",
+                                    Text("Myo-reps now have individually recorded mini-sets " +
+                                        "when configured with 3–5 rounds. Other techniques " +
+                                        "still use one logged follow-up stage.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -550,6 +562,17 @@ internal fun NativeKotlinCustomExerciseSheet(
                             AuthorNumberField(fields.extraRest, "Intra-set rest (s)",
                                 { update(fields.copy(extraRest = it)) },
                                 Modifier.weight(1f))
+                        }
+                        if(fields.amplifier==CustomAmplifierKind.MYO_REPS) {
+                            AuthorNumberField(fields.extraRounds,
+                                "Max mini-sets (3–5)",
+                                {update(fields.copy(extraRounds=it))},
+                                Modifier.fillMaxWidth())
+                            Text("Mini-sets use the same load. Log every mini-set " +
+                                "separately; the sequence stops early when performance " +
+                                "reaches the planned rep floor or technique breaks down.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         AuthorNumberField(fields.extraWork,
                             "Extra working time (s)",

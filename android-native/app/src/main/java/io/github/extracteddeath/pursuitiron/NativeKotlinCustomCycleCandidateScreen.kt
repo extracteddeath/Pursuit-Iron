@@ -1051,7 +1051,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                         Text(technique.title + " · Set ${set.ordinalInSlot}",
                                             style=MaterialTheme.typography.labelLarge,
                                             color=MaterialTheme.colorScheme.primary)
-                                        Text("${amp.followUpReps} follow-up reps · " +
+                                        Text((if(amp.followUpRounds>1)
+                                                "${amp.followUpRounds} mini-sets · ${amp.followUpReps} reps each · "
+                                            else "${amp.followUpReps} follow-up reps · ") +
                                             "${amp.followUpRestSeconds}s short rest · " +
                                             (when(val extra=amp.followUpLoad) {
                                                 null -> "Same confirmed load"
@@ -1068,8 +1070,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                                         Text(technique.techniqueCue,
                                             style=MaterialTheme.typography.bodySmall)
-                                        Text("Current custom journal saves one follow-up, not " +
-                                            "each step of a multi-stage technique.",
+                                        Text(if(amp.followUpRounds>1)
+                                            "Each myo mini-set saves separately; stop early at " +
+                                                "the rep floor or on technique breakdown."
+                                        else "This technique saves one follow-up stage.",
                                             style=MaterialTheme.typography.bodySmall,
                                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                                     }

@@ -21,7 +21,9 @@ import io.github.extracteddeath.pursuitiron.rebuild.LoadUnit
 import io.github.extracteddeath.pursuitiron.rebuild.StrengthStandardsMeasurementDomain
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,6 +135,7 @@ private fun NativeBodyweightTrend(
  * from the host's verified active profile. Exercise loads and issued targets
  * are deliberately absent; no progression authority enters this panel.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NativeKotlinBodyweightPanel(
     host:NativeKotlinCandidateHost,
@@ -156,6 +159,7 @@ internal fun NativeKotlinBodyweightPanel(
         mutableStateOf(preferredUnit.name)
     }
     var showEntry by rememberSaveable(athleteId){mutableStateOf(false)}
+    var calendarOpen by rememberSaveable(athleteId){mutableStateOf(false)}
     var pendingReplace by remember {mutableStateOf<NativeBodyweightEntry?>(null)}
     var pendingDelete by remember {mutableStateOf<LocalDate?>(null)}
     var showAll by rememberSaveable(athleteId){mutableStateOf(false)}
@@ -260,6 +264,10 @@ internal fun NativeKotlinBodyweightPanel(
                         singleLine=true,
                         isError=date==null,
                         modifier=Modifier.fillMaxWidth())
+                    TextButton(onClick={calendarOpen=true},
+                        modifier=Modifier.heightIn(min=48.dp)) {
+                        Text("Choose date from calendar")
+                    }
                     Row(Modifier.fillMaxWidth(),
                         horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                         OutlinedTextField(
@@ -360,6 +368,42 @@ internal fun NativeKotlinBodyweightPanel(
             "remain separate beta work.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+    if(calendarOpen) {
+        val now=LocalDate.now()
+        val todayMillis=now.atStartOfDay(ZoneOffset.UTC)
+            .toInstant().toEpochMilli()
+        val selectedMillis=(date ?:now).atStartOfDay(ZoneOffset.UTC)
+            .toInstant().toEpochMilli()
+        val selectable=remember {object:SelectableDates {
+            override fun isSelectableDate(utcTimeMillis:Long):Boolean {
+                val selected=Instant.ofEpochMilli(utcTimeMillis)
+                    .atZone(ZoneOffset.UTC).toLocalDate()
+                return !selected.isAfter(LocalDate.now()) &&
+                    !selected.isBefore(LocalDate.parse("1900-01-01"))
+            }
+        }}
+        val picker=rememberDatePickerState(
+            initialSelectedDateMillis=selectedMillis,
+            yearRange=1900..now.year,selectableDates=selectable)
+        DatePickerDialog(onDismissRequest={calendarOpen=false},
+            confirmButton={
+                TextButton(onClick={
+                    picker.selectedDateMillis?.let {day->
+                        val selected=Instant.ofEpochMilli(day)
+                            .atZone(ZoneOffset.UTC).toLocalDate()
+                        entryDate=selected.toString()
+                    }
+                    calendarOpen=false
+                },enabled=picker.selectedDateMillis!=null){
+                    Text("Use date")
+                }
+            },dismissButton={
+                TextButton(onClick={calendarOpen=false}){Text("Cancel")}
+            }) {
+            DatePicker(state=picker,showModeToggle=false)
+        }
     }
 
     pendingReplace?.let {replacement->

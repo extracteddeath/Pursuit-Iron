@@ -1,0 +1,23 @@
+name: One-shot web catalog release stamp preview
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  stamp:
+    if: github.head_ref == 'feature/web-requested-exercise-variants-20261117'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Recalculate unshipped build 1013 web catalog hashes
+        run: |
+          node scripts/finalize-release.mjs
+          for f in RELEASE_MANIFEST.json BUILD_PROFILE.json sw.js index.html; do
+            printf 'STAMP_OUTPUT_%s=' "$f"
+            base64 -w0 "$f"
+            printf '\n'
+          done

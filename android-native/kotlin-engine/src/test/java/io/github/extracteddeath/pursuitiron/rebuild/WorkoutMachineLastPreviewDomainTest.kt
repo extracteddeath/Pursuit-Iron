@@ -74,6 +74,16 @@ class WorkoutMachineLastPreviewDomainTest {
                 KotlinMachineAlternativesDomain.LEGACY_MACHINE_ID))
     }
 
+    @Test fun unitlessPhysicalMachineHistoryNeverPretendsToBeBodyweight() {
+        val unverified=WorkoutLastSetReference(
+            "unitless",1,KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(null,null,8,null,machineInstanceId="A"),
+            LoadBasis.MACHINE_STACK)
+        val history=ready(WorkoutMachineReferenceKey(first,"A") to unverified)
+        assertEquals(WorkoutMachineLastPreview.Unavailable,
+            WorkoutMachineLastPreviewDomain.review(history,listOf(first),"A"))
+    }
+
     @Test fun impossibleStationProvenanceOrAbsentHistoryFailClosed() {
         val inconsistent=ready(
             WorkoutMachineReferenceKey(first,"B") to completed("A",200,8,2))

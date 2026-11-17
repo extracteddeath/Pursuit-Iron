@@ -4,11 +4,10 @@ package io.github.extracteddeath.pursuitiron.rebuild
  * Evidence-informed technique guidance, deliberately separate from authored
  * prescriptions and factual journal receipts.
  *
- * IMPORTANT: the historical custom journal stores one FOLLOW_UP visit for an
- * amplifier. A multi-mini-set template must NEVER be passed off as multiple
- * logged observations, counted toward working-set progression, or used to
- * silently rewrite a saved workout. Sequence issuance requires a versioned
- * per-stage journal/schema migration and its own acceptance tests.
+ * Legacy custom journals retain their one-follow-up behavior. Only explicitly
+ * authored staged myo-reps and rest-pause use independent follow-up visit IDs.
+ * No unperformed stage becomes a receipt, a working set, or progression evidence.
+ * Drop sets still require a separately verified reduction, not an invented load.
  *
  * References and product decisions: android-native/docs/AMPLIFIER_PROTOCOL.md
  */
@@ -98,6 +97,28 @@ object AdvancedAmplifierProtocolDomain {
                 "default hypertrophy finisher."
         )
     }
+
+    /** Both authoring entry points use one policy for OPTIONAL staged work.
+     * Legacy single-follow-up recipes keep their exact old semantics. */
+    fun validStagedFollowUps(amp:CustomSetAmplifier):Boolean =
+        amp.followUpRounds==1 || when(amp.kind) {
+            CustomAmplifierKind.MYO_REPS ->
+                amp.followUpRounds in 3..5 && amp.followUpReps in 3..5 &&
+                    amp.followUpRestSeconds in 10..30 && amp.followUpLoad==null
+            CustomAmplifierKind.REST_PAUSE ->
+                amp.followUpRounds in 2..3 && amp.followUpReps in 2..5 &&
+                    amp.followUpRestSeconds in 15..30 && amp.followUpLoad==null
+            else -> false
+        }
+
+    /** Short-rest efforts keep the exact activation load. A missed authored
+     * rep target ends optional extra work, even before the planned maximum.
+     * This is read-only; no recorded reps are changed or fabricated. */
+    fun continueRestPause(targetReps:Int,observed:List<Int>,
+        plannedLimit:Int):Boolean =
+        targetReps in 2..5 && plannedLimit in 2..3 &&
+            observed.isNotEmpty() && observed.size<plannedLimit &&
+            observed.all{it in targetReps..100}
 
     /**
      * Evaluates observed mini-set reps without inventing observations.

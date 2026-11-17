@@ -176,7 +176,7 @@ object CoachFirstProgramDraftConversionDomain {
                 CustomCycleCoachAuditDomain.review(next,setup,curatedCatalog,inputs)
             }.getOrNull()
             if(audit?.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
-                audit.issues.isNotEmpty())
+                audit?.issues?.isNotEmpty()!=false)
                 return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                     "Optional myo-reps exceed the current full-cycle coaching, fatigue or session-time review; use straight sets instead.")
         }

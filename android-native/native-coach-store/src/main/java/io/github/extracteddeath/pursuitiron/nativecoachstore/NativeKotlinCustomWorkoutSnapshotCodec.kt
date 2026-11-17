@@ -264,12 +264,12 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 p.amplifier?.let{ amp ->
                     require(amp.followUpReps in 1..100 &&
                         amp.followUpRestSeconds in 0..3600 &&
-                        (amp.followUpRounds==1 ||
-                            amp.kind==CustomAmplifierKind.MYO_REPS &&
-                            amp.followUpRounds in 3..5 &&
-                            amp.followUpReps in 3..5 &&
-                            amp.followUpRestSeconds in 10..30 &&
-                            amp.followUpLoad==null) &&
+                        // Share the authored protocol authority with the
+                        // Kotlin engine. A previous myo-only codec guard
+                        // rejected valid staged rest-pause and clusters on
+                        // issuance, recovery, swapping and journal replay.
+                        // Do not create a second divergent technique policy.
+                        AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp) &&
                         amp.followUpActiveSeconds?.let{
                             it in 1..3600
                         }!=false)

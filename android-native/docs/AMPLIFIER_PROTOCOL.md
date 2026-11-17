@@ -2,6 +2,24 @@
 
 **State on 2026-11-17:** Existing Kotlin custom workout journaling durably records opt-in **3–5-stage myo-reps** and **2–3-stage rest-pause** under independent owner/revision-fenced factual receipts, stop/skip, Focus/All, history and cold replay. The next staged milestone adds **2–5 same-load cluster quality efforts** with a separate receipt per observed cluster, subject to CI and device verification. All older one-follow-up snapshots keep their existing encoding. **Multi-drop, generated-program amplifier issuance, matched web runtime parity and full native device acceptance remain open.** No release approval is implied.
 
+## Cold-reopen and issuance gate (reviewed November 17, 2026)
+
+The native v5 custom-workout snapshot codec previously contained an outdated
+**myo-only** staged-amplifier condition. Even though staged rest-pause and
+cluster journaling and UI worked in the independent engine, this validator
+could reject a legitimately authored workout on actual snapshot encoding,
+issuing, owner-fenced journal reopen, and swap decoding. A passing pure reducer
+test cannot establish file-backed beta readiness.
+
+The codec now delegates to
+`AdvancedAmplifierProtocolDomain.validStagedFollowUps`, the exact policy used
+by custom authoring and cycles. The schema/wire version is **unchanged**:
+existing single-follow-up and v5 myo bytes retain their old encoding.
+New file-store regression fixtures must roundtrip staged rest-pause and
+cluster plans and real stage receipts through both snapshot and journal
+codecs, including restart, early stop, finish and historic byte stability.
+This does not replace physical Android cold-process and backup testing.
+
 ## Evidence and selection
 
 - A 2026 systematic review/meta-analysis found that advanced systems did **not** produce a meaningful overall hypertrophy advantage; rest-pause may have a small advantage and drop sets/cluster systems were often comparable when effort/volume were matched. Use techniques to **save time**, for an optional finishing stimulus, or for a specific programming purpose, not as magic extra growth. https://pubmed.ncbi.nlm.nih.gov/41718208/

@@ -37,6 +37,16 @@ assert.match(restPauseSheet,/Stop early if you miss reps or form deteriorates/);
 assert.match(restPauseExecution,/CustomAmplifierKind.REST_PAUSE ->/);
 assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueRestPause/);
 assert.match(restPauseProtocol,/fun validStagedFollowUps\(/);
+const snapshotCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutSnapshotCodec.kt');
+const snapshotAmplifierGate=snapshotCodec.slice(
+  snapshotCodec.indexOf('p.amplifier?.let{ amp ->'),
+  snapshotCodec.indexOf('duration+=p.activeSeconds'));
+assert.ok(snapshotAmplifierGate.includes('AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp)'),
+  'Versioned workout snapshots must use the same staged technique authority as Kotlin engine');
+assert.ok(!snapshotAmplifierGate.includes('amp.kind==CustomAmplifierKind.MYO_REPS'),
+  'A myo-only codec would reject valid rest-pause or cluster snapshots on restart');
+assert.match(snapshotCodec,/if\(version>=5\)writeInt\(amp.followUpRounds\)/);
+
 assert.match(restPauseProtocol,/fun continueRestPause\(/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
 assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);

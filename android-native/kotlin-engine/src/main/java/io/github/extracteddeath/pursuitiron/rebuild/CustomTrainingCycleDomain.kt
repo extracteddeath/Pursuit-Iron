@@ -32,9 +32,9 @@ data class CustomSetAmplifier(
     /** Separately athlete-authored ACTIVE seconds for the complete
      * follow-up protocol, not its rest. Null is unknown, not zero. */
     val followUpActiveSeconds: Int? = null,
-    /** Legacy plans have exactly one follow-up. New myo-reps may issue 3–5
-     * independently recorded mini-sets; this is a maximum, not a minimum
-     * that should be forced after fatigue or an early stop. */
+    /** Legacy recipes keep one follow-up. Explicit myo-reps may issue 3–5
+     * mini-sets; rest-pause may issue 1–3 efforts. This is an optional maximum:
+     * fatigue or a missed rep target can end the sequence early. */
     val followUpRounds: Int = 1
 )
 

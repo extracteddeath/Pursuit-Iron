@@ -330,7 +330,7 @@ object CustomCycleCoachAuditDomain {
                                     missingAdvancedWork=true
                                 // Authored follow-up work time is counted;
                                 // missing active seconds remain unresolved.
-                                seconds+=amp.followUpRestSeconds+
+                                seconds+=amp.followUpRestSeconds * amp.followUpRounds+
                                     (amp.followUpActiveSeconds?:0)
                             }
                         }

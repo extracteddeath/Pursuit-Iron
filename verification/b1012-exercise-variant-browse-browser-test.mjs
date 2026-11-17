@@ -72,7 +72,6 @@ try {
  await page.waitForSelector('button[aria-label="Choose Generic Chest 70"]');
  await more();
  await page.waitForSelector('button[aria-label="Choose Generic Chest 110"]');
- const high=await page.$x?.('//button[normalize-space()="High incline"]');
  await page.evaluate(()=>{
   const chip=[...document.querySelectorAll('button')].find(b=>
    b.textContent.trim()==='High incline');
@@ -91,7 +90,9 @@ try {
  await page.click('button[aria-label="Choose Dual-Rope Pushdown"]');
  assert.equal(await page.evaluate(()=>window.__picked),'dual-rope-pushdown');
  await page.evaluate(()=>{
-  [...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Any attachment').click();
+  // A filter reset correctly returns pagination to page one. Pick the V-bar
+  // facet explicitly rather than assuming the 159th row remains rendered.
+  [...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='V-bar').click();
  });
  await page.waitForSelector('button[aria-label="Choose V-Bar Pushdown"]');
  assert.equal(await page.$eval('button[aria-label="Choose V-Bar Pushdown"]',el=>el.disabled),true,

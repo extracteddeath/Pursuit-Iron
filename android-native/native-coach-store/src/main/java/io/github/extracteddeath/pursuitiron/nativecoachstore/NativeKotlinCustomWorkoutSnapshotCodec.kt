@@ -393,7 +393,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                     }
                 }
                 val timeLimit=when(version){
-                    3,4,5->input.optionalInt()
+                    in 3..VERSION->input.optionalInt()
                     2->input.readInt()
                     else->null
                 }

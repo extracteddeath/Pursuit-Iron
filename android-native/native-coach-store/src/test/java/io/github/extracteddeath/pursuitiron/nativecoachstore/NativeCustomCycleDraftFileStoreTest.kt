@@ -373,15 +373,16 @@ class NativeCustomCycleDraftFileStoreTest {
         assertEquals(NativeCustomDraftReadResult.Found(two),
             cold.read("owner-1","cycle-1"))
         val legacyStage=original.copy(blocks=original.blocks.map{block->
-            block.copy(days=block.days.map{day->day.copy(
-                slots=day.slots.map{slot->
-                    if(slot.slotId!="bench-1")slot else slot.copy(
-                        sets=slot.sets.mapIndexed{index,set->
-                            if(index!=1)set else set.copy(amplifier=amp.copy(
-                                followUpRounds=1,secondDropLoad=null))
-                        })
+            block.copy(days=block.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    if(slot.slotId!="bench-1")slot
+                    else slot.copy(sets=slot.sets.mapIndexed{index,set->
+                        if(index!=1)set
+                        else set.copy(amplifier=amp.copy(
+                            followUpRounds=1,secondDropLoad=null))
+                    })
                 })
-            )})
+            })
         })
         val one=NativeCustomCycleDraftCodec.encode(legacyStage)
         assertEquals(2,java.nio.ByteBuffer.wrap(one,4,4).int)

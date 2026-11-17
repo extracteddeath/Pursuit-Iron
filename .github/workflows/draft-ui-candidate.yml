@@ -32,6 +32,8 @@ jobs:
         run: node --check modules/App.js
       - name: Verify all UI integration source contracts
         run: node scripts/verify-engine-contracts.mjs integration
+      - name: Validate web exercise variant facets and complete-picker pagination
+        run: node verification/b1012-exercise-variant-browse-test.mjs
 
   ui-browser:
     if: ${{ github.event.pull_request.draft }}

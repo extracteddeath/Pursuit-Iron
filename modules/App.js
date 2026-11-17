@@ -1,4 +1,5 @@
 import { GymLoadFields } from './gym-load-fields.js';
+import { exerciseBenchLevel, exerciseAttachmentFacet, availableVariantFacets, matchesVariantFacets } from './exercise-variant-browse.js';
 import { PlateCalcSheet } from './loading-calculator.js';
 import { HistoryEditSheet } from './history-editor.js';
 import { BackupRestorePanel } from './backup-restore-panel.js';
@@ -8452,14 +8453,131 @@ function SessionExerciseListSheet({ data, exIdx, onJump, onMove, onSkip, onAdd, 
                                     }, "aria-label": `Reorder ${ex?.name || "exercise"}. Drag, or use arrow keys.`, className: "pressable hit", style: { ...iconBtn(), width: 44, height: 44, flexShrink: 0, cursor: "grab", touchAction: "none" }, children: _jsx(GripVertical, { size: 17 }) }), _jsxs("button", { onClick: () => { onJump(i); onClose(); }, className: "pressable", "aria-label": `Jump to ${ex?.name || "exercise"}, ${done} of ${work.length} sets done`, "aria-current": cur ? "true" : undefined, style: { flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, color: C.text }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsx("span", { className: "mono wpb-type-caption-faint", style: { fontWeight: 700, flexShrink: 0 }, children: i + 1 }), _jsx("span", { className: "wpb-s956-fontsize-15 wpb-s956-fontweight-600 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: ex?.name || "Exercise" }), linked && _jsx(Layers, { size: 11, color: C.accentInk, className: "wpb-icon-no-shrink" })] }), _jsxs("div", { style: { fontSize: 11, color: done >= work.length && work.length > 0 ? C.accentInk : C.muted, marginTop: 2 }, children: [done, "/", work.length, " sets", ex ? ` · ${PART_LABEL[ex.part]}` : ""] })] }), _jsx("button", { onClick: () => onSkip(i), "aria-label": `Skip ${ex?.name || "exercise"} today`, className: "pressable hit", style: { ...iconBtn(), width: 44, height: 44 }, children: _jsx(X, { size: 15 }) })] }, i));
                     }) }), _jsx("div", { className: "wpb-s960-padding-10px-18px-0", children: _jsxs("button", { onClick: onAdd, className: "pressable", style: { width: "100%", padding: "12px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Plus, { size: 16 }), " Add exercise"] }) })] }) }));
 }
+
+/** Read-only facets. They narrow already allowed exercise choices, never
+ * authorize equipment, transfer a set's load, or select a physical A/B station. */
+function ExerciseVariantFacetFilters({ candidates, level, onLevel, attachment, onAttachment }) {
+    const facets = useMemo(() => availableVariantFacets(candidates), [candidates]);
+    const chips = (label, options, selected, onSelect) => options.length > 0
+        && _jsxs("div", { className: "wpb-hscroll wpb-b964-layout-10",
+            role: "group", "aria-label": label, children: [
+                _jsx("span", { className: "wpb-type-caption-faint",
+                    children: label }),
+                _jsx("button", { type: "button", className: "pressable",
+                    "aria-pressed": selected === "all",
+                    onClick: () => onSelect("all"),
+                    children: label === "Bench incline" ? "Any angle" : "Any attachment" }),
+                ...options.map(option => _jsx("button", {
+                    type: "button", className: "pressable",
+                    "aria-pressed": selected === option.id,
+                    onClick: () => onSelect(option.id),
+                    children: option.label
+                }, option.id))
+            ] });
+    return _jsxs("div", { className: "wpb-variant-facets", children: [
+        chips("Bench incline", facets.levels, level, onLevel),
+        chips("Cable attachment", facets.attachments, attachment, onAttachment)
+    ] });
+}
+
+function variantSearchMatches(ex, input) {
+    const terms = String(input || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return true;
+    const label = [
+        ex.id, ex.name, variantDisplayName(ex), friendlyEquipment(ex),
+        exerciseBenchLevel(ex), exerciseAttachmentFacet(ex), ex.part, ex.type
+    ].filter(Boolean).join(" ").replace(/[_-]/g, " ").toLowerCase();
+    return terms.every(term => label.includes(term)) ||
+        exMatches(ex, String(input).trim().toLowerCase());
+}
+
 function ExercisePickerSheet({ onPick, onClose, banned = [], title = "Add exercise" }) {
     const [q, setQ] = useState("");
     const [part, setPart] = useState("all");
-    const list = useMemo(() => {
-        const ql = q.trim().toLowerCase();
-        return EXERCISES.filter(e => (part === "all" || e.part === part) && (!ql || exMatches(e, ql))).slice(0, 100);
-    }, [q, part]);
-    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-b961-overlay-06", children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "88%", display: "flex", flexDirection: "column", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-justifycontent-space-between wpb-s956-marginbottom-8", children: [_jsx("div", { className: "wpb-s956-fontsize-18 wpb-s956-fontweight-700", children: title }), _jsx("button", { className: "pressable hit", onClick: onClose, "aria-label": "Close", style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Search, { size: 16, color: C.faint }), _jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: `Search ${EXERCISES.length} exercises…`, autoFocus: true, style: { flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 15 } })] }), _jsx("div", { className: "wpb-hscroll wpb-b964-layout-10", children: ["all", ...PART_ORDER].map(p => (_jsx("button", { onClick: () => setPart(p), className: "pressable", style: { flexShrink: 0, padding: "6px 12px", borderRadius: 999, border: `1px solid ${part === p ? C.accent : C.border}`, background: part === p ? C.accent : C.card, color: part === p ? C.accentText : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize", whiteSpace: "nowrap" }, children: p === "all" ? "All" : PART_LABEL[p] }, p))) }), _jsxs("div", { className: "wpb-scroll wpb-b965-layout-09", children: [list.map(e => (_jsxs("button", { onClick: () => onPick(e.id), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", marginBottom: 6, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", textAlign: "left", opacity: banned.includes(e.id) ? 0.5 : 1 }, children: [_jsxs("div", { className: "wpb-layout-flex-one", children: [_jsxs("div", { className: "wpb-type-value", children: [e.name, banned.includes(e.id) ? " · banned" : ""] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, textTransform: "capitalize" }, children: [PART_LABEL[e.part], " \u00B7 ", e.type] })] }), _jsx(Plus, { size: 16, color: C.accentInk })] }, e.id))), list.length === 0 && _jsx("div", { style: { textAlign: "center", color: C.muted, fontSize: 13, padding: "30px 0" }, children: "No exercises match." })] })] }) }));
+    const [level, setLevel] = useState("all");
+    const [attachment, setAttachment] = useState("all");
+    const [visibleCount, setVisibleCount] = useState(40);
+    const candidatePool = useMemo(() => EXERCISES.filter(ex =>
+        part === "all" || ex.part === part), [part]);
+    const allMatches = useMemo(() => candidatePool.filter(ex =>
+        variantSearchMatches(ex, q) &&
+        matchesVariantFacets(ex, { level, attachment })),
+    [candidatePool, q, level, attachment]);
+    useEffect(() => { setVisibleCount(40); }, [q, part, level, attachment]);
+    const list = allMatches.slice(0, visibleCount);
+    const blocked = new Set(banned);
+    return _jsx("div", { className: "wpb-backdrop wpb-b961-overlay-06",
+        onClick: onClose, children: _jsxs("div", {
+            ref: sheetDragRef,
+            onClick: event => event.stopPropagation(),
+            className: "wpb-ui-sheet-panel",
+            style: { width: "100%", maxHeight: "88%", display: "flex",
+                flexDirection: "column", background: C.bg2,
+                borderTopLeftRadius: 24, borderTopRightRadius: 24,
+                paddingTop: 8, borderTop: `1px solid ${C.border}` },
+            children: [
+                _jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-justifycontent-space-between wpb-s956-marginbottom-8",
+                    children: [
+                        _jsx("div", { className: "wpb-s956-fontsize-18 wpb-s956-fontweight-700", children: title }),
+                        _jsx("button", { type: "button", className: "pressable hit",
+                            onClick: onClose, "aria-label": "Close", style: iconBtn(),
+                            children: _jsx(X, { size: 18 }) })
+                    ] }),
+                _jsx("label", { className: "wpb-s960-padding-0-18px",
+                    children: _jsx("input", { value: q,
+                        onChange: event => setQ(event.target.value.slice(0, 80)),
+                        placeholder: `Search all ${EXERCISES.length} exercises, attachments, or inclines`,
+                        "aria-label": "Search exercises, variants and attachments",
+                        style: { width: "100%", background: C.card,
+                            border: `1px solid ${C.border}`, borderRadius: 12,
+                            padding: "11px 12px", boxSizing: "border-box", color: C.text } })
+                }),
+                _jsx("div", { className: "wpb-hscroll wpb-b964-layout-10",
+                    role: "group", "aria-label": "Target muscle", children:
+                    ["all", ...PART_ORDER].map(p => _jsx("button", {
+                        type: "button", className: "pressable",
+                        "aria-pressed": part === p,
+                        onClick: () => setPart(p),
+                        children: p === "all" ? "All" : PART_LABEL[p]
+                    }, p)) }),
+                _jsx(ExerciseVariantFacetFilters, {
+                    candidates: candidatePool, level, onLevel: setLevel,
+                    attachment, onAttachment: setAttachment }),
+                _jsx("div", { className: "wpb-type-caption-faint wpb-s960-padding-0-18px",
+                    role: "status",
+                    children: `${allMatches.length} matching exercise setups · ${EXERCISES.length} catalog entries. Each setup keeps its own loading history.` }),
+                _jsxs("div", { className: "wpb-scroll wpb-b965-layout-09",
+                    children: [
+                        ...list.map(ex => _jsxs("button", {
+                            type: "button", className: "pressable",
+                            disabled: blocked.has(ex.id),
+                            onClick: () => onPick(ex.id),
+                            "aria-label": `Choose ${variantDisplayName(ex)}`,
+                            style: { width: "100%", minHeight: 56,
+                                padding: "11px 12px", marginBottom: 6,
+                                background: C.card, border: `1px solid ${C.border}`,
+                                borderRadius: 12, textAlign: "left", color: C.text,
+                                cursor: blocked.has(ex.id) ? "not-allowed" : "pointer",
+                                opacity: blocked.has(ex.id) ? .5 : 1 },
+                            children: [
+                                _jsx("span", { className: "wpb-type-value",
+                                    children: variantDisplayName(ex) +
+                                        (blocked.has(ex.id) ? " · banned" : "") }),
+                                _jsx("span", { className: "wpb-type-subline",
+                                    children: friendlyEquipment(ex) })
+                            ]
+                        }, ex.id)),
+                        allMatches.length > list.length &&
+                            _jsx("button", { type: "button", className: "pressable",
+                                onClick: () => setVisibleCount(n =>
+                                    Math.min(allMatches.length, n + 40)),
+                                children: `Show more (${allMatches.length - list.length} remaining)` }),
+                        allMatches.length === 0 && _jsx("div", {
+                            role: "status", className: "wpb-type-support-muted",
+                            children: "No matching exercise setups. Clear a filter or search term." })
+                    ] })
+            ] })
+    });
 }
 function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, day, sessionExerciseIds = null, scopeMode = "workout" }) {
     /* The same starved-region set the ranking used, so the badge and the order tell one story: an item
@@ -8470,13 +8588,18 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
     const [pending, setPending] = useState(null); // chosen replacement id awaiting scope choice
     const [weekOpen, setWeekOpen] = useState(false);
     const [query, setQuery] = useState("");
+    const [level, setLevel] = useState("all");
+    const [attachment, setAttachment] = useState("all");
     const peers = (sessionExerciseIds || day?.exercises || []).filter(id => id !== ex.id).map(id => EX_BY_ID[id]);
     const overlaps = useMemo(() => new Map(alts.map(a => [a.id, swapOverlapNames(a, peers, program, day)])), [alts, program, day, sessionExerciseIds]);
     const samePart = (a) => a.part === ex.part || secondaryOf(a).some(([pp]) => pp === ex.part);
-    const filtered = query.trim() === "" ? alts : alts.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+    // Start from the already-ranked/verified exercise pool; facet selection
+    // never widens it to unavailable gym equipment or a different machine ID.
+    const filtered = alts.filter(a => matchesVariantFacets(a, { level, attachment })
+        && variantSearchMatches(a, query));
     const familyIds = new Set(movementFamilyOptions(ex).map(a => a.id));
-    const familyAlts = query.trim() ? [] : alts.filter(a => familyIds.has(a.id));
-    const generalAlts = familyAlts.length ? filtered.filter(a => !familyIds.has(a.id)) : filtered;
+    const familyAlts = filtered.filter(a => familyIds.has(a.id));
+    const generalAlts = filtered.filter(a => !familyIds.has(a.id));
     const choose = (id) => scopeMode === "program" ? onPick(id, "program") : setPending(id);
     return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-b961-overlay-07", children: _jsx("div", { ref: sheetDragRef, onClick: (e) => e.stopPropagation(), style: { width: "100%", height: "min(82vh, 720px)", minHeight: 0, background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 16px calc(env(safe-area-inset-bottom) + 16px)", display: "flex", flexDirection: "column", overflow: "hidden", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: pending ? (() => {
                 const nx = EX_BY_ID[pending];
@@ -8491,7 +8614,9 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
                                     color: C.text,
                                     boxSizing: "border-box"
                                 } }), query && _jsx("button", { "aria-label": "Clear replacement search", onClick: () => setQuery(""), className: "pressable hit", style: { position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 30, height: 30, borderRadius: 999,
-                                    border: "none", background: "transparent", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 14 }) })] }), _jsx("div", { style: { fontSize: 12, color: C.faint, lineHeight: 1.45, marginBottom: 10, padding: "0 2px" }, children: "Ranked for your equipment, movement role, and this program's weekly muscle coverage." }), _jsxs("div", { className: "wpb-scroll wpb-swap-results wpb-b976-swap-results", "data-swap-results": true, children: [familyAlts.length > 0 && (_jsxs("div", { className: "wpb-s960-margin-6px-0-12px", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: movementFamilyTitle(ex) }), _jsx("div", { className: "pi-t-explain", children: movementFamilyDescription(ex) }), _jsx("div", { className: "wpb-s956-display-grid wpb-s956-gap-7", children: familyAlts.map(a => (_jsxs("button", { className: "pressable", "aria-label": `Swap to ${variantDisplayName(a)}`, onClick: () => choose(a.id), style: { width: "100%", minHeight: 64, display: "grid", gridTemplateColumns: "56px minmax(0,1fr) 20px", alignItems: "center", gap: 9, padding: "7px 9px 7px 7px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, textAlign: "left", cursor: "pointer" }, children: [_jsx("span", { style: { width: 56, height: 50, display: "grid", placeItems: "center", borderRadius: 10, background: C.bg2, color: C.accentInk }, children: _jsx(AttachmentGlyph, { ex: a, size: 42 }) }), _jsxs("span", { className: "wpb-s956-minwidth-0", children: [_jsx("span", { className: "wpb-s956-display-block wpb-s960-fontsize-12-5px wpb-s956-fontweight-700 wpb-s960-lineheight-1-25", children: variantDisplayName(a) }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.faint, marginTop: 2 }, children: friendlyEquipment(a) })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-b976-swap-chevron" })] }, a.id))) })] })), program && Array.isArray(program.days) && program.days.length > 1 && (_jsxs("div", { style: { marginTop: 8, marginBottom: 4, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setWeekOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", background: C.card, border: "none", cursor: "pointer", textAlign: "left" }, children: [_jsx(Calendar, { size: 14, color: C.accentInk }), _jsx("span", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: C.text }, children: "This week's training" }), _jsxs("span", { className: "wpb-type-micro-faint", children: ["see what else hits ", PART_LABEL[ex.part]] }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { transform: weekOpen ? "rotate(180deg)" : "none", flexShrink: 0 } })] }), weekOpen && (_jsxs("div", { style: { padding: "4px 13px 12px", background: C.card }, children: [program.days.map((d, di) => {
+                                    border: "none", background: "transparent", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 14 }) })] }), _jsx(ExerciseVariantFacetFilters, { candidates: alts, level, onLevel: setLevel,
+                attachment, onAttachment: setAttachment }),
+                _jsx("div", { style: { fontSize: 12, color: C.faint, lineHeight: 1.45, marginBottom: 10, padding: "0 2px" }, children: "Ranked for your equipment, movement role, and this program's weekly muscle coverage. Attachment, incline and physical machines are not interchangeable loads." }), _jsxs("div", { className: "wpb-scroll wpb-swap-results wpb-b976-swap-results", "data-swap-results": true, children: [familyAlts.length > 0 && (_jsxs("div", { className: "wpb-s960-margin-6px-0-12px", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: movementFamilyTitle(ex) }), _jsx("div", { className: "pi-t-explain", children: movementFamilyDescription(ex) }), _jsx("div", { className: "wpb-s956-display-grid wpb-s956-gap-7", children: familyAlts.map(a => (_jsxs("button", { className: "pressable", "aria-label": `Swap to ${variantDisplayName(a)}`, onClick: () => choose(a.id), style: { width: "100%", minHeight: 64, display: "grid", gridTemplateColumns: "56px minmax(0,1fr) 20px", alignItems: "center", gap: 9, padding: "7px 9px 7px 7px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, textAlign: "left", cursor: "pointer" }, children: [_jsx("span", { style: { width: 56, height: 50, display: "grid", placeItems: "center", borderRadius: 10, background: C.bg2, color: C.accentInk }, children: _jsx(AttachmentGlyph, { ex: a, size: 42 }) }), _jsxs("span", { className: "wpb-s956-minwidth-0", children: [_jsx("span", { className: "wpb-s956-display-block wpb-s960-fontsize-12-5px wpb-s956-fontweight-700 wpb-s960-lineheight-1-25", children: variantDisplayName(a) }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.faint, marginTop: 2 }, children: friendlyEquipment(a) })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-b976-swap-chevron" })] }, a.id))) })] })), program && Array.isArray(program.days) && program.days.length > 1 && (_jsxs("div", { style: { marginTop: 8, marginBottom: 4, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setWeekOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", background: C.card, border: "none", cursor: "pointer", textAlign: "left" }, children: [_jsx(Calendar, { size: 14, color: C.accentInk }), _jsx("span", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: C.text }, children: "This week's training" }), _jsxs("span", { className: "wpb-type-micro-faint", children: ["see what else hits ", PART_LABEL[ex.part]] }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { transform: weekOpen ? "rotate(180deg)" : "none", flexShrink: 0 } })] }), weekOpen && (_jsxs("div", { style: { padding: "4px 13px 12px", background: C.card }, children: [program.days.map((d, di) => {
                                                 const isToday = d.id === day?.id;
                                                 return (_jsxs("div", { style: { padding: "9px 0", borderTop: di === 0 ? "none" : `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: isToday ? C.accentInk : C.muted, marginBottom: 4 }, children: [d.label, isToday ? " · today" : ""] }), _jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-4", children: d.exercises.map((id, xi) => {
                                                                 const e2 = EX_BY_ID[id];

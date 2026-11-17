@@ -81,6 +81,23 @@ class AdvancedAmplifierProtocolDomainTest {
         assertTrue(cluster.techniqueCue.contains("unlike myo-reps"))
     }
 
+    @Test fun oneTechniqueVocabularyAcrossPlanPreviewAndStagedWorkout() {
+        val policy=AdvancedAmplifierProtocolDomain
+        val myo=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,followUpRounds=5)
+        val pause=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,3,20,followUpRounds=3)
+        assertEquals("Myo-reps · mini-set 2 of 5",policy.stageLabel(myo,2))
+        assertEquals("Rest-pause · effort 2 of 3",policy.stageLabel(pause,2))
+        assertEquals("Rest-pause · follow-up",policy.stageLabel(pause.copy(followUpRounds=1),1))
+        assertEquals("efforts",policy.stageNoun(CustomAmplifierKind.REST_PAUSE,true))
+        assertEquals("weight drops",policy.stageNoun(CustomAmplifierKind.DROP_SET,true))
+        assertEquals("clusters",policy.stageNoun(CustomAmplifierKind.CLUSTER,true))
+        assertTrue(policy.stageReviewCue(myo).contains("rep floor"))
+        assertTrue(policy.stageReviewCue(pause).contains("rep shortfall"))
+        assertFalse(policy.stageReviewCue(pause).contains("myo"))
+        assertEquals("End rest-pause early?",policy.stageEarlyStopTitle(pause.kind))
+        assertTrue(policy.stageEarlyStopDescription(pause.kind).contains("no later rest-pause efforts"))
+    }
+
     @Test fun advancedTechniquesAreNotMandatoryAndNotPlacedOnEveryStrengthSet() {
         fun eligible(
             kind: CustomAmplifierKind, phase: TrainingPhase,

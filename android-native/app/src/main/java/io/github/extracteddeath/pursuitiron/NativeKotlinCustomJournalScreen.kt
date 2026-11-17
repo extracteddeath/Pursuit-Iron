@@ -1698,6 +1698,9 @@ private fun NativeKotlinCustomVisitEditor(
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
+    val isStagedShortRestStop=part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        stageTotal>1 && follower?.kind in setOf(
+            CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.REST_PAUSE)
     val target=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
         follower?.followUpLoad ?:prescription.load
     else prescription.load
@@ -1852,8 +1855,7 @@ private fun NativeKotlinCustomVisitEditor(
             val skipButton:@Composable (Modifier)->Unit={buttonModifier->
                 OutlinedButton(enabled=!locked,modifier=buttonModifier,onClick={
                     pendingExceptionalOutcome=KotlinJournalSetOutcome.SKIPPED
-                }){Text(if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
-                    follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
+                }){Text(if(isStagedShortRestStop)
                     "End sequence" else "Skip")}
             }
             val failedButton:@Composable (Modifier)->Unit={buttonModifier->
@@ -1891,12 +1893,8 @@ private fun NativeKotlinCustomVisitEditor(
         HorizontalDivider()
         val label=if(part==CustomWorkoutVisitPart.MAIN)
             "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
-        else follower?.let { AdvancedAmplifierProtocolDomain.template(it.kind).title +
-            (if(stageTotal>1)
-                (if(follower.kind==CustomAmplifierKind.REST_PAUSE)
-                    " · effort $stageOrdinal of $stageTotal"
-                else " · mini $stageOrdinal of $stageTotal")
-             else " · follow-up")
+        else follower?.let {
+            AdvancedAmplifierProtocolDomain.stageLabel(it,stageOrdinal)
         } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
@@ -1987,16 +1985,13 @@ private fun NativeKotlinCustomVisitEditor(
     if(pending!=null && !locked) AlertDialog(
         onDismissRequest={pendingExceptionalOutcome=null},
         title={Text(if(pending==KotlinJournalSetOutcome.SKIPPED &&
-            part==CustomWorkoutVisitPart.FOLLOW_UP &&
-            follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
-            "End myo-reps early?"
+            isStagedShortRestStop)
+            AdvancedAmplifierProtocolDomain.stageEarlyStopTitle(requireNotNull(follower).kind)
         else if(pending==KotlinJournalSetOutcome.SKIPPED)
             "Skip this visit?" else "Log a failed attempt?")},
         text={Text(if(pending==KotlinJournalSetOutcome.SKIPPED &&
-            part==CustomWorkoutVisitPart.FOLLOW_UP &&
-            follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1)
-            "End this sequence if technique or recovery is declining. " +
-                "This stage is saved as skipped and no later mini-sets are created."
+            isStagedShortRestStop)
+            AdvancedAmplifierProtocolDomain.stageEarlyStopDescription(requireNotNull(follower).kind)
         else if(pending==KotlinJournalSetOutcome.SKIPPED)
             "Skipping records an explicit outcome. It is not a completed set, and you can correct it before Finish."
         else

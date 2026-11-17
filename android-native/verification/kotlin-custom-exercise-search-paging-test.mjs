@@ -46,7 +46,9 @@ assert.doesNotMatch(sheet,/Narrow your search for more/);
 
 // A swap does not carry across old prescriptions or secretly accept itself.
 assert.doesNotMatch(sheet,/LaunchedEffect\(exerciseId,replacing\?\.slotId\)/);
-assert.match(sheet,/forms=listOf\(CustomSetFields\(\)\)/);
+assert.match(sheet,/forms=freshReplacementStructure\(\)/);
+assert.match(sheet,/\.map\{CustomSetFields\(type=it\.type\)\}/);
+assert.doesNotMatch(sheet,/forms=replacing\.sets\.map\{it\.toFields\(\)\}/);
 assert.match(sheet,/swapConfirmation=false/);
 // Saved state is only unsent input and never a receipt/approval. Recreating
 // the sheet must not run a load-clearing effect against restored fields.

@@ -155,7 +155,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
         if(focusedWorkoutId!=null)verified?.completions.orEmpty().filter{
             it.manifest.workoutId==focusedWorkoutId
         }
-        else if(query.isEmpty())verified?.completions.orEmpty()
+        else if(preferredWorkoutId!=null || query.isEmpty())
+            verified?.completions.orEmpty()
         else verified?.completions.orEmpty().filter{ entry ->
             when(entry) {
                 is NativeKotlinMixedHistoryCompletion.Composer ->
@@ -176,8 +177,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
         else nativeHistoryDateSelection(historyDateKey,historyDayKey,historyMonths)
     }
     val displayedSessions=remember(visibleSessions,dateSelection,historyZone,
-        focusedWorkoutId) {
-        if(focusedWorkoutId!=null)visibleSessions
+        preferredWorkoutId) {
+        if(preferredWorkoutId!=null)visibleSessions
         else nativeHistorySessionsInSelection(
             visibleSessions,dateSelection,historyZone)
     }

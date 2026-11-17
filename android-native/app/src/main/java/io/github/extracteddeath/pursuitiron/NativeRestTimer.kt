@@ -46,20 +46,20 @@ internal fun NativeRestTimer(
     val scopeKey=remember(workoutId,ownerId) {
         ownerId?.let {restStore.scopedKey(it,workoutId)}
     }
-    val recovered=remember(scopeKey) {
-        scopeKey?.let {restStore.read(it,
+    val recovered=remember(scopeKey,latestReceiptOperationId) {
+        scopeKey?.let {restStore.read(it,latestReceiptOperationId,
             SystemClock.elapsedRealtime(),System.currentTimeMillis())}
     }
-    var deadline by rememberSaveable(workoutId,ownerId) {
+    var deadline by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
         mutableLongStateOf(recovered?.deadlineElapsed ?:0L)
     }
-    var startedElapsed by rememberSaveable(workoutId,ownerId) {
+    var startedElapsed by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
         mutableLongStateOf(recovered?.startedElapsed ?:0L)
     }
-    var startedWall by rememberSaveable(workoutId,ownerId) {
+    var startedWall by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
         mutableLongStateOf(recovered?.startedWall ?:0L)
     }
-    var activeSeconds by rememberSaveable(workoutId,ownerId) {
+    var activeSeconds by rememberSaveable(workoutId,ownerId,latestReceiptOperationId) {
         mutableIntStateOf(recovered?.activeSeconds ?:0)
     }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
@@ -78,7 +78,7 @@ internal fun NativeRestTimer(
         startedElapsed=checkpoint?.startedElapsed ?:0L
         startedWall=checkpoint?.startedWall ?:0L
         activeSeconds=checkpoint?.activeSeconds ?:0
-        restStore.save(scopeKey,checkpoint)
+        restStore.save(scopeKey,latestReceiptOperationId,checkpoint)
     }
     fun begin(seconds: Int) {
         val elapsed=SystemClock.elapsedRealtime()

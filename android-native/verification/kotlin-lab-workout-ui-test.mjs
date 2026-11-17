@@ -219,6 +219,12 @@ assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') 
   localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
+assert.ok(journal.includes('activationPerformed=main?.performed') &&
+  journal.includes('val sameLoadActivation=if(') &&
+  journal.includes('activationPerformed?.machineInstanceId==machineInstanceId') &&
+  journal.includes('sameLoadActivation ?:') &&
+  journal.includes('Your issued target remains unchanged.'),
+  'Myo mini-set prefill must use observed same-machine activation without editing prescription');
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
   journal.includes('set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,') &&
   localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&

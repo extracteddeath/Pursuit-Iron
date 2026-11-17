@@ -83,9 +83,10 @@ object CustomWorkoutExecutionDomain {
                         set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage-1)]
                         ?.operation as? CustomWorkoutJournalOperation.Record)
                         ?.performed
-                if(priorObserved?.load==null ||
+                val actualPriorLoad=priorObserved?.load
+                if(actualPriorLoad==null ||
                     priorObserved.unit!=proposed.unit ||
-                    priorObserved.load.compareTo(proposed.value)<=0 ||
+                    actualPriorLoad.compareTo(proposed.value)<=0 ||
                     priorObserved.machineInstanceId!=main.performed?.machineInstanceId)
                     break
             }

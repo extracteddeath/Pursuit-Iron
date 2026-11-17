@@ -1052,7 +1052,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                             style=MaterialTheme.typography.labelLarge,
                                             color=MaterialTheme.colorScheme.primary)
                                         Text((if(amp.followUpRounds>1)
-                                                "${amp.followUpRounds} mini-sets · ${amp.followUpReps} reps each · "
+                                                "${amp.followUpRounds} ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,plural=true)} · ${amp.followUpReps} reps each · "
                                             else "${amp.followUpReps} follow-up reps · ") +
                                             "${amp.followUpRestSeconds}s short rest · " +
                                             (when(val extra=amp.followUpLoad) {
@@ -1070,10 +1070,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                                         Text(technique.techniqueCue,
                                             style=MaterialTheme.typography.bodySmall)
-                                        Text(if(amp.followUpRounds>1)
-                                            "Each myo mini-set saves separately; stop early at " +
-                                                "the rep floor or on technique breakdown."
-                                        else "This technique saves one follow-up stage.",
+                                        Text(AdvancedAmplifierProtocolDomain.stageReviewCue(amp),
                                             style=MaterialTheme.typography.bodySmall,
                                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                                     }

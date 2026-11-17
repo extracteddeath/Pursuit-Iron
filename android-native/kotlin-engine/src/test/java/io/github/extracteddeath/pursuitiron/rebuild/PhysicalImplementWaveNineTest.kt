@@ -82,6 +82,16 @@ class PhysicalImplementWaveNineTest {
                 emptySet()))))
     }
 
+    @Test fun ratedGripperAndPlateLoadsStayInTheirVerifiedUnit() {
+        // Manufacturer-rated gripper resistance is an equipment-specific
+        // setting, not a free-weight equivalent or automatically converted KG.
+        assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.UNIT_MISMATCH),
+            EquipmentLoadDomain.inspect(gripper,n("80"),LoadUnit.KG))
+        assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.UNIT_MISMATCH),
+            EquipmentLoadDomain.inspect(plate,n("10"),LoadUnit.KG))
+        assertNotEquals(gripper,plate)
+    }
+
     @Test fun exactGripperSettingIsNotAutomaticallyEquivalentToAWeightPlate() {
         assertFalse(issue("svend-press",CatalogIssueType.LOAD_UNVERIFIED,
             review("svend-press",load="10")))

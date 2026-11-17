@@ -3626,11 +3626,7 @@ function navPop(stack) {
 
 /* Short-ROM isolations that suit a rest-pause / myo-rep extension rather than stretched partials. */
 
-/* Compact tag for the SET ROW the technique lands on. The full cue ("Last set: lengthened partials
-   — extra reps in the stretched position past failure") is the banner; this is the two-word badge
-   that sits on the actual last working set so the lifter can see WHICH set it applies to without
-   reading the banner and counting rows. Derived from the same cue string, so the two can't disagree
-   about what's prescribed. Returns null for anything that isn't a recognised technique. */
+/* Set-row technique labels follow the engine's authored final-set cue. */
 
 /* Last-set intensity technique, periodized the way the program prescribes it: nothing until at
    least the back half of the block, then a per-exercise technique layered onto the LAST set of
@@ -12455,11 +12451,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 const cell = computeCell(program, day, e.id, e.slot, weekIndex);
                 const isPrimary = e.slot === day.primaryIndex;
                 const wTotal = workOnly(e).length;
-                /* Row index of the LAST working set — the one the last-set technique actually applies to.
-                   The technique is prescribed per the block (cell.tech) but lands on a single set; without
-                   this the lifter saw a top banner and had to count rows to know where it applied. Excludes
-                   warm-ups and sub-sets (drop/myo), and the technique only makes sense when the lift has real
-                   working sets and isn't itself already a myo/drop extension. */
+                /* Select the last full working set, excluding warm-ups and mini-sets. */
                 const techTag = e.injuryAdjusted ? null : techSetTag(cell.tech);
                 const lastWorkRow = (() => {
                     if (!techTag)

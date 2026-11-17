@@ -70,6 +70,25 @@ object CustomWorkoutExecutionDomain {
         for(stage in 1..amp.followUpRounds) {
             val key=CustomWorkoutVisitKey(set.setKey,
                 CustomWorkoutVisitPart.FOLLOW_UP,stage)
+            if(amp.kind==CustomAmplifierKind.DROP_SET &&
+                amp.followUpRounds==2) {
+                // An athlete's ACTUAL activation weight may differ from
+                // the issued target. Never present an optional drop that
+                // would increase or hold weight relative to the last
+                // performed stage; a changed target is not consent.
+                val proposed=AdvancedAmplifierProtocolDomain.dropStageLoad(
+                    amp,stage) as? DraftSetLoad.Verified ?:break
+                val priorObserved=if(stage==1)main.performed else
+                    (journal.effectiveVisits[CustomWorkoutVisitKey(
+                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage-1)]
+                        ?.operation as? CustomWorkoutJournalOperation.Record)
+                        ?.performed
+                if(priorObserved?.load==null ||
+                    priorObserved.unit!=proposed.unit ||
+                    priorObserved.load.compareTo(proposed.value)<=0 ||
+                    priorObserved.machineInstanceId!=main.performed?.machineInstanceId)
+                    break
+            }
             visits+=key
             val recorded=journal.effectiveVisits[key]?.operation
                 as? CustomWorkoutJournalOperation.Record ?:break

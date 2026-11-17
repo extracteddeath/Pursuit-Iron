@@ -33,7 +33,7 @@ const restPauseProtocol=read('android-native/kotlin-engine/src/main/java/io/gith
 const restPauseJournal=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutJournalDomain.kt');
 assert.match(restPauseSheet,/CustomAmplifierKind.REST_PAUSE -> "2"/);
 assert.match(restPauseSheet,/Max rest-pause efforts \(1–3\)/);
-assert.match(restPauseSheet,/Stop early if you miss the planned reps/);
+assert.match(restPauseSheet,/Stop early if you miss reps or form deteriorates/);
 assert.match(restPauseExecution,/CustomAmplifierKind.REST_PAUSE ->/);
 assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueRestPause/);
 assert.match(restPauseProtocol,/fun validStagedFollowUps\(/);
@@ -45,6 +45,20 @@ assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(it,stageOrdina
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopTitle/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopDescription/);
 assert.match(journal,/isStagedShortRestStop/);
+// Clusters use the same durable revision-fenced stage authority as myo and
+// rest-pause, while the engine enforces a planned submaximal quality rule.
+assert.match(restPauseSheet,/CustomAmplifierKind.CLUSTER -> "3"/);
+assert.match(restPauseSheet,/CustomAmplifierKind.CLUSTER -> "2"/);
+assert.match(restPauseSheet,/CustomAmplifierKind.CLUSTER -> "30"/);
+assert.match(restPauseSheet,/Planned clusters \(2–5\)/);
+assert.match(restPauseSheet,/Planned submaximal quality reps, not a failure method/);
+assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueCluster/);
+assert.match(restPauseProtocol,/fun continueCluster\(/);
+assert.match(restPauseProtocol,/amp.followUpRounds in 2\.\.5 && amp.followUpReps in 1\.\.4/);
+assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.CLUSTER/);
+assert.match(journal,/follower\?\.kind==CustomAmplifierKind.CLUSTER/);
+assert.match(journal,/CustomAmplifierKind.CLUSTER\)/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(/);
 const protocolPreview=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageNoun\(amp.kind,plural=true\)/);
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageReviewCue\(amp\)/);
@@ -711,8 +725,8 @@ assert.ok(composer.includes('val coach=state.liveCoach?.takeIf {') &&
 assert.ok(journal.includes('val sameType=slot.sets.filter {') &&
   journal.includes('it.prescription.type==set.prescription.type') &&
   journal.includes('val number=sameType.indexOfFirst {') &&
-  journal.includes('stage ${activeFocus.stage} of ${it.followUpRounds}') &&
-  journal.includes('val method=AdvancedAmplifierProtocolDomain.template(it.kind)') &&
+  journal.includes('AdvancedAmplifierProtocolDomain.stageLabel(') &&
+  journal.includes('it,activeFocus.stage)') &&
   journal.includes('"$label $number of ${sameType.size}"') &&
   !journal.includes('entry $number of ${slot.sets.size}') &&
   composer.includes('"Set"} $number of ${typeSets.size}"'),

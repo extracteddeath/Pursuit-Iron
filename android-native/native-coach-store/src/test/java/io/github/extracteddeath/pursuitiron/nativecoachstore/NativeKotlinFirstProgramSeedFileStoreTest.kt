@@ -135,4 +135,63 @@ class NativeKotlinFirstProgramSeedFileStoreTest {
             as NativeFirstProgramSeedRead.Found).seed.includeMyoFinisher)
     }
 
+    private fun physicalSeeds():List<java.nio.file.Path> =
+        Files.list(temp.root.toPath()).use { stream ->
+            stream.filter{it.fileName.toString().startsWith("first-program-") &&
+                it.fileName.toString().endsWith(".bin")}.toList()
+        }
+
+    @Test fun stagedInventoryRetainsLegacyAndOptInSeedsIncludingValidOrphans() {
+        val empty=store().inventoryOwner("owner-1")
+        assertEquals(NativeFirstProgramSeedInventory.Verified(emptyList()),empty)
+        val old=seed().copy(cycleId="old-program")
+        val opt=seed().copy(cycleId="opt-program",
+            includeMyoFinisher=true)
+        assertEquals(NativeFirstProgramSeedWrite.Committed,store().create("owner-1",old))
+        assertEquals(NativeFirstProgramSeedWrite.Committed,store().create("owner-1",opt))
+        val reread=store().inventoryOwner("owner-1")
+            as NativeFirstProgramSeedInventory.Verified
+        assertEquals(listOf("old-program","opt-program"),
+            reread.seeds.map{it.cycleId})
+        assertEquals(listOf(false,true),
+            reread.seeds.map{it.includeMyoFinisher})
+        // A seed is intentionally created before its cycle draft. No
+        // approved workout or even a saved draft is required to retain it.
+        assertEquals(2,reread.seeds.size)
+        assertEquals(2,physicalSeeds().size)
+    }
+
+    @Test fun physicalSeedTamperOrRenameRejectsEntireStagedInventory() {
+        assertEquals(NativeFirstProgramSeedWrite.Committed,
+            store().create("owner-1",seed().copy(includeMyoFinisher=true)))
+        val file=physicalSeeds().single()
+        val bytes=Files.readAllBytes(file)
+        val damaged=bytes.clone()
+        damaged[damaged.lastIndex]=(damaged.last().toInt() xor 1).toByte()
+        Files.write(file,damaged)
+        assertEquals(NativeFirstProgramSeedInventory.Rejected(
+            NativeFirstProgramSeedRefusal.CORRUPT),store().inventoryOwner("owner-1"))
+        Files.write(file,bytes)
+        val wrong=file.resolveSibling("first-program-"+("f".repeat(64))+".bin")
+        Files.move(file,wrong)
+        assertEquals(NativeFirstProgramSeedInventory.Rejected(
+            NativeFirstProgramSeedRefusal.CORRUPT),store().inventoryOwner("owner-1"))
+    }
+
+    @Test fun foreignOwnerPendingWriteAndUnsafeFileCannotBeDroppedSilently() {
+        assertEquals(NativeFirstProgramSeedWrite.Committed,
+            store().create("owner-1",seed()))
+        signedIn=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertEquals(NativeFirstProgramSeedInventory.Rejected(
+            NativeFirstProgramSeedRefusal.CORRUPT),store().inventoryOwner("owner-2"))
+        signedIn=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val pending=temp.root.toPath().resolve("first-program-unsafe.pending")
+        Files.write(pending,byteArrayOf(1))
+        assertEquals(NativeFirstProgramSeedInventory.Rejected(
+            NativeFirstProgramSeedRefusal.CORRUPT),store().inventoryOwner("owner-1"))
+        Files.delete(pending)
+        assertEquals(1,(store().inventoryOwner("owner-1")
+            as NativeFirstProgramSeedInventory.Verified).seeds.size)
+    }
+
 }

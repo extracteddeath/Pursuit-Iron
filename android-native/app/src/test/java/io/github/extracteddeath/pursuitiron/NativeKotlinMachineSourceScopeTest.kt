@@ -2,6 +2,8 @@ package io.github.extracteddeath.pursuitiron
 
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinPhysicalMachine
+import io.github.extracteddeath.pursuitiron.rebuild.CatalogPhysicalMachineEligibility
+import io.github.extracteddeath.pursuitiron.rebuild.StarterExerciseTranche
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -11,6 +13,36 @@ class NativeKotlinMachineSourceScopeTest {
             listOf(KotlinPhysicalMachine("id-a",label)))
 
     private val qualified=setOf("machine_press","cable_row")
+
+    @Test fun realReviewedMachineOverrideStationsCanSaveAButPortableEquipmentCannot() {
+        val eligible=CatalogPhysicalMachineEligibility.eligibleExerciseIds(
+            StarterExerciseTranche.movements())
+        assertTrue("machine_press" in eligible)
+        assertTrue("leg_press" in eligible)
+        assertTrue("machine-row" in eligible)
+        assertTrue("hip-abduction" in eligible)
+        assertFalse("wrist-roller" in eligible)
+        assertFalse("plate-front-raise" in eligible)
+        assertFalse("barbell_bench" in eligible)
+        val old=group("machine_press")
+        val addLegPress=group("leg_press")
+        val addPortable=group("plate-front-raise")
+        val addWrist=group("wrist-roller")
+        assertTrue(nativeMachineRosterSourceEligible("gym-one",eligible,
+            listOf(old),listOf(old,addLegPress)))
+        assertFalse(nativeMachineRosterSourceEligible("gym-one",eligible,
+            listOf(old),listOf(old,addPortable)))
+        assertFalse(nativeMachineRosterSourceEligible("gym-one",eligible,
+            listOf(old),listOf(old,addWrist)))
+        // Existing historical portable misconfigurations stay preserved
+        // when editing a real machine. They are never silently deleted.
+        assertTrue(nativeMachineRosterSourceEligible("gym-one",eligible,
+            listOf(old,addPortable),listOf(old,addPortable,addLegPress)))
+        assertFalse(nativeMachineRosterSourceEligible("gym-one",eligible,
+            listOf(old,addPortable),listOf(old,addLegPress)))
+    }
+
+
 
     @Test fun sourceQualifiedPhysicalStationsMayBeAddedWithoutChangingLegacyEvidence() {
         val invalidLegacy=group("barbell_bench")

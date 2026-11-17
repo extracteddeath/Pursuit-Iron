@@ -15,9 +15,7 @@ assert.match(save,/revisionFence\.withOwnerTransaction\(identity\.ownerKey\)/);
 assert.match(save,/source\.ownerKey!=identity\.ownerKey/);
 assert.match(save,/KotlinMachineAlternativesDomain\.preservesOtherGyms/);
 assert.match(save,/nativeMachineRosterSourceEligible\(/);
-assert.match(save,/source\.catalog\.groupBy \{it\.exerciseId\}/);
-assert.match(save,/records\.size==1|entries\.size==1/);
-assert.match(save,/LoadBasis\.MACHINE_STACK,LoadBasis\.CABLE_STACK/);
+assert.match(save,/CatalogPhysicalMachineEligibility\.eligibleExerciseIds\(source\.catalog\)/);
 assert.match(save,/EXERCISE_HAS_NO_MACHINE_STACK/);
 assert.match(save,/machineRosters\.save\(identity\.ownerKey/);
 assert.ok(save.indexOf('nativeMachineRosterSourceEligible(') <
@@ -27,7 +25,7 @@ assert.ok(save.indexOf('nativeMachineRosterSourceEligible(') <
 const adding=controller.slice(controller.indexOf('fun addPhysicalMachine('),
     controller.indexOf('/** Edits gym stock only'));
 assert.match(adding,/source\.catalog\.singleOrNull\{it\.exerciseId==exerciseId\}/);
-assert.match(adding,/LoadBasis\.MACHINE_STACK,LoadBasis\.CABLE_STACK/);
+assert.match(adding,/CatalogPhysicalMachineEligibility::eligible/);
 assert.doesNotMatch(adding,/require\(source\.catalog\.any/);
 
 assert.match(policy,/previous\.filter \{/);
@@ -44,7 +42,7 @@ assert.match(selection,/source\.catalog\.singleOrNull\{it\.exerciseId==exerciseI
 assert.match(selection,/EXERCISE_HAS_NO_MACHINE_STACK/);
 const addNow=host.slice(host.indexOf('fun addWorkoutPhysicalMachine('),
     host.indexOf('Read-only profile/settings summary',host.indexOf('fun addWorkoutPhysicalMachine(')));
-assert.match(addNow,/source\.catalog\.singleOrNull \{it\.exerciseId==exerciseId\}/);
+assert.match(addNow,/source\.catalog\.singleOrNull\s*\{it\.exerciseId==exerciseId\}/);
 assert.match(addNow,/EXERCISE_HAS_NO_MACHINE_STACK/);
 assert.ok(addNow.indexOf('source.catalog.singleOrNull') <
     addNow.indexOf('machineRosters.save(signed.ownerKey'),
@@ -64,8 +62,8 @@ assert.match(generated,/if\(exerciseId in eligibleMachineExercises\)/);
 // impossible when its picker has (correctly) been hidden.
 assert.match(generated,/val perSetMachineConfig=if\(set\.target\.exerciseId in eligibleMachineExercises\)/);
 assert.match(generated,/else null\s+val perSetMachineId=/);
-assert.match(panel,/val verifiedMachineIds=catalog\.groupBy/);
-assert.match(panel,/records\.size==1/);
+assert.match(panel,/val verifiedMachineIds=CatalogPhysicalMachineEligibility/);
+assert.match(panel,/\.eligibleExerciseIds\(catalog\)/);
 assert.match(panel,/ex\.exerciseId in verifiedMachineIds/);
 assert.match(panel,/it\.exerciseId in verifiedMachineIds/);
 assert.match(panel,/it\.exerciseId !in verifiedMachineIds/);

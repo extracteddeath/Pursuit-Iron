@@ -604,6 +604,43 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                                 style=MaterialTheme.typography.bodySmall)
                         }
                     }
+                    // Advanced techniques are NEVER switched on by
+                    // default. Show this control only for a source-reviewed,
+                    // eligible hypertrophy accessory in the exact preview.
+                    val myoChoice=review.prescription?.let {prescribed->
+                        state.source?.setup?.reviewed?.let {athleteSetup->
+                            CoachFirstProgramMyoFinisherDomain.recommend(
+                                prescribed.sessions,
+                                state.source?.catalog.orEmpty(),
+                                review.policy?.phase ?:state.phase,
+                                athleteSetup.experience)
+                        }
+                    }
+                    if(myoChoice!=null && state.savedProgramId==null) {
+                        HorizontalDivider()
+                        Text("Optional myo-reps finisher",
+                            style=MaterialTheme.typography.titleSmall)
+                        Text("Day ${myoChoice.dayIndex+1} · "+
+                            kotlinExerciseLabel(myoChoice.exerciseId)+
+                            " · final working set",
+                            style=MaterialTheme.typography.bodyMedium)
+                        FilterChip(
+                            selected=state.includeMyoFinisher,
+                            onClick={controller.chooseMyoFinisher(
+                                !state.includeMyoFinisher)},
+                            enabled=!state.busy,
+                            label={Text(if(state.includeMyoFinisher)
+                                "Remove optional myo-reps" else
+                                "Add one myo-reps finisher")}
+                        )
+                        Text("One hard activation set, then up to four "+
+                            "same-weight mini-sets targeting 4 reps with "+
+                            "20 seconds between. Stop early if you reach "+
+                            "3 reps, miss the floor or form declines. "+
+                            "The full session and cycle must remain feasible.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     if(state.canSaveDraft) {
                         Button(onClick={confirmingSave=true},
                             enabled=!state.busy,
@@ -645,7 +682,11 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
     if(confirmingSave)AlertDialog(
         onDismissRequest={if(!state.busy)confirmingSave=false},
         title={Text("Save this reviewed training draft?")},
-        text={Text("Save the displayed four-week first block, including its exact chosen weights, sets, reps and effort targets, as a new native program draft. This will not overwrite any previous program or issue a workout. You will review the complete cycle before training.")},
+        text={Text("Save the displayed four-week first block with its "+
+            "exact weights, sets, reps, effort targets"+
+            (if(state.includeMyoFinisher)" and one optional myo-reps finisher" else "")+
+            ". No earlier program is overwritten or workout issued. "+
+            "You will review the full cycle before training.")},
         confirmButton={Button(
             enabled=!state.busy && state.canSaveDraft,
             onClick={

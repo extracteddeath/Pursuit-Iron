@@ -423,7 +423,7 @@ object CustomWorkoutJournalDomain {
                     slot.sets.sumOf {set->
                         set.prescription.activeSeconds.toLong()+
                             set.prescription.restSeconds.toLong()+
-                            (set.prescription.amplifier?.followUpRestSeconds ?:0)
+                            (set.prescription.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)
                     }
                 }
                 if(duration !in 1L..10_000_000L)

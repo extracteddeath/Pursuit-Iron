@@ -42,7 +42,7 @@ assert.match(selection,/source\.catalog\.singleOrNull\{it\.exerciseId==exerciseI
 assert.match(selection,/EXERCISE_HAS_NO_MACHINE_STACK/);
 const addNow=host.slice(host.indexOf('fun addWorkoutPhysicalMachine('),
     host.indexOf('Read-only profile/settings summary',host.indexOf('fun addWorkoutPhysicalMachine(')));
-assert.match(addNow,/source\.catalog\.singleOrNull \{it\.exerciseId==exerciseId\}/);
+assert.match(addNow,/source\.catalog\.singleOrNull\s*\{it\.exerciseId==exerciseId\}/);
 assert.match(addNow,/EXERCISE_HAS_NO_MACHINE_STACK/);
 assert.ok(addNow.indexOf('source.catalog.singleOrNull') <
     addNow.indexOf('machineRosters.save(signed.ownerKey'),

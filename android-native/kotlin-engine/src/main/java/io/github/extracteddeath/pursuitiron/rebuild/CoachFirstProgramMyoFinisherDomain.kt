@@ -46,7 +46,8 @@ object CoachFirstProgramMyoFinisherDomain {
             if(session.purpose!=ComposerSessionPurpose.HYPERTROPHY)continue
             // A finisher follows the other work rather than interrupting
             // the week's primary or secondary strength practice.
-            for((index,exercise) in session.exercises.withIndex().reversed()) {
+            for(index in session.exercises.indices.reversed()) {
+                val exercise=session.exercises[index]
                 if(!stableStockedIsolation(exercise,byId[exercise.exerciseId]))
                     continue
                 val working=exercise.sets.withIndex()
@@ -57,7 +58,7 @@ object CoachFirstProgramMyoFinisherDomain {
                 val load=set.load as? DraftSetLoad.Verified ?:continue
                 if(load.value.signum()<=0 || set.targetReps.minimum<12 ||
                     set.targetReps.maximum>20 ||
-                    set.targetRir !in 1..2)continue
+                    (set.targetRir==null || set.targetRir !in 1..2))continue
                 // If a special back-off or different physical weight is
                 // already programmed, do not attach a same-load finisher.
                 if(working.any{it.value.load!=set.load})continue

@@ -209,16 +209,15 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
     @Test fun stagedRestPauseAndClustersRoundTripFullSnapshotsAndSwapsWithoutVersionDrift() {
         val legacy=fixture()
         val legacyBytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(legacy)
-        for((kind,reps,rest,rounds) in listOf(
-            listOf(CustomAmplifierKind.REST_PAUSE,3,20,3),
-            listOf(CustomAmplifierKind.CLUSTER,2,30,4))) {
-            val method=kind as CustomAmplifierKind
-            val count=reps as Int
-            val restSeconds=rest as Int
-            val planned=rounds as Int
+        for(new in listOf(
+            CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,3,20,
+                followUpActiveSeconds=60,followUpRounds=3),
+            CustomSetAmplifier(CustomAmplifierKind.CLUSTER,2,30,
+                followUpActiveSeconds=60,followUpRounds=4))) {
+            val method=new.kind
+            val restSeconds=new.followUpRestSeconds
+            val planned=new.followUpRounds
             val old=legacy.slots.last().sets.single().prescription.amplifier!!
-            val new=CustomSetAmplifier(method,count,restSeconds,
-                followUpActiveSeconds=60,followUpRounds=planned)
             val staged=legacy.copy(slots=legacy.slots.map{slot->
                 slot.copy(sets=slot.sets.map{set->
                     if(set.prescription.amplifier?.kind!=CustomAmplifierKind.MYO_REPS)set

@@ -11,6 +11,7 @@ class AdvancedAmplifierProtocolDomainTest {
         assertEquals(3..5, plan.followUpRounds)
         assertEquals(10..30, plan.intraSetRestSeconds)
         assertEquals(AmplifierLoadRule.SAME_LOAD, plan.loadRule)
+        assertTrue(plan.oneLine.contains("mini-sets"))
         assertTrue(plan.techniqueCue.contains("Stop"))
     }
 
@@ -46,6 +47,9 @@ class AdvancedAmplifierProtocolDomainTest {
         val cluster = AdvancedAmplifierProtocolDomain.template(CustomAmplifierKind.CLUSTER)
         assertEquals(AmplifierLoadRule.VERIFIED_REDUCED_LOAD, drop.loadRule)
         assertEquals(1..2, drop.followUpRounds)
+        assertTrue(drop.oneLine.contains("weight drops"))
+        assertFalse(drop.oneLine.contains("mini-sets"))
+        assertTrue(cluster.oneLine.contains("clusters"))
         assertEquals(0..15, drop.intraSetRestSeconds)
         assertEquals(AmplifierLoadRule.AUTHORED_LOAD, cluster.loadRule)
         assertTrue(cluster.techniqueCue.contains("unlike myo-reps"))

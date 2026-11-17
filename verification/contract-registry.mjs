@@ -78,6 +78,7 @@ export const contractGroups = Object.freeze({
         'm378-web-approved-regressions-test.mjs',
         'machine-instances-test.mjs',
         'b1012-machine-ab-discoverability-test.mjs',
+        'b1015-last-set-technique-machine-tool-test.mjs',
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
         'home-utility-owner-test.mjs',

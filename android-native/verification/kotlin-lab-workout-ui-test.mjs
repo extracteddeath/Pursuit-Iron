@@ -7,6 +7,24 @@ const read=p=>fs.readFileSync(p,'utf8');
 const journal=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 
+const bandGym=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt');
+const bandStock=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPhysicalStockDraft.kt');
+const bandRule=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/RatedResistanceBandDomain.kt');
+const bandComposer=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachExerciseCatalogDomain.kt');
+const bandPicker=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
+const bandCycle=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomTrainingCycleDomain.kt');
+assert.ok(bandGym.includes('selected?.equipmentId==RatedResistanceBandDomain.EQUIPMENT_ID'));
+assert.ok(bandGym.includes('it==PhysicalStockEditorKind.EXACT_LOADS'));
+assert.ok(bandGym.includes('RatedResistanceBandDomain.confirmedDiscreteStock(equipmentId,it)'));
+assert.ok(bandGym.includes('Tension varies with stretch'));
+assert.ok(bandStock.includes('"rated-resistance-band-set" -> "Resistance bands (manufacturer-rated, discrete)"'));
+assert.ok(bandRule.includes('stock !is VerifiedLoadStock.Totals'));
+assert.ok(bandRule.includes('stock.basis!=LoadBasis.EXERCISE_OVERRIDE'));
+assert.ok(bandComposer.includes('RatedResistanceBandDomain.confirmedDiscreteStock(spec.equipmentId,stock)'));
+assert.ok(bandPicker.includes('RatedResistanceBandDomain.confirmedDiscreteStock(move.equipmentId,stock)'));
+assert.ok(bandCycle.includes('RatedResistanceBandDomain.validForReviewedExercise('));
+
+
 // Staged rest-pause shares the same durable visit UI and revision-fenced
 // journal as myo-reps; technique choices cannot invent a performed set.
 const restPauseSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt');

@@ -68,7 +68,8 @@ object CoachFirstProgramDraftConversionDomain {
         curatedCatalog:List<CatalogMovement>,
         cycleId:String,
         title:String,
-        firstBlockWeeks:Int
+        firstBlockWeeks:Int,
+        includeMyoFinisher:Boolean=false
     ):FirstProgramDraftReview {
         fun reject(status:FirstProgramDraftStatus,message:String)=
             FirstProgramDraftReview(status,null,message)
@@ -101,6 +102,12 @@ object CoachFirstProgramDraftConversionDomain {
                 }} })
             return reject(FirstProgramDraftStatus.UNRESOLVED_PRESCRIPTION,
                 "The original generated exercise, muscle-dose, time or set review is incomplete.")
+        val finisher=if(includeMyoFinisher)
+            CoachFirstProgramMyoFinisherDomain.recommend(
+                prescribed.sessions,curatedCatalog,policy.phase,athlete.experience)
+                ?:return reject(FirstProgramDraftStatus.UNRESOLVED_PRESCRIPTION,
+                    "No reviewed stable isolation accessory with 12–20 reps and suitable effort is available for optional myo-reps.")
+        else null
         // A source-authored required PRIMARY visit may be a companion
         // skill sharing a session with the named main lift (e.g. ULPPL
         // squat + conventional deadlift). It must survive conversion into
@@ -123,11 +130,18 @@ object CoachFirstProgramDraftConversionDomain {
                         CustomExerciseSlot(
                             "first_${day.calendarDay}_${index}",
                             exercise.exerciseId,exercise.role,
-                            Collections.unmodifiableList(exercise.sets.map {set ->
+                            Collections.unmodifiableList(exercise.sets.mapIndexed {setIndex,set ->
                                 CustomAuthoredSet(
                                     set.type,set.load,set.targetReps,
                                     set.targetRir,set.activeSeconds,
-                                    set.restSeconds)
+                                    set.restSeconds,
+                                    amplifier=if(finisher?.dayIndex==session.dayIndex &&
+                                        finisher.exerciseIndex==index &&
+                                        finisher.exerciseId==exercise.exerciseId &&
+                                        finisher.setIndex==setIndex &&
+                                        finisher.setKey==set.stableSetKey)
+                                        CoachFirstProgramMyoFinisherDomain.prescribedTechnique()
+                                    else null)
                             }),
                             pinned=exercise.role==ComposerRole.PRIMARY &&
                                 (exercise.exerciseId in hardPinnedPrimaryIds ||
@@ -154,9 +168,23 @@ object CoachFirstProgramDraftConversionDomain {
         if(complete?.verifiedDraft==null)
             return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "The generated week did not pass the independent native custom-cycle inventory/structure review.")
+        if(includeMyoFinisher) {
+            val inputs=policyForInitialFullCycleReview(reviewed,setup)
+                ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                    "The original first-program coaching policy is unavailable.")
+            val audit=runCatching {
+                CustomCycleCoachAuditDomain.review(next,setup,curatedCatalog,inputs)
+            }.getOrNull()
+            if(audit?.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+                audit.issues.isNotEmpty())
+                return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                    "Optional myo-reps exceed the current full-cycle coaching, fatigue or session-time review; use straight sets instead.")
+        }
         return FirstProgramDraftReview(
             FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             next,
-            "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.")
+            if(includeMyoFinisher)
+                "Optional myo-reps on one reviewed accessory have passed the full-cycle audit. Explicit program approval and workout issuance are still required."
+            else "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.")
     }
 }

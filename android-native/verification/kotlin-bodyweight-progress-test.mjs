@@ -31,7 +31,7 @@ assert.match(panel,/if\(confirmed==owner\)store\.read\(owner\)/);
 assert.match(panel,/if\(confirmed!=selectedOwner\)NativeBodyweightWrite\.Rejected/);
 assert.match(panel,/if\(existing!=null\)pendingReplace=observation/);
 assert.match(panel,/pendingDelete=record\.date/);
-assert.match(panel,/NativeBodyweightLedgerDomain\.replace/); // through store only
+assert.match(panel,/store\.save\(selectedOwner,source\.ledger\.revision,/);
 assert.match(panel,/onUseForComparison\(record\.amount,record\.unit\)/);
 assert.match(panel,/Canvas\(Modifier\.fillMaxWidth\(\)\.height\(164\.dp\)/);
 assert.match(panel,/date\.toEpochDay\(\)\.toFloat\(\)-firstDay/);

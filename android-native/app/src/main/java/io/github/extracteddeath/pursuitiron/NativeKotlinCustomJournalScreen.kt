@@ -1830,14 +1830,8 @@ private fun NativeKotlinCustomVisitEditor(
                     part==CustomWorkoutVisitPart.FOLLOW_UP))
         }
         if(saved!=null){
-            Text("Recorded: ${saved.outcome.name.replace('_',' ').lowercase()}" +
-                (saved.performed?.let{" · ${it.reps} reps" +
-                    (it.load?.let{load->" at $load"} ?: "")+
-                    (it.actualRir?.let{rir->" · $rir RIR"} ?: " · RIR unreported")+
-                    (it.machineInstanceId?.let{machineId->
-                        workoutPhysicalStationName(exerciseId,issuedGymId,
-                            machineId,machineRoster)?.let{label->" · $label"}
-                    } ?: "")} ?: ""),
+            Text(nativeSavedSetCaption("Recorded",saved.outcome,saved.performed,
+                exerciseId,issuedGymId,machineRoster),
                 style=MaterialTheme.typography.bodyMedium)
             TextButton(enabled=!locked,onClick={editing=true},
                 modifier=Modifier.heightIn(min=48.dp)) {

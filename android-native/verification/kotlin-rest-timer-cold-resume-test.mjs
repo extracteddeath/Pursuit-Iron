@@ -12,7 +12,7 @@ const tests=readFileSync('android-native/app/src/test/java/io/github/extractedde
 assert.match(policy,/getSharedPreferences\("kotlin-workout-rest-v1",Context.MODE_PRIVATE\)/);
 assert.match(policy,/athleteId,workoutId/);
 assert.match(policy,/MessageDigest\.getInstance\("SHA-256"\)/);
-assert.match(policy,/System/); // Source has no time source: caller passes actual clock
+assert.doesNotMatch(policy,/SystemClock|System\.currentTimeMillis/); // Pure policy receives clock samples
 assert.match(policy,/remaining\(checkpoint,elapsed,wall\)/);
 assert.match(policy,/if\(elapsedAge>MAX_SECONDS\*1000L\+CLOCK_TOLERANCE_MILLIS\)return false/);
 assert.match(policy,/abs\(wallAge-elapsedAge\)<=CLOCK_TOLERANCE_MILLIS/);

@@ -2130,10 +2130,50 @@ object StarterExerciseTranche {
             "AD press on Smith uses a gym-confirmed incline Smith station and its separately calibrated total-weight convention; no free-bar or other Smith station weight transfer.",
             direct(TrainingMuscle.FRONT_DELTS),
             indirect(TrainingMuscle.TRICEPS,"0.25"))
+    ) + listOf(
+        // The active web roster also contains six resistance exercises whose
+        // old generic "bodyweight"/"dumbbell" tokens do not describe their
+        // actual loading implement. Correct those physical assumptions here.
+        // Every exercise ID/variant keeps independent history; stock is NEVER
+        // inferred from the name of another implement.
+        entry("dumbbell_crunch","trunk_flexion","single-dumbbell-crunch",
+            ComposerPattern.CORE,ComposerRole.ACCESSORY,all,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),8..30,
+            "Dumbbell crunch uses the weight of ONE individually verified dumbbell (not a two-dumbbell total). It is not the unweighted crunch and must have its own load and repetition history.",
+            direct(TrainingMuscle.ABS)),
+        entry("cable-radial-dev","wrist_deviation","cable-radial",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "cable-station",LoadBasis.CABLE_STACK,emptySet(),12..20,
+            "Cable radial deviation requires its own calibrated cable stack and explicitly athlete-confirmed handle. Forearm muscle allocation is provisional; never transfer a cable curl or wrist-extension weight.",
+            direct(TrainingMuscle.WRIST_EXTENSORS),
+            indirect(TrainingMuscle.WRIST_FLEXORS,"0.25")),
+        entry("hammer-radial-dev","wrist_deviation","lever-radial",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "wrist-lever-hammer",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
+            "A handheld lever hammer is NOT bodyweight-only despite legacy source equipment metadata. Only gym-confirmed physical lever resistance can be prescribed; radial and ulnar movement histories stay separate.",
+            direct(TrainingMuscle.WRIST_EXTENSORS),
+            indirect(TrainingMuscle.WRIST_FLEXORS,"0.25")),
+        entry("hammer-ulnar-dev","wrist_deviation","lever-ulnar",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "wrist-lever-hammer",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
+            "Ulnar deviation with a lever hammer requires personally verified resistance rather than invented bodyweight loading. This movement is not equivalent to the radial variation even on the same physical handle.",
+            direct(TrainingMuscle.WRIST_FLEXORS),
+            indirect(TrainingMuscle.WRIST_EXTENSORS,"0.25")),
+        entry("wrist-roller","wrist_roller","bidirectional-plate-winding",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "wrist-roller-handle",LoadBasis.EXERCISE_OVERRIDE,emptySet(),10..15,
+            "The old web record incorrectly lists wrist-roller as bodyweight. Require a verified actual plate-loaded roller handle; one repetition is a complete roll cycle with both directions and both forearm compartments tracked independently.",
+            direct(TrainingMuscle.WRIST_FLEXORS),
+            direct(TrainingMuscle.WRIST_EXTENSORS)),
+        entry("plate-front-raise","shoulder_flexion","single-weight-plate",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "single-weight-plate",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
+            "The legacy web record calls this a dumbbell, but the named movement uses a physical weight plate held with both hands. Require its own explicitly verified plate inventory; no free bar or dumbbell-rack load can be reused.",
+            direct(TrainingMuscle.FRONT_DELTS))
     )
 
     init {
-        require(definitions.size==337)
+        require(definitions.size==343)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

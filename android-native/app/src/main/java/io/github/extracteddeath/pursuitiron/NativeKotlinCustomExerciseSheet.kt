@@ -516,16 +516,19 @@ internal fun NativeKotlinCustomExerciseSheet(
                                         extraRounds = when(technique) {
                                             CustomAmplifierKind.MYO_REPS -> "5"
                                             CustomAmplifierKind.REST_PAUSE -> "2"
+                                            CustomAmplifierKind.CLUSTER -> "3"
                                             else -> "1"
                                         },
                                         extraReps = when(technique) {
                                             CustomAmplifierKind.MYO_REPS -> "4"
                                             CustomAmplifierKind.REST_PAUSE -> "3"
+                                            CustomAmplifierKind.CLUSTER -> "2"
                                             else -> fields.extraReps
                                         },
                                         extraRest = when(technique) {
                                             CustomAmplifierKind.MYO_REPS,
                                             CustomAmplifierKind.REST_PAUSE -> "20"
+                                            CustomAmplifierKind.CLUSTER -> "30"
                                             else -> fields.extraRest
                                         }
                                     ))
@@ -552,11 +555,13 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 Text(template.selectionCue,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (fields.amplifier == CustomAmplifierKind.MYO_REPS ||
-                                    fields.amplifier == CustomAmplifierKind.REST_PAUSE ||
-                                    fields.amplifier == CustomAmplifierKind.DROP_SET) {
-                                    Text("Myo-reps and rest-pause can log every short-rest " +
-                                        "effort separately. Weight drops still require a " +
+                                if (fields.amplifier in setOf(
+                                        CustomAmplifierKind.MYO_REPS,
+                                        CustomAmplifierKind.REST_PAUSE,
+                                        CustomAmplifierKind.DROP_SET,
+                                        CustomAmplifierKind.CLUSTER)) {
+                                    Text("Myo-reps, rest-pause and clusters log every planned " +
+                                        "effort separately. Weight drops require a " +
                                         "verified reduced load and one authored follow-up.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -565,28 +570,44 @@ internal fun NativeKotlinCustomExerciseSheet(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             AuthorNumberField(fields.extraReps,
-                                if(fields.amplifier == CustomAmplifierKind.MYO_REPS)
-                                    "Mini-set reps" else "Follow-up reps",
+                                when(fields.amplifier) {
+                                    CustomAmplifierKind.MYO_REPS -> "Mini-set reps"
+                                    CustomAmplifierKind.CLUSTER -> "Cluster reps"
+                                    else -> "Follow-up reps"
+                                },
                                 { update(fields.copy(extraReps = it)) },
                                 Modifier.weight(1f))
                             AuthorNumberField(fields.extraRest, "Intra-set rest (s)",
                                 { update(fields.copy(extraRest = it)) },
                                 Modifier.weight(1f))
                         }
-                        if(fields.amplifier==CustomAmplifierKind.MYO_REPS ||
-                            fields.amplifier==CustomAmplifierKind.REST_PAUSE) {
-                            val myo=fields.amplifier==CustomAmplifierKind.MYO_REPS
+                        if(fields.amplifier in setOf(
+                                CustomAmplifierKind.MYO_REPS,
+                                CustomAmplifierKind.REST_PAUSE,
+                                CustomAmplifierKind.CLUSTER)) {
+                            val kind=requireNotNull(fields.amplifier)
                             AuthorNumberField(fields.extraRounds,
-                                if(myo)"Max mini-sets (3–5)"
-                                else "Max rest-pause efforts (1–3)",
+                                when(kind) {
+                                    CustomAmplifierKind.MYO_REPS -> "Max mini-sets (3–5)"
+                                    CustomAmplifierKind.REST_PAUSE -> "Max rest-pause efforts (1–3)"
+                                    CustomAmplifierKind.CLUSTER -> "Planned clusters (2–5)"
+                                    else -> "Follow-up stages"
+                                },
                                 {update(fields.copy(extraRounds=it))},
                                 Modifier.fillMaxWidth())
-                            Text(if(myo)
-                                "Mini-sets use the same load. Log each one separately; " +
-                                    "stop when reps hit the planned floor or form deteriorates."
-                                else "Keep the same load and log each short-rest effort. " +
-                                    "Stop early if you miss the planned reps or form deteriorates; " +
-                                    "an unperformed effort is never recorded.",
+                            Text(when(kind) {
+                                CustomAmplifierKind.MYO_REPS ->
+                                    "Mini-sets use the same load. Log each separately; " +
+                                        "stop when reps reach the floor or form deteriorates."
+                                CustomAmplifierKind.REST_PAUSE ->
+                                    "Keep the same load and log each short-rest effort. " +
+                                        "Stop early if you miss reps or form deteriorates."
+                                CustomAmplifierKind.CLUSTER ->
+                                    "Planned submaximal quality reps, not a failure method. " +
+                                        "Use the same authored load and station for every cluster; " +
+                                        "stop on an unplanned rep count or deteriorating technique."
+                                else -> ""
+                            },
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }

@@ -1213,6 +1213,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
+                                workoutId=workoutId,
+                                athleteId=current.originalSnapshot.stamp.athleteId,
                                 exerciseId=slot.exerciseId,
                                 issuedGymId=current.originalSnapshot.stamp.gymId,
                                 machineRoster=machineRoster,
@@ -1279,6 +1281,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                             ?.performed?.machineInstanceId
                                     else if(main!=null)main.performed?.machineInstanceId
                                     else selectedMachineId,
+                                    workoutId=workoutId,
+                                    athleteId=current.originalSnapshot.stamp.athleteId,
                                     exerciseId=slot.exerciseId,
                                     issuedGymId=current.originalSnapshot.stamp.gymId,
                                     machineRoster=machineRoster,
@@ -1627,6 +1631,8 @@ private fun NativeKotlinCustomVisitEditor(
     saving:Boolean,
     saveError:String?,
     machineInstanceId:String?,
+    workoutId:String,
+    athleteId:String,
     exerciseId:String,
     issuedGymId:String?,
     machineRoster:NativeMachineRosterSnapshot?,
@@ -1667,25 +1673,29 @@ private fun NativeKotlinCustomVisitEditor(
             reveal.bringIntoView()
         }
     }
-    // These values are editable targets, NEVER synthesized performed facts.
-    // They become recorded actuals only after the athlete taps Complete.
-    var actualReps by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
-        mutableStateOf(saved?.performed?.reps?.toString() ?:
+    // A/B and exercise/day/source identity are pinned to the immutable
+    // ISSUED workout. This private entry cannot issue prescriptions, save
+    // observations or authorize a future session after cold restart.
+    val expectedReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+        follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
+    else prescription.reps
+    val draftIdentity=NativePendingWorkoutDraftIdentity.make(
+        athleteId,workoutId,issuedGymId.orEmpty(),exerciseId,
+        set.setKey,part.name,machineInstanceId,target,expectedReps,
+        if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
+    val draftBaseline=NativePendingWorkoutDraft(
+        initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
+        saved?.performed?.reps?.toString() ?:
             (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
                 follower?.followUpReps else prescription.reps.minimum)
-                ?.toString().orEmpty())
-    }
-    // A/B station changes invalidate only this unsaved editor baseline,
-    // never the issued prescription or a durable actual. No asynchronous
-    // effect may erase an in-progress athlete edit during recomposition.
-    var actualLoad by rememberSaveable(
-        set.setKey,part.name,existing?.appliedRevision,machineInstanceId
-    ) {
-        mutableStateOf(initialMachineScopedLoad(target,saved?.performed,machineInstanceId))
-    }
-    var actualRir by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
-        mutableStateOf(saved?.performed?.actualRir?.toString().orEmpty())
-    }
+                ?.toString().orEmpty(),
+        saved?.performed?.actualRir?.toString().orEmpty())
+    val draftEditor=rememberNativePendingWorkoutDraftEditor(
+        draftIdentity,existing!=null,existing?.appliedRevision?.toString(),
+        draftBaseline)
+    val actualLoad=draftEditor.load
+    val actualReps=draftEditor.reps
+    val actualRir=draftEditor.rir
     var appliedLevelVersion by rememberSaveable(
         set.setKey,part.name,existing?.appliedRevision,machineInstanceId
     ) {mutableIntStateOf(-1)}
@@ -1694,8 +1704,7 @@ private fun NativeKotlinCustomVisitEditor(
         if(part==CustomWorkoutVisitPart.MAIN && saved==null &&
             prescription.type==DraftSetType.WORKING && draft!=null &&
             appliedLevelVersion!=draft.version) {
-            actualLoad=draft.weight
-            actualReps=draft.reps.toString()
+            draftEditor.update(load=draft.weight,reps=draft.reps.toString())
             // Preserve entered actual RIR, which Leveling never owns.
             appliedLevelVersion=draft.version
         }
@@ -1720,6 +1729,15 @@ private fun NativeKotlinCustomVisitEditor(
     val entryFields:@Composable ()->Unit={
             Text("Edit the values to match your set. Blank RIR stays unreported.",
                 style=MaterialTheme.typography.bodySmall)
+            if(existing==null && draftEditor.recovered) {
+                Text("Recovered an unfinished entry for this exact workout and "+
+                    "machine. It has NOT been logged.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick={draftEditor.discard()},enabled=!locked) {
+                    Text("Discard recovered entry")
+                }
+            }
             if(saved==null) PursuitUseLastCompletedSet(
                 mode=referenceMode,
                 history=physicalMachineLastReferences(lastReferences,machineInstanceId),
@@ -1728,9 +1746,10 @@ private fun NativeKotlinCustomVisitEditor(
                 currentLoad=target,
                 enabled=!locked,
                 onApply={last->
-                    actualLoad=last.load?.stripTrailingZeros()?.toPlainString().orEmpty()
-                    actualReps=last.reps.toString()
-                    actualRir=last.actualRir?.toString().orEmpty()
+                    draftEditor.update(
+                        load=last.load?.stripTrailingZeros()?.toPlainString().orEmpty(),
+                        reps=last.reps.toString(),
+                        rir=last.actualRir?.toString().orEmpty())
                 }
             )
             NativeSetValueFields(
@@ -1739,9 +1758,9 @@ private fun NativeKotlinCustomVisitEditor(
                 reps=actualReps,
                 rir=actualRir,
                 enabled=!locked,
-                onLoad={actualLoad=it},
-                onReps={actualReps=it},
-                onRir={actualRir=it},
+                onLoad={draftEditor.update(load=it)},
+                onReps={draftEditor.update(reps=it)},
+                onRir={draftEditor.update(rir=it)},
                 showLoad=verified!=null,
                 loadError=actualLoad.isNotBlank() && invalid in setOf(
                     KotlinSetEntryRefusal.MISSING_WEIGHT,KotlinSetEntryRefusal.INVALID_WEIGHT),

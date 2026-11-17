@@ -212,12 +212,17 @@ assert.ok(!header.includes('onClick=onSkip,enabled=enabled,modifier=Modifier.fil
   'All actions must retain their own accessible 48dp touch targets');
 
 
-assert.match(journal,/var actualRir by rememberSaveable\(set.setKey,part.name,existing\?\.appliedRevision\) \{\s*mutableStateOf\(saved\?\.performed\?\.actualRir\?\.toString\(\)\.orEmpty\(\)\)/,
-  'Unknown actual RIR must remain unreported, never copied from the target');
-assert.ok(journal.includes('var actualLoad by rememberSaveable(') &&
-  journal.includes('set.setKey,part.name,existing?.appliedRevision,machineInstanceId') &&
-  journal.includes('var actualReps by rememberSaveable(set.setKey,part.name,existing?.appliedRevision)'),
-  'Uncommitted edit fields must survive configuration changes and remain machine-scoped');
+const localDrafts=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPendingWorkoutDrafts.kt');
+assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') &&
+  localDrafts.includes('val rir=rememberSaveable(identity.value,receiptRevision)') &&
+  localDrafts.includes('if(committed)null else store.read(identity)'),
+  'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
+assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
+  journal.includes('set.setKey,part.name,machineInstanceId,target,expectedReps,') &&
+  localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&
+  localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision)') &&
+  localDrafts.includes('if(committed)store.discard(identity)'),
+  'Uncommitted edit fields must survive configuration and cold reopen while remaining machine- and receipt-scoped');
 assert.match(journal,/onRecord\(KotlinJournalSetOutcome.COMPLETED,\s*actual\)/,
   'Actual set writing must require an explicit Complete action');
 assert.ok(journal.includes('KotlinWorkoutEntryDomain.parse(target,actualLoad,actualReps,actualRir)') &&
@@ -669,17 +674,18 @@ assert.ok(composer.includes('NativeKotlinExerciseHistorySheet(host,exerciseId,')
   composer.includes('PursuitExerciseHeading(target.exerciseId,') &&
   composer.includes('onHistory=onHistory,onInfo=onInfo'),
   'Generated workout must open the same verified full exercise history');
-assert.ok(composer.includes('rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision)') &&
-  composer.includes('?:target.reps.minimum.toString()') &&
+assert.ok(composer.includes('val draftBaseline=NativePendingWorkoutDraft(') &&
+  composer.includes('target.reps.minimum.toString()') &&
   composer.includes('existing?.actualRir?.toString().orEmpty()') &&
+  composer.includes('draftIdentity,set.isResolved,set.currentReceipt?.appliedRevision?.toString()') &&
   composer.includes('Planned reps and load are editable starting points'),
-  'Composer must prefill editable reps, preserve unknown RIR, and refresh a saved correction');
+  'Composer must prefill editable reps, preserve unknown RIR, and refresh after a saved receipt');
 const sharedSetFields=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeComponents.kt');
 assert.ok(journal.includes('NativeSetValueFields(') &&
   journal.includes('showLoad=verified!=null') &&
-  journal.includes('onLoad={actualLoad=it}') &&
-  journal.includes('onReps={actualReps=it}') &&
-  journal.includes('onRir={actualRir=it}') &&
+  journal.includes('onLoad={draftEditor.update(load=it)}') &&
+  journal.includes('onReps={draftEditor.update(reps=it)}') &&
+  journal.includes('onRir={draftEditor.update(rir=it)}') &&
   journal.includes('loadError=actualLoad.isNotBlank() && invalid in setOf(') &&
   journal.includes('rirError=invalid==KotlinSetEntryRefusal.INVALID_RIR') &&
   journal.includes('val actual=(entry as? KotlinSetEntryResult.Accepted)?.performed') &&
@@ -687,9 +693,9 @@ assert.ok(journal.includes('NativeSetValueFields(') &&
   'Custom workout must share bodyweight-aware stepper fields while retaining explicit complete, skip, failed and corrected history outcomes');
 assert.ok(composer.includes('NativeSetValueFields(') &&
   composer.includes('showLoad=verifiedLoad!=null') &&
-  composer.includes('onLoad={weight=it}') &&
-  composer.includes('onReps={reps=it}') &&
-  composer.includes('onRir={effort=it}') &&
+  composer.includes('onLoad={draftEditor.update(load=it)}') &&
+  composer.includes('onReps={draftEditor.update(reps=it)}') &&
+  composer.includes('onRir={draftEditor.update(rir=it)}') &&
   sharedSetFields.includes('showLoad:Boolean=true') &&
   sharedSetFields.includes('if(showLoad)OutlinedTextField(') &&
   sharedSetFields.includes('NativeSetCounterField(') &&
@@ -894,10 +900,10 @@ assert.match(lastPicker,/Missing last RIR stays blank/);
 assert.match(lastPicker,/heightIn\(min=48\.dp\)/);
 assert.match(composer,/if\(!set\.isResolved\) PursuitUseLastCompletedSet\(/);
 assert.match(composer,/key=WorkoutReferenceKey\(target\.setKey\)/);
-assert.match(composer,/effort=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
+assert.match(composer,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
 assert.match(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
 assert.match(journal,/part==CustomWorkoutVisitPart\.FOLLOW_UP\)/);
-assert.match(journal,/actualRir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
+assert.match(journal,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
 const lastHelper=lastPicker.slice(
     lastPicker.indexOf('internal fun PursuitUseLastCompletedSet('),
     lastPicker.indexOf('internal fun kotlinLoadBasisLabel('));

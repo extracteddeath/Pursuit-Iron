@@ -906,6 +906,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         "The correction was not saved. Review the saved set and retry."
                     } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
+                    athleteId=journal?.snapshot?.source?.athleteId.orEmpty(),
+                    workoutId=workoutId,
                     issuedGymId=issuedGymId,machineRoster=machineRoster,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     onCurrentDraftChanged={load,reps->
@@ -1278,6 +1280,8 @@ private fun NativeKotlinSetCard(
     busy:Boolean,
     saveError:String?,
     machineInstanceId:String?,
+    athleteId:String,
+    workoutId:String,
     issuedGymId:String?,
     machineRoster:NativeMachineRosterSnapshot?,
     referenceMode:WorkoutReferenceMode,
@@ -1296,21 +1300,22 @@ private fun NativeKotlinSetCard(
 ) {
     val target=set.target
     val existing=set.actual
-    // Key the unsaved editor to its PHYSICAL station. Selecting B must never
-    // carry an A load into a new attempt, while a redraw of A cannot blank
-    // a value the athlete has already typed.
-    var weight by rememberSaveable(
-        target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId
-    ) {
-        mutableStateOf(initialMachineScopedLoad(target.load,existing,machineInstanceId))
-    }
-    var reps by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
-        mutableStateOf(existing?.reps?.toString()
-            ?:target.reps.minimum.toString())
-    }
-    var effort by rememberSaveable(target.setKey,set.currentReceipt?.appliedRevision){
-        mutableStateOf(existing?.actualRir?.toString().orEmpty())
-    }
+    // The independently verified workout/set/station defines the exact
+    // private UI draft identity. Recovered values remain UNLOGGED input until
+    // the athlete taps Complete; a saved receipt always wins over the draft.
+    val draftIdentity=NativePendingWorkoutDraftIdentity.make(
+        athleteId,workoutId,issuedGymId.orEmpty(),target.exerciseId,
+        target.setKey,"MAIN",machineInstanceId,target.load,target.reps,target.targetRir)
+    val draftBaseline=NativePendingWorkoutDraft(
+        initialMachineScopedLoad(target.load,existing,machineInstanceId),
+        existing?.reps?.toString() ?: target.reps.minimum.toString(),
+        existing?.actualRir?.toString().orEmpty())
+    val draftEditor=rememberNativePendingWorkoutDraftEditor(
+        draftIdentity,set.isResolved,set.currentReceipt?.appliedRevision?.toString(),
+        draftBaseline)
+    val weight=draftEditor.load
+    val reps=draftEditor.reps
+    val effort=draftEditor.rir
     var appliedLevelVersion by rememberSaveable(
         target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId
     ) {mutableIntStateOf(-1)}
@@ -1321,8 +1326,7 @@ private fun NativeKotlinSetCard(
         val draft=levelingDraft
         if(draft!=null && !set.isResolved &&
             appliedLevelVersion!=draft.version) {
-            weight=draft.weight
-            reps=draft.reps.toString()
+            draftEditor.update(load=draft.weight,reps=draft.reps.toString())
             // Leveling changes only the entered load and reps, not actual RIR.
             appliedLevelVersion=draft.version
         }
@@ -1358,6 +1362,15 @@ private fun NativeKotlinSetCard(
         else "Planned reps and load are editable starting points, not logged actuals. Leave actual RIR blank if unknown.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(!set.isResolved && draftEditor.recovered) {
+            Text("Recovered an unfinished entry for this exact workout and "+
+                "machine. It has NOT been logged.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick={draftEditor.discard()},enabled=!busy) {
+                Text("Discard recovered entry")
+            }
+        }
         // Reuse the same keyboard and 48dp rep/RIR stepper controls as
         // other native set editors. No inferred load increments, no
         // transfer of target RIR into reported actual effort.
@@ -1370,9 +1383,10 @@ private fun NativeKotlinSetCard(
             onApply={last->
                 // Last is already source verified for the exact set and load
                 // basis; these are UNSAVED draft fields, not progression.
-                weight=last.load?.stripTrailingZeros()?.toPlainString().orEmpty()
-                reps=last.reps.toString()
-                effort=last.actualRir?.toString().orEmpty()
+                draftEditor.update(
+                    load=last.load?.stripTrailingZeros()?.toPlainString().orEmpty(),
+                    reps=last.reps.toString(),
+                    rir=last.actualRir?.toString().orEmpty())
             }
         )
         NativeSetValueFields(
@@ -1381,9 +1395,9 @@ private fun NativeKotlinSetCard(
             reps=reps,
             rir=effort,
             enabled=!busy,
-            onLoad={weight=it},
-            onReps={reps=it},
-            onRir={effort=it},
+            onLoad={draftEditor.update(load=it)},
+            onReps={draftEditor.update(reps=it)},
+            onRir={draftEditor.update(rir=it)},
             showLoad=verifiedLoad!=null,
             allowFailedAttempt=existing?.reps==0,
             showFieldHelp=false

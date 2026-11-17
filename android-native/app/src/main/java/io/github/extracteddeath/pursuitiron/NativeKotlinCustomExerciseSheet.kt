@@ -509,12 +509,42 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 onClick = {
                                     update(fields.copy(amplifier = technique))
                                 },
-                                label = { Text(technique.name.replace('_', ' ').lowercase()) })
+                                label = { Text(AdvancedAmplifierProtocolDomain.template(technique).title) })
                         }
                     }
                     if (fields.amplifier != null) {
+                        val template = AdvancedAmplifierProtocolDomain.template(
+                            requireNotNull(fields.amplifier))
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
+                                verticalArrangement = Arrangement.spacedBy(PursuitSpace.xs)) {
+                                Text(template.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary)
+                                Text(template.oneLine,
+                                    style = MaterialTheme.typography.labelLarge)
+                                Text(template.techniqueCue,
+                                    style = MaterialTheme.typography.bodySmall)
+                                Text(template.selectionCue,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (fields.amplifier == CustomAmplifierKind.MYO_REPS ||
+                                    fields.amplifier == CustomAmplifierKind.DROP_SET) {
+                                    Text("Current custom workouts save one follow-up entry. " +
+                                        "Multi-stage logging is not yet supported; " +
+                                        "these are protocol guidelines, not recorded rounds.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AuthorNumberField(fields.extraReps, "Follow-up reps",
+                            AuthorNumberField(fields.extraReps,
+                                if(fields.amplifier == CustomAmplifierKind.MYO_REPS)
+                                    "Mini-set reps" else "Follow-up reps",
                                 { update(fields.copy(extraReps = it)) },
                                 Modifier.weight(1f))
                             AuthorNumberField(fields.extraRest, "Intra-set rest (s)",

@@ -21,11 +21,12 @@ class CustomWorkoutExecutionDomainTest {
             1,1,"base",TrainingPhase.HYPERTROPHY,CustomBlockPurpose.TRAINING,
             CustomSplitIdentity.Freeform("Custom"),0,"Upper",
             ComposerSessionPurpose.HYPERTROPHY,slots.toList(),1000,null),"a".repeat(64))
-    private fun visit(key:String,part:CustomWorkoutVisitPart=CustomWorkoutVisitPart.MAIN)=CustomWorkoutVisitKey(key,part)
+    private fun visit(key:String,part:CustomWorkoutVisitPart=CustomWorkoutVisitPart.MAIN,
+        stage:Int=1)=CustomWorkoutVisitKey(key,part,stage)
     private fun record(j:CustomWorkoutJournalDraft,key:String,
         part:CustomWorkoutVisitPart=CustomWorkoutVisitPart.MAIN,
         outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
-        corrects:String?=null):CustomWorkoutJournalDraft {
+        corrects:String?=null,stage:Int=1,reps:Int=8):CustomWorkoutJournalDraft {
         val set=j.snapshot.slots.flatMap{it.sets}.single{it.setKey==key}
         val load=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
             set.prescription.amplifier?.followUpLoad ?:set.prescription.load
@@ -33,10 +34,10 @@ class CustomWorkoutExecutionDomainTest {
         val verified=load as? DraftSetLoad.Verified
         val actual=if(outcome==KotlinJournalSetOutcome.SKIPPED)null
             else KotlinPerformedSet(verified?.value,verified?.unit,
-                if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)0 else 8,
+                if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)0 else reps,
                 if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)null else 2)
         val operation=CustomWorkoutJournalOperation.Record("event-${j.revision}",j.revision,
-            visit(key,part),outcome,actual,corrects)
+            visit(key,part,stage),outcome,actual,corrects)
         return (CustomWorkoutJournalDomain.reduce(j,operation) as CustomWorkoutJournalDecision.Proposed).draft
     }
     private fun next(j:CustomWorkoutJournalDraft)=CustomWorkoutJournalDomain.nextUnresolvedVisit(j)
@@ -226,6 +227,87 @@ class CustomWorkoutExecutionDomainTest {
         assertTrue(saved.canProposeFinish)
         assertEquals(4,saved.effectiveVisits.size)
         assertNull(WorkoutRemainingExerciseDomain.custom(saved.copy(finishedByEventId="finish"),"a"))
+    }
+
+    @Test fun myoMiniSetsAreSavedOneAtATimeAndStopAtThreeReps() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+            5,20,null,100,5)
+        var j=initial(slot("myo",1,null,amplifier=amp),
+            slot("later",1,null))
+        assertEquals(visit("myo:s1"),next(j))
+        j=record(j,"myo:s1",reps=14)
+        for((index,reps) in listOf(5,5,4,3).withIndex()) {
+            val stage=index+1
+            assertEquals(visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage),next(j))
+            assertEquals(20,rest(j).automaticCue?.seconds)
+            j=record(j,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                stage=stage,reps=reps)
+        }
+        // The fifth mini-set is not manufactured after an early floor.
+        assertEquals(visit("later:s1"),next(j))
+        assertEquals(90,rest(j).automaticCue?.seconds)
+        assertEquals(5,j.effectiveVisits.size)
+        assertEquals(4,CustomWorkoutVisitFocusDomain.progress(j).recordedFollowUps)
+        assertEquals(4,CustomWorkoutVisitFocusDomain.progress(j).requiredFollowUps)
+        assertEquals(4,j.receipts.count {
+            (it.operation as? CustomWorkoutJournalOperation.Record)
+                ?.visit?.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+        assertEquals(listOf(5,5,4,3),
+            j.effectiveVisits.filterKeys{
+                it.setKey=="myo:s1" && it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            }.values.map {
+                ((it.operation as CustomWorkoutJournalOperation.Record).performed!!.reps)
+            })
+    }
+
+    @Test fun myoResumesAtNextUnrecordedStageAndDoesNotForceAfterShortfall() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=5)
+        var j=initial(slot("myo",1,null,amplifier=amp))
+        j=record(j,"myo:s1",reps=16)
+        j=record(j,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=4)
+        assertEquals(visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
+        // A cold replay reconstructs this same immutable receipt sequence.
+        var replay=CustomWorkoutJournalDomain.begin(j.workoutId,j.originalSnapshot,
+            j.preparedConsentFingerprint)
+        for(receipt in j.receipts) {
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        assertEquals(j,replay)
+        replay=record(replay,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=2,reps=2)
+        assertTrue(replay.canProposeFinish)
+        assertEquals(2,replay.effectiveVisits.keys.count {
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+        assertNull(next(replay))
+    }
+
+    @Test fun futureMyoStageCannotBeRecordedOutOfOrderOrCorrectedAcrossDependents() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=5)
+        var j=initial(slot("myo",1,null,amplifier=amp))
+        j=record(j,"myo:s1")
+        val invalid=CustomWorkoutJournalOperation.Record("future",j.revision,
+            visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,3),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,4,2))
+        assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+            (CustomWorkoutJournalDomain.reduce(j,invalid)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        j=record(j,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=4)
+        j=record(j,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=2,reps=4)
+        val old=j.effectiveVisits.getValue(
+            visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,1))
+        val revise=CustomWorkoutJournalOperation.Record("rewrite",j.revision,
+            visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2),
+            old.operation.eventId)
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(j,revise)
+                as CustomWorkoutJournalDecision.Rejected).reason)
     }
 
 }

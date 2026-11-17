@@ -57,7 +57,10 @@ object WorkoutMachineLastPreviewDomain {
             return WorkoutMachineLastPreview.Unavailable
         return when(latest.outcome) {
             KotlinJournalSetOutcome.COMPLETED ->
-                if(actual==null || actual.reps<1)
+                if(actual==null || actual.reps<1 || actual.load==null ||
+                    actual.unit==null)
+                    // A physical stack has a real load and unit. Never
+                    // display an unverified 'bodyweight' station baseline.
                     WorkoutMachineLastPreview.Unavailable
                 else WorkoutMachineLastPreview.Completed(
                     actual.load,actual.unit,actual.reps,

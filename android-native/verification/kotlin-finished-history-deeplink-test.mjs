@@ -21,6 +21,7 @@ assert.match(history,/verified\?\.completions\?\.singleOrNull/);
 assert.match(history,/if\(preferredWorkoutId!=null\)visibleSessions/);
 assert.match(history,/if\(entry\.manifest\.workoutId==focusedWorkoutId\)\s*expanded=true/);
 assert.match(history,/Show all workout history/);
+assert.match(history,/if\(preferredWorkoutId!=null\)historyListState\.scrollToItem\(0\)/);
 assert.match(policy,/verifiedWorkoutIds\.count \{ verified->verified==it \}==1/);
 assert.match(workflow,/node android-native\/verification\/kotlin-finished-history-deeplink-test\.mjs/);
 for(const name of [

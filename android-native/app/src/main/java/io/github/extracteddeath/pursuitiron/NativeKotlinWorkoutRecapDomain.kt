@@ -27,7 +27,11 @@ internal data class NativeKotlinWorkoutRecap(
     val completedAmplifiers:Int,
     val skippedOther:Int,
     val failedOther:Int,
-    val exercises:List<NativeKotlinRecapExercise>
+    val exercises:List<NativeKotlinRecapExercise>,
+    // Only an independently owner-verified, corrected History completion can
+    // attach this canonical performance evidence. Structural-only summaries
+    // never manufacture RIR or target-range adherence.
+    val performance:KotlinHistoryPerformanceSummary?=null
 ) {
     val totalRecordedVisits:Int get()=
         completedMain+skippedMain+failedMain+
@@ -43,6 +47,14 @@ internal object NativeKotlinWorkoutRecapDomain {
     fun fromVerifiedCompletion(
         completion:NativeKotlinMixedHistoryCompletion
     ):NativeKotlinWorkoutRecap? {
+        val performance=when(completion) {
+            is NativeKotlinMixedHistoryCompletion.Composer ->
+                KotlinHistoryPerformanceSummaryDomain.fromComposer(
+                    completion.evidence.sets)
+            is NativeKotlinMixedHistoryCompletion.Custom ->
+                KotlinHistoryPerformanceSummaryDomain.fromCustom(
+                    completion.evidence.visits)
+        }
         val rows=when(completion) {
             is NativeKotlinMixedHistoryCompletion.Composer ->
                 completion.evidence.sets.map {
@@ -56,7 +68,29 @@ internal object NativeKotlinWorkoutRecapDomain {
                         it.part==CustomWorkoutVisitPart.FOLLOW_UP,it.outcome)
                 }
         }
-        return summarize(rows)
+        return summarize(rows)?.let { attachVerifiedPerformance(it,performance) }
+    }
+
+    /**
+     * Reconcile the existing one-authority Kotlin History performance count
+     * with the separate presentation-only warm-up / follow-up inventory.
+     * A mismatch refuses the recap rather than publishing conflicting stats.
+     */
+    internal fun attachVerifiedPerformance(
+        summary:NativeKotlinWorkoutRecap,
+        canonical:KotlinHistoryPerformanceSummary
+    ):NativeKotlinWorkoutRecap? {
+        if(canonical.workingSets!=
+                summary.completedMain+summary.skippedMain+summary.failedMain ||
+            canonical.completedWorkingSets!=summary.completedMain ||
+            canonical.skippedWorkingSets!=summary.skippedMain ||
+            canonical.failedWorkingSets!=summary.failedMain ||
+            canonical.completedFollowUpVisits!=summary.completedAmplifiers ||
+            summary.exercises.sumOf{it.completedMain}!=summary.completedMain ||
+            summary.exercises.sumOf{it.skippedMain}!=summary.skippedMain ||
+            summary.exercises.sumOf{it.failedMain}!=summary.failedMain)
+            return null
+        return summary.copy(performance=canonical)
     }
 
     fun summarize(rows:List<NativeKotlinRecapVisit>):NativeKotlinWorkoutRecap? {

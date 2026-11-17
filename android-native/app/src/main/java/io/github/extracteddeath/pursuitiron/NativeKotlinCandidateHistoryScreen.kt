@@ -400,13 +400,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             Text("${performance.skippedWorkingSets} skipped · ${performance.failedWorkingSets} failed attempts",
                                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                                 style=MaterialTheme.typography.bodySmall)
-                        if(performance.completedWorkingSets>0) {
-                            Text("Reps: ${performance.repsWithinRange} within target · ${performance.repsBelowMinimum} below · ${performance.repsAboveMaximum} above",
-                                style=MaterialTheme.typography.bodySmall)
-                            Text("Actual RIR recorded: ${performance.actualRirReportedWorkingSets} of ${performance.completedWorkingSets} completed working sets",
-                                color=MaterialTheme.colorScheme.onSurfaceVariant,
-                                style=MaterialTheme.typography.bodySmall)
-                        }
+                        NativeKotlinPerformanceEvidenceLines(performance)
                         if(performance.followUpVisits>0)
                             Text("Amplifier follow-ups: ${performance.completedFollowUpVisits} of ${performance.followUpVisits} completed (not counted as main sets)",
                                 style=MaterialTheme.typography.bodySmall)

@@ -286,8 +286,7 @@ export const browserShards = Object.freeze({
 });
 
 export const releaseTests = Object.freeze([
-    'm223-icon-update-test.mjs',
-    'machine-instances-release-test.mjs'
+    'm223-icon-update-test.mjs'
 ]);
 
 const specialExecutableFiles = new Set([

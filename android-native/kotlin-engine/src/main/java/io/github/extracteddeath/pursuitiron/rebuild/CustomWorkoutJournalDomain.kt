@@ -255,7 +255,8 @@ object CustomWorkoutJournalDomain {
                         if(main!=null && target.prescription.amplifier?.let{
                                 (it.kind==CustomAmplifierKind.LENGTHENED_PARTIALS ||
                                  it.followUpRounds>1 &&
-                                    (it.kind==CustomAmplifierKind.MYO_REPS ||
+                                    (it.kind==CustomAmplifierKind.DROP_SET ||
+                                     it.kind==CustomAmplifierKind.MYO_REPS ||
                                      it.kind==CustomAmplifierKind.REST_PAUSE ||
                                      it.kind==CustomAmplifierKind.CLUSTER))
                             }==true && nextEffective.keys.any {
@@ -318,7 +319,8 @@ object CustomWorkoutJournalDomain {
                                 main.performed.machineInstanceId))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_ACTUAL)
-                        amp.followUpLoad ?:target.prescription.load
+                        AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                            amp,target.prescription.load,operation.visit.stage)
                     }
                 }
                 if(!actualValid(plan,operation.outcome,operation.performed))

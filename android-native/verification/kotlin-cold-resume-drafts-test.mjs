@@ -31,7 +31,8 @@ assert.match(generated,/Recovered an unfinished entry/);
 assert.match(generated,/Discard recovered entry/);
 
 assert.match(custom,/athleteId=current\.originalSnapshot\.stamp\.athleteId/);
-assert.match(custom,/part\.name,machineInstanceId,target,expectedReps/);
+assert.ok(custom.includes('part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps'),
+  'Distinct myo mini-sets must never alias cold-recovered drafts');
 assert.match(custom,/draftIdentity,existing!=null,existing\?\.appliedRevision/);
 assert.match(custom,/draftEditor\.update\(load=it\)/);
 assert.match(custom,/draftEditor\.update\(reps=it\)/);

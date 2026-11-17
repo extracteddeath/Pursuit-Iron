@@ -28,7 +28,7 @@ internal class NativeKotlinPhysicalStockDraftTest:NativeKotlinProgramFilesFixtur
             Triple("wrist-roller-handle","Wrist roller (verified added load)",
                 setOf("Wrist Roller")),
             Triple("single-weight-plate","Individual weight plate",
-                setOf("Plate Front Raise"))
+                setOf("Plate Front Raise","Svend Press"))
         )) {
             val verified=checkNotNull(choice[id])
             assertEquals(label,verified.displayName)

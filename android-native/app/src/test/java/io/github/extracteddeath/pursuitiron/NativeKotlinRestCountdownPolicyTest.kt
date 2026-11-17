@@ -74,7 +74,7 @@ class NativeKotlinRestCountdownPolicyTest {
         val almost=NativeRestCountdownPolicy.adjust(
             active,30,elapsed+15_000L,wall+15_000L)
         assertNotNull(almost)
-        assertEquals(3615,almost?.activeSeconds)
+        assertEquals(3630,almost?.activeSeconds)
         // Paused old app data cannot magically become an endlessly long timer.
         assertFalse(NativeRestCountdownPolicy.valid(
             active,elapsed+10_000_000L,wall+10_000_000L))

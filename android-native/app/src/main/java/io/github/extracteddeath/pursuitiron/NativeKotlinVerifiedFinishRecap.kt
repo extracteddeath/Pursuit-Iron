@@ -104,6 +104,9 @@ internal fun NativeKotlinVerifiedFinishRecap(
                     "Working sets" to summary.completedMain.toString(),
                     "Skipped" to summary.skippedMain.toString(),
                     "Failed" to summary.failedMain.toString()))
+                summary.performance?.let { verified ->
+                    NativeKotlinPerformanceEvidenceLines(verified)
+                }
                 Text(
                     "${summary.completedWarmups} completed warm-ups · "+
                         "${summary.completedAmplifiers} completed amplifier follow-ups",

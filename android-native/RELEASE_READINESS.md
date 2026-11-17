@@ -8,6 +8,18 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Canonical History/Finish performance checkpoint (2026-11-17):**
+Post-Finish and History now display the SAME existing Kotlin History
+working-set rep-range and reported-actual-RIR calculation. A source-verified
+recap cross-checks its warm-up/amplifier and exercise counts against that
+canonical performance evidence; mismatches refuse the summary rather than
+publish contradictory progress. Actual RIR stays unreported if the athlete
+did not record it. This is descriptive, not a PR, progression, load change,
+new training policy or source of workout mutations. Both generated and custom
+Finish paths retain the verified owner/correction history fence. JVM/source
+and Compose build checks must pass; real device/UI completion remains open.
+No APK/AAB.
+
 **Verified post-Finish recap checkpoint (2026-11-17):** the finished
 Kotlin generated and custom workout routes now share a compact read-only
 summary of outcomes from the COMPLETE owner-fenced native History, including

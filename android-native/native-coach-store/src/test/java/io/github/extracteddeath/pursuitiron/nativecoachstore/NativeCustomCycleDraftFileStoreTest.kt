@@ -309,4 +309,32 @@ class NativeCustomCycleDraftFileStoreTest {
             NativeCustomCycleDraftCodec.decode(bytes)))
     }
 
+    @Test fun stagedRestPauseAndClusterPlansColdReopenBeforeWorkoutIssuance() {
+        val baseline=original()
+        val oldBytes=NativeCustomCycleDraftCodec.encode(baseline)
+        for(amp in listOf(
+            CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,3,20,
+                followUpActiveSeconds=45,followUpRounds=3),
+            CustomSetAmplifier(CustomAmplifierKind.CLUSTER,2,30,
+                followUpActiveSeconds=45,followUpRounds=4))) {
+            val withStages=baseline.copy(blocks=baseline.blocks.map{block->
+                block.copy(days=block.days.map{day->day.copy(
+                    slots=day.slots.map{slot->
+                        if(slot.slotId!="bench-1")slot else slot.copy(
+                            sets=slot.sets.mapIndexed{index,set->
+                                if(index!=1)set else set.copy(amplifier=amp)
+                            })
+                    })
+                })
+            })
+            val bytes=NativeCustomCycleDraftCodec.encode(withStages)
+            assertEquals(4,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+            assertEquals(withStages,NativeCustomCycleDraftCodec.decode(bytes))
+            assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(
+                NativeCustomCycleDraftCodec.decode(bytes)))
+        }
+        assertArrayEquals(oldBytes,NativeCustomCycleDraftCodec.encode(
+            NativeCustomCycleDraftCodec.decode(oldBytes)))
+    }
+
 }

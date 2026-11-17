@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeSavedSetupResume
 import io.github.extracteddeath.pursuitiron.rebuild.LoadUnit
 import io.github.extracteddeath.pursuitiron.rebuild.StrengthStandardsMeasurementDomain
 import java.math.BigDecimal
@@ -134,6 +135,7 @@ private fun NativeBodyweightTrend(
  */
 @Composable
 internal fun NativeKotlinBodyweightPanel(
+    host:NativeKotlinCandidateHost,
     athleteId:String?,
     preferredUnit:LoadUnit,
     onUseForComparison:(BigDecimal,LoadUnit)->Unit
@@ -158,11 +160,19 @@ internal fun NativeKotlinBodyweightPanel(
     var pendingDelete by remember {mutableStateOf<LocalDate?>(null)}
     var showAll by rememberSaveable(athleteId){mutableStateOf(false)}
     val owner=athleteId?.takeIf(NativeBodyweightLedgerDomain::validOwner)
-    LaunchedEffect(owner,refresh) {
+    LaunchedEffect(host,owner,refresh) {
         loaded=null
         readOwner=null
         if(owner!=null) {
-            val source=withContext(Dispatchers.IO){store.read(owner)}
+            val source=withContext(Dispatchers.IO){
+                val confirmed=runCatching {
+                    (host.reviewActiveAthleteSetup() as? NativeSavedSetupResume.Ready)
+                        ?.setup?.athleteProfileId
+                }.getOrNull()
+                if(confirmed==owner)store.read(owner)
+                else NativeBodyweightRead.Rejected(
+                    NativeBodyweightRefusal.OWNER_NOT_VERIFIED)
+            }
             if(athleteId==owner) {
                 readOwner=owner
                 loaded=source
@@ -192,7 +202,13 @@ internal fun NativeKotlinBodyweightPanel(
         notice=null
         scope.launch {
             val result=withContext(Dispatchers.IO) {
-                if(remove!=null)store.delete(
+                val confirmed=runCatching {
+                    (host.reviewActiveAthleteSetup() as? NativeSavedSetupResume.Ready)
+                        ?.setup?.athleteProfileId
+                }.getOrNull()
+                if(confirmed!=selectedOwner)NativeBodyweightWrite.Rejected(
+                    NativeBodyweightRefusal.OWNER_NOT_VERIFIED)
+                else if(remove!=null)store.delete(
                     selectedOwner,source.ledger.revision,remove)
                 else store.save(selectedOwner,source.ledger.revision,
                     checkNotNull(change),LocalDate.now(),confirmedReplace)

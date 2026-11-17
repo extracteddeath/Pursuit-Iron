@@ -34,6 +34,12 @@ const requestedWebVariants=[
   ['ad-press-smith','AD Press (Smith Machine)',['smith','inclinebench'],[6,12]]
 ];
 const requestedIds=requestedWebVariants.map(x=>x[0]);
+const requestedFixture=JSON.parse(readFileSync(join(root,
+ 'android-native/kotlin-engine/verification/requested-web-variants-20261117.json'),'utf8'));
+assert.equal(requestedFixture.schemaVersion,1,'reviewed request fixture schema drift');
+assert.equal(requestedFixture.sourcePullRequest,671,'web provenance PR drift');
+assert.deepEqual(requestedFixture.records.map(x=>x.id),requestedIds,
+ 'seven-source provenance snapshot must retain exact order and IDs');
 const allowedMuscles=new Set(['CHEST','LATS','UPPER_BACK','FRONT_DELTS',
  'SIDE_DELTS','REAR_DELTS','TRICEPS','BICEPS','BRACHIALIS','WRIST_FLEXORS',
  'WRIST_EXTENSORS','QUADS','HAMSTRINGS','GLUTES','CALVES','ABS',
@@ -218,12 +224,24 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  // A new source catalog ID is not evidence of identical mechanics.
  // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
+ const fixtureById=new Map(requestedFixture.records.map(x=>[x.id,x]));
  for(const [id,name,equipment,reps] of requestedWebVariants) {
-   const ex=liveById.get(id);
-   assert.ok(ex,'requested variant absent from active web source: '+id);
+   const ex=fixtureById.get(id);
+   assert.ok(ex,'requested variant missing provenance fixture: '+id);
    assert.equal(ex.name,name,'requested variant identity/name drift: '+id);
    assert.deepEqual(ex.equipment,equipment,'requested variant physical source drift: '+id);
    assert.deepEqual(ex.practicalReps,reps,'requested variant rep band drift: '+id);
+   assert.equal(ex.source,'pursuit_requested_variant_20261117',
+     'requested variant must retain explicit upstream provisional identity: '+id);
+   // The Kotlin rebuild branch intentionally does not change the legacy
+   // browser/JS execution catalog. If the upstream web source later contains
+   // this ID, it must agree exactly with the pinned review snapshot.
+   const live=liveById.get(id);
+   if(live) {
+     for(const key of ['name','equipment','movementFamily','practicalReps','source'])
+       assert.deepEqual(live[key],ex[key],
+         'live web source drift from separately reviewed Kotlin exercise: '+id+'/'+key);
+   }
  }
  const total=49+count+requestedIds.length;
  assert.ok(source.includes('require(definitions.size=='+total+')'),

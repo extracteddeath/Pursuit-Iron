@@ -21,8 +21,9 @@ assert.doesNotMatch(detail, /!s\.done|targetMode\s*===/);
 assert.doesNotMatch(app, /si === lastWorkRow && !s\.done && techTag/);
 assert.match(app, /const lastWorkRow = \(\(\) => \{/);
 assert.match(app, /!e\.sets\[j\]\.warm && !e\.sets\[j\]\.sub/);
-assert.match(css, /wpb-last-set-technique>summary/);
-assert.match(css, /wpb-last-set-technique-help/);
+assert.match(machineCss, /wpb-last-set-technique>summary/);
+assert.match(machineCss, /wpb-last-set-technique-help/);
+assert.match(app, /className: "wpb-set-tech-tag"/);
 
 // The machine-choice action is now a peer of Swap in the horizontal tools,
 // not an extra exercise-heading row. It still invokes the same runtime owner,

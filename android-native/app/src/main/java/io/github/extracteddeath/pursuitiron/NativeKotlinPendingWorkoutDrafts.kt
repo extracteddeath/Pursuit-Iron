@@ -2,8 +2,8 @@ package io.github.extracteddeath.pursuitiron
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import org.json.JSONObject
@@ -91,4 +91,71 @@ internal class NativeKotlinPendingWorkoutDraftStore(context:Context) {
 internal fun rememberNativePendingWorkoutDraftStore():NativeKotlinPendingWorkoutDraftStore {
     val context=LocalContext.current.applicationContext
     return remember(context){NativeKotlinPendingWorkoutDraftStore(context)}
+}
+
+/** Shared Compose editor for both native workout journals. */
+internal class NativeKotlinPendingWorkoutDraftEditor(
+    private val loadState:MutableState<String>,
+    private val repsState:MutableState<String>,
+    private val rirState:MutableState<String>,
+    private val recoveredState:MutableState<Boolean>,
+    private val identity:NativePendingWorkoutDraftKey,
+    private val baseline:NativePendingWorkoutDraft,
+    private val committed:Boolean,
+    private val store:NativeKotlinPendingWorkoutDraftStore
+) {
+    val load:String get()=loadState.value
+    val reps:String get()=repsState.value
+    val rir:String get()=rirState.value
+    val recovered:Boolean get()=recoveredState.value && !committed
+
+    /** Only an athlete UI edit or an explicit Leveling/Last tap calls this. */
+    fun update(load:String=this.load,reps:String=this.reps,rir:String=this.rir) {
+        loadState.value=load
+        repsState.value=reps
+        rirState.value=rir
+        recoveredState.value=false
+        if(!committed)store.save(identity,NativePendingWorkoutDraft(load,reps,rir))
+    }
+
+    /** Discard never clears a saved journal receipt or changes a prescription. */
+    fun discard() {
+        store.discard(identity)
+        loadState.value=baseline.load
+        repsState.value=baseline.reps
+        rirState.value=baseline.rir
+        recoveredState.value=false
+    }
+}
+
+@Composable
+internal fun rememberNativePendingWorkoutDraftEditor(
+    identity:NativePendingWorkoutDraftKey,
+    committed:Boolean,
+    receiptRevision:String?,
+    baseline:NativePendingWorkoutDraft
+):NativeKotlinPendingWorkoutDraftEditor {
+    val store=rememberNativePendingWorkoutDraftStore()
+    // The only persisted source is the exact authenticated workout identity;
+    // on a saved receipt, ignore the private draft even before cleanup runs.
+    val recovered=remember(identity.value,receiptRevision,committed) {
+        if(committed)null else store.read(identity)
+    }
+    val load=rememberSaveable(identity.value,receiptRevision) {
+        mutableStateOf(recovered?.load ?: baseline.load)
+    }
+    val reps=rememberSaveable(identity.value,receiptRevision) {
+        mutableStateOf(recovered?.reps ?: baseline.reps)
+    }
+    val rir=rememberSaveable(identity.value,receiptRevision) {
+        mutableStateOf(recovered?.rir ?: baseline.rir)
+    }
+    val recoveredLabel=rememberSaveable(identity.value,receiptRevision) {
+        mutableStateOf(recovered!=null)
+    }
+    LaunchedEffect(identity.value,committed,receiptRevision) {
+        if(committed)store.discard(identity)
+    }
+    return NativeKotlinPendingWorkoutDraftEditor(
+        load,reps,rir,recoveredLabel,identity,baseline,committed,store)
 }

@@ -15,16 +15,21 @@ class AdvancedAmplifierProtocolDomainTest {
     }
 
     @Test fun underTargetEndsMyoSequenceInsteadOfForcingRemainingRounds() {
-        val step = AdvancedAmplifierProtocolDomain::nextMyoRepStep
+        fun step(target: Int, reps: List<Int>, cap: Int = 5, compromised: Boolean = false) =
+            AdvancedAmplifierProtocolDomain.nextMyoRepStep(
+                target, reps, cap, techniqueCompromised = compromised)
         assertEquals(MyoRepNextStep.KEEP_GOING, step(4, listOf(4, 4), 5))
         assertEquals(MyoRepNextStep.STOP_REP_DROP, step(4, listOf(4, 4, 3), 5))
-        assertEquals(MyoRepNextStep.STOP_REP_DROP, step(5, listOf(5, 4), 3))
+        assertEquals(MyoRepNextStep.KEEP_GOING, step(5, listOf(5, 4), 3))
+        assertEquals(MyoRepNextStep.STOP_REP_DROP, step(5, listOf(5, 4, 3), 5))
         assertEquals(MyoRepNextStep.STOP_TECHNIQUE,
-            step(4, listOf(4), 5, techniqueCompromised = true))
+            step(4, listOf(4), 5, compromised = true))
     }
 
     @Test fun rangeBoundaryAndCapAreExplicit() {
-        val step = AdvancedAmplifierProtocolDomain::nextMyoRepStep
+        fun step(target: Int, reps: List<Int>, cap: Int = 5, compromised: Boolean = false) =
+            AdvancedAmplifierProtocolDomain.nextMyoRepStep(
+                target, reps, cap, techniqueCompromised = compromised)
         assertEquals(MyoRepNextStep.PLANNED_LIMIT_REACHED, step(3, listOf(3, 3, 3), 3))
         assertEquals(MyoRepNextStep.PLANNED_LIMIT_REACHED,
             step(5, listOf(5, 5, 5, 5, 5), 5))
@@ -32,6 +37,7 @@ class AdvancedAmplifierProtocolDomainTest {
         assertEquals(MyoRepNextStep.INVALID_SEQUENCE,
             step(4, listOf(4, 4, 4, 4, 4, 4), 5))
         assertEquals(MyoRepNextStep.INVALID_SEQUENCE, step(4, listOf(-1), 5))
+        assertEquals(MyoRepNextStep.KEEP_GOING, step(3, listOf(3, 3), 5))
         assertEquals(MyoRepNextStep.INVALID_SEQUENCE, step(4, listOf(4), 6))
     }
 

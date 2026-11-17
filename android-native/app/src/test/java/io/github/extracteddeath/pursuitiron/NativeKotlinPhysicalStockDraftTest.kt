@@ -219,4 +219,31 @@ internal class NativeKotlinPhysicalStockDraftTest:NativeKotlinProgramFilesFixtur
         assertEquals(before,hashes())
     }
 
+    @Test fun ratedBandGymProfileIsExplicitDiscreteAndNotAFreeWeightStock() {
+        val catalog=StarterExerciseTranche.movements()
+        val band=kotlinGymStockChoices(catalog).single {
+            it.equipmentId==RatedResistanceBandDomain.EQUIPMENT_ID
+        }
+        assertEquals("Resistance bands (manufacturer-rated, discrete)",band.displayName)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,band.basis)
+        assertEquals(16,band.exerciseNames.size)
+        assertTrue(band.exerciseNames.contains("Band Lateral Raise"))
+        assertTrue(band.exerciseNames.contains("Banded Tibialis Raise"))
+        assertTrue(band.exerciseNames.contains("Banded Horizontal Chest Press"))
+        val exact=checkNotNull(parseVerifiedStock(LoadUnit.LB,
+            PhysicalStockEditorKind.EXACT_LOADS,LoadBasis.EXERCISE_OVERRIDE,
+            "10,20,30","","","","",""))
+        assertTrue(RatedResistanceBandDomain.confirmedDiscreteStock(
+            band.equipmentId,exact))
+        assertFalse((EquipmentLoadDomain.inspect(exact,n("15"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        val inventedStack=checkNotNull(parseVerifiedStock(LoadUnit.LB,
+            PhysicalStockEditorKind.VERIFIED_STACK,LoadBasis.EXERCISE_OVERRIDE,
+            "","10","5","30","",""))
+        assertFalse(RatedResistanceBandDomain.confirmedDiscreteStock(
+            band.equipmentId,inventedStack))
+        assertNotEquals(band.equipmentId,
+            kotlinGymStockChoices(catalog).single{it.equipmentId=="dumbbell-rack"}.equipmentId)
+    }
+
 }

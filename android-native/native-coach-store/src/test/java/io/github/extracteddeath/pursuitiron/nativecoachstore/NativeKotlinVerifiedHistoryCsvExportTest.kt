@@ -155,4 +155,35 @@ class NativeKotlinVerifiedHistoryCsvExportTest {
         assertEquals(NativeKotlinHistoryCsvResult.InvalidHistory,
             NativeKotlinVerifiedHistoryCsvExport.prepare(timeline(forged)))
     }
+    @Test fun myoMiniSetsExportDistinctStageNumbersWithoutChangingLegacyRows() {
+        val old=NativeKotlinVerifiedHistoryCsvExport.prepare(
+            timeline(generated(),custom())) as NativeKotlinHistoryCsvResult.Ready
+        assertTrue(old.csv.startsWith("\"format\""))
+        assertFalse(old.csv.lines().first().contains("amplifier_stage"))
+        val original=custom()
+        val stage2=original.evidence.visits[1].copy(
+            amplifierKind=CustomAmplifierKind.MYO_REPS,stage=2,
+            actual=KotlinPerformedSet(n("40"),LoadUnit.LB,4,2,"B"),
+            effectiveEventId="myo-2")
+        val stage1=stage2.copy(stage=1,
+            actual=KotlinPerformedSet(n("40"),LoadUnit.LB,5,2,"B"),
+            effectiveEventId="myo-1")
+        val staged=original.copy(evidence=original.evidence.copy(
+            visits=listOf(original.evidence.visits[0],stage1,stage2,
+                original.evidence.visits[2])))
+        val result=NativeKotlinVerifiedHistoryCsvExport.prepare(
+            timeline(generated(),staged)) as NativeKotlinHistoryCsvResult.Ready
+        val rows=result.csv.trimEnd().lines()
+        assertEquals(6,result.rowCount)
+        assertTrue(rows.first().contains("\"amplifier_stage\""))
+        assertTrue(rows[1].startsWith("\"pursuit-iron-history-v3\""))
+        val stages=rows.filter{it.contains("\"FOLLOW_UP\"")}
+        assertEquals(2,stages.size)
+        assertTrue(stages[0].endsWith("\"MYO_REPS\",\"1\""))
+        assertTrue(stages[1].endsWith("\"MYO_REPS\",\"2\""))
+        val oldAgain=NativeKotlinVerifiedHistoryCsvExport.prepare(
+            timeline(generated(),custom())) as NativeKotlinHistoryCsvResult.Ready
+        assertEquals(old.csv,oldAgain.csv)
+    }
+
 }

@@ -467,4 +467,110 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(visit("myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
     }
 
+    @Test fun plannedClustersStageActualQualityRepsAndHoldSupersetPartnerUntilResolved() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.CLUSTER,
+            2,30,followUpRounds=4)
+        var j=initial(slot("cluster",1,"group",amplifier=amp),
+            slot("partner",1,"group"))
+        j=record(j,"cluster:s1",reps=5)
+        for(stage in 1..4) {
+            assertEquals(visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage),
+                next(j))
+            assertEquals(30,rest(j).automaticCue?.seconds)
+            j=record(j,"cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                stage=stage,reps=2)
+        }
+        assertEquals(visit("partner:s1"),next(j))
+        assertEquals(0,rest(j).automaticCue?.seconds)
+        assertEquals(4,CustomWorkoutVisitFocusDomain.progress(j).recordedFollowUps)
+        assertEquals(4,CustomWorkoutVisitFocusDomain.progress(j).requiredFollowUps)
+        assertEquals(4,j.effectiveVisits.keys.count {
+            it.setKey=="cluster:s1" &&
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+        assertTrue(j.effectiveVisits.values.all {
+            ((it.operation as CustomWorkoutJournalOperation.Record)
+                .performed?.load)==BigDecimal("20")
+        })
+        j=record(j,"partner:s1")
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+    }
+
+    @Test fun clusterShortfallAndEarlyEndLeaveDurableTruthWithoutInventingExtraStages() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.CLUSTER,
+            3,30,followUpRounds=5)
+        var j=initial(slot("cluster",1,null,amplifier=amp))
+        j=record(j,"cluster:s1",reps=5)
+        j=record(j,"cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,reps=3)
+        assertEquals(visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),
+            next(j))
+        j=record(j,"cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=2,reps=2)
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        assertEquals(2,CustomWorkoutVisitFocusDomain.progress(j).requiredFollowUps)
+        var replay=CustomWorkoutJournalDomain.begin(j.workoutId,
+            j.originalSnapshot,j.preparedConsentFingerprint)
+        for(receipt in j.receipts) {
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        assertEquals(j,replay)
+        assertNull(next(replay))
+
+        var skipped=initial(slot("stop",1,null,amplifier=amp))
+        skipped=record(skipped,"stop:s1",reps=5)
+        skipped=record(skipped,"stop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,reps=3)
+        skipped=record(skipped,"stop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            outcome=KotlinJournalSetOutcome.SKIPPED,stage=2)
+        assertNull(next(skipped))
+        assertTrue(skipped.canProposeFinish)
+        assertEquals(2,skipped.effectiveVisits.keys.count{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+        assertEquals(KotlinJournalSetOutcome.SKIPPED,
+            (skipped.effectiveVisits.getValue(visit(
+                "stop:s1",CustomWorkoutVisitPart.FOLLOW_UP,2)).operation
+                as CustomWorkoutJournalOperation.Record).outcome)
+    }
+
+    @Test fun clustersRejectOutOfOrderStageAndRetrospectiveStationLoadChanges() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.CLUSTER,
+            2,30,followUpRounds=3)
+        var j=initial(slot("cluster",1,null,amplifier=amp))
+        j=record(j,"cluster:s1",reps=5)
+        val future=CustomWorkoutJournalOperation.Record("future-cluster",
+            j.revision,visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,3),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2))
+        assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+            (CustomWorkoutJournalDomain.reduce(j,future)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        j=record(j,"cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=2)
+        val old=j.effectiveVisits.getValue(visit("cluster:s1")).operation
+            as CustomWorkoutJournalOperation.Record
+        val altered=CustomWorkoutJournalOperation.Record(
+            "alter-activation",j.revision,visit("cluster:s1"),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,5,2),old.eventId)
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(j,altered)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        val wrongStation=CustomWorkoutJournalOperation.Record(
+            "other-station",j.revision,
+            visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,2,2,"B"))
+        val changed=(CustomWorkoutJournalDomain.reduce(j,wrongStation)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertNull(next(changed))
+        assertEquals(3,changed.effectiveVisits.size)
+        assertEquals("B",((changed.effectiveVisits.getValue(
+            visit("cluster:s1",CustomWorkoutVisitPart.FOLLOW_UP,2)).operation
+            as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
+    }
+
 }

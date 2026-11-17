@@ -142,7 +142,8 @@ for(const phrase of ['host.reviewVerifiedKotlinHistory()', 'reviewWorkingSetFact
   'PublishedStrengthReference("barbell_ohp"'])
   assert.ok(standards.includes(phrase),'Unverified strength standards design contract: '+phrase);
 assert.ok(history.includes('var exerciseSearch by rememberSaveable') &&
-  history.includes('visibleSessions=remember(verified,filteredMovements,exerciseSearch)') &&
+  history.includes('visibleSessions=remember(verified,filteredMovements,exerciseSearch,') &&
+  history.includes('focusedWorkoutId') &&
   history.includes('nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)') &&
   history.includes('nativeHistoryMonths(displayedSessions,historyZone)') &&
   history.includes('items(section.sessions') &&

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,8 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun NativeKotlinCandidateHistoryScreen(
     host:NativeKotlinCandidateHost,
+    preferredWorkoutId:String?=null,
+    onClearWorkoutFocus:()->Unit={},
     onOpenProgram:()->Unit={},
     onOpenCoach:(String?)->Unit={},
     onOpenProgress:()->Unit={},
@@ -119,6 +122,16 @@ internal fun NativeKotlinCandidateHistoryScreen(
     }
     LaunchedEffect(host){reload()}
     val verified=(result as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+    // A URL/Compose ID alone never grants access. The only admitted focus
+    // is a unique completed workout in the CURRENT replay-verified timeline.
+    val focusedWorkoutId=remember(verified,preferredWorkoutId) {
+        NativeKotlinHistoryFocusPolicy.admit(
+            preferredWorkoutId,
+            verified?.completions?.map{it.manifest.workoutId}.orEmpty())
+    }
+    val focusedWorkout=verified?.completions?.singleOrNull {
+        it.manifest.workoutId==focusedWorkoutId
+    }
     val searchableMovements=remember(verified) {
         verified?.completions.orEmpty().flatMap{entry->
             when(entry) {
@@ -137,9 +150,14 @@ internal fun NativeKotlinCandidateHistoryScreen(
                 kotlinExerciseLabel(it).contains(query,ignoreCase=true)
         }
     }
-    val visibleSessions=remember(verified,filteredMovements,exerciseSearch) {
+    val visibleSessions=remember(verified,filteredMovements,exerciseSearch,
+        focusedWorkoutId,preferredWorkoutId) {
         val query=exerciseSearch.trim()
-        if(query.isEmpty())verified?.completions.orEmpty()
+        if(focusedWorkoutId!=null)verified?.completions.orEmpty().filter{
+            it.manifest.workoutId==focusedWorkoutId
+        }
+        else if(preferredWorkoutId!=null || query.isEmpty())
+            verified?.completions.orEmpty()
         else verified?.completions.orEmpty().filter{ entry ->
             when(entry) {
                 is NativeKotlinMixedHistoryCompletion.Composer ->
@@ -159,12 +177,21 @@ internal fun NativeKotlinCandidateHistoryScreen(
         if(dateSelectionAthlete!=verified?.athleteId)NativeKotlinHistoryDateSelection.All
         else nativeHistoryDateSelection(historyDateKey,historyDayKey,historyMonths)
     }
-    val displayedSessions=remember(visibleSessions,dateSelection,historyZone) {
-        nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)
+    val displayedSessions=remember(visibleSessions,dateSelection,historyZone,
+        preferredWorkoutId) {
+        if(preferredWorkoutId!=null)visibleSessions
+        else nativeHistorySessionsInSelection(visibleSessions,dateSelection,historyZone)
     }
     val monthSections=remember(displayedSessions,historyZone){nativeHistoryMonths(displayedSessions,historyZone)}
     var visibleExerciseCount by rememberSaveable(exerciseSearch){mutableStateOf(12)}
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),
+    val historyListState=rememberLazyListState()
+    // Opening an exact completed session must not reuse the old History
+    // browser's distant scroll position and hide the finished result.
+    LaunchedEffect(preferredWorkoutId,focusedWorkoutId) {
+        if(preferredWorkoutId!=null)historyListState.scrollToItem(0)
+    }
+    LazyColumn(Modifier.fillMaxSize(),state=historyListState,
+        contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
             PageHeading("TRAINING LOG","Workout history",
@@ -179,6 +206,28 @@ internal fun NativeKotlinCandidateHistoryScreen(
         }
         when(val read=result) {
             is NativeKotlinMixedHistoryReadResult.Review -> {
+                if(preferredWorkoutId!=null)item(key="finished-history-focus"){
+                    PursuitCard {
+                        if(focusedWorkout!=null) {
+                            PursuitSectionHeading("Just finished",
+                                "Showing the exact verified workout you opened from Train.")
+                            Text("You can inspect targets, actuals and corrections "+
+                                "below. Your previous search and calendar "+
+                                "selection are preserved for the full log.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            PursuitSectionHeading("Workout not found",
+                                "The saved workout link could not be verified "+
+                                    "for the current athlete. Nothing was changed.")
+                        }
+                        OutlinedButton(
+                            onClick=onClearWorkoutFocus,
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                            Text("Show all workout history")
+                        }
+                    }
+                }
                 item {
                     PursuitDisclosureRow("History options","Export, program and coaching shortcuts",
                         historyOptionsExpanded,{historyOptionsExpanded=!historyOptionsExpanded})
@@ -245,7 +294,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     }
                 }
                 if(read.timeline.completions.isEmpty())item {Text("Your first finished workout will appear here.")}
-                if(read.timeline.completions.isNotEmpty())item {
+                if(read.timeline.completions.isNotEmpty() &&
+                    focusedWorkoutId==null && preferredWorkoutId==null)item {
                     PursuitCard {
                         PursuitSectionHeading("Find an exercise",
                             "Search completed sessions, or open a movement's full history.")
@@ -291,7 +341,9 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         }
                     }
                 }
-                if(read.timeline.completions.isNotEmpty())item(key="history-date-browser") {
+                if(read.timeline.completions.isNotEmpty() &&
+                    focusedWorkoutId==null && preferredWorkoutId==null)
+                    item(key="history-date-browser") {
                     key(read.timeline.athleteId) {
                         NativeKotlinHistoryDateBrowser(historyMonths,visibleSessions,dateSelection,historyZone,historyLocale) {selection->
                             dateSelectionAthlete=read.timeline.athleteId
@@ -319,7 +371,13 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 items(section.sessions,key={"session:${it.manifest.workoutId}"}) {entry->
-                    var expanded by rememberSaveable(entry.manifest.workoutId){mutableStateOf(false)}
+                    var expanded by rememberSaveable(entry.manifest.workoutId){
+                        mutableStateOf(entry.manifest.workoutId==focusedWorkoutId)
+                    }
+                    LaunchedEffect(focusedWorkoutId,entry.manifest.workoutId) {
+                        if(entry.manifest.workoutId==focusedWorkoutId)
+                            expanded=true
+                    }
                     PursuitCard {
                         Text(nativeHistoryDateLabel(entry.manifest,historyZone,historyLocale)
                             ?:"Session ${entry.manifest.completionOrder}",style=MaterialTheme.typography.titleMedium)

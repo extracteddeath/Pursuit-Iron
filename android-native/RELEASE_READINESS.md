@@ -8,6 +8,18 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Dated bodyweight Progress checkpoint (2026-11-17):** the Kotlin Progress
+screen now has a source-integrated, athlete-entered bodyweight ledger with
+actual calendar dates, lb/kg values, a day-scaled trend, correction confirmation,
+specific-date deletion and an explicit optional handoff to Strength Standards.
+A versioned private store checks the current athlete on every read/write,
+compares revisions, checksums the complete ledger and refuses corrupt or
+conflicting data without resetting it. Values remain separate from workout
+actuals, training decisions, PRs and automatic Strength Standards comparisons.
+Source/JVM/Compose CI and real-device acceptance are separate requirements.
+Measurements beyond bodyweight, full backup/migration, accessibility and the
+whole product-cohesion review are still open. No APK/AAB is authorized.
+
 **Product acceptance requirement (2026-11-14):** every carried feature must
 meet the [product cohesion and improvement contract](PRODUCT_UI_DESIGN_CONTRACT.md#product-cohesion-and-improvement--binding-beta-requirement-2026-11-14).
 Review purpose, deliberate placement, shared behavior, complete task flows and

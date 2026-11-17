@@ -3051,6 +3051,9 @@ const SUPPORT_BLURB = "This app is built by a tiny independent team and is compl
    generic bar pushdown and Straight-Bar Pushdown), while `visual` guarantees that different setups
    never silently fall back to the same generic picture. */
 const VARIANT_PRESENTATION = {
+    // Anterior-delt press: a near-upright seat, NOT interchangeable with a chest incline press.
+    "ad-press-barbell": { key: "ad-press-bar", name: "AD Press (Barbell)", setup: "Barbell + near-upright adjustable bench", detail: "Barbell and adjustable backrest · own load history", visual: "ad-press-bar", order: 10 },
+    "ad-press-smith": { key: "ad-press-smith", name: "AD Press (Smith Machine)", setup: "Smith + near-upright adjustable bench", detail: "Smith machine and adjustable backrest · own load history", visual: "ad-press-smith", order: 20 },
     // Triceps pushdowns
     "pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40 },
     "straight-bar-pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40, preferred: true },
@@ -3128,6 +3131,8 @@ function movementFamilyOptions(ex, equipSet = null, banned = []) {
 }
 function movementFamilyTitle(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "AD Press setups";
     if (family === "tri-pushdown")
         return "Attachment options";
     if (family === "tri-ohext")
@@ -3146,6 +3151,8 @@ function movementFamilyTitle(ex) {
 }
 function movementFamilyDescription(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "Compare barbell and Smith AD Press setups; each uses its own load and exercise history.";
     if (family === "tri-ohext")
         return "Compare leaning cable, rope cable, dumbbell, EZ-bar and band overhead extensions; do not reuse a different variant's weight.";
     if (family === "tri-pushdown")
@@ -3228,6 +3235,10 @@ function AttachmentGlyph({ ex, size = 46 }) {
             const rear = visual.startsWith("rear"), sh = rear && seated ? "M27 14l10 13M31 20L12 24M31 20l21-7" : `M32 14v18M32 20L13 23${single ? "" : "M32 20l19 3"}`;
             return _jsxs("g", { children: [_jsx("circle", { cx: rear && seated ? "25" : "32", cy: "10", r: "4", ...S }), _jsx("path", { d: sh, ...S }), _jsx("path", { d: seated ? "M24 32h17M24 32l-5 7v8M41 32l5 7v8M20 34h25M23 34v13M42 34v13" : "M32 32l-7 15M32 32l7 15", ...(seated ? faint : S) }), cable ? _jsxs("g", { children: [_jsx("rect", { x: "54", y: "33", width: "6", height: "14", rx: "2", ...faint }), _jsx("path", { d: visual === "lateral-behind" ? "M57 37L13 23M27 29l10-3" : "M57 37L13 23", ...S }), visual === "lateral-cuff" ? _jsx("rect", { x: "10", y: "20", width: "6", height: "6", rx: "2", ...S }) : _jsx("path", { d: "M10 22h6", ...S, strokeWidth: "3.4" })] }) : band ? _jsx("path", { d: "M13 23L25 47M51 23L39 47", ...S, strokeWidth: "1.8" }) : _jsx("path", { d: `M8 23h10M10 19v8M16 19v8${single ? "" : "M46 23h10M48 19v8M54 19v8"}`, ...S, strokeWidth: "2.3" })] });
         }
+        if (visual === "ad-press-bar")
+            return _jsxs("g", { children: [_jsx("path", { d: "M20 46l12-28M18 44h23", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6M10 14h44M10 10v8M54 10v8", ...S })] });
+        if (visual === "ad-press-smith")
+            return _jsxs("g", { children: [_jsx("path", { d: "M10 6v42M54 6v42M10 15h44", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M20 46l12-28M18 44h23M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6", ...S }), _jsx("rect", { x: "8", y: "13", width: "5", height: "5", rx: "1", ...S }), _jsx("rect", { x: "51", y: "13", width: "5", height: "5", rx: "1", ...S })] });
         if (visual === "overhead-dumbbell")
             return _jsxs("g", { children: [_jsx("path", { d: "M20 26h24", ...S, strokeWidth: "4" }), _jsx("path", { d: "M14 17v18M19 19v14M45 19v14M50 17v18", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M11 21v10M53 21v10", ...faint })] });
         if (visual === "overhead-ez" || visual === "ez-bar")

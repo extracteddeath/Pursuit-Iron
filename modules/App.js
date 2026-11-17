@@ -3062,6 +3062,7 @@ const VARIANT_PRESENTATION = {
     "underhand-pushdown": { key: "pushdown-underhand", name: "Reverse-Grip Pushdown", setup: "Underhand bar", detail: "Straight bar · underhand grip", visual: "underhand-bar", order: 70 },
     // Triceps overhead extensions
     "oh-cable-ext": { key: "ohext-rope", name: "Rope Overhead Cable Extension", setup: "Rope attachment", detail: "High cable · rope attachment", visual: "overhead-rope", order: 10 },
+    "leaning-cable-ohext": { key: "ohext-leaning", name: "Leaning Cable Overhead Triceps Extension", setup: "Cable attachment", detail: "Leaning overhead cable setup · verify actual handle", visual: "overhead-lean", order: 15 },
     "db-oh-ext": { key: "ohext-db", name: "DB Overhead Extension", setup: "Single dumbbell", detail: "Single dumbbell", visual: "overhead-dumbbell", order: 20 },
     "ez-oh-ext": { key: "ohext-ez", name: "EZ-Bar Overhead Extension", setup: "EZ curl bar", detail: "EZ curl bar", visual: "overhead-ez", order: 30 },
     "bands-tricep-ext": { key: "ohext-band", name: "Banded Overhead Tricep Extension", setup: "Resistance band", detail: "Anchored resistance band", visual: "overhead-band", order: 40 },
@@ -3093,6 +3094,7 @@ const VARIANT_PRESENTATION = {
     "prone-rear-delt-raise": { key: "rear-prone-bodyweight", name: "Prone Rear Delt Raise", setup: "Bodyweight", detail: "Prone on the floor · unloaded arms", visual: "rear-prone-bodyweight", order: 40 },
     // Chest flyes
     "db-fly": { key: "chest-db", name: "Dumbbell Fly", setup: "Dumbbells + bench", detail: "Dumbbells · flat bench", visual: "chest-db", order: 10 },
+    "bottom-half-db-fly": { key: "chest-db-bottom", name: "Bottom-Half Dumbbell Fly", setup: "Dumbbells + flat bench", detail: "Bottom-half partial ROM · separate load history", visual: "chest-db-partial", order: 12 },
     "cable-fly": { key: "chest-cable", name: "Cable Fly", setup: "Dual cable", detail: "Dual cable · standing fly", visual: "chest-cable", order: 20 },
     "pec-deck": { key: "chest-machine", name: "Pec Deck", setup: "Pec-deck machine", detail: "Seated pec-deck machine", visual: "chest-machine", order: 30 },
     // Glute kickbacks
@@ -3145,7 +3147,7 @@ function movementFamilyTitle(ex) {
 function movementFamilyDescription(ex) {
     const family = ex && EX_FAMILY[ex.id];
     if (family === "tri-ohext")
-        return "Same overhead-extension pattern with a rope cable, dumbbell, EZ-bar, or resistance band.";
+        return "Compare leaning cable, rope cable, dumbbell, EZ-bar and band overhead extensions; do not reuse a different variant's weight.";
     if (family === "tri-pushdown")
         return "Same pushdown pattern with a different cable attachment or single-arm setup.";
     if (family === "tri-kickback")
@@ -3155,7 +3157,7 @@ function movementFamilyDescription(ex) {
     if (family === "rear-delt-fly")
         return "Compare standing, seated, chest-supported, single-arm cable, dual-cable, and machine rear-delt fly setups.";
     if (family === "chest-fly")
-        return "Compare dumbbell-and-bench, standing cable, and pec-deck chest fly setups.";
+        return "Compare full-range and bottom-half dumbbell flyes, standing cable, and pec-deck setups; use separate targets.";
     if (family === "glute-kickback")
         return "Compare an ankle-strap cable kickback with the dedicated kickback machine.";
     return "Same movement, different attachment or setup. Choose a variant to view it.";
@@ -3232,6 +3234,8 @@ function AttachmentGlyph({ ex, size = 46 }) {
             return _jsxs("g", { children: [_jsx("path", { d: "M8 26h10l6-6 8 12 8-12 6 6h10", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M8 17v18M12 20v12M52 20v12M56 17v18", ...S })] });
         if (visual === "overhead-band")
             return _jsxs("g", { children: [_jsx("path", { d: "M22 8c-7 7-10 17-8 27 1 6 5 10 10 10 5 0 8-4 8-9V19c0-7 3-11 8-11 5 0 9 5 10 13", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M20 7h24", ...faint }), _jsx("circle", { cx: "22", cy: "8", r: "3", ...F }), _jsx("circle", { cx: "44", cy: "8", r: "3", ...F })] });
+        if (visual === "overhead-lean")
+            return _jsxs("g", { children: [_jsx("rect", { x: "5", y: "8", width: "7", height: "34", rx: "2", ...faint }), _jsx("circle", { cx: "30", cy: "11", r: "4", ...S }), _jsx("path", { d: "M30 15l10 14M40 29l-6 18M40 29l15 14M28 17l-8 8M20 25l-8-5", ...S }), _jsx("path", { d: "M9 12l11 13M42 28l-4 3", ...faint })] });
         if (visual === "overhead-rope" || cableRope)
             return _jsxs("g", { children: [_jsx("path", { d: "M13 5v42", ...faint }), _jsx("rect", { x: "8", y: "5", width: "10", height: "18", rx: "3", ...S, opacity: ".65" }), _jsx("circle", { cx: "27", cy: "10", r: "4", ...S }), _jsx("path", { d: "M18 12h5M30 13l5 8v5", ...S }), _jsx("path", { d: "M35 26v5M35 31l-9 11M35 31l9 11", ...S, strokeWidth: "3.4" }), _jsx("circle", { cx: "24", cy: "44", r: "3.4", ...F }), _jsx("circle", { cx: "46", cy: "44", r: "3.4", ...F })] });
         if (visual === "rope")
@@ -3270,6 +3274,8 @@ function AttachmentGlyph({ ex, size = 46 }) {
         if (visual === "rear-machine")
             return _jsxs("g", { children: [_jsx("path", { d: "M23 44h18M25 29h14M27 29v15M37 29v15", ...faint }), _jsx("circle", { cx: "32", cy: "10", r: "4", ...S }), _jsx("path", { d: "M32 14v15M32 19L15 21M32 19l17 2", ...S }), _jsx("path", { d: "M12 12v18M52 12v18M12 17l3 4M52 17l-3 4", ...faint }), _jsx("circle", { cx: "15", cy: "21", r: "3", ...S }), _jsx("circle", { cx: "49", cy: "21", r: "3", ...S })] });
         // Chest fly scenes.
+        if (visual === "chest-db-partial")
+            return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L20 22M35 29l15-7", ...S }), _jsx("path", { d: "M11 22h10M13 19v6M19 19v6M49 22h10M51 19v6M57 19v6", ...S, strokeWidth: "2.2" }), _jsx("path", { d: "M17 13l3 3M47 16l3-3", ...faint, strokeDasharray: "2 3" })] });
         if (visual === "chest-db")
             return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L16 14M35 29l19-15", ...S }), _jsx("path", { d: "M11 14h10M13 11v6M19 11v6M49 14h10M51 11v6M57 11v6", ...S, strokeWidth: "2.2" })] });
         if (visual === "chest-cable")

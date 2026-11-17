@@ -360,9 +360,12 @@ assert.ok(
   authoringSheet.includes('choice.attachmentId,') &&
   authoringSheet.includes('terms.all { searchable.contains(it) }') &&
   authoringSheet.includes('val matchedChoices=labeled.toSet()') &&
-  authoringSheet.includes('val searched=ranked.filter { it.choice in matchedChoices }') &&
+  authoringSheet.includes('val searched=ranked.filter { rankedChoice ->') &&
+  authoringSheet.includes('choice in matchedChoices') &&
+  authoringSheet.includes('nativeBenchAngle(choice.variantId)==selectedAngle') &&
+  authoringSheet.includes('choice.attachmentId==attachmentId') &&
   authoringSheet.includes('val filtered=searched.take(visibleCount)') &&
-  authoringSheet.includes('" · attachment: "+it.replace(') &&
+  authoringSheet.includes('nativeVariantDescription(candidate.variantId') &&
   authoringSheet.includes('Text("Same pattern")') &&
   authoringSheet.includes('Text("Shared muscles")') &&
   authoringSheet.includes('Text("Same role")') &&

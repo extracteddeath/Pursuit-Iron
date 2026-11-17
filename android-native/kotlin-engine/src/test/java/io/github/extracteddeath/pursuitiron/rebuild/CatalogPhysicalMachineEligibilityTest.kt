@@ -13,7 +13,7 @@ class CatalogPhysicalMachineEligibilityTest {
         val overrides=catalog.filter {
             it.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE
         }
-        assertEquals(46,overrides.size)
+        assertEquals(48,overrides.size)
         val qualified=overrides.filter(CatalogPhysicalMachineEligibility::eligible)
         assertEquals(42,qualified.size)
         assertTrue(qualified.all{it.equipmentId!=null})
@@ -26,7 +26,8 @@ class CatalogPhysicalMachineEligibilityTest {
                 CatalogPhysicalMachineEligibility.eligible(byId.getValue(id)))
         }
         for(id in listOf("hammer-radial-dev","hammer-ulnar-dev",
-            "wrist-roller","plate-front-raise")) {
+            "wrist-roller","plate-front-raise",
+            "svend-press","gripper")) {
             assertFalse("Portable equipment must not create A/B: "+id,
                 CatalogPhysicalMachineEligibility.eligible(byId.getValue(id)))
         }
@@ -72,6 +73,8 @@ class CatalogPhysicalMachineEligibilityTest {
             "single-leg-press" in eligible && "leg-press-calf" in eligible)
         assertFalse("wrist-roller" in eligible)
         assertFalse("plate-front-raise" in eligible)
+        assertFalse("svend-press" in eligible)
+        assertFalse("gripper" in eligible)
         val conflicting=listOf(reviewed,reviewed.copy(
             expectedLoadBasis=LoadBasis.DUMBBELL_PER_HAND,
             equipmentId="dumbbell-rack"))

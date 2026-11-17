@@ -906,7 +906,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         "The correction was not saved. Review the saved set and retry."
                     } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
-                    athleteId=journal.snapshot.source.athleteId,
+                    athleteId=journal?.snapshot?.source?.athleteId.orEmpty(),
                     workoutId=workoutId,
                     issuedGymId=issuedGymId,machineRoster=machineRoster,
                     referenceMode=referenceMode,lastReferences=lastReferences,

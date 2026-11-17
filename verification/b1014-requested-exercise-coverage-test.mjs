@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { EXERCISES, EX_BY_ID, EQUIPMENT } from '../modules/training-domain/catalog.js';
 import { EXERCISE_MAP, createExerciseCatalog, createAutomaticExerciseCatalog } from '../modules/next-engine/exercise-db.js';
+import { createEngineContext } from '../modules/next-engine/engine-context.js';
 import { exerciseBenchLevel, exerciseAttachmentFacet } from '../modules/exercise-variant-browse.js';
 
 // Regression for specifically requested real-world training setups; an
@@ -86,6 +87,22 @@ for(const [id] of expected.map(([id])=>[id])) {
 }
 assert.equal(manual.length-automatic.length,expected.length,
   'only the seven new provisional variants may be excluded from automatic generation');
+const sourceContext=createEngineContext({
+  athlete:{experience:'advanced'},goal:{type:'hypertrophy'},
+  schedule:{days:[{day:'monday'}]},
+  equipment:{available:['dumbbell','bench','inclinebench','barbell','rack','smith','cable'],bodyweight:'allow'},
+  restrictions:{maxBarbellMovementsPerDay:2},
+  preferences:{avoidedExercises:[]}
+});
+for(const [id] of expected.map(([id])=>[id])) {
+  assert.equal(sourceContext.exerciseById(id)?.id,id,
+    'provisional identity must remain addressable for manual session history');
+  assert.ok(!sourceContext.automaticCatalog.some(ex=>ex.id===id),
+    'unreviewed variant leaked into generated planning candidates');
+}
+assert.equal(sourceContext.exerciseCatalog.length,manual.length,
+  'full engine source retains every manually reachable built-in');
+
 
 // Picker must search all source IDs, with options visible in program and
 // in-workout swaps. Physical machine ID is never an exercise swap.

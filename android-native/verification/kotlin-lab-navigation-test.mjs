@@ -362,7 +362,8 @@ assert.ok(
   authoringSheet.includes('val matchedChoices=labeled.toSet()') &&
   authoringSheet.includes('val searched=ranked.filter { rankedChoice ->') &&
   authoringSheet.includes('choice in matchedChoices') &&
-  authoringSheet.includes('nativeBenchAngle(choice.variantId)==selectedAngle') &&
+  authoringSheet.includes('verifiedAngleFor(choice.exerciseId)==selectedAngle') &&
+  authoringSheet.includes('nativeReviewedChoiceAngle(exerciseId,reviewedVariantById)') &&
   authoringSheet.includes('choice.attachmentId==attachmentId') &&
   authoringSheet.includes('val filtered=searched.take(visibleCount)') &&
   authoringSheet.includes('nativeVariantDescription(candidate.variantId') &&

@@ -17,7 +17,8 @@ internal data class NativeKotlinExerciseLibraryRecord(
     val gearIds:Set<String> get()=setOf(movement.equipmentId ?: nativeLibraryBodyweight)+
         movement.requiredFacilityIds+listOfNotNull(movement.attachmentId)
     val angle:NativeBenchAngle? get()=
-        nativeBenchAngle(movement.variantId,movement.requiredFacilityIds)
+        nativeBenchAngle(movement.variantId,movement.requiredFacilityIds,
+            movement.familyId)
     val variantDescription:String get()=nativeExerciseVariantCategory(movement)
 }
 

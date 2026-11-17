@@ -33,8 +33,12 @@ assert.match(rank,/fun rank\(/);
 assert.match(sheet,/val matchedChoices=labeled\.toSet\(\)/);
 assert.match(sheet,/val searched=ranked\.filter \{ rankedChoice ->/);
 assert.match(sheet,/choice in matchedChoices/);
-assert.match(sheet,/nativeBenchAngle\(choice\.variantId\)==selectedAngle/);
+assert.match(sheet,/verifiedAngleFor\(choice\.exerciseId\)==selectedAngle/);
 assert.match(sheet,/choice\.attachmentId==attachmentId/);
+assert.match(sheet,/StarterExerciseTranche\.movements\(\)/);
+assert.match(sheet,/nativeReviewedChoiceAngle\(exerciseId,reviewedVariantById\)/);
+assert.match(sheet,/nativeReviewedChoiceAngle\(exerciseId,reviewedVariantById\)/);
+assert.match(sheet,/verifiedAngleFor\(it\.exerciseId\)/);
 assert.doesNotMatch(sheet,/it\.choice\.exerciseId in matchingIds/);
 
 // The first 20 are a page, not a catalog limit.

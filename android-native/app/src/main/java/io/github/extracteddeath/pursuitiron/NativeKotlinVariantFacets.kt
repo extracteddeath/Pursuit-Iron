@@ -16,18 +16,28 @@ internal enum class NativeBenchAngle(val display:String) {
 }
 
 internal fun nativeBenchAngle(
-    variantId:String,facilities:Set<String> = emptySet()
+    variantId:String,facilities:Set<String> = emptySet(),
+    familyId:String? = null
 ):NativeBenchAngle? {
     val variant=variantId.lowercase(Locale.ROOT).replace('_','-')
+    val family=familyId?.lowercase(Locale.ROOT)?.replace('_','-')
+    // "Incline push-up", "decline push-up" and low-to-high cable motions
+    // describe body position/trajectory, not an adjustable bench angle.
+    if(family=="pushup" || family=="push-up" ||
+        variant.contains("pushup") || variant.contains("push-up"))return null
+    // An exact source-declared bench fixture is required for *any* angle.
+    // Names and arbitrary variant IDs (including custom exercises) alone
+    // are insufficient to assert a bench setting or numeric degrees.
     return when {
-        variant.contains("high-incline") -> NativeBenchAngle.HIGH_INCLINE
-        variant.contains("low-incline") -> NativeBenchAngle.LOW_INCLINE
-        variant.contains("decline") || "decline-bench" in facilities ->
-            NativeBenchAngle.DECLINE
-        variant.contains("incline") || "incline-bench" in facilities ->
-            NativeBenchAngle.INCLINE
-        variant.contains("flat") || "flat-bench" in facilities ->
-            NativeBenchAngle.FLAT
+        "incline-bench" in facilities && variant.contains("high-incline") ->
+            NativeBenchAngle.HIGH_INCLINE
+        "incline-bench" in facilities && variant.contains("low-incline") ->
+            NativeBenchAngle.LOW_INCLINE
+        "incline-bench" in facilities -> NativeBenchAngle.INCLINE
+        "decline-bench" in facilities -> NativeBenchAngle.DECLINE
+        "flat-bench" in facilities &&
+            (family in setOf("bench-press","chest-adduction") ||
+                variant.contains("flat")) -> NativeBenchAngle.FLAT
         else -> null
     }
 }
@@ -35,9 +45,9 @@ internal fun nativeBenchAngle(
 /** Search and selection descriptors only; never imply a 15/30/45-degree setting. */
 internal fun nativeVariantDescription(
     variantId:String,facilityIds:Set<String>,attachmentId:String?,
-    role:String?=null
+    role:String?=null,familyId:String?=null
 ):String {
-    val angle=nativeBenchAngle(variantId,facilityIds)
+    val angle=nativeBenchAngle(variantId,facilityIds,familyId)
     val parts=buildList {
         if(angle!=null)add(angle.display)
         add(nativeLibraryWords(variantId))
@@ -66,9 +76,17 @@ internal fun nativeExerciseFamilyVariants(
         .thenBy{it.movement.exerciseId})
 }
 
+/** Source-backed incline facet for approved picker identities only.
+ * Custom/unmapped authored IDs cannot gain an angle by naming themselves. */
+internal fun nativeReviewedChoiceAngle(
+    exerciseId:String,reviewedSource:Map<String,CatalogMovement>
+):NativeBenchAngle? = reviewedSource[exerciseId]?.let {
+    nativeBenchAngle(it.variantId,it.requiredFacilityIds,it.familyId)
+}
+
 internal fun nativeExerciseVariantCategory(move:CatalogMovement):String =
     nativeVariantDescription(move.variantId,move.requiredFacilityIds,
-        move.attachmentId,move.role.name)
+        move.attachmentId,move.role.name,move.familyId)
 
 /**
  * The generated workout picker receives approved ComposerExerciseOption
@@ -97,7 +115,7 @@ internal fun filterNativeComposerSwapVariants(
     choices.filter{candidate ->
         val movement=source[candidate.option.exerciseId]
         (angle==null || movement?.let{
-            nativeBenchAngle(it.variantId,it.requiredFacilityIds)
+            nativeBenchAngle(it.variantId,it.requiredFacilityIds,it.familyId)
         }==angle) &&
         (attachmentId==null || movement?.attachmentId==attachmentId)
     }

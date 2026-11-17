@@ -230,12 +230,23 @@ internal fun NativeKotlinCustomExerciseSheet(
     // Compare the entire verified choice, including attachment/variant.
     // A matching name must not make a sibling attachment appear authorized.
     val matchedChoices=labeled.toSet()
+    // Only installed, source-reviewed built-in identities can assert a
+    // physical incline. Custom authoring and unreviewed variants may be
+    // searched by name but cannot invent a verified bench setting.
+    val reviewedVariantById=remember(available) {
+        val visibleIds=available.map { it.exerciseId }.toSet()
+        StarterExerciseTranche.movements()
+            .filter { it.exerciseId in visibleIds }
+            .associateBy { it.exerciseId }
+    }
+    fun verifiedAngleFor(exerciseId:String):NativeBenchAngle? =
+        nativeReviewedChoiceAngle(exerciseId,reviewedVariantById)
     val selectedAngle=NativeBenchAngle.entries.firstOrNull {it.name==inclineLevel}
     val searched=ranked.filter { rankedChoice ->
         val choice=rankedChoice.choice
         choice in matchedChoices &&
             (selectedAngle==null ||
-                nativeBenchAngle(choice.variantId)==selectedAngle) &&
+                verifiedAngleFor(choice.exerciseId)==selectedAngle) &&
             (attachmentId==null || choice.attachmentId==attachmentId)
     }
     // This is a paging cap, not a catalog cap. The complete verified ranked
@@ -327,7 +338,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            val angles=available.mapNotNull {nativeBenchAngle(it.variantId)}
+            val angles=available.mapNotNull {verifiedAngleFor(it.exerciseId)}
                 .distinct()
             val attachments=available.mapNotNull {it.attachmentId}.distinct()
             if(angles.isNotEmpty()) {
@@ -375,8 +386,11 @@ internal fun NativeKotlinCustomExerciseSheet(
                         }
                     },
                     label={Text(kotlinExerciseLabel(candidate.exerciseId)+
-                        " · "+nativeVariantDescription(candidate.variantId,emptySet(),
-                            candidate.attachmentId,candidate.role?.name))})
+                        " · "+nativeVariantDescription(candidate.variantId,
+                            reviewedVariantById[candidate.exerciseId]
+                                ?.requiredFacilityIds ?:emptySet(),
+                            candidate.attachmentId,candidate.role?.name,
+                            reviewedVariantById[candidate.exerciseId]?.familyId))})
                 if(replacing!=null)Text(optionRow.explanation,
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)

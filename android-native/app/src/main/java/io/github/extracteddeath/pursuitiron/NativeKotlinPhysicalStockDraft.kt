@@ -89,6 +89,9 @@ internal data class KotlinGymStockChoice(
         "matched-kettlebell-pair" -> "Kettlebells (matching pair)"
         "landmine-station" -> "Landmine (bar and anchored pivot)"
         "cable-station" -> "Cable station"
+        "wrist-lever-hammer" -> "Wrist lever hammer (verified resistance)"
+        "wrist-roller-handle" -> "Wrist roller (verified added load)"
+        "single-weight-plate" -> "Individual weight plate"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}
     }

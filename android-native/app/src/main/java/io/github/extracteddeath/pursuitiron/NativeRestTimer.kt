@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import io.github.extracteddeath.pursuitiron.domain.NativeRestCue
-import kotlin.math.abs
 
 /**
  * A presentation-only rest countdown. The target comes from the pinned,
@@ -35,20 +34,38 @@ internal fun NativeRestTimer(
     prescribedSeconds: Int,
     enabled: Boolean,
     latestReceiptOperationId: String? = null,
-    autoCue: NativeRestCue? = null
+    autoCue: NativeRestCue? = null,
+    /** Null disables persistent UI recovery for older, unscoped callers. */
+    ownerId: String? = null
 ) {
     // A verified receipt may start rest from the previous exercise even if
     // the currently selected exercise has zero rest. Never unmount the timer
     // before observing that receipt or while its elapsed countdown is active.
     val manualRestTarget=prescribedSeconds in 1..3600
-    var deadline by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
-    var startedElapsed by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
-    var startedWall by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
-    var activeSeconds by rememberSaveable(workoutId) { mutableIntStateOf(0) }
+    val restStore=rememberNativeRestCountdownStore()
+    val scopeKey=remember(workoutId,ownerId) {
+        ownerId?.let {restStore.scopedKey(it,workoutId)}
+    }
+    val recovered=remember(scopeKey) {
+        scopeKey?.let {restStore.read(it,
+            SystemClock.elapsedRealtime(),System.currentTimeMillis())}
+    }
+    var deadline by rememberSaveable(workoutId,ownerId) {
+        mutableLongStateOf(recovered?.deadlineElapsed ?:0L)
+    }
+    var startedElapsed by rememberSaveable(workoutId,ownerId) {
+        mutableLongStateOf(recovered?.startedElapsed ?:0L)
+    }
+    var startedWall by rememberSaveable(workoutId,ownerId) {
+        mutableLongStateOf(recovered?.startedWall ?:0L)
+    }
+    var activeSeconds by rememberSaveable(workoutId,ownerId) {
+        mutableIntStateOf(recovered?.activeSeconds ?:0)
+    }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     // Initialize from the *already visible* journal receipt. Re-entering
     // Train, rotating or recovering the app must not replay old rests.
-    var observedEvent by rememberSaveable(workoutId) {
+    var observedEvent by rememberSaveable(workoutId,ownerId) {
         mutableStateOf(latestReceiptOperationId)
     }
     // A saved UI checkpoint can precede a durable write acknowledged while
@@ -56,14 +73,33 @@ internal fun NativeRestTimer(
     // receipt, including restoration; never start that old rest on reopening.
     // An already-running saveable deadline is preserved independently.
     var receiptBaselineChecked by remember(workoutId) { mutableStateOf(false) }
+    fun publish(checkpoint:NativeRestCountdownCheckpoint?) {
+        deadline=checkpoint?.deadlineElapsed ?:0L
+        startedElapsed=checkpoint?.startedElapsed ?:0L
+        startedWall=checkpoint?.startedWall ?:0L
+        activeSeconds=checkpoint?.activeSeconds ?:0
+        restStore.save(scopeKey,checkpoint)
+    }
     fun begin(seconds: Int) {
-        if(seconds !in 1..3600)return
         val elapsed=SystemClock.elapsedRealtime()
         now=elapsed
-        startedElapsed=elapsed
-        startedWall=System.currentTimeMillis()
-        activeSeconds=seconds
-        deadline=elapsed+seconds*1000L
+        publish(NativeRestCountdownPolicy.begin(
+            seconds,elapsed,System.currentTimeMillis()))
+    }
+    fun adjust(seconds:Int) {
+        val checkpoint=NativeRestCountdownCheckpoint(
+            startedElapsed,startedWall,deadline,activeSeconds)
+        val elapsed=SystemClock.elapsedRealtime()
+        now=elapsed
+        // An untrusted, stale or expired checkpoint cannot be extended.
+        // An athlete may tap the normal issued rest target to restart it.
+        if(!NativeRestCountdownPolicy.valid(
+                checkpoint,elapsed,System.currentTimeMillis())) {
+            publish(null)
+            return
+        }
+        publish(NativeRestCountdownPolicy.adjust(
+            checkpoint,seconds,elapsed,System.currentTimeMillis()))
     }
     LaunchedEffect(latestReceiptOperationId,enabled) {
         if(!receiptBaselineChecked) {
@@ -76,32 +112,23 @@ internal fun NativeRestTimer(
             if(autoCue?.operationId==latestReceiptOperationId) {
                 // An explicitly immediate Kotlin follow-up must not inherit
                 // a countdown still running from the preceding normal set.
-                if(autoCue.seconds==0) {
-                    deadline=0L
-                    activeSeconds=0
-                } else begin(autoCue.seconds)
+                if(autoCue.seconds==0)publish(null)
+                else begin(autoCue.seconds)
             }
         }
     }
 
     // A saved elapsedRealtime deadline is invalid after a device reboot.
-    // Compare elapsed and wall time; clock changes also fail closed instead
-    // of leaving a phantom multi-hour countdown on the user's workout.
-    fun hasValidClock(elapsed: Long, wall: Long): Boolean {
-        if (startedElapsed <= 0L || startedWall <= 0L ||
-            elapsed < startedElapsed || wall < startedWall) return false
-        val monotonicAge = elapsed - startedElapsed
-        val wallAge = wall - startedWall
-        return abs(wallAge - monotonicAge) <= 60_000L
-    }
-
+    // Compare monotonic and wall time and bound expired historical timers.
     LaunchedEffect(deadline, startedElapsed, startedWall) {
         if (deadline <= 0L) return@LaunchedEffect
         while (isActive) {
             val elapsed = SystemClock.elapsedRealtime()
-            if (!hasValidClock(elapsed, System.currentTimeMillis())) {
-                deadline = 0L
-                activeSeconds = 0
+            val checkpoint=NativeRestCountdownCheckpoint(
+                startedElapsed,startedWall,deadline,activeSeconds)
+            if (!NativeRestCountdownPolicy.valid(
+                    checkpoint,elapsed,System.currentTimeMillis())) {
+                publish(null)
                 break
             }
             now = elapsed
@@ -109,9 +136,12 @@ internal fun NativeRestTimer(
             delay(250L)
         }
     }
-    val valid = deadline > 0L && hasValidClock(now, System.currentTimeMillis())
-    val remaining = if (!valid) 0L else
-        ((deadline - now).coerceAtLeast(0L) + 999L) / 1000L
+    val checkpoint=NativeRestCountdownCheckpoint(
+        startedElapsed,startedWall,deadline,activeSeconds)
+    val remainingMaybe=NativeRestCountdownPolicy.remaining(
+        checkpoint,now,System.currentTimeMillis())
+    val valid=deadline>0L && remainingMaybe!=null
+    val remaining=remainingMaybe ?:0L
     val time = "%d:%02d".format(remaining / 60, remaining % 60)
     val title = when {
         !valid -> "Start rest timer"
@@ -135,10 +165,7 @@ internal fun NativeRestTimer(
             onClickLabel = "Start or restart rest timer",
             onLongClickLabel = "Reset rest timer",
             onClick = { begin(prescribedSeconds) },
-            onLongClick = {
-                deadline = 0L
-                activeSeconds = 0
-            }
+            onLongClick = {publish(null)}
         ) else Modifier.fillMaxWidth().heightIn(min = 64.dp)
 
     Surface(
@@ -158,10 +185,24 @@ internal fun NativeRestTimer(
             }
             Text(supporting, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer)
-            if(!manualRestTarget && enabled) TextButton(onClick = {
-                deadline = 0L
-                activeSeconds = 0
-            }) { Text("Clear rest") }
+            if(valid && remaining>0L) {
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick={adjust(-30)},enabled=enabled,
+                        modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
+                        Text("−30 s")
+                    }
+                    TextButton(onClick={adjust(30)},enabled=enabled &&
+                        remaining<NativeRestCountdownPolicy.MAX_SECONDS,
+                        modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
+                        Text("+30 s")
+                    }
+                    TextButton(onClick={publish(null)},enabled=enabled,
+                        modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
+                        Text("Clear")
+                    }
+                }
+            }
         }
     }
 }

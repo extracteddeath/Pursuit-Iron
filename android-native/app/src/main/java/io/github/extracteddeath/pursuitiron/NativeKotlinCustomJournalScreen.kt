@@ -600,6 +600,8 @@ internal fun NativeKotlinCustomJournalScreen(
                             color=MaterialTheme.colorScheme.primary)
                         Text("Your results are saved in workout history.",
                             style=MaterialTheme.typography.bodyMedium)
+                        NativeKotlinVerifiedFinishRecap(
+                            host=host,workoutId=workoutId,isCustom=true)
                         PursuitPrimaryAction("View finished workout in history",enabled=!busy,
                             onClick=onViewHistory)
                         OutlinedButton(onClick=onReturnToProgram,enabled=!busy,

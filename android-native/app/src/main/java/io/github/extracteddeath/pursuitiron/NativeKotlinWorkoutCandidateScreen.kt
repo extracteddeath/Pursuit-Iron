@@ -1080,6 +1080,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             Text("Your original targets and every actual, skip, failure and correction remain in the Kotlin journal.")
             when(verifiedFinish) {
                 is NativeComposerFinishHandoffResult.Verified -> {
+                    NativeKotlinVerifiedFinishRecap(
+                        host=host,workoutId=workoutId,isCustom=false)
                     Text("Finish verified in committed native History. Your next workout remains unchanged until you explicitly review it.",
                         style=MaterialTheme.typography.bodySmall)
                     PursuitPrimaryAction("View finished workout in History",

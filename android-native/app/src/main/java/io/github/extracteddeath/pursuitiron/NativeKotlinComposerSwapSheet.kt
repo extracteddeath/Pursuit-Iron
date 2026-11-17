@@ -71,6 +71,12 @@ internal fun NativeKotlinComposerSwapSheet(
     var sharedMusclesOnly by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
         mutableStateOf(false)
     }
+    var inclineId by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
+        mutableStateOf<String?>(null)
+    }
+    var attachmentId by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
+        mutableStateOf<String?>(null)
+    }
     var selectedId by rememberSaveable(fromExerciseId,issuedTargetsSignature) {
         mutableStateOf<String?>(null)
     }
@@ -83,12 +89,33 @@ internal fun NativeKotlinComposerSwapSheet(
     }
     // Search the same labels shown to athletes, not only internal IDs.
     // Equipment, role and original ranking remain engine-owned.
-    val displayLabels=remember(choices){
-        choices.associate{it.option.exerciseId to
-            kotlinExerciseLabel(it.option.exerciseId)}
+    val variantCatalog=remember(choices){
+        nativeComposerVariantMetadata(choices)
     }
-    val permitted=KotlinComposerSwapRankingDomain.filterRanked(
+    val displayLabels=remember(choices){
+        choices.associate{choice->
+            val id=choice.option.exerciseId
+            val source=variantCatalog[id]
+            id to (kotlinExerciseLabel(id)+
+                (source?.let{" · "+nativeExerciseVariantCategory(it)} ?: ""))
+        }
+    }
+    val ranked=KotlinComposerSwapRankingDomain.filterRanked(
         choices,query,matchingPattern,sharedMusclesOnly,displayLabels)
+    val selectedAngle=NativeBenchAngle.entries.firstOrNull{it.name==inclineId}
+    val permitted=filterNativeComposerSwapVariants(
+        ranked,variantCatalog,selectedAngle,attachmentId)
+    val knownAngles=remember(choices){
+        choices.mapNotNull{choice ->
+            variantCatalog[choice.option.exerciseId]?.let{
+                nativeBenchAngle(it.variantId,it.requiredFacilityIds)
+            }
+        }.distinct()
+    }
+    val knownAttachments=remember(choices){
+        choices.mapNotNull{variantCatalog[it.option.exerciseId]?.attachmentId}
+            .distinct().sorted()
+    }
     val approved=selected?.let{choice->
         runCatching {
             sourceTargets.mapIndexed {i,target->
@@ -151,6 +178,39 @@ internal fun NativeKotlinComposerSwapSheet(
                             enabled=!busy,
                             label={Text("Shared direct muscles")})
                     }
+                    if(knownAngles.isNotEmpty()) {
+                        Text("Bench incline",style=MaterialTheme.typography.labelLarge)
+                        Row(Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            FilterChip(selected=inclineId==null,
+                                onClick={inclineId=null},enabled=!busy,
+                                label={Text("Any incline")})
+                            knownAngles.forEach{angle->
+                                FilterChip(selected=inclineId==angle.name,
+                                    onClick={inclineId=angle.name},enabled=!busy,
+                                    label={Text(angle.display)})
+                            }
+                        }
+                    }
+                    if(knownAttachments.isNotEmpty()) {
+                        Text("Cable attachment",style=MaterialTheme.typography.labelLarge)
+                        Row(Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            FilterChip(selected=attachmentId==null,
+                                onClick={attachmentId=null},enabled=!busy,
+                                label={Text("Any attachment")})
+                            knownAttachments.forEach{id->
+                                FilterChip(selected=attachmentId==id,
+                                    onClick={attachmentId=id},enabled=!busy,
+                                    label={Text(kotlinGymAttachmentLabel(id))})
+                            }
+                        }
+                    }
+                    Text("Each incline, attachment and gym machine has its own physical loading. Select an available exercise, then enter new verified targets.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${permitted.size} verified same-role alternatives · "+
                         "ranked by pattern and distinct reviewed direct-muscle overlap",
                         style=MaterialTheme.typography.labelSmall,
@@ -166,6 +226,11 @@ internal fun NativeKotlinComposerSwapSheet(
                         ){
                             Column(Modifier.fillMaxWidth()){
                                 Text(kotlinExerciseLabel(candidate.option.exerciseId))
+                                variantCatalog[candidate.option.exerciseId]?.let{move->
+                                    Text(nativeExerciseVariantCategory(move),
+                                        style=MaterialTheme.typography.labelSmall,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 Text(candidate.explanation,
                                     style=MaterialTheme.typography.labelSmall)
                                 Text(candidate.option.pattern.name.replace('_',' ')
@@ -180,6 +245,10 @@ internal fun NativeKotlinComposerSwapSheet(
                 } else {
                     Text(kotlinExerciseLabel(selected.option.exerciseId),
                         style=MaterialTheme.typography.titleMedium)
+                    variantCatalog[selected.option.exerciseId]?.let{move->
+                        Text(nativeExerciseVariantCategory(move),
+                            style=MaterialTheme.typography.bodyMedium)
+                    }
                     Text(selected.explanation,
                         style=MaterialTheme.typography.bodySmall)
                     selected.option.sourcePracticalReps?.let { envelope ->

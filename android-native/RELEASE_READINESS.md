@@ -8,6 +8,19 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Generated Train variant-picking parity (2026-11-17):**
+Generated workout-only swaps now share the factual reviewed incline-level
+and exact cable-attachment filtering already available in custom Train,
+Plan and Gym Library. The generated picker derives those read-only facets
+only from matching Kotlin built-in catalog identities in the currently
+owner-reviewed replacement list. Custom/unknown movement metadata never
+gains a fabricated bench angle or attachment; if a chosen facet cannot
+be sourced the option is not shown. Ranking, owner/gym verification,
+new per-set load/rep/RIR authoring, journal CAS, old results and distinct
+Machine A/B histories remain owned by the original Kotlin rules. JUnit,
+source integration and Compose compilation must pass; phone/TalkBack and
+full 376-ID semantics remain open. No APK/AAB.
+
 **Catalog variant browsing (2026-11-17):**
 Gym Library now reveals the existing Kotlin exact physical family/variant
 relationships with independent eligibility and direct variant-detail access;

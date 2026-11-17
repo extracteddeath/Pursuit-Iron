@@ -2170,10 +2170,25 @@ object StarterExerciseTranche {
             "single-weight-plate",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
             "The legacy web record calls this a dumbbell, but the named movement uses a physical weight plate held with both hands. Require its own explicitly verified plate inventory; no free bar or dumbbell-rack load can be reused.",
             direct(TrainingMuscle.FRONT_DELTS))
+    ) + listOf(
+        // Wave nine only: two repetition-based movements with actual
+        // verified resistance implements. They are NOT bodyweight movements
+        // even though the legacy metadata uses that token.
+        entry("svend-press","chest_adduction","plate-squeeze-press",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
+            "single-weight-plate",LoadBasis.EXERCISE_OVERRIDE,emptySet(),12..20,
+            "Svend press requires an actual individually verified plate squeezed between both hands. Its plate-load history is independent from plate front raise despite the shared physical inventory. The old web bodyweight tag is not training authority.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.25")),
+        entry("gripper","crushing_grip","manufacturer-rated-hand-gripper",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "hand-gripper-device",LoadBasis.EXERCISE_OVERRIDE,emptySet(),10..20,
+            "A hand gripper is a physical spring/resistance device, not unweighted bodyweight. Only individually athlete-confirmed manufacturer-rated device settings are eligible; ratings are not free-weight loads or portable between gripper models. Use a separate authored movement identity for a different physical device, and log repetitions rather than seconds.",
+            direct(TrainingMuscle.WRIST_FLEXORS))
     )
 
     init {
-        require(definitions.size==343)
+        require(definitions.size==345)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

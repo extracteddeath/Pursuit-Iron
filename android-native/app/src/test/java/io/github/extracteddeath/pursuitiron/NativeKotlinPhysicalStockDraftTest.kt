@@ -28,7 +28,7 @@ internal class NativeKotlinPhysicalStockDraftTest:NativeKotlinProgramFilesFixtur
             Triple("wrist-roller-handle","Wrist roller (verified added load)",
                 setOf("Wrist Roller")),
             Triple("single-weight-plate","Individual weight plate",
-                setOf("Plate Front Raise"))
+                setOf("Plate Front Raise","Svend Press"))
         )) {
             val verified=checkNotNull(choice[id])
             assertEquals(label,verified.displayName)
@@ -44,6 +44,31 @@ internal class NativeKotlinPhysicalStockDraftTest:NativeKotlinProgramFilesFixtur
             as LoadInspection.Confirmed).exact)
         assertNotEquals(choice.getValue("dumbbell-rack").equipmentId,
             choice.getValue("single-weight-plate").equipmentId)
+    }
+
+    @Test fun plateSvendAndSpringGripperHaveSeparateGymHardwareAndLoadSources() {
+        val catalog=StarterExerciseTranche.movements()
+        val choices=kotlinGymStockChoices(catalog).associateBy{it.equipmentId}
+        val plate=checkNotNull(choices["single-weight-plate"])
+        assertEquals("Individual weight plate",plate.displayName)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,plate.basis)
+        assertEquals(setOf("Plate Front Raise","Svend Press"),
+            plate.exerciseNames.toSet())
+        val gripper=checkNotNull(choices["hand-gripper-device"])
+        assertEquals("Hand gripper (verified rated settings)",gripper.displayName)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,gripper.basis)
+        assertEquals(listOf("Hand Gripper"),gripper.exerciseNames)
+        val device=checkNotNull(parseVerifiedStock(LoadUnit.LB,
+            PhysicalStockEditorKind.EXACT_LOADS,LoadBasis.EXERCISE_OVERRIDE,
+            "60,80,100","","","","",""))
+        val observed=EquipmentLoadDomain.inspect(device,n("80"),LoadUnit.LB)
+            as LoadInspection.Confirmed
+        assertTrue(observed.exact)
+        assertFalse((EquipmentLoadDomain.inspect(device,n("75"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        assertNotEquals(gripper.equipmentId,plate.equipmentId)
+        assertNotEquals(gripper.equipmentId,
+            choices.getValue("dumbbell-rack").equipmentId)
     }
 
     @Test fun explicitBarMassAndSymmetricPairsDetermineAttainableLoads() {

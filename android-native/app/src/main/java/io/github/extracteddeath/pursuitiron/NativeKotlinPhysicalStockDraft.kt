@@ -92,6 +92,7 @@ internal data class KotlinGymStockChoice(
         "wrist-lever-hammer" -> "Wrist lever hammer (verified resistance)"
         "wrist-roller-handle" -> "Wrist roller (verified added load)"
         "single-weight-plate" -> "Individual weight plate"
+        "hand-gripper-device" -> "Hand gripper (verified rated settings)"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}
     }

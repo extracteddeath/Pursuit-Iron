@@ -83,6 +83,23 @@ object AdvancedAmplifierProtocolDomain {
                 "rests. Stop when the prescribed reps or safe technique cannot be maintained.",
             selectionCue = "Use sparingly for stable accessories, not automatically on every lift."
         )
+        CustomAmplifierKind.LENGTHENED_PARTIALS -> AdvancedAmplifierTemplate(
+            title = "Lengthened partials",
+            roundLabel = "lengthened partials",
+            activationReps = 6..20,
+            followUpReps = 1..8,
+            followUpRounds = 1..1,
+            intraSetRestSeconds = 0..0,
+            loadRule = AmplifierLoadRule.SAME_LOAD,
+            techniqueCue = "After completing the final full-range working set, " +
+                "optionally log 1–8 controlled partial repetitions in the " +
+                "lengthened portion of the range using the SAME load and " +
+                "physical station. Stop when position or technique degrades; " +
+                "partials are not full-range repetitions.",
+            selectionCue = "Opt-in for experienced lifters on stable, " +
+                "appropriate accessories; not automatic, and not required " +
+                "on heavy technical lifts or when fatigue/injury argues against it."
+        )
         CustomAmplifierKind.CLUSTER -> AdvancedAmplifierTemplate(
             title = "Cluster sets",
             roundLabel = "clusters",
@@ -106,16 +123,22 @@ object AdvancedAmplifierProtocolDomain {
         CustomAmplifierKind.REST_PAUSE -> if(plural)"efforts" else "effort"
         CustomAmplifierKind.DROP_SET -> if(plural)"weight drops" else "weight drop"
         CustomAmplifierKind.CLUSTER -> if(plural)"clusters" else "cluster"
+        CustomAmplifierKind.LENGTHENED_PARTIALS ->
+            if(plural)"partial reps" else "partial rep"
     }
 
     fun stageLabel(amp:CustomSetAmplifier,ordinal:Int):String {
         val title=template(amp.kind).title
+        if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+            return "Lengthened partials · final-set extension"
         if(amp.followUpRounds<=1)return "$title · follow-up"
         return "$title · ${stageNoun(amp.kind)} $ordinal of ${amp.followUpRounds}"
     }
 
     fun stageReviewCue(amp:CustomSetAmplifier):String =
-        if(amp.followUpRounds<=1)
+        if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+            "Final working set only · partial reps logged separately at the activation load; never counted as full-range reps or a new regular set."
+        else if(amp.followUpRounds<=1)
             "One separately logged follow-up; unperformed work is not recorded."
         else when(amp.kind) {
             CustomAmplifierKind.MYO_REPS ->
@@ -126,6 +149,8 @@ object AdvancedAmplifierProtocolDomain {
                 "Each weight drop must use its separately verified load and actual reps."
             CustomAmplifierKind.CLUSTER ->
                 "Each planned cluster is a separately saved quality-rep observation; stop on missed or unplanned reps, or when technique declines."
+            CustomAmplifierKind.LENGTHENED_PARTIALS ->
+                "Log partial repetitions separately on the final working set; never turn them into full-range reps."
         }
 
     fun stageEarlyStopTitle(kind:CustomAmplifierKind):String =
@@ -139,6 +164,8 @@ object AdvancedAmplifierProtocolDomain {
                 "End this sequence when reps or technique decline. This effort is saved as skipped; no later rest-pause efforts are created."
             CustomAmplifierKind.CLUSTER ->
                 "End the planned clusters if quality or technique declines. This cluster is saved as skipped; no later clusters are created."
+            CustomAmplifierKind.LENGTHENED_PARTIALS ->
+                "Skip the optional final-set partial extension if technique or joint comfort is poor. No partial reps are invented."
             else ->
                 "This stage is saved as skipped; unperformed stages are never recorded."
         }
@@ -146,7 +173,10 @@ object AdvancedAmplifierProtocolDomain {
     /** Both authoring entry points use one policy for OPTIONAL staged work.
      * Legacy single-follow-up recipes keep their exact old semantics. */
     fun validStagedFollowUps(amp:CustomSetAmplifier):Boolean =
-        amp.followUpRounds==1 || when(amp.kind) {
+        if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+            amp.followUpRounds==1 && amp.followUpReps in 1..8 &&
+                amp.followUpRestSeconds==0 && amp.followUpLoad==null
+        else amp.followUpRounds==1 || when(amp.kind) {
             CustomAmplifierKind.MYO_REPS ->
                 amp.followUpRounds in 3..5 && amp.followUpReps in 3..5 &&
                     amp.followUpRestSeconds in 10..30 && amp.followUpLoad==null

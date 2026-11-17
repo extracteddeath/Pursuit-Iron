@@ -38,12 +38,17 @@ object WorkoutMachineLastPreviewDomain {
             return WorkoutMachineLastPreview.NoMatchingSet
         // The caller must enumerate exact current-workout exercise keys.
         // Never use an unrelated exercise or an arbitrary 'best' machine PR.
-        val matches=workingSetKeys.distinct().mapNotNull {key->
+        val matches=workingSetKeys.distinct().mapIndexedNotNull {index,key->
             history.machineSets[WorkoutMachineReferenceKey(key,machineId)]
+                ?.let{index to it}
         }
         if(matches.isEmpty())return WorkoutMachineLastPreview.NoMatchingSet
-        val newestOrder=matches.maxOf{it.completionOrder}
-        val latest=matches.first{it.completionOrder==newestOrder}
+        // All sets in one workout have the SAME completion order. Prefer
+        // its later working-set ordinal so a later failed attempt cannot be
+        // hidden behind an earlier successful set from that same session.
+        val latest=matches.maxWith(
+            compareBy<Pair<Int,WorkoutLastSetReference>>(
+                {it.second.completionOrder},{it.first})).second
         if(latest.completionOrder<=0L)
             return WorkoutMachineLastPreview.Unavailable
         val actual=latest.actual

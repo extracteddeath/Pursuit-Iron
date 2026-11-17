@@ -51,9 +51,11 @@ object CustomWorkoutExecutionDomain {
         }
     }
 
-    /** Saved mini-sets and the next permitted stage; future unperformed
-     * rounds are neither required nor represented as observations. */
-    internal fun followUpVisits(
+    /** Read-only follow-up projection used by both the engine and the
+     * separate Compose app module. Saved mini-sets and the next permitted
+     * stage are shown; future unperformed stages are not observations.
+     * Never mutates the issued prescription or journal. */
+    fun followUpVisits(
         journal:CustomWorkoutJournalDraft,
         set:CustomWorkoutSetSnapshot
     ):List<CustomWorkoutVisitKey> {

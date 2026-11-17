@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 1,
+  "notes": "Source-linked reviewer-authored nominal band-tension tranche. Non-constant resistance is not a free-weight equivalent. Only exact athlete-confirmed manufacturer-rated band options; no guessed rating or automatic history sharing. Hybrid band-assisted bodyweight moves, holds, carries and neck exercises remain excluded until their own representation is reviewed.",
+  "records": [
+    {
+      "id": "band_lateral_raise",
+      "name": "Band Lateral Raise",
+      "source": {
+        "movementFamily": "lateral_raise",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          10,
+          40
+        ],
+        "source": null,
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "lateral_raise",
+        "variant": "rated-band-lateral-raise",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "SIDE_DELTS",
+        "indirect": [],
+        "note": "Lateral band raising uses an explicitly identified and manufacturer-rated band; record nominal band tension rather than silently assuming dumbbell-equivalent pounds."
+      }
+    },
+    {
+      "id": "band-curl",
+      "name": "Band Curl",
+      "source": {
+        "movementFamily": "elbow_flexion",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "elbow_flexion",
+        "variant": "rated-band-curl",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "BICEPS",
+        "indirect": [],
+        "note": "Band curls require confirmed rated band selections, not a guessed dumbbell or cable stack; biceps credit stays separate from brachialis."
+      }
+    },
+    {
+      "id": "banded-tib-raise",
+      "name": "Banded Tibialis Raise",
+      "source": {
+        "movementFamily": "dorsiflexion",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": "tibialis"
+      },
+      "review": {
+        "family": "ankle_dorsiflexion",
+        "variant": "rated-band-tibialis",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "TIBIALIS_ANTERIOR",
+        "indirect": [],
+        "note": "Banded ankle dorsiflexion targets tibialis anterior explicitly, never the calf muscle; logged resistance is the athlete-verified nominal band rating."
+      }
+    },
+    {
+      "id": "band-ulnar-dev",
+      "name": "Band Ulnar Wrist Deviation",
+      "source": {
+        "movementFamily": "wrist_deviation",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": "wrist_deviators"
+      },
+      "review": {
+        "family": "wrist_deviation",
+        "variant": "rated-band-ulnar",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "WRIST_FLEXORS",
+        "indirect": [
+          "WRIST_EXTENSORS:0.25"
+        ],
+        "note": "Ulnar band deviation uses manufacturer-rated nominal band tension with provisional wrist-flexor and extensor credits, not generic forearms or a wrist-curl load."
+      }
+    },
+    {
+      "id": "lateral-walk",
+      "name": "Banded Lateral Walk",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "hip_abduction",
+        "variant": "rated-band-lateral-walk",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "HIP_ABDUCTORS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "note": "Lateral band walking requires a real looped resistance band with independently confirmed rating; counts remain athlete-authored, not inferred walking distance."
+      }
+    },
+    {
+      "id": "band-leg-curl",
+      "name": "Banded Leg Curl",
+      "source": {
+        "movementFamily": "knee_flexion",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "knee_flexion",
+        "variant": "rated-band-leg-curl",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "band-anchor"
+        ],
+        "direct": "HAMSTRINGS",
+        "indirect": [],
+        "note": "Banded leg curling requires a stable confirmed band anchor plus a rated band; machine leg-curl stacks and resistance baselines never transfer."
+      }
+    },
+    {
+      "id": "band-pulldown",
+      "name": "Banded Lat Pulldown",
+      "source": {
+        "movementFamily": "vertical_pull",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "vertical_pull",
+        "variant": "rated-band-pulldown",
+        "pattern": "VERTICAL_PULL",
+        "role": "SECONDARY",
+        "focus": "pull",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "band-overhead-anchor"
+        ],
+        "direct": "LATS",
+        "indirect": [
+          "BICEPS:0.25"
+        ],
+        "note": "Band pulldowns require a confirmed overhead anchor and rated band, not a calibrated cable stack; lats are provisionally direct and biceps indirect."
+      }
+    },
+    {
+      "id": "rear-band-pull-apart",
+      "name": "Band Pull-Apart",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": "rear_delts"
+      },
+      "review": {
+        "family": "rear_delt_fly",
+        "variant": "rated-band-pull-apart",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "REAR_DELTS",
+        "indirect": [],
+        "note": "Band pull-aparts require rated resistance bands and separately tracked rear-delt repetitions; no cable face-pull or machine history is borrowed."
+      }
+    },
+    {
+      "id": "band-good-morning",
+      "name": "Banded Good Morning",
+      "source": {
+        "movementFamily": "hip_hinge",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          12,
+          20
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "hip_hinge",
+        "variant": "rated-band-good-morning",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "HAMSTRINGS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "note": "Band good mornings use an actual manufacturer-rated band and a cautious hinge protocol; ratings are not equivalent to barbell deadlift loads."
+      }
+    },
+    {
+      "id": "band-hip-thrust",
+      "name": "Banded Hip Thrust",
+      "source": {
+        "movementFamily": "hip_extension",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "hip_extension",
+        "variant": "rated-band-hip-thrust",
+        "pattern": "HINGE",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "GLUTES",
+        "indirect": [
+          "HAMSTRINGS:0.25"
+        ],
+        "note": "Band hip thrusts require rated band resistance rather than pretending a barbell, Smith or dedicated thrust machine; all loads remain exercise-specific."
+      }
+    },
+    {
+      "id": "band-adduction",
+      "name": "Banded Hip Adduction",
+      "source": {
+        "movementFamily": "hip_adduction",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "hip_adduction",
+        "variant": "rated-band-adduction",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "band-anchor"
+        ],
+        "direct": "HIP_ADDUCTORS",
+        "indirect": [],
+        "note": "Band adduction requires a confirmed anchor and rated band; hip adductors are tracked independently of glutes and machine adduction resistance."
+      }
+    },
+    {
+      "id": "band-abduction",
+      "name": "Seated Banded Abduction",
+      "source": {
+        "movementFamily": "hip_abduction",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "hip_abduction",
+        "variant": "rated-band-seated-abduction",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "HIP_ABDUCTORS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "note": "Seated band abduction uses actual rated loop resistance and distinct movement history from lateral band walks and the seated abduction machine."
+      }
+    },
+    {
+      "id": "bands-face-pull",
+      "name": "Banded Face Pull",
+      "source": {
+        "movementFamily": "rear_delt",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          20
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": "rear_delts"
+      },
+      "review": {
+        "family": "rear_delt_fly",
+        "variant": "rated-band-face-pull",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "pull",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [
+          "band-anchor"
+        ],
+        "direct": "REAR_DELTS",
+        "indirect": [
+          "UPPER_BACK:0.25"
+        ],
+        "note": "Band face pulls require a real stable anchor, rated band, and independent shoulder/rear-delt identity, never a guessed cable attachment or tension."
+      }
+    },
+    {
+      "id": "bands-squat",
+      "name": "Banded Resistance Squat",
+      "source": {
+        "movementFamily": "squat",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          25
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "squat",
+        "variant": "rated-band-squat",
+        "pattern": "SQUAT",
+        "role": "SECONDARY",
+        "focus": "lower",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "QUADS",
+        "indirect": [
+          "GLUTES:0.25"
+        ],
+        "note": "Band resistance squats use the athlete-confirmed nominal band rating, not an invented barbell total or bodyweight equivalence."
+      }
+    },
+    {
+      "id": "bands-tricep-ext",
+      "name": "Banded Overhead Tricep Extension",
+      "source": {
+        "movementFamily": "elbow_extension",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          15,
+          20
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "elbow_extension",
+        "variant": "rated-band-overhead-triceps",
+        "pattern": "ISOLATION",
+        "role": "ACCESSORY",
+        "focus": "press",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "TRICEPS",
+        "indirect": [],
+        "note": "Overhead band extensions require verified nominal band ratings rather than assuming a rope, cable pulley or elbow-extension machine."
+      }
+    },
+    {
+      "id": "bands-chest-press",
+      "name": "Banded Horizontal Chest Press",
+      "source": {
+        "movementFamily": "horizontal_press",
+        "equipment": [
+          "bands"
+        ],
+        "practicalReps": [
+          12,
+          15
+        ],
+        "source": "legacy_v661",
+        "legacySubregion": null
+      },
+      "review": {
+        "family": "horizontal_press",
+        "variant": "rated-band-chest-press",
+        "pattern": "HORIZONTAL_PRESS",
+        "role": "SECONDARY",
+        "focus": "press",
+        "implement": "rated-resistance-band-set",
+        "basis": "EXERCISE_OVERRIDE",
+        "fixtures": [],
+        "direct": "CHEST",
+        "indirect": [
+          "TRICEPS:0.25",
+          "FRONT_DELTS:0.25"
+        ],
+        "note": "Banded standing horizontal presses require an actual rated band; nominal resistance is not treated as equivalent to a bench press or cable stack."
+      }
+    }
+  ]
+}

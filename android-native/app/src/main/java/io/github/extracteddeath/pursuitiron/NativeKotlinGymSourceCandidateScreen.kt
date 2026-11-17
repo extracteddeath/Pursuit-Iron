@@ -217,7 +217,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
         val selected=verifiedChoices.firstOrNull{it.equipmentId==equipmentId}
         val requiredBasis=selected?.basis
         val usableKinds=PhysicalStockEditorKind.entries.filter {
-            when(requiredBasis) {
+            if(selected?.equipmentId==RatedResistanceBandDomain.EQUIPMENT_ID)
+                it==PhysicalStockEditorKind.EXACT_LOADS
+            else when(requiredBasis) {
                 LoadBasis.BARBELL_TOTAL ->
                     it==PhysicalStockEditorKind.BARBELL_WITH_PAIRS
                 LoadBasis.SMITH_TOTAL -> it in listOf(
@@ -238,7 +240,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
         val basisMatches=requiredBasis==null || requiredBasis==actualBasis
         val parsed=if(basisMatches)
             parseVerifiedStock(reviewed.gym.unit,kind,actualBasis,
-                exact,min,step,max,bar,plates) else null
+                exact,min,step,max,bar,plates)?.takeIf {
+                    RatedResistanceBandDomain.confirmedDiscreteStock(equipmentId,it)
+                } else null
         val matching=verifiedChoices.filter{choice->
             equipmentSearch.isBlank() ||
                 choice.displayName.contains(equipmentSearch,ignoreCase=true) ||
@@ -285,7 +289,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                                     "wrist-lever-hammer",
                                                     "wrist-roller-handle",
                                                     "single-weight-plate",
-                                                    "hand-gripper-device"))
+                                                    "hand-gripper-device",
+                                                    RatedResistanceBandDomain.EQUIPMENT_ID))
                                                     PhysicalStockEditorKind.EXACT_LOADS
                                                 else PhysicalStockEditorKind.VERIFIED_STACK
                                             else -> PhysicalStockEditorKind.VERIFIED_STACK
@@ -332,7 +337,9 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                         }) {Text("Choose from reviewed exercises")}
                     }
                     if(selected!=null && !manualEquipmentId) {
-                        Text("Chosen: ${selected.displayName} · ${kotlinLoadBasisLabel(selected.basis)}. Actual weights are still required.",
+                        Text(if(selected.equipmentId==RatedResistanceBandDomain.EQUIPMENT_ID)
+                            "Chosen: rated resistance bands. Enter only manufacturer-labeled nominal tension settings (LB/KG), not estimated constant exercise weights."
+                            else "Chosen: ${selected.displayName} · ${kotlinLoadBasisLabel(selected.basis)}. Actual weights are still required.",
                             style=MaterialTheme.typography.bodySmall)
                     }
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -371,8 +378,12 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     when(kind) {
                         PhysicalStockEditorKind.EXACT_LOADS ->
                             OutlinedTextField(exact,{exact=it.take(900)},
-                                label={Text("Exact ${reviewed.gym.unit} loads${kotlinLoadBasisSuffix(actualBasis)}, comma-separated")},
-                                supportingText=if(actualBasis==LoadBasis.KETTLEBELL_EACH) {
+                                label={Text(if(equipmentId==RatedResistanceBandDomain.EQUIPMENT_ID)
+                                    "Rated band tension (${reviewed.gym.unit}), comma-separated"
+                                else "Exact ${reviewed.gym.unit} loads${kotlinLoadBasisSuffix(actualBasis)}, comma-separated")},
+                                supportingText=if(equipmentId==RatedResistanceBandDomain.EQUIPMENT_ID) {
+                                    { Text("Enter discrete positive printed band ratings only. Tension varies with stretch and is NOT equivalent to a dumbbell, stack, or constant load.") }
+                                } else if(actualBasis==LoadBasis.KETTLEBELL_EACH) {
                                     { Text(if(equipmentId=="matched-kettlebell-pair")
                                         "Enter each bell's weight only when two matching bells are available."
                                         else "Enter the weight of one bell, including a two-handed swing.") }

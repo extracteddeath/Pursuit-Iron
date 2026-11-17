@@ -33,9 +33,9 @@ class PhysicalImplementWaveNineTest {
         r.issues.any{it.exerciseId==id && it.kind==kind}
 
     @Test fun waveNineAddsTwoDistinctRepetitionBasedRealResistanceIdentities() {
-        assertEquals(345,catalog.size)
+        assertEquals(361,catalog.size)
         assertEquals(listOf("svend-press","gripper"),
-            catalog.drop(343).map{it.legacyCuratedId})
+            catalog.drop(343).take(2).map{it.legacyCuratedId})
         val svend=byId.getValue("svend-press")
         val grip=byId.getValue("gripper")
         assertEquals(RepBand(12,20),svend.practicalRepBand)

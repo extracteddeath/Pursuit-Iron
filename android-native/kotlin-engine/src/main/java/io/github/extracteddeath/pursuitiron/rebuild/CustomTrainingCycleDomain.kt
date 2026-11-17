@@ -269,6 +269,10 @@ object CustomTrainingCycleDomain {
             if (availability == null)
                 issue(CustomCycleIssueKind.UNAVAILABLE_EXERCISE, at,
                     "The selected exercise is absent from the confirmed gym.")
+            else if(!RatedResistanceBandDomain.validForReviewedExercise(
+                    slot.exerciseId,availability.stock))
+                issue(CustomCycleIssueKind.NO_VERIFIED_STOCK, at,
+                    "This band exercise requires exact positive manufacturer-rated band settings, not a guessed stack.")
             for ((setIndex, set) in sets.withIndex()) {
                 val here = "$at.set.$setIndex"
                 if (set.activeSeconds !in 1..3600 ||

@@ -234,10 +234,11 @@ object CoachExerciseCatalogDomain {
                     issues+=CatalogIssue(spec.exerciseId,
                         CatalogIssueType.EQUIPMENT_UNAVAILABLE,
                         "The required implement is not confirmed in this gym.")
-                } else if(stock.basis!=spec.expectedLoadBasis) {
+                } else if(stock.basis!=spec.expectedLoadBasis ||
+                    !RatedResistanceBandDomain.confirmedDiscreteStock(spec.equipmentId,stock)) {
                     issues+=CatalogIssue(spec.exerciseId,
                         CatalogIssueType.EQUIPMENT_BASIS_MISMATCH,
-                        "The implement uses a different weight basis than this variant.")
+                        "The implement has the wrong basis or lacks discrete verified band ratings.")
                 }
                 if(choice.selectedLoad==null) {
                     issues+=CatalogIssue(spec.exerciseId,CatalogIssueType.LOAD_UNVERIFIED,

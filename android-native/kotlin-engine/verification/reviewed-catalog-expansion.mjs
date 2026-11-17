@@ -24,6 +24,16 @@ const manifestPath=join(root,
  'android-native/kotlin-engine/verification/reviewed-catalog-expansion.json');
 const BEGIN='        // BEGIN REVIEWED_WEB_EXPANSION_V2';
 const END='        // END REVIEWED_WEB_EXPANSION_V2';
+const BAND_BEGIN='        // BEGIN_REVIEWED_RATED_BANDS_V1';
+const BAND_END='        // END_REVIEWED_RATED_BANDS_V1';
+const ratedBandManifest=JSON.parse(readFileSync(join(root,
+ 'android-native/kotlin-engine/verification/rated-band-source-20261117.json'),'utf8'));
+const ratedBandRequiredIds=[
+ 'band_lateral_raise','band-curl','banded-tib-raise','band-ulnar-dev',
+ 'lateral-walk','band-leg-curl','band-pulldown','rear-band-pull-apart',
+ 'band-good-morning','band-hip-thrust','band-adduction','band-abduction',
+ 'bands-face-pull','bands-squat','bands-tricep-ext','bands-chest-press'
+];
 const requestedWebVariants=[
   ['high-inc-db-press','High-Incline Dumbbell Press',['dumbbell','inclinebench'],[8,12]],
   ['bottom-half-db-fly','Bottom-Half Dumbbell Fly',['dumbbell','bench'],[12,18]],
@@ -219,8 +229,65 @@ function validateRows(manifest,web=EXERCISES) {
  return manifest.records.length;
 }
 
+/**
+ * Second manually reviewed source-linked inventory. These are not
+ * interchangeable dumbbell masses: the Kotlin domain requires real exact
+ * manufacturer-rated nominal tension for every issued band selection.
+ * Prohibited hybrid/assistance and non-rep methods have not been included.
+ */
+function validateRatedBandTranche(fixture,source,web) {
+ assert.equal(fixture.schemaVersion,1,'rated band source schema drift');
+ assert.deepEqual(fixture.records.map(x=>x.id),ratedBandRequiredIds,
+   'rated band reviewer coverage or append order changed');
+ const byId=new Map(web.map(x=>[x.id,x]));
+ const seen=new Set();
+ for(const row of fixture.records) {
+   const actual=byId.get(row.id);
+   assert.ok(actual,'reviewed rated-band ID missing from active web: '+row.id);
+   assert.equal(row.name,actual.name,'rated-band source name drift: '+row.id);
+   assert.deepEqual(row.source,{
+     movementFamily:actual.movementFamily,
+     equipment:actual.equipment,
+     practicalReps:actual.practicalReps,
+     source:actual.source??null,
+     legacySubregion:actual.legacySubregion??null
+   },'rated-band source identity/rep/metadata drift: '+row.id);
+   assert.deepEqual(actual.equipment,['bands'],'rated-band equipment drift: '+row.id);
+   assert.equal(actual.flags?.bodyweight,false,
+     'hybrid band and bodyweight cannot be authored as numeric tension: '+row.id);
+   const a=row.review;
+   assert.equal(a.implement,'rated-resistance-band-set');
+   assert.equal(a.basis,'EXERCISE_OVERRIDE');
+   assert.ok(patterns.has(a.pattern));
+   assert.ok(['PRIMARY','SECONDARY','ACCESSORY'].includes(a.role));
+   assert.ok(focusTypes.has(a.focus));
+   assert.ok(allowedMuscles.has(a.direct));
+   assert.ok(a.note?.length>65 && /band/i.test(a.note),
+     'missing nominal-band physical rationale '+row.id);
+   assert.ok(Array.isArray(a.fixtures)&&a.fixtures.length<=4);
+   assert.ok(a.fixtures.every(x=>/^[a-z0-9-]+$/.test(x)));
+   assert.ok(Array.isArray(a.indirect)&&a.indirect.every(x=>
+     /^[A-Z_]+:0\.(?:25|5|75)$/.test(x)));
+   const muscles=[a.direct,...a.indirect.map(x=>x.split(':')[0])];
+   assert.equal(new Set(muscles).size,muscles.length);
+   assert.ok(muscles.every(x=>allowedMuscles.has(x)));
+   const familyVariant=a.family+'|'+a.variant;
+   assert.ok(!seen.has(familyVariant),'duplicate reviewed band variant '+row.id);
+   seen.add(familyVariant);
+ }
+ assert.equal(source.split(BAND_BEGIN).length,2,'rated-band source fence missing');
+ assert.equal(source.split(BAND_END).length,2,'rated-band end fence missing');
+ const from=source.indexOf(BAND_BEGIN)+BAND_BEGIN.length;
+ const to=source.indexOf(BAND_END);
+ assert.ok(to>from);
+ assert.equal(source.slice(from,to),
+   '\n'+fixture.records.map(renderEntry).join(',\n')+'\n',
+   'committed Kotlin band definitions differ from reviewed source fixture');
+}
+
 export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
  const count=validateRows(manifest,web);
+ validateRatedBandTranche(ratedBandManifest,source,web);
  assert.equal(source.split(BEGIN).length,2,'missing/duplicate generated start');
  assert.equal(source.split(END).length,2,'missing/duplicate generated end');
  const from=source.indexOf(BEGIN)+BEGIN.length,to=source.indexOf(END);
@@ -244,9 +311,11 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
    declarations.slice(49+count+requestedIds.length,
      49+count+requestedIds.length+waveEightIds.length),
    waveEightIds,'earlier six reviewed physical implements must remain stable');
- assert.deepEqual(
-   declarations.slice(49+count+requestedIds.length+waveEightIds.length),
-   waveNineIds,'only two reviewer-authorized new weighted identities may follow');
+ const beforeWaveNine=49+count+requestedIds.length+waveEightIds.length;
+ assert.deepEqual(declarations.slice(beforeWaveNine,beforeWaveNine+waveNineIds.length),
+   waveNineIds,'two wave-nine real implements must remain append-stable');
+ assert.deepEqual(declarations.slice(beforeWaveNine+waveNineIds.length),
+   ratedBandRequiredIds,'only source-reviewed rated-band IDs may follow wave nine');
  // A new source catalog ID is not evidence of identical mechanics.
  // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
@@ -295,7 +364,8 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
    assert.equal(ex.flags?.bodyweight,false,
      'wave-nine source must not reclassify the loaded implement as bodyweight');
  }
- const total=49+count+requestedIds.length+waveEightIds.length+waveNineIds.length;
+ const total=49+count+requestedIds.length+waveEightIds.length+
+   waveNineIds.length+ratedBandRequiredIds.length;
  assert.ok(source.includes('require(definitions.size=='+total+')'),
    'Kotlin exact source count must include independently reviewed additions');
  assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
@@ -314,7 +384,8 @@ export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
  const previous=requireCount(source);
  return source.slice(0,from)+replacement+source.slice(to+END.length)
    .replace('require(definitions.size=='+previous+')',
-     'require(definitions.size=='+(49+count+requestedIds.length+waveEightIds.length+waveNineIds.length)+')');
+     'require(definitions.size=='+(49+count+requestedIds.length+waveEightIds.length+
+       waveNineIds.length+ratedBandRequiredIds.length)+')');
 }
 function requireCount(source) {
  const m=source.match(/require\(definitions\.size==(\d+)\)/);
@@ -324,11 +395,19 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,345);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,361);
  const waveNineDrift=EXERCISES.map(ex=>ex.id==='svend-press'
    ?{...ex,practicalReps:[5,8]}:ex);
  assert.throws(()=>validateReviewedCatalogExpansion(m,src,waveNineDrift),
    /wave-nine rep band drift/);
+ const forgedBand=EXERCISES.map(ex=>ex.id==='band_lateral_raise'
+   ?{...ex,practicalReps:[8,12]}:ex);
+ assert.throws(()=>validateReviewedCatalogExpansion(m,src,forgedBand),
+   /rated-band source identity\/rep\/metadata drift/);
+ const malformedBand=structuredClone(ratedBandManifest);
+ malformedBand.records.pop();
+ assert.throws(()=>validateRatedBandTranche(malformedBand,src,EXERCISES),
+   /reviewer coverage or append order changed/);
  const changedWeb=EXERCISES.map(ex=>ex.id==='cable-radial-dev'
    ?{...ex,practicalReps:[8,12]}:ex);
  assert.throws(()=>validateReviewedCatalogExpansion(m,src,changedWeb),

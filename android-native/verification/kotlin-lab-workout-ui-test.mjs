@@ -130,7 +130,8 @@ for(const fragment of [
   'reviewSetKey=visit.setKey',
   'reviewPart=visit.part.name',
   'initiallyExpanded=activeFocus==mainKey',
-  'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
+  'initiallyExpanded=activeFocus==followKey',
+  'reviewStage=visit.stage',
   'if(reviewSetKey==visit.setKey && reviewPart==visit.part.name)'
 ])assert.ok(journal.includes(fragment),
   'Custom Focus must not steal or skip another visit: '+fragment);

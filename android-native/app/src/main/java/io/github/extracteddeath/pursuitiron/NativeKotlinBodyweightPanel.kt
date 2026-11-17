@@ -164,6 +164,13 @@ internal fun NativeKotlinBodyweightPanel(
     var pendingDelete by remember {mutableStateOf<LocalDate?>(null)}
     var showAll by rememberSaveable(athleteId){mutableStateOf(false)}
     val owner=athleteId?.takeIf(NativeBodyweightLedgerDomain::validOwner)
+    LaunchedEffect(owner) {
+        // Pending confirm dialogs and notices belong to the previous
+        // athlete. Never allow an old-profile correction to remain actionable.
+        pendingReplace=null
+        pendingDelete=null
+        notice=null
+    }
     LaunchedEffect(host,owner,refresh) {
         loaded=null
         readOwner=null
@@ -372,8 +379,6 @@ internal fun NativeKotlinBodyweightPanel(
 
     if(calendarOpen) {
         val now=LocalDate.now()
-        val todayMillis=now.atStartOfDay(ZoneOffset.UTC)
-            .toInstant().toEpochMilli()
         val selectedMillis=(date ?:now).atStartOfDay(ZoneOffset.UTC)
             .toInstant().toEpochMilli()
         val selectable=remember {object:SelectableDates {

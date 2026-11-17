@@ -5,7 +5,7 @@
   "build": 1013,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "97549b8c6029c18749a1461a23f89486bb85951d9c18fb56de8e0ab64d8e6c02",
+  "runtimeAggregate": "605c37b5f32e7ee07eda6cd80abe4371d2e072580e58ca92572c729b1386dbcc",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -47,7 +47,7 @@
     "modules/next-engine/exercise-economy.js": "9b44195f1cffb5df9d6c2c529ce693d8305ee2170868c4d26d7cd02bcf04bef5",
     "modules/next-engine/exercise-selection-intelligence.js": "684212e875ff5ffafc0efce2519bcce890e4e73b7ca1e0c5bdc93bfad21786d8",
     "modules/next-engine/explainability.js": "ba06d4cb9eb448157897f3e28617ff475b38b285ab2645ca39e46a4d15fb2c58",
-    "modules/next-engine/extended-exercise-catalog.js": "23f58d88b4781e289e4b8bdfb6d7db7eb6fba98ecba45ddb9dc269a358d6ef67",
+    "modules/next-engine/extended-exercise-catalog.js": "8b30afbb0f5b1f5415ae42ffd4a1d4dff0ba72f272dcc9564ebef5b484c8b8eb",
     "modules/next-engine/focus-intent.js": "6c251d9df81d52adba2978b18d3b58651845dfd52fb6e0933d9eca89eab7f69c",
     "modules/next-engine/functional-coverage-repair.js": "1aa7ff18fde627d8755ee87bf8ef31e8a958bdcf27eee6660648db6d4b4b40be",
     "modules/next-engine/functional-coverage.js": "51e767145c0b87fa62445ce98c998d6d0158b42d36eaae35974a05707a660c2c",
@@ -121,8 +121,8 @@
     "modules/session-plan.js": "4229495140e0cf357a436537c4af7ff48c94a47c810450d714407a01173543f1",
     "modules/session-tools.js": "bb47e4bbcef367a3a27b0cbd23393379d63a5c8ea41ba31172f342fa76795776",
     "modules/training-domain.js": "b0ab1dfc9b363f4ee7c467039aacf06a9fd9b635b92c224d4aa151cccc596f47",
-    "modules/training-domain/analytics.js": "caebd71f58d4adba3b530df847e52f54a46cf4120aa898b2f89b74f6e63b6090",
-    "modules/training-domain/catalog.js": "3cec224d2a6e3937f28e90f2999eb6beaf833d7f60895f3bc12d6916a3dc3e45",
+    "modules/training-domain/analytics.js": "eaf1dbffb5ea2c0b471c134e53a161d040fa253d48d2b8ff97997808d65ea5ff",
+    "modules/training-domain/catalog.js": "0b739daed3e98c722b4720fcc57d5da2840b3edbeb414a742a2f41740abb78c9",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
     "modules/training-domain/loading-tools.js": "ee3a4aedf3c240207d0d35523f8e252a5214eef1911abd08f489f265686d9a0d",
     "modules/training-domain/prescriptions.js": "94becf1d366597505d58620b8f46cd7f3c094391abcc3bdd53dd32b6301c9648",
@@ -155,10 +155,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "1de3c8c12d52b37d109fa785d892cb0f688e0be7ce9324562a8355e82d63640a",
+    "modules/App.js": "afc3576cd6518af8ad3a807f9605c252d5ec857f2d7582044b8dd16ebb9ec37f",
     "index.html": "769fb84e59e82a99c5c7358d73cae3f587e0002d63594d986820a74c65e8b4ca",
-    "sw.js": "2c122dc166c54009af90b914dab9496851b2581b92b1f19e132fe5c11cb020b7",
-    "BUILD_PROFILE.json": "4db534ceb7f323f0d0634b124932b86471e986410f2d483bcc94f7d6577b3e5d",
+    "sw.js": "c22a7d5ea58b6477636e8313db9975ab5a02cbd782c4c5b8f684ccb1e3b7a9cf",
+    "BUILD_PROFILE.json": "dd41221b1fff59177b7bba9a02472a288ba12e8b2bb43baff7265804b157f744",
     "CHANGELOG.md": "f54e49b4763a1e8f534eb21e3740998d1c40d102a83470b08c27efb67cb42662",
     "app.css": "2cbb5b79495833cd8fe876adf46a963c7566c5077524a2a0cdb8f4ff06f43ccd",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -167,6 +167,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1013-rfe5c5693c7e0c815",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1013-r518075e145c05c5a",
   "uiMilestone": "Build 1013 · Exercise variants, attachment discovery and truthful bench angles"
 }

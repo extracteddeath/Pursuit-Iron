@@ -484,9 +484,10 @@ internal fun NativeKotlinCustomExerciseSheet(
                     fields.type==DraftSetType.WORKING &&
                     forms.count{it.type==DraftSetType.WORKING}>1)
                     TextButton(onClick={
-                        // This distributes only the currently entered NEW
-                        // working prescription. It never reads former
-                        // exercise targets or copies advanced techniques.
+                        // Distribute only THIS new set's authored main load,
+                        // reps, effort and timing; preserve any separately
+                        // entered techniques on the other replacement sets.
+                        // Nothing comes from the former exercise targets.
                         forms=forms.mapIndexed {otherIndex,other->
                             if(otherIndex!=index &&
                                 other.type==DraftSetType.WORKING)
@@ -496,16 +497,20 @@ internal fun NativeKotlinCustomExerciseSheet(
                                     maximum=fields.maximum,
                                     rir=fields.rir,
                                     seconds=fields.seconds,
-                                    rest=fields.rest,
-                                    amplifier=null,
-                                    extraReps="",extraRest="",
-                                    extraWork="",extraLoad="")
+                                    rest=fields.rest)
                             else other
                         }
                     },enabled=!busy,
                         modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                         Text("Use these NEW targets for other working sets")
                     }
+                if(replacing!=null && option!=null &&
+                    fields.type==DraftSetType.WORKING &&
+                    forms.count{it.type==DraftSetType.WORKING}>1)
+                    Text("This copies only main-set load, reps, RIR and timing. "+
+                        "Each set keeps its own amplifier and follow-up edits.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(

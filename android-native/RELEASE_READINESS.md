@@ -8,6 +8,20 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Catalog variant browsing (2026-11-17):**
+Gym Library now reveals the existing Kotlin exact physical family/variant
+relationships with independent eligibility and direct variant-detail access;
+family, attachment and categorical incline-level filters cover saved
+definitions before pagination. Plan and Train's shared verified swap chooser
+can narrow to those same incline levels and exact attachments; it still
+requires a deliberate athlete selection, a newly authored load, and existing
+gym/consent validation. Flat, low/standard/high incline and decline labels are
+QUALITATIVE source descriptors, not fabricated numeric angles or proof that
+two benches are interchangeable. Unavailable options remain discoverable in
+Gym but cannot be issued by Train. The underlying 330/376 active-web ID gap,
+band/assisted/timed semantics, web UI release and full device/accessibility
+acceptance remain OPEN. No APK/AAB.
+
 **Exact observed RIR in native Progress (2026-11-17):**
 The per-exercise corrected History trend now carries the actual RIR from
 the same best completed working set displayed in each factual point, for

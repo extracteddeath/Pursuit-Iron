@@ -177,6 +177,8 @@ internal fun NativeKotlinCustomExerciseSheet(
     var sharedMusclesOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
     var sameRoleOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
     var sameFamilyOnly by rememberSaveable(authorScope) {mutableStateOf(false)}
+    var inclineLevel by rememberSaveable(authorScope) {mutableStateOf<String?>(null)}
+    var attachmentId by rememberSaveable(authorScope) {mutableStateOf<String?>(null)}
     // Reconfirmation is intentionally required after process recreation.
     var swapConfirmation by remember(replacing?.slotId) {mutableStateOf(false)}
     var note by rememberSaveable(authorScope) {
@@ -228,11 +230,20 @@ internal fun NativeKotlinCustomExerciseSheet(
     // Compare the entire verified choice, including attachment/variant.
     // A matching name must not make a sibling attachment appear authorized.
     val matchedChoices=labeled.toSet()
-    val searched=ranked.filter { it.choice in matchedChoices }
+    val selectedAngle=NativeBenchAngle.entries.firstOrNull {it.name==inclineLevel}
+    val searched=ranked.filter { rankedChoice ->
+        val choice=rankedChoice.choice
+        choice in matchedChoices &&
+            (selectedAngle==null ||
+                nativeBenchAngle(choice.variantId)==selectedAngle) &&
+            (attachmentId==null || choice.attachmentId==attachmentId)
+    }
     // This is a paging cap, not a catalog cap. The complete verified ranked
     // pool remains available, even when it contains more than twenty choices.
     var visibleCount by remember(search,samePatternOnly,sharedMusclesOnly,
-        sameRoleOnly,sameFamilyOnly,replacing?.slotId) { mutableIntStateOf(20) }
+        sameRoleOnly,sameFamilyOnly,inclineLevel,attachmentId,replacing?.slotId) {
+            mutableIntStateOf(20)
+        }
     val filtered=searched.take(visibleCount)
     // A replacement change clears drafts only on a real athlete tap, not
     // on rotation/restoration (which would destroy saved unsent edits).
@@ -316,6 +327,38 @@ internal fun NativeKotlinCustomExerciseSheet(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            val angles=available.mapNotNull {nativeBenchAngle(it.variantId)}
+                .distinct()
+            val attachments=available.mapNotNull {it.attachmentId}.distinct()
+            if(angles.isNotEmpty()) {
+                Text("Incline level",style=MaterialTheme.typography.labelLarge)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    FilterChip(selected=inclineLevel==null,
+                        onClick={inclineLevel=null},label={Text("Any angle")})
+                    angles.forEach { angle ->
+                        FilterChip(selected=inclineLevel==angle.name,
+                            onClick={inclineLevel=angle.name},
+                            label={Text(angle.display)})
+                    }
+                }
+            }
+            if(attachments.isNotEmpty()) {
+                Text("Attachment",style=MaterialTheme.typography.labelLarge)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    FilterChip(selected=attachmentId==null,
+                        onClick={attachmentId=null},label={Text("Any attachment")})
+                    attachments.sorted().forEach { id ->
+                        FilterChip(selected=attachmentId==id,
+                            onClick={attachmentId=id},
+                            label={Text(kotlinGymAttachmentLabel(id))})
+                    }
+                }
+            }
+            Text("Only verified movements in the current gym appear here. Low, regular and high incline remain distinct; switching never transfers the previous weight.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(filtered.isEmpty())Text("No verified matches. Try another search or filter.",
                 style=MaterialTheme.typography.bodySmall)
             filtered.forEach { optionRow ->
@@ -332,10 +375,8 @@ internal fun NativeKotlinCustomExerciseSheet(
                         }
                     },
                     label={Text(kotlinExerciseLabel(candidate.exerciseId)+
-                        " · "+candidate.variantId.replace('-', ' ')+
-                        (candidate.attachmentId?.let {
-                            " · attachment: "+it.replace('_',' ').replace('-',' ')
-                        } ?: ""))})
+                        " · "+nativeVariantDescription(candidate.variantId,emptySet(),
+                            candidate.attachmentId,candidate.role?.name))})
                 if(replacing!=null)Text(optionRow.explanation,
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)

@@ -63,12 +63,16 @@ private fun NativeKotlinExerciseLibrarySheet(
     var query by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf("")}
     var muscleId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
     var gearId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var familyId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var angleId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
+    var attachmentId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
     var patternId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
     var roleId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
     var availability by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(NativeLibraryAvailability.ALL)}
     var showFilters by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf(false)}
     var visibleCount by rememberSaveable(source.ownerKey,source.athleteId,
-        query,muscleId,gearId,patternId,roleId,availability) {mutableIntStateOf(20)}
+        query,muscleId,gearId,familyId,angleId,attachmentId,patternId,roleId,
+        availability) {mutableIntStateOf(20)}
     var selectedId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
     var historyId by rememberSaveable(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
     var filterPicker by remember(source.ownerKey,source.athleteId) {mutableStateOf<String?>(null)}
@@ -92,8 +96,9 @@ private fun NativeKotlinExerciseLibrarySheet(
     val muscle=TrainingMuscle.entries.firstOrNull{it.name==muscleId}
     val pattern=ComposerPattern.entries.firstOrNull{it.name==patternId}
     val role=ComposerRole.entries.firstOrNull{it.name==roleId}
+    val angle=NativeBenchAngle.entries.firstOrNull{it.name==angleId}
     val matches=filterNativeExerciseLibrary(records,query,muscle,gearId,availability,
-        draft.toSet(),pattern,role)
+        draft.toSet(),pattern,role,familyId,angle,attachmentId)
     val overLimit=draft.size>CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES
     LaunchedEffect(lastEdit,source) {
         if(submitted!=null && lastEdit!=null && lastEdit.request==submitted && lastEdit.matches(source))onDismiss()
@@ -137,6 +142,9 @@ private fun NativeKotlinExerciseLibrarySheet(
                 pattern?.let{nativeLibraryWords(it.name)} ?: "Any movement pattern",
                 role?.let{nativeLibraryWords(it.name)} ?: "Any program role",
                 gearId?.let(::gearLabel) ?: "Any equipment",
+                familyId?.let(::nativeLibraryWords) ?: "Any exercise family",
+                angle?.display ?: "Any bench angle",
+                attachmentId?.let(::kotlinGymAttachmentLabel) ?: "Any attachment",
                 nativeLibraryWords(availability.name)).joinToString(" · "),
             showFilters,{showFilters=!showFilters})
         if(showFilters) {
@@ -144,16 +152,21 @@ private fun NativeKotlinExerciseLibrarySheet(
                 "muscle" to (muscle?.let{nativeLibraryWords(it.name)} ?: "All muscles"),
                 "pattern" to (pattern?.let{nativeLibraryWords(it.name)} ?: "Any movement pattern"),
                 "role" to (role?.let{nativeLibraryWords(it.name)} ?: "Any program role"),
-                "gear" to (gearId?.let(::gearLabel) ?: "Any equipment or attachment"),
+                "gear" to (gearId?.let(::gearLabel) ?: "Any equipment or fixture"),
+                "family" to (familyId?.let(::nativeLibraryWords) ?: "Any exercise family"),
+                "angle" to (angle?.display ?: "Any incline level"),
+                "attachment" to (attachmentId?.let(::kotlinGymAttachmentLabel) ?: "Any attachment"),
                 "availability" to nativeLibraryWords(availability.name))) {
                 OutlinedButton(onClick={filterPicker=id},modifier=Modifier.fillMaxWidth()) {Text(label)}
             }
         }
         if(query.isNotBlank() || muscleId!=null || patternId!=null || roleId!=null ||
-            gearId!=null || availability!=NativeLibraryAvailability.ALL)
+            gearId!=null || familyId!=null || angleId!=null || attachmentId!=null ||
+            availability!=NativeLibraryAvailability.ALL)
             TextButton(onClick={
                 query="";muscleId=null;patternId=null;roleId=null
-                gearId=null;availability=NativeLibraryAvailability.ALL
+                gearId=null;familyId=null;angleId=null;attachmentId=null
+                availability=NativeLibraryAvailability.ALL
             }) {Text("Clear search and filters")}
         val inherited=original.toSet()-records.map{it.movement.exerciseId}.toSet()
         if(inherited.isNotEmpty())Text("${inherited.size} exclusion(s) from an older catalog will be retained.",
@@ -170,7 +183,8 @@ private fun NativeKotlinExerciseLibrarySheet(
                 record.eligible -> "Eligible for exercise selection"
                 else -> "Needs gym or preference review"
             }
-            PursuitDestinationRow(record.label,"${record.equipmentLabel} · $status",
+            PursuitDestinationRow(record.label,
+                "${record.variantDescription} · ${record.equipmentLabel} · $status",
                 onClick={selectedId=id},icon={Icon(Icons.Outlined.FitnessCenter,contentDescription=null)})
         }
         if(visibleCount<matches.size)TextButton(onClick={visibleCount=(visibleCount+20).coerceAtMost(matches.size)},
@@ -183,6 +197,11 @@ private fun NativeKotlinExerciseLibrarySheet(
         NativeEditSheet(busy,onDismiss={selectedId=null}) {
             PursuitSectionHeading(record.label,if(record.eligible)"Eligible for exercise selection" else "Review saved requirements and preferences")
             Text(record.equipmentLabel+" · "+kotlinLoadBasisLabel(move.expectedLoadBasis))
+            Text("Variant · "+record.variantDescription,
+                style=MaterialTheme.typography.bodyMedium)
+            Text("Named incline levels are categorical, not verified angles in degrees. Different benches, attachments and physical machines never share a load baseline.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             val direct=move.credits.filter{it.role==MuscleCreditRole.DIRECT}.map{nativeLibraryWords(it.muscle.name)}
             val supporting=move.credits.filter{it.role==MuscleCreditRole.INDIRECT}.map{nativeLibraryWords(it.muscle.name)}
             Text("Direct targets · "+direct.joinToString().ifBlank{"None declared"})
@@ -206,6 +225,31 @@ private fun NativeKotlinExerciseLibrarySheet(
             if(move.expectedLoadBasis?.countsTowardBarbellLimit==true && athlete.maxBarbellExercisesPerDay==0)
                 Text("Your saved barbell-per-day limit is zero.")
             if(!record.eligible && !record.savedExcluded)Text("This movement is not currently eligible. Review gym stock, fixtures and preferences; browsing cannot approve it.")
+            val related=nativeExerciseFamilyVariants(records,id)
+            if(related.isNotEmpty()) {
+                var expandVariants by rememberSaveable(source.ownerKey,id) {
+                    mutableStateOf(false)
+                }
+                HorizontalDivider()
+                Text("Other variants in this exercise family",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("${related.size} separately named variants · equipment and attachments are verified individually. Viewing does not switch a program or workout.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                (if(expandVariants)related else related.take(6)).forEach { sibling ->
+                    PursuitDestinationRow(sibling.label,
+                        sibling.variantDescription+" · "+
+                        (if(sibling.eligible)"Eligible at this gym"
+                            else "Needs equipment or preference review"),
+                        onClick={selectedId=sibling.movement.exerciseId})
+                }
+                if(related.size>6)TextButton(
+                    onClick={expandVariants=!expandVariants},
+                    modifier=Modifier.heightIn(min=48.dp)) {
+                    Text(if(expandVariants)"Show fewer variants"
+                        else "Show all ${related.size} variants")
+                }
+            }
             val excluded=id in draft
             OutlinedButton(onClick={draft=if(excluded)draft-id else draft+id},
                 enabled=!busy && !stale && (excluded || draft.size<CoachAthleteSetupDomain.MAX_EXCLUDED_EXERCISES),
@@ -230,19 +274,28 @@ private fun NativeKotlinExerciseLibrarySheet(
                 .sortedBy{nativeLibraryWords(it.name)}.map{it.name to nativeLibraryWords(it.name)}
             "role" -> listOf(null to "Any program role")+records.map{it.movement.role}.distinct()
                 .sortedBy{nativeLibraryWords(it.name)}.map{it.name to nativeLibraryWords(it.name)}
-            "gear" -> listOf(null to "Any equipment or attachment")+records.flatMap{it.gearIds}.distinct()
+            "gear" -> listOf(null to "Any equipment or fixture")+records.flatMap{it.gearIds}.distinct()
                 .sortedBy{gearLabel(it)}.map{it to gearLabel(it)}
-            else -> NativeLibraryAvailability.entries.map{it.name to nativeLibraryWords(it.name)}
+            "family" -> listOf(null to "Any exercise family")+records.map{it.movement.familyId}.distinct()
+                .sortedBy{nativeLibraryWords(it)}.map{it to nativeLibraryWords(it)}
+            "angle" -> listOf(null to "Any incline level")+NativeBenchAngle.entries.map{it.name to it.display}
+            "attachment" -> listOf(null to "Any attachment")+records.mapNotNull{it.movement.attachmentId}.distinct()
+                .sortedBy{kotlinGymAttachmentLabel(it)}.map{it to kotlinGymAttachmentLabel(it)}
+            else -> NativeLibraryAvailability.entries.map{it.name to nativeLibraryWords(it)}
         }
         AlertDialog(onDismissRequest={filterPicker=null},title={Text(when(kind){
             "muscle"->"Muscle";"pattern"->"Movement pattern";"role"->"Program role"
-            "gear"->"Equipment and attachments";else->"Availability"
+            "gear"->"Equipment and fixtures";"family"->"Exercise family"
+            "angle"->"Incline level";"attachment"->"Cable attachment"
+            else->"Availability"
         })},
             text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
                 options.forEach{(id,label)->
                     val checked=when(kind){
                         "muscle"->muscleId==id;"pattern"->patternId==id
                         "role"->roleId==id;"gear"->gearId==id
+                        "family"->familyId==id;"angle"->angleId==id
+                        "attachment"->attachmentId==id
                         else->availability.name==id
                     }
                     Row(Modifier.fillMaxWidth().heightIn(min=48.dp)
@@ -250,6 +303,8 @@ private fun NativeKotlinExerciseLibrarySheet(
                             when(kind){
                                 "muscle"->muscleId=id;"pattern"->patternId=id
                                 "role"->roleId=id;"gear"->gearId=id
+                                "family"->familyId=id;"angle"->angleId=id
+                                "attachment"->attachmentId=id
                                 else->availability=NativeLibraryAvailability.valueOf(checkNotNull(id))
                             }
                             filterPicker=null

@@ -24,7 +24,9 @@ assert.doesNotMatch(model,/StarterExerciseTranche|\.publish\(|\.record\(|\.issue
 assert.match(screen,/val matches=filterNativeExerciseLibrary/);
 assert.match(screen,/matches\.take\(visibleCount\)/);
 assert.match(screen,/Show more exercises/);
-assert.match(screen,/rememberSaveable\(source\.ownerKey,source\.athleteId,\s*query,muscleId,gearId,patternId,roleId,availability\)/);
+assert.match(screen,/rememberSaveable\(source\.ownerKey,source\.athleteId,\s*query,muscleId,gearId,familyId,angleId,attachmentId,patternId,roleId,\s*availability\)/);
+assert.match(screen,/familyId=null;angleId=null;attachmentId=null/);
+assert.match(screen,/nativeExerciseFamilyVariants\(records,id\)/);
 assert.match(model,/record\.movement\.pattern==pattern/);
 assert.match(model,/record\.movement\.role==role/);
 assert.match(screen,/"pattern" to \(pattern\?/);

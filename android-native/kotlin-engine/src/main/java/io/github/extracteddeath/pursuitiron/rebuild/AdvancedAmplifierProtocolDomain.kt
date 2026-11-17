@@ -98,6 +98,49 @@ object AdvancedAmplifierProtocolDomain {
         )
     }
 
+    /** One vocabulary for authoring, Preview, Focus and saved stage review.
+     * These labels never imply that unperformed optional stages are records.
+     * The legacy single-follow-up view stays identifiable as a follow-up. */
+    fun stageNoun(kind:CustomAmplifierKind,plural:Boolean=false):String = when(kind) {
+        CustomAmplifierKind.MYO_REPS -> if(plural)"mini-sets" else "mini-set"
+        CustomAmplifierKind.REST_PAUSE -> if(plural)"efforts" else "effort"
+        CustomAmplifierKind.DROP_SET -> if(plural)"weight drops" else "weight drop"
+        CustomAmplifierKind.CLUSTER -> if(plural)"clusters" else "cluster"
+    }
+
+    fun stageLabel(amp:CustomSetAmplifier,ordinal:Int):String {
+        val title=template(amp.kind).title
+        if(amp.followUpRounds<=1)return "$title · follow-up"
+        return "$title · ${stageNoun(amp.kind)} $ordinal of ${amp.followUpRounds}"
+    }
+
+    fun stageReviewCue(amp:CustomSetAmplifier):String =
+        if(amp.followUpRounds<=1)
+            "One separately logged follow-up; unperformed work is not recorded."
+        else when(amp.kind) {
+            CustomAmplifierKind.MYO_REPS ->
+                "Each mini-set saves separately; stop at the rep floor or if form deteriorates."
+            CustomAmplifierKind.REST_PAUSE ->
+                "Each rest-pause effort saves separately; stop after a rep shortfall or if form deteriorates."
+            CustomAmplifierKind.DROP_SET ->
+                "Each weight drop must use its separately verified load and actual reps."
+            CustomAmplifierKind.CLUSTER ->
+                "Each planned cluster must be recorded separately without inventing completed reps."
+        }
+
+    fun stageEarlyStopTitle(kind:CustomAmplifierKind):String =
+        "End ${template(kind).title.lowercase()} early?"
+
+    fun stageEarlyStopDescription(kind:CustomAmplifierKind):String =
+        when(kind) {
+            CustomAmplifierKind.MYO_REPS ->
+                "End this sequence if form or recovery is declining. This stage is saved as skipped; no later mini-sets are created."
+            CustomAmplifierKind.REST_PAUSE ->
+                "End this sequence when reps or technique decline. This effort is saved as skipped; no later rest-pause efforts are created."
+            else ->
+                "This stage is saved as skipped; unperformed stages are never recorded."
+        }
+
     /** Both authoring entry points use one policy for OPTIONAL staged work.
      * Legacy single-follow-up recipes keep their exact old semantics. */
     fun validStagedFollowUps(amp:CustomSetAmplifier):Boolean =

@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b1011-r26c6c18ec7313af7";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b1012-r31289b0075a16934";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -17,6 +17,8 @@ const SHELL=[
   "./modules/engine-api.js",
   "./modules/engine-shell.js",
   "./modules/exercise-notes.js",
+  "./modules/exercise-picker-sheet.js",
+  "./modules/exercise-variant-browse.js",
   "./modules/generation-runtime.js",
   "./modules/generation-worker.js",
   "./modules/gym-load-fields.js",

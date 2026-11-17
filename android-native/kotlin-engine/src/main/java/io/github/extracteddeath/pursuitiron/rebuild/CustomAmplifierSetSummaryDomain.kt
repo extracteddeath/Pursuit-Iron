@@ -10,7 +10,9 @@ package io.github.extracteddeath.pursuitiron.rebuild
 data class CustomAmplifierSetSummary(
     val title: String,
     val planned: String,
-    val progress: String
+    val progress: String,
+    /** Only actually completed follow-ups; NEVER the planned targets. */
+    val actuals: String? = null
 )
 
 object CustomAmplifierSetSummaryDomain {
@@ -67,6 +69,25 @@ object CustomAmplifierSetSummaryDomain {
             else ->
                 "Sequence ended · $completed of ${amp.followUpRounds} logged"
         }
-        return CustomAmplifierSetSummary(title,planned,progress)
+        val completedObservations=observed.mapNotNull { receipt ->
+            receipt.performed?.takeIf {
+                receipt.outcome==KotlinJournalSetOutcome.COMPLETED
+            }
+        }
+        val actuals=if(completedObservations.isEmpty())null
+            else when(amp.kind) {
+                CustomAmplifierKind.DROP_SET ->
+                    "Performed drops: "+completedObservations.joinToString(" → ") {
+                        "${it.load?.toPlainString() ?: "?"} "+
+                            "${it.unit?.name?.lowercase() ?: "?"} × ${it.reps}"
+                    }
+                CustomAmplifierKind.LENGTHENED_PARTIALS ->
+                    "Logged ${completedObservations.sumOf{it.reps}} partial reps"
+                else ->
+                    "Performed ${AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,true)}: "+
+                        completedObservations.joinToString(" + "){it.reps.toString()}+
+                        " reps"
+            }
+        return CustomAmplifierSetSummary(title,planned,progress,actuals)
     }
 }

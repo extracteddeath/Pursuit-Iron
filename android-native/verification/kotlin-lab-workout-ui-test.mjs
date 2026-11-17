@@ -10,7 +10,7 @@ const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 for(const phrase of [
   'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',
   'initiallyExpanded=activeFocus==mainKey',
-  'initiallyExpanded=activeFocus==CustomWorkoutVisitKey(',
+  'initiallyExpanded=activeFocus==followKey',
   'mutableStateOf(saved==null && initiallyExpanded)',
   'initialMachineScopedLoad(target,saved?.performed,machineInstanceId)',
   'prescription.reps.minimum',
@@ -35,7 +35,7 @@ for(const phrase of [
   'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
   '"main:${set.setKey}:station:"',
-  'editorStates.SaveableStateProvider("follow:${set.setKey}")',
+  '"follow:${set.setKey}:stage:${followKey.stage}"',
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);

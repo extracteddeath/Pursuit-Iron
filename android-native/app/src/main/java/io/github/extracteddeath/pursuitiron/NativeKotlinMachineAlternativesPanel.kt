@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMachineRosterSnapshot
 import io.github.extracteddeath.pursuitiron.rebuild.CatalogMovement
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
+import io.github.extracteddeath.pursuitiron.rebuild.CatalogPhysicalMachineEligibility
 
 private fun parseMachineLoad(value:String):BigDecimal? =
     value.trim().takeIf{it.isNotEmpty()}?.let{
@@ -56,9 +57,7 @@ internal fun NativeKotlinMachineAlternativesPanel(
         // decides whether the movement is still an eligible machine stack.
         val option=catalog.singleOrNull {
             it.exerciseId==focused &&
-                it.expectedLoadBasis in setOf(
-                    io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.MACHINE_STACK,
-                    io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.CABLE_STACK)
+                CatalogPhysicalMachineEligibility.eligible(it)
         }
         stalePlanFocus=option==null
         if(option!=null) {
@@ -86,11 +85,8 @@ internal fun NativeKotlinMachineAlternativesPanel(
         (increment!=null && increment>BigDecimal.ZERO &&
             increment<=BigDecimal("100000") &&
             increment.stripTrailingZeros().scale()<=3)
-    val verifiedMachineIds=catalog.groupBy {it.exerciseId}.filterValues {records->
-        records.size==1 && records.single().expectedLoadBasis in setOf(
-            io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.MACHINE_STACK,
-            io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.CABLE_STACK)
-    }.keys
+    val verifiedMachineIds=CatalogPhysicalMachineEligibility
+        .eligibleExerciseIds(catalog)
     val matches=catalog.asSequence().filter {ex->
         ex.exerciseId in verifiedMachineIds &&
             query.isNotBlank() &&

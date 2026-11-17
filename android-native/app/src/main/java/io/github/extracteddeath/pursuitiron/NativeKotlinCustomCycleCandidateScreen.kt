@@ -1042,17 +1042,38 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             Text("${target.activeSeconds}s work · ${target.restSeconds}s rest",
                                 style=MaterialTheme.typography.bodySmall)
                             target.amplifier?.let {amp ->
-                                Text("${pretty(amp.kind)} · ${amp.followUpReps} follow-up reps · ${amp.followUpRestSeconds}s intra-set rest · " +
-                                    (amp.followUpActiveSeconds?.let{
-                                        "${it}s extra work · "
-                                    }?:"extra work time missing · ") +
-                                    (when(val extra=amp.followUpLoad) {
-                                        null -> "Same confirmed load"
-                                        DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-                                        is DraftSetLoad.Verified ->
-                                            "${extra.value.toPlainString()} ${extra.unit} · ${kotlinLoadBasisLabel(extra.basis)}"
-                                    }),
-                                    style=MaterialTheme.typography.bodySmall)
+                                val technique = AdvancedAmplifierProtocolDomain.template(amp.kind)
+                                Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
+                                    shape=MaterialTheme.shapes.medium,
+                                    modifier=Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(12.dp),
+                                        verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Text(technique.title + " · Set ${set.ordinalInSlot}",
+                                            style=MaterialTheme.typography.labelLarge,
+                                            color=MaterialTheme.colorScheme.primary)
+                                        Text("${amp.followUpReps} follow-up reps · " +
+                                            "${amp.followUpRestSeconds}s short rest · " +
+                                            (when(val extra=amp.followUpLoad) {
+                                                null -> "Same confirmed load"
+                                                DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+                                                is DraftSetLoad.Verified ->
+                                                    "${extra.value.toPlainString()} ${extra.unit} · " +
+                                                        kotlinLoadBasisLabel(extra.basis)
+                                            }),
+                                            style=MaterialTheme.typography.bodyMedium)
+                                        Text(amp.followUpActiveSeconds?.let{
+                                            "${it}s added work planned"
+                                        } ?: "Additional work time not authored",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(technique.techniqueCue,
+                                            style=MaterialTheme.typography.bodySmall)
+                                        Text("Current custom journal saves one follow-up, not " +
+                                            "each step of a multi-stage technique.",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
                             }
                         }
                         OutlinedButton(enabled=!busy && session.stamp.cycleRevision==draft.revision,

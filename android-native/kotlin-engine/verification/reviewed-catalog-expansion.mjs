@@ -267,7 +267,7 @@ function validateRatedBandTranche(fixture,source,web) {
    assert.ok(Array.isArray(a.fixtures)&&a.fixtures.length<=4);
    assert.ok(a.fixtures.every(x=>/^[a-z0-9-]+$/.test(x)));
    assert.ok(Array.isArray(a.indirect)&&a.indirect.every(x=>
-     /^[A-Z_]+:0\\.(?:25|5|75)$/.test(x)));
+     /^[A-Z_]+:0\.(?:25|5|75)$/.test(x)));
    const muscles=[a.direct,...a.indirect.map(x=>x.split(':')[0])];
    assert.equal(new Set(muscles).size,muscles.length);
    assert.ok(muscles.every(x=>allowedMuscles.has(x)));
@@ -281,7 +281,7 @@ function validateRatedBandTranche(fixture,source,web) {
  const to=source.indexOf(BAND_END);
  assert.ok(to>from);
  assert.equal(source.slice(from,to),
-   '\\n'+fixture.records.map(renderEntry).join(',\\n')+'\\n',
+   '\n'+fixture.records.map(renderEntry).join(',\n')+'\n',
    'committed Kotlin band definitions differ from reviewed source fixture');
 }
 
@@ -403,7 +403,7 @@ function selfTest() {
  const forgedBand=EXERCISES.map(ex=>ex.id==='band_lateral_raise'
    ?{...ex,practicalReps:[8,12]}:ex);
  assert.throws(()=>validateReviewedCatalogExpansion(m,src,forgedBand),
-   /rated-band source identity\\/rep\\/metadata drift/);
+   /rated-band source identity\/rep\/metadata drift/);
  const malformedBand=structuredClone(ratedBandManifest);
  malformedBand.records.pop();
  assert.throws(()=>validateRatedBandTranche(malformedBand,src,EXERCISES),

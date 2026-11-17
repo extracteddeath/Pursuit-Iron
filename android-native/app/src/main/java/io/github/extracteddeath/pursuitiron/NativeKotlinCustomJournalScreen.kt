@@ -1316,6 +1316,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     stageOrdinal=followKey.stage,
                                     stageTotal=set.prescription.amplifier?.followUpRounds ?:1,
+                                    activationPerformed=main?.performed,
                                     existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                     saving=busy,saveError=error,
                                     machineInstanceId=if(follower!=null)
@@ -1692,7 +1693,8 @@ private fun NativeKotlinCustomVisitEditor(
     levelingDraft:CurrentWorkoutLevelingDraft?=null,
     onCurrentDraftChanged:(String,String)->Unit={_,_->},
     stageOrdinal:Int=1,
-    stageTotal:Int=1
+    stageTotal:Int=1,
+    activationPerformed:KotlinPerformedSet?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1731,8 +1733,18 @@ private fun NativeKotlinCustomVisitEditor(
         athleteId,workoutId,issuedGymId.orEmpty(),exerciseId,
         set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,
         if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
+    // The prescribed target never changes; an athlete-entered activation
+    // load may be different. A new myo mini-set should start from that
+    // recorded same-machine load, not silently revert to issued weight.
+    val sameLoadActivation=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1 &&
+        saved==null && activationPerformed?.machineInstanceId==machineInstanceId &&
+        activationPerformed?.unit==verified?.unit)
+        activationPerformed?.load?.stripTrailingZeros()?.toPlainString()
+    else null
     val draftBaseline=NativePendingWorkoutDraft(
-        initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
+        sameLoadActivation ?:
+            initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
         saved?.performed?.reps?.toString() ?:
             (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
                 follower?.followUpReps else prescription.reps.minimum)
@@ -1899,6 +1911,13 @@ private fun NativeKotlinCustomVisitEditor(
                     }
                     Text(protocol.techniqueCue,
                         style=MaterialTheme.typography.bodySmall)
+                    if(sameLoadActivation!=null)Text(
+                        "Weight starts from the logged activation set ("+
+                            sameLoadActivation+" "+
+                            verified?.unit?.name?.lowercase().orEmpty()+
+                            "). Your issued target remains unchanged.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         (follower.followUpActiveSeconds?.let{
                             "$it s planned follow-up work"

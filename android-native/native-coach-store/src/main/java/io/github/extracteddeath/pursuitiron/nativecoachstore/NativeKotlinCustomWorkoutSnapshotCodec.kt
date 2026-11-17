@@ -268,7 +268,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                             amp.kind==CustomAmplifierKind.MYO_REPS &&
                             amp.followUpRounds in 3..5 &&
                             amp.followUpReps in 3..5 &&
-                            amp.followUpRestSeconds in 10..30) &&
+                            amp.followUpRestSeconds in 10..30 &&
+                            amp.followUpLoad==null) &&
                         amp.followUpActiveSeconds?.let{
                             it in 1..3600
                         }!=false)

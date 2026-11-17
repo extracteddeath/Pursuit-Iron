@@ -23,7 +23,9 @@ const expected=[
   ['bottom-half-db-fly','Bottom-Half Dumbbell Fly',['dumbbell','bench'],'chest'],
   ['deficit-pendlay-row','Deficit Pendlay Row',['barbell'],'upper_back'],
   ['low-to-high-face-pull','Low-to-High Face Pull',['cable'],'shoulders'],
-  ['leaning-cable-ohext','Leaning Cable Overhead Triceps Extension',['cable'],'triceps']
+  ['leaning-cable-ohext','Leaning Cable Overhead Triceps Extension',['cable'],'triceps'],
+  ['ad-press-barbell','AD Press (Barbell)',['barbell','inclinebench','rack'],'shoulders'],
+  ['ad-press-smith','AD Press (Smith Machine)',['smith','inclinebench'],'shoulders']
 ];
 for (const [id,name,equipment,part] of expected) {
   const web=EX_BY_ID[id],engine=EXERCISE_MAP.get(id);
@@ -51,7 +53,8 @@ for(const id of [
  'single-cable-raise','leaning-lat-raise','machine-lat-raise',
  'chest-supported-lat-raise','face-pull','wide-pulldown',
  'close-pulldown','bayesian-curl','smith-ohp','bottom-half-db-fly',
- 'deficit-pendlay-row','low-to-high-face-pull','leaning-cable-ohext'
+ 'deficit-pendlay-row','low-to-high-face-pull','leaning-cable-ohext',
+ 'ad-press-barbell','ad-press-smith'
 ]){
   assert.ok(EX_BY_ID[id],'missing user-requested web exercise '+id);
 }
@@ -84,4 +87,10 @@ assert.match(picker,/const matches=useMemo\(\(\)=>pool\.filter/);
 assert.match(picker,/matches\.slice\(0,visibleCount\)/);
 assert.doesNotMatch(picker,/\.slice\(0,100\)/);
 assert.match(machine,/machineInstanceId/);
+assert.match(app,/"ad-press-barbell": \{ key: "ad-press-bar"/);
+assert.match(app,/"ad-press-smith": \{ key: "ad-press-smith"/);
+assert.match(app,/visual === "ad-press-bar"/);
+assert.match(app,/visual === "ad-press-smith"/);
+assert.match(app,/visual === "chest-db-partial"/);
+assert.match(app,/visual === "overhead-lean"/);
 console.log('PASS web exercise request inventory, distinct setups, no false bench facets, program/workout picker authority');

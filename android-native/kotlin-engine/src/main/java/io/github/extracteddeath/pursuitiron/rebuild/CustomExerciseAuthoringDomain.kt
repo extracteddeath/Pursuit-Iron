@@ -168,7 +168,8 @@ object CustomExerciseAuthoringDomain {
                     (amp.kind!=CustomAmplifierKind.MYO_REPS ||
                     amp.followUpRounds !in 3..5 ||
                     amp.followUpReps !in 3..5 ||
-                    amp.followUpRestSeconds !in 10..30)))
+                    amp.followUpRestSeconds !in 10..30 ||
+                    amp.followUpLoad!=null)))
                 return CustomAuthoringRefusal.INVALID_SETS
             if (amp.kind == CustomAmplifierKind.DROP_SET) {
                 val base = set.load as? DraftSetLoad.Verified

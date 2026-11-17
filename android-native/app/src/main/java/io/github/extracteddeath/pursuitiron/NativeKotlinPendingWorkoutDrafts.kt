@@ -6,8 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import io.github.extracteddeath.pursuitiron.rebuild.*
-import org.json.JSONObject
 import java.security.MessageDigest
+import java.util.Base64
 
 /**
  * Private PRESENTATION drafts, not an issued prescription, journal, outcome,
@@ -46,6 +46,31 @@ internal object NativePendingWorkoutDraftIdentity {
     }
 }
 
+/** Versioned, bounded, untrusted UI text codec; safe on JVM and Android. */
+internal object NativePendingWorkoutDraftCodec {
+    private const val MAX_FIELD=64
+    fun encode(draft:NativePendingWorkoutDraft):String? {
+        val parts=listOf(draft.load,draft.reps,draft.rir)
+        if(parts.any{it.length>MAX_FIELD})return null
+        return "v1:"+parts.joinToString(":"){
+            Base64.getEncoder().encodeToString(it.toByteArray(Charsets.UTF_8))
+        }
+    }
+    fun decode(raw:String?):NativePendingWorkoutDraft? {
+        if(raw==null || raw.length>512)return null
+        val parts=raw.split(':')
+        if(parts.size!=4 || parts.first()!="v1")return null
+        val decoded=parts.drop(1).map {field->
+            runCatching {
+                val bytes=Base64.getDecoder().decode(field)
+                if(Base64.getEncoder().encodeToString(bytes)!=field)return null
+                String(bytes,Charsets.UTF_8).takeIf{it.length<=MAX_FIELD}
+            }.getOrNull() ?:return null
+        }
+        return NativePendingWorkoutDraft(decoded[0],decoded[1],decoded[2])
+    }
+}
+
 /**
  * Bounded app-private SharedPreferences store. apply() does not block the
  * workout's typing/stepper frame with disk I/O; Activity lifecycle flushes
@@ -59,25 +84,14 @@ internal class NativeKotlinPendingWorkoutDraftStore(context:Context) {
 
     fun read(key:NativePendingWorkoutDraftKey):NativePendingWorkoutDraft? =
         runCatching {
-            val raw=preferences.getString(key.value,null)
-                ?.takeIf{it.length<=512} ?:return@runCatching null
-            val json=JSONObject(raw)
-            if(json.optInt("v")!=1 || !json.has("load") ||
-                !json.has("reps") || !json.has("rir"))
-                return@runCatching null
-            val fields=listOf(
-                json.getString("load"),json.getString("reps"),json.getString("rir"))
-            if(fields.any{it.length>64})return@runCatching null
-            NativePendingWorkoutDraft(fields[0],fields[1],fields[2])
+            NativePendingWorkoutDraftCodec.decode(
+                preferences.getString(key.value,null))
         }.getOrNull()
 
     fun save(key:NativePendingWorkoutDraftKey,draft:NativePendingWorkoutDraft):Boolean {
-        if(listOf(draft.load,draft.reps,draft.rir).any{it.length>64})
-            return false
+        val encoded=NativePendingWorkoutDraftCodec.encode(draft) ?:return false
         return runCatching {
-            val json=JSONObject().put("v",1)
-                .put("load",draft.load).put("reps",draft.reps).put("rir",draft.rir)
-            preferences.edit().putString(key.value,json.toString()).apply()
+            preferences.edit().putString(key.value,encoded).apply()
             true
         }.getOrDefault(false)
     }

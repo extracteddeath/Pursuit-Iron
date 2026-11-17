@@ -2190,6 +2190,7 @@ object StarterExerciseTranche {
         // nominal manufacturer-rated resistance and no implied free-weight
         // equivalence. Hybrid assisted bands and timed methods remain excluded.
         // Only physically confirmed discrete band ratings may compose workouts.
+        // BEGIN_REVIEWED_RATED_BANDS_V1
         entry("band_lateral_raise","lateral_raise","rated-band-lateral-raise",
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
             "rated-resistance-band-set",LoadBasis.EXERCISE_OVERRIDE,emptySet(),10..40,
@@ -2280,6 +2281,7 @@ object StarterExerciseTranche {
             direct(TrainingMuscle.CHEST),
             indirect(TrainingMuscle.TRICEPS,"0.25"),
             indirect(TrainingMuscle.FRONT_DELTS,"0.25"))
+        // END_REVIEWED_RATED_BANDS_V1
     )
 
     init {

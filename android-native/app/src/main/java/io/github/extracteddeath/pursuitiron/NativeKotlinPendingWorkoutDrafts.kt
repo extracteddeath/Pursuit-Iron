@@ -28,7 +28,7 @@ internal object NativePendingWorkoutDraftIdentity {
     ):NativePendingWorkoutDraftKey {
         val issuedLoad=when(load) {
             is DraftSetLoad.Verified -> listOf(
-                "verified",load.value.toPlainString(),load.unit.name,load.basis.name)
+                "verified",load.value.stripTrailingZeros().toPlainString(),load.unit.name,load.basis.name)
             DraftSetLoad.ExplicitBodyweight -> listOf("bodyweight")
             else -> listOf("other",load.toString())
         }

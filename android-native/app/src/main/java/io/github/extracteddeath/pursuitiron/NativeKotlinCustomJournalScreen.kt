@@ -671,8 +671,8 @@ internal fun NativeKotlinCustomJournalScreen(
                             "Warm-up" else "Set"
                         if(activeFocus?.part==CustomWorkoutVisitPart.FOLLOW_UP)
                             set.prescription.amplifier?.let {
-                                val method=AdvancedAmplifierProtocolDomain.template(it.kind)
-                                "${method.title} · stage ${activeFocus.stage} of ${it.followUpRounds}"
+                                AdvancedAmplifierProtocolDomain.stageLabel(
+                                    it,activeFocus.stage)
                             } ?: "Amplifier follow-up"
 
                         else
@@ -1700,7 +1700,8 @@ private fun NativeKotlinCustomVisitEditor(
     val follower=prescription.amplifier
     val isStagedShortRestStop=part==CustomWorkoutVisitPart.FOLLOW_UP &&
         stageTotal>1 && follower?.kind in setOf(
-            CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.REST_PAUSE)
+            CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.REST_PAUSE,
+            CustomAmplifierKind.CLUSTER)
     val target=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
         follower?.followUpLoad ?:prescription.load
     else prescription.load
@@ -1737,12 +1738,13 @@ private fun NativeKotlinCustomVisitEditor(
         set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,
         if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
     // The prescribed target never changes; an athlete-entered activation
-    // load may be different. Same-load myo and rest-pause stages start
-    // from that recorded machine's activation, not the issued target.
+    // load may be different. Same-load myo, rest-pause and cluster stages
+    // start from that recorded machine's activation, not the issued target.
     val sameLoadActivation=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
         stageTotal>1 &&
         (follower?.kind==CustomAmplifierKind.MYO_REPS ||
-         follower?.kind==CustomAmplifierKind.REST_PAUSE) &&
+         follower?.kind==CustomAmplifierKind.REST_PAUSE ||
+         follower?.kind==CustomAmplifierKind.CLUSTER) &&
         saved==null && activationPerformed?.machineInstanceId==machineInstanceId &&
         activationPerformed?.unit==verified?.unit)
         activationPerformed?.load?.stripTrailingZeros()?.toPlainString()

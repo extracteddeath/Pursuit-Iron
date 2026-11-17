@@ -89,8 +89,15 @@ assert.match(restPauseSheet,/Partial reps \(not full ROM\)/);
 assert.match(partialCycle,/setIndex!=lastWorkingSet/);
 assert.match(partialAuthor,/validateSelectedSets\(/);
 assert.match(partialStore,/index==lastWorking/);
-assert.match(journal,/Last working set · Lengthened partials/);
-assert.match(journal,/position==setCount/);
+// All five techniques must be anchored to their own main-set row before
+// logging, and remain visible with factual stage outcomes after logging.
+const inlineTechnique=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomAmplifierSetSummaryDomain.kt');
+assert.match(journal,/CustomAmplifierSetSummaryDomain.review\(current,set\)/);
+assert.match(journal,/if\(part==CustomWorkoutVisitPart.MAIN && amplifierSummary!=null\)/);
+assert.match(journal,/if\(position==setCount\)"Last working set"/);
+assert.match(inlineTechnique,/CustomWorkoutExecutionDomain.followUpVisits\(journal,set\)/);
+assert.match(inlineTechnique,/journal.effectiveVisits\[key\]/);
+assert.match(inlineTechnique,/CustomAmplifierKind.DROP_SET/);
 assert.match(journal,/sameLoadActivation/);
 assert.match(journal,/follower\?\.kind==CustomAmplifierKind.LENGTHENED_PARTIALS/);
 assert.match(partialHistory,/Lengthened partials · partial reps/);

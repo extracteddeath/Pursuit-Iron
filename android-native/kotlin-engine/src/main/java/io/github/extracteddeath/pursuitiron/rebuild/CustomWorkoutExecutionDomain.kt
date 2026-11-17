@@ -85,9 +85,9 @@ object CustomWorkoutExecutionDomain {
                         ?.performed
                 val actualPriorLoad=priorObserved?.load
                 if(actualPriorLoad==null ||
-                    priorObserved.unit!=proposed.unit ||
+                    priorObserved?.unit!=proposed.unit ||
                     actualPriorLoad.compareTo(proposed.value)<=0 ||
-                    priorObserved.machineInstanceId!=main.performed?.machineInstanceId)
+                    priorObserved?.machineInstanceId!=main.performed?.machineInstanceId)
                     break
             }
             visits+=key

@@ -25,6 +25,8 @@ assert.doesNotMatch(policy,/RecordSet\(|recordIssuedCustomSet\(|approve\(|issueW
 assert.match(rest,/ownerId: String\? = null/);
 assert.match(rest,/scopeKey=remember\(workoutId,ownerId\)/);
 assert.match(rest,/recovered=remember\(scopeKey,latestReceiptOperationId\)/);
+assert.match(rest,/var deadline by rememberSaveable\(workoutId,ownerId\)/);
+assert.doesNotMatch(rest,/rememberSaveable\(workoutId,ownerId,latestReceiptOperationId\)/);
 assert.match(rest,/restStore\.read\(it,latestReceiptOperationId,/);
 assert.match(rest,/mutableLongStateOf\(recovered\?\.deadlineElapsed \?:0L\)/);
 assert.match(rest,/restStore\.save\(scopeKey,latestReceiptOperationId,checkpoint\)/);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { EXERCISES, EX_BY_ID, EQUIPMENT } from '../modules/training-domain/catalog.js';
-import { EXERCISE_MAP } from '../modules/next-engine/exercise-db.js';
+import { EXERCISE_MAP, createExerciseCatalog, createAutomaticExerciseCatalog } from '../modules/next-engine/exercise-db.js';
 import { exerciseBenchLevel, exerciseAttachmentFacet } from '../modules/exercise-variant-browse.js';
 
 // Regression for specifically requested real-world training setups; an
@@ -75,6 +75,17 @@ for(const [id,attachment] of [
   ['ez-pushdown','ez-bar'],['single-pushdown','single-handle'],
   ['oh-cable-ext','rope']
 ]) assert.equal(exerciseAttachmentFacet(EX_BY_ID[id]),attachment);
+
+// Default generated plans must remain byte-for-byte compatible with frozen
+// engine snapshots. Manual Add/Swap can still reach all reviewed IDs.
+const manual = createExerciseCatalog();
+const automatic = createAutomaticExerciseCatalog();
+for(const [id] of expected.map(([id])=>[id])) {
+  assert.ok(manual.some(ex=>ex.id===id),'manual catalog lost '+id);
+  assert.ok(!automatic.some(ex=>ex.id===id),'new provisional variant was auto-generated: '+id);
+}
+assert.equal(manual.length-automatic.length,expected.length,
+  'only the seven new provisional variants may be excluded from automatic generation');
 
 // Picker must search all source IDs, with options visible in program and
 // in-workout swaps. Physical machine ID is never an exercise swap.

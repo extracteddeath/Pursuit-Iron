@@ -1734,10 +1734,12 @@ private fun NativeKotlinCustomVisitEditor(
         set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,
         if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
     // The prescribed target never changes; an athlete-entered activation
-    // load may be different. A new myo mini-set should start from that
-    // recorded same-machine load, not silently revert to issued weight.
+    // load may be different. Same-load myo and rest-pause stages start
+    // from that recorded machine's activation, not the issued target.
     val sameLoadActivation=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
-        follower?.kind==CustomAmplifierKind.MYO_REPS && stageTotal>1 &&
+        stageTotal>1 &&
+        (follower?.kind==CustomAmplifierKind.MYO_REPS ||
+         follower?.kind==CustomAmplifierKind.REST_PAUSE) &&
         saved==null && activationPerformed?.machineInstanceId==machineInstanceId &&
         activationPerformed?.unit==verified?.unit)
         activationPerformed?.load?.stripTrailingZeros()?.toPlainString()
@@ -1890,7 +1892,11 @@ private fun NativeKotlinCustomVisitEditor(
         val label=if(part==CustomWorkoutVisitPart.MAIN)
             "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
         else follower?.let { AdvancedAmplifierProtocolDomain.template(it.kind).title +
-            (if(stageTotal>1)" · mini $stageOrdinal of $stageTotal" else " · follow-up")
+            (if(stageTotal>1)
+                (if(follower.kind==CustomAmplifierKind.REST_PAUSE)
+                    " · effort $stageOrdinal of $stageTotal"
+                else " · mini $stageOrdinal of $stageTotal")
+             else " · follow-up")
         } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
@@ -1922,7 +1928,9 @@ private fun NativeKotlinCustomVisitEditor(
                         (follower.followUpActiveSeconds?.let{
                             "$it s planned follow-up work"
                         }?:"Follow-up work time not authored") +
-                        " · One separately logged follow-up in this workout",
+                        (if(stageTotal>1)
+                            " · Each performed stage is logged separately"
+                        else " · One separately logged follow-up in this workout"),
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }

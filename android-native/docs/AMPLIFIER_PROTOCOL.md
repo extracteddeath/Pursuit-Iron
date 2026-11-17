@@ -1,12 +1,13 @@
 # Advanced set amplifiers — protocol, UX and beta acceptance
 
-**State on 2026-11-17 (PR #678, under review):** The Kotlin custom journal now has an **opt-in 3–5-stage myo-rep sequence**, with one owner/revision-fenced factual receipt per performed mini-set, early stop, stage-aware Focus/All, individual History facts, short rest and versioned disk replay. Existing single-follow-up workouts remain one stage and retain legacy binary encodings. **This is still under CI/device review, not a release declaration.** Multi-drop, cluster and rest-pause workflows, generated-program amp issuance, web runtime display/logging and full native device acceptance remain open.
+**State on 2026-11-17:** PR #678 merged the Kotlin custom journal's **opt-in 3–5-stage myo-rep sequence**, with one owner/revision-fenced factual receipt per performed mini-set, early stop, stage-aware Focus/All, history, short rest and versioned disk replay. This next change extends the exact same durable stage authority to **1–3 same-load rest-pause efforts**, only when explicitly authored. Old one-follow-up workouts retain legacy encoding. **Staged rest-pause still requires CI and device review; this is not beta release approval.** Multi-drop, clusters, generated-program amplifier issuance, web runtime parity and full native device acceptance remain open.
 
 ## Evidence and selection
 
 - A 2026 systematic review/meta-analysis found that advanced systems did **not** produce a meaningful overall hypertrophy advantage; rest-pause may have a small advantage and drop sets/cluster systems were often comparable when effort/volume were matched. Use techniques to **save time**, for an optional finishing stimulus, or for a specific programming purpose, not as magic extra growth. https://pubmed.ncbi.nlm.nih.gov/41718208/
 - Drop sets can produce similar hypertrophy in less time. They are demanding, and a drop is a *deliberate, explicit* load change, never a silent change to a straight working set. https://pubmed.ncbi.nlm.nih.gov/37523092/ and https://pubmed.ncbi.nlm.nih.gov/41920484/
 - Børge Fagerli's myo-reps and Barbell Medicine's guidance: activation at around RPE 8 (often 12–20+ reps), followed by the **same weight** in short 3–5-rep mini-sets, usually 20–30 seconds between. Keep going only while performance and form hold; reach 3 reps on the final mini-set or stop sooner when falling short; at most five mini-sets. An optional stricter rule ends on first drop below the selected 4–5 target. https://www.barbellmedicine.com/blog/myo-reps/ and https://www.predatornutrition.com/en-US/articlesdetail?cid=an-interview-with-borge-fagerli-aka-blade
+- Rest-pause can be time-efficient with short (~20 s) rests between additional efforts, but greater acute fatigue and discomfort justify conservative optional placement and stopping at a missed rep target rather than forcing all planned repeats. https://pmc.ncbi.nlm.nih.gov/articles/PMC11127831/ and https://pubmed.ncbi.nlm.nih.gov/28617715/
 - Supersets can be time-saving but should remain a separate pairing feature; do not conflate linked supersets with amplifiers. https://pubmed.ncbi.nlm.nih.gov/39903375/
 
 ## Conservative default placement
@@ -16,7 +17,7 @@
 - A cluster is a *planned* quality/intensity method with short rests and submaximal efforts. Do not portray clusters as failure-based myo-reps.
 - Retain weekly dose budget: one activation+mini-set sequence is one technique block. Extra mini-sets are **not** automatically 3–5 additional regular working sets, progression entries, or personal records.
 
-## Full sequence contracts (myo slice in PR #678; other methods pending)
+## Full sequence contracts (myo merged; rest-pause staged slice in review)
 
 | Technique | Issued protocol | Actuals and stopping |
 | --- | --- | --- |
@@ -35,4 +36,4 @@
 6. **History and Progress:** show `Activation 14 · mini 5+5+4+3` or drops with **actual weights**, and distinguish technique stages from regular sets in volume/progression, PR and machine A/B history. Keep activation main-set progression and actual RIR provenance intact.
 7. **Tests:** pure stop-state/range/quality evaluator, stage identity and ordering in supersets, load rounding/decline for drops, time/rest cues, crash-safe persistence, correction/undo, source reissuance, custom/generated parity, accessibility + screenshots, no legacy JS dependency. No APK before full native UI acceptance.
 
-This contract deliberately separates a science-informed recommendation from an *issued and independently logged workout*. PR #678 implements the **custom myo-rep vertical slice**, while native-generated programs and multi-stage drop/rest-pause/cluster protocols and web parity remain open. Even after Kotlin CI passes, full multi-stage amplifier support is an **open beta acceptance item** pending device accessibility and end-to-end product checks.
+This contract deliberately separates a science-informed recommendation from an *issued and independently logged workout*. The custom myo-rep slice is merged. Staged rest-pause here reuses its versioned receipts, explicit same-load guards and early-stop behavior; multi-stage drops and clusters remain separate work and cannot be faked by duplicating a single follow-up. Generated program support, web parity, full device accessibility and end-to-end beta acceptance remain open after CI. No APK before the full UI is complete.

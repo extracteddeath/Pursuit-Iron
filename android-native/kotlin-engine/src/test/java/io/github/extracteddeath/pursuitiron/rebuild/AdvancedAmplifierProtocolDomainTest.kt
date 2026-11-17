@@ -42,6 +42,32 @@ class AdvancedAmplifierProtocolDomainTest {
         assertEquals(MyoRepNextStep.INVALID_SEQUENCE, step(4, listOf(4), 6))
     }
 
+    @Test fun restPauseMayBeStagedButNeverSilentlyChangesWeightOrForcesExtraEfforts() {
+        val policy=AdvancedAmplifierProtocolDomain
+        val staged=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
+            3,20,followUpRounds=3)
+        assertTrue(policy.validStagedFollowUps(staged))
+        assertTrue(policy.validStagedFollowUps(staged.copy(followUpRounds=2)))
+        // Older single-visit prescriptions still decode and execute identically.
+        assertTrue(policy.validStagedFollowUps(staged.copy(followUpRounds=1)))
+        assertFalse(policy.validStagedFollowUps(staged.copy(followUpRounds=4)))
+        assertFalse(policy.validStagedFollowUps(staged.copy(followUpReps=6)))
+        assertFalse(policy.validStagedFollowUps(staged.copy(followUpRestSeconds=10)))
+        assertFalse(policy.validStagedFollowUps(staged.copy(
+            followUpLoad=DraftSetLoad.ExplicitBodyweight)))
+        assertFalse(policy.validStagedFollowUps(
+            CustomSetAmplifier(CustomAmplifierKind.DROP_SET,3,20,
+                followUpRounds=2)))
+        assertFalse(policy.validStagedFollowUps(
+            CustomSetAmplifier(CustomAmplifierKind.CLUSTER,3,20,
+                followUpRounds=2)))
+        assertTrue(policy.continueRestPause(3,listOf(3),3))
+        assertTrue(policy.continueRestPause(3,listOf(3,4),3))
+        assertFalse(policy.continueRestPause(3,listOf(3,2),3))
+        assertFalse(policy.continueRestPause(3,listOf(3,3,3),3))
+        assertFalse(policy.continueRestPause(6,listOf(6),3))
+    }
+
     @Test fun dropsRequireLoadReductionsAndClustersAreNotMyoReps() {
         val drop = AdvancedAmplifierProtocolDomain.template(CustomAmplifierKind.DROP_SET)
         val cluster = AdvancedAmplifierProtocolDomain.template(CustomAmplifierKind.CLUSTER)

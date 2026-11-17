@@ -66,7 +66,7 @@ object CustomWorkoutExecutionDomain {
         if(main?.outcome!=KotlinJournalSetOutcome.COMPLETED)return emptyList()
         if(amp.followUpRounds !in 1..5)return emptyList()
         val visits=mutableListOf<CustomWorkoutVisitKey>()
-        val actualMiniReps=mutableListOf<Int>()
+        val observedFollowUpReps=mutableListOf<Int>()
         for(stage in 1..amp.followUpRounds) {
             val key=CustomWorkoutVisitKey(set.setKey,
                 CustomWorkoutVisitPart.FOLLOW_UP,stage)
@@ -74,19 +74,30 @@ object CustomWorkoutExecutionDomain {
             val recorded=journal.effectiveVisits[key]?.operation
                 as? CustomWorkoutJournalOperation.Record ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
-            if(amp.kind==CustomAmplifierKind.MYO_REPS && amp.followUpRounds>1) {
-                // Observations are never overwritten: a different physical
-                // load or station ends the same-load protocol at this stage.
-                // Do not unlock further mini-sets against changed equipment.
+            if(amp.followUpRounds>1 &&
+                (amp.kind==CustomAmplifierKind.MYO_REPS ||
+                 amp.kind==CustomAmplifierKind.REST_PAUSE)) {
+                // These protocols require the EXACT activation load and
+                // station. Keep any unexpected observation as factual history
+                // but never unlock more same-load work from changed equipment.
                 val activation=main.performed ?:break
                 val observed=recorded.performed ?:break
                 if(observed.load!=activation.load ||
                     observed.unit!=activation.unit ||
                     observed.machineInstanceId!=activation.machineInstanceId)break
-                actualMiniReps+=observed.reps
-                val step=AdvancedAmplifierProtocolDomain.nextMyoRepStep(
-                    amp.followUpReps,actualMiniReps,amp.followUpRounds)
-                if(step!=MyoRepNextStep.KEEP_GOING)break
+                observedFollowUpReps+=observed.reps
+                val continueTraining=when(amp.kind) {
+                    CustomAmplifierKind.MYO_REPS ->
+                        AdvancedAmplifierProtocolDomain.nextMyoRepStep(
+                            amp.followUpReps,observedFollowUpReps,
+                            amp.followUpRounds)==MyoRepNextStep.KEEP_GOING
+                    CustomAmplifierKind.REST_PAUSE ->
+                        AdvancedAmplifierProtocolDomain.continueRestPause(
+                            amp.followUpReps,observedFollowUpReps,
+                            amp.followUpRounds)
+                    else -> false
+                }
+                if(!continueTraining)break
             }
         }
         return visits

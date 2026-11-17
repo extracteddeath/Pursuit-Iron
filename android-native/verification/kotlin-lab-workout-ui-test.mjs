@@ -7,6 +7,27 @@ const read=p=>fs.readFileSync(p,'utf8');
 const journal=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 
+// Staged rest-pause shares the same durable visit UI and revision-fenced
+// journal as myo-reps; technique choices cannot invent a performed set.
+const restPauseSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomExerciseSheet.kt');
+const restPauseExecution=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutExecutionDomain.kt');
+const restPauseProtocol=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/AdvancedAmplifierProtocolDomain.kt');
+const restPauseJournal=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutJournalDomain.kt');
+assert.match(restPauseSheet,/CustomAmplifierKind.REST_PAUSE -> "2"/);
+assert.match(restPauseSheet,/Max rest-pause efforts \(1–3\)/);
+assert.match(restPauseSheet,/Stop early if you miss the planned reps/);
+assert.match(restPauseExecution,/CustomAmplifierKind.REST_PAUSE ->/);
+assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueRestPause/);
+assert.match(restPauseProtocol,/fun validStagedFollowUps\(/);
+assert.match(restPauseProtocol,/fun continueRestPause\(/);
+assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
+assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);
+assert.match(journal,/follower\?\.kind==CustomAmplifierKind.REST_PAUSE/);
+assert.match(journal,/effort \$stageOrdinal of \$stageTotal/);
+assert.match(journal,/Each performed stage is logged separately/);
+assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}"'),
+  "stage identity must survive Focus/All and cold resume");
+
 for(const phrase of [
   'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',
   'initiallyExpanded=activeFocus==mainKey',

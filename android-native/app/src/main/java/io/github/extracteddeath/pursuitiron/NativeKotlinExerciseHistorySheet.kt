@@ -39,7 +39,10 @@ private data class ExerciseVisitDisplay(
     val issuedLoad:DraftSetLoad,
     val issuedReps:RepBand,
     val issuedRir:Int?,
-    val actual:KotlinPerformedSet?
+    val actual:KotlinPerformedSet?,
+    val techniqueKind:CustomAmplifierKind?=null,
+    val techniqueStage:Int=1,
+    val techniqueParentKey:String?=null
 )
 
 private fun exerciseHistoryRows(
@@ -51,7 +54,9 @@ private fun exerciseHistoryRows(
             completed.evidence.sets.filter {
                 it.exerciseId==exerciseId
             }.mapIndexed { index,set ->
-                ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}",
+                ExerciseVisitDisplay(
+                    nativeExerciseHistoryRowKey(completed.manifest.workoutId,
+                        set.setKey,null),
                     order,completed.evidence.source.gymId,index+1,
                     set.type,false,set.outcome,set.issuedLoad,
                     set.issuedReps,set.issuedRir,set.actual)
@@ -60,11 +65,16 @@ private fun exerciseHistoryRows(
             completed.evidence.visits.filter {
                 it.exerciseId==exerciseId
             }.mapIndexed { index,set ->
-                ExerciseVisitDisplay("${completed.manifest.workoutId}:${set.setKey}:${set.part.name}",
+                ExerciseVisitDisplay(
+                    nativeExerciseHistoryRowKey(completed.manifest.workoutId,
+                        set.setKey,set.part,set.stage),
                     order,completed.gymId,index+1,set.setType,
                     set.part==CustomWorkoutVisitPart.FOLLOW_UP,
                     set.outcome,set.prescribedLoad,
-                    set.prescribedReps,set.prescribedRir,set.actual)
+                    set.prescribedReps,set.prescribedRir,set.actual,
+                    set.amplifierKind,set.stage,
+                    nativeExerciseHistoryRowKey(completed.manifest.workoutId,
+                        set.setKey,null))
             }
     }
 }
@@ -223,12 +233,30 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    val rows=remember(result.timeline.athleteId,
-                        result.timeline.manifestRevision,exerciseId) {
+                    val rows=remember(result.timeline,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }
-                    val sessionManifests=remember(result.timeline.athleteId,
-                        result.timeline.manifestRevision) {
+                    // One factual caption per exact original working set.
+                    // Corrections refresh this verified manifest revision.
+                    // Invalid grouping never hides the unmodified stage rows
+                    // from the All entries history view.
+                    val techniqueCaptions=remember(result.timeline,exerciseId) {
+                        result.timeline.completions
+                            .filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                            .flatMap { completed ->
+                                CustomHistoricalTechniqueGroupingDomain.group(
+                                    completed.evidence.visits)?.mapNotNull{ group ->
+                                    group.techniqueCaption?.takeIf {
+                                        group.main.exerciseId==exerciseId
+                                    }?.let { caption ->
+                                        nativeExerciseHistoryRowKey(
+                                            completed.manifest.workoutId,
+                                            group.main.setKey,null) to caption
+                                    }
+                                } ?:emptyList()
+                            }.toMap()
+                    }
+                    val sessionManifests=remember(result.timeline) {
                         result.timeline.completions.associate {
                             it.manifest.completionOrder to it.manifest
                         }
@@ -339,7 +367,12 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 }
                                 PursuitCard {
                                     val kind=when {
-                                        row.followUp -> "Amplifier follow-up"
+                                        row.followUp -> row.techniqueKind?.let {kind->
+                                            AdvancedAmplifierProtocolDomain.template(kind).title+
+                                                " · "+
+                                                AdvancedAmplifierProtocolDomain.stageNoun(kind)+
+                                                " ${row.techniqueStage}"
+                                        } ?: "Amplifier follow-up"
                                         row.type==DraftSetType.WARMUP -> "Warm-up"
                                         else -> "Working set"
                                     }
@@ -351,7 +384,10 @@ internal fun NativeKotlinExerciseHistorySheet(
                                         .count {
                                             it.type==row.type && it.followUp==row.followUp
                                         }+1
-                                    Text("$kind $ordinal",
+                                    // A mini-set's own stage number is authoritative;
+                                    // appending the session-wide follow-up ordinal
+                                    // would mislabel a second exercise's mini 1.
+                                    Text(if(row.followUp)"$kind" else "$kind $ordinal",
                                         style=MaterialTheme.typography.titleSmall)
                                     val targetReps=if(row.issuedReps.minimum==row.issuedReps.maximum)
                                         "${row.issuedReps.minimum}"
@@ -367,6 +403,14 @@ internal fun NativeKotlinExerciseHistorySheet(
                                         KotlinJournalSetOutcome.COMPLETED ->
                                             "Actual · ${actualLabel(row.actual,row.issuedLoad)}"
                                     },style=MaterialTheme.typography.bodyMedium)
+                                    if(!row.followUp)
+                                        row.techniqueParentKey?.let{parent->
+                                            techniqueCaptions[parent]?.let{caption->
+                                                Text(caption,
+                                                    style=MaterialTheme.typography.bodySmall,
+                                                    color=MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
                                     Text(machineLabel(historyMachine(row)),
                                         style=MaterialTheme.typography.bodySmall,
                                         color=MaterialTheme.colorScheme.onSurfaceVariant)

@@ -68,6 +68,10 @@ class CustomWorkoutHistoryEvidenceDomainTest {
         assertEquals(0,facts.visits[1].actual?.actualRir)
         assertEquals(6,facts.visits[1].actual?.reps)
         assertEquals(CustomAmplifierKind.DROP_SET,facts.visits[1].amplifierKind)
+        val grouped=CustomHistoricalTechniqueGroupingDomain.group(facts.visits)!!
+        assertEquals(1,grouped.size)
+        assertEquals("Drop set · 1 drop · 15 lb × 6",grouped.single().techniqueCaption)
+        assertEquals(facts.visits,grouped.flatMap{listOf(it.main)+it.followUps})
         assertFalse(facts.canPublishGlobalHistory)
         assertFalse(facts.canApplyProgression)
     }
@@ -165,6 +169,11 @@ class CustomWorkoutHistoryEvidenceDomainTest {
             BigDecimal("20"),BigDecimal("20")),facts.map{
                 (it.prescribedLoad as DraftSetLoad.Verified).value
         })
+        val groups=CustomHistoricalTechniqueGroupingDomain.group(facts)!!
+        assertEquals(1,groups.size)
+        assertEquals("Myo-reps · 3 mini-sets · 5 + 4 + 3 reps",
+            groups.single().techniqueCaption)
+        assertEquals(facts,groups.flatMap{listOf(it.main)+it.followUps})
         val score=KotlinHistoryPerformanceSummaryDomain.fromCustom(facts)
         assertEquals(1,score.completedWorkingSets)
         assertEquals(3,score.completedFollowUpVisits)

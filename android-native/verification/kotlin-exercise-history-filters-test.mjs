@@ -10,6 +10,28 @@ assert.match(ui,/host\.reviewVerifiedKotlinHistory\(\)/);
 assert.match(ui,/NativeKotlinMixedHistoryReadResult\.Review/);
 assert.match(ui,/exerciseHistoryRows\(result\.timeline,exerciseId\)/);
 assert.match(ui,/timeline\.completions\.asReversed\(\)\.flatMap/);
+// Staged technique rows once shared a single MAIN/FOLLOW_UP key. In a
+// LazyColumn that made myo-rep mini 1..5 collide. Preserve one row per
+// physically logged stage, with corrections/partials attached to the exact
+// main set in Working and All views.
+const identity=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseHistoryRowIdentity.kt','utf8');
+assert.match(identity,/\$\{workoutId\.length\}/);
+assert.match(identity,/\$\{setKey\.length\}/);
+assert.match(identity,/\(part\?\.name \?: "COMPOSER"\)\+":\$stage"/);
+assert.match(ui,/nativeExerciseHistoryRowKey\(completed\.manifest\.workoutId,/);
+assert.match(ui,/set\.part,set\.stage/);
+assert.match(ui,/CustomHistoricalTechniqueGroupingDomain\.group\(/);
+assert.match(ui,/techniqueCaptions\[parent\]/);
+// Saved-set corrections can change actual facts without creating another
+// Finish receipt. Cached UI summaries must track the verified timeline
+// content rather than only a coarse revision number.
+assert.match(ui,/val rows=remember\(result\.timeline,exerciseId\)/);
+assert.match(ui,/val techniqueCaptions=remember\(result\.timeline,exerciseId\)/);
+
+assert.match(ui,/AdvancedAmplifierProtocolDomain\.stageNoun\(kind\)/);
+assert.match(ui,/items\(visible,key=\{it\.key\}\)/);
+
 assert.match(ui,/val order=completed\.manifest\.completionOrder/);
 assert.match(ui,/completed\.evidence\.sets\.filter/);
 assert.match(ui,/completed\.evidence\.visits\.filter/);

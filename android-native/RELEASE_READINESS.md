@@ -8,6 +8,27 @@ The recent workout/restart checkpoints described individual improvements, not
 the complete remaining release scope. No percentage-complete or release date
 is supported by the current evidence.
 
+**Train equipment-recovery checkpoint (2026-11-17):** the Kotlin generated
+and custom workout UIs now surface a clear, workout-local "Equipment
+unavailable?" route from the current exercise in Focus and All Sets.
+The athlete can open the EXISTING physical Machine A/B chooser for the same
+lift and its separately scoped load/Last/history, or request the EXISTING
+source-verified exercise swap, never implicitly convert weights or change the
+saved program. Linked custom supersets, already-recorded exercise sets and
+finished workouts remain protected. A failure to load the physical-machine
+roster does not silently block the independent movement swap.
+
+Custom workout replacement retains only the original count and warm-up/
+working SET TYPES in a fresh blank edit: former weights, reps, actual/target
+RIR, technique, attachment and prior timing are NOT copied. An explicit
+athlete tap may copy *timing only* into editable new slots, or distribute
+newly entered working targets without reusing the former exercise's load.
+Generated workout swaps can explicitly select the NEW exercise's reviewed
+rep window, with all loads still newly entered and gym-verified. Source/JVM
+and Android Compose compilation are required; on-device keyboard/TalkBack,
+complete equipment catalog and whole-program substitution adaptation remain
+open. No APK or AAB is authorized.
+
 **Dated bodyweight Progress checkpoint (2026-11-17):** the Kotlin Progress
 screen now has a source-integrated, athlete-entered bodyweight ledger with
 actual calendar dates, lb/kg values, a day-scaled trend, correction confirmation,

@@ -193,6 +193,25 @@ internal fun NativeKotlinComposerSwapSheet(
                         "Leave target RIR blank if you do not want one.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    selected.option.sourcePracticalReps?.let { range->
+                        if(sourceTargets.any{it.type==DraftSetType.WORKING})
+                            OutlinedButton(
+                                onClick={
+                                    // Opt-in verified exercise range only.
+                                    // Never transfer former exercise reps,
+                                    // load, actual RIR or any completed set.
+                                    sourceTargets.forEachIndexed {i,target->
+                                        if(target.type==DraftSetType.WORKING)
+                                            rows[i]=rows[i].copy(
+                                                min=range.minimum.toString(),
+                                                max=range.maximum.toString())
+                                    }
+                                },enabled=!busy,
+                                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                            ) {
+                                Text("Use this exercise's reviewed rep range")
+                            }
+                    }
                     sourceTargets.forEachIndexed{i,target->
                         val row=rows[i]
                         HorizontalDivider()

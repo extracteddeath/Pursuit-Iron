@@ -128,6 +128,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         mutableStateOf<List<KotlinComposerSwapChoice>>(emptyList())
     }
     var swapLoading by remember(workoutId){mutableStateOf(false)}
+    // Ephemeral one-shot request: machine sheet stays owner-verified and
+    // cannot reopen from a stale saved source after returning to a set.
+    var openPhysicalMachineFor by remember(workoutId) {
+        mutableStateOf<String?>(null)
+    }
     var swapError by remember(workoutId){mutableStateOf<String?>(null)}
     var undoConfirm by remember(workoutId){mutableStateOf<String?>(null)}
     val referenceMode=display.referenceMode
@@ -837,6 +842,24 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 externalOpen=pinnedExerciseId==selected.target.exerciseId,
                 onExternalDismiss={pinnedExerciseId=null}
             )
+        if(selected!=null && journal!=null && !presentation.finished) {
+            val exercise=selected.target.exerciseId
+            val recorded=journal.snapshot.targets.filter{
+                it.exerciseId==exercise
+            }.any{it.setKey in journal.effectiveSets}
+            val options=NativeKotlinEquipmentRecoveryPolicy.review(
+                activeWorkout=!state.busy && !swapLoading,
+                hasPhysicalMachineConfig=activeMachineConfig!=null &&
+                    machineChoices.ready && !machineChoices.busy,
+                hasRecordedExerciseWork=recorded
+            )
+            NativeKotlinEquipmentRecoveryControl(
+                scopeKey="$workoutId:$exercise",
+                availability=options,busy=state.busy || swapLoading,
+                onChangeStation={openPhysicalMachineFor=exercise},
+                onReplaceExercise={reviewSwap(exercise)}
+            )
+        }
         NativeKotlinWorkoutMachineSelector(activeMachineConfig,currentMachine,
             enabled=!state.busy && !presentation.finished &&
                 machineChoices.ready && !machineChoices.busy,
@@ -855,7 +878,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 it.target.exerciseId==selected?.target?.exerciseId &&
                     it.target.type==DraftSetType.WORKING
             }.map {WorkoutReferenceKey(it.target.setKey)},
-            onRequestHistory={stationHistoryRequested=true})
+            onRequestHistory={stationHistoryRequested=true},
+            externalOpen=selected!=null &&
+                openPhysicalMachineFor==selected.target.exerciseId,
+            onExternalOpenConsumed={openPhysicalMachineFor=null})
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)

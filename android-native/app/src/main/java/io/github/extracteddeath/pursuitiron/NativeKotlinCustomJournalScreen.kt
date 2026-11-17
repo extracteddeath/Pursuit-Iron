@@ -100,6 +100,9 @@ internal fun NativeKotlinCustomJournalScreen(
         mutableStateOf<NativeCustomPlateRequest?>(null)
     }
     var swapSlotId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var openPhysicalMachineForSlot by remember(workoutId){
+        mutableStateOf<String?>(null)
+    }
     var undoSwapConfirmEventId by remember(workoutId){mutableStateOf<String?>(null)}
     var swapChoices by remember(workoutId) {
         mutableStateOf<List<CustomExercisePickerOption>>(emptyList())
@@ -844,6 +847,28 @@ internal fun NativeKotlinCustomJournalScreen(
                             "Already recorded sets keep their original machine.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    if(!finished && current.finishedByEventId==null) {
+                        val recorded=slot.sets.any{set ->
+                            current.receipts.any{receipt ->
+                                (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                                    ?.visit?.setKey==set.setKey
+                            }
+                        }
+                        val options=NativeKotlinEquipmentRecoveryPolicy.review(
+                            activeWorkout=!busy,
+                            hasPhysicalMachineConfig=config!=null &&
+                                machineChoices.ready && !machineChoices.busy,
+                            hasRecordedExerciseWork=recorded,
+                            linkedSuperset=slot.supersetGroup!=null
+                        )
+                        NativeKotlinEquipmentRecoveryControl(
+                            scopeKey="$workoutId:${slot.slotId}",
+                            availability=options,
+                            busy=busy,
+                            onChangeStation={openPhysicalMachineForSlot=slot.slotId},
+                            onReplaceExercise={reviewSwap(slot)}
+                        )
+                    }
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
                         enabled=!busy && !finished && current.finishedByEventId==null &&
                             machineChoices.ready && !machineChoices.busy,
@@ -858,7 +883,9 @@ internal fun NativeKotlinCustomJournalScreen(
                         priorWorkingKeys=slot.sets.filter {
                             it.prescription.type==DraftSetType.WORKING
                         }.map{WorkoutReferenceKey(it.setKey)},
-                        onRequestHistory={stationHistoryRequested=true})
+                        onRequestHistory={stationHistoryRequested=true},
+                        externalOpen=openPhysicalMachineForSlot==slot.slotId,
+                        onExternalOpenConsumed={openPhysicalMachineForSlot=null})
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)

@@ -7,7 +7,9 @@ const ui=readFileSync(
 const engine=readFileSync(
     'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinComposerSwapReviewDomain.kt','utf8');
 for(const phrase of [
-    'kotlinExerciseLabel(it.option.exerciseId)',
+    'val id=choice.option.exerciseId',
+    'kotlinExerciseLabel(id)',
+    'nativeExerciseVariantCategory(it)',
     'choices,query,matchingPattern,sharedMusclesOnly,displayLabels',
     'val displayLabels=remember(choices)',
     'label={Text("Shared direct muscles")}',

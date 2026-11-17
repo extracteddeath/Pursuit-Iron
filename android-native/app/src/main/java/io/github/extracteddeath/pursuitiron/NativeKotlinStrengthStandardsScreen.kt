@@ -387,7 +387,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
         // into the UNSAVED strength-comparison fields; neither the coach nor
         // stored comparison settings change automatically.
         NativeKotlinBodyweightPanel(
-            athleteId=profileId,preferredUnit=displayUnit,
+            host=host,athleteId=profileId,preferredUnit=displayUnit,
             onUseForComparison={value,unit->
                 bodyweightUnit=unit.name
                 bodyweightText=value.stripTrailingZeros().toPlainString()

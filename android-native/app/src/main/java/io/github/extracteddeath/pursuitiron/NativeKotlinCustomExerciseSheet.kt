@@ -182,9 +182,17 @@ internal fun NativeKotlinCustomExerciseSheet(
     var note by rememberSaveable(authorScope) {
         mutableStateOf(existing?.coachNote.orEmpty())
     }
+    // A replacement starts with exactly the old WARMUP/WORKING *structure*
+    // (number and kind only), never the old movement's load, reps, RIR,
+    // time, rest, amplifier, attachment, note or observed history. This
+    // avoids accidentally reducing a four-set workout to one blank set.
+    fun freshReplacementStructure():List<CustomSetFields> =
+        replacing?.sets?.takeIf{it.size in 1..20}
+            ?.map{CustomSetFields(type=it.type)}
+            ?:listOf(CustomSetFields())
     var forms by rememberSaveable(authorScope,saver=customSetFieldsSaver) {
         mutableStateOf(existing?.sets?.map { it.toFields() }
-            ?: listOf(CustomSetFields()))
+            ?:freshReplacementStructure())
     }
     val option = available.firstOrNull { it.exerciseId == exerciseId }
     val parsed = parsedSets(forms, option)
@@ -318,7 +326,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                         if(exerciseId!=candidate.exerciseId) {
                             exerciseId=candidate.exerciseId
                             if(replacing!=null) {
-                                forms=listOf(CustomSetFields())
+                                forms=freshReplacementStructure()
                                 note=""
                             }
                         }
@@ -361,6 +369,30 @@ internal fun NativeKotlinCustomExerciseSheet(
                 style = MaterialTheme.typography.labelLarge)
             Text("Attachment: ${option.attachmentId ?: "none"}",
                 style = MaterialTheme.typography.bodySmall)
+        }
+        if(replacing!=null && workoutOnlySwap && option!=null) {
+            Text("Started with ${forms.size} blank set${if(forms.size==1)"" else "s"} "+
+                "matching the original warm-up/working COUNT only. "+
+                "No old weight, reps, effort, technique or timing was copied.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(replacing.sets.size==forms.size)
+                OutlinedButton(
+                    onClick={
+                        // Athlete-requested convenience only. Work/rest timing
+                        // is an editable template, not a verified new-movement
+                        // prescription; every load/rep/RIR remains unfilled.
+                        forms=forms.mapIndexed{index,field->
+                            val old=replacing.sets[index]
+                            if(old.type==field.type)
+                                field.copy(seconds=old.activeSeconds.toString(),
+                                    rest=old.restSeconds.toString())
+                            else field
+                        }
+                    },
+                    enabled=!busy,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ){Text("Copy original timing ONLY (optional)")}
         }
         forms.forEachIndexed { index, fields ->
             key(index) {
@@ -448,6 +480,32 @@ internal fun NativeKotlinCustomExerciseSheet(
                         }
                     }
                 }
+                if(replacing!=null && option!=null &&
+                    fields.type==DraftSetType.WORKING &&
+                    forms.count{it.type==DraftSetType.WORKING}>1)
+                    TextButton(onClick={
+                        // This distributes only the currently entered NEW
+                        // working prescription. It never reads former
+                        // exercise targets or copies advanced techniques.
+                        forms=forms.mapIndexed {otherIndex,other->
+                            if(otherIndex!=index &&
+                                other.type==DraftSetType.WORKING)
+                                other.copy(
+                                    weight=fields.weight,
+                                    minimum=fields.minimum,
+                                    maximum=fields.maximum,
+                                    rir=fields.rir,
+                                    seconds=fields.seconds,
+                                    rest=fields.rest,
+                                    amplifier=null,
+                                    extraReps="",extraRest="",
+                                    extraWork="",extraLoad="")
+                            else other
+                        }
+                    },enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                        Text("Use these NEW targets for other working sets")
+                    }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(

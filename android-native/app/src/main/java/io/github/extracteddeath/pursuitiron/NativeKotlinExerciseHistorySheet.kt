@@ -384,7 +384,10 @@ internal fun NativeKotlinExerciseHistorySheet(
                                         .count {
                                             it.type==row.type && it.followUp==row.followUp
                                         }+1
-                                    Text("$kind $ordinal",
+                                    // A mini-set's own stage number is authoritative;
+                                    // appending the session-wide follow-up ordinal
+                                    // would mislabel a second exercise's mini 1.
+                                    Text(if(row.followUp)"$kind" else "$kind $ordinal",
                                         style=MaterialTheme.typography.titleSmall)
                                     val targetReps=if(row.issuedReps.minimum==row.issuedReps.maximum)
                                         "${row.issuedReps.minimum}"

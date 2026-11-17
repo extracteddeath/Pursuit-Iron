@@ -463,10 +463,9 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 NativeKotlinSavedComposerHistorySetRow(
                                     host,entry,set,onChanged={reload()})
                             }
-                            is NativeKotlinMixedHistoryCompletion.Custom ->entry.evidence.visits.forEach {set->
-                                NativeKotlinSavedCustomHistoryVisitRow(
-                                    host,entry,set,onChanged={reload()})
-                            }
+                            is NativeKotlinMixedHistoryCompletion.Custom ->
+                                NativeKotlinSavedCustomHistoryTechniqueLedger(
+                                    host,entry,onChanged={reload()})
                         }
                     }
                 }
@@ -723,6 +722,68 @@ private fun NativeKotlinSavedComposerHistorySetRow(
         }
         error?.let{Text(it,color=MaterialTheme.colorScheme.error,
             style=MaterialTheme.typography.bodySmall)}
+    }
+}
+
+/**
+ * Full-ROM main results remain first and always accessible. Technique
+ * follow-ups belong to that exact working set, not a disconnected exercise
+ * footer. The compact factual caption is visible without expanding; each
+ * original stage keeps its independent correction action on disclosure.
+ *
+ * If grouping ever detects malformed/foreign stage relationships, show ALL
+ * original visits without suppressing a saved observation.
+ */
+@Composable
+private fun NativeKotlinSavedCustomHistoryTechniqueLedger(
+    host:NativeKotlinCandidateHost,
+    entry:NativeKotlinMixedHistoryCompletion.Custom,
+    onChanged:()->Unit
+) {
+    val groups=CustomHistoricalTechniqueGroupingDomain.group(entry.evidence.visits)
+    if(groups==null) {
+        Text("Technique grouping could not be verified. Original saved set records are shown without hiding any entry.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.error)
+        entry.evidence.visits.forEach {fact->
+            NativeKotlinSavedCustomHistoryVisitRow(host,entry,fact,onChanged)
+        }
+        return
+    }
+    groups.forEach {group->
+        key(entry.manifest.workoutId,group.main.setKey) {
+            Column(Modifier.fillMaxWidth(),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                NativeKotlinSavedCustomHistoryVisitRow(
+                    host,entry,group.main,onChanged)
+                val caption=group.techniqueCaption
+                if(caption!=null) {
+                    Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
+                        shape=MaterialTheme.shapes.small) {
+                        Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
+                            verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                            Text(caption,style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.primary)
+                            if(group.followUps.isNotEmpty()) {
+                                var showStages by rememberSaveable(
+                                    entry.manifest.workoutId,group.main.setKey
+                                ) {mutableStateOf(false)}
+                                TextButton(onClick={showStages=!showStages},
+                                    modifier=Modifier.heightIn(min=48.dp)) {
+                                    Text(if(showStages)
+                                        "Hide technique stage details" else
+                                        "View technique stage details")
+                                }
+                                if(showStages)group.followUps.forEach{stage->
+                                    NativeKotlinSavedCustomHistoryVisitRow(
+                                        host,entry,stage,onChanged)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

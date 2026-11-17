@@ -483,4 +483,64 @@ class NativeCustomWorkoutJournalCodecTest {
         assertFalse(evidence.evidence.canApplyProgression)
     }
 
+    @Test fun twoDropV6SnapshotsJournalV5ColdReplayRetainsBothDistinctActualsAndHistory() {
+        val baseline=snapshot()
+        val main=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.SMITH_TOTAL,java.math.BigDecimal("185"))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=main.copy(value=java.math.BigDecimal("155")),
+            followUpRounds=2,
+            secondDropLoad=main.copy(value=java.math.BigDecimal("135")))
+        val originalAmp=baseline.slots.single().sets.single().prescription.amplifier!!
+        val issued=baseline.copy(slots=baseline.slots.map{slot->
+            slot.copy(sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(
+                    load=main,amplifier=amp))
+            })
+        },knownSetAndRestSeconds=baseline.knownSetAndRestSeconds-
+            originalAmp.followUpRestSeconds*originalAmp.followUpRounds+
+            amp.followUpRestSeconds*amp.followUpRounds)
+        fun observed(weight:String,reps:Int)=KotlinPerformedSet(
+            java.math.BigDecimal(weight),LoadUnit.LB,reps,2,"machine_A")
+        var j=CustomWorkoutJournalDomain.begin("two-drop-owned",issued,
+            "a".repeat(64))
+        j=accept(j,CustomWorkoutJournalOperation.Record("main-two",j.revision,
+            CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,observed("185",10)))
+        for((stage,weight) in listOf("155","135").withIndex()) {
+            val stageIndex=stage+1
+            assertEquals(CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP,
+                stageIndex),CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+            val wire=NativeCustomWorkoutJournalCodec.encode(record(j))
+            assertEquals(5,java.nio.ByteBuffer.wrap(wire,4,4).int)
+            val recovered=NativeCustomWorkoutJournalCodec.decode(wire)
+            assertEquals(record(j),recovered)
+            val set=recovered.journal.snapshot.slots.single().sets.single()
+            assertEquals(amp,set.prescription.amplifier)
+            j=accept(recovered.journal,CustomWorkoutJournalOperation.Record(
+                "drop-"+stageIndex,j.revision,
+                CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP,
+                    stageIndex),KotlinJournalSetOutcome.COMPLETED,
+                observed(weight,8)))
+        }
+        assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+        assertTrue(j.canProposeFinish)
+        j=accept(j,CustomWorkoutJournalOperation.Finish(
+            "finish-two-drop",j.revision))
+        val saved=NativeCustomWorkoutJournalCodec.encode(record(j))
+        val cold=NativeCustomWorkoutJournalCodec.decode(saved)
+        assertEquals(record(j),cold)
+        assertArrayEquals(saved,NativeCustomWorkoutJournalCodec.encode(cold))
+        val facts=(CustomWorkoutHistoryEvidenceDomain.project(cold.journal)
+            as CustomHistoryEvidenceResult.Candidate).evidence.visits
+        assertEquals(listOf(java.math.BigDecimal("155"),
+            java.math.BigDecimal("135")),facts.filter{
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            }.map{(it.prescribedLoad as DraftSetLoad.Verified).value})
+        assertEquals(listOf(java.math.BigDecimal("155"),
+            java.math.BigDecimal("135")),facts.filter{
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            }.map{it.actual?.load})
+    }
+
 }

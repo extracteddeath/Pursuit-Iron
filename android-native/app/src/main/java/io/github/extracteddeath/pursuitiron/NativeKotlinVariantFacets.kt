@@ -76,6 +76,14 @@ internal fun nativeExerciseFamilyVariants(
         .thenBy{it.movement.exerciseId})
 }
 
+/** Source-backed incline facet for approved picker identities only.
+ * Custom/unmapped authored IDs cannot gain an angle by naming themselves. */
+internal fun nativeReviewedChoiceAngle(
+    exerciseId:String,reviewedSource:Map<String,CatalogMovement>
+):NativeBenchAngle? = reviewedSource[exerciseId]?.let {
+    nativeBenchAngle(it.variantId,it.requiredFacilityIds,it.familyId)
+}
+
 internal fun nativeExerciseVariantCategory(move:CatalogMovement):String =
     nativeVariantDescription(move.variantId,move.requiredFacilityIds,
         move.attachmentId,move.role.name,move.familyId)

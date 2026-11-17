@@ -23,7 +23,14 @@ assert.match(restPauseProtocol,/fun continueRestPause\(/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
 assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);
 assert.match(journal,/follower\?\.kind==CustomAmplifierKind.REST_PAUSE/);
-assert.match(journal,/effort \$stageOrdinal of \$stageTotal/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(it,stageOrdinal\)/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopTitle/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopDescription/);
+assert.match(journal,/isStagedShortRestStop/);
+const protocolPreview=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageNoun\(amp.kind,plural=true\)/);
+assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageReviewCue\(amp\)/);
+assert.doesNotMatch(protocolPreview,/Each myo mini-set saves separately/);
 assert.match(journal,/Each performed stage is logged separately/);
 assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}"'),
   "stage identity must survive Focus/All and cold resume");

@@ -45,6 +45,19 @@ class WorkoutMachineLastPreviewDomainTest {
             history,listOf(first),"A") as WorkoutMachineLastPreview.Completed).load)
     }
 
+    @Test fun laterFailureInTheSameSessionIsNeverHiddenByFirstSetSuccess() {
+        val history=ready(
+            WorkoutMachineReferenceKey(first,"A") to completed("A",200,8,7),
+            WorkoutMachineReferenceKey(second,"A") to failed("A",7),
+            WorkoutMachineReferenceKey(first,"B") to completed("B",140,8,6))
+        val result=WorkoutMachineLastPreviewDomain.review(
+            history,listOf(first,second),"A")
+        assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,
+            (result as WorkoutMachineLastPreview.NotCompleted).outcome)
+        assertEquals(BigDecimal(140),(WorkoutMachineLastPreviewDomain.review(
+            history,listOf(first,second),"B") as WorkoutMachineLastPreview.Completed).load)
+    }
+
     @Test fun anotherExerciseAndLegacySetsCannotSupplyStationEvidence() {
         val history=WorkoutLastReferenceResult.Ready(
             mapOf(first to completed("A",220,12,4)),

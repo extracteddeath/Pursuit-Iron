@@ -1303,12 +1303,17 @@ internal fun NativeKotlinCustomJournalScreen(
                             if(set.prescription.amplifier!=null &&
                                 main?.outcome==KotlinJournalSetOutcome.COMPLETED &&
                                 activeFocus?.part!=CustomWorkoutVisitPart.MAIN) {
-                                val follower=current.effectiveVisits[
-                                    CustomWorkoutVisitKey(
-                                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)]
-                                editorStates.SaveableStateProvider("follow:${set.setKey}") {
+                                val followKeys=CustomWorkoutExecutionDomain.followUpVisits(
+                                    current,set)
+                                followKeys.filter{activeFocus==null || it==activeFocus}
+                                    .forEach { followKey ->
+                                val follower=current.effectiveVisits[followKey]
+                                editorStates.SaveableStateProvider(
+                                    "follow:${set.setKey}:stage:${followKey.stage}") {
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
+                                    stageOrdinal=followKey.stage,
+                                    stageTotal=set.prescription.amplifier?.followUpRounds ?:1,
                                     existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                     saving=busy,saveError=error,
                                     machineInstanceId=if(follower!=null)
@@ -1326,8 +1331,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                         .indexOf(set)+1,
                                     setCount=slot.sets.count{it.prescription.type==set.prescription.type},
-                                    initiallyExpanded=activeFocus==CustomWorkoutVisitKey(
-                                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP),
+                                    initiallyExpanded=activeFocus==followKey,
                                     onRecord={outcome,actual->
                                         record(set.setKey,
                                             CustomWorkoutVisitPart.FOLLOW_UP,
@@ -1337,7 +1341,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                                         CustomWorkoutJournalOperation.Record)
                                                         ?.performed?.machineInstanceId
                                                 else if(main!=null)main.performed?.machineInstanceId
-                                                else selectedMachineId))
+                                                else selectedMachineId),
+                                            stage=followKey.stage)
                                     },
                                     onShowPlates={load,unit,basis->
                                         plateRequest=NativeCustomPlateRequest(
@@ -1345,6 +1350,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                             current.originalSnapshot.stamp,
                                             load,unit,basis)
                                     })
+                                }
                                 }
                             }
                         }

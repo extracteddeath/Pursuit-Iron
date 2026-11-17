@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "sourcePullRequest": 671,
+  "sourceCommit": "fce94102d4651d5efa48d740fbeff4751b384ca4",
+  "description": "Exact source metadata snapshot for Kotlin-only CI. Never loaded by Android app or web runtime. Update only after reviewing canonical active-web PR #671; preserve exact IDs.",
+  "records": [
+    {
+      "id": "high-inc-db-press",
+      "name": "High-Incline Dumbbell Press",
+      "equipment": [
+        "dumbbell",
+        "inclinebench"
+      ],
+      "movementFamily": "horizontal_press",
+      "practicalReps": [
+        8,
+        12
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    },
+    {
+      "id": "bottom-half-db-fly",
+      "name": "Bottom-Half Dumbbell Fly",
+      "equipment": [
+        "dumbbell",
+        "bench"
+      ],
+      "movementFamily": "chest_adduction",
+      "practicalReps": [
+        12,
+        18
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    },
+    {
+      "id": "deficit-pendlay-row",
+      "name": "Deficit Pendlay Row",
+      "equipment": [
+        "barbell"
+      ],
+      "movementFamily": "horizontal_pull",
+      "practicalReps": [
+        5,
+        8
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    },
+    {
+      "id": "low-to-high-face-pull",
+      "name": "Low-to-High Face Pull",
+      "equipment": [
+        "cable"
+      ],
+      "movementFamily": "rear_delt",
+      "practicalReps": [
+        12,
+        20
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    },
+    {
+      "id": "leaning-cable-ohext",
+      "name": "Leaning Cable Overhead Triceps Extension",
+      "equipment": [
+        "cable"
+      ],
+      "movementFamily": "elbow_extension",
+      "practicalReps": [
+        10,
+        15
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    },
+    {
+      "id": "ad-press-barbell",
+      "name": "AD Press (Barbell)",
+      "equipment": [
+        "barbell",
+        "inclinebench",
+        "rack"
+      ],
+      "movementFamily": "vertical_press",
+      "practicalReps": [
+        6,
+        12
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    },
+    {
+      "id": "ad-press-smith",
+      "name": "AD Press (Smith Machine)",
+      "equipment": [
+        "smith",
+        "inclinebench"
+      ],
+      "movementFamily": "vertical_press",
+      "practicalReps": [
+        6,
+        12
+      ],
+      "source": "pursuit_requested_variant_20261117"
+    }
+  ]
+}

@@ -18,7 +18,7 @@ import java.util.Collections
  */
 internal object NativeCustomCycleDraftCodec {
     private const val MAGIC = 0x50494344 // PICD
-    private const val VERSION = 4
+    private const val VERSION = 5
     const val MAX_BYTES = 2_500_000
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -84,6 +84,10 @@ internal object NativeCustomCycleDraftCodec {
             amplifier.followUpLoad?.let { load(it) }
             if(version>=2)optionalInt(amplifier.followUpActiveSeconds)
             if(version>=4)writeInt(amplifier.followUpRounds)
+            if(version>=5) {
+                writeBoolean(amplifier.secondDropLoad!=null)
+                amplifier.secondDropLoad?.let{load(it)}
+            }
         }
     }
     private fun DataInputStream.set(version:Int): CustomAuthoredSet {
@@ -100,7 +104,8 @@ internal object NativeCustomCycleDraftCodec {
             val nextLoad=if(readBoolean())load() else null
             CustomSetAmplifier(kind,repsExtra,restExtra,nextLoad,
                 if(version>=2)optionalInt() else null,
-                if(version>=4)readInt() else 1)
+                if(version>=4)readInt() else 1,
+                if(version>=5 && readBoolean())load() else null)
         } else null
         return CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier)
     }
@@ -251,7 +256,15 @@ internal object NativeCustomCycleDraftCodec {
                 }
                 // Historical draft bytes (including signoff fingerprints)
                 // must not change until an authored machine choice exists.
-                val version=if(hasStages)VERSION else if(hasMachineBinding)3
+                val hasSecondDrop=value.blocks.any{block->block.days.any{day->
+                    day.slots.any{slot->slot.sets.any{
+                        it.amplifier?.secondDropLoad!=null
+                    }}
+                }} || value.weekOverrides.values.any{rows->rows.any{row->
+                    row.sets.any{it.amplifier?.secondDropLoad!=null}
+                }}
+                val version=if(hasSecondDrop)VERSION else if(hasStages)4
+                    else if(hasMachineBinding)3
                     else if(hasNewTime)2 else 1
                 writeInt(MAGIC); writeInt(version)
                 writeUTF(value.cycleId); writeLong(value.revision)

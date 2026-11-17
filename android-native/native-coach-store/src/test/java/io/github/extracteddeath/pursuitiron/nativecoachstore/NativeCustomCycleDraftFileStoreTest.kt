@@ -337,4 +337,55 @@ class NativeCustomCycleDraftFileStoreTest {
             NativeCustomCycleDraftCodec.decode(oldBytes)))
     }
 
+    @Test fun twoDropV5DraftStoresBothLoadsAcrossColdReopenAndOldV4IsIdentical() {
+        val original=original()
+        val legacy=NativeCustomCycleDraftCodec.encode(original)
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.SMITH_TOTAL,number(155)),
+            followUpActiveSeconds=35,followUpRounds=2,
+            secondDropLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.SMITH_TOTAL,number(135)))
+        val two=original.copy(blocks=original.blocks.map{block->
+            block.copy(days=block.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    if(slot.slotId!="bench-1")slot
+                    else slot.copy(sets=slot.sets.mapIndexed{index,set->
+                        if(index!=1)set else set.copy(amplifier=amp)
+                    })
+                })
+            })
+        })
+        val bytes=NativeCustomCycleDraftCodec.encode(two)
+        assertEquals(5,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        assertEquals(two,NativeCustomCycleDraftCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(
+            NativeCustomCycleDraftCodec.decode(bytes)))
+        assertArrayEquals(legacy,NativeCustomCycleDraftCodec.encode(
+            NativeCustomCycleDraftCodec.decode(legacy)))
+        assertEquals(saved(1),repository().save("owner-1","cycle-1",0,two))
+        assertEquals(NativeCustomDraftReadResult.Found(two),
+            repository().read("owner-1","cycle-1"))
+        val cold=NativeCustomCycleDraftFileStore(
+            temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            NativeKotlinCurrentIdentity {signedIn})
+        assertEquals(NativeCustomDraftReadResult.Found(two),
+            cold.read("owner-1","cycle-1"))
+        val legacyStage=original.copy(blocks=original.blocks.map{block->
+            block.copy(days=block.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    if(slot.slotId!="bench-1")slot
+                    else slot.copy(sets=slot.sets.mapIndexed{index,set->
+                        if(index!=1)set
+                        else set.copy(amplifier=amp.copy(
+                            followUpRounds=1,secondDropLoad=null))
+                    })
+                })
+            })
+        })
+        val one=NativeCustomCycleDraftCodec.encode(legacyStage)
+        assertEquals(2,java.nio.ByteBuffer.wrap(one,4,4).int)
+    }
+
 }

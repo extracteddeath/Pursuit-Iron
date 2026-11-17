@@ -92,7 +92,18 @@ private fun NativeKotlinSetTechniqueSummary(
                 verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 Text("Set $ordinal · ${technique.title}",
                     style=MaterialTheme.typography.labelLarge)
-                Text(when(val extra=amp.followUpLoad) {
+                if(amp.kind==CustomAmplifierKind.DROP_SET &&
+                    amp.followUpRounds==2) {
+                    for(stage in 1..2) {
+                        val load=AdvancedAmplifierProtocolDomain.dropStageLoad(amp,stage)
+                            as? DraftSetLoad.Verified
+                        Text("Drop $stage · "+(load?.let{
+                            "${it.value.toPlainString()} ${it.unit} · "+
+                                kotlinLoadBasisLabel(it.basis)
+                        }?:"unverified load · cannot issue"),
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                } else Text(when(val extra=amp.followUpLoad) {
                     null -> "Same confirmed load"
                     DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
                     is DraftSetLoad.Verified ->

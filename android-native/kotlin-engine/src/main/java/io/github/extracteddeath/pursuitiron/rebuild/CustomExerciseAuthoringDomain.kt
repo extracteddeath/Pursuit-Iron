@@ -167,16 +167,12 @@ object CustomExerciseAuthoringDomain {
                 amp.followUpRestSeconds !in 0..3600 ||
                 !AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp))
                 return CustomAuthoringRefusal.INVALID_SETS
-            if (amp.kind == CustomAmplifierKind.DROP_SET) {
-                val base = set.load as? DraftSetLoad.Verified
-                val reduced = amp.followUpLoad as? DraftSetLoad.Verified
-                if (base == null || reduced == null ||
-                    base.unit != reduced.unit || base.basis != reduced.basis ||
-                    reduced.value >= base.value)
-                    return CustomAuthoringRefusal.INVALID_SETS
-            }
-            if (amp.followUpLoad != null && !validLoad(amp.followUpLoad))
-                return CustomAuthoringRefusal.INATTAINABLE_LOAD
+            if (amp.kind == CustomAmplifierKind.DROP_SET &&
+                !AdvancedAmplifierProtocolDomain.validDropSequence(set.load,amp))
+                return CustomAuthoringRefusal.INVALID_SETS
+            for(extra in listOfNotNull(amp.followUpLoad,amp.secondDropLoad))
+                if(!validLoad(extra))
+                    return CustomAuthoringRefusal.INATTAINABLE_LOAD
         }
         return null
     }

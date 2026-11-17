@@ -96,6 +96,34 @@ assert.match(journal,/follower\?\.kind==CustomAmplifierKind.LENGTHENED_PARTIALS/
 assert.match(partialHistory,/Lengthened partials · partial reps/);
 assert.match(partialHistory,/final-set partial extension/);
 
+
+// A second physical drop is an independently reviewed weight, never a copy
+// of the first reduction, and must survive custom-cycle and issued-workout
+// disk codecs with separate version guards.
+const twoDropCycle=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomTrainingCycleDomain.kt');
+const twoDropAuthor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
+const twoDropHistory=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutHistoryEvidenceDomain.kt');
+const twoDropDraftCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeCustomCycleDraftCodec.kt');
+const twoDropSnapshotCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutSnapshotCodec.kt');
+assert.match(twoDropCycle,/val secondDropLoad: DraftSetLoad\? = null/);
+assert.match(twoDropCycle,/validDropSequence\(/);
+assert.match(twoDropAuthor,/amp.secondDropLoad/);
+assert.match(restPauseProtocol,/fun dropStageLoad\(/);
+assert.match(restPauseProtocol,/fun followUpLoadForStage\(/);
+assert.match(restPauseProtocol,/fun validDropSequence\(/);
+assert.match(restPauseExecution,/CustomAmplifierKind.DROP_SET &&/);
+assert.match(restPauseJournal,/followUpLoadForStage\(/);
+assert.match(twoDropHistory,/followUpLoadForStage\(/);
+assert.match(restPauseSheet,/val secondDropLoad: String = ""/);
+assert.match(restPauseSheet,/secondDropLoad=row.getOrNull\(13\)/);
+assert.match(restPauseSheet,/extraRounds=="2"/);
+assert.match(restPauseSheet,/Drop 2 · verified load below drop 1/);
+assert.match(journal,/Drop \$stageOrdinal of \$stageTotal/);
+assert.match(twoDropDraftCodec,/private const val VERSION = 5/);
+assert.match(twoDropDraftCodec,/if\(version>=5\) \{/);
+assert.match(twoDropSnapshotCodec,/private const val VERSION=6/);
+assert.match(twoDropSnapshotCodec,/if\(version>=6\) \{/);
+
 const protocolPreview=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageNoun\(amp.kind,plural=true\)/);
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageReviewCue\(amp\)/);

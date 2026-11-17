@@ -70,10 +70,45 @@ object CustomWorkoutExecutionDomain {
         for(stage in 1..amp.followUpRounds) {
             val key=CustomWorkoutVisitKey(set.setKey,
                 CustomWorkoutVisitPart.FOLLOW_UP,stage)
+            if(amp.kind==CustomAmplifierKind.DROP_SET &&
+                amp.followUpRounds==2) {
+                // An athlete's ACTUAL activation weight may differ from
+                // the issued target. Never present an optional drop that
+                // would increase or hold weight relative to the last
+                // performed stage; a changed target is not consent.
+                val proposed=AdvancedAmplifierProtocolDomain.dropStageLoad(
+                    amp,stage) as? DraftSetLoad.Verified ?:break
+                val priorObserved=if(stage==1)main.performed else
+                    (journal.effectiveVisits[CustomWorkoutVisitKey(
+                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage-1)]
+                        ?.operation as? CustomWorkoutJournalOperation.Record)
+                        ?.performed
+                val actualPriorLoad=priorObserved?.load
+                if(actualPriorLoad==null ||
+                    priorObserved?.unit!=proposed.unit ||
+                    actualPriorLoad.compareTo(proposed.value)<=0 ||
+                    priorObserved?.machineInstanceId!=main.performed?.machineInstanceId)
+                    break
+            }
             visits+=key
             val recorded=journal.effectiveVisits[key]?.operation
                 as? CustomWorkoutJournalOperation.Record ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
+            if(amp.kind==CustomAmplifierKind.DROP_SET &&
+                amp.followUpRounds==2) {
+                // A second reduction is offered only after the first
+                // physically planned drop was actually performed, on the
+                // activation station. If the athlete entered a different
+                // weight, keep the factual receipt but do not invent the
+                // next lower weight or assume it is safe.
+                val activation=main.performed ?:break
+                val observed=recorded.performed ?:break
+                val planned=AdvancedAmplifierProtocolDomain.dropStageLoad(amp,stage)
+                    as? DraftSetLoad.Verified ?:break
+                if(observed.machineInstanceId!=activation.machineInstanceId ||
+                    observed.unit!=planned.unit ||
+                    observed.load?.compareTo(planned.value)!=0)break
+            }
             if(amp.followUpRounds>1 &&
                 (amp.kind==CustomAmplifierKind.MYO_REPS ||
                  amp.kind==CustomAmplifierKind.REST_PAUSE ||

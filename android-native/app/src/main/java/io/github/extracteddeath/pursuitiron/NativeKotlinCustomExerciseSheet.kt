@@ -33,20 +33,24 @@ private data class CustomSetFields(
     /** Explicit total follow-up work time; blank means not yet reviewed. */
     val extraWork: String = "",
     val extraLoad: String = "",
-    val extraRounds: String = "1"
+    val extraRounds: String = "1",
+    val secondDropLoad: String = ""
 )
 
 // Only unsaved editor text is Bundle-restored. It never certifies physical
 // stock, source validity, a swap, or an actual workout receipt.
 private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>,String>(
-    save = { state -> state.value.flatMap { field ->
+    save = { state -> listOf("v2") + state.value.flatMap { field ->
         listOf(field.type.name,field.weight,field.minimum,field.maximum,
             field.rir,field.seconds,field.rest,field.amplifier?.name.orEmpty(),
             field.extraReps,field.extraRest,field.extraWork,field.extraLoad,
-            field.extraRounds)
+            field.extraRounds,field.secondDropLoad)
     } },
     restore = { serialized ->
-        serialized.chunked(13).filter { it.size==13 }.take(20).map { row ->
+        val newVersion=serialized.firstOrNull()=="v2"
+        val rows=if(newVersion)serialized.drop(1).chunked(14)
+            else serialized.chunked(13)
+        rows.filter { it.size==(if(newVersion)14 else 13) }.take(20).map { row ->
             CustomSetFields(
                 type=DraftSetType.entries.firstOrNull { it.name==row[0] }
                     ?:DraftSetType.WORKING,
@@ -56,7 +60,8 @@ private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>
                     it.name==row[7]
                 },
                 extraReps=row[8],extraRest=row[9],extraWork=row[10],
-                extraLoad=row[11],extraRounds=row[12])
+                extraLoad=row[11],extraRounds=row[12],
+                secondDropLoad=row.getOrNull(13).orEmpty())
         }.ifEmpty { listOf(CustomSetFields()) }.let { mutableStateOf(it) }
     }
 )
@@ -77,7 +82,9 @@ private fun CustomAuthoredSet.toFields(): CustomSetFields =
         extraWork = amplifier?.followUpActiveSeconds?.toString().orEmpty(),
         extraLoad = (amplifier?.followUpLoad as? DraftSetLoad.Verified)
             ?.value?.toPlainString().orEmpty(),
-        extraRounds = amplifier?.followUpRounds?.toString() ?: "1"
+        extraRounds = amplifier?.followUpRounds?.toString() ?: "1",
+        secondDropLoad=(amplifier?.secondDropLoad as? DraftSetLoad.Verified)
+            ?.value?.toPlainString().orEmpty()
     )
 
 private fun parsedSets(
@@ -105,7 +112,10 @@ private fun parsedSets(
                 else null,
                 if(field.extraWork.isBlank())null else
                     requireNotNull(field.extraWork.toIntOrNull()),
-                requireNotNull(field.extraRounds.toIntOrNull()))
+                requireNotNull(field.extraRounds.toIntOrNull()),
+                if(kind==CustomAmplifierKind.DROP_SET &&
+                    field.extraRounds=="2")weight(field.secondDropLoad)
+                else null)
             CustomAuthoredSet(
                 field.type,
                 weight(field.weight),
@@ -633,9 +643,32 @@ internal fun NativeKotlinCustomExerciseSheet(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (fields.amplifier == CustomAmplifierKind.DROP_SET) {
-                            AuthorNumberField(fields.extraLoad, "Lower verified drop load",
-                                { update(fields.copy(extraLoad = it)) },
+                            Text("Each physical reduction is a separately recorded " +
+                                "effort. Author two distinct descending weights; " +
+                                "the app will never infer or reuse a missing drop.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                FilterChip(
+                                    selected=fields.extraRounds=="1",
+                                    onClick={update(fields.copy(extraRounds="1",
+                                        secondDropLoad=""))},
+                                    label={Text("1 drop")})
+                                FilterChip(
+                                    selected=fields.extraRounds=="2",
+                                    onClick={update(fields.copy(extraRounds="2"))},
+                                    label={Text("2 drops")})
+                            }
+                            AuthorNumberField(fields.extraLoad,
+                                "Drop 1 · verified lower load",
+                                {update(fields.copy(extraLoad=it))},
                                 Modifier.fillMaxWidth())
+                            if(fields.extraRounds=="2")
+                                AuthorNumberField(fields.secondDropLoad,
+                                    "Drop 2 · verified load below drop 1",
+                                    {update(fields.copy(secondDropLoad=it))},
+                                    Modifier.fillMaxWidth())
                         }
                     }
                 }

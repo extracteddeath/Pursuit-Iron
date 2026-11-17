@@ -149,7 +149,7 @@ object AdvancedAmplifierProtocolDomain {
             CustomAmplifierKind.REST_PAUSE ->
                 "Each rest-pause effort saves separately; stop after a rep shortfall or if form deteriorates."
             CustomAmplifierKind.DROP_SET ->
-                "Each weight drop must use its separately verified load and actual reps."
+                "Each weight drop has its own independently verified lower load, physical station and separately logged actual reps."
             CustomAmplifierKind.CLUSTER ->
                 "Each planned cluster is a separately saved quality-rep observation; stop on missed or unplanned reps, or when technique declines."
             CustomAmplifierKind.LENGTHENED_PARTIALS ->
@@ -173,10 +173,50 @@ object AdvancedAmplifierProtocolDomain {
                 "This stage is saved as skipped; unperformed stages are never recorded."
         }
 
+    /** The durable protocol specifies one independently reviewed physical
+     * load per drop. Never clone first-drop weight into a second drop. */
+    fun dropStageLoad(amp:CustomSetAmplifier,stage:Int):DraftSetLoad? =
+        if(amp.kind!=CustomAmplifierKind.DROP_SET)return null
+        else when(stage) {
+            1 -> amp.followUpLoad
+            2 -> if(amp.followUpRounds==2)amp.secondDropLoad else null
+            else -> null
+        }
+
+    fun validDropSequence(main:DraftSetLoad,amp:CustomSetAmplifier):Boolean {
+        if(amp.kind!=CustomAmplifierKind.DROP_SET ||
+            amp.followUpRounds !in 1..2)return false
+        val before=main as? DraftSetLoad.Verified ?:return false
+        val first=amp.followUpLoad as? DraftSetLoad.Verified ?:return false
+        if(before.unit!=first.unit || before.basis!=first.basis ||
+            first.value.signum()<=0 || first.value>=before.value)return false
+        if(amp.followUpRounds==1)return amp.secondDropLoad==null
+        val second=amp.secondDropLoad as? DraftSetLoad.Verified ?:return false
+        return first.unit==second.unit && first.basis==second.basis &&
+            second.value.signum()>0 && second.value<first.value
+    }
+
+    /** All stage-specific target loads are immutable prescribed values.
+     * Actuals are separately recorded and may differ, but do not
+     * retroactively rewrite these targets or automatically promote stages. */
+    fun followUpLoadForStage(amp:CustomSetAmplifier,
+        main:DraftSetLoad,stage:Int):DraftSetLoad =
+        if(amp.kind==CustomAmplifierKind.DROP_SET)
+            dropStageLoad(amp,stage) ?:main
+        else amp.followUpLoad ?:main
+
     /** Both authoring entry points use one policy for OPTIONAL staged work.
      * Legacy single-follow-up recipes keep their exact old semantics. */
     fun validStagedFollowUps(amp:CustomSetAmplifier):Boolean =
-        if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+        if(amp.kind==CustomAmplifierKind.DROP_SET)
+            amp.followUpRounds in 1..2 &&
+                (amp.followUpRounds==1 && amp.secondDropLoad==null ||
+                 amp.followUpRounds==2 && amp.followUpLoad!=null &&
+                    amp.secondDropLoad!=null &&
+                    amp.followUpReps in 6..15 &&
+                    amp.followUpRestSeconds in 0..15)
+        else if(amp.secondDropLoad!=null)false
+        else if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
             amp.followUpRounds==1 && amp.followUpReps in 1..8 &&
                 amp.followUpRestSeconds==0 && amp.followUpLoad==null
         else amp.followUpRounds==1 || when(amp.kind) {

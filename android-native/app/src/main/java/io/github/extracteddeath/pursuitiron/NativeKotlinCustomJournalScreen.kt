@@ -1702,8 +1702,10 @@ private fun NativeKotlinCustomVisitEditor(
         stageTotal>1 && follower?.kind in setOf(
             CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.REST_PAUSE,
             CustomAmplifierKind.CLUSTER)
-    val target=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-        follower?.followUpLoad ?:prescription.load
+    val target=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        follower!=null)
+        AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+            follower,prescription.load,stageOrdinal)
     else prescription.load
     val verified=target as? DraftSetLoad.Verified
     val saved=existing?.operation as? CustomWorkoutJournalOperation.Record
@@ -1927,6 +1929,17 @@ private fun NativeKotlinCustomVisitEditor(
                         (if(stageTotal>1)" · stage $stageOrdinal/$stageTotal" else ""),
                         style=MaterialTheme.typography.labelLarge,
                         color=MaterialTheme.colorScheme.primary)
+                    if(follower.kind==CustomAmplifierKind.DROP_SET &&
+                        stageTotal==2) {
+                        val prescribedLoad=target as? DraftSetLoad.Verified
+                        Text("Drop $stageOrdinal of $stageTotal · " +
+                            (prescribedLoad?.let{
+                                "${it.value.toPlainString()} ${it.unit.name.lowercase()}"
+                            }?:"unverified load")+
+                            " · separately logged actual weight and reps",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     if(stageTotal>1) {
                         LinearProgressIndicator(
                             progress={(stageOrdinal-1).toFloat()/stageTotal},

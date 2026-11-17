@@ -305,4 +305,60 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             NativeKotlinCustomWorkoutSnapshotCodec.decode(oldBytes)))
     }
 
+    @Test fun twoDropV6SnapshotAndSwapRoundTripEachAuthoredWeightWhileV1ThroughV5StayStable() {
+        val old=fixture()
+        val oldBytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(old)
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=weight("15"),followUpRounds=2,
+            secondDropLoad=weight("10"))
+        val updated=old.copy(slots=old.slots.map{slot->
+            if(slot.slotId!="raise-1")slot
+            else slot.copy(sets=slot.sets.map{set->
+                if(set.prescription.amplifier?.kind!=CustomAmplifierKind.DROP_SET)
+                    set
+                else set.copy(prescription=set.prescription.copy(amplifier=amp))
+            })
+        },knownSetAndRestSeconds=old.knownSetAndRestSeconds+5L)
+        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(updated)
+        assertEquals(6,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        assertEquals(updated,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
+        val selected=updated.slots.first()
+        val slotWire=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(selected)
+        assertEquals(6,java.nio.ByteBuffer.wrap(slotWire,4,4).int)
+        assertEquals(selected,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(slotWire))
+        val broken=updated.copy(slots=updated.slots.map{slot->
+            slot.copy(sets=slot.sets.map{set->
+                val p=set.prescription
+                if(p.amplifier?.kind!=CustomAmplifierKind.DROP_SET)set
+                else set.copy(prescription=p.copy(amplifier=checkNotNull(
+                    p.amplifier).copy(secondDropLoad=weight("15"))))
+            })
+        })
+        assertThrows(IllegalArgumentException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(broken)
+        }
+        assertThrows(java.io.IOException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(
+                bytes.copyOf(bytes.size-1))
+        }
+        assertArrayEquals(oldBytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(oldBytes)))
+        // v5 staged myo/rest-pause/cluster snapshots are byte-identical
+        // after introducing v6, not silently upgraded on every cold save.
+        val stagedOld=old.copy(slots=old.slots.map{slot->
+            slot.copy(sets=slot.sets.map{set->
+                val p=set.prescription
+                if(p.amplifier?.kind!=CustomAmplifierKind.MYO_REPS)set
+                else set.copy(prescription=p.copy(amplifier=checkNotNull(
+                    p.amplifier).copy(followUpRounds=5)))
+            })
+        },knownSetAndRestSeconds=old.knownSetAndRestSeconds+80L)
+        val oldV5=NativeKotlinCustomWorkoutSnapshotCodec.encode(stagedOld)
+        assertEquals(5,java.nio.ByteBuffer.wrap(oldV5,4,4).int)
+        assertArrayEquals(oldV5,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(oldV5)))
+    }
+
 }

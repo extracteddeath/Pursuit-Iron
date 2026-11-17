@@ -184,4 +184,41 @@ class AdvancedAmplifierProtocolDomainTest {
             true,true,false,true,false))
     }
 
+    @Test fun twoDropSequencesRequireTwoDistinctVerifiedDescendingWeights() {
+        val policy=AdvancedAmplifierProtocolDomain
+        fun weight(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.SMITH_TOTAL,java.math.BigDecimal(n))
+        val main=weight("185")
+        val first=weight("155")
+        val second=weight("135")
+        val two=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=first,followUpRounds=2,secondDropLoad=second)
+        assertTrue(policy.validStagedFollowUps(two))
+        assertTrue(policy.validDropSequence(main,two))
+        assertEquals(first,policy.dropStageLoad(two,1))
+        assertEquals(second,policy.dropStageLoad(two,2))
+        assertNull(policy.dropStageLoad(two,3))
+        assertEquals(second,policy.followUpLoadForStage(two,main,2))
+        assertEquals("Drop set · weight drop 2 of 2",policy.stageLabel(two,2))
+        assertFalse(policy.validDropSequence(main,two.copy(secondDropLoad=first)))
+        assertFalse(policy.validDropSequence(main,two.copy(secondDropLoad=weight("175"))))
+        assertFalse(policy.validDropSequence(main,two.copy(
+            secondDropLoad=DraftSetLoad.Verified(LoadUnit.KG,LoadBasis.SMITH_TOTAL,
+                java.math.BigDecimal("65")))))
+        assertFalse(policy.validDropSequence(main,two.copy(secondDropLoad=null)))
+        assertFalse(policy.validStagedFollowUps(two.copy(secondDropLoad=null)))
+        assertFalse(policy.validStagedFollowUps(two.copy(followUpRounds=3)))
+        assertFalse(policy.validStagedFollowUps(two.copy(followUpRestSeconds=30)))
+        assertFalse(policy.validStagedFollowUps(two.copy(followUpReps=16)))
+        assertFalse(policy.validStagedFollowUps(two.copy(followUpRounds=1)))
+        assertFalse(policy.validStagedFollowUps(CustomSetAmplifier(
+            CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=5,secondDropLoad=second)))
+        val legacy=two.copy(followUpRounds=1,secondDropLoad=null)
+        assertTrue(policy.validStagedFollowUps(legacy))
+        assertTrue(policy.validDropSequence(main,legacy))
+        assertEquals(first,policy.followUpLoadForStage(legacy,main,1))
+        assertEquals("Drop set · follow-up",policy.stageLabel(legacy,1))
+    }
+
 }

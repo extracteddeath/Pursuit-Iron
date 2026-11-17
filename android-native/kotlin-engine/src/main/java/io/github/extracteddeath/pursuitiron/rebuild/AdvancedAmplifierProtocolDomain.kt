@@ -20,6 +20,7 @@ enum class AmplifierLoadRule {
 
 data class AdvancedAmplifierTemplate(
     val title: String,
+    val roundLabel: String,
     val activationReps: IntRange,
     val followUpReps: IntRange,
     val followUpRounds: IntRange,
@@ -30,7 +31,7 @@ data class AdvancedAmplifierTemplate(
 ) {
     // A protocol description is NOT an issued workout or a logged sequence.
     val oneLine: String get() =
-        "${followUpRounds.first}–${followUpRounds.last} mini-sets · " +
+        "${followUpRounds.first}–${followUpRounds.last} ${roundLabel} · " +
             "${followUpReps.first}–${followUpReps.last} reps · " +
             "${intraSetRestSeconds.first}–${intraSetRestSeconds.last}s between"
 }
@@ -47,18 +48,20 @@ object AdvancedAmplifierProtocolDomain {
     fun template(kind: CustomAmplifierKind): AdvancedAmplifierTemplate = when (kind) {
         CustomAmplifierKind.MYO_REPS -> AdvancedAmplifierTemplate(
             title = "Myo-reps",
+            roundLabel = "mini-sets",
             activationReps = 12..20,
             followUpReps = 3..5,
             followUpRounds = 3..5,
             intraSetRestSeconds = 10..30,
             loadRule = AmplifierLoadRule.SAME_LOAD,
             techniqueCue = "One hard activation set (about 1–2 RIR), then short " +
-                "same-weight mini-sets. Stop on a missed target or deteriorating form.",
+                "same-weight mini-sets. Stop when reps reach your planned floor, fall below the safe minimum, or form deteriorates.",
             selectionCue = "Best for experienced lifters on stable machine/cable " +
                 "or isolation work in a hypertrophy session; avoid heavy technical lifts."
         )
         CustomAmplifierKind.DROP_SET -> AdvancedAmplifierTemplate(
             title = "Drop set",
+            roundLabel = "weight drops",
             activationReps = 8..20,
             followUpReps = 6..15,
             followUpRounds = 1..2,
@@ -71,6 +74,7 @@ object AdvancedAmplifierProtocolDomain {
         )
         CustomAmplifierKind.REST_PAUSE -> AdvancedAmplifierTemplate(
             title = "Rest-pause",
+            roundLabel = "rest-pause efforts",
             activationReps = 8..20,
             followUpReps = 2..5,
             followUpRounds = 1..3,
@@ -82,6 +86,7 @@ object AdvancedAmplifierProtocolDomain {
         )
         CustomAmplifierKind.CLUSTER -> AdvancedAmplifierTemplate(
             title = "Cluster sets",
+            roundLabel = "clusters",
             activationReps = 2..6,
             followUpReps = 1..4,
             followUpRounds = 2..5,

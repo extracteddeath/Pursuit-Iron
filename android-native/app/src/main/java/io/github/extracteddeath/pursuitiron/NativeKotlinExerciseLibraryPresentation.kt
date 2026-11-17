@@ -16,6 +16,9 @@ internal data class NativeKotlinExerciseLibraryRecord(
 ) {
     val gearIds:Set<String> get()=setOf(movement.equipmentId ?: nativeLibraryBodyweight)+
         movement.requiredFacilityIds+listOfNotNull(movement.attachmentId)
+    val angle:NativeBenchAngle? get()=
+        nativeBenchAngle(movement.variantId,movement.requiredFacilityIds)
+    val variantDescription:String get()=nativeExerciseVariantCategory(movement)
 }
 
 /** Display facts from one saved source. Eligibility never grants a prescription. */
@@ -38,7 +41,9 @@ internal fun nativeExerciseLibraryRecords(
         val label=kotlinExerciseLabel(move.exerciseId)
         val equipment=move.equipmentId?.let(equipmentLabel) ?: "Bodyweight"
         val fields=listOf(label,move.exerciseId,move.familyId,move.variantId,
-            move.equipmentId.orEmpty(),equipment,move.pattern.name,move.role.name)+
+            move.equipmentId.orEmpty(),equipment,move.pattern.name,move.role.name,
+            nativeExerciseVariantCategory(move))+
+
             move.requiredFacilityIds.flatMap{listOf(it,facilityLabel(it))}+
             listOfNotNull(move.attachmentId?.let{it+" "+attachmentLabel(it)})+
             move.credits.filter{it.fractionalSet.signum()>0}.map{it.muscle.name}
@@ -54,7 +59,9 @@ internal fun filterNativeExerciseLibrary(
     records:List<NativeKotlinExerciseLibraryRecord>,query:String,
     muscle:TrainingMuscle?,gearId:String?,availability:NativeLibraryAvailability,
     draftExclusions:Set<String>,pattern:ComposerPattern?=null,
-    role:ComposerRole?=null
+    role:ComposerRole?=null,
+    familyId:String?=null,angle:NativeBenchAngle?=null,
+    attachmentId:String?=null
 ):List<NativeKotlinExerciseLibraryRecord> {
     val byId=records.associateBy{it.movement.exerciseId}
     if(byId.size!=records.size)return emptyList()
@@ -65,6 +72,9 @@ internal fun filterNativeExerciseLibrary(
         val id=record.movement.exerciseId
         id in matches && (pattern==null || record.movement.pattern==pattern) &&
             (role==null || record.movement.role==role) &&
+            (familyId==null || record.movement.familyId==familyId) &&
+            (angle==null || record.angle==angle) &&
+            (attachmentId==null || record.movement.attachmentId==attachmentId) &&
             (muscle==null || record.movement.credits.any{
             it.muscle==muscle && it.fractionalSet.signum()>0}) &&
             (gearId==null || gearId in record.gearIds) && when(availability) {

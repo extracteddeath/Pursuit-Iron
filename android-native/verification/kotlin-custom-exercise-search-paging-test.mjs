@@ -31,7 +31,10 @@ assert.match(rank,/fun rank\(/);
 // The same ID can represent different reviewed attachment/variant choices.
 // Only the exact matching choice may pass the visible search.
 assert.match(sheet,/val matchedChoices=labeled\.toSet\(\)/);
-assert.match(sheet,/val searched=ranked\.filter \{ it\.choice in matchedChoices \}/);
+assert.match(sheet,/val searched=ranked\.filter \{ rankedChoice ->/);
+assert.match(sheet,/choice in matchedChoices/);
+assert.match(sheet,/nativeBenchAngle\(choice\.variantId\)==selectedAngle/);
+assert.match(sheet,/choice\.attachmentId==attachmentId/);
 assert.doesNotMatch(sheet,/it\.choice\.exerciseId in matchingIds/);
 
 // The first 20 are a page, not a catalog limit.

@@ -134,4 +134,62 @@ internal class NativeKotlinExerciseLibraryPresentationTest:NativeKotlinProgramFi
             filterNativeExerciseLibrary(all,"rope",null,null,mode,setOf("db_curl"))
         assertEquals(before,hashes())
     }
+    @Test fun angleFacetKeepsLowRegularHighAndDeclineSeparateFromPhysicalStack() {
+        val all=records()
+        val low=filterNativeExerciseLibrary(all,"",null,null,
+            NativeLibraryAvailability.ALL,emptySet(),
+            angle=NativeBenchAngle.LOW_INCLINE)
+        val high=filterNativeExerciseLibrary(all,"",null,null,
+            NativeLibraryAvailability.ALL,emptySet(),
+            angle=NativeBenchAngle.HIGH_INCLINE)
+        val regular=filterNativeExerciseLibrary(all,"",null,null,
+            NativeLibraryAvailability.ALL,emptySet(),
+            angle=NativeBenchAngle.INCLINE)
+        val decline=filterNativeExerciseLibrary(all,"",null,null,
+            NativeLibraryAvailability.ALL,emptySet(),
+            angle=NativeBenchAngle.DECLINE)
+        assertTrue(low.any{it.movement.exerciseId=="low-inc-bb-bench"})
+        assertTrue(high.any{it.movement.exerciseId=="high-inc-bb-bench"})
+        assertTrue(regular.any{it.movement.exerciseId=="incline_db_press"})
+        assertTrue(decline.any{it.movement.exerciseId=="decline-bench"})
+        assertTrue(low.none{it.angle==NativeBenchAngle.HIGH_INCLINE})
+        assertFalse("low-to-high fly should not be treated as an incline bench",
+            all.single{it.movement.exerciseId=="inc-cable-fly"}.angle!=null)
+        assertNull(nativeBenchAngle("rope-cable-row"))
+    }
+
+    @Test fun attachmentAndFamilyFiltersPreserveExactMovementIdentity() {
+        val all=records()
+        val id="v-bar-pushdown"
+        val original=all.single{it.movement.exerciseId==id}
+        val attachment=checkNotNull(original.movement.attachmentId)
+        val family=original.movement.familyId
+        val matches=filterNativeExerciseLibrary(all,"",null,null,
+            NativeLibraryAvailability.ALL,emptySet(),
+            familyId=family,attachmentId=attachment)
+        assertTrue(matches.any{it.movement.exerciseId==id})
+        assertTrue(matches.all{it.movement.familyId==family &&
+            it.movement.attachmentId==attachment})
+        assertTrue(matches.all{it.movement.exerciseId!=
+            "dual-rope-pushdown"})
+        assertTrue(nativeExerciseVariantCategory(original.movement)
+            .contains(kotlinGymAttachmentLabel(attachment)))
+        assertTrue(all.single{it.movement.exerciseId=="db_curl"}
+            .variantDescription.contains("Accessory"))
+    }
+
+    @Test fun siblingBrowserIncludesUnverifiedVariantsButDoesNotAuthorizeThem() {
+        val saved=seed()
+        val before=hashes()
+        val source=records(saved.source)
+        val siblings=nativeExerciseFamilyVariants(source,"barbell_bench")
+        assertTrue(siblings.any{it.movement.exerciseId=="low-inc-bb-bench"})
+        assertTrue(siblings.any{it.movement.exerciseId=="high-inc-bb-bench"})
+        assertTrue(siblings.none{it.movement.exerciseId=="barbell_bench"})
+        assertTrue(siblings.any{!it.eligible})
+        assertTrue(nativeExerciseFamilyVariants(source,"does-not-exist").isEmpty())
+        assertTrue(nativeExerciseFamilyVariants(source+source.first(),"barbell_bench").isEmpty())
+        assertEquals(before,hashes())
+    }
+
 }

@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const dir='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
+const facets=readFileSync(dir+'NativeKotlinVariantFacets.kt','utf8');
+const presentation=readFileSync(dir+'NativeKotlinExerciseLibraryPresentation.kt','utf8');
+const library=readFileSync(dir+'NativeKotlinExerciseLibraryScreen.kt','utf8');
+const swap=readFileSync(dir+'NativeKotlinCustomExerciseSheet.kt','utf8');
+const tests=readFileSync('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinExerciseLibraryPresentationTest.kt','utf8');
+const ci=readFileSync('.github/workflows/android-kotlin-rebuild.yml','utf8');
+for(const name of ['LOW_INCLINE','HIGH_INCLINE','INCLINE','FLAT','DECLINE']) {
+ assert.match(facets,new RegExp(name));
+}
+assert.match(facets,/nativeExerciseFamilyVariants/);
+assert.match(facets,/familyId==current\.movement\.familyId/);
+assert.match(presentation,/record\.angle==angle/);
+assert.match(presentation,/record\.movement\.attachmentId==attachmentId/);
+assert.match(library,/Other variants in this exercise family/);
+assert.match(library,/Selected|selectedId=sibling\.movement\.exerciseId/);
+assert.match(library,/"family"->familyId=id/);
+assert.match(library,/"angle"->angleId=id/);
+assert.match(library,/"attachment"->attachmentId=id/);
+assert.match(swap,/nativeBenchAngle\(choice\.variantId\)==selectedAngle/);
+assert.match(swap,/choice\.attachmentId==attachmentId/);
+assert.match(swap,/nativeVariantDescription\(candidate\.variantId/);
+assert.match(tests,/angleFacetKeepsLowRegularHighAndDeclineSeparateFromPhysicalStack/);
+assert.match(tests,/siblingBrowserIncludesUnverifiedVariantsButDoesNotAuthorizeThem/);
+assert.match(ci,/kotlin-exercise-variant-facets-test\.mjs/);
+console.log('PASS exact source family/attachment/incline variant navigation across Gym and workout/program swap');

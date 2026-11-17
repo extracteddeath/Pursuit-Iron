@@ -283,7 +283,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                     }
                 }
                 duration+=p.activeSeconds+p.restSeconds+
-                    (p.amplifier?.followUpRestSeconds?:0)+
+                    (p.amplifier?.let{it.followUpRestSeconds * it.followUpRounds}?:0)+
                     (p.amplifier?.followUpActiveSeconds?:0)
             }
         }

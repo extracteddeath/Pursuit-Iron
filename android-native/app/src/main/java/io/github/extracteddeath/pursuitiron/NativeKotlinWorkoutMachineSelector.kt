@@ -177,10 +177,23 @@ internal fun NativeKotlinWorkoutMachineSelector(
     acknowledgedCreatedMachineId:String?=null,
     priorHistory:WorkoutLastReferenceResult?=null,
     priorWorkingKeys:List<WorkoutReferenceKey> = emptyList(),
-    onRequestHistory:(()->Unit)?=null
+    onRequestHistory:(()->Unit)?=null,
+    externalOpen:Boolean=false,
+    onExternalOpenConsumed:(()->Unit)?=null
 ) {
     if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
+    // A direct workout 'Equipment unavailable?' action opens the SAME
+    // source-checked selector; it cannot silently select or create a machine.
+    // Clear the one-shot request so returning to this exercise later does
+    // not reopen the sheet or re-fetch Last without an athlete tap.
+    LaunchedEffect(externalOpen) {
+        if(externalOpen) {
+            open=true
+            onRequestHistory?.invoke()
+            onExternalOpenConsumed?.invoke()
+        }
+    }
     val selected=config.machines.firstOrNull {it.id==selectedId}
     val display=selected?.label ?: "Choose machine"
     val active=config.machines.filter {it.active || it.id==selectedId}

@@ -35,7 +35,10 @@ data class CustomSetAmplifier(
     /** Legacy recipes keep one follow-up. Explicit myo-reps may issue 3–5
      * mini-sets; rest-pause may issue 1–3 efforts. This is an optional maximum:
      * fatigue or a missed rep target can end the sequence early. */
-    val followUpRounds: Int = 1
+    val followUpRounds: Int = 1,
+    /** The SECOND verified reduced load, never an implicit copy of the
+     * first reduction. Only a two-drop protocol may provide this. */
+    val secondDropLoad: DraftSetLoad? = null
 )
 
 data class CustomAuthoredSet(
@@ -301,28 +304,26 @@ object CustomTrainingCycleDomain {
                         }==true)
                         issue(CustomCycleIssueKind.INVALID_SET, here,
                             "Amplifier reps and intra-set rest require explicit valid values.")
-                    // DROP_SET requires a separately authored lower follow-up
-                    // load, not a pretend completion at the original weight.
+                    // All planned drops have their own checked physical
+                    // weights. Reusing a single reduced weight for stage 2
+                    // would silently invent a reduction that was not authored.
                     if (amplifier.kind == CustomAmplifierKind.DROP_SET) {
-                        val before = set.load as? DraftSetLoad.Verified
-                        val after = amplifier.followUpLoad as? DraftSetLoad.Verified
-                        if (before == null || after == null ||
-                            before.unit != after.unit || before.basis != after.basis ||
-                            after.value >= before.value)
+                        if(!AdvancedAmplifierProtocolDomain.validDropSequence(
+                                set.load,amplifier))
                             issue(CustomCycleIssueKind.INVALID_SET, here,
-                                "Drop sets require a lower load with matching unit and basis.")
+                                "Every drop needs its own strictly lower, same-unit, verified load.")
                     }
                 }
                 if (availability != null) {
                     val error = loadIsAttainable(set.load, availability)
                     if (error != null)
                         issue(error, here, "The authored set load is not confirmed attainable.")
-                    val extraLoad = amplifier?.followUpLoad
-                    if (extraLoad != null) {
-                        val extraError = loadIsAttainable(extraLoad, availability)
-                        if (extraError != null)
-                            issue(extraError, "$here.amplifier",
-                                "The amplifier follow-up load is not verified.")
+                    listOfNotNull(amplifier?.followUpLoad,
+                        amplifier?.secondDropLoad).forEachIndexed{dropIndex,load->
+                        val extraError=loadIsAttainable(load,availability)
+                        if(extraError!=null)
+                            issue(extraError,"$here.amplifier.drop.${dropIndex+1}",
+                                "Every authored drop load must be physically verified.")
                     }
                 }
             }

@@ -87,7 +87,7 @@ export function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) 
 
 /**
  * Machine identity is selected at the machine, not in a program-edit screen.
- * The compact chip is always discoverable for machine-compatible movements.
+ * A quiet machine choice sits in workout tools rather than the set header.
  * One focused sheet provides existing physical machines, their own last
  * performances, quick machine creation, or the existing exercise swap.
  *
@@ -228,16 +228,15 @@ export function WorkoutMachineVariantControl({
     return _jsxs('div',{className:'wpb-machine-switch',
         'data-noswipe':true,children:[
         _jsxs(UiAction,{type:'button',ref:trigger,
-            className:'wpb-machine-switch-trigger',
+            className:'wpb-machine-switch-trigger wpb-workout-tool',
+             title:`Choose physical machine · ${selected.label}`,
             'aria-label':`Machine for ${EX_BY_ID[exerciseId]?.name||'exercise'}: ${selected.label}. Choose or add machine`,
             'aria-haspopup':'dialog','aria-expanded':open,
             onClick:()=>{setOpen(true);setMessage('');},
             children:[
-                _jsx(Repeat,{size:16,'aria-hidden':true}),
-                _jsx('span',{className:'wpb-machine-switch-kicker',children:'Machine'}),
+                _jsx(Repeat,{size:17,'aria-hidden':true}),
                 _jsx('strong',{className:'wpb-machine-switch-name',children:
-                    !gym?'Unavailable':instances.length?selected.label:'Choose / add'}),
-                _jsx(ChevronDown,{size:16,'aria-hidden':true})
+                    !gym?'Machine':instances.length?selected.label:'Machine'})
             ]}),
         modal
     ]});

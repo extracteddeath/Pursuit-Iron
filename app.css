@@ -10240,3 +10240,30 @@ background:var(--pi-color-card)!important;
 @media(max-width:359px){#root .wpb .wpb-template-featured{flex-basis:190px;max-width:78vw}#root .wpb .wpb-template-card.wpb-ui-card{padding:var(--pi-space-2)}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-template-sheet{animation:none}}
 @media(forced-colors:active){#root .wpb .wpb-template-card,#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice,.wpb-template-search){border-color:CanvasText}#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice)[aria-pressed="true"]{background:Highlight;color:HighlightText}}
+
+/* Last-set techniques belong to the actual set, in both Target and Last views.
+   The disclosure remains visible after logging; only its explanation expands. */
+#root .wpb-workout .wpb-last-set-technique{
+  display:block;max-width:calc(100% - 32px);width:fit-content;
+  margin:2px 0 6px 32px;color:var(--wpb-theme-text);
+}
+#root .wpb-workout .wpb-last-set-technique>summary{
+  display:inline-flex;align-items:center;gap:6px;max-width:100%;
+  min-height:34px;box-sizing:border-box;padding:5px 10px;
+  border-radius:10px;background:var(--pi-color-feature,var(--wpb-theme-accent-dim));
+  color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;
+  line-height:1.35;cursor:pointer;list-style:none;
+}
+#root .wpb-workout .wpb-last-set-technique>summary::-webkit-details-marker{display:none}
+#root .wpb-workout .wpb-last-set-technique>summary span{min-width:0;overflow-wrap:anywhere}
+#root .wpb-workout .wpb-last-set-technique>summary svg{flex-shrink:0}
+#root .wpb-workout .wpb-last-set-technique[open]>summary svg:last-child{transform:rotate(180deg)}
+#root .wpb-workout .wpb-last-set-technique>summary:focus-visible{
+  outline:2px solid var(--wpb-theme-accent);outline-offset:2px;
+}
+#root .wpb-workout .wpb-last-set-technique-help{
+  margin-top:5px;max-width:420px;padding:8px 10px;border-radius:10px;
+  border:1px solid var(--wpb-theme-border);
+  background:var(--wpb-theme-card);color:var(--wpb-theme-muted);
+  font-size:12px;line-height:1.5;overflow-wrap:anywhere;
+}

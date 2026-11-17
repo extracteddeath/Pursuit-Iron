@@ -69,9 +69,14 @@ try{
         return {height:r.height,width:r.width,text:el.textContent,
             label:el.getAttribute('aria-label')};
     });
-    assert.ok(chip.height>=48,'Machine chip must meet native 48px touch target');
+    assert.ok(chip.height>=44,'Machine tool must keep an accessible touch target');
+    assert.ok(chip.width<=150,'Machine identity must not grow into a prominent header card');
+    assert.ok(await page.$eval('.wpb-machine-switch-trigger',el=>
+        !!el.closest('.wpb-workout-tools')),'Machine choice belongs in exercise tools');
+    assert.equal(await page.$('.wpb-exercise-meta .wpb-machine-switch-trigger'),null,
+        'No oversized machine selector in exercise prescription metadata');
     assert.ok(chip.text.includes('Machine A'),
-        'Active physical machine is visible without a bulky card');
+        'Active physical machine remains readable in the quiet workout tools action');
     await page.click('.wpb-machine-switch-trigger');
     await page.waitForSelector('.wpb-machine-switch-sheet');
     assert.equal(await page.$eval('.wpb-machine-switch-sheet',el=>el.getAttribute('aria-modal')),'true');

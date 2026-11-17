@@ -206,7 +206,8 @@ for(const phrase of [
   'val canSkip=stillNext && !busy && !finished',
   'if(latest==quickSkip && !busy && !finished',
   'record(quickSkip.setKey,quickSkip.part,',
-  'KotlinJournalSetOutcome.SKIPPED,null)',
+  'KotlinJournalSetOutcome.SKIPPED,null,',
+  'stage=quickSkip.stage',
   'Text("Keep training")'
 ])assert.ok(journal.includes(phrase),'Custom next-set shortcut must be revision-checked: '+phrase);
 assert.ok(!header.includes('onClick=onSkip,enabled=enabled,modifier=Modifier.fillMaxWidth()'),
@@ -219,7 +220,7 @@ assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') 
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
-  journal.includes('set.setKey,part.name,machineInstanceId,target,expectedReps,') &&
+  journal.includes('set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,') &&
   localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('if(committed)store.discard(identity)'),

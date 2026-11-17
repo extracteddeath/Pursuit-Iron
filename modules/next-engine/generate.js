@@ -232,7 +232,9 @@ function generateProgramOnce(requestInput, options) {
     // bias only). The arbiter correctly rejected those blocks. Close the loop transactionally here:
     // prefer a one-set dose-neutral swap within the same muscle, then a one-set add only when it fits the
     // session clock. Every proposal is rebuilt and re-audited; no finding is suppressed or downgraded.
-    const exerciseCatalog = context.exerciseCatalog;
+    // Candidate repair may only draw from certified automatic selections;
+    // manual-only provisional variants remain addressable in the full map.
+    const exerciseCatalog = context.automaticCatalog;
     const armBiasForCode = (code) => code === 'ARM_BICEPS_BIAS_MISSING' ? 'biceps_bias' :
         code === 'ARM_BRACHIALIS_BIAS_MISSING' || code === 'ARM_BRACHIORADIALIS_UNDERSERVED' ? 'brachialis_bias' :
             code === 'WRIST_FLEXION_MISSING' ? 'wrist_flexion' :

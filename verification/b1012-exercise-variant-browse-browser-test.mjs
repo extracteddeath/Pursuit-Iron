@@ -18,8 +18,8 @@ const generic=Array.from({length:155},(_,n)=>({
  id:'generic-'+n,name:'Generic Chest '+n,part:'chest',equip:['dumbbell']
 }));
 const variations=[
- {id:'low',name:'Low-Incline Barbell Press',part:'chest',equip:['barbell']},
- {id:'high',name:'High-Incline Barbell Press',part:'chest',equip:['barbell']},
+ {id:'low',name:'Low-Incline Barbell Press',part:'chest',equip:['barbell','inclinebench']},
+ {id:'high',name:'High-Incline Barbell Press',part:'chest',equip:['barbell','inclinebench']},
  {id:'dual-rope-pushdown',name:'Dual-Rope Pushdown',part:'chest',equip:['cable']},
  {id:'v-bar-pushdown',name:'V-Bar Pushdown',part:'chest',equip:['cable']}
 ];

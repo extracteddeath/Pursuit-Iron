@@ -85,7 +85,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1012';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1013';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -3051,6 +3051,9 @@ const SUPPORT_BLURB = "This app is built by a tiny independent team and is compl
    generic bar pushdown and Straight-Bar Pushdown), while `visual` guarantees that different setups
    never silently fall back to the same generic picture. */
 const VARIANT_PRESENTATION = {
+    // Anterior-delt press: a near-upright seat, NOT interchangeable with a chest incline press.
+    "ad-press-barbell": { key: "ad-press-bar", name: "AD Press (Barbell)", setup: "Barbell + near-upright adjustable bench", detail: "Barbell and adjustable backrest · own load history", visual: "ad-press-bar", order: 10 },
+    "ad-press-smith": { key: "ad-press-smith", name: "AD Press (Smith Machine)", setup: "Smith + near-upright adjustable bench", detail: "Smith machine and adjustable backrest · own load history", visual: "ad-press-smith", order: 20 },
     // Triceps pushdowns
     "pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40 },
     "straight-bar-pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40, preferred: true },
@@ -3062,6 +3065,7 @@ const VARIANT_PRESENTATION = {
     "underhand-pushdown": { key: "pushdown-underhand", name: "Reverse-Grip Pushdown", setup: "Underhand bar", detail: "Straight bar · underhand grip", visual: "underhand-bar", order: 70 },
     // Triceps overhead extensions
     "oh-cable-ext": { key: "ohext-rope", name: "Rope Overhead Cable Extension", setup: "Rope attachment", detail: "High cable · rope attachment", visual: "overhead-rope", order: 10 },
+    "leaning-cable-ohext": { key: "ohext-leaning", name: "Leaning Cable Overhead Triceps Extension", setup: "Cable attachment", detail: "Leaning overhead cable setup · verify actual handle", visual: "overhead-lean", order: 15 },
     "db-oh-ext": { key: "ohext-db", name: "DB Overhead Extension", setup: "Single dumbbell", detail: "Single dumbbell", visual: "overhead-dumbbell", order: 20 },
     "ez-oh-ext": { key: "ohext-ez", name: "EZ-Bar Overhead Extension", setup: "EZ curl bar", detail: "EZ curl bar", visual: "overhead-ez", order: 30 },
     "bands-tricep-ext": { key: "ohext-band", name: "Banded Overhead Tricep Extension", setup: "Resistance band", detail: "Anchored resistance band", visual: "overhead-band", order: 40 },
@@ -3093,6 +3097,7 @@ const VARIANT_PRESENTATION = {
     "prone-rear-delt-raise": { key: "rear-prone-bodyweight", name: "Prone Rear Delt Raise", setup: "Bodyweight", detail: "Prone on the floor · unloaded arms", visual: "rear-prone-bodyweight", order: 40 },
     // Chest flyes
     "db-fly": { key: "chest-db", name: "Dumbbell Fly", setup: "Dumbbells + bench", detail: "Dumbbells · flat bench", visual: "chest-db", order: 10 },
+    "bottom-half-db-fly": { key: "chest-db-bottom", name: "Bottom-Half Dumbbell Fly", setup: "Dumbbells + flat bench", detail: "Bottom-half partial ROM · separate load history", visual: "chest-db-partial", order: 12 },
     "cable-fly": { key: "chest-cable", name: "Cable Fly", setup: "Dual cable", detail: "Dual cable · standing fly", visual: "chest-cable", order: 20 },
     "pec-deck": { key: "chest-machine", name: "Pec Deck", setup: "Pec-deck machine", detail: "Seated pec-deck machine", visual: "chest-machine", order: 30 },
     // Glute kickbacks
@@ -3126,6 +3131,8 @@ function movementFamilyOptions(ex, equipSet = null, banned = []) {
 }
 function movementFamilyTitle(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "AD Press setups";
     if (family === "tri-pushdown")
         return "Attachment options";
     if (family === "tri-ohext")
@@ -3144,8 +3151,10 @@ function movementFamilyTitle(ex) {
 }
 function movementFamilyDescription(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "Compare barbell and Smith AD Press setups; each uses its own load and exercise history.";
     if (family === "tri-ohext")
-        return "Same overhead-extension pattern with a rope cable, dumbbell, EZ-bar, or resistance band.";
+        return "Compare leaning cable, rope cable, dumbbell, EZ-bar and band overhead extensions; do not reuse a different variant's weight.";
     if (family === "tri-pushdown")
         return "Same pushdown pattern with a different cable attachment or single-arm setup.";
     if (family === "tri-kickback")
@@ -3155,7 +3164,7 @@ function movementFamilyDescription(ex) {
     if (family === "rear-delt-fly")
         return "Compare standing, seated, chest-supported, single-arm cable, dual-cable, and machine rear-delt fly setups.";
     if (family === "chest-fly")
-        return "Compare dumbbell-and-bench, standing cable, and pec-deck chest fly setups.";
+        return "Compare full-range and bottom-half dumbbell flyes, standing cable, and pec-deck setups; use separate targets.";
     if (family === "glute-kickback")
         return "Compare an ankle-strap cable kickback with the dedicated kickback machine.";
     return "Same movement, different attachment or setup. Choose a variant to view it.";
@@ -3226,12 +3235,18 @@ function AttachmentGlyph({ ex, size = 46 }) {
             const rear = visual.startsWith("rear"), sh = rear && seated ? "M27 14l10 13M31 20L12 24M31 20l21-7" : `M32 14v18M32 20L13 23${single ? "" : "M32 20l19 3"}`;
             return _jsxs("g", { children: [_jsx("circle", { cx: rear && seated ? "25" : "32", cy: "10", r: "4", ...S }), _jsx("path", { d: sh, ...S }), _jsx("path", { d: seated ? "M24 32h17M24 32l-5 7v8M41 32l5 7v8M20 34h25M23 34v13M42 34v13" : "M32 32l-7 15M32 32l7 15", ...(seated ? faint : S) }), cable ? _jsxs("g", { children: [_jsx("rect", { x: "54", y: "33", width: "6", height: "14", rx: "2", ...faint }), _jsx("path", { d: visual === "lateral-behind" ? "M57 37L13 23M27 29l10-3" : "M57 37L13 23", ...S }), visual === "lateral-cuff" ? _jsx("rect", { x: "10", y: "20", width: "6", height: "6", rx: "2", ...S }) : _jsx("path", { d: "M10 22h6", ...S, strokeWidth: "3.4" })] }) : band ? _jsx("path", { d: "M13 23L25 47M51 23L39 47", ...S, strokeWidth: "1.8" }) : _jsx("path", { d: `M8 23h10M10 19v8M16 19v8${single ? "" : "M46 23h10M48 19v8M54 19v8"}`, ...S, strokeWidth: "2.3" })] });
         }
+        if (visual === "ad-press-bar")
+            return _jsxs("g", { children: [_jsx("path", { d: "M20 46l12-28M18 44h23", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6M10 14h44M10 10v8M54 10v8", ...S })] });
+        if (visual === "ad-press-smith")
+            return _jsxs("g", { children: [_jsx("path", { d: "M10 6v42M54 6v42M10 15h44", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M20 46l12-28M18 44h23M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6", ...S }), _jsx("rect", { x: "8", y: "13", width: "5", height: "5", rx: "1", ...S }), _jsx("rect", { x: "51", y: "13", width: "5", height: "5", rx: "1", ...S })] });
         if (visual === "overhead-dumbbell")
             return _jsxs("g", { children: [_jsx("path", { d: "M20 26h24", ...S, strokeWidth: "4" }), _jsx("path", { d: "M14 17v18M19 19v14M45 19v14M50 17v18", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M11 21v10M53 21v10", ...faint })] });
         if (visual === "overhead-ez" || visual === "ez-bar")
             return _jsxs("g", { children: [_jsx("path", { d: "M8 26h10l6-6 8 12 8-12 6 6h10", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M8 17v18M12 20v12M52 20v12M56 17v18", ...S })] });
         if (visual === "overhead-band")
             return _jsxs("g", { children: [_jsx("path", { d: "M22 8c-7 7-10 17-8 27 1 6 5 10 10 10 5 0 8-4 8-9V19c0-7 3-11 8-11 5 0 9 5 10 13", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M20 7h24", ...faint }), _jsx("circle", { cx: "22", cy: "8", r: "3", ...F }), _jsx("circle", { cx: "44", cy: "8", r: "3", ...F })] });
+        if (visual === "overhead-lean")
+            return _jsxs("g", { children: [_jsx("rect", { x: "5", y: "8", width: "7", height: "34", rx: "2", ...faint }), _jsx("circle", { cx: "30", cy: "11", r: "4", ...S }), _jsx("path", { d: "M30 15l10 14M40 29l-6 18M40 29l15 14M28 17l-8 8M20 25l-8-5", ...S }), _jsx("path", { d: "M9 12l11 13M42 28l-4 3", ...faint })] });
         if (visual === "overhead-rope" || cableRope)
             return _jsxs("g", { children: [_jsx("path", { d: "M13 5v42", ...faint }), _jsx("rect", { x: "8", y: "5", width: "10", height: "18", rx: "3", ...S, opacity: ".65" }), _jsx("circle", { cx: "27", cy: "10", r: "4", ...S }), _jsx("path", { d: "M18 12h5M30 13l5 8v5", ...S }), _jsx("path", { d: "M35 26v5M35 31l-9 11M35 31l9 11", ...S, strokeWidth: "3.4" }), _jsx("circle", { cx: "24", cy: "44", r: "3.4", ...F }), _jsx("circle", { cx: "46", cy: "44", r: "3.4", ...F })] });
         if (visual === "rope")
@@ -3270,6 +3285,8 @@ function AttachmentGlyph({ ex, size = 46 }) {
         if (visual === "rear-machine")
             return _jsxs("g", { children: [_jsx("path", { d: "M23 44h18M25 29h14M27 29v15M37 29v15", ...faint }), _jsx("circle", { cx: "32", cy: "10", r: "4", ...S }), _jsx("path", { d: "M32 14v15M32 19L15 21M32 19l17 2", ...S }), _jsx("path", { d: "M12 12v18M52 12v18M12 17l3 4M52 17l-3 4", ...faint }), _jsx("circle", { cx: "15", cy: "21", r: "3", ...S }), _jsx("circle", { cx: "49", cy: "21", r: "3", ...S })] });
         // Chest fly scenes.
+        if (visual === "chest-db-partial")
+            return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L20 22M35 29l15-7", ...S }), _jsx("path", { d: "M11 22h10M13 19v6M19 19v6M49 22h10M51 19v6M57 19v6", ...S, strokeWidth: "2.2" }), _jsx("path", { d: "M17 13l3 3M47 16l3-3", ...faint, strokeDasharray: "2 3" })] });
         if (visual === "chest-db")
             return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L16 14M35 29l19-15", ...S }), _jsx("path", { d: "M11 14h10M13 11v6M19 11v6M49 14h10M51 11v6M57 11v6", ...S, strokeWidth: "2.2" })] });
         if (visual === "chest-cable")

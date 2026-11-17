@@ -10,13 +10,21 @@ const CLEAN = text => normalized(text).replace(/\s+/g, " ").trim();
 export function exerciseBenchLevel(ex) {
     const name = CLEAN(ex?.name);
     if (!name) return null;
-    // Only explicit incline/decline descriptions qualify; low-to-high
-    // cable fly and low cable positions must never become bench angles.
+    const equip=Array.isArray(ex?.equip) ? ex.equip : [];
+    // Body position and cable direction are not automatically bench angles.
+    const bench=equip.some(id=>["bench","inclinebench","declinebench"].includes(id));
+    const angledMachine=equip.some(id=>["machinepress","smith"].includes(id))
+        && /\bpress\b/.test(name);
+    if (!bench && !angledMachine) return null;
+    // Only source-named, equipment-qualified incline/decline angles qualify.
     if (/\bhigh incline\b/.test(name)) return "high-incline";
     if (/\blow incline\b/.test(name)) return "low-incline";
     if (/\bdecline\b/.test(name)) return "decline";
     if (/\bincline\b/.test(name)) return "incline";
     if (/\bflat\b/.test(name)) return "flat";
+    // A required flat bench implies flat chest pressing/fly setups, not
+    // a flat-angle claim for unrelated seated movements.
+    if (equip.includes("bench") && ex?.part==="chest") return "flat";
     return null;
 }
 

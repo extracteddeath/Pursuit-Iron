@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinGymMachineAlternatives
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinMachineAlternativesDomain
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
+import io.github.extracteddeath.pursuitiron.rebuild.WorkoutReferenceKey
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinPerformedSet
 
@@ -173,7 +174,10 @@ internal fun NativeKotlinWorkoutMachineSelector(
     onSelect:(String)->Unit,
     onCreate:((String,Boolean)->Unit)?=null,
     error:String?=null,
-    acknowledgedCreatedMachineId:String?=null
+    acknowledgedCreatedMachineId:String?=null,
+    priorHistory:WorkoutLastReferenceResult?=null,
+    priorWorkingKeys:List<WorkoutReferenceKey> = emptyList(),
+    onRequestHistory:(()->Unit)?=null
 ) {
     if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
@@ -216,7 +220,13 @@ internal fun NativeKotlinWorkoutMachineSelector(
         }
     }
     OutlinedButton(
-        onClick={open=true},
+        onClick={
+            open=true
+            // The exact same-day source is fetched only when this picker
+            // is opened. The workout owner validates it; the sheet never
+            // searches other gyms or rewrites today's issued prescription.
+            onRequestHistory?.invoke()
+        },
         enabled=true, // inspection remains available on finished/paused workouts
         modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
     ) {
@@ -232,7 +242,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
         ) {
             Text("Choose physical machine",style=MaterialTheme.typography.titleLarge)
             Text("Same exercise, different weight stacks. Your actual load, Last, "+
-                "progression and records stay with each physical machine.",
+                "progression and records stay with each physical machine. "+
+                "Switching does not convert or lower another machine's load.",
                 style=MaterialTheme.typography.bodyMedium,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             error?.let {Text(it,style=MaterialTheme.typography.bodyMedium,
@@ -260,6 +271,10 @@ internal fun NativeKotlinWorkoutMachineSelector(
                     Column(Modifier.fillMaxWidth()) {
                         Text(machine.label,
                             style=MaterialTheme.typography.labelLarge)
+                        Text(workoutStationLastCaption(
+                            priorHistory,priorWorkingKeys,machine.id),
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                         if(current)Text("Selected for this workout",
                             style=MaterialTheme.typography.bodySmall)
                         else if(!machine.active)Text(

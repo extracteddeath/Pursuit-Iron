@@ -162,9 +162,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         mutableStateOf<String?>(null)
     }
     var lastReferenceRefresh by remember(workoutId){mutableIntStateOf(0)}
+    // Opening the A/B chooser requests the same owner-verified previous-day
+    // facts even if the ordinary Target/Last toggle remains on Target.
+    var stationHistoryRequested by rememberSaveable(workoutId){mutableStateOf(false)}
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
         enabled=(referenceMode==WorkoutReferenceMode.LAST ||
-            priorLevelingScope!=null) &&
+            priorLevelingScope!=null || stationHistoryRequested) &&
             journal!=null,
         source=journal?.snapshot?.let{WorkoutLastReferenceInput.Generated(it)},
         refreshVersion=lastReferenceRefresh)
@@ -846,7 +849,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 if(exerciseId!=null)
                     machineChoices.onCreate(exerciseId,label,makeDefault)
             },error=machineChoices.error,
-            acknowledgedCreatedMachineId=machineChoices.createdMachineId)
+            acknowledgedCreatedMachineId=machineChoices.createdMachineId,
+            priorHistory=lastReferences,
+            priorWorkingKeys=allSets.filter {
+                it.target.exerciseId==selected?.target?.exerciseId &&
+                    it.target.type==DraftSetType.WORKING
+            }.map {WorkoutReferenceKey(it.target.setKey)},
+            onRequestHistory={stationHistoryRequested=true})
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)
@@ -897,6 +906,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         "The correction was not saved. Review the saved set and retry."
                     } ?:state.unavailableReason?.let(::humanStatus),
                     machineInstanceId=recordedMachineId,
+                    issuedGymId=issuedGymId,machineRoster=machineRoster,
                     referenceMode=referenceMode,lastReferences=lastReferences,
                     onCurrentDraftChanged={load,reps->
                         val key=levelEditorKey(set.target.setKey,recordedMachineId)
@@ -1268,6 +1278,8 @@ private fun NativeKotlinSetCard(
     busy:Boolean,
     saveError:String?,
     machineInstanceId:String?,
+    issuedGymId:String?,
+    machineRoster:NativeMachineRosterSnapshot?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
     levelingDraft:CurrentWorkoutLevelingDraft?,
@@ -1412,12 +1424,8 @@ private fun NativeKotlinSetCard(
             physicalMachineLastReferences(lastReferences,machineInstanceId),
             WorkoutReferenceKey(target.setKey))
         if(set.isResolved) {
-            Text("Saved: ${set.outcome?.name?.replace('_',' ')?.lowercase()}"+
-                (existing?.let{" · ${it.reps} reps"+
-                    (it.load?.let{amount->" at ${amount.stripTrailingZeros().toPlainString()}"}?:"")+
-                    (it.actualRir?.let{rir->" · ${rir} actual RIR"}?: " · actual RIR unknown")
-                } ?: "")+
-                (existing?.machineInstanceId?.let{" · machine $it"} ?: ""),
+            Text(nativeSavedSetCaption("Saved",set.outcome,existing,
+                target.exerciseId,issuedGymId,machineRoster),
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                 style=MaterialTheme.typography.bodyMedium)
         }

@@ -464,9 +464,10 @@ internal fun NativeKotlinCustomJournalScreen(
         onDismiss={showSessionNote=false;noteError=null}
     )
     var lastReferenceRefresh by remember(workoutId){mutableIntStateOf(0)}
+    var stationHistoryRequested by rememberSaveable(workoutId){mutableStateOf(false)}
     val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
         enabled=(referenceMode==WorkoutReferenceMode.LAST ||
-            priorLevelingSlotId!=null) && current!=null,
+            priorLevelingSlotId!=null || stationHistoryRequested) && current!=null,
         source=current?.snapshot?.let{WorkoutLastReferenceInput.Custom(it)},
         refreshVersion=lastReferenceRefresh)
     val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
@@ -852,7 +853,12 @@ internal fun NativeKotlinCustomJournalScreen(
                         onCreate={label,makeDefault->
                             machineChoices.onCreate(slot.exerciseId,label,makeDefault)
                         },error=machineChoices.error,
-            acknowledgedCreatedMachineId=machineChoices.createdMachineId)
+                        acknowledgedCreatedMachineId=machineChoices.createdMachineId,
+                        priorHistory=lastReferences,
+                        priorWorkingKeys=slot.sets.filter {
+                            it.prescription.type==DraftSetType.WORKING
+                        }.map{WorkoutReferenceKey(it.setKey)},
+                        onRequestHistory={stationHistoryRequested=true})
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)
@@ -1207,6 +1213,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
+                                exerciseId=slot.exerciseId,
+                                issuedGymId=current.originalSnapshot.stamp.gymId,
+                                machineRoster=machineRoster,
                                 referenceMode=referenceMode,lastReferences=lastReferences,
                                 levelingDraft=if(observed==null &&
                                     set.prescription.type==DraftSetType.WORKING &&
@@ -1270,6 +1279,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                             ?.performed?.machineInstanceId
                                     else if(main!=null)main.performed?.machineInstanceId
                                     else selectedMachineId,
+                                    exerciseId=slot.exerciseId,
+                                    issuedGymId=current.originalSnapshot.stamp.gymId,
+                                    machineRoster=machineRoster,
                                     referenceMode=referenceMode,lastReferences=lastReferences,
                                     position=slot.sets.filter{it.prescription.type==set.prescription.type}
                                         .indexOf(set)+1,
@@ -1615,6 +1627,9 @@ private fun NativeKotlinCustomVisitEditor(
     saving:Boolean,
     saveError:String?,
     machineInstanceId:String?,
+    exerciseId:String,
+    issuedGymId:String?,
+    machineRoster:NativeMachineRosterSnapshot?,
     referenceMode:WorkoutReferenceMode,
     lastReferences:WorkoutLastReferenceResult?,
     position:Int,
@@ -1815,10 +1830,8 @@ private fun NativeKotlinCustomVisitEditor(
                     part==CustomWorkoutVisitPart.FOLLOW_UP))
         }
         if(saved!=null){
-            Text("Recorded: ${saved.outcome.name.replace('_',' ').lowercase()}" +
-                (saved.performed?.let{" · ${it.reps} reps" +
-                    (it.load?.let{load->" at $load"} ?: "")+
-                    (it.actualRir?.let{rir->" · $rir RIR"} ?: "")} ?: ""),
+            Text(nativeSavedSetCaption("Recorded",saved.outcome,saved.performed,
+                exerciseId,issuedGymId,machineRoster),
                 style=MaterialTheme.typography.bodyMedium)
             TextButton(enabled=!locked,onClick={editing=true},
                 modifier=Modifier.heightIn(min=48.dp)) {

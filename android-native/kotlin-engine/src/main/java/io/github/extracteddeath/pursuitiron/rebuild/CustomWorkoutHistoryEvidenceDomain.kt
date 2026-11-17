@@ -15,7 +15,9 @@ data class CustomHistoricalVisitFact(
     val amplifierKind: CustomAmplifierKind?,
     val outcome: KotlinJournalSetOutcome,
     val actual: KotlinPerformedSet?,
-    val effectiveEventId: String
+    val effectiveEventId: String,
+    /** Distinct saved mini-set, never a new ordinary working set. */
+    val stage: Int = 1
 )
 data class CustomWorkoutHistoricalEvidence(
     val athleteId: String,
@@ -89,17 +91,23 @@ object CustomWorkoutHistoryEvidenceDomain {
                 main.outcome,main.performed,main.eventId)
             if(main.outcome==KotlinJournalSetOutcome.COMPLETED) {
                 val amp=set.prescription.amplifier ?:continue
-                val follow=rebuilt.effectiveVisits[CustomWorkoutVisitKey(
-                    set.setKey,CustomWorkoutVisitPart.FOLLOW_UP)]?.operation
-                    as? CustomWorkoutJournalOperation.Record
-                    ?:return CustomHistoryEvidenceResult.Rejected(
-                        CustomHistoryEvidenceRefusal.INCOMPLETE_FACTS)
-                facts+=CustomHistoricalVisitFact(
-                    slot.slotId,slot.exerciseId,set.setKey,
-                    CustomWorkoutVisitPart.FOLLOW_UP,set.prescription.type,
-                    amp.followUpLoad ?:set.prescription.load,
-                    RepBand(amp.followUpReps,amp.followUpReps),null,
-                    amp.kind,follow.outcome,follow.performed,follow.eventId)
+                val stageKeys=CustomWorkoutExecutionDomain.followUpVisits(
+                    rebuilt,set)
+                if(stageKeys.isEmpty())return CustomHistoryEvidenceResult.Rejected(
+                    CustomHistoryEvidenceRefusal.INCOMPLETE_FACTS)
+                for(followKey in stageKeys) {
+                    val follow=rebuilt.effectiveVisits[followKey]?.operation
+                        as? CustomWorkoutJournalOperation.Record
+                        ?:return CustomHistoryEvidenceResult.Rejected(
+                            CustomHistoryEvidenceRefusal.INCOMPLETE_FACTS)
+                    facts+=CustomHistoricalVisitFact(
+                        slot.slotId,slot.exerciseId,set.setKey,
+                        CustomWorkoutVisitPart.FOLLOW_UP,set.prescription.type,
+                        amp.followUpLoad ?:set.prescription.load,
+                        RepBand(amp.followUpReps,amp.followUpReps),null,
+                        amp.kind,follow.outcome,follow.performed,follow.eventId,
+                        followKey.stage)
+                }
             }
         }
         return CustomHistoryEvidenceResult.Candidate(

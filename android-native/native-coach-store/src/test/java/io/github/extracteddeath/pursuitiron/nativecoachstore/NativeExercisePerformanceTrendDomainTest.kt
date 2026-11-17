@@ -26,11 +26,11 @@ class NativeExercisePerformanceTrendDomainTest {
         unit:LoadUnit?=LoadUnit.LB,issued:DraftSetLoad=load(),
         type:DraftSetType=DraftSetType.WORKING,
         outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
-        machineId:String?=null
+        machineId:String?=null,actualRir:Int?=2
     )=KotlinHistoricalSetFact(
         "db_row","set-$order-$visit",type,0,issued,RepBand(6,10),2,
         outcome,if(outcome==KotlinJournalSetOutcome.SKIPPED)null
-            else KotlinPerformedSet(weight?.let(::n),unit,reps,2,machineId),
+            else KotlinPerformedSet(weight?.let(::n),unit,reps,actualRir,machineId),
         "event-$order-$visit",null)
     private fun custom(
         order:Int,vararg visits:CustomHistoricalVisitFact
@@ -42,7 +42,8 @@ class NativeExercisePerformanceTrendDomainTest {
         order:Int,slot:String,reps:Int,weight:String?,
         issued:DraftSetLoad,
         part:CustomWorkoutVisitPart=CustomWorkoutVisitPart.MAIN,
-        outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED
+        outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
+        actualRir:Int?=2
     )=CustomHistoricalVisitFact(
         slot,"db_row","set-$order-$slot",part,DraftSetType.WORKING,
         issued,RepBand(6,10),2,
@@ -50,7 +51,7 @@ class NativeExercisePerformanceTrendDomainTest {
             else null,
         outcome,if(outcome==KotlinJournalSetOutcome.SKIPPED)null
             else KotlinPerformedSet(weight?.let(::n),
-                (issued as? DraftSetLoad.Verified)?.unit,reps,2),
+                (issued as? DraftSetLoad.Verified)?.unit,reps,actualRir),
         "event-$order-$slot-$part")
     private fun timeline(vararg visits:NativeKotlinMixedHistoryCompletion)=
         NativeKotlinMixedHistoryTimeline("athlete-1",7,visits.toList())
@@ -219,4 +220,31 @@ class NativeExercisePerformanceTrendDomainTest {
             })
         assertEquals(7L,recorded.manifestRevision)
     }
+    @Test fun bestSetKeepsItsOwnRirRatherThanAHeavierOrLatestSetEffort() {
+        val one=trend(timeline(composer(1,
+            fact(1,1,reps=8,weight="100",actualRir=0),
+            fact(1,2,reps=8,weight="120",actualRir=null),
+            fact(1,3,reps=10,weight="100",actualRir=4)
+        ))).series.single().points.single()
+        assertEquals(n("120"),one.actualLoad)
+        assertEquals(8,one.performedReps)
+        assertNull(one.actualRir)
+        val tie=trend(timeline(composer(1,
+            fact(1,1,reps=8,weight="100",actualRir=0),
+            fact(1,2,reps=8,weight="100",actualRir=4)
+        ))).series.single().points.single()
+        assertEquals(0,tie.actualRir)
+    }
+
+    @Test fun unknownCustomRirStaysUnknownNotTargetOrPriorWorkoutEffort() {
+        val points=trend(timeline(
+            custom(1,customVisit(1,"a",8,"100",load(),actualRir=null)),
+            custom(2,customVisit(2,"b",9,"110",load(),actualRir=3))
+        )).series.single().points
+        assertEquals(listOf(1L,2L),points.map{it.completionOrder})
+        assertNull(points.first().actualRir)
+        assertEquals(3,points.last().actualRir)
+        assertEquals(listOf(n("100"),n("110")),points.map{it.actualLoad})
+    }
+
 }

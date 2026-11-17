@@ -15,6 +15,10 @@ import java.math.BigDecimal
 private fun performanceLabel(value:BigDecimal,unit:String):String =
     NativeKotlinTrendAxisPolicy.exactMetric(value,unit)
 
+/** Read-only observation; absence of athlete RIR stays explicitly unknown. */
+internal fun nativeObservedEffortLabel(rir:Int?):String =
+    rir?.let{"$it actual RIR"} ?: "actual RIR not reported"
+
 /**
  * A genuine observed-history trend for any exact movement ID, not an
  * unsourced Strength Standards ranking or a coaching recommendation.
@@ -152,6 +156,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     PursuitHistoryStatus("One qualifying session",
                         sessionText(last.completionOrder) + " · ${measure(lastValue)}" +
                             (if(bodyweight)"" else " for ${last.performedReps} reps") +
+                            " · "+nativeObservedEffortLabel(last.actualRir)+
                             ". A second qualifying session is needed to show change.")
                 } else {
                     val delta=lastValue-firstValue
@@ -166,19 +171,22 @@ internal fun NativeKotlinExercisePerformanceTrend(
                         recent.map{sample->
                             PursuitFactualTrendPoint(sample.completionOrder,
                                 sample.actualLoad ?:BigDecimal(sample.performedReps),
-                                manifests[sample.completionOrder]?.completedAtEpochMillis)
+                                manifests[sample.completionOrder]?.completedAtEpochMillis,
+                                actualRir=sample.actualRir,showActualEffort=true)
                         },
                         if(bodyweight)"Completed reps" else "Completed working load",
                         ::measure
                     )
                     Text("First shown · "+sessionText(first.completionOrder)+" · "+
                             measure(firstValue)+
-                            (if(bodyweight)"" else " × ${first.performedReps} reps"),
+                            (if(bodyweight)"" else " × ${first.performedReps} reps")+
+                            " · "+nativeObservedEffortLabel(first.actualRir),
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Latest · "+sessionText(last.completionOrder)+" · "+
                             measure(lastValue)+
-                            (if(bodyweight)"" else " × ${last.performedReps} reps"),
+                            (if(bodyweight)"" else " × ${last.performedReps} reps")+
+                            " · "+nativeObservedEffortLabel(last.actualRir),
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -194,7 +202,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     "Only the exact exercise, selected physical machine (when relevant), loading basis and rep window are compared. " +
-                    "Reps, effort and fatigue may still differ. These are recorded values, " +
+                    "Reported RIR belongs only to the selected recorded best working set in each session; missing effort is never estimated. Reps, effort and fatigue may still differ. These are recorded values, " +
                     "not an adjusted strength score, a PR certificate or a coaching target.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -209,7 +217,8 @@ internal fun NativeKotlinExercisePerformanceTrend(
                             BigDecimal(sample.performedReps)
                         Text(sessionText(sample.completionOrder)+" · "+
                             measure(actual)+
-                            (if(bodyweight)"" else " · ${sample.performedReps} reps"),
+                            (if(bodyweight)"" else " · ${sample.performedReps} reps")+
+                            " · "+nativeObservedEffortLabel(sample.actualRir),
                             style=MaterialTheme.typography.bodyMedium)
                     }
                 }

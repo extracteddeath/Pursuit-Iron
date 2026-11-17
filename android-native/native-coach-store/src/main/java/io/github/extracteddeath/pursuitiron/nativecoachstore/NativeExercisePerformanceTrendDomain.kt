@@ -36,7 +36,10 @@ data class NativeExerciseTrendKey(
 data class NativeExerciseTrendPoint(
     val completionOrder:Long,
     val actualLoad:BigDecimal?,
-    val performedReps:Int
+    val performedReps:Int,
+    /** RIR actually reported for this same selected completed working set.
+     * Null means unknown, never target or assumed effort. */
+    val actualRir:Int?=null
 )
 data class NativeExerciseTrendSeries(
     val key:NativeExerciseTrendKey,
@@ -126,9 +129,11 @@ object NativeExercisePerformanceTrendDomain {
                         weight=null
                     }
                 }
-                val sample=NativeExerciseTrendPoint(order,weight,actual.reps)
+                val sample=NativeExerciseTrendPoint(order,weight,actual.reps,actual.actualRir)
                 val bySession=candidates.getOrPut(key){linkedMapOf()}
                 val previous=bySession[order]
+                // The factual best load/reps rule remains unchanged. Ties keep
+                // original receipt order; RIR never ranks a set or creates a PR.
                 val improves=if(key.bodyweightOnly)
                     previous==null || sample.performedReps>previous.performedReps
                 else previous==null ||

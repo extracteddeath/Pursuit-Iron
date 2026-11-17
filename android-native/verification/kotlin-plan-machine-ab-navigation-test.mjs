@@ -18,7 +18,7 @@ assert.match(review,/revisionFence\.withOwnerTransaction\(identity\.ownerKey\)/)
 assert.match(review,/source\.ownerKey!=identity\.ownerKey/);
 assert.match(review,/source\.setup\.reviewed\?\.gym\?\.gymId!=gymId/);
 assert.match(review,/NativeMachineRosterResult\.Saved/);
-assert.match(review,/LoadBasis\.MACHINE_STACK,LoadBasis\.CABLE_STACK/);
+assert.match(review,/CatalogPhysicalMachineEligibility\.eligibleExerciseIds\(source\.catalog\)/);
 assert.doesNotMatch(review,/machineRosters\.save\(|journalStore\.save\(|workoutMachineChoices\.save\(/);
 
 assert.match(plan,/fun nativePlanMachineDescription\(/);
@@ -46,8 +46,7 @@ assert.ok(machinePosition>0 && libraryPosition>machinePosition,
     'machine group must be immediately discoverable above long exercise library');
 assert.match(machines,/LaunchedEffect\(gymId,focusedMachineExerciseId,catalog\)/);
 assert.match(machines,/catalog\.singleOrNull/);
-assert.match(machines,/LoadBasis\.MACHINE_STACK/);
-assert.match(machines,/LoadBasis\.CABLE_STACK/);
+assert.match(machines,/CatalogPhysicalMachineEligibility\.eligible\(it\)/);
 assert.match(machines,/stalePlanFocus=option==null/);
 assert.match(machines,/exerciseId=""\s*query=""/);
 assert.match(machines,/onMachineFocusConsumed\(\)/);

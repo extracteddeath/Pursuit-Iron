@@ -37,7 +37,7 @@ assert.match(sheet,/verifiedAngleFor\(choice\.exerciseId\)==selectedAngle/);
 assert.match(sheet,/choice\.attachmentId==attachmentId/);
 assert.match(sheet,/StarterExerciseTranche\.movements\(\)/);
 assert.match(sheet,/nativeReviewedChoiceAngle\(exerciseId,reviewedVariantById\)/);
-assert.match(sheet,/reviewedVariantById\[exerciseId\]/);
+assert.match(sheet,/nativeReviewedChoiceAngle\(exerciseId,reviewedVariantById\)/);
 assert.match(sheet,/verifiedAngleFor\(it\.exerciseId\)/);
 assert.doesNotMatch(sheet,/it\.choice\.exerciseId in matchingIds/);
 

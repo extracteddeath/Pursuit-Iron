@@ -86,7 +86,7 @@ private fun NativeKotlinSetTechniqueSummary(
         if(showDetails) Surface(
             color=MaterialTheme.colorScheme.surfaceContainerLow,
             shape=MaterialTheme.shapes.medium) {
-            Column(Modifier.fillMaxWidth().padding(PursuitSpace.s),
+            Column(Modifier.fillMaxWidth().padding(PursuitSpace.sm),
                 verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                 Text("Set $ordinal · ${technique.title}",
                     style=MaterialTheme.typography.labelLarge)

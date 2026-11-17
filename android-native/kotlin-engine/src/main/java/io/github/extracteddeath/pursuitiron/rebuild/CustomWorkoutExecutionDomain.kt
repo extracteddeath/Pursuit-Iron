@@ -73,7 +73,15 @@ object CustomWorkoutExecutionDomain {
                 as? CustomWorkoutJournalOperation.Record ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
             if(amp.kind==CustomAmplifierKind.MYO_REPS && amp.followUpRounds>1) {
-                actualMiniReps+=recorded.performed?.reps ?:break
+                // Observations are never overwritten: a different physical
+                // load or station ends the same-load protocol at this stage.
+                // Do not unlock further mini-sets against changed equipment.
+                val activation=main.performed ?:break
+                val observed=recorded.performed ?:break
+                if(observed.load!=activation.load ||
+                    observed.unit!=activation.unit ||
+                    observed.machineInstanceId!=activation.machineInstanceId)break
+                actualMiniReps+=observed.reps
                 val step=AdvancedAmplifierProtocolDomain.nextMyoRepStep(
                     amp.followUpReps,actualMiniReps,amp.followUpRounds)
                 if(step!=MyoRepNextStep.KEEP_GOING)break

@@ -382,6 +382,20 @@ internal fun NativeKotlinStrengthStandardsScreen(
                     onOpenHistory={historyExerciseId=trendExerciseId})
             }
         }
+        // The dated ledger is independent of workout achievements and
+        // source-verified history. An explicit tap copies a real observation
+        // into the UNSAVED strength-comparison fields; neither the coach nor
+        // stored comparison settings change automatically.
+        NativeKotlinBodyweightPanel(
+            athleteId=profileId,preferredUnit=displayUnit,
+            onUseForComparison={value,unit->
+                bodyweightUnit=unit.name
+                bodyweightText=value.stripTrailingZeros().toPlainString()
+                comparisonExpanded=true
+                comparisonNotice="Selected a logged measurement for comparison. "+
+                    "Choose a reference group and Save comparison if wanted."
+            }
+        )
         val ready=comparisonGroup!=null && bodyweight!=null
         val comparisonStatus=when {
             !ready -> "Not set · verified charts work without comparison settings"

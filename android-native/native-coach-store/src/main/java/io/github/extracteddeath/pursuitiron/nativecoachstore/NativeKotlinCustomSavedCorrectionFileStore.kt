@@ -32,7 +32,7 @@ internal data class NativeCustomSavedCorrectionEnvelope(
 
 internal object NativeCustomSavedCorrectionCodec {
     private const val MAGIC = 0x50494353 // PICS
-    private const val VERSION = 2
+    private const val VERSION = 3
     const val MAX_BYTES = 256_000
     private const val MAX_RECEIPTS = 512
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -88,9 +88,10 @@ internal object NativeCustomSavedCorrectionCodec {
         // machine-tagged correction exists. Only physical A/B corrections
         // require the new V2 payload; otherwise manifest digests could
         // turn an old, authentic saved correction into a false mismatch.
-        val version=if(value.receipts.any {
-            it.correction.performed?.machineInstanceId!=null
-        }) VERSION else 1
+        val version=if(value.receipts.any{it.correction.visit.stage>1})
+            VERSION else if(value.receipts.any {
+                it.correction.performed?.machineInstanceId!=null
+            }) 2 else 1
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             out.writeInt(MAGIC); out.writeInt(version)
@@ -105,6 +106,7 @@ internal object NativeCustomSavedCorrectionCodec {
                 out.writeLong(op.expectedCorrectionRevision)
                 out.writeUTF(op.visit.setKey)
                 out.writeUTF(op.visit.part.name)
+                if(version>=3)out.writeInt(op.visit.stage)
                 out.writeUTF(op.correctsEventId)
                 out.writeUTF(op.outcome.name)
                 out.performed(op.performed,version)
@@ -159,6 +161,10 @@ internal object NativeCustomSavedCorrectionCodec {
                         val part = CustomWorkoutVisitPart.entries.singleOrNull {
                             it.name == partName
                         }
+                        val stage=if(version>=3)data.readInt() else 1
+                        if(stage !in 1..5 ||
+                            part==CustomWorkoutVisitPart.MAIN && stage!=1)
+                            throw IOException("invalid correction mini-set stage")
                         val predecessor = data.readUTF()
                         val outcomeName = data.readUTF()
                         val outcome = KotlinJournalSetOutcome.entries.singleOrNull {
@@ -168,7 +174,7 @@ internal object NativeCustomSavedCorrectionCodec {
                             throw IOException("unknown correction visit/outcome")
                         CustomSavedVisitCorrectionReceipt(applied,
                             CustomSavedVisitCorrection(eventId, expected,
-                                CustomWorkoutVisitKey(setKey, part),
+                                CustomWorkoutVisitKey(setKey, part,stage),
                                 predecessor, outcome, data.performed(version)))
                     }
                     if (data.available() != 0)

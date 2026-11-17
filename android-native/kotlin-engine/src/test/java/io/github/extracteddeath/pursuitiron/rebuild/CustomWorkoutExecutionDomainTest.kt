@@ -414,6 +414,40 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
     }
 
+    @Test fun changedPhysicalStationOrLoadEndsRestPauseButNeverDeletesReceipts() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,
+            3,20,followUpRounds=3)
+        var station=initial(slot("pause",1,null,amplifier=amp))
+        val main=CustomWorkoutJournalOperation.Record("main-A",0,
+            visit("pause:s1"),KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,12,2,"A"))
+        station=(CustomWorkoutJournalDomain.reduce(station,main)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val changeStation=CustomWorkoutJournalOperation.Record("stage-B",station.revision,
+            visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,3,2,"B"))
+        station=(CustomWorkoutJournalDomain.reduce(station,changeStation)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertNull(next(station))
+        assertEquals(2,station.effectiveVisits.size)
+        assertEquals("B",((station.effectiveVisits.getValue(
+            visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1)).operation
+            as CustomWorkoutJournalOperation.Record).performed?.machineInstanceId))
+
+        var load=initial(slot("pause",1,null,amplifier=amp))
+        load=(CustomWorkoutJournalDomain.reduce(load,main)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val changeWeight=CustomWorkoutJournalOperation.Record("stage-lower",load.revision,
+            visit("pause:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,3,2,"A"))
+        load=(CustomWorkoutJournalDomain.reduce(load,changeWeight)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertNull(next(load))
+        assertEquals(2,load.effectiveVisits.size)
+    }
+
     @Test fun activationLoadCannotChangeOnceMyoFollowUpsExist() {
         val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
             followUpRounds=5)

@@ -12,7 +12,7 @@ assert.match(store,/getSharedPreferences\("kotlin-unsaved-workout-entry-v1",Cont
 assert.match(store,/MessageDigest\.getInstance\("SHA-256"\)/);
 assert.match(store,/athleteId,workoutId,gymId,exerciseId/);
 assert.match(store,/setKey,visitPart,machineId/);
-assert.match(store,/load\.value\.toPlainString\(\),load\.unit\.name,load\.basis\.name/);
+assert.match(store,/load\.value\.stripTrailingZeros\(\)\.toPlainString\(\),load\.unit\.name,load\.basis\.name/);
 assert.match(store,/reps\.minimum\.toString\(\),reps\.maximum\.toString\(\)/);
 assert.match(store,/if\(committed\)null else store\.read\(identity\)/);
 assert.match(store,/if\(committed\)store\.discard\(identity\)/);

@@ -364,7 +364,7 @@ assert.ok(machineSelector.includes('internal fun initialMachineScopedLoad(') &&
   composer.includes('initialMachineScopedLoad(target.load,existing,machineInstanceId)') &&
   journal.includes('initialMachineScopedLoad(target,saved?.performed,machineInstanceId)') &&
   composer.includes('target.setKey,set.currentReceipt?.appliedRevision,machineInstanceId') &&
-  journal.includes('set.setKey,part.name,existing?.appliedRevision,machineInstanceId') &&
+  journal.includes('set.setKey,part.name,stageOrdinal,existing?.appliedRevision,machineInstanceId') &&
   !composer.includes('LaunchedEffect(machineInstanceId)') &&
   !journal.includes('LaunchedEffect(machineInstanceId)'),
   'Machine identity changes must not silently overwrite pending native set weight edits');

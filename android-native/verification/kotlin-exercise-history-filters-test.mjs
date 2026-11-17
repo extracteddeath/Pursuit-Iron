@@ -23,6 +23,12 @@ assert.match(ui,/nativeExerciseHistoryRowKey\(completed\.manifest\.workoutId,/);
 assert.match(ui,/set\.part,set\.stage/);
 assert.match(ui,/CustomHistoricalTechniqueGroupingDomain\.group\(/);
 assert.match(ui,/techniqueCaptions\[parent\]/);
+// Saved-set corrections can change actual facts without creating another
+// Finish receipt. Cached UI summaries must track the verified timeline
+// content rather than only a coarse revision number.
+assert.match(ui,/val rows=remember\(result\.timeline,exerciseId\)/);
+assert.match(ui,/val techniqueCaptions=remember\(result\.timeline,exerciseId\)/);
+
 assert.match(ui,/AdvancedAmplifierProtocolDomain\.stageNoun\(kind\)/);
 assert.match(ui,/items\(visible,key=\{it\.key\}\)/);
 

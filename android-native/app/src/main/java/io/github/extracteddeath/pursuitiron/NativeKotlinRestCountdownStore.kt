@@ -104,26 +104,50 @@ internal class NativeKotlinRestCountdownStore(context:Context) {
         return "rest:"+digest.joinToString(""){"%02x".format(it)}
     }
 
-    fun read(key:String,elapsed:Long,wall:Long):NativeRestCountdownCheckpoint? {
+    /**
+     * A recovered countdown must also belong to the latest independently
+     * confirmed non-note journal event. If the last set changed while this
+     * UI was away, an older manual timer is not allowed to impersonate it.
+     * Hashing avoids storing an event ID in the presentation preference.
+     */
+    private fun receiptStamp(receiptEventId:String?):String {
+        val event=receiptEventId ?: "<before first set>"
+        val bytes=("receipt:"+event.length+":"+event).toByteArray(Charsets.UTF_8)
+        return MessageDigest.getInstance("SHA-256")
+            .digest(bytes).joinToString(""){"%02x".format(it)}
+    }
+
+    fun read(
+        key:String,receiptEventId:String?,elapsed:Long,wall:Long
+    ):NativeRestCountdownCheckpoint? {
         return runCatching {
-            val checkpoint=NativeRestCountdownPolicy.decode(
-                preferences.getString(key,null))
+            val raw=preferences.getString(key,null)
+            val stamp=receiptStamp(receiptEventId)
+            val scoped=raw?.takeIf{it.startsWith("$stamp:")}
+                ?.substring(stamp.length+1)
+            val checkpoint=NativeRestCountdownPolicy.decode(scoped)
             if(checkpoint!=null &&
                 NativeRestCountdownPolicy.remaining(checkpoint,elapsed,wall)!=null)
                 checkpoint
             else {
+                // A changed workout receipt (or stale time) invalidates only
+                // this UI timer, not the durable workout journal.
                 preferences.edit().remove(key).apply()
                 null
             }
         }.getOrNull()
     }
 
-    fun save(key:String?,checkpoint:NativeRestCountdownCheckpoint?) {
+    fun save(
+        key:String?,receiptEventId:String?,
+        checkpoint:NativeRestCountdownCheckpoint?
+    ) {
         if(key==null)return
         runCatching {
             val edit=preferences.edit()
             if(checkpoint==null)edit.remove(key)
-            else edit.putString(key,NativeRestCountdownPolicy.encode(checkpoint))
+            else edit.putString(key,receiptStamp(receiptEventId)+":"+
+                NativeRestCountdownPolicy.encode(checkpoint))
             edit.apply()
         }
     }

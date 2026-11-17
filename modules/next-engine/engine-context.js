@@ -1,4 +1,4 @@
-import { createExerciseCatalog } from './exercise-db.js';
+import { createAutomaticExerciseCatalog } from './exercise-db.js';
 
 function setupEligible(def, available, bodyweightMode) {
     if ((def.flags.bodyweight || def.equipment.includes('bodyweight')) && bodyweightMode === 'exclude')
@@ -15,7 +15,7 @@ function setupEligible(def, available, bodyweightMode) {
 export function createEngineContext(request) {
     // Each request owns one canonical catalog and one lookup index; building
     // both independently repeated built-in/custom merging per split candidate.
-    const exerciseCatalog = Object.freeze(createExerciseCatalog(request.customExercises));
+    const exerciseCatalog = Object.freeze(createAutomaticExerciseCatalog(request.customExercises));
     const exerciseMap = new Map(exerciseCatalog.map(exercise => [exercise.id, exercise]));
     const scheduleByDay = new Map(request.schedule.days.map(day => [day.day, day]));
     const avoidedExercises = new Set(request.preferences?.avoidedExercises ?? []);

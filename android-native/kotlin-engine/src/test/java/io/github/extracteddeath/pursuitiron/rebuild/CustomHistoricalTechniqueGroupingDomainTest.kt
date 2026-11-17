@@ -92,7 +92,7 @@ class CustomHistoricalTechniqueGroupingDomainTest {
         val early=CustomHistoricalTechniqueGroupingDomain.group(
             listOf(valid,follow(valid,1,4),follow(valid,2,0,
                 outcome=KotlinJournalSetOutcome.SKIPPED)))!!.single()
-        assertEquals("Myo-reps · 2 mini-sets · 4 + skipped reps",
+        assertEquals("Myo-reps · stage 1: 4 reps · stage 2 skipped",
             early.techniqueCaption)
     }
 

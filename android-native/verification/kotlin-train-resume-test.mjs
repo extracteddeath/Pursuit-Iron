@@ -31,7 +31,7 @@ assert.match(candidate,/workoutScreens\.SaveableStateProvider\("composer:\$selec
 const clearBody=controller.slice(controller.indexOf('fun clear()'),controller.indexOf('override fun close()'));
 assert.match(clearBody,/mutable\.value=NativeKotlinSessionState\(\)/);
 assert.doesNotMatch(clearBody,/recordWorkoutOperation|delete|finish\(/);
-assert.match(candidate,/minimizedGeneratedId=null\s*selectedId=null\s*onViewFinishedHistory\(\)/);
+assert.match(candidate,/val completedId=selectedId\s*controller\.clear\(\)\s*minimizedGeneratedId=null\s*selectedId=null\s*if\(completedId!=null\)onViewFinishedHistory\(completedId\)/);
 assert.match(candidate,/minimizedGeneratedId=null\s*selectedId=null\s*onReviewNext\(exerciseId\)/);
 
 // No old program may inherit state. No verified custom session is stranded

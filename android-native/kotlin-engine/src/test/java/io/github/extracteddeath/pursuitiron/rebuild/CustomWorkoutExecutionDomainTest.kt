@@ -29,7 +29,10 @@ class CustomWorkoutExecutionDomainTest {
         corrects:String?=null,stage:Int=1,reps:Int=8):CustomWorkoutJournalDraft {
         val set=j.snapshot.slots.flatMap{it.sets}.single{it.setKey==key}
         val load=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-            set.prescription.amplifier?.followUpLoad ?:set.prescription.load
+            set.prescription.amplifier?.let{
+                AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                    it,set.prescription.load,stage)
+            } ?:set.prescription.load
         else set.prescription.load
         val verified=load as? DraftSetLoad.Verified
         val actual=if(outcome==KotlinJournalSetOutcome.SKIPPED)null
@@ -649,6 +652,98 @@ class CustomWorkoutExecutionDomainTest {
                 as CustomWorkoutJournalDecision.Rejected).reason)
         assertNull(next(journal))
         assertTrue(journal.canProposeFinish)
+    }
+
+    @Test fun twoPhysicalDropStagesRecordTheirOwnActualsBeforeNextSupersetMovement() {
+        fun verified(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=verified("15"),followUpRounds=2,
+            secondDropLoad=verified("10"))
+        var j=initial(slot("drop",1,"pair",amplifier=amp),
+            slot("partner",1,"pair"))
+        assertEquals(visit("drop:s1"),next(j))
+        j=record(j,"drop:s1",reps=10)
+        assertEquals(visit("drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),next(j))
+        assertEquals(10,rest(j).automaticCue?.seconds)
+        j=record(j,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,reps=8)
+        assertEquals(visit("drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
+        j=record(j,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=2,reps=7)
+        assertEquals(visit("partner:s1"),next(j))
+        assertEquals(0,rest(j).automaticCue?.seconds)
+        val stages=j.effectiveVisits.entries.filter{it.key.setKey=="drop:s1" &&
+            it.key.part==CustomWorkoutVisitPart.FOLLOW_UP}.sortedBy{it.key.stage}
+        assertEquals(listOf(BigDecimal("15"),BigDecimal("10")),stages.map{
+            ((it.value.operation as CustomWorkoutJournalOperation.Record)
+                .performed?.load)
+        })
+        assertEquals(2,CustomWorkoutVisitFocusDomain.progress(j).recordedFollowUps)
+        j=record(j,"partner:s1")
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        val closed=(CustomWorkoutJournalDomain.reduce(j,
+            CustomWorkoutJournalOperation.Finish("finish-two-drops",j.revision))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        val history=CustomWorkoutHistoryEvidenceDomain.project(closed)
+            as CustomHistoryEvidenceResult.Candidate
+        assertEquals(listOf(BigDecimal("15"),BigDecimal("10")),
+            history.evidence.visits.filter{it.part==CustomWorkoutVisitPart.FOLLOW_UP}
+                .map{(it.prescribedLoad as DraftSetLoad.Verified).value})
+        assertEquals(2,history.evidence.visits.count{
+            it.part==CustomWorkoutVisitPart.MAIN
+        })
+        assertFalse(history.evidence.canApplyProgression)
+    }
+
+    @Test fun changedFirstDropNeverAutoIssuesSecondAndActivationCorrectionIsProtected() {
+        fun verified(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=verified("15"),followUpRounds=2,
+            secondDropLoad=verified("10"))
+        var j=initial(slot("drop",1,null,amplifier=amp))
+        j=record(j,"drop:s1")
+        val wrongLoad=CustomWorkoutJournalOperation.Record(
+            "actual-different",j.revision,
+            visit("drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("12"),LoadUnit.LB,8,2))
+        j=(CustomWorkoutJournalDomain.reduce(j,wrongLoad)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertNull(next(j))
+        assertEquals(1,CustomWorkoutVisitFocusDomain.progress(j).recordedFollowUps)
+        assertTrue(j.canProposeFinish)
+        val outOfOrder=CustomWorkoutJournalOperation.Record(
+            "unissued-second",j.revision,
+            visit("drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("10"),LoadUnit.LB,8,2))
+        assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+            (CustomWorkoutJournalDomain.reduce(j,outOfOrder)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+
+        var exact=initial(slot("drop",1,null,amplifier=amp))
+        exact=record(exact,"drop:s1")
+        exact=record(exact,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1)
+        val priorMain=exact.effectiveVisits.getValue(visit("drop:s1"))
+            .operation as CustomWorkoutJournalOperation.Record
+        val attempt=CustomWorkoutJournalOperation.Record(
+            "attempt-rebase",exact.revision,visit("drop:s1"),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("25"),LoadUnit.LB,8,2),
+            priorMain.eventId)
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(exact,attempt)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        exact=record(exact,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            outcome=KotlinJournalSetOutcome.SKIPPED,stage=2)
+        assertNull(next(exact))
+        assertTrue(exact.canProposeFinish)
+        assertEquals(2,exact.effectiveVisits.keys.count{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
     }
 
 }

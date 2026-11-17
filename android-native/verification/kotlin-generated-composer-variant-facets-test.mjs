@@ -21,7 +21,7 @@ assert.match(generated,/sourceTargets\.map \{ComposerSwapDraftRow\(\)\}/);
 assert.match(generated,/onConfirm\(selected\.option\.exerciseId,approved\)/);
 assert.match(custom,/verifiedAngleFor\(choice\.exerciseId\)==selectedAngle/);
 assert.match(custom,/StarterExerciseTranche\.movements\(\)/);
-assert.match(custom,/nativeBenchAngle\(it\.variantId,it\.requiredFacilityIds,it\.familyId\)/);
+assert.match(custom,/nativeReviewedChoiceAngle\(exerciseId,reviewedVariantById\)/);
 assert.match(test,/exactInclineFilterNeverSubstitutesLowForHighOrUnknownCustom/);
 assert.match(test,/exactAttachmentsPreserveRankedOrderAndDoNotExpandApprovedChoices/);
 assert.match(workflow,/kotlin-generated-composer-variant-facets-test\.mjs/);

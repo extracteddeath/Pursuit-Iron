@@ -13015,7 +13015,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                 }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) })] })] }), si === lastWorkRow && techTag && (_jsxs("details", {
                                         "data-last-set-technique": true, className: "wpb-last-set-technique",
                                         children: [_jsxs("summary", { children: [_jsx(Zap, { size: 13, "aria-hidden": true }),
-                                            _jsx("span", { children: `Last set · ${techTag.replace(/^\+\s*/, "")}` }),
+                                            _jsx("span", { children: `Last set · ${/partials/i.test(techTag) ? "Lengthened partials" : techTag.replace(/^\+\s*/, "")}` }),
                                             _jsx(ChevronDown, { size: 13, "aria-hidden": true })] }),
                                             _jsx("div", { className: "wpb-last-set-technique-help", children: techExplain(cell.tech) })]
                                     })), (() => {

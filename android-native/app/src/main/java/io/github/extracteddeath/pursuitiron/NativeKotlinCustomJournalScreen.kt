@@ -1857,18 +1857,31 @@ private fun NativeKotlinCustomVisitEditor(
         HorizontalDivider()
         val label=if(part==CustomWorkoutVisitPart.MAIN)
             "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
-        else "Amplifier · ${follower?.kind?.name?.replace('_',' ')}"
+        else follower?.let { AdvancedAmplifierProtocolDomain.template(it.kind).title +
+            " · follow-up" } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
-        if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null)
-            Text(
-                "Planned follow-up: ${follower.followUpReps} reps · " +
-                    (follower.followUpActiveSeconds?.let{
-                        "$it s additional active work"
-                    }?:"additional active work time not authored") +
-                    " · ${follower.followUpRestSeconds}s intra-set rest",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
+            val protocol=AdvancedAmplifierProtocolDomain.template(follower.kind)
+            Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
+                shape=MaterialTheme.shapes.medium) {
+                Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    Text("${follower.followUpReps} reps · " +
+                        "${follower.followUpRestSeconds}s short rest",
+                        style=MaterialTheme.typography.labelLarge,
+                        color=MaterialTheme.colorScheme.primary)
+                    Text(protocol.techniqueCue,
+                        style=MaterialTheme.typography.bodySmall)
+                    Text(
+                        (follower.followUpActiveSeconds?.let{
+                            "$it s planned follow-up work"
+                        }?:"Follow-up work time not authored") +
+                        " · One separately logged follow-up in this workout",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         if(saved==null && (editing || initiallyExpanded)) {
             val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
                 follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps

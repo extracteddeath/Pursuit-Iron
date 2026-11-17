@@ -22,7 +22,8 @@ assert.match(restPauseProtocol,/fun validStagedFollowUps\(/);
 assert.match(restPauseProtocol,/fun continueRestPause\(/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
 assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);
-assert.match(journal,/"follow:${set.setKey}:stage:${followKey.stage}"/);
+assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}"'),
+  "stage identity must survive Focus/All and cold resume");
 
 for(const phrase of [
   'CustomWorkoutJournalDomain.nextUnresolvedVisit(it)',

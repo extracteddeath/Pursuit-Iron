@@ -2081,7 +2081,9 @@ object StarterExerciseTranche {
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
             null,null,setOf("incline-bench"),12..20,
             "Only the unweighted controlled prone Y-raise on a verified incline bench is included. It targets upward scapular rotation/lower-trap practice, rather than blindly copying legacy side-delt credit. No dumbbell is inferred and no other raise history transfers.",
-            direct(TrainingMuscle.TRAPS)),
+            direct(TrainingMuscle.TRAPS))
+        // END REVIEWED_WEB_EXPANSION_V2
+    ) + listOf(
         // Canonical web catalog additions from requested variant tranche (2026-11-17).
         // Each remains provisional until physical gym stock and its own target load
         // are verified; no history or next-set load is copied from a sibling.
@@ -2128,7 +2130,6 @@ object StarterExerciseTranche {
             "AD press on Smith uses a gym-confirmed incline Smith station and its separately calibrated total-weight convention; no free-bar or other Smith station weight transfer.",
             direct(TrainingMuscle.FRONT_DELTS),
             indirect(TrainingMuscle.TRICEPS,"0.25"))
-        // END REVIEWED_WEB_EXPANSION_V2
     )
 
     init {

@@ -133,4 +133,41 @@ class CustomWorkoutHistoryEvidenceDomainTest {
             CustomWorkoutHistoryEvidenceDomain.project(
                 complete.copy(effectiveVisits=emptyMap())))
     }
+    @Test fun everySavedMyoStageAppearsInHistoryButNotAsAWorkingSet() {
+        val base=draft()
+        val workout=base.snapshot.copy(
+            slots=base.snapshot.slots.map { slot -> slot.copy(sets=slot.sets.map { set ->
+                set.copy(prescription=set.prescription.copy(amplifier=CustomSetAmplifier(
+                    CustomAmplifierKind.MYO_REPS,5,20,
+                    followUpActiveSeconds=80,followUpRounds=5)))
+            }) },
+            knownSetAndRestSeconds=250)
+        var session=CustomWorkoutJournalDomain.begin(
+            "workout-myo",workout,base.preparedConsentFingerprint)
+        session=accept(session,record("myo-main",0,main,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,17,1)))
+        for((index,reps) in listOf(5,4,3).withIndex()) {
+            session=accept(session,record("mini-${index+1}",session.revision,
+                CustomWorkoutVisitKey(mainKey,CustomWorkoutVisitPart.FOLLOW_UP,index+1),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,reps,1)))
+        }
+        session=accept(session,CustomWorkoutJournalOperation.Finish(
+            "myo-finished",session.revision))
+        val candidate=CustomWorkoutHistoryEvidenceDomain.project(session)
+        assertTrue(candidate.toString(),candidate is CustomHistoryEvidenceResult.Candidate)
+        val facts=(candidate as CustomHistoryEvidenceResult.Candidate).evidence.visits
+        assertEquals(4,facts.size)
+        assertEquals(listOf(1,1,2,3),facts.map{it.stage})
+        assertEquals(listOf(17,5,4,3),facts.map{it.actual?.reps})
+        assertEquals(listOf(BigDecimal("20"),BigDecimal("20"),
+            BigDecimal("20"),BigDecimal("20")),facts.map{
+                (it.prescribedLoad as DraftSetLoad.Verified).value
+        })
+        val score=KotlinHistoryPerformanceSummaryDomain.fromCustom(facts)
+        assertEquals(1,score.completedWorkingSets)
+        assertEquals(3,score.completedFollowUpVisits)
+    }
+
 }

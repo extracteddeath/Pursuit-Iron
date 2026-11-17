@@ -4,15 +4,16 @@ import {exerciseBenchLevel,exerciseAttachmentFacet,
     availableVariantFacets,matchesVariantFacets} from '../modules/exercise-variant-browse.js';
 
 const exercise=(id,name,equip=[])=>({id,name,equip,part:'chest',type:'compound'});
-for(const [name,expected] of [
-    ['Low-Incline Dumbbell Press','low-incline'],
-    ['Incline Dumbbell Press','incline'],
-    ['High-Incline Barbell Press','high-incline'],
-    ['Decline Bench Press','decline'],
-    ['Flat Bench Press','flat'],
-    ['Low-to-High Cable Fly',null],
-    ['Cable Rope Hammer Curl',null]
-])assert.equal(exerciseBenchLevel(exercise('any',name)),expected,name);
+for(const [name,expected,equipment] of [
+    ['Low-Incline Dumbbell Press','low-incline',['dumbbell','inclinebench']],
+    ['Incline Dumbbell Press','incline',['dumbbell','inclinebench']],
+    ['High-Incline Barbell Press','high-incline',['barbell','inclinebench']],
+    ['Decline Bench Press','decline',['barbell','declinebench']],
+    ['Flat Bench Press','flat',['barbell','bench']],
+    ['Low-to-High Cable Fly',null,['cable']],
+    ['Incline Push-Up',null,[]],
+    ['Cable Rope Hammer Curl',null,['cable']]
+])assert.equal(exerciseBenchLevel(exercise('any',name,equipment)),expected,name);
 
 const variants=[
     exercise('pushdown','Tricep Pushdown (Bar)',['cable']),
@@ -32,7 +33,7 @@ assert.equal(matchesVariantFacets(variants[2],{attachment:'dual-rope'}),true);
 assert.equal(matchesVariantFacets(variants[1],{attachment:'dual-rope'}),false);
 assert.equal(matchesVariantFacets(variants[3],{level:'incline'}),false);
 const facets=availableVariantFacets([
-    exercise('low','Low-Incline Barbell Press',['barbell']),...variants]);
+    exercise('low','Low-Incline Barbell Press',['barbell','inclinebench']),...variants]);
 assert.deepEqual(facets.levels,[{id:'low-incline',label:'Low incline'}]);
 assert.ok(facets.attachments.some(x=>x.id==='dual-rope'));
 assert.ok(facets.attachments.some(x=>x.id==='v-bar'));

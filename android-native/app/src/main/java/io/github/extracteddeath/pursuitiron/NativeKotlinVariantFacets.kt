@@ -1,6 +1,8 @@
 package io.github.extracteddeath.pursuitiron
 
 import io.github.extracteddeath.pursuitiron.rebuild.CatalogMovement
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinComposerSwapChoice
+import io.github.extracteddeath.pursuitiron.rebuild.StarterExerciseTranche
 import java.util.Locale
 
 /**
@@ -67,3 +69,35 @@ internal fun nativeExerciseFamilyVariants(
 internal fun nativeExerciseVariantCategory(move:CatalogMovement):String =
     nativeVariantDescription(move.variantId,move.requiredFacilityIds,
         move.attachmentId,move.role.name)
+
+/**
+ * The generated workout picker receives approved ComposerExerciseOption
+ * choices, which deliberately contain NO custom physical variant/attachment
+ * metadata. Only explicitly reviewed built-in starter records may provide
+ * display facets here. Missing custom metadata never becomes a guessed angle
+ * or a reason to broaden the preapproved replacement list.
+ */
+internal fun nativeComposerVariantMetadata(
+    choices:List<KotlinComposerSwapChoice>
+):Map<String,CatalogMovement> {
+    val permittedIds=choices.map{it.option.exerciseId}.toSet()
+    return StarterExerciseTranche.movements()
+        .filter{it.exerciseId in permittedIds}
+        .associateBy{it.exerciseId}
+}
+
+/** Filter the GIVEN reviewed, ranked candidates. Never generate, authorize,
+ * reorder, recalculate or persist a replacement in presentation code. */
+internal fun filterNativeComposerSwapVariants(
+    choices:List<KotlinComposerSwapChoice>,
+    source:Map<String,CatalogMovement>,
+    angle:NativeBenchAngle?=null,
+    attachmentId:String?=null
+):List<KotlinComposerSwapChoice> =
+    choices.filter{candidate ->
+        val movement=source[candidate.option.exerciseId]
+        (angle==null || movement?.let{
+            nativeBenchAngle(it.variantId,it.requiredFacilityIds)
+        }==angle) &&
+        (attachmentId==null || movement?.attachmentId==attachmentId)
+    }

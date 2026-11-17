@@ -208,6 +208,7 @@ jobs:
           node android-native/verification/kotlin-plan-hierarchy-test.mjs
           node android-native/verification/kotlin-exercise-library-test.mjs
           node android-native/verification/kotlin-exercise-variant-facets-test.mjs
+          node android-native/verification/kotlin-generated-composer-variant-facets-test.mjs
           node android-native/verification/kotlin-exercise-history-filters-test.mjs
           node android-native/verification/kotlin-history-dates-test.mjs
           node android-native/verification/kotlin-finished-history-deeplink-test.mjs

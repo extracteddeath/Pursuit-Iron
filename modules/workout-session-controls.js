@@ -2,7 +2,7 @@
 // saved notes, exercise order and edits; these controls dispatch callbacks only.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { Check, ChevronDown, Repeat, Plus, SlidersHorizontal } from 'lucide-react';
+import { Check, ChevronDown, Repeat, Plus } from 'lucide-react';
 import { createPortal } from '../vendor/react-dom.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { UiAction, UiField } from './ui-primitives.js';
@@ -234,7 +234,7 @@ export function WorkoutMachineVariantControl({
             'aria-haspopup':'dialog','aria-expanded':open,
             onClick:()=>{setOpen(true);setMessage('');},
             children:[
-                _jsx(SlidersHorizontal,{size:17,'aria-hidden':true}),
+                _jsx(Repeat,{size:17,'aria-hidden':true}),
                 _jsx('strong',{className:'wpb-machine-switch-name',children:
                     !gym?'Machine':instances.length?selected.label:'Machine'})
             ]}),

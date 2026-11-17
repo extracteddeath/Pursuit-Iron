@@ -1688,7 +1688,9 @@ private fun NativeKotlinCustomVisitEditor(
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onShowPlates:(String,LoadUnit,LoadBasis)->Unit,
     levelingDraft:CurrentWorkoutLevelingDraft?=null,
-    onCurrentDraftChanged:(String,String)->Unit={_,_->}
+    onCurrentDraftChanged:(String,String)->Unit={_,_->},
+    stageOrdinal:Int=1,
+    stageTotal:Int=1
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1697,19 +1699,19 @@ private fun NativeKotlinCustomVisitEditor(
     else prescription.load
     val verified=target as? DraftSetLoad.Verified
     val saved=existing?.operation as? CustomWorkoutJournalOperation.Record
-    var editing by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
+    var editing by rememberSaveable(set.setKey,part.name,stageOrdinal,existing?.appliedRevision) {
         mutableStateOf(saved==null && initiallyExpanded)
     }
     // Skips and failed attempts are durable factual observations, not
     // ordinary navigation. Confirm before writing to the owned journal.
     var pendingExceptionalOutcome by rememberSaveable(
-        set.setKey,part.name,existing?.appliedRevision
+        set.setKey,part.name,stageOrdinal,existing?.appliedRevision
     ) {mutableStateOf<KotlinJournalSetOutcome?>(null)}
     LaunchedEffect(locked) {
         if(locked)pendingExceptionalOutcome=null
     }
-    val reveal=remember(set.setKey,part){BringIntoViewRequester()}
-    LaunchedEffect(set.setKey,part,initiallyExpanded,locked,existing?.appliedRevision) {
+    val reveal=remember(set.setKey,part,stageOrdinal){BringIntoViewRequester()}
+    LaunchedEffect(set.setKey,part,stageOrdinal,initiallyExpanded,locked,existing?.appliedRevision) {
         if(initiallyExpanded && saved==null && !locked) {
             editing=true
             // A long workout can contain dozens of sets. Bring the next
@@ -1725,7 +1727,7 @@ private fun NativeKotlinCustomVisitEditor(
     else prescription.reps
     val draftIdentity=NativePendingWorkoutDraftIdentity.make(
         athleteId,workoutId,issuedGymId.orEmpty(),exerciseId,
-        set.setKey,part.name,machineInstanceId,target,expectedReps,
+        set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,
         if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
     val draftBaseline=NativePendingWorkoutDraft(
         initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
@@ -1741,7 +1743,7 @@ private fun NativeKotlinCustomVisitEditor(
     val actualReps=draftEditor.reps
     val actualRir=draftEditor.rir
     var appliedLevelVersion by rememberSaveable(
-        set.setKey,part.name,existing?.appliedRevision,machineInstanceId
+        set.setKey,part.name,stageOrdinal,existing?.appliedRevision,machineInstanceId
     ) {mutableIntStateOf(-1)}
     LaunchedEffect(levelingDraft?.version,machineInstanceId,existing?.appliedRevision) {
         val draft=levelingDraft
@@ -1753,7 +1755,7 @@ private fun NativeKotlinCustomVisitEditor(
             appliedLevelVersion=draft.version
         }
     }
-    LaunchedEffect(set.setKey,part,machineInstanceId,actualLoad,actualReps,
+    LaunchedEffect(set.setKey,part,stageOrdinal,machineInstanceId,actualLoad,actualReps,
         saved,levelingDraft?.version,appliedLevelVersion) {
         val pendingLevel=levelingDraft?.let {
             saved==null && appliedLevelVersion!=it.version
@@ -1872,7 +1874,8 @@ private fun NativeKotlinCustomVisitEditor(
         val label=if(part==CustomWorkoutVisitPart.MAIN)
             "${if(prescription.type==DraftSetType.WARMUP)"Warm-up" else "Set"} $position of $setCount"
         else follower?.let { AdvancedAmplifierProtocolDomain.template(it.kind).title +
-            " · follow-up" } ?: "Amplifier follow-up"
+            (if(stageTotal>1)" · mini $stageOrdinal of $stageTotal" else " · follow-up")
+        } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
         if(part==CustomWorkoutVisitPart.FOLLOW_UP && follower!=null) {
             val protocol=AdvancedAmplifierProtocolDomain.template(follower.kind)
@@ -1881,7 +1884,8 @@ private fun NativeKotlinCustomVisitEditor(
                 Column(Modifier.fillMaxWidth().padding(PursuitSpace.xs),
                     verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                     Text("${follower.followUpReps} reps · " +
-                        "${follower.followUpRestSeconds}s short rest",
+                        "${follower.followUpRestSeconds}s short rest" +
+                        (if(stageTotal>1)" · stage $stageOrdinal/$stageTotal" else ""),
                         style=MaterialTheme.typography.labelLarge,
                         color=MaterialTheme.colorScheme.primary)
                     Text(protocol.techniqueCue,

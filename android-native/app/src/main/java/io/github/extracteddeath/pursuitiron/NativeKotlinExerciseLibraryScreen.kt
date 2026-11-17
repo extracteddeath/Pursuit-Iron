@@ -241,7 +241,9 @@ private fun NativeKotlinExerciseLibrarySheet(
                         sibling.variantDescription+" · "+
                         (if(sibling.eligible)"Eligible at this gym"
                             else "Needs equipment or preference review"),
-                        onClick={selectedId=sibling.movement.exerciseId})
+                        onClick={selectedId=sibling.movement.exerciseId},
+                        icon={Icon(Icons.Outlined.FitnessCenter,
+                            contentDescription=null)})
                 }
                 if(related.size>6)TextButton(
                     onClick={expandVariants=!expandVariants},
@@ -281,7 +283,9 @@ private fun NativeKotlinExerciseLibrarySheet(
             "angle" -> listOf(null to "Any incline level")+NativeBenchAngle.entries.map{it.name to it.display}
             "attachment" -> listOf(null to "Any attachment")+records.mapNotNull{it.movement.attachmentId}.distinct()
                 .sortedBy{kotlinGymAttachmentLabel(it)}.map{it to kotlinGymAttachmentLabel(it)}
-            else -> NativeLibraryAvailability.entries.map{it.name to nativeLibraryWords(it)}
+            else -> NativeLibraryAvailability.entries.map{
+                it.name to nativeLibraryWords(it.name)
+            }
         }
         AlertDialog(onDismissRequest={filterPicker=null},title={Text(when(kind){
             "muscle"->"Muscle";"pattern"->"Movement pattern";"role"->"Program role"

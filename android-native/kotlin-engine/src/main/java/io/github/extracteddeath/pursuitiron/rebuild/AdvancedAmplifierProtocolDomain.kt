@@ -30,7 +30,10 @@ data class AdvancedAmplifierTemplate(
 ) {
     // A protocol description is NOT an issued workout or a logged sequence.
     val oneLine: String get() =
-        "${followUpRounds.first}–${followUpRounds.last} ${roundLabel} · " +
+        if(roundLabel=="lengthened partials")
+            "Optional final-set extension · ${followUpReps.first}–${followUpReps.last} "+
+                "partial reps · same load · no rest"
+        else "${followUpRounds.first}–${followUpRounds.last} ${roundLabel} · " +
             "${followUpReps.first}–${followUpReps.last} reps · " +
             "${intraSetRestSeconds.first}–${intraSetRestSeconds.last}s between"
 }

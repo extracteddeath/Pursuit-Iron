@@ -775,4 +775,61 @@ class CustomWorkoutExecutionDomainTest {
                 as CustomWorkoutJournalDecision.Rejected).reason)
     }
 
+
+    @Test fun mainSetTechniqueIsVisibleBeforeAndAfterMyoStagesAndNeverInventsReps() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,5,20,
+            followUpRounds=5)
+        var j=initial(slot("a",1,null,amplifier=amp))
+        val set=j.snapshot.slots.single().sets.single()
+        val planned=CustomAmplifierSetSummaryDomain.review(j,set)!!
+        assertEquals("Myo-reps",planned.title)
+        assertTrue(planned.planned.contains("5 mini-sets"))
+        assertEquals("Planned after this working set",planned.progress)
+
+        j=record(j,"a:s1",reps=16)
+        assertTrue(CustomAmplifierSetSummaryDomain.review(j,set)!!.progress
+            .contains("Next: Myo-reps · mini-set 1 of 5"))
+        j=record(j,"a:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=5)
+        assertTrue(CustomAmplifierSetSummaryDomain.review(j,set)!!.progress
+            .contains("1 of 5 logged · Next:"))
+        j=record(j,"a:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=2,reps=4)
+        j=record(j,"a:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=3,reps=3)
+        assertEquals("Sequence ended · 3 of 5 logged",
+            CustomAmplifierSetSummaryDomain.review(j,set)!!.progress)
+        assertEquals("Performed mini-sets: 5 + 4 + 3 reps",
+            CustomAmplifierSetSummaryDomain.review(j,set)!!.actuals)
+        assertEquals(3,j.effectiveVisits.keys.count{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+        val skipped=record(initial(slot("a",1,null,amplifier=amp)),
+            "a:s1",outcome=KotlinJournalSetOutcome.SKIPPED)
+        assertTrue(CustomAmplifierSetSummaryDomain.review(skipped,set)!!.progress
+            .startsWith("Not performed"))
+    }
+
+    @Test fun mainSetShowsBothRealDropWeightsAndOnlyLoggedStages() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,0,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                BigDecimal("15")),40,2,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                BigDecimal("10")))
+        var j=initial(slot("drop",1,null,amplifier=amp))
+        val set=j.snapshot.slots.single().sets.single()
+        val planned=CustomAmplifierSetSummaryDomain.review(j,set)!!
+        assertTrue(planned.planned.contains("15 lb → 10 lb"))
+        assertTrue(planned.progress.startsWith("Planned after"))
+        j=record(j,"drop:s1",reps=12)
+        assertTrue(CustomAmplifierSetSummaryDomain.review(j,set)!!.progress
+            .contains("Next: Drop set · weight drop 1 of 2"))
+        j=record(j,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=1,reps=8)
+        assertTrue(CustomAmplifierSetSummaryDomain.review(j,set)!!.progress
+            .contains("1 of 2 logged · Next: Drop set · weight drop 2 of 2"))
+        j=record(j,"drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,stage=2,reps=8)
+        assertEquals("Complete · 2 of 2 logged",
+            CustomAmplifierSetSummaryDomain.review(j,set)!!.progress)
+        assertEquals("Performed drops: 15 lb × 8 → 10 lb × 8",
+            CustomAmplifierSetSummaryDomain.review(j,set)!!.actuals)
+        assertEquals(3,j.effectiveVisits.size)
+    }
+
 }

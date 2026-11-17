@@ -233,16 +233,14 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    val rows=remember(result.timeline.athleteId,
-                        result.timeline.manifestRevision,exerciseId) {
+                    val rows=remember(result.timeline,exerciseId) {
                         exerciseHistoryRows(result.timeline,exerciseId)
                     }
                     // One factual caption per exact original working set.
                     // Corrections refresh this verified manifest revision.
                     // Invalid grouping never hides the unmodified stage rows
                     // from the All entries history view.
-                    val techniqueCaptions=remember(result.timeline.athleteId,
-                        result.timeline.manifestRevision,exerciseId) {
+                    val techniqueCaptions=remember(result.timeline,exerciseId) {
                         result.timeline.completions
                             .filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
                             .flatMap { completed ->
@@ -258,8 +256,7 @@ internal fun NativeKotlinExerciseHistorySheet(
                                 } ?:emptyList()
                             }.toMap()
                     }
-                    val sessionManifests=remember(result.timeline.athleteId,
-                        result.timeline.manifestRevision) {
+                    val sessionManifests=remember(result.timeline) {
                         result.timeline.completions.associate {
                             it.manifest.completionOrder to it.manifest
                         }

@@ -33,6 +33,8 @@ internal object NativeRestCountdownPolicy {
         if(duration<=0L || duration>MAX_SECONDS*1000L)return false
         val elapsedAge=elapsed-checkpoint.startedElapsed
         val wallAge=wall-checkpoint.startedWall
+        // Never resurrect an ancient 'Rest complete' from a past session.
+        if(elapsedAge>MAX_SECONDS*1000L+CLOCK_TOLERANCE_MILLIS)return false
         return abs(wallAge-elapsedAge)<=CLOCK_TOLERANCE_MILLIS
     }
 
@@ -57,11 +59,13 @@ internal object NativeRestCountdownPolicy {
         checkpoint:NativeRestCountdownCheckpoint,
         changeSeconds:Int,elapsed:Long,wall:Long
     ):NativeRestCountdownCheckpoint? {
-        val remaining=remaining(checkpoint,elapsed,wall) ?:return null
-        if(remaining==0L)return null
-        val next=(remaining+changeSeconds).coerceIn(0L,MAX_SECONDS.toLong())
+        if(remaining(checkpoint,elapsed,wall)==null)return null
+        val remainingMillis=(checkpoint.deadlineElapsed-elapsed).coerceAtLeast(0L)
+        if(remainingMillis==0L)return null
+        val next=(remainingMillis+changeSeconds*1000L)
+            .coerceIn(0L,MAX_SECONDS*1000L)
         if(next==0L)return null
-        val nextDeadline=elapsed+next*1000L
+        val nextDeadline=elapsed+next
         val total=((nextDeadline-checkpoint.startedElapsed)+999L)/1000L
         if(total !in 1..MAX_SECONDS)return null
         return checkpoint.copy(deadlineElapsed=nextDeadline,activeSeconds=total.toInt())

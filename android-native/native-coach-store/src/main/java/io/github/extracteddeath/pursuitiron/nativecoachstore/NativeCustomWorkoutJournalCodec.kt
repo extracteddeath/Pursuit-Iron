@@ -25,7 +25,7 @@ internal data class NativeCustomWorkoutJournalRecord(
 
 internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
-    private const val VERSION=4
+    private const val VERSION=5
     const val MAX_BYTES=2_000_000
     private const val MAX_RECEIPTS=2048
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -77,6 +77,7 @@ internal object NativeCustomWorkoutJournalCodec {
                 writeLong(event.expectedRevision)
                 writeUTF(event.visit.setKey)
                 writeUTF(event.visit.part.name)
+                if(version>=5)writeInt(event.visit.stage)
                 writeUTF(event.outcome.name)
                 performed(event.performed,version)
                 textOptional(event.correctsEventId)
@@ -121,6 +122,9 @@ internal object NativeCustomWorkoutJournalCodec {
                 val part=CustomWorkoutVisitPart.entries.singleOrNull{
                     it.name==partName
                 }?:throw IOException("invalid workout visit part")
+                val stage=if(version>=5)readInt() else 1
+                if(stage !in 1..5 || part==CustomWorkoutVisitPart.MAIN && stage!=1)
+                    throw IOException("invalid follow-up stage")
                 val outcomeName=readUTF()
                 val outcome=KotlinJournalSetOutcome.entries.singleOrNull{
                     it.name==outcomeName
@@ -128,7 +132,7 @@ internal object NativeCustomWorkoutJournalCodec {
                 val observed=performed(version)
                 val corrected=textOptional()
                 CustomWorkoutJournalOperation.Record(eventId,rev,
-                    CustomWorkoutVisitKey(setKey,part),outcome,observed,corrected)
+                    CustomWorkoutVisitKey(setKey,part,stage),outcome,observed,corrected)
             }
             2->CustomWorkoutJournalOperation.Finish(readUTF(),readLong())
             3->{
@@ -213,8 +217,16 @@ internal object NativeCustomWorkoutJournalCodec {
             (it.operation as? CustomWorkoutJournalOperation.Record)
                 ?.performed?.machineInstanceId!=null
         }
-        val version=if(machineTagged) VERSION else if(notes) 3
-            else if(swapped) 2 else 1
+        val stageTagged=state.originalSnapshot.slots.any{slot->slot.sets.any{
+            it.prescription.amplifier?.followUpRounds?.let{rounds->rounds>1}==true
+        }} || state.snapshot.slots.any{slot->slot.sets.any{
+            it.prescription.amplifier?.followUpRounds?.let{rounds->rounds>1}==true
+        }} || state.receipts.any {
+            (it.operation as? CustomWorkoutJournalOperation.Record)
+                ?.visit?.stage?.let { stage->stage>1 }==true
+        }
+        val version=if(stageTagged) VERSION else if(machineTagged) 4
+            else if(notes) 3 else if(swapped) 2 else 1
         val snapshot=NativeKotlinCustomWorkoutSnapshotCodec.encode(state.snapshot)
         val original=if(swapped)
             NativeKotlinCustomWorkoutSnapshotCodec.encode(state.originalSnapshot)

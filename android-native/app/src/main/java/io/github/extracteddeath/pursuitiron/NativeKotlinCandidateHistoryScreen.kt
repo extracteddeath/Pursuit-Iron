@@ -739,12 +739,14 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
     onChanged:()->Unit
 ) {
     KotlinHistoryActualRow(fact.exerciseId,
-        if(fact.part==CustomWorkoutVisitPart.FOLLOW_UP)"Amplifier follow-up" else
+        if(fact.part==CustomWorkoutVisitPart.FOLLOW_UP)
+            (if(fact.amplifierKind==CustomAmplifierKind.MYO_REPS)
+                "Myo-reps · mini ${fact.stage}" else "Amplifier follow-up") else
             fact.setType.name.lowercase().replaceFirstChar{it.uppercase()},
         fact.prescribedLoad,fact.prescribedReps,fact.prescribedRir,
         fact.outcome,fact.actual)
     var editing by remember(entry.manifest.workoutId,fact.setKey,
-        fact.part,fact.effectiveEventId) {mutableStateOf(false)}
+        fact.part,fact.stage,fact.effectiveEventId) {mutableStateOf(false)}
     var submitting by remember {mutableStateOf(false)}
     var error by remember {mutableStateOf<String?>(null)}
     var outcome by remember(entry.manifest.workoutId,fact.effectiveEventId) {
@@ -809,7 +811,8 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                             ?.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
                             ?.singleOrNull{it.manifest.workoutId==entry.manifest.workoutId}
                         val currentFact=current?.evidence?.visits?.singleOrNull {
-                            it.setKey==fact.setKey && it.part==fact.part
+                            it.setKey==fact.setKey && it.part==fact.part &&
+                                it.stage==fact.stage
                         }
                         val correction=host.readFinishedCustomCorrections(
                             entry.manifest.workoutId)
@@ -825,7 +828,7 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
                                 "custom-correction-"+java.util.UUID.randomUUID()
                                     .toString().replace("-",""),
                                 correction.state.correctionRevision,
-                                CustomWorkoutVisitKey(fact.setKey,fact.part),
+                                CustomWorkoutVisitKey(fact.setKey,fact.part,fact.stage),
                                 fact.effectiveEventId,selectedOutcome,actual))
                         }.getOrNull()
                     }

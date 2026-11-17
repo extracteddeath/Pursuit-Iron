@@ -255,4 +255,54 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             NativeKotlinCustomWorkoutSnapshotCodec.decode(legacyBytes)))
     }
 
+    @Test fun finalWorkingSetPartialsEncodeIndependentlyAndBadPlacementFailsClosed() {
+        val before=fixture()
+        val oldBytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(before)
+        val partial=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,
+            3,0,followUpActiveSeconds=15)
+        // Final working set belongs to curl-2; earlier warmup and other
+        // exercise drop set remain completely unchanged.
+        val updated=before.copy(
+            slots=before.slots.map{slot->
+                if(slot.slotId!="curl-2")slot
+                else slot.copy(sets=slot.sets.map{set->
+                    set.copy(prescription=set.prescription.copy(amplifier=partial))
+                })
+            },knownSetAndRestSeconds=before.knownSetAndRestSeconds-20+15)
+        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(updated)
+        assertEquals(3,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        assertEquals(updated,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
+        assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
+        val slot=updated.slots.last()
+        val framed=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(slot)
+        assertEquals(slot,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(framed))
+        val notFinal=updated.copy(
+            slots=updated.slots.map{row->
+                if(row.slotId!="raise-1")row
+                else row.copy(sets=row.sets.mapIndexed{index,set->
+                    if(index==0)set else set.copy(prescription=
+                        set.prescription.copy(amplifier=null))
+                }.mapIndexed{index,set->
+                    if(index==0)set.copy(prescription=set.prescription.copy(
+                        type=DraftSetType.WORKING,amplifier=partial))
+                    else set
+                })
+            },knownSetAndRestSeconds=updated.knownSetAndRestSeconds+15-15)
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(notFinal)
+        }
+        val invalidProtocol=updated.copy(
+            slots=updated.slots.map{row->row.copy(sets=row.sets.map{set->
+                if(set.prescription.amplifier!=partial)set
+                else set.copy(prescription=set.prescription.copy(
+                    amplifier=partial.copy(followUpRounds=2)))
+            })},knownSetAndRestSeconds=updated.knownSetAndRestSeconds)
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(invalidProtocol)
+        }
+        assertArrayEquals(oldBytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+            NativeKotlinCustomWorkoutSnapshotCodec.decode(oldBytes)))
+    }
+
 }

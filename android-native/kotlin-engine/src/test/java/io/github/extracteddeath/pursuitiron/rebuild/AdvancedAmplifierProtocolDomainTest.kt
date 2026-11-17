@@ -58,7 +58,7 @@ class AdvancedAmplifierProtocolDomainTest {
         assertFalse(policy.validStagedFollowUps(
             CustomSetAmplifier(CustomAmplifierKind.DROP_SET,3,20,
                 followUpRounds=2)))
-        assertFalse(policy.validStagedFollowUps(
+        assertTrue(policy.validStagedFollowUps(
             CustomSetAmplifier(CustomAmplifierKind.CLUSTER,3,20,
                 followUpRounds=2)))
         assertTrue(policy.continueRestPause(3,listOf(3),3))
@@ -120,4 +120,38 @@ class AdvancedAmplifierProtocolDomainTest {
         assertFalse(eligible(CustomAmplifierKind.DROP_SET, TrainingPhase.STRENGTH))
         assertFalse(eligible(CustomAmplifierKind.CLUSTER, TrainingPhase.HYPERTROPHY))
     }
+    @Test fun plannedClustersUseTwoToFiveSameLoadQualityRepStagesNotFailureSets() {
+        val policy=AdvancedAmplifierProtocolDomain
+        fun cluster(reps:Int=2,rest:Int=30,rounds:Int=3,
+            load:DraftSetLoad?=null)=CustomSetAmplifier(CustomAmplifierKind.CLUSTER,
+            reps,rest,followUpLoad=load,followUpRounds=rounds)
+        for(rounds in 2..5) {
+            assertTrue(policy.validStagedFollowUps(cluster(rounds=rounds)))
+        }
+        assertTrue(policy.validStagedFollowUps(cluster(rounds=1)))
+        for(rounds in listOf(0,6)) {
+            assertFalse(policy.validStagedFollowUps(cluster(rounds=rounds)))
+        }
+        assertFalse(policy.validStagedFollowUps(cluster(reps=0)))
+        assertFalse(policy.validStagedFollowUps(cluster(reps=5)))
+        assertFalse(policy.validStagedFollowUps(cluster(rest=14)))
+        assertFalse(policy.validStagedFollowUps(cluster(rest=46)))
+        assertFalse(policy.validStagedFollowUps(cluster(
+            load=DraftSetLoad.ExplicitBodyweight)))
+        assertTrue(policy.continueCluster(2,listOf(2,2),4))
+        assertFalse(policy.continueCluster(2,listOf(2,2,2,2),4))
+        assertFalse(policy.continueCluster(2,listOf(2,1),4))
+        assertFalse(policy.continueCluster(2,listOf(2,3),4))
+        assertFalse(policy.continueCluster(0,listOf(1),3))
+        assertFalse(policy.continueCluster(2,emptyList(),3))
+        val staged=cluster(rounds=4)
+        assertEquals("Cluster sets · cluster 2 of 4",policy.stageLabel(staged,2))
+        assertTrue(policy.stageReviewCue(staged).contains("quality-rep"))
+        assertTrue(policy.stageEarlyStopDescription(staged.kind).contains(
+            "no later clusters"))
+        assertFalse(policy.recommendedAsHypertrophyFinisher(
+            CustomAmplifierKind.CLUSTER,TrainingPhase.HYPERTROPHY,
+            true,true,false,true,false))
+    }
+
 }

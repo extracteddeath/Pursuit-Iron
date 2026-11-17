@@ -360,6 +360,11 @@ internal fun NativeKotlinProfileScreen(
         OutlinedButton(onClick=onAppearance,modifier=Modifier.fillMaxWidth()) {
             Text("Appearance · ${PursuitThemes.resolve(themeId).name}")
         }
+        NativeKotlinTrainingArchivePanel(
+            host=host,
+            athleteId=current?.athleteProfileId,
+            historyRevision=timeline?.manifestRevision
+        )
         Text("This is a local profile, not an online account. Display-name edits never change your athlete ID, saved training or exercise history.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)

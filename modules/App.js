@@ -1,4 +1,6 @@
 import { GymLoadFields } from './gym-load-fields.js';
+import { exerciseBenchLevel, exerciseAttachmentFacet, matchesVariantFacets } from './exercise-variant-browse.js';
+import { ExercisePickerSheet as VariantExercisePickerSheet, ExerciseVariantFacetFilters } from './exercise-picker-sheet.js';
 import { PlateCalcSheet } from './loading-calculator.js';
 import { HistoryEditSheet } from './history-editor.js';
 import { BackupRestorePanel } from './backup-restore-panel.js';
@@ -84,7 +86,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1012';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1013';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -3050,6 +3052,9 @@ const SUPPORT_BLURB = "This app is built by a tiny independent team and is compl
    generic bar pushdown and Straight-Bar Pushdown), while `visual` guarantees that different setups
    never silently fall back to the same generic picture. */
 const VARIANT_PRESENTATION = {
+    // Anterior-delt press: a near-upright seat, NOT interchangeable with a chest incline press.
+    "ad-press-barbell": { key: "ad-press-bar", name: "AD Press (Barbell)", setup: "Barbell + near-upright adjustable bench", detail: "Barbell and adjustable backrest · own load history", visual: "ad-press-bar", order: 10 },
+    "ad-press-smith": { key: "ad-press-smith", name: "AD Press (Smith Machine)", setup: "Smith + near-upright adjustable bench", detail: "Smith machine and adjustable backrest · own load history", visual: "ad-press-smith", order: 20 },
     // Triceps pushdowns
     "pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40 },
     "straight-bar-pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40, preferred: true },
@@ -3061,6 +3066,7 @@ const VARIANT_PRESENTATION = {
     "underhand-pushdown": { key: "pushdown-underhand", name: "Reverse-Grip Pushdown", setup: "Underhand bar", detail: "Straight bar · underhand grip", visual: "underhand-bar", order: 70 },
     // Triceps overhead extensions
     "oh-cable-ext": { key: "ohext-rope", name: "Rope Overhead Cable Extension", setup: "Rope attachment", detail: "High cable · rope attachment", visual: "overhead-rope", order: 10 },
+    "leaning-cable-ohext": { key: "ohext-leaning", name: "Leaning Cable Overhead Triceps Extension", setup: "Cable attachment", detail: "Leaning overhead cable setup · verify actual handle", visual: "overhead-lean", order: 15 },
     "db-oh-ext": { key: "ohext-db", name: "DB Overhead Extension", setup: "Single dumbbell", detail: "Single dumbbell", visual: "overhead-dumbbell", order: 20 },
     "ez-oh-ext": { key: "ohext-ez", name: "EZ-Bar Overhead Extension", setup: "EZ curl bar", detail: "EZ curl bar", visual: "overhead-ez", order: 30 },
     "bands-tricep-ext": { key: "ohext-band", name: "Banded Overhead Tricep Extension", setup: "Resistance band", detail: "Anchored resistance band", visual: "overhead-band", order: 40 },
@@ -3092,6 +3098,7 @@ const VARIANT_PRESENTATION = {
     "prone-rear-delt-raise": { key: "rear-prone-bodyweight", name: "Prone Rear Delt Raise", setup: "Bodyweight", detail: "Prone on the floor · unloaded arms", visual: "rear-prone-bodyweight", order: 40 },
     // Chest flyes
     "db-fly": { key: "chest-db", name: "Dumbbell Fly", setup: "Dumbbells + bench", detail: "Dumbbells · flat bench", visual: "chest-db", order: 10 },
+    "bottom-half-db-fly": { key: "chest-db-bottom", name: "Bottom-Half Dumbbell Fly", setup: "Dumbbells + flat bench", detail: "Bottom-half partial ROM · separate load history", visual: "chest-db-partial", order: 12 },
     "cable-fly": { key: "chest-cable", name: "Cable Fly", setup: "Dual cable", detail: "Dual cable · standing fly", visual: "chest-cable", order: 20 },
     "pec-deck": { key: "chest-machine", name: "Pec Deck", setup: "Pec-deck machine", detail: "Seated pec-deck machine", visual: "chest-machine", order: 30 },
     // Glute kickbacks
@@ -3125,6 +3132,8 @@ function movementFamilyOptions(ex, equipSet = null, banned = []) {
 }
 function movementFamilyTitle(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "AD Press setups";
     if (family === "tri-pushdown")
         return "Attachment options";
     if (family === "tri-ohext")
@@ -3143,8 +3152,10 @@ function movementFamilyTitle(ex) {
 }
 function movementFamilyDescription(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "Compare barbell and Smith AD Press setups; each uses its own load and exercise history.";
     if (family === "tri-ohext")
-        return "Same overhead-extension pattern with a rope cable, dumbbell, EZ-bar, or resistance band.";
+        return "Compare leaning cable, rope cable, dumbbell, EZ-bar and band overhead extensions; do not reuse a different variant's weight.";
     if (family === "tri-pushdown")
         return "Same pushdown pattern with a different cable attachment or single-arm setup.";
     if (family === "tri-kickback")
@@ -3154,7 +3165,7 @@ function movementFamilyDescription(ex) {
     if (family === "rear-delt-fly")
         return "Compare standing, seated, chest-supported, single-arm cable, dual-cable, and machine rear-delt fly setups.";
     if (family === "chest-fly")
-        return "Compare dumbbell-and-bench, standing cable, and pec-deck chest fly setups.";
+        return "Compare full-range and bottom-half dumbbell flyes, standing cable, and pec-deck setups; use separate targets.";
     if (family === "glute-kickback")
         return "Compare an ankle-strap cable kickback with the dedicated kickback machine.";
     return "Same movement, different attachment or setup. Choose a variant to view it.";
@@ -3225,12 +3236,18 @@ function AttachmentGlyph({ ex, size = 46 }) {
             const rear = visual.startsWith("rear"), sh = rear && seated ? "M27 14l10 13M31 20L12 24M31 20l21-7" : `M32 14v18M32 20L13 23${single ? "" : "M32 20l19 3"}`;
             return _jsxs("g", { children: [_jsx("circle", { cx: rear && seated ? "25" : "32", cy: "10", r: "4", ...S }), _jsx("path", { d: sh, ...S }), _jsx("path", { d: seated ? "M24 32h17M24 32l-5 7v8M41 32l5 7v8M20 34h25M23 34v13M42 34v13" : "M32 32l-7 15M32 32l7 15", ...(seated ? faint : S) }), cable ? _jsxs("g", { children: [_jsx("rect", { x: "54", y: "33", width: "6", height: "14", rx: "2", ...faint }), _jsx("path", { d: visual === "lateral-behind" ? "M57 37L13 23M27 29l10-3" : "M57 37L13 23", ...S }), visual === "lateral-cuff" ? _jsx("rect", { x: "10", y: "20", width: "6", height: "6", rx: "2", ...S }) : _jsx("path", { d: "M10 22h6", ...S, strokeWidth: "3.4" })] }) : band ? _jsx("path", { d: "M13 23L25 47M51 23L39 47", ...S, strokeWidth: "1.8" }) : _jsx("path", { d: `M8 23h10M10 19v8M16 19v8${single ? "" : "M46 23h10M48 19v8M54 19v8"}`, ...S, strokeWidth: "2.3" })] });
         }
+        if (visual === "ad-press-bar")
+            return _jsxs("g", { children: [_jsx("path", { d: "M20 46l12-28M18 44h23", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6M10 14h44M10 10v8M54 10v8", ...S })] });
+        if (visual === "ad-press-smith")
+            return _jsxs("g", { children: [_jsx("path", { d: "M10 6v42M54 6v42M10 15h44", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M20 46l12-28M18 44h23M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6", ...S }), _jsx("rect", { x: "8", y: "13", width: "5", height: "5", rx: "1", ...S }), _jsx("rect", { x: "51", y: "13", width: "5", height: "5", rx: "1", ...S })] });
         if (visual === "overhead-dumbbell")
             return _jsxs("g", { children: [_jsx("path", { d: "M20 26h24", ...S, strokeWidth: "4" }), _jsx("path", { d: "M14 17v18M19 19v14M45 19v14M50 17v18", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M11 21v10M53 21v10", ...faint })] });
         if (visual === "overhead-ez" || visual === "ez-bar")
             return _jsxs("g", { children: [_jsx("path", { d: "M8 26h10l6-6 8 12 8-12 6 6h10", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M8 17v18M12 20v12M52 20v12M56 17v18", ...S })] });
         if (visual === "overhead-band")
             return _jsxs("g", { children: [_jsx("path", { d: "M22 8c-7 7-10 17-8 27 1 6 5 10 10 10 5 0 8-4 8-9V19c0-7 3-11 8-11 5 0 9 5 10 13", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M20 7h24", ...faint }), _jsx("circle", { cx: "22", cy: "8", r: "3", ...F }), _jsx("circle", { cx: "44", cy: "8", r: "3", ...F })] });
+        if (visual === "overhead-lean")
+            return _jsxs("g", { children: [_jsx("rect", { x: "5", y: "8", width: "7", height: "34", rx: "2", ...faint }), _jsx("circle", { cx: "30", cy: "11", r: "4", ...S }), _jsx("path", { d: "M30 15l10 14M40 29l-6 18M40 29l15 14M28 17l-8 8M20 25l-8-5", ...S }), _jsx("path", { d: "M9 12l11 13M42 28l-4 3", ...faint })] });
         if (visual === "overhead-rope" || cableRope)
             return _jsxs("g", { children: [_jsx("path", { d: "M13 5v42", ...faint }), _jsx("rect", { x: "8", y: "5", width: "10", height: "18", rx: "3", ...S, opacity: ".65" }), _jsx("circle", { cx: "27", cy: "10", r: "4", ...S }), _jsx("path", { d: "M18 12h5M30 13l5 8v5", ...S }), _jsx("path", { d: "M35 26v5M35 31l-9 11M35 31l9 11", ...S, strokeWidth: "3.4" }), _jsx("circle", { cx: "24", cy: "44", r: "3.4", ...F }), _jsx("circle", { cx: "46", cy: "44", r: "3.4", ...F })] });
         if (visual === "rope")
@@ -3269,6 +3286,8 @@ function AttachmentGlyph({ ex, size = 46 }) {
         if (visual === "rear-machine")
             return _jsxs("g", { children: [_jsx("path", { d: "M23 44h18M25 29h14M27 29v15M37 29v15", ...faint }), _jsx("circle", { cx: "32", cy: "10", r: "4", ...S }), _jsx("path", { d: "M32 14v15M32 19L15 21M32 19l17 2", ...S }), _jsx("path", { d: "M12 12v18M52 12v18M12 17l3 4M52 17l-3 4", ...faint }), _jsx("circle", { cx: "15", cy: "21", r: "3", ...S }), _jsx("circle", { cx: "49", cy: "21", r: "3", ...S })] });
         // Chest fly scenes.
+        if (visual === "chest-db-partial")
+            return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L20 22M35 29l15-7", ...S }), _jsx("path", { d: "M11 22h10M13 19v6M19 19v6M49 22h10M51 19v6M57 19v6", ...S, strokeWidth: "2.2" }), _jsx("path", { d: "M17 13l3 3M47 16l3-3", ...faint, strokeDasharray: "2 3" })] });
         if (visual === "chest-db")
             return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L16 14M35 29l19-15", ...S }), _jsx("path", { d: "M11 14h10M13 11v6M19 11v6M49 14h10M51 11v6M57 11v6", ...S, strokeWidth: "2.2" })] });
         if (visual === "chest-cable")
@@ -8453,14 +8472,29 @@ function SessionExerciseListSheet({ data, exIdx, onJump, onMove, onSkip, onAdd, 
                                     }, "aria-label": `Reorder ${ex?.name || "exercise"}. Drag, or use arrow keys.`, className: "pressable hit", style: { ...iconBtn(), width: 44, height: 44, flexShrink: 0, cursor: "grab", touchAction: "none" }, children: _jsx(GripVertical, { size: 17 }) }), _jsxs("button", { onClick: () => { onJump(i); onClose(); }, className: "pressable", "aria-label": `Jump to ${ex?.name || "exercise"}, ${done} of ${work.length} sets done`, "aria-current": cur ? "true" : undefined, style: { flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, color: C.text }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsx("span", { className: "mono wpb-type-caption-faint", style: { fontWeight: 700, flexShrink: 0 }, children: i + 1 }), _jsx("span", { className: "wpb-s956-fontsize-15 wpb-s956-fontweight-600 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: ex?.name || "Exercise" }), linked && _jsx(Layers, { size: 11, color: C.accentInk, className: "wpb-icon-no-shrink" })] }), _jsxs("div", { style: { fontSize: 11, color: done >= work.length && work.length > 0 ? C.accentInk : C.muted, marginTop: 2 }, children: [done, "/", work.length, " sets", ex ? ` · ${PART_LABEL[ex.part]}` : ""] })] }), _jsx("button", { onClick: () => onSkip(i), "aria-label": `Skip ${ex?.name || "exercise"} today`, className: "pressable hit", style: { ...iconBtn(), width: 44, height: 44 }, children: _jsx(X, { size: 15 }) })] }, i));
                     }) }), _jsx("div", { className: "wpb-s960-padding-10px-18px-0", children: _jsxs("button", { onClick: onAdd, className: "pressable", style: { width: "100%", padding: "12px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Plus, { size: 16 }), " Add exercise"] }) })] }) }));
 }
-function ExercisePickerSheet({ onPick, onClose, banned = [], title = "Add exercise" }) {
-    const [q, setQ] = useState("");
-    const [part, setPart] = useState("all");
-    const list = useMemo(() => {
-        const ql = q.trim().toLowerCase();
-        return EXERCISES.filter(e => (part === "all" || e.part === part) && (!ql || exMatches(e, ql))).slice(0, 100);
-    }, [q, part]);
-    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-b961-overlay-06", children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "88%", display: "flex", flexDirection: "column", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-justifycontent-space-between wpb-s956-marginbottom-8", children: [_jsx("div", { className: "wpb-s956-fontsize-18 wpb-s956-fontweight-700", children: title }), _jsx("button", { className: "pressable hit", onClick: onClose, "aria-label": "Close", style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Search, { size: 16, color: C.faint }), _jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: `Search ${EXERCISES.length} exercises…`, autoFocus: true, style: { flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 15 } })] }), _jsx("div", { className: "wpb-hscroll wpb-b964-layout-10", children: ["all", ...PART_ORDER].map(p => (_jsx("button", { onClick: () => setPart(p), className: "pressable", style: { flexShrink: 0, padding: "6px 12px", borderRadius: 999, border: `1px solid ${part === p ? C.accent : C.border}`, background: part === p ? C.accent : C.card, color: part === p ? C.accentText : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize", whiteSpace: "nowrap" }, children: p === "all" ? "All" : PART_LABEL[p] }, p))) }), _jsxs("div", { className: "wpb-scroll wpb-b965-layout-09", children: [list.map(e => (_jsxs("button", { onClick: () => onPick(e.id), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", marginBottom: 6, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", textAlign: "left", opacity: banned.includes(e.id) ? 0.5 : 1 }, children: [_jsxs("div", { className: "wpb-layout-flex-one", children: [_jsxs("div", { className: "wpb-type-value", children: [e.name, banned.includes(e.id) ? " · banned" : ""] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, textTransform: "capitalize" }, children: [PART_LABEL[e.part], " \u00B7 ", e.type] })] }), _jsx(Plus, { size: 16, color: C.accentInk })] }, e.id))), list.length === 0 && _jsx("div", { style: { textAlign: "center", color: C.muted, fontSize: 13, padding: "30px 0" }, children: "No exercises match." })] })] }) }));
+
+function variantSearchMatches(ex, input) {
+    const terms = String(input || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return true;
+    const label = [
+        ex.id, ex.name, variantDisplayName(ex), friendlyEquipment(ex),
+        exerciseBenchLevel(ex), exerciseAttachmentFacet(ex), ex.part, ex.type
+    ].filter(Boolean).join(" ").replace(/[_-]/g, " ").toLowerCase();
+    return terms.every(term => label.includes(term)) ||
+        exMatches(ex, String(input).trim().toLowerCase());
+}
+
+
+function ExercisePickerSheet(props) {
+    return _jsx(VariantExercisePickerSheet, { ...props,
+        exercises: EXERCISES,
+        parts: PART_ORDER,
+        partLabels: PART_LABEL,
+        displayName: variantDisplayName,
+        equipmentDescription: friendlyEquipment,
+        searchable: variantSearchMatches,
+        sheetDragRef
+    });
 }
 function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, day, sessionExerciseIds = null, scopeMode = "workout" }) {
     /* The same starved-region set the ranking used, so the badge and the order tell one story: an item
@@ -8471,13 +8505,18 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
     const [pending, setPending] = useState(null); // chosen replacement id awaiting scope choice
     const [weekOpen, setWeekOpen] = useState(false);
     const [query, setQuery] = useState("");
+    const [level, setLevel] = useState("all");
+    const [attachment, setAttachment] = useState("all");
     const peers = (sessionExerciseIds || day?.exercises || []).filter(id => id !== ex.id).map(id => EX_BY_ID[id]);
     const overlaps = useMemo(() => new Map(alts.map(a => [a.id, swapOverlapNames(a, peers, program, day)])), [alts, program, day, sessionExerciseIds]);
     const samePart = (a) => a.part === ex.part || secondaryOf(a).some(([pp]) => pp === ex.part);
-    const filtered = query.trim() === "" ? alts : alts.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+    // Start from the already-ranked/verified exercise pool; facet selection
+    // never widens it to unavailable gym equipment or a different machine ID.
+    const filtered = alts.filter(a => matchesVariantFacets(a, { level, attachment })
+        && variantSearchMatches(a, query));
     const familyIds = new Set(movementFamilyOptions(ex).map(a => a.id));
-    const familyAlts = query.trim() ? [] : alts.filter(a => familyIds.has(a.id));
-    const generalAlts = familyAlts.length ? filtered.filter(a => !familyIds.has(a.id)) : filtered;
+    const familyAlts = filtered.filter(a => familyIds.has(a.id));
+    const generalAlts = filtered.filter(a => !familyIds.has(a.id));
     const choose = (id) => scopeMode === "program" ? onPick(id, "program") : setPending(id);
     return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-b961-overlay-07", children: _jsx("div", { ref: sheetDragRef, onClick: (e) => e.stopPropagation(), style: { width: "100%", height: "min(82vh, 720px)", minHeight: 0, background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 16px calc(env(safe-area-inset-bottom) + 16px)", display: "flex", flexDirection: "column", overflow: "hidden", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: pending ? (() => {
                 const nx = EX_BY_ID[pending];
@@ -8492,7 +8531,9 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
                                     color: C.text,
                                     boxSizing: "border-box"
                                 } }), query && _jsx("button", { "aria-label": "Clear replacement search", onClick: () => setQuery(""), className: "pressable hit", style: { position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 30, height: 30, borderRadius: 999,
-                                    border: "none", background: "transparent", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 14 }) })] }), _jsx("div", { style: { fontSize: 12, color: C.faint, lineHeight: 1.45, marginBottom: 10, padding: "0 2px" }, children: "Ranked for your equipment, movement role, and this program's weekly muscle coverage." }), _jsxs("div", { className: "wpb-scroll wpb-swap-results wpb-b976-swap-results", "data-swap-results": true, children: [familyAlts.length > 0 && (_jsxs("div", { className: "wpb-s960-margin-6px-0-12px", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: movementFamilyTitle(ex) }), _jsx("div", { className: "pi-t-explain", children: movementFamilyDescription(ex) }), _jsx("div", { className: "wpb-s956-display-grid wpb-s956-gap-7", children: familyAlts.map(a => (_jsxs("button", { className: "pressable", "aria-label": `Swap to ${variantDisplayName(a)}`, onClick: () => choose(a.id), style: { width: "100%", minHeight: 64, display: "grid", gridTemplateColumns: "56px minmax(0,1fr) 20px", alignItems: "center", gap: 9, padding: "7px 9px 7px 7px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, textAlign: "left", cursor: "pointer" }, children: [_jsx("span", { style: { width: 56, height: 50, display: "grid", placeItems: "center", borderRadius: 10, background: C.bg2, color: C.accentInk }, children: _jsx(AttachmentGlyph, { ex: a, size: 42 }) }), _jsxs("span", { className: "wpb-s956-minwidth-0", children: [_jsx("span", { className: "wpb-s956-display-block wpb-s960-fontsize-12-5px wpb-s956-fontweight-700 wpb-s960-lineheight-1-25", children: variantDisplayName(a) }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.faint, marginTop: 2 }, children: friendlyEquipment(a) })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-b976-swap-chevron" })] }, a.id))) })] })), program && Array.isArray(program.days) && program.days.length > 1 && (_jsxs("div", { style: { marginTop: 8, marginBottom: 4, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setWeekOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", background: C.card, border: "none", cursor: "pointer", textAlign: "left" }, children: [_jsx(Calendar, { size: 14, color: C.accentInk }), _jsx("span", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: C.text }, children: "This week's training" }), _jsxs("span", { className: "wpb-type-micro-faint", children: ["see what else hits ", PART_LABEL[ex.part]] }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { transform: weekOpen ? "rotate(180deg)" : "none", flexShrink: 0 } })] }), weekOpen && (_jsxs("div", { style: { padding: "4px 13px 12px", background: C.card }, children: [program.days.map((d, di) => {
+                                    border: "none", background: "transparent", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 14 }) })] }), _jsx(ExerciseVariantFacetFilters, { candidates: alts, level, onLevel: setLevel,
+                attachment, onAttachment: setAttachment }),
+                _jsx("div", { style: { fontSize: 12, color: C.faint, lineHeight: 1.45, marginBottom: 10, padding: "0 2px" }, children: "Ranked for your equipment, movement role, and this program's weekly muscle coverage. Attachment, incline and physical machines are not interchangeable loads." }), _jsxs("div", { className: "wpb-scroll wpb-swap-results wpb-b976-swap-results", "data-swap-results": true, children: [familyAlts.length > 0 && (_jsxs("div", { className: "wpb-s960-margin-6px-0-12px", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: movementFamilyTitle(ex) }), _jsx("div", { className: "pi-t-explain", children: movementFamilyDescription(ex) }), _jsx("div", { className: "wpb-s956-display-grid wpb-s956-gap-7", children: familyAlts.map(a => (_jsxs("button", { className: "pressable", "aria-label": `Swap to ${variantDisplayName(a)}`, onClick: () => choose(a.id), style: { width: "100%", minHeight: 64, display: "grid", gridTemplateColumns: "56px minmax(0,1fr) 20px", alignItems: "center", gap: 9, padding: "7px 9px 7px 7px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, textAlign: "left", cursor: "pointer" }, children: [_jsx("span", { style: { width: 56, height: 50, display: "grid", placeItems: "center", borderRadius: 10, background: C.bg2, color: C.accentInk }, children: _jsx(AttachmentGlyph, { ex: a, size: 42 }) }), _jsxs("span", { className: "wpb-s956-minwidth-0", children: [_jsx("span", { className: "wpb-s956-display-block wpb-s960-fontsize-12-5px wpb-s956-fontweight-700 wpb-s960-lineheight-1-25", children: variantDisplayName(a) }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.faint, marginTop: 2 }, children: friendlyEquipment(a) })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-b976-swap-chevron" })] }, a.id))) })] })), program && Array.isArray(program.days) && program.days.length > 1 && (_jsxs("div", { style: { marginTop: 8, marginBottom: 4, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setWeekOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", background: C.card, border: "none", cursor: "pointer", textAlign: "left" }, children: [_jsx(Calendar, { size: 14, color: C.accentInk }), _jsx("span", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: C.text }, children: "This week's training" }), _jsxs("span", { className: "wpb-type-micro-faint", children: ["see what else hits ", PART_LABEL[ex.part]] }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { transform: weekOpen ? "rotate(180deg)" : "none", flexShrink: 0 } })] }), weekOpen && (_jsxs("div", { style: { padding: "4px 13px 12px", background: C.card }, children: [program.days.map((d, di) => {
                                                 const isToday = d.id === day?.id;
                                                 return (_jsxs("div", { style: { padding: "9px 0", borderTop: di === 0 ? "none" : `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: isToday ? C.accentInk : C.muted, marginBottom: 4 }, children: [d.label, isToday ? " · today" : ""] }), _jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-4", children: d.exercises.map((id, xi) => {
                                                                 const e2 = EX_BY_ID[id];

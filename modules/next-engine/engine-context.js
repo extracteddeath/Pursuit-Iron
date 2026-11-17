@@ -1,4 +1,4 @@
-import { createExerciseCatalog } from './exercise-db.js';
+import { createExerciseCatalog, createAutomaticExerciseCatalog } from './exercise-db.js';
 
 function setupEligible(def, available, bodyweightMode) {
     if ((def.flags.bodyweight || def.equipment.includes('bodyweight')) && bodyweightMode === 'exclude')
@@ -15,7 +15,11 @@ function setupEligible(def, available, bodyweightMode) {
 export function createEngineContext(request) {
     // Each request owns one canonical catalog and one lookup index; building
     // both independently repeated built-in/custom merging per split candidate.
+    // The authoritative catalog and map remain COMPLETE, so a manual
+    // exercise swap can still resolve and progress a new provisional ID.
+    // Automatic generation uses a separately bounded eligible subset.
     const exerciseCatalog = Object.freeze(createExerciseCatalog(request.customExercises));
+    const automaticCatalog = Object.freeze(createAutomaticExerciseCatalog(request.customExercises));
     const exerciseMap = new Map(exerciseCatalog.map(exercise => [exercise.id, exercise]));
     const scheduleByDay = new Map(request.schedule.days.map(day => [day.day, day]));
     const avoidedExercises = new Set(request.preferences?.avoidedExercises ?? []);
@@ -35,7 +39,7 @@ export function createEngineContext(request) {
     const feasibleSomewhere = def => request.schedule.days.some(day => equipmentEligible(def, day.day));
     const candidatesByMuscle = new Map();
     const candidatesByLift = new Map();
-    for (const def of exerciseCatalog) {
+    for (const def of automaticCatalog) {
         if (!feasibleSomewhere(def))
             continue;
         for (const [muscle, credit] of Object.entries(def.muscles ?? {})) {
@@ -61,6 +65,7 @@ export function createEngineContext(request) {
         request,
         exerciseMap,
         exerciseCatalog,
+        automaticCatalog,
         scheduleByDay,
         avoidedExercises,
         equipmentEligible,

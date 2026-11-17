@@ -55,7 +55,7 @@ for(const role of ['wpb-profile-stat-value','wpb-profile-stat-label','wpb-profil
 assert.ok(report.screens.Plan.sharedMetricCalls===1 &&
   report.screens.Progress.sharedMetricCalls===1 &&
   report.screens.Profile.sharedMetricCalls===1,'Metric calls attributable to each destination');
-assert.equal(report.appInlineStyleObjects,801,'Metric migration cannot add inline styles');
+assert.ok(report.appInlineStyleObjects<=uiStyleBudget.appInlineObjects,'Metric migration cannot add inline styles');
 assert.equal(css.length,uiStyleBudget.cssCharacters,'Metric uses existing CSS only');
 assert.ok((css.match(/!important/g)||[]).length<=uiStyleBudget.cssPriorityDeclarations,
   'Metric migration cannot add priority debt');

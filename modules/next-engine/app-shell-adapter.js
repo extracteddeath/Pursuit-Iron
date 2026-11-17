@@ -161,6 +161,10 @@ export function shellConfigToNextRequest(config, banned = [], legacyExercises = 
     // the athlete left unticked. Filter at selection time so cycle coverage and
     // volume are audited on the same exercise identities the app will display.
     for (const [exerciseId, def] of EXERCISE_MAP) {
+        // Provisional explicitly-selected variants are intentionally outside
+        // the automatic generator's certified candidate pool. Do not add
+        // their IDs to persisted avoided lists or frozen request snapshots.
+        if (def.source === 'pursuit_requested_variant_20261117') continue;
         const shell = resolveLegacyExerciseByIdentity({ exerciseId, name: def.name }, legacyExercises, byId, byName);
         if (shell && !canPerform(shell)) avoided.add(exerciseId);
     }

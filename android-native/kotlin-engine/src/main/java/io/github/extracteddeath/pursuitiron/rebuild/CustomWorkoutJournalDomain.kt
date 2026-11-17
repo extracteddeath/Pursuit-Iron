@@ -19,7 +19,9 @@ enum class CustomWorkoutVisitPart { MAIN, FOLLOW_UP }
 
 data class CustomWorkoutVisitKey(
     val setKey: String,
-    val part: CustomWorkoutVisitPart
+    val part: CustomWorkoutVisitPart,
+    /** 1 is byte-identical to legacy follow-ups. Used only for FOLLOW_UP. */
+    val stage: Int = 1
 )
 
 sealed interface CustomWorkoutJournalOperation {
@@ -107,9 +109,9 @@ data class CustomWorkoutJournalDraft(
             val done=(main.operation as? CustomWorkoutJournalOperation.Record)
                 ?.outcome==KotlinJournalSetOutcome.COMPLETED
             if(done && set.prescription.amplifier!=null &&
-                CustomWorkoutVisitKey(set.setKey,
-                    CustomWorkoutVisitPart.FOLLOW_UP) !in effectiveVisits)
-                unresolved++
+                CustomWorkoutExecutionDomain.followUpVisits(this,set).any{
+                    it !in effectiveVisits
+                })unresolved++
         }
         return unresolved
     }
@@ -234,6 +236,11 @@ object CustomWorkoutJournalDomain {
                     .firstOrNull{it.setKey==operation.visit.setKey}
                     ?:return CustomWorkoutJournalDecision.Rejected(
                         CustomWorkoutJournalRefusal.UNKNOWN_VISIT)
+                if(operation.visit.stage !in 1..5 ||
+                    operation.visit.part==CustomWorkoutVisitPart.MAIN &&
+                        operation.visit.stage!=1)
+                    return CustomWorkoutJournalDecision.Rejected(
+                        CustomWorkoutJournalRefusal.UNKNOWN_VISIT)
                 val mainKey=CustomWorkoutVisitKey(
                     operation.visit.setKey,CustomWorkoutVisitPart.MAIN)
                 val followerKey=CustomWorkoutVisitKey(
@@ -243,12 +250,12 @@ object CustomWorkoutJournalDomain {
                 val plan=when(operation.visit.part) {
                     CustomWorkoutVisitPart.MAIN -> {
                         if(operation.outcome!=KotlinJournalSetOutcome.COMPLETED &&
-                            (nextEffective[followerKey]?.operation
-                                as? CustomWorkoutJournalOperation.Record)
-                                ?.outcome!=null &&
-                            (nextEffective[followerKey]?.operation
-                                as CustomWorkoutJournalOperation.Record)
-                                .outcome!=KotlinJournalSetOutcome.SKIPPED)
+                            nextEffective.any{ (key,receipt)->
+                                key.setKey==operation.visit.setKey &&
+                                key.part==CustomWorkoutVisitPart.FOLLOW_UP &&
+                                (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                                    ?.outcome!=KotlinJournalSetOutcome.SKIPPED
+                            })
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_CORRECTION)
                         target.prescription.load
@@ -260,6 +267,25 @@ object CustomWorkoutJournalDomain {
                         if(main?.outcome!=KotlinJournalSetOutcome.COMPLETED)
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.MAIN_NOT_COMPLETED)
+                        if(operation.visit.stage>amp.followUpRounds)
+                            return CustomWorkoutJournalDecision.Rejected(
+                                CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED)
+                        val oldStage=nextEffective[operation.visit]
+                        if(oldStage==null &&
+                            operation.visit !in CustomWorkoutExecutionDomain.followUpVisits(
+                                prior,target))
+                            return CustomWorkoutJournalDecision.Rejected(
+                                CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED)
+                        // Rewriting an earlier mini-set can invalidate the
+                        // existence of later stages. Do not silently erase
+                        // any recorded observations; refuse such corrections
+                        // until an explicit dependent-stage undo exists.
+                        if(oldStage!=null && nextEffective.keys.any{key->
+                            key.setKey==operation.visit.setKey &&
+                            key.part==CustomWorkoutVisitPart.FOLLOW_UP &&
+                            key.stage>operation.visit.stage
+                        })return CustomWorkoutJournalDecision.Rejected(
+                            CustomWorkoutJournalRefusal.INVALID_CORRECTION)
                         amp.followUpLoad ?:target.prescription.load
                     }
                 }
@@ -340,7 +366,7 @@ object CustomWorkoutJournalDomain {
                     slot.sets.sumOf{set ->
                         set.prescription.activeSeconds.toLong()+
                         set.prescription.restSeconds.toLong()+
-                        (set.prescription.amplifier?.followUpRestSeconds ?:0)
+                        (set.prescription.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)
                     }
                 }
                 if(duration !in 1L..10_000_000L)
@@ -397,7 +423,7 @@ object CustomWorkoutJournalDomain {
                     slot.sets.sumOf {set->
                         set.prescription.activeSeconds.toLong()+
                             set.prescription.restSeconds.toLong()+
-                            (set.prescription.amplifier?.followUpRestSeconds ?:0)
+                            (set.prescription.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)
                     }
                 }
                 if(duration !in 1L..10_000_000L)

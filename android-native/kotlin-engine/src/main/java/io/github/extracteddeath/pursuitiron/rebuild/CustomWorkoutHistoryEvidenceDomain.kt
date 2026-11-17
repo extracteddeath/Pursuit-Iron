@@ -103,7 +103,8 @@ object CustomWorkoutHistoryEvidenceDomain {
                     facts+=CustomHistoricalVisitFact(
                         slot.slotId,slot.exerciseId,set.setKey,
                         CustomWorkoutVisitPart.FOLLOW_UP,set.prescription.type,
-                        amp.followUpLoad ?:set.prescription.load,
+                        AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                            amp,set.prescription.load,followKey.stage),
                         RepBand(amp.followUpReps,amp.followUpReps),null,
                         amp.kind,follow.outcome,follow.performed,follow.eventId,
                         followKey.stage)

@@ -645,7 +645,8 @@ assert.ok(composer.includes('val coach=state.liveCoach?.takeIf {') &&
 assert.ok(journal.includes('val sameType=slot.sets.filter {') &&
   journal.includes('it.prescription.type==set.prescription.type') &&
   journal.includes('val number=sameType.indexOfFirst {') &&
-  journal.includes('"Amplifier follow-up · $label $number of ${sameType.size}"') &&
+  journal.includes('stage ${activeFocus.stage} of ${it.followUpRounds}') &&
+  journal.includes('val method=AdvancedAmplifierProtocolDomain.template(it.kind)') &&
   journal.includes('"$label $number of ${sameType.size}"') &&
   !journal.includes('entry $number of ${slot.sets.size}') &&
   composer.includes('"Set"} $number of ${typeSets.size}"'),

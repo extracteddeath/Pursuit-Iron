@@ -344,7 +344,9 @@ private val kotlinExerciseNames=mapOf(
     "hammer-radial-dev" to "Hammer Radial Wrist Deviation",
     "hammer-ulnar-dev" to "Hammer Ulnar Wrist Deviation",
     "wrist-roller" to "Wrist Roller",
-    "plate-front-raise" to "Plate Front Raise"
+    "plate-front-raise" to "Plate Front Raise",
+    "svend-press" to "Svend Press",
+    "gripper" to "Hand Gripper"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

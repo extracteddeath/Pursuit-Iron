@@ -33,7 +33,9 @@ data class NativeFirstProgramSeed(
     val startingLoads:Map<String,BigDecimal>,
     val bodyweightExercises:Set<String>,
     val extraFocuses:List<ComposerFocus>,
-    val nonSetSeconds:Int
+    val nonSetSeconds:Int,
+    /** Explicit opt-in, never a silent generated training change. */
+    val includeMyoFinisher:Boolean=false
 )
 
 enum class NativeFirstProgramSeedRefusal {
@@ -67,7 +69,8 @@ class NativeKotlinFirstProgramSeedFileStore(
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val magic=0x50494653 // PIFS
-    private val version=1
+    private val version=2
+    private val originalVersion=1
     private val maxBytes=8192
 
     private fun owner(ownerKey:String):NativeKotlinOwnerIdentity? {
@@ -104,7 +107,9 @@ class NativeKotlinFirstProgramSeedFileStore(
         require(id.matches(ownerKey) && id.matches(athleteId) && valid(seed))
         val body=ByteArrayOutputStream()
         DataOutputStream(body).use {out->
-            out.writeInt(magic);out.writeInt(version)
+            // Keep every unmodified legacy seed byte-identical.
+            out.writeInt(magic)
+            out.writeInt(if(seed.includeMyoFinisher)version else originalVersion)
             out.writeUTF(ownerKey);out.writeUTF(athleteId)
             out.writeUTF(seed.cycleId);out.writeUTF(seed.title)
             out.writeInt(seed.blockWeeks);out.writeLong(seed.sourceRevision)
@@ -121,6 +126,7 @@ class NativeKotlinFirstProgramSeedFileStore(
             bodyweight.forEach(out::writeUTF)
             out.writeInt(seed.extraFocuses.size)
             seed.extraFocuses.forEach{out.writeUTF(it.name)}
+            if(seed.includeMyoFinisher)out.writeBoolean(true)
         }
         val payload=body.toByteArray()
         require(payload.size+36<=maxBytes)
@@ -148,7 +154,9 @@ class NativeKotlinFirstProgramSeedFileStore(
                 MessageDigest.getInstance("SHA-256").digest(content)))
             throw IOException("First-program seed checksum mismatch")
         return DataInputStream(ByteArrayInputStream(content)).use {data->
-            if(data.readInt()!=magic || data.readInt()!=version ||
+            if(data.readInt()!=magic)throw IOException("First-program magic changed")
+            val storedVersion=data.readInt()
+            if(storedVersion !in originalVersion..version ||
                 data.readUTF()!=ownerKey || data.readUTF()!=athleteId)
                 throw IOException("First-program owner, version or format changed")
             val cycleId=data.readUTF()
@@ -178,8 +186,9 @@ class NativeKotlinFirstProgramSeedFileStore(
             val focuses=(0 until focusesCount).map {
                 ComposerFocus.valueOf(data.readUTF())
             }
+            val withMyo=if(storedVersion>=2)data.readBoolean() else false
             val seed=NativeFirstProgramSeed(cycleId,title,weeks,
-                revision,policy,phase,loads,bodyweight,focuses,overhead)
+                revision,policy,phase,loads,bodyweight,focuses,overhead,withMyo)
             if(data.available()!=0 || cycleId!=requestedCycleId ||
                 !valid(seed))throw IOException("Invalid first-program seed")
             seed

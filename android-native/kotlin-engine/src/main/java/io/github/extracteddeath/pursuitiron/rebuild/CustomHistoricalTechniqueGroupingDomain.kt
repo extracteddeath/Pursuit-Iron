@@ -23,6 +23,31 @@ data class CustomHistoricalSetGroup(
                 return "$name · not performed (main set ${main.outcome.name.lowercase().replace('_',' ')})"
             if(followUps.isEmpty())return "$name · no follow-up performed"
 
+            // Avoid captions such as "skipped reps" or suggesting a
+            // failed mini-set contributed full performed repetitions. Name
+            // each stage explicitly when the sequence did not all complete.
+            if(followUps.any{it.outcome!=KotlinJournalSetOutcome.COMPLETED}) {
+                val details=followUps.joinToString(" · ") { fact ->
+                    when(fact.outcome) {
+                        KotlinJournalSetOutcome.SKIPPED ->
+                            "stage ${fact.stage} skipped"
+                        KotlinJournalSetOutcome.FAILED_ATTEMPT ->
+                            "stage ${fact.stage} failed"
+                        KotlinJournalSetOutcome.COMPLETED -> {
+                            val performed=fact.actual
+                            if(kind==CustomAmplifierKind.DROP_SET) {
+                                val weight=performed?.load?.stripTrailingZeros()
+                                    ?.toPlainString() ?: "?"
+                                val unit=performed?.unit?.name?.lowercase() ?: "?"
+                                "stage ${fact.stage}: $weight $unit × ${performed?.reps ?: "?"}"
+                            } else "stage ${fact.stage}: ${performed?.reps ?: "?"} "+
+                                (if(kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+                                    "partial reps" else "reps")
+                        }
+                    }
+                }
+                return "$name · $details"
+            }
             val actuals=followUps.joinToString(" + ") { fact ->
                 when(fact.outcome) {
                     KotlinJournalSetOutcome.SKIPPED -> "skipped"

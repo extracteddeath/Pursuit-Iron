@@ -13,7 +13,7 @@ export function ExerciseVariantFacetFilters({ candidates, level, onLevel,
     attachment, onAttachment }) {
     const facets = useMemo(() => availableVariantFacets(candidates), [candidates]);
     const group=(label,options,selected,onSelect,allLabel) =>
-        options.length && _jsxs('div', {
+        options.length ? _jsxs('div', {
             className:'wpb-hscroll wpb-b964-layout-10',
             role:'group','aria-label':label,
             children:[
@@ -25,7 +25,7 @@ export function ExerciseVariantFacetFilters({ candidates, level, onLevel,
                     onClick:()=>onSelect(option.id),children:option.label
                 },option.id))
             ]
-        });
+        }) : null;
     return _jsxs('div',{className:'wpb-variant-facets',children:[
         group('Bench incline',facets.levels,level,onLevel,'Any angle'),
         group('Cable attachment',facets.attachments,attachment,onAttachment,

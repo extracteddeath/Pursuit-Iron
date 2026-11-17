@@ -437,4 +437,50 @@ class NativeCustomWorkoutJournalCodecTest {
         }
     }
 
+    @Test fun finalSetPartialRepsColdReplaySeparatelyWithoutInventingFullRangeSets() {
+        val baseline=snapshot()
+        val old=baseline.slots.single().sets.single().prescription.amplifier!!
+        val partial=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,
+            3,0,followUpActiveSeconds=15)
+        val issued=baseline.copy(slots=baseline.slots.map{slot->
+            slot.copy(sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(amplifier=partial))
+            })
+        },knownSetAndRestSeconds=baseline.knownSetAndRestSeconds-
+            old.followUpRestSeconds*old.followUpRounds+15)
+        var j=CustomWorkoutJournalDomain.begin("partial-session",issued,
+            "a".repeat(64))
+        j=accept(j,CustomWorkoutJournalOperation.Record("full-rom",0,
+            CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,actual(10,2)))
+        val before=NativeCustomWorkoutJournalCodec.encode(record(j))
+        val cold=NativeCustomWorkoutJournalCodec.decode(before)
+        assertEquals(j,cold.journal)
+        assertEquals(CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP),
+            CustomWorkoutJournalDomain.nextUnresolvedVisit(cold.journal))
+        assertFalse(cold.journal.canProposeFinish)
+        j=accept(cold.journal,CustomWorkoutJournalOperation.Record(
+            "partial-repetitions",j.revision,
+            CustomWorkoutVisitKey(key,CustomWorkoutVisitPart.FOLLOW_UP),
+            KotlinJournalSetOutcome.COMPLETED,actual(3,null)))
+        assertNull(CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
+        j=accept(j,CustomWorkoutJournalOperation.Finish(
+            "finished-with-partials",j.revision))
+        val saved=NativeCustomWorkoutJournalCodec.encode(record(j))
+        val replay=NativeCustomWorkoutJournalCodec.decode(saved)
+        assertEquals(record(j),replay)
+        assertArrayEquals(saved,NativeCustomWorkoutJournalCodec.encode(replay))
+        val evidence=CustomWorkoutHistoryEvidenceDomain.project(replay.journal)
+            as CustomHistoryEvidenceResult.Candidate
+        assertEquals(1,evidence.evidence.visits.count{
+            it.part==CustomWorkoutVisitPart.MAIN
+        })
+        val extension=evidence.evidence.visits.single{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        }
+        assertEquals(CustomAmplifierKind.LENGTHENED_PARTIALS,extension.amplifierKind)
+        assertEquals(3,extension.actual?.reps)
+        assertFalse(evidence.evidence.canApplyProgression)
+    }
+
 }

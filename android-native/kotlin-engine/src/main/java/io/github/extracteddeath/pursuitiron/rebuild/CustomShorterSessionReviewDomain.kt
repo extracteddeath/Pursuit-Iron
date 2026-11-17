@@ -122,7 +122,7 @@ object CustomShorterSessionReviewDomain {
         val knownSetSeconds=ordered.sumOf {
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
-                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.let{amp->amp.followUpRestSeconds * amp.followUpRounds}?:0)+
                 (it.prescription.amplifier?.followUpActiveSeconds?:0)
         }
         if(knownSetSeconds!=source.knownSetAndRestSeconds)
@@ -177,7 +177,7 @@ object CustomShorterSessionReviewDomain {
         fun seconds()=overhead+selected().sumOf {
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
-                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.let{amp->amp.followUpRestSeconds * amp.followUpRounds}?:0)+
                 (it.prescription.amplifier?.followUpActiveSeconds?:0)
         }
         fun remainingWorking()=selected().count{
@@ -320,7 +320,7 @@ object CustomShorterSessionReviewDomain {
         val duration=survivors.flatMap{it.sets}.sumOf{
             it.prescription.activeSeconds.toLong()+
                 it.prescription.restSeconds+
-                (it.prescription.amplifier?.followUpRestSeconds?:0)+
+                (it.prescription.amplifier?.let{amp->amp.followUpRestSeconds * amp.followUpRounds}?:0)+
                 (it.prescription.amplifier?.followUpActiveSeconds?:0)
         }
         val groups=survivors.mapNotNull{it.supersetGroup}.distinct()

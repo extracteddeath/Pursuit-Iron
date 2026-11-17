@@ -249,13 +249,13 @@ object CustomWorkoutJournalDomain {
                     as? CustomWorkoutJournalOperation.Record)
                 val plan=when(operation.visit.part) {
                     CustomWorkoutVisitPart.MAIN -> {
-                        // A correction to the activation load or physical
-                        // station after mini-sets exist would retroactively
-                        // invalidate their same-load lineage. Keep the actual
-                        // observations and refuse that correction instead.
+                        // A correction to the activation load or station
+                        // after any same-load staged technique would invalidate
+                        // its lineage. Never erase factual mini-set receipts.
                         if(main!=null && target.prescription.amplifier?.let{
-                                it.kind==CustomAmplifierKind.MYO_REPS &&
-                                    it.followUpRounds>1
+                                it.followUpRounds>1 &&
+                                    (it.kind==CustomAmplifierKind.MYO_REPS ||
+                                     it.kind==CustomAmplifierKind.REST_PAUSE)
                             }==true && nextEffective.keys.any {
                                 it.setKey==operation.visit.setKey &&
                                     it.part==CustomWorkoutVisitPart.FOLLOW_UP

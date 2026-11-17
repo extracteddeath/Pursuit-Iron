@@ -21,7 +21,7 @@ assert.match(store,/NativePendingWorkoutDraftCodec\.decode\(/);
 assert.match(store,/NativePendingWorkoutDraftCodec\.encode\(/);
 assert.doesNotMatch(store,/KotlinPerformedSet\(|RecordSet\(|recordIssuedCustomSet\(|issueWorkout\(/);
 
-assert.match(generated,/journal\.snapshot\.source\.athleteId/);
+assert.match(generated,/journal\?\.snapshot\?\.source\?\.athleteId\.orEmpty\(\)/);
 assert.match(generated,/val draftIdentity=NativePendingWorkoutDraftIdentity\.make\(/);
 assert.match(generated,/draftIdentity,set\.isResolved,set\.currentReceipt\?\.appliedRevision/);
 assert.match(generated,/draftEditor\.update\(load=it\)/);

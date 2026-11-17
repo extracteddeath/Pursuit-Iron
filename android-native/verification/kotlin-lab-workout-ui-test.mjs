@@ -151,7 +151,7 @@ for(const fragment of [
   'fun visibleOrder(journal:CustomWorkoutJournalDraft)',
   'CustomWorkoutExecutionDomain.orderedSets(journal.snapshot)',
   'saved?.outcome==KotlinJournalSetOutcome.COMPLETED',
-  'set.prescription.amplifier!=null',
+  'CustomWorkoutExecutionDomain.followUpVisits(journal,set)',
   'CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(focusDomain.includes(fragment),
   'Read-only focus order must preserve main/amplifier causality: '+fragment);

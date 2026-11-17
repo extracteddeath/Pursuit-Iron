@@ -346,7 +346,23 @@ private val kotlinExerciseNames=mapOf(
     "wrist-roller" to "Wrist Roller",
     "plate-front-raise" to "Plate Front Raise",
     "svend-press" to "Svend Press",
-    "gripper" to "Hand Gripper"
+    "gripper" to "Hand Gripper",
+    "band_lateral_raise" to "Band Lateral Raise",
+    "band-curl" to "Band Curl",
+    "banded-tib-raise" to "Banded Tibialis Raise",
+    "band-ulnar-dev" to "Band Ulnar Wrist Deviation",
+    "lateral-walk" to "Banded Lateral Walk",
+    "band-leg-curl" to "Banded Leg Curl",
+    "band-pulldown" to "Banded Lat Pulldown",
+    "rear-band-pull-apart" to "Band Pull-Apart",
+    "band-good-morning" to "Banded Good Morning",
+    "band-hip-thrust" to "Banded Hip Thrust",
+    "band-adduction" to "Banded Hip Adduction",
+    "band-abduction" to "Seated Banded Abduction",
+    "bands-face-pull" to "Banded Face Pull",
+    "bands-squat" to "Banded Resistance Squat",
+    "bands-tricep-ext" to "Banded Overhead Tricep Extension",
+    "bands-chest-press" to "Banded Horizontal Chest Press"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

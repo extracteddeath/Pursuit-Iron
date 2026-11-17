@@ -49,3 +49,33 @@ internal fun workoutStationLastCaption(
         }
     }
 }
+
+/**
+ * One saved-set presentation for generated and custom journals. These are
+ * factual receipts, never current target weights or next-set recommendations.
+ * Physical station names are looked up by the SAVED actual machine identity.
+ */
+internal fun nativeSavedSetCaption(
+    prefix:String,
+    outcome:KotlinJournalSetOutcome?,
+    actual:KotlinPerformedSet?,
+    exerciseId:String,
+    issuedGymId:String?,
+    roster:NativeMachineRosterSnapshot?
+):String {
+    val parts=mutableListOf(
+        outcome?.name?.replace('_',' ')?.lowercase() ?: "outcome unavailable")
+    if(actual!=null) {
+        parts+="${actual.reps} reps"
+        val amount=actual.load?.stripTrailingZeros()?.toPlainString()
+        parts+=if(amount!=null) {
+            "at $amount ${actual.unit?.name?.lowercase() ?: "(unit unreported)"}"
+        } else "bodyweight"
+        parts+=(actual.actualRir?.let{"$it actual RIR"} ?: "actual RIR unreported")
+        if(actual.machineInstanceId!=null)
+            workoutPhysicalStationName(
+                exerciseId,issuedGymId,actual.machineInstanceId,roster)
+                ?.let{parts+=it}
+    }
+    return "$prefix: "+parts.joinToString(" · ")
+}

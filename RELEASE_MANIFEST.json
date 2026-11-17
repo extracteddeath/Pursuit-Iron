@@ -5,7 +5,7 @@
   "build": 1013,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "c8e0f0dd7bc83078d4e59e9b716de9843d4f2d03fe054c0d35035499a4f7a676",
+  "runtimeAggregate": "8df46b77ef89aa08f00cd7113ea6434190a28b1f76ea2904f62b584a932133d1",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -41,7 +41,7 @@
     "modules/next-engine/cycles.js": "3b949f73ecef2543e4aa3aa6910fe43a3d3526805fcbcd111424e5df2d6efc79",
     "modules/next-engine/domain-contracts.js": "fc35224050b1c20769cc38f727852a180f6ac50e990dc6ddeb213f9e30ec755f",
     "modules/next-engine/dose-reconciliation.js": "122c4eab4052b540d163b4cca0ecb6b00c16adb32d1e703ff32dd3e449a5f65b",
-    "modules/next-engine/engine-context.js": "f759e8278372cba3f9b26d5d45128638d8e5878321bf6f99946a45fd2514da1c",
+    "modules/next-engine/engine-context.js": "04228a2e894ed50043aec2fd251e17bd73b64d1b925c5bde0fe3db38b97b2e29",
     "modules/next-engine/events.js": "224b26bfbef0c398e0b0a3e32b26c96075f5c1dce5ce6aa9f5cad83d7a0b437a",
     "modules/next-engine/exercise-db.js": "064eeb8268f64ee28675d3d47cc91dbdc3974eb89b0d2b5e3587757a29e43986",
     "modules/next-engine/exercise-economy.js": "9b44195f1cffb5df9d6c2c529ce693d8305ee2170868c4d26d7cd02bcf04bef5",
@@ -51,7 +51,7 @@
     "modules/next-engine/focus-intent.js": "6c251d9df81d52adba2978b18d3b58651845dfd52fb6e0933d9eca89eab7f69c",
     "modules/next-engine/functional-coverage-repair.js": "1aa7ff18fde627d8755ee87bf8ef31e8a958bdcf27eee6660648db6d4b4b40be",
     "modules/next-engine/functional-coverage.js": "51e767145c0b87fa62445ce98c998d6d0158b42d36eaae35974a05707a660c2c",
-    "modules/next-engine/generate.js": "1fabe98d8405a01b569ac9a9c31d7d523b4d90453432bd379d3c49dbbe0da006",
+    "modules/next-engine/generate.js": "b164eceb93bb076151a31c2db2d0c65cc92046d213d8137513145b439415622f",
     "modules/next-engine/generation-recovery.js": "83e916fb202b1f002615d91a834431c696ae7e7be84328f8a9fdb0cace2ecf73",
     "modules/next-engine/history-contract.js": "b34a14e2f830d453a0edda7cc443de94106b82b67c0321797d42f18fba962e96",
     "modules/next-engine/history.js": "8c2c2c0e92c1d4ab51b4326d22e2b7c5425f8c6e3f14c1cea6afe3c3b99b931c",
@@ -157,8 +157,8 @@
   "uiFiles": {
     "modules/App.js": "afc3576cd6518af8ad3a807f9605c252d5ec857f2d7582044b8dd16ebb9ec37f",
     "index.html": "769fb84e59e82a99c5c7358d73cae3f587e0002d63594d986820a74c65e8b4ca",
-    "sw.js": "ca2ffdb5a8e0ea409bef5f52716d230dad85fc00e9c90192d9dfe04abd5148af",
-    "BUILD_PROFILE.json": "ea2823b02c6b3c377f6f03fce3f3abd7ec386e83371bf370ff4989e73454c576",
+    "sw.js": "13b2bc22856c86f14372eaf75c5e1b23cc51a8cba2f87979284e7eaeaaf7a2e3",
+    "BUILD_PROFILE.json": "f00db5f78d5a08e50ab7c954568eaf2bd68566233c24d378226725f78ef2869e",
     "CHANGELOG.md": "f54e49b4763a1e8f534eb21e3740998d1c40d102a83470b08c27efb67cb42662",
     "app.css": "2cbb5b79495833cd8fe876adf46a963c7566c5077524a2a0cdb8f4ff06f43ccd",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -167,6 +167,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1013-r4178bb72abc4a4a5",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1013-r87e72b622ed45d92",
   "uiMilestone": "Build 1013 · Exercise variants, attachment discovery and truthful bench angles"
 }

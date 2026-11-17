@@ -257,4 +257,28 @@ class CustomTrainingCycleDomainTest {
         assertTrue(result.issues.any { it.kind == CustomCycleIssueKind.INVALID_DAY })
         assertTrue(result.issues.any { it.kind == CustomCycleIssueKind.EMPTY_SESSION })
     }
+    @Test fun stagedClustersSurviveCustomCycleAndFailClosedOnUnverifiedOrUnplannedPatterns() {
+        fun program(amp:CustomSetAmplifier)=cycle(listOf(block(days=listOf(
+            CustomTrainingDay(0,"Quality",ComposerSessionPurpose.STRENGTH_SKILL,
+                listOf(benchSlot(listOf(weighted(185,4,amp)))))
+        ))))
+        val authored=CustomSetAmplifier(CustomAmplifierKind.CLUSTER,
+            2,30,followUpRounds=4)
+        val ready=valid(program(authored))
+        val restored=checkNotNull(CustomTrainingCycleDomain.week(ready,1))
+            .days.single().slots.single().sets.single()
+        assertEquals(authored,restored.amplifier)
+        assertNull(restored.amplifier?.followUpLoad)
+        assertEquals(4,restored.amplifier?.followUpRounds)
+        assertTrue(reviewed(program(authored.copy(followUpRounds=6)))
+            .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+        assertTrue(reviewed(program(authored.copy(followUpReps=5)))
+            .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+        assertTrue(reviewed(program(authored.copy(followUpRestSeconds=14)))
+            .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+        assertTrue(reviewed(program(authored.copy(followUpLoad=
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(155)))))
+            .issues.any{it.kind==CustomCycleIssueKind.INVALID_SET})
+    }
+
 }

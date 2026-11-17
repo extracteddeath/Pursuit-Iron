@@ -76,7 +76,8 @@ object CustomWorkoutExecutionDomain {
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
             if(amp.followUpRounds>1 &&
                 (amp.kind==CustomAmplifierKind.MYO_REPS ||
-                 amp.kind==CustomAmplifierKind.REST_PAUSE)) {
+                 amp.kind==CustomAmplifierKind.REST_PAUSE ||
+                 amp.kind==CustomAmplifierKind.CLUSTER)) {
                 // These protocols require the EXACT activation load and
                 // station. Keep any unexpected observation as factual history
                 // but never unlock more same-load work from changed equipment.
@@ -93,6 +94,10 @@ object CustomWorkoutExecutionDomain {
                             amp.followUpRounds)==MyoRepNextStep.KEEP_GOING
                     CustomAmplifierKind.REST_PAUSE ->
                         AdvancedAmplifierProtocolDomain.continueRestPause(
+                            amp.followUpReps,observedFollowUpReps,
+                            amp.followUpRounds)
+                    CustomAmplifierKind.CLUSTER ->
+                        AdvancedAmplifierProtocolDomain.continueCluster(
                             amp.followUpReps,observedFollowUpReps,
                             amp.followUpRounds)
                     else -> false

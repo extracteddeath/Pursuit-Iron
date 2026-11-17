@@ -5,7 +5,7 @@ package io.github.extracteddeath.pursuitiron.rebuild
  * prescriptions and factual journal receipts.
  *
  * Legacy custom journals retain their one-follow-up behavior. Only explicitly
- * authored staged myo-reps and rest-pause use independent follow-up visit IDs.
+ * authored staged myo-reps, rest-pause and clusters use separate visit IDs.
  * No unperformed stage becomes a receipt, a working set, or progression evidence.
  * Drop sets still require a separately verified reduction, not an invented load.
  *
@@ -125,7 +125,7 @@ object AdvancedAmplifierProtocolDomain {
             CustomAmplifierKind.DROP_SET ->
                 "Each weight drop must use its separately verified load and actual reps."
             CustomAmplifierKind.CLUSTER ->
-                "Each planned cluster must be recorded separately without inventing completed reps."
+                "Each planned cluster is a separately saved quality-rep observation; stop on missed or unplanned reps, or when technique declines."
         }
 
     fun stageEarlyStopTitle(kind:CustomAmplifierKind):String =
@@ -137,6 +137,8 @@ object AdvancedAmplifierProtocolDomain {
                 "End this sequence if form or recovery is declining. This stage is saved as skipped; no later mini-sets are created."
             CustomAmplifierKind.REST_PAUSE ->
                 "End this sequence when reps or technique decline. This effort is saved as skipped; no later rest-pause efforts are created."
+            CustomAmplifierKind.CLUSTER ->
+                "End the planned clusters if quality or technique declines. This cluster is saved as skipped; no later clusters are created."
             else ->
                 "This stage is saved as skipped; unperformed stages are never recorded."
         }
@@ -151,6 +153,13 @@ object AdvancedAmplifierProtocolDomain {
             CustomAmplifierKind.REST_PAUSE ->
                 amp.followUpRounds in 2..3 && amp.followUpReps in 2..5 &&
                     amp.followUpRestSeconds in 15..30 && amp.followUpLoad==null
+            CustomAmplifierKind.CLUSTER ->
+                amp.followUpRounds in 2..5 && amp.followUpReps in 1..4 &&
+                    amp.followUpRestSeconds in 15..45 &&
+                    // This first staged-cluster contract is fixed to the
+                    // athlete-authored activation load; arbitrary alternative
+                    // stage weights would need an explicit stage-by-stage plan.
+                    amp.followUpLoad==null
             else -> false
         }
 
@@ -162,6 +171,18 @@ object AdvancedAmplifierProtocolDomain {
         targetReps in 2..5 && plannedLimit in 2..3 &&
             observed.isNotEmpty() && observed.size<plannedLimit &&
             observed.all{it in targetReps..100}
+
+    /**
+     * Planned clusters are quality practice, NOT a failure sequence.
+     * Following the first different observed repetition count, require an
+     * explicit athlete review instead of creating more optional clusters.
+     * A completed observation stays factual even if it ended the protocol.
+     */
+    fun continueCluster(targetReps:Int,observed:List<Int>,
+        plannedLimit:Int):Boolean =
+        targetReps in 1..4 && plannedLimit in 2..5 &&
+            observed.isNotEmpty() && observed.size<plannedLimit &&
+            observed.all { it==targetReps }
 
     /**
      * Evaluates observed mini-set reps without inventing observations.

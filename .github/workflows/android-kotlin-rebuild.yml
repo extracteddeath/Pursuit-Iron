@@ -189,6 +189,7 @@ jobs:
           node android-native/verification/kotlin-bodyweight-progress-test.mjs
           node android-native/verification/kotlin-workout-equipment-recovery-test.mjs
           node android-native/verification/kotlin-verified-training-archive-test.mjs
+          node android-native/verification/kotlin-factual-trend-time-axis-test.mjs
           node android-native/verification/kotlin-machine-gym-admission-test.mjs
           node android-native/verification/kotlin-plan-machine-ab-navigation-test.mjs
           node android-native/verification/kotlin-profile-layout-test.mjs

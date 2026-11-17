@@ -11,10 +11,9 @@ import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
-import java.math.RoundingMode
 
 private fun performanceLabel(value:BigDecimal,unit:String):String =
-    "${value.setScale(1,RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()} $unit"
+    NativeKotlinTrendAxisPolicy.exactMetric(value,unit)
 
 /**
  * A genuine observed-history trend for any exact movement ID, not an
@@ -34,6 +33,15 @@ internal fun NativeKotlinExercisePerformanceTrend(
     var stationMachine by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
     var windowChoice by rememberSaveable(exerciseId){mutableStateOf<String?>(null)}
     var showValues by rememberSaveable(exerciseId){mutableStateOf(false)}
+    val manifests=remember(timeline) {
+        timeline.completions.associate {
+            it.manifest.completionOrder to it.manifest
+        }
+    }
+    val recordedZone=remember { java.time.ZoneId.systemDefault() }
+    val recordedLocale=remember { java.util.Locale.getDefault() }
+    fun sessionText(order:Long)=NativeKotlinTrendAxisPolicy.sessionLabel(
+        order,manifests[order]?.completedAtEpochMillis,recordedZone,recordedLocale)
     val outcome=remember(timeline,exerciseId,displayUnit) {
         NativeExercisePerformanceTrendDomain.project(
             timeline,exerciseId,displayUnit)
@@ -125,6 +133,8 @@ internal fun NativeKotlinExercisePerformanceTrend(
             if(selected!=null) {
                 val points=selected.points.sortedBy{it.completionOrder}
                 val recent=points.takeLast(20)
+                val axis=NativeKotlinTrendAxisPolicy.project(
+                    recent.map{manifests[it.completionOrder]?.completedAtEpochMillis})
                 val first=recent.first()
                 val last=recent.last()
                 val firstValue=first.actualLoad ?:BigDecimal(first.performedReps)
@@ -140,8 +150,9 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(recent.size==1) {
                     PursuitHistoryStatus("One qualifying session",
-                        "Session ${last.completionOrder} · ${measure(lastValue)}" +
-                            " for ${last.performedReps} reps. A second qualifying session is needed to show change.")
+                        sessionText(last.completionOrder) + " · ${measure(lastValue)}" +
+                            (if(bodyweight)"" else " for ${last.performedReps} reps") +
+                            ". A second qualifying session is needed to show change.")
                 } else {
                     val delta=lastValue-firstValue
                     val difference=(if(delta.signum()>0)"+" else "")+
@@ -154,20 +165,28 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     PursuitFactualLinePlot(
                         recent.map{sample->
                             PursuitFactualTrendPoint(sample.completionOrder,
-                                sample.actualLoad ?:BigDecimal(sample.performedReps))
+                                sample.actualLoad ?:BigDecimal(sample.performedReps),
+                                manifests[sample.completionOrder]?.completedAtEpochMillis)
                         },
                         if(bodyweight)"Completed reps" else "Completed working load",
                         ::measure
                     )
-                    Text("First shown · session ${first.completionOrder} · "+
-                            measure(firstValue)+" × ${first.performedReps} reps",
+                    Text("First shown · "+sessionText(first.completionOrder)+" · "+
+                            measure(firstValue)+
+                            (if(bodyweight)"" else " × ${first.performedReps} reps"),
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Latest · session ${last.completionOrder} · "+
-                            measure(lastValue)+" × ${last.performedReps} reps",
+                    Text("Latest · "+sessionText(last.completionOrder)+" · "+
+                            measure(lastValue)+
+                            (if(bodyweight)"" else " × ${last.performedReps} reps"),
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Text(if(axis.calendarScaled)
+                    "Horizontal spacing follows recorded Finish times."
+                    else "Horizontal spacing follows session sequence because dates are missing, equal or out of order.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(if(points.size>20)
                     "Last 20 of ${points.size} qualifying sessions shown."
                     else "${points.size} qualifying ${if(points.size==1)"session" else "sessions"} shown.",
@@ -188,8 +207,9 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     recent.asReversed().forEach {sample ->
                         val actual=sample.actualLoad ?:
                             BigDecimal(sample.performedReps)
-                        Text("Session ${sample.completionOrder} · "+
-                            measure(actual)+" · ${sample.performedReps} reps",
+                        Text(sessionText(sample.completionOrder)+" · "+
+                            measure(actual)+
+                            (if(bodyweight)"" else " · ${sample.performedReps} reps"),
                             style=MaterialTheme.typography.bodyMedium)
                     }
                 }

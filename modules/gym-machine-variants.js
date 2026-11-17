@@ -14,6 +14,8 @@ export function GymMachineVariantFields({gym,onChange}) {
     const [message,setMessage]=useState('');
     const saved=gym.machineVariants?.[exerciseId] ?? {defaultId:null,instances:[]};
     const instances=Array.isArray(saved.instances)?saved.instances:[];
+    const configuredCount=Object.values(gym.machineVariants||{})
+        .reduce((n,item)=>n+(Array.isArray(item?.instances)?item.instances.length:0),0);
     const edit=operation=>{
         try {
             const updated=operation();
@@ -28,14 +30,26 @@ export function GymMachineVariantFields({gym,onChange}) {
         edit(()=>addMachineVariant(gym,exerciseId,{id:nextId,label:name,active:true},instances.length===0));
         setLabel(instances.length===0?'Machine B':'Machine C');
     };
-    return _jsxs('details',{className:'wpb-gym-section wpb-gym-machine-variants',children:[
-        _jsx(UiSummary,{children:'Physical machine alternatives (A/B)'}),
-        _jsx('p',{className:'wpb-gym-guidance',children:'Two physical machines can train the same exercise with different weight stacks. Each machine keeps independent Last, Target, PR and progression. Choose a default for this gym.'}),
+    return _jsxs('details',{className:'wpb-gym-section wpb-gym-machine-variants',
+        open:true,children:[
+        _jsx(UiSummary,{children:'Machine A/B · Add physical machines'}),
+        _jsx('p',{className:'wpb-gym-guidance',children:
+            'Choose a machine exercise below and add Machine A, Machine B, or more. '+
+            'Set the gym default, then tap Done to save. During a workout, use the '+
+            'Machine A/B selector above the exercise title to switch physical machines. '+
+            'The Program view shows the movement, not the physical machine; switching '+
+            'does not change your exercise selection or combine weight histories.'}),
+        _jsx('p',{className:'wpb-gym-guidance',children:
+            configuredCount? `Saved physical machines in this gym: ${configuredCount}.`:
+                'No Machine A/B alternatives saved in this gym yet.'}),
         _jsxs('label',{children:['Exercise',
             _jsx(UiField,{as:'select',className:'wpb-ui-control','aria-label':'Exercise with machine alternatives',value:exerciseId,
                 onChange:event=>{setExerciseId(event.target.value);setMessage('');},
                 children:machineExercises.map(ex=>_jsx('option',{value:ex.id,children:ex.name},ex.id))})
         ]}),
+        !instances.length && _jsx('p',{className:'wpb-gym-guidance',children:
+            'No physical variants for this exercise. Enter Machine A and tap Add machine, '+
+            'then add Machine B for the same exercise.'}),
         ...instances.map(instance=>_jsxs('div',{className:'wpb-gym-field-block',children:[
             _jsxs('div',{className:'wpb-gym-inline',children:[
                 _jsx(UiField,{as:'input',className:'wpb-ui-control','aria-label':`Name for ${instance.label}`,

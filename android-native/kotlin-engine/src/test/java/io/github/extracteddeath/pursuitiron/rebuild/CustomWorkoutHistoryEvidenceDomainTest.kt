@@ -141,7 +141,7 @@ class CustomWorkoutHistoryEvidenceDomainTest {
                     CustomAmplifierKind.MYO_REPS,5,20,
                     followUpActiveSeconds=80,followUpRounds=5)))
             }) },
-            knownSetAndRestSeconds=250)
+            knownSetAndRestSeconds=330)
         var session=CustomWorkoutJournalDomain.begin(
             "workout-myo",workout,base.preparedConsentFingerprint)
         session=accept(session,record("myo-main",0,main,

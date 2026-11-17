@@ -746,4 +746,33 @@ class CustomWorkoutExecutionDomainTest {
         })
     }
 
+    @Test fun noDropStageIsIssuedIfActualActivationIsBelowFirstReduction() {
+        fun verified(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=verified("15"),followUpRounds=2,
+            secondDropLoad=verified("10"))
+        var j=initial(slot("safe",1,null,amplifier=amp))
+        // Even if the issued activation was 20 lb, the athlete really
+        // lifted 12 lb. Calling 15 lb a drop would be a dangerous lie.
+        val actual=CustomWorkoutJournalOperation.Record(
+            "activation-lighter-than-drop",j.revision,visit("safe:s1"),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("12"),LoadUnit.LB,8,2))
+        j=(CustomWorkoutJournalDomain.reduce(j,actual)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertTrue(CustomWorkoutExecutionDomain.followUpVisits(
+            j,j.snapshot.slots.single().sets.single()).isEmpty())
+        assertNull(next(j))
+        assertTrue(j.canProposeFinish)
+        val attempt=CustomWorkoutJournalOperation.Record(
+            "unapproved-higher-weight",j.revision,
+            visit("safe:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,8,2))
+        assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+            (CustomWorkoutJournalDomain.reduce(j,attempt)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+    }
+
 }

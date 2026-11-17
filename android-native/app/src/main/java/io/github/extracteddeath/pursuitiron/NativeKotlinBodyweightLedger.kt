@@ -45,7 +45,7 @@ internal object NativeBodyweightLedgerDomain {
     private val earliest=LocalDate.parse("1900-01-01")
 
     fun validOwner(owner:String)=owner.isNotBlank() && owner.length<=128 &&
-        owner.none{it.isISOControl()}
+        owner.none{it.code<32 || it.code==127}
 
     fun validEntry(entry:NativeBodyweightEntry,today:LocalDate):NativeBodyweightRefusal? {
         if(entry.date.isAfter(today))return NativeBodyweightRefusal.DATE_IN_FUTURE

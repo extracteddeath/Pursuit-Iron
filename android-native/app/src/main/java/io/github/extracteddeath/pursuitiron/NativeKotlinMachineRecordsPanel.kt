@@ -19,25 +19,28 @@ internal fun NativeKotlinMachineRecordsPanel(
     bestByMachine:Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact>,
     singlesByMachine:Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact>,
     roster:NativeMachineRosterSnapshot?,
-    onOpenHistory:(String)->Unit
+    onOpenHistory:(String)->Unit,
+    /** Source-authenticated physical station: lowest counterweight is harder. */
+    assistanceByMachine:Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact> =
+        emptyMap()
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var showAll by rememberSaveable { mutableStateOf(false) }
-    val ordered=remember(bestByMachine) {
-        bestByMachine.entries.sortedWith(
+    val ordered=remember(bestByMachine,assistanceByMachine) {
+        (bestByMachine.entries+assistanceByMachine.entries).sortedWith(
             compareBy<Map.Entry<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact>>(
                 {it.key.exerciseId},{it.key.gymId},{it.key.machineInstanceId},
                 {it.key.basis.name},{it.key.unit.name}))
     }
     PursuitDisclosureRow(
-        title="Physical machine bests",
+        title="Physical machine records",
         subtitle=if(ordered.isEmpty())"No separately identified machine sets yet"
             else "${ordered.size} gym-specific station records · completed working sets",
         expanded=expanded,onToggle={expanded=!expanded}
     )
     if(!expanded)return
     Text(
-        "Each physical machine has its own weight history. These are best logged, completed working sets—not certified PR badges, comparable machine strength scores, or barbell standards.",
+        "Each physical machine has its own completed working-set history. For ordinary machines, higher external weight is heavier. For assisted pull-up/dip machines, LESS selected counterweight is harder. Machine A/B records are not comparable strength scores or PR badges.",
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -57,7 +60,9 @@ internal fun NativeKotlinMachineRecordsPanel(
                     .map{it.key.gymId to it.key.machineInstanceId},roster)
             val basis=kotlinLoadBasisLabel(key.basis)
             val unit=key.unit.name.lowercase()
-            val bestSingle=singlesByMachine[key]
+            val assisted=key.basis==
+                io.github.extracteddeath.pursuitiron.rebuild.LoadBasis.ASSISTANCE_COUNTERWEIGHT
+            val bestSingle=if(assisted)null else singlesByMachine[key]
             PursuitCard {
                 Text(kotlinExerciseLabel(key.exerciseId),
                     style=MaterialTheme.typography.titleMedium)
@@ -65,9 +70,13 @@ internal fun NativeKotlinMachineRecordsPanel(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 PursuitMetricStrip(listOf(
-                    "Heaviest logged" to "${record.actualLoad.stripTrailingZeros().toPlainString()} $unit × ${record.reps}",
+                    (if(assisted)"Least assistance" else "Heaviest logged") to "${record.actualLoad.stripTrailingZeros().toPlainString()} $unit × ${record.reps}",
                     "Session" to record.completionOrder.toString()
                 ))
+                if(assisted)Text(
+                    "Machine counterweight: a smaller value means less help and more bodyweight demand. This record does not estimate lifted weight or certify strength.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(bestSingle!=null)Text(
                     "Best logged single: ${bestSingle.actualLoad.stripTrailingZeros().toPlainString()} $unit × 1",
                     style=MaterialTheme.typography.bodyMedium)

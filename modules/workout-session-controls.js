@@ -105,6 +105,28 @@ export function nextPhysicalMachineLabel(instances=[]) {
     return 'Other machine';
 }
 
+/** Machine A/B and exercise replacement are one responsive Exercise Info
+ * section, beside the per-exercise loading step; not toolbar controls. */
+export function WorkoutMachineInfoActions({
+    gym,exerciseId,exerciseName,selectedId,dayId,history,unit,
+    onSelect,onCreate,onAssignLegacy,onSwap
+}) {
+    return _jsxs('section',{className:'wpb-exinfo-machine-tools',
+        'aria-label':'Machine and exercise options',children:[
+        _jsx('div',{className:'wpb-ey8',children:'Equipment and exercise'}),
+        !!gym && isMachineLike(EX_BY_ID[exerciseId]?.equip) &&
+            _jsx(WorkoutMachineVariantControl,{
+                gym,exerciseId,selectedId,dayId,history,unit,
+                onSelect,onCreate,onAssignLegacy
+            }),
+        _jsxs('button',{type:'button',className:'pressable wpb-exinfo-swap-action',
+            onClick:onSwap,
+            'aria-label':`Swap ${exerciseName} to another exercise`,
+            children:[_jsx(Repeat,{size:17,'aria-hidden':true}),
+                ' Swap to another exercise']})
+    ]});
+}
+
 export function WorkoutMachineVariantControl({
     gym,exerciseId,selectedId,dayId,history=[],unit,onSelect,onCreate,onSwap,onAssignLegacy
 }) {

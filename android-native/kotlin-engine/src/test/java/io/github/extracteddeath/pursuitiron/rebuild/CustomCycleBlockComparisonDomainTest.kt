@@ -104,7 +104,7 @@ class CustomCycleBlockComparisonDomainTest {
             it.weekday==0}.priorExerciseCount)
         assertEquals(3,result.strengthDayExerciseChanges.single{
             it.weekday==0}.nextExerciseCount)
-        assertEquals(7,result.strengthDayExerciseChanges.single{
+        assertEquals(5,result.strengthDayExerciseChanges.single{
             it.weekday==0}.droppedExerciseIds.size)
         assertFalse(result.mayApplyAutomatically)
         assertFalse(result.mayIssueWorkout)

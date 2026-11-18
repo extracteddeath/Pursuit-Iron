@@ -63,20 +63,21 @@ try{
         {waitUntil:'networkidle0'});
     await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
-    await page.waitForSelector('.wpb-machine-switch-trigger');
+    await page.click('button[aria-label^="Exercise info for"]');
+    await page.waitForSelector('.wpb-exinfo-sheet .wpb-machine-switch-trigger');
     const chip=await page.$eval('.wpb-machine-switch-trigger',el=>{
         const r=el.getBoundingClientRect();
         return {height:r.height,width:r.width,text:el.textContent,
             label:el.getAttribute('aria-label')};
     });
     assert.ok(chip.height>=44,'Machine tool must keep an accessible touch target');
-    assert.ok(chip.width<=150,'Machine identity must not grow into a prominent header card');
+    assert.ok(chip.width>=220,'Machine identity should be readable at full Exercise Info width');
     assert.ok(await page.$eval('.wpb-machine-switch-trigger',el=>
-        !!el.closest('.wpb-workout-tools')),'Machine choice belongs in exercise tools');
+        !!el.closest('.wpb-exinfo-machine-tools')),'Machine choice belongs beside the increment controls');
     assert.equal(await page.$('.wpb-exercise-meta .wpb-machine-switch-trigger'),null,
-        'No oversized machine selector in exercise prescription metadata');
+        'No machine selector in workout prescription metadata');
     assert.ok(chip.text.includes('Machine A'),
-        'Active physical machine remains readable in the quiet workout tools action');
+        'Active physical machine remains readable in Exercise Info');
     await page.click('.wpb-machine-switch-trigger');
     await page.waitForSelector('.wpb-machine-switch-sheet');
     assert.equal(await page.$eval('.wpb-machine-switch-sheet',el=>el.getAttribute('aria-modal')),'true');

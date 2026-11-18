@@ -72,7 +72,21 @@ object CatalogPhysicalMachineEligibility {
         "kelso-shrug" to ReviewedStation("scapular_retraction","supported-machine-kelso","kelso-shrug-machine")
     )
 
+    private val assistedIds=setOf("assisted-dip","assisted-chinup",
+        "assisted-pullup")
     fun eligible(movement:CatalogMovement):Boolean {
+        if(movement.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+            return movement.exerciseId in assistedIds &&
+                movement.equipmentId=="assisted-pullup-dip-counterweight" &&
+                movement.variantId=="assisted-counterweight-"+
+                    when(movement.exerciseId) {
+                        "assisted-dip"->"dip"
+                        "assisted-chinup"->"chinup"
+                        else->"pullup"
+                    } &&
+                movement.creditStatus==
+                    CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL &&
+                movement.creditReviewReference=="engineering-provisional-v1"
         // Preserve separately reviewed cable/machine stack behavior.
         if(movement.expectedLoadBasis in setOf(
                 LoadBasis.CABLE_STACK,LoadBasis.MACHINE_STACK))

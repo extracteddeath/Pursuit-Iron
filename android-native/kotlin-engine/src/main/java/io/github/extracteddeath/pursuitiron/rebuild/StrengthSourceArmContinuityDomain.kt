@@ -20,6 +20,7 @@ data class StrengthSourceArmCandidate(
 data class StrengthSourceArmReview(
     val status:StrengthSourceArmsStatus,
     val cycleId:String?,
+    val athleteId:String?,
     val sourceCycleRevision:Long?,
     val sourceBlockId:String?,
     val candidates:List<StrengthSourceArmCandidate>,
@@ -46,7 +47,7 @@ object StrengthSourceArmContinuityDomain {
     ):StrengthSourceArmReview {
         fun reject(reason:String)=StrengthSourceArmReview(
             StrengthSourceArmsStatus.SOURCE_UNVERIFIED,
-            cycle?.cycleId,cycle?.revision,priorBlockId,emptyList(),reason)
+            cycle?.cycleId,cycle?.athleteId,cycle?.revision,priorBlockId,emptyList(),reason)
         if(cycle==null || cycle.athleteId!=expectedAthleteId ||
             cycle.revision<1 ||
             coachAudit?.auditedCycleRevision!=cycle.revision ||
@@ -71,9 +72,10 @@ object StrengthSourceArmContinuityDomain {
             return reject("The exact final hypertrophy week could not be resolved, including overrides.")
         val catalogById=catalog.associateBy{it.exerciseId}
         val setsByExercise=prior.days.flatMap{it.slots}
-            .associateBy({it.exerciseId},{
-                it.sets.count{set->set.type==DraftSetType.WORKING}
-            })
+            .groupBy{it.exerciseId}
+            .mapValues{(_,slots)->slots.sumOf{slot->
+                slot.sets.count{set->set.type==DraftSetType.WORKING}
+            }}
         val candidates=armMuscles.mapNotNull{muscle->
             setsByExercise.entries.mapNotNull{(id,sets)->
                 val spec=catalogById[id]
@@ -95,7 +97,7 @@ object StrengthSourceArmContinuityDomain {
         return StrengthSourceArmReview(
             if(candidates.isEmpty())StrengthSourceArmsStatus.NO_REVIEWABLE_ARM_SOURCE
             else StrengthSourceArmsStatus.REVIEW_READY,
-            cycle.cycleId,cycle.revision,priorBlockId,
+            cycle.cycleId,cycle.athleteId,cycle.revision,priorBlockId,
             Collections.unmodifiableList(candidates),
             if(candidates.isEmpty())
                 "The resolved source does not contain directly credited, catalog-reviewed biceps, brachialis or triceps accessories."

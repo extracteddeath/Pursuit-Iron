@@ -263,10 +263,8 @@ object CustomWorkoutJournalDomain {
                                 it.setKey==operation.visit.setKey &&
                                     it.part==CustomWorkoutVisitPart.FOLLOW_UP
                             } &&
-                            (main.performed?.load!=operation.performed?.load ||
-                             main.performed?.unit!=operation.performed?.unit ||
-                             main.performed?.machineInstanceId!=
-                                operation.performed?.machineInstanceId))
+                            !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                                main.performed,operation.performed))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_CORRECTION)
                         if(operation.outcome!=KotlinJournalSetOutcome.COMPLETED &&
@@ -312,11 +310,8 @@ object CustomWorkoutJournalDomain {
                         // regular working set or an invented load reduction.
                         if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS &&
                             operation.outcome!=KotlinJournalSetOutcome.SKIPPED &&
-                            (main.performed==null ||
-                             operation.performed?.load!=main.performed.load ||
-                             operation.performed?.unit!=main.performed.unit ||
-                             operation.performed?.machineInstanceId!=
-                                main.performed.machineInstanceId))
+                            !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                                main.performed,operation.performed))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_ACTUAL)
                         AdvancedAmplifierProtocolDomain.followUpLoadForStage(

@@ -2,6 +2,19 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Staged amplifier numeric-load consistency (2026-11-18):**
+Myo-reps, rest-pause and cluster follow-up continuation now compares REAL
+numeric loads (20, 20.0, 20.00) instead of BigDecimal representation
+scale. The same identity check guards activation-set corrections after
+dependent stages and final-set lengthened partials. Actual unit and physical
+Machine A/B ID must still match exactly; numeric rounding does not grant
+unit conversion, station transfer, a heavier/lighter load, any new set, or
+progression. JVM regression fixtures traverse three-stage techniques,
+correction-aware partials, immutable targets, Finish and receipt replay,
+including deliberate different-station and different-load refusals.
+GitHub engine/Compose gates and later real-phone Focus/Last/History and
+TalkBack acceptance are separate; no APK/AAB is authorized.
+
 **Native Coach invalid-scope and upgrade UX guard (2026-11-18):**
 An unverified future, forged or partial saved phase scope is now a
 read-only, clearly identified blocker, rather than a candidate for a

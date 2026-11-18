@@ -26,7 +26,8 @@ class CustomWorkoutExecutionDomainTest {
     private fun record(j:CustomWorkoutJournalDraft,key:String,
         part:CustomWorkoutVisitPart=CustomWorkoutVisitPart.MAIN,
         outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
-        corrects:String?=null,stage:Int=1,reps:Int=8):CustomWorkoutJournalDraft {
+        corrects:String?=null,stage:Int=1,reps:Int=8,
+        actualWeight:String?=null,station:String?=null):CustomWorkoutJournalDraft {
         val set=j.snapshot.slots.flatMap{it.sets}.single{it.setKey==key}
         val load=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
             set.prescription.amplifier?.let{
@@ -36,9 +37,11 @@ class CustomWorkoutExecutionDomainTest {
         else set.prescription.load
         val verified=load as? DraftSetLoad.Verified
         val actual=if(outcome==KotlinJournalSetOutcome.SKIPPED)null
-            else KotlinPerformedSet(verified?.value,verified?.unit,
+            else KotlinPerformedSet(actualWeight?.let(::BigDecimal) ?: verified?.value,
+                verified?.unit,
                 if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)0 else reps,
-                if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)null else 2)
+                if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)null else 2,
+                station)
         val operation=CustomWorkoutJournalOperation.Record("event-${j.revision}",j.revision,
             visit(key,part,stage),outcome,actual,corrects)
         return (CustomWorkoutJournalDomain.reduce(j,operation) as CustomWorkoutJournalDecision.Proposed).draft
@@ -46,6 +49,130 @@ class CustomWorkoutExecutionDomainTest {
     private fun next(j:CustomWorkoutJournalDraft)=CustomWorkoutJournalDomain.nextUnresolvedVisit(j)
     private fun rest(j:CustomWorkoutJournalDraft)=KotlinWorkoutRestDomain.inspect(j,next(j))
     private fun order(j:CustomWorkoutJournalDraft)=CustomWorkoutExecutionDomain.orderedSets(j.snapshot).map{it.set.setKey}
+
+
+    @Test fun numericScaleOfPhysicalWeightNeverEndsAValidStagedAmplifier() {
+        val protocols=listOf(
+            CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+                followUpRounds=3) to 4,
+            CustomSetAmplifier(CustomAmplifierKind.REST_PAUSE,3,20,
+                followUpRounds=3) to 3,
+            CustomSetAmplifier(CustomAmplifierKind.CLUSTER,2,30,
+                followUpRounds=3) to 2
+        )
+        for((amp,miniReps) in protocols) {
+            var j=initial(slot("stage",1,null,amplifier=amp))
+            val original=j.snapshot
+            // Same real 20 lb setting, entered with different decimal scales.
+            j=record(j,"stage:s1",reps=16,actualWeight="20.000",
+                station="machine_A")
+            assertEquals(visit("stage:s1",CustomWorkoutVisitPart.FOLLOW_UP,1),next(j))
+            j=record(j,"stage:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                stage=1,reps=miniReps,actualWeight="20.0",station="machine_A")
+            assertEquals(visit("stage:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),next(j))
+            assertFalse(j.canProposeFinish)
+
+            // Recovery from actual journal receipts must make the same choice,
+            // without normalizing or rewriting any saved athlete observations.
+            var replay=CustomWorkoutJournalDomain.begin(j.workoutId,
+                j.originalSnapshot,j.preparedConsentFingerprint)
+            for(receipt in j.receipts) {
+                replay=(CustomWorkoutJournalDomain.reduce(
+                    replay,receipt.operation) as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            assertEquals(j,replay)
+            for(stage in 2..3) {
+                assertEquals(visit("stage:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                    stage),next(replay))
+                replay=record(replay,"stage:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                    stage=stage,reps=miniReps,
+                    actualWeight=if(stage==2)"20.00" else "20",
+                    station="machine_A")
+            }
+            assertNull(next(replay))
+            assertTrue(replay.canProposeFinish)
+            assertEquals(original,replay.snapshot)
+            assertEquals(listOf(BigDecimal("20.000"),BigDecimal("20.0"),
+                BigDecimal("20.00"),BigDecimal("20")),replay.receipts.map {
+                (it.operation as CustomWorkoutJournalOperation.Record).performed!!.load
+            })
+            val finished=(CustomWorkoutJournalDomain.reduce(replay,
+                CustomWorkoutJournalOperation.Finish("finish-stage",replay.revision))
+                as CustomWorkoutJournalDecision.Proposed).draft
+            assertNotNull(finished.finishedByEventId)
+            assertEquals(4,finished.effectiveVisits.size)
+        }
+    }
+
+    @Test fun alteredPhysicalLoadOrMachineStillEndsOptionalStagedWork() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=5)
+        for((load,machine) in listOf("19.5" to "machine_A",
+            "20.00" to "machine_B")) {
+            var j=initial(slot("myo",1,null,amplifier=amp))
+            j=record(j,"myo:s1",reps=15,actualWeight="20",
+                station="machine_A")
+            j=record(j,"myo:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                stage=1,reps=4,actualWeight=load,station=machine)
+            // The different observation remains factual, but no later
+            // same-load mini-set can be manufactured from changed stock.
+            assertEquals(2,j.effectiveVisits.size)
+            assertNull(next(j))
+            assertTrue(j.canProposeFinish)
+            assertEquals(BigDecimal(load),(j.receipts.last().operation
+                as CustomWorkoutJournalOperation.Record).performed?.load)
+        }
+    }
+
+    @Test fun numericScalePreservesCorrectedActivationAndFinalSetPartials() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,3,0)
+        var j=initial(slot("partials",1,null,amplifier=amp))
+        j=record(j,"partials:s1",reps=10,actualWeight="20.00",
+            station="machine_A")
+        j=record(j,"partials:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            reps=3,actualWeight="20",station="machine_A")
+        assertTrue(j.canProposeFinish)
+        // Changing ONLY scale or other non-load information remains a
+        // permissible correction after dependent factual partial work.
+        val mainKey=visit("partials:s1")
+        val main=j.effectiveVisits.getValue(mainKey)
+            .operation as CustomWorkoutJournalOperation.Record
+        val corrected=CustomWorkoutJournalOperation.Record(
+            "scale-correction",j.revision,mainKey,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20.000"),LoadUnit.LB,11,2,"machine_A"),
+            main.eventId)
+        j=(CustomWorkoutJournalDomain.reduce(j,corrected)
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(11,(j.effectiveVisits.getValue(mainKey).operation
+            as CustomWorkoutJournalOperation.Record).performed?.reps)
+        assertTrue(j.canProposeFinish)
+        assertEquals(BigDecimal("20"),(j.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+
+        val changed=corrected.copy(eventId="changed-mass",
+            expectedRevision=j.revision,
+            performed=corrected.performed?.copy(load=BigDecimal("21")),
+            correctsEventId="scale-correction")
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(j,changed)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        val switched=changed.copy(eventId="changed-station",
+            performed=corrected.performed?.copy(machineInstanceId="machine_B"))
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(j,switched)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        val original=j
+        var replay=CustomWorkoutJournalDomain.begin(j.workoutId,
+            j.originalSnapshot,j.preparedConsentFingerprint)
+        for(receipt in j.receipts)
+            replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                as CustomWorkoutJournalDecision.Proposed).draft
+        assertEquals(original,replay)
+        assertEquals(1,replay.effectiveVisits.keys.count{
+            it.part==CustomWorkoutVisitPart.FOLLOW_UP
+        })
+    }
 
     @Test fun pairAlternatesEveryWorkingRoundAndAllThreeProjectionsShareTheOrder() {
         var j=initial(slot("a"),slot("b"),slot("solo",1,null))

@@ -11,6 +11,28 @@ const gym=readFileSync(root+'NativeKotlinMachineAlternativesPanel.kt','utf8');
 for(const call of [generated,custom])
   assert.match(call,/NativeKotlinWorkoutMachineSelector\(/);
 assert.match(picker,/TextButton\([\s\S]*?Machine · \$display/);
+const tools=readFileSync(root+'NativeKotlinWorkoutTools.kt','utf8');
+assert.match(tools,/onMachine:\(\(\)->Unit\)\?=null/);
+assert.match(tools,/machineLabel:String\?=null/);
+assert.match(tools,/Icons\.Outlined\.Tune/);
+assert.match(tools,/WorkoutTool\("Choose physical machine:/);
+assert.match(picker,/showInlineTrigger:Boolean=true/);
+assert.match(picker,/if\(showInlineTrigger\) \{/);
+assert.match(picker,/LaunchedEffect\(externalOpen\)/);
+assert.match(picker,/onExternalOpenConsumed\?\.invoke\(\)/);
+assert.match(generated,/onMachine=activeMachineConfig\?\.let/);
+assert.match(generated,/openPhysicalMachineFor=toolExercise/);
+assert.match(generated,/showInlineTrigger=showAll \|\| presentation\.finished/);
+assert.match(custom,/onMachine=upcoming\?\.first\?\.takeIf/);
+assert.match(custom,/openPhysicalMachineForSlot=slot\.slotId/);
+assert.match(custom,/showInlineTrigger=!focusOnNext \|\| finished/);
+// Focus opens exactly the same sheet as Equipment unavailable; neither
+// tool tap nor exercise navigation issues a load or alters logged sets.
+for(const screen of [generated,custom]) {
+  assert.match(screen,/NativeKotlinWorkoutTools\(/);
+  assert.match(screen,/NativeKotlinWorkoutMachineSelector\(/);
+}
+
 const action=picker.slice(picker.indexOf('    TextButton('),
     picker.indexOf('    if(open)ModalBottomSheet('));
 assert.doesNotMatch(action,/fillMaxWidth\(\)/,

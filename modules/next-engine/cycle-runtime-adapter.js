@@ -279,7 +279,7 @@ export function strengthEntryMinimumSets(previousSets) {
     // for that high-volume class rather than failing an otherwise validated
     // cycle. This exception is not a Peak taper or a general set cut rule.
     return previousSets > 68
-        ? Math.floor(previousSets * .5) + 1
+        ? Math.ceil(previousSets * .5)
         : Math.ceil(previousSets * .7);
 }
 // Split search adds a concrete split to every candidate, including the original split.

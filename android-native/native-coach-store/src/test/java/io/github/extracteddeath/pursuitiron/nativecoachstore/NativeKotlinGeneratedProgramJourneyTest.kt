@@ -762,13 +762,13 @@ class NativeKotlinGeneratedProgramJourneyTest {
         if(includeNewTargets) {
             assertTrue(selected.containsAll(setOf("serratus-pushup","tibialis-raise")))
             assertEquals("v11",inputs.policiesByPhase.getValue(phase).revision)
-            assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase.getValue(phase).selectedBounds.map{it.muscle})
+            assertEquals(TrainingMuscleCoverage.legacyV4,inputs.policiesByPhase.getValue(phase).selectedBounds.map{it.muscle})
             for(slot in days.flatMap{it.slots}.filter{it.exerciseId in setOf("serratus-pushup","tibialis-raise")})
                 assertTrue(slot.sets.all{it.load==DraftSetLoad.ExplicitBodyweight && it.type==DraftSetType.WORKING})
         }
         if(includeTrapBar) {
             assertTrue(selected.containsAll(setOf("trap-bar-deadlift","db-shrug")))
-            assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase
+            assertEquals(TrainingMuscleCoverage.legacyV4,inputs.policiesByPhase
                 .getValue(phase).selectedBounds.map{it.muscle})
             for(slot in days.flatMap{it.slots}.filter{it.exerciseId=="trap-bar-deadlift"})
                 for(set in slot.sets.filter{it.type==DraftSetType.WORKING})
@@ -776,7 +776,7 @@ class NativeKotlinGeneratedProgramJourneyTest {
         }
         if(includeHipMachines) {
             assertTrue(selected.containsAll(setOf("hip-abduction","adduction-machine")))
-            assertEquals(TrainingMuscleCoverage.current,inputs.policiesByPhase
+            assertEquals(TrainingMuscleCoverage.legacyV4,inputs.policiesByPhase
                 .getValue(phase).selectedBounds.map{it.muscle})
             for(slot in days.flatMap{it.slots}.filter {
                 it.exerciseId in setOf("hip-abduction","adduction-machine")

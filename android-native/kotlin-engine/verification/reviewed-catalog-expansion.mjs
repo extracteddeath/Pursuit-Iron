@@ -316,8 +316,9 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
    waveNineIds,'two wave-nine real implements must remain append-stable');
  assert.deepEqual(declarations.slice(beforeWaveNine+waveNineIds.length),
    [...ratedBandRequiredIds,'spanish-squat',
-     'assisted-dip','assisted-chinup','assisted-pullup'],
-   'only separately reviewed supported Spanish squat and assisted-machine IDs may follow the rated bands');
+     'assisted-dip','assisted-chinup','assisted-pullup',
+     'neck-extension','neck-curl','neck-harness','neck-lateral'],
+   'only verified Spanish squat, assisted-machine and physically loaded neck IDs may follow the rated bands');
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
  const spanish=liveById.get('spanish-squat');
  assert.ok(spanish,'supported Spanish squat missing from web source');
@@ -348,6 +349,45 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
    assert.match(source.slice(from,from+360),
      /LoadBasis\.ASSISTANCE_COUNTERWEIGHT,\s*setOf\("assisted-pullup-dip"\),8\.\.12/,
      'assisted movement must use verified counterweight and physical fixture: '+id);
+ }
+ // Neck v5: the web's ambiguous 'bodyweight' equipment token is
+ // inconsistent with its WEIGHTED neck exercise names. No native workout
+ // can assume unloaded neck reps or invent a head-loading resistance.
+ const reviewedNeck=[
+   ['neck-extension','Weighted Neck Extension','neck_extension',
+     'supported-weighted-extension','NECK_EXTENSORS','neck-extension-device',
+     'supported-neck-extension'],
+   ['neck-curl','Weighted Neck Curl','neck_flexion',
+     'supported-weighted-flexion','NECK_FLEXORS','neck-flexion-device',
+     'supported-neck-flexion'],
+   ['neck-harness','Neck Harness Raise','neck_extension',
+     'harness-resisted-extension','NECK_EXTENSORS','neck-harness-device',
+     'fitted-neck-harness'],
+   ['neck-lateral','Lateral Neck Raise','neck_lateral_flexion',
+     'supported-weighted-lateral','NECK_LATERAL_FLEXORS','neck-lateral-device',
+     'supported-neck-lateral']
+ ];
+ for(const [id,name,family,variant,muscle,implement,facility] of reviewedNeck) {
+   const ex=liveById.get(id);
+   assert.ok(ex,'neck source exercise missing: '+id);
+   assert.equal(ex.name,name,'neck source name drift: '+id);
+   assert.equal(ex.movementFamily,'neck','neck source family drift: '+id);
+   assert.deepEqual(ex.equipment,['bodyweight'],
+     'ambiguous neck source tag changed; re-review physical loading: '+id);
+   assert.equal(ex.flags?.bodyweight,false,
+     'weighted neck work became unweighted: '+id);
+   assert.deepEqual(ex.practicalReps,[12,20],
+     'reviewed neck rep window drift: '+id);
+   assert.equal(ex.source,'legacy_v661','neck source provenance changed: '+id);
+   const from=source.indexOf('entry("'+id+'","'+family+'","'+variant+'"');
+   assert.ok(from>=0,'neck source-backed native identity absent: '+id);
+   const snippet=source.slice(from,from+900);
+   assert.ok(snippet.includes('"'+implement+'",LoadBasis.EXERCISE_OVERRIDE,'),
+     'neck real implement stock required: '+id);
+   assert.ok(snippet.includes('setOf("'+facility+'"),12..20'),
+     'neck supported position and actual rep band required: '+id);
+   assert.ok(snippet.includes('direct(TrainingMuscle.'+muscle+')'),
+     'neck cannot borrow trap/delt/ab volume credit: '+id);
  }
  // A new source catalog ID is not evidence of identical mechanics.
  // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
@@ -397,7 +437,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
      'wave-nine source must not reclassify the loaded implement as bodyweight');
  }
  const total=49+count+requestedIds.length+waveEightIds.length+
-   waveNineIds.length+ratedBandRequiredIds.length+4;
+   waveNineIds.length+ratedBandRequiredIds.length+8;
  assert.ok(source.includes('require(definitions.size=='+total+')'),
    'Kotlin exact source count must include independently reviewed additions');
  assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
@@ -405,7 +445,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false')&&
    !expected.includes('mayTransferPreviousLoad'),
    'reviewed IDs may never implicitly transfer historical loading');
- return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+4,total};
+ return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+8,total};
 }
 
 export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
@@ -427,7 +467,7 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,365);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,369);
  const unverifiedSupport=src.replace(
    'null,null,setOf("spanish-squat-support"),12..20',
    'null,null,emptySet(),12..20');

@@ -95,6 +95,10 @@ internal data class KotlinGymStockChoice(
         "single-weight-plate" -> "Individual weight plate"
         "hand-gripper-device" -> "Hand gripper (verified rated settings)"
         "rated-resistance-band-set" -> "Resistance bands (manufacturer-rated, discrete)"
+        "neck-extension-device" -> "Neck extension resistance (actual settings)"
+        "neck-flexion-device" -> "Neck curl resistance (actual settings)"
+        "neck-harness-device" -> "Neck harness resistance (actual settings)"
+        "neck-lateral-device" -> "Lateral neck resistance (actual settings)"
         "assisted-pullup-dip-counterweight" -> "Assisted pull-up/dip machine · COUNTERWEIGHT (more = easier)"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}

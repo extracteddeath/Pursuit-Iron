@@ -66,8 +66,8 @@ const pendingMeasurementSemantics={
   TIMED_HOLD:['superman','plank','side-plank','plate-pinch','dead-hang',
     'hollow-hold','copenhagen','wall-sit','l-sit','weighted-plank','towel-hang'],
   DISTANCE_CARRY:['farmers','suitcase-carry'],
-  NECK_LOADING_AND_MUSCLE_COVERAGE:['neck-extension','neck-curl',
-    'neck-harness','neck-lateral'],
+  // Neck v5 is source-matched with three distinct functions and real
+  // individually verified implement stock; no missing neck IDs remain.
   HYBRID_BODYWEIGHT_AND_BAND:['band-pushup']
 };
 const pendingById=new Map();
@@ -166,8 +166,11 @@ function selfTest() {
     'All three reviewed assisted machine identities must be source matched');
   for(const id of pendingMeasurementSemantics.ASSISTED_COUNTERWEIGHT)
     assert.ok(nativeStarterIds.includes(id),'Missing reviewed assisted machine: '+id);
-  assert.equal(completeAudit.webBuiltinsNotInStarter,18,
-    'The current reconciled web catalog must have exactly 18 remaining measurement gaps');
+  assert.equal(completeAudit.webBuiltinsNotInStarter,14,
+    'The current reconciled web catalog must have exactly 14 remaining time/distance/hybrid gaps');
+  for(const id of ['neck-extension','neck-curl','neck-harness','neck-lateral'])
+    assert.ok(nativeStarterIds.includes(id),
+      'A separately reviewed physical-load and V5 muscle entry is required: '+id);
   assert.equal(completeAudit.missingByMeasurementSemantics
     .find(x=>x.reason==='HYBRID_BODYWEIGHT_AND_BAND')?.ids[0],'band-pushup');
   assert.equal(incomplete.webBuiltinsNotInStarter,1);

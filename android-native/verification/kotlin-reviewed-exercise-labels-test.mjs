@@ -44,6 +44,34 @@ for(const id of ['assisted-dip','assisted-chinup','assisted-pullup']) {
   assert.ok(labels.includes('"'+id+'" to "'),
     'Physical assisted machine must have its own visible label: '+id);
 }
+// Neck source equipment is misleading: all four are weighted movements.
+// A provisional V5 anatomical credit and verified real-world resistance
+// plus a named supported setup are mandatory before any native issuance.
+for(const [id,name,fixture] of [
+  ['neck-extension','Weighted Neck Extension','supported-neck-extension'],
+  ['neck-curl','Weighted Neck Curl','supported-neck-flexion'],
+  ['neck-harness','Neck Harness Raise','fitted-neck-harness'],
+  ['neck-lateral','Lateral Neck Raise','supported-neck-lateral']
+]) {
+  assert.ok(ids.includes(id),'Reviewed neck source missing: '+id);
+  assert.ok(labels.includes('"'+id+'" to "'+name+'"'),
+    'Neck exercise must keep canonical athlete-readable name: '+id);
+  assert.ok(fixtureUi.includes('"'+fixture+'" to "'),
+    'Neck movement requires an explicitly selectable confirmed support: '+id);
+}
+// Real neck weight settings are discrete by default in the Gym editor.
+// A missing inventory never becomes a guessed continuous machine stack.
+const gymEditor=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt','utf8');
+const stockLabels=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPhysicalStockDraft.kt','utf8');
+for(const id of ['neck-extension-device','neck-flexion-device',
+  'neck-harness-device','neck-lateral-device']) {
+  assert.ok(gymEditor.includes('"'+id+'"'),
+    'Loaded neck movement must choose athlete-verified exact stock: '+id);
+  assert.ok(stockLabels.includes('"'+id+'" -> "'),
+    'Gym must name the physical implement, not invent a generic stack: '+id);
+}
 for(const id of ['band-pushup','plank',
   'dead-hang','farmers','weighted-plank']) {
   assert.ok(!ids.includes(id),

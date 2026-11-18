@@ -104,7 +104,11 @@ object CoachFirstProgramStartDomain {
             AthleteExperience.ADVANCED->4
         }
         val scope=when(policyVersion) {
-            POLICY_VERSION -> TrainingMuscleCoverage.current
+            // Frozen v11 remains exactly 22 muscles. V5 neck identities
+            // require a separately authored/approved V5 policy; never
+            // mutate the old first-program seed or make legacy workouts
+            // inherit three new zero-dose rows during cold replay.
+            POLICY_VERSION -> TrainingMuscleCoverage.legacyV4
             V10_POLICY_VERSION -> TrainingMuscleCoverage.legacyV3
             V9_POLICY_VERSION -> TrainingMuscleCoverage.legacyV2
             else -> TrainingMuscleCoverage.legacyV1

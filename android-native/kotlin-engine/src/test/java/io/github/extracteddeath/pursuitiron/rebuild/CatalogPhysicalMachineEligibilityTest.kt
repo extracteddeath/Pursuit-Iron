@@ -13,7 +13,7 @@ class CatalogPhysicalMachineEligibilityTest {
         val overrides=catalog.filter {
             it.expectedLoadBasis==LoadBasis.EXERCISE_OVERRIDE
         }
-        assertEquals(64,overrides.size) // 42 physical machines + 6 portable + 16 nominal bands
+        assertEquals(68,overrides.size) // 42 physical machines + 6 portable + 16 nominal bands + 4 physical neck implements
         val qualified=overrides.filter(CatalogPhysicalMachineEligibility::eligible)
         assertEquals(42,qualified.size)
         assertTrue(qualified.all{it.equipmentId!=null})
@@ -29,6 +29,10 @@ class CatalogPhysicalMachineEligibilityTest {
             "wrist-roller","plate-front-raise",
             "svend-press","gripper")) {
             assertFalse("Portable equipment must not create A/B: "+id,
+                CatalogPhysicalMachineEligibility.eligible(byId.getValue(id)))
+        }
+        for(id in listOf("neck-extension","neck-curl","neck-harness","neck-lateral")) {
+            assertFalse("Individually verified neck implements cannot masquerade as a physical machine A/B station: "+id,
                 CatalogPhysicalMachineEligibility.eligible(byId.getValue(id)))
         }
         for(id in RatedResistanceBandDomain.reviewedExerciseIds()) {

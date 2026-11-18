@@ -62,7 +62,8 @@ class ReviewedSerratusTibialisCatalogTest {
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,current.status)
         assertEquals("v10",old.policy?.revision);assertEquals("v11",current.policy?.revision)
         assertEquals(TrainingMuscleCoverage.legacyV3,old.policy?.selectedBounds?.map{it.muscle})
-        assertEquals(TrainingMuscleCoverage.current,current.policy?.selectedBounds?.map{it.muscle})
+        assertEquals(TrainingMuscleCoverage.legacyV4,
+            current.policy?.selectedBounds?.map{it.muscle})
         assertEquals(old.prescription?.sessions,current.prescription?.sessions)
         assertEquals(old.policy?.selectedBounds,current.policy?.selectedBounds?.filter{it.muscle.introducedIn<=3})
         for(id in ids) {

@@ -50,7 +50,7 @@ class CoachFirstProgramStartDomainTest {
         assertEquals("athlete-1",policy.athleteId)
         assertEquals(3,policy.trainingDays)
         assertEquals(TrainingPhase.HYPERTROPHY,policy.phase)
-        assertEquals(TrainingMuscle.entries.toSet(),
+        assertEquals(TrainingMuscleCoverage.legacyV4.toSet(),
             policy.selectedBounds.map {it.muscle}.toSet())
         assertEquals(n("4"),policy.selectedBounds.single{
             it.muscle==TrainingMuscle.CHEST}.mev)

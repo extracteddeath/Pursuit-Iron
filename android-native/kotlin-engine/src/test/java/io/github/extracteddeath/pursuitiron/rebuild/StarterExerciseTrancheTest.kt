@@ -787,7 +787,7 @@ class StarterExerciseTrancheTest {
     @Test fun newlyReviewedBenchAccessoriesRequireSpecificFixturesAndNoPhantomLoading() {
         val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
         val ids=listOf("decline-situp","back-ext-45","prone-y-raise")
-        assertEquals(365,byId.size)
+        assertEquals(369,byId.size)
         assertTrue(ids.all{it in byId})
         assertEquals(listOf(RepBand(12,20),RepBand(12,20),RepBand(12,20)),
             ids.map{byId.getValue(it).practicalRepBand})

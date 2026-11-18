@@ -46,7 +46,8 @@ internal fun parseVerifiedStock(
         }
         PhysicalStockEditorKind.VERIFIED_STACK -> {
             require(basis in listOf(LoadBasis.CABLE_STACK,
-                LoadBasis.MACHINE_STACK,LoadBasis.EXERCISE_OVERRIDE))
+                LoadBasis.MACHINE_STACK,LoadBasis.EXERCISE_OVERRIDE,
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT))
             VerifiedLoadStock.Stack(unit,basis,BigDecimal(minimum.trim()),
                 BigDecimal(increment.trim()),BigDecimal(maximum.trim()))
         }
@@ -94,6 +95,7 @@ internal data class KotlinGymStockChoice(
         "single-weight-plate" -> "Individual weight plate"
         "hand-gripper-device" -> "Hand gripper (verified rated settings)"
         "rated-resistance-band-set" -> "Resistance bands (manufacturer-rated, discrete)"
+        "assisted-pullup-dip-counterweight" -> "Assisted pull-up/dip machine · COUNTERWEIGHT (more = easier)"
         else -> equipmentId.replace('-', ' ').replace('_',' ')
             .replaceFirstChar{it.uppercase()}
     }

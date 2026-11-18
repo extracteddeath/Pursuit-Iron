@@ -576,11 +576,20 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     review.issues.take(12).forEach { issue ->
                         Text(issue,style=MaterialTheme.typography.bodySmall)
                     }
+                    val myoChoice=review.prescription?.let {prescribed->
+                        state.source?.setup?.reviewed?.let {athleteSetup->
+                            CoachFirstProgramMyoFinisherDomain.recommend(
+                                prescribed.sessions,
+                                state.source?.catalog.orEmpty(),
+                                review.policy?.phase ?:state.phase,
+                                athleteSetup.experience)
+                        }
+                    }
                     val scheduled=review.generation?.candidate?.catalogReview?.draft
                     if(scheduled!=null) {
                         Text("${scheduled.visits.size} exercise visits · ${scheduled.sessions.size} training days",
                             style=MaterialTheme.typography.bodyMedium)
-                        scheduled.sessions.forEach {day ->
+                        if(review.prescription==null) scheduled.sessions.forEach {day ->
                             Text("Day ${day.dayIndex+1} · ${prettyFirstProgram(day.purpose.name)}",
                                 style=MaterialTheme.typography.titleSmall)
                             day.orderedVisits.forEach { visit ->
@@ -602,20 +611,25 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             } ?: "unresolved"
                             Text("${kotlinExerciseLabel(exercise.exerciseId)}: ${working.size} × ${range} · goal RIR ${target?.targetRir ?: "?"}",
                                 style=MaterialTheme.typography.bodySmall)
+                            // The opted-in technique belongs to ONE exact final
+                            // working set; do not advertise it on every exercise
+                            // or before the full cycle passes native review.
+                            if(state.includeMyoFinisher && state.canSaveDraft &&
+                                myoChoice?.dayIndex==session.dayIndex &&
+                                myoChoice?.exerciseId==exercise.exerciseId &&
+                                working.isNotEmpty()) {
+                                Text("Final working set · Myo-reps: up to 4 × 4 reps · 20 s rests",
+                                    style=MaterialTheme.typography.labelMedium,
+                                    color=MaterialTheme.colorScheme.primary)
+                                Text("Stop early at 3 reps or if form declines. Log each mini-set separately.",
+                                    style=MaterialTheme.typography.bodySmall,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                     // Advanced techniques are NEVER switched on by
                     // default. Show this control only for a source-reviewed,
                     // eligible hypertrophy accessory in the exact preview.
-                    val myoChoice=review.prescription?.let {prescribed->
-                        state.source?.setup?.reviewed?.let {athleteSetup->
-                            CoachFirstProgramMyoFinisherDomain.recommend(
-                                prescribed.sessions,
-                                state.source?.catalog.orEmpty(),
-                                review.policy?.phase ?:state.phase,
-                                athleteSetup.experience)
-                        }
-                    }
                     if(myoChoice!=null && state.savedProgramId==null) {
                         HorizontalDivider()
                         Text("Optional myo-reps finisher",

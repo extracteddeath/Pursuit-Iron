@@ -2,6 +2,18 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Native custom Coach policy v4→v5 form compatibility (2026-11-18):**
+The actual native custom policy editor now resolves each saved phase
+through the same exact v1–v5 muscle-scope authority used for coaching dose.
+A previously reviewed 22-row v4 policy reopens 22 rows and its exact
+authored values, not 25 newly blank neck rows. Only an explicit
+athlete/coach action selects v5, which then requires authored values for
+all neck groups before the whole-cycle audit can approve a change.
+Malformed and future markers remain unverified rather than defaulting to
+current. Pure Kotlin tests and native Compose source contracts verify the
+screen wiring. Real-device, interruption, accessibility and end-to-end
+review/save acceptance remain separate beta gates. No APK/AAB.
+
 **Neck V5 muscle coverage and physical exercise audit (2026-11-18):**
 Four exact web neck IDs now append to the existing stable Kotlin catalog,
 bringing SOURCE identities to **369 of 383**. Unlike legacy 'bodyweight'

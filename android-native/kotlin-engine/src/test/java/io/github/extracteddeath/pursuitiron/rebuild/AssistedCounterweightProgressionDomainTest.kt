@@ -176,4 +176,36 @@ class AssistedCounterweightProgressionDomainTest {
         assertNull(achieved.weightForHumanReview)
     }
 
+    @Test fun physicalMachineAAndBHaveIndependentVerifiedCounterweightStocks() {
+        val machines=KotlinGymMachineAlternatives(
+            "gym-main","assisted-pullup", "machine-a",listOf(
+                KotlinPhysicalMachine("machine-a","A",unit=LoadUnit.LB,
+                    increment=n("10"),minimum=n("10"),maximum=n("80")),
+                KotlinPhysicalMachine("machine-b","B",unit=LoadUnit.LB,
+                    increment=n("5"),minimum=n("20"),maximum=n("65"))
+            ))
+        assertTrue(KotlinMachineAlternativesDomain.valid(machines))
+        val a=KotlinMachineAlternativesDomain.confirmedStack(
+            machines,"machine-a",LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val b=KotlinMachineAlternativesDomain.confirmedStack(
+            machines,"machine-b",LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        assertNotNull(a)
+        assertNotNull(b)
+        assertEquals(LoadBasis.ASSISTANCE_COUNTERWEIGHT,a?.basis)
+        assertEquals(n("10"),a?.increment)
+        assertEquals(n("5"),b?.increment)
+        assertTrue((EquipmentLoadDomain.inspect(a,n("40"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        assertTrue((EquipmentLoadDomain.inspect(b,n("45"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        assertFalse((EquipmentLoadDomain.inspect(a,n("45"),LoadUnit.LB)
+            as LoadInspection.Confirmed).exact)
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(
+            machines,"machine-c",LoadBasis.ASSISTANCE_COUNTERWEIGHT))
+        assertNull(KotlinMachineAlternativesDomain.confirmedStack(
+            machines.copy(machines=machines.machines.map{
+                if(it.id=="machine-b")it.copy(active=false)else it
+            }),"machine-b",LoadBasis.ASSISTANCE_COUNTERWEIGHT))
+    }
+
 }

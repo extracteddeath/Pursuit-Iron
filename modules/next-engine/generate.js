@@ -58,18 +58,19 @@ function generateProgramOnce(requestInput, options) {
     const experienceCapacityMultiplier = normalized.athlete.experience === 'novice' ? .75 : normalized.athlete.experience === 'intermediate' ? .9 : 1;
     const experienceExerciseCap = normalized.athlete.experience === 'novice' ? 6 : normalized.athlete.experience === 'intermediate' ? 8 : 12;
     const responseCapacityMultiplier = normalized.preferences?.responseCapacityScale ?? 1;
-    // Strength accumulation and a short true taper primarily manipulate
-    // working SETS, relative LOAD, rest and total fatigue, not the number
-    // of distinct exercises an athlete is allowed to perform. Applying
-    // the phase volume multiplier to exercise count made an eight-exercise
-    // hypertrophy session shrink to three movements in Peak and could drop
-    // important assistance patterns before the actual dose audit.
-    // Complexity remains a SOFT budget; the time/equipment/recovery auditor
-    // and capacity fallback may still select fewer exercises when justified.
-    // Explicit low readiness and short sessions retain their own scaling.
-    const exercisePhaseScale = ['strength_accumulation', 'intensification', 'peak']
-        .includes(phase) ? 1 : policy.sessionCapacityMultiplier;
-    const capacityMultiplier = exercisePhaseScale * experienceCapacityMultiplier * responseCapacityMultiplier;
+    // A source-verified hypertrophy -> strength block may keep a similar
+    // movement menu while heavier sets, intensity, RIR and rest change.
+    // Do not multiply its exercise-count complexity budget by the
+    // strength-volume taper: these are different programming variables.
+    // This does not force any number of exercises: time, joint recovery,
+    // equipment and actual dose audits still decide what can be used.
+    // Standalone strength and genuine Peak retain their prior explicit
+    // capacity policy. The caller supplies this ONLY during a supported
+    // athlete-owned continuation with meaningful prior session variety.
+    const continuityVariety = options?.preservePriorExerciseVariety === true &&
+        phase === 'strength_accumulation';
+    const phaseExerciseScale = continuityVariety ? 1 : policy.sessionCapacityMultiplier;
+    const capacityMultiplier = phaseExerciseScale * experienceCapacityMultiplier * responseCapacityMultiplier;
     const split = normalized.preferences.lockedSplit ?? normalized.preferences.preferredSplit;
     // Full-body structures have a three-region identity (push + pull + lower). Phase tapering may cut
     // sets and accessories aggressively, but an exercise-count target below three is internally

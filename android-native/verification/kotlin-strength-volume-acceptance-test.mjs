@@ -62,10 +62,12 @@ for(const required of [
   'applyRead(prior.cycleId,disk)',
   'strengthRepairReview=null',
   'canUndo=true',
-  'if(receipt.operation=="strength-dose-repair")',
   'host.saveReviewedCustomCycleDraft(',
   'NativeCustomDraftRefusal.STALE_REVISION'
 ])assert.ok(controller.includes(required),'Missing controller review/save: '+required);
+// Both revisioned Strength repairs must take the source-fenced Undo path.
+assert.match(controller,/if\(receipt\.operation in setOf\("strength-dose-repair",\s*"strength-menu-recovery"\)\)/,
+  'Dose and menu recovery Undo must use a current reviewed gym source');
 for(const required of [
   'repairReview=state.strengthRepairReview',
   'state.coachingSuggestionsEnabled',

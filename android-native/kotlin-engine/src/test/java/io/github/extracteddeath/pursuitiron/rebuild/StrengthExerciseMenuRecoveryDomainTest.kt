@@ -27,7 +27,7 @@ class StrengthExerciseMenuRecoveryDomainTest {
     }
     private val catalog by lazy{fixture.movements+extras()}
     private fun core()=listOf(
-        slot("bench",ComposerRole.PRIMARY),
+        slot("bench",ComposerRole.PRIMARY).copy(pinned=true),
         slot("row",ComposerRole.SECONDARY),
         slot("squat",ComposerRole.SECONDARY))
     private fun cycle():CustomTrainingCycle {
@@ -127,6 +127,62 @@ class StrengthExerciseMenuRecoveryDomainTest {
         assertEquals(StrengthMenuRecoveryStatus.SOURCE_UNVERIFIED,
             StrengthExerciseMenuRecoveryDomain.preview(
                 request(c),audit(c.copy(revision=7))).status)
+    }
+
+    @Test fun fullyAuditedRecoveryCanProduceANonIssuableAthleteReview() {
+        val c=cycle()
+        val base=checkNotNull(fixture.generation().policy)
+        val activeExtras=muscles.toSet()
+        val bounds=base.selectedBounds.map{dose->
+            if(dose.muscle in activeExtras)
+                dose.copy(mev=BigDecimal.ZERO,mav=BigDecimal("2"),
+                    mrv=BigDecimal("4"),minimumDirectDays=0)
+            else dose
+        }
+        val hyper=base.copy(baselineBounds=bounds,selectedBounds=bounds)
+        val strength=hyper.copy(
+            policyId="strength-source-policy",revision="strength-v2",
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+            primaryLiftMinimumDays=mapOf("bench" to 1))
+        val inputs=CustomCoachAuditInputs(
+            policiesByPhase=mapOf(
+                TrainingPhase.HYPERTROPHY to hyper,
+                TrainingPhase.STRENGTH to strength),
+            nonSetSecondsByWeekday=mapOf(0 to 900,2 to 900,4 to 900),
+            continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                BigDecimal("0.25"),BigDecimal("0.25"),
+                BigDecimal("0.8"),BigDecimal("0.8")))
+        val before=CustomCycleCoachAuditDomain.review(c,fixture.athlete(),
+            catalog,inputs)
+        assertEquals("A real source continuity defect is required: "+
+            before.issues,CustomCoachAuditStatus.UNRESOLVED,before.status)
+        assertTrue(before.issues.toString(),before.issues.any{
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP})
+        assertFalse(before.issues.toString(),before.issues.any{
+            it.kind in setOf(CustomCoachIssueKind.CATALOG_UNVERIFIED,
+                CustomCoachIssueKind.BELOW_WEEKLY_MEV,
+                CustomCoachIssueKind.ABOVE_WEEKLY_MRV)})
+        val input=request(c).copy(review=request(c).review.copy(coaching=inputs))
+        val review=StrengthExerciseMenuRecoveryDomain.propose(input)
+        assertEquals("Restored, already-authored strength movements should "+
+            "pass the SAME actual full-cycle auditor: "+
+            review.comparison.evaluated.map{
+                it.status to it.coachingAudit?.issues},
+            StrengthMenuRecoveryStatus.READY_FOR_ATHLETE_REVIEW,review.status)
+        assertEquals(extraIds,review.restored.map{it.exerciseId})
+        assertEquals(AdaptiveCycleOptionStatus.READY_FOR_REVIEW,
+            review.comparison.evaluated.single().status)
+        val candidate=checkNotNull(review.reviewedOption).proposedCycle
+        assertEquals(28,review.comparison.evaluated.single()
+            .coachingAudit!!.weeks[2].workingSets)
+        assertEquals(7L,candidate.revision)
+        assertEquals(c.blocks.first(),candidate.blocks.first())
+        assertEquals(6L,c.revision)
+        assertFalse(review.maySaveProgram)
+        assertFalse(review.mayIssueWorkout)
+        assertFalse(review.mayApplyAutomatically)
+        assertFalse(review.mayAlterHistory)
     }
 
     @Test fun fullProposeNeverTreatsInjectedStructuralAuditAsAuthority() {

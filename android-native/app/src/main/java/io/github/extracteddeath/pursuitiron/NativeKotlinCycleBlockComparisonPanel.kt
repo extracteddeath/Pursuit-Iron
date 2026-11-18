@@ -91,7 +91,11 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     repairReview:NativeStrengthVolumeRepairReady?=null,
     canRequestStrengthRepair:Boolean=false,
     onRequestStrengthRepair:((String,Int)->Unit)?=null,
-    onAcceptStrengthRepair:(()->Unit)?=null
+    onAcceptStrengthRepair:(()->Unit)?=null,
+    menuRecoveryReview:NativeStrengthMenuRecoveryReady?=null,
+    canRequestMenuRecovery:Boolean=false,
+    onRequestMenuRecovery:((String,Int)->Unit)?=null,
+    onAcceptMenuRecovery:(()->Unit)?=null
 ) {
     if(cycle.blocks.size<2)return
     var selected by rememberSaveable(cycle.cycleId){
@@ -281,6 +285,81 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                     "No exercise, prescription or training history was changed.",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(comparison.strengthExerciseCollapseReviewRequired &&
+            onRequestMenuRecovery!=null) {
+            HorizontalDivider()
+            PursuitSectionHeading("Restore missing Strength exercises",
+                "Compare the actual last Hypertrophy week with the reviewed Strength entry. No exercise-count quota or invented prescription.")
+            var menuCapacity by rememberSaveable(cycle.cycleId,id) {
+                mutableIntStateOf(8)
+            }
+            Text("Maximum exercises on one training day",
+                style=MaterialTheme.typography.labelLarge)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                listOf(6,8,10,12).forEach{cap->
+                    FilterChip(selected=menuCapacity==cap,enabled=enabled,
+                        onClick={menuCapacity=cap},
+                        label={Text(cap.toString()+" exercises")})
+                }
+            }
+            val current=menuRecoveryReview?.takeIf{receipt->
+                receipt.request.cycleId==cycle.cycleId &&
+                    receipt.request.expectedCycleRevision==cycle.revision &&
+                    receipt.request.blockId==next.blockId &&
+                    receipt.request.maximumExercisesPerDay==menuCapacity
+            }
+            if(current==null) {
+                OutlinedButton(
+                    enabled=enabled && canRequestMenuRecovery,
+                    onClick={onRequestMenuRecovery(next.blockId,menuCapacity)},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
+                ) {Text("Preview source exercise recovery")}
+                if(!canRequestMenuRecovery)Text(
+                    "A current full-cycle coach review and source-verified gym are required first.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text("Proposed: "+current.restored.size+
+                    " original source exercise(s), with their actual authored "+
+                    "sets, loads, reps, RIR and rest. No saved program changed yet.",
+                    style=MaterialTheme.typography.bodyMedium)
+                current.restored.forEach{item->
+                    Text(compareWeekday(item.weekday)+" · "+
+                        kotlinExerciseLabel(item.exerciseId)+" · "+
+                        item.workingSets+" working sets",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                Text("The full native cycle audit accepted this exact candidate. "+
+                    "Saving invalidates the old program approval, never rewrites "+
+                    "existing workouts or transfers Machine A/B histories.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                var menuAthleteConfirmed by remember(current) {
+                    mutableStateOf(false)
+                }
+                Row(Modifier.fillMaxWidth(),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    Checkbox(checked=menuAthleteConfirmed,enabled=enabled,
+                        onCheckedChange={menuAthleteConfirmed=it})
+                    Text("I reviewed the recovered exercises and their working "+
+                        "sets. Save a new program draft that requires renewed approval.",
+                        modifier=Modifier.weight(1f),
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                Button(
+                    enabled=enabled && menuAthleteConfirmed &&
+                        onAcceptMenuRecovery!=null,
+                    onClick={onAcceptMenuRecovery?.invoke()},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
+                ) {Text("Confirm and save recovered exercises")}
+                OutlinedButton(
+                    enabled=enabled && canRequestMenuRecovery,
+                    onClick={onRequestMenuRecovery(next.blockId,menuCapacity)},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Recheck latest source")}
+            }
         }
         val sourceContinuityIssue=currentAudit?.issues?.any {issue->
             issue.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&

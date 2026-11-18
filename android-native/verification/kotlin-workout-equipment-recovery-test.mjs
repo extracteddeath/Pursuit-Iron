@@ -6,15 +6,22 @@ const recovery=readFileSync(dir+'NativeKotlinEquipmentRecovery.kt','utf8');
 const machine=readFileSync(dir+'NativeKotlinWorkoutMachineSelector.kt','utf8');
 const generated=readFileSync(dir+'NativeKotlinWorkoutCandidateScreen.kt','utf8');
 const custom=readFileSync(dir+'NativeKotlinCustomJournalScreen.kt','utf8');
+const info=readFileSync(dir+'NativeKotlinWorkoutExerciseInfoSheet.kt','utf8');
 const customSheet=readFileSync(dir+'NativeKotlinCustomExerciseSheet.kt','utf8');
 const generatedSheet=readFileSync(dir+'NativeKotlinComposerSwapSheet.kt','utf8');
 const tests=readFileSync(
     'android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinEquipmentRecoveryPolicyTest.kt','utf8');
 
-assert.match(recovery,/Equipment unavailable\? Change machine or exercise/);
-assert.match(recovery,/Same lift · different physical machine/);
-assert.match(recovery,/Different exercise · workout only/);
-assert.match(recovery,/if\(expanded\)PursuitCard/);
+// These actions now live in Exercise Info. Never resurrect the permanent
+// recovery banner above the actual work/last/target editor.
+assert.doesNotMatch(recovery,/NativeKotlinEquipmentRecoveryControl|@Composable|PursuitCard/);
+assert.doesNotMatch(generated,/NativeKotlinEquipmentRecoveryControl\(/);
+assert.doesNotMatch(custom,/NativeKotlinEquipmentRecoveryControl\(/);
+assert.match(info,/Text\("Equipment and exercise"/);
+assert.match(info,/onChooseMachine\?\.let/);
+assert.match(info,/onSwapExercise\?\.let/);
+assert.match(info,/unavailableReason\?\.takeIf/);
+assert.match(info,/Planned working sets/);
 assert.match(recovery,/activeWorkout && hasPhysicalMachineConfig/);
 assert.match(recovery,/activeWorkout && !hasRecordedExerciseWork && !linkedSuperset/);
 assert.doesNotMatch(recovery,/onRecord\(|onSave\(|RecordSet\(|issueWorkout\(|KotlinPerformedSet\(/);
@@ -29,22 +36,26 @@ assert.match(machine,/onSelect\(machine\.id\)/);
 assert.match(machine,/onCreate\(newMachineName\.trim\(\)\.ifEmpty\{suggestedName\},makeDefault\)/);
 
 assert.match(generated,/NativeKotlinEquipmentRecoveryPolicy\.review\(/);
-assert.match(generated,/NativeKotlinEquipmentRecoveryControl\(/);
-assert.match(generated,/hasPhysicalMachineConfig=activeMachineConfig!=null/);
-assert.match(generated,/hasRecordedExerciseWork=recorded/);
-assert.match(generated,/onChangeStation=\{openPhysicalMachineFor=exercise\}/);
-assert.match(generated,/onReplaceExercise=\{reviewSwap\(exercise\)\}/);
+assert.match(generated,/hasPhysicalMachineConfig=infoConfig!=null/);
+assert.match(generated,/hasRecordedExerciseWork=targets\.any\{/);
+assert.match(generated,/onChooseMachine=if\(!infoWarmupsOnly && infoOptions\.canChangeStation\)/);
+assert.match(generated,/onSwapExercise=if\(!infoWarmupsOnly && infoOptions\.canReplaceExercise\)/);
+assert.match(generated,/unavailableReason=if\(!infoWarmupsOnly/);
+assert.match(generated,/openPhysicalMachineFor=exerciseId/);
+assert.match(generated,/reviewSwap\(exerciseId\)/);
 assert.match(generated,/openPhysicalMachineFor==selected\.target\.exerciseId/);
 assert.match(generated,/onExternalOpenConsumed=\{openPhysicalMachineFor=null\}/);
 assert.match(generated,/host\.reviewComposerWorkoutSwapChoices\(workoutId,exerciseId\)/);
 assert.match(generated,/machineChoices\.onSelect\(exerciseId,machineId\)/);
 
 assert.match(custom,/NativeKotlinEquipmentRecoveryPolicy\.review\(/);
-assert.match(custom,/NativeKotlinEquipmentRecoveryControl\(/);
 assert.match(custom,/linkedSuperset=slot\.supersetGroup!=null/);
-assert.match(custom,/hasRecordedExerciseWork=recorded/);
-assert.match(custom,/onChangeStation=\{openPhysicalMachineForSlot=slot\.slotId\}/);
-assert.match(custom,/onReplaceExercise=\{reviewSwap\(slot\)\}/);
+assert.match(custom,/hasRecordedExerciseWork=infoRecorded/);
+assert.match(custom,/onChooseMachine=if\(!infoWarmupsOnly && infoOptions\.canChangeStation\)/);
+assert.match(custom,/onSwapExercise=if\(!infoWarmupsOnly && infoOptions\.canReplaceExercise\)/);
+assert.match(custom,/unavailableReason=if\(!infoWarmupsOnly/);
+assert.match(custom,/openPhysicalMachineForSlot=slot\.slotId/);
+assert.match(custom,/reviewSwap\(slot\)/);
 assert.match(custom,/externalOpen=openPhysicalMachineForSlot==slot\.slotId/);
 assert.match(custom,/onExternalOpenConsumed=\{openPhysicalMachineForSlot=null\}/);
 assert.match(custom,/machineChoices\.onSelect\(slot\.exerciseId,machineId\)/);

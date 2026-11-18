@@ -71,7 +71,7 @@ assert.equal(historyForMachineRecommendation(history,'chest_press','A','gymX',x)
 assert.equal(historyForMachineRecommendation(history,'chest_press','B','gymX',x)
     .at(-1).perf.chest_press.sets.length,0);
 assert.equal(machineHistory(history,{gymId:'gymY',exerciseId:'chest_press',
-    machineInstanceId:'A',gym:x}).length,1,
+    machineInstanceId:'A',gym:x}).length,0,
     'GymX assignment never leaks to GymY');
 assert.equal(sanitizeMachineVariants(x.machineVariants).chest_press.legacyHistoryMachineId,'A');
 const xRenamed=editMachineVariant(x,'chest_press','A',{label:'Original Press'});

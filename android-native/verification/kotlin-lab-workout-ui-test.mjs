@@ -1360,3 +1360,30 @@ assert.match(coachScopeUi,/Button\(enabled=!busy && unverifiedPhases.isEmpty\(\)
 // Explicit upgrades land on the first not-yet-covered muscle, so an older
 // athlete does not have to search through all existing saved rows.
 assert.match(coachScopeUi,/selectedMuscle=TrainingMuscleCoverage.current.firstOrNull\{/);
+
+
+// Typed non-repetition set entry is an actual Compose callback surface,
+// backed by the source-specific Kotlin parser and real issued set model.
+// Not proof that the parent program/History routes are wired or device-tested.
+const measuredEditor=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeMeasuredExerciseSetEditor.kt');
+const measuredEntry=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MeasuredExerciseEntryDomain.kt');
+assert.match(measuredEditor,/NativeMeasuredStoredSet/);
+assert.match(measuredEditor,/fun NativeMeasuredExerciseSetEditor/);
+assert.match(measuredEditor,/MeasuredExerciseEntryDomain\.parse\(/);
+assert.match(measuredEditor,/plan\.sides\.sortedBy\{it\.ordinal\}/);
+assert.match(measuredEditor,/MeasuredEntryUnit\.MINUTES_SECONDS/);
+assert.match(measuredEditor,/MeasuredEntryUnit\.FEET/);
+assert.match(measuredEditor,/roundedApproved/);
+assert.match(measuredEditor,/Checkbox\(/);
+assert.match(measuredEditor,/MeasuredJournalOperation\.Record\(/);
+assert.match(measuredEditor,/UUID\.randomUUID\(\)/);
+assert.match(measuredEditor,/journal\.revision,outcome,actual,previous\?\.eventId/);
+assert.match(measuredEditor,/only a confirmed native journal receipt/i);
+assert.match(measuredEditor,/if\(loaded\)actualWeight else null/);
+assert.match(measuredEditor,/if\(previous!=null && !editing\)/);
+assert.match(measuredEditor,/onRecord\(/);
+assert.doesNotMatch(measuredEditor,/MeasuredJournalOperation\.Finish/);
+assert.doesNotMatch(measuredEditor,/onRecord\(.*KotlinPerformedSet/);
+assert.match(measuredEntry,/unit==MeasuredEntryUnit\.FEET && !exact/);
+assert.match(measuredEntry,/rounding/);
+assert.match(measuredEntry,/MeasuredExerciseDomain\.validActual\(plan,outcome,actual\)/);

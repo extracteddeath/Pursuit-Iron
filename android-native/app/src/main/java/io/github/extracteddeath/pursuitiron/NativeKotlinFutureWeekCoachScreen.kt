@@ -55,6 +55,12 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     var repPreview by remember {mutableStateOf<NativeCustomNextRepPreview.Ready?>(null)}
     var repAccepted by remember {mutableStateOf<NativeCustomNextRepReceipt?>(null)}
     var repWorkoutId by rememberSaveable {mutableStateOf("")}
+    // A counterweight decrease uses the existing separately persisted custom
+    // next-workout load approval, never future-cycle upward-load consent.
+    var assistancePreview by remember {mutableStateOf<NativeCustomLoadPreview.Ready?>(null)}
+    var assistanceAccepted by remember {mutableStateOf<NativeCustomNextLoadReceipt?>(null)}
+    var assistanceWorkoutId by rememberSaveable {mutableStateOf("")}
+    var confirmAssistance by remember {mutableStateOf(false)}
     var confirmRepAcceptance by remember {mutableStateOf(false)}
     var handoff by remember {
         mutableStateOf<NativeAcceptedFutureWeekLoadHandoff.Ready?>(null)
@@ -71,6 +77,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         session=null;slotId="";coaching=null;offer=null;consentPreview=null;accepted=null
         handoff=null;prepared=null;issued=null;confirmAcceptance=false
         confirmRepAcceptance=false;repPreview=null;repAccepted=null;repWorkoutId=""
+        assistancePreview=null;assistanceAccepted=null;assistanceWorkoutId=""
+        confirmAssistance=false
         confirmIssue=false;notice=null
     }
     fun clearOffer() {
@@ -78,6 +86,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         coaching=null;offer=null;consentPreview=null;accepted=null;handoff=null
         prepared=null;issued=null;confirmAcceptance=false;confirmIssue=false
         confirmRepAcceptance=false;repPreview=null;repAccepted=null;repWorkoutId=""
+        assistancePreview=null;assistanceAccepted=null;assistanceWorkoutId=""
+        confirmAssistance=false
         notice=null
     }
     LaunchedEffect(host) {
@@ -111,6 +121,15 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     val repForecastPolicy=assistance?.let{
         CustomRepForecastPolicyDomain.newProposal(it)
     } ?: CustomRepForecastPolicy.TARGET_RIR_V2 // never used when disabled
+    val currentSlot=session?.slots?.singleOrNull{it.slotId==slotId}
+    val currentWorkingSets=currentSlot?.sets?.filter{
+        it.prescription.type==DraftSetType.WORKING
+    }.orEmpty()
+    val isAssistedCounterweight=currentWorkingSets.isNotEmpty() &&
+        currentWorkingSets.all{
+            (it.prescription.load as? DraftSetLoad.Verified)?.basis==
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        }
     val maxStep=remember(maxStepText) {
         runCatching{BigDecimal(maxStepText.trim())}.getOrNull()
             ?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
@@ -231,7 +250,9 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     enabled=!busy,
                     onValueChange={maxStepText=it;clearOffer()},
                     isError=maxStep==null,
-                    label={Text("Maximum approved increase · gym units")},
+                    label={Text(if(isAssistedCounterweight)
+                        "Maximum counterweight reduction · gym units"
+                    else "Maximum approved increase · gym units")},
                     singleLine=true,modifier=Modifier.fillMaxWidth())
                 if(assistance?.offersFatigueAdvice==true) {
                     Text("How are you feeling?",
@@ -278,6 +299,91 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     }) {Text(if(busy)"Checking saved work…" else "Review this training day")}
                 coaching?.let {reviewed->
                     NativeKotlinCustomDayCoachingSummary(reviewed,absoluteWeek)
+                }
+                if(isAssistedCounterweight) {
+                    HorizontalDivider()
+                    Text("Assisted-machine progression",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("The weight shown on this machine is assistance: less counterweight makes the movement harder. Your current physical Machine A/B, signed day and complete corrected history must qualify before proposing a change.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(
+                        enabled=!busy && slotId.isNotBlank() && maxStep!=null &&
+                            currentSlot?.machineInstanceId!=null,
+                        onClick={
+                            val chosen=slotId
+                            val reduction=checkNotNull(maxStep)
+                            clearOffer()
+                            val workoutId="custom-"+UUID.randomUUID().toString()
+                            assistanceWorkoutId=workoutId
+                            busy=true
+                            scope.launch {
+                                val result=withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        host.previewNextActivatedLoadAmendment(
+                                            workoutId,absoluteWeek,weekday,chosen,
+                                            contextInputs,readiness,restricted,reduction)
+                                    }.getOrNull()
+                                }
+                                assistancePreview=(result as?
+                                    NativeCustomLoadPreview.Ready)?.takeIf {
+                                    it.receipt.workoutId==workoutId &&
+                                        it.receipt.slotId==chosen &&
+                                        it.receipt.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT &&
+                                        it.receipt.proposedLoad<it.receipt.originalLoad
+                                }
+                                notice=if(assistancePreview==null)
+                                    "No safe lower-assistance option: ${result ?: "history or physical machine not verified"}. Keep the current workout unchanged."
+                                else null
+                                busy=false
+                            }
+                        }) {Text(if(busy)"Checking actual assistance…" else
+                            "Review less assistance for next workout")}
+                    if(currentSlot?.machineInstanceId==null)
+                        Text("Bind the physical assisted machine to this saved cycle slot in My Program before advancing its independent Machine A/B history.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    assistancePreview?.let {preview->
+                        val receipt=preview.receipt
+                        val original=receipt.originalLoad.stripTrailingZeros().toPlainString()
+                        val proposed=receipt.proposedLoad.stripTrailingZeros().toPlainString()
+                        Text("Next workout · less assistance",
+                            style=MaterialTheme.typography.titleMedium)
+                        Text("$original → $proposed ${receipt.unit.name.lowercase()} counterweight",
+                            style=MaterialTheme.typography.headlineSmall)
+                        Text("This is a harder assisted exercise, not a decrease in lifted resistance. All ${receipt.setKeys.size} working sets retain their reps, RIR, warmups and exact physical machine. Nothing is applied automatically.",
+                            style=MaterialTheme.typography.bodySmall)
+                        Button(enabled=!busy && assistanceAccepted==null,
+                            onClick={confirmAssistance=true}) {
+                            Text("Review and approve less assistance")
+                        }
+                    }
+                    assistanceAccepted?.let{receipt->
+                        Text("Less-assistance approval saved for this exact next workout",
+                            style=MaterialTheme.typography.titleMedium)
+                        if(prepared==null) {
+                            OutlinedButton(enabled=!busy,onClick={
+                                busy=true
+                                scope.launch {
+                                    val preparedResult=withContext(Dispatchers.IO){
+                                        runCatching {
+                                            host.prepareActivatedFutureWorkout(
+                                                receipt.workoutId,active.cycleId,
+                                                absoluteWeek,weekday,contextInputs)
+                                        }.getOrNull()
+                                    }
+                                    prepared=(preparedResult as?
+                                        NativeCustomPrepareResult.Prepared)?.workout
+                                        ?.takeIf{it.workoutId==receipt.workoutId &&
+                                            it.loadApprovalFingerprint==receipt.fingerprint}
+                                    notice=if(prepared==null)
+                                        "Saved approval is not prepared: ${preparedResult ?: "verification unavailable"}. No workout issued."
+                                    else "Assistance-adjusted workout prepared. Issue it separately to begin logging."
+                                    busy=false
+                                }
+                            }) {Text("Retry preparing approved workout")}
+                        }
+                    }
                 }
                 // Offer an actual coach-reviewed rep adjustment, not just
                 // a display-only calculation. The native owner validates
@@ -363,6 +469,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                         }
                     }) {Text("Prepare rep-adjusted workout")}
                 }
+                if(!isAssistedCounterweight)
                 Button(enabled=!busy&&slotId.isNotBlank()&&maxStep!=null,
                     onClick={
                         val chosen=slotId
@@ -573,6 +680,64 @@ internal fun NativeKotlinFutureWeekCoachScreen(
             },dismissButton={
                 TextButton(enabled=!busy,onClick={confirmRepAcceptance=false}) {
                     Text("Cancel")
+                }
+            })
+    }
+    if(confirmAssistance && active!=null && contextInputs!=null) {
+        val shown=assistancePreview
+        AlertDialog(
+            onDismissRequest={if(!busy)confirmAssistance=false},
+            title={Text("Use less machine assistance?")},
+            text={Text("Accept ${shown?.receipt?.originalLoad} → ${shown?.receipt?.proposedLoad} ${shown?.receipt?.unit?.name?.lowercase()} of counterweight on the exact saved assisted machine. This makes the next workout HARDER. The original cycle, warmups and all completed/issued workouts stay unchanged. A second confirmation is required to issue the new workout.")},
+            confirmButton={
+                Button(enabled=!busy && shown!=null && maxStep!=null,
+                    onClick={
+                        val offer=shown ?:return@Button
+                        val reduction=maxStep ?:return@Button
+                        confirmAssistance=false
+                        busy=true
+                        scope.launch {
+                            val expected=offer.receipt
+                            val (approval,preparedResult)=withContext(Dispatchers.IO) {
+                                runCatching {
+                                    val accepted=host.approveNextActivatedLoadAmendment(
+                                        expected.workoutId,absoluteWeek,weekday,
+                                        expected.slotId,contextInputs,readiness,restricted,
+                                        reduction,expected.fingerprint,
+                                        expected.historyRevision,expected.consentRevision,
+                                        expected.setKeys,expected.originalLoad,
+                                        expected.proposedLoad,true)
+                                    val ready=if(accepted is NativeCustomLoadWrite.Accepted)
+                                        host.prepareActivatedFutureWorkout(
+                                            expected.workoutId,active.cycleId,
+                                            absoluteWeek,weekday,contextInputs)
+                                    else null
+                                    accepted to ready
+                                }.getOrElse{null to null}
+                            }
+                            assistanceAccepted=(approval as? NativeCustomLoadWrite.Accepted)
+                                ?.receipt?.takeIf{it==expected}
+                            prepared=(preparedResult as? NativeCustomPrepareResult.Prepared)
+                                ?.workout?.takeIf{
+                                    it.workoutId==expected.workoutId &&
+                                        it.loadApprovalFingerprint==expected.fingerprint
+                                }
+                            notice=when {
+                                assistanceAccepted==null ->
+                                    "No change approved: ${approval ?: "verification unavailable"}. The authored workout is unchanged."
+                                prepared==null ->
+                                    "Assistance reduction accepted, but workout preparation was refused: ${preparedResult ?: "verification unavailable"}. Retry preparing without changing your approval."
+                                else ->
+                                    "Your verified less-assistance workout is prepared. Review it and issue separately to start logging."
+                            }
+                            if(assistanceAccepted==null)assistancePreview=null
+                            busy=false
+                        }
+                    }) {Text("Approve and prepare")}
+            },
+            dismissButton={
+                TextButton(enabled=!busy,onClick={confirmAssistance=false}){
+                    Text("Keep current assistance")
                 }
             })
     }

@@ -2,6 +2,20 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Assisted-machine next-workout consent (2026-11-18):** The custom
+activated-block Coach now offers a separate next-session assistance review
+ONLY when the approved slot binds a real calibrated assisted machine. Exact
+same-day/same-Machine-A/B completed rep-ceiling evidence can propose a
+*smaller displayed counterweight*, which makes the exercise harder; normal
+higher-weight coaching, unconfirmed stacks, stale history, non-straight sets
+and warmup changes remain blocked. The athlete must explicitly approve the
+exact revisioned proposal; native store rederives source, history, physical
+stock and exercise identity before persisting. The existing prepared-workout
+and separate Issue flow then opens the actual logger. Old higher-load
+approval bytes and policies are unchanged. Full device/TalkBack acceptance,
+all other assisted variants, recovery/periodization and real athlete
+superiority remain OPEN. No APK/AAB.
+
 **Assisted-machine Progress and record direction (2026-11-18):**
 A lower COUNTERWEIGHT means a harder assisted movement. Read-only per-exercise
 corrected trends now choose the **lowest** completed counterweight for each

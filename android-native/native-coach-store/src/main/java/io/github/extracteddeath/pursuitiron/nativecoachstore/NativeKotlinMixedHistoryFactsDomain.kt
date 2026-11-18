@@ -68,6 +68,11 @@ data class NativeKotlinMixedHistoryFacts(
     val highestCompletedLoadByMachine:
         Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact> = emptyMap(),
     val bestLoggedSingleByMachine:
+        Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact> = emptyMap(),
+    /** HARDER assisted-machine observations have LESS selected counterweight.
+     * No generic heaviest-load/1RM/Strength Standards/PR metric may own them.
+     * Each record is bound to issued gym + physical station + actual basis. */
+    val lowestAssistanceByMachine:
         Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact> = emptyMap()
 ) {
     val canPublishPr: Boolean get() = false
@@ -131,6 +136,8 @@ object NativeKotlinMixedHistoryFactsDomain {
             NativeMixedCompletedLoadFact>()
         val singlesByMachine=linkedMapOf<NativeMixedMachineLoadKey,
             NativeMixedCompletedLoadFact>()
+        val lowestAssistanceByMachine=linkedMapOf<NativeMixedMachineLoadKey,
+            NativeMixedCompletedLoadFact>()
         for (completion in timeline.completions) {
             val manifest = completion.manifest
             val visits = when (completion) {
@@ -186,8 +193,10 @@ object NativeKotlinMixedHistoryFactsDomain {
                 val target = visit.issuedLoad as? DraftSetLoad.Verified ?: continue
                 val actual = visit.actual ?: continue
                 val load = actual.load ?: continue
+                val assisted=target.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
                 if (actual.unit != target.unit || actual.reps !in 1..100 ||
-                    load <= BigDecimal.ZERO || load > BigDecimal("100000") ||
+                    (if(assisted)load<BigDecimal.ZERO else load<=BigDecimal.ZERO) ||
+                    load > BigDecimal("100000") ||
                     load.stripTrailingZeros().scale() > 3) continue
                 val key = NativeMixedPhysicalLoadKey(
                     visit.exercise, target.unit, target.basis)
@@ -201,6 +210,27 @@ object NativeKotlinMixedHistoryFactsDomain {
                 // exclude it from general barbell 1RM, Strength Standards
                 // and thousand-pound logged-single calculations.
                 val machineId=actual.machineInstanceId
+                // The load is the counterweight selected on an assisted
+                // machine: larger numbers are EASIER, so recording the largest
+                // as a strength best (or as a logged single) is false. Preserve
+                // the latest corrected working set above, and select the
+                // minimum only for an explicitly identified physical station.
+                if(assisted) {
+                    if(id.matches(issuedGymId) &&
+                        KotlinMachineAlternativesDomain.validInstanceId(machineId)) {
+                        val station=NativeMixedMachineLoadKey(issuedGymId,
+                            visit.exercise,checkNotNull(machineId),
+                            target.unit,target.basis)
+                        val earlier=lowestAssistanceByMachine[station]
+                        if(earlier==null || physical<earlier.actualLoad ||
+                            (physical.compareTo(earlier.actualLoad)==0 &&
+                                (record.reps>earlier.reps ||
+                                    (record.reps==earlier.reps &&
+                                        record.completionOrder>earlier.completionOrder))))
+                            lowestAssistanceByMachine[station]=record
+                    }
+                    continue
+                }
                 if(target.basis!=LoadBasis.BARBELL_TOTAL || machineId==null) {
                     if (actual.reps == 1) {
                         val previous=bestSingle[key]
@@ -253,7 +283,8 @@ object NativeKotlinMixedHistoryFactsDomain {
             Collections.unmodifiableList(repsAtLoad.values.toList()),
             Collections.unmodifiableMap(bestSingle),
             Collections.unmodifiableMap(highestByMachine),
-            Collections.unmodifiableMap(singlesByMachine)
+            Collections.unmodifiableMap(singlesByMachine),
+            Collections.unmodifiableMap(lowestAssistanceByMachine)
         ))
     }
 }

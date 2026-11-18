@@ -2131,6 +2131,143 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return futureBlockContexts.read(owner.ownerKey,cycleId,blockId)
     }
 
+    /**
+     * The ONLY preview authority for an athlete-initiated strength dose
+     * repair. All source facts, current adaptation rights and coaching
+     * opt-outs come from this owner, not Compose-provided approval flags.
+     * This is an EDITABLE DRAFT proposal, not a signed/issued next workout.
+     * Both preview and commit run under the same cross-process owner fence.
+     */
+    private fun reviewedStrengthDose(
+        request:NativeStrengthVolumeRepairRequest
+    ):NativeStrengthVolumeRepairPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeStrengthVolumeRepairPreview.Rejected(
+                "Sign in to review this exact saved training cycle.")
+        if(request.expectedCycleRevision<1 ||
+            request.expectedSourceRevision<1 ||
+            request.maximumWorkingSetsPerSlot !in 1..20)
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                "Invalid saved-cycle, gym revision or working-set ceiling.")
+        val assistance=(coachSettings.read(owner.ownerKey)
+            as? NativeCoachSettingsRead.Current)?.settings
+            ?:return NativeStrengthVolumeRepairPreview.Rejected(
+                "Current coaching preferences could not be verified.")
+        if(assistance.athleteId!=owner.athleteId ||
+            !assistance.policy.coachingSuggestionsEnabled)
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                "Adaptive coaching is disabled for this athlete.")
+        val rights=(adaptiveCyclePermissions.read(owner.ownerKey,
+            request.cycleId) as? NativeAdaptivePermissionRead.Found)?.receipt
+            ?:return NativeStrengthVolumeRepairPreview.Rejected(
+                "Authorize Adapt set counts for this program first.")
+        if(rights.athleteId!=owner.athleteId ||
+            CustomCycleChangeKind.SET_COUNT !in rights.allowedKinds)
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                "Adapt set counts is not enabled for this saved cycle.")
+        val original=(customDraftStore.read(owner.ownerKey,
+            request.cycleId) as? NativeCustomDraftReadResult.Found)?.draft
+            ?:return NativeStrengthVolumeRepairPreview.Rejected(
+                "Saved program could not be verified; reopen it.")
+        val source=(authoringSourceStore.read(owner.ownerKey)
+            as? NativeAuthoringSourceRead.Found)?.source
+            ?:return NativeStrengthVolumeRepairPreview.Rejected(
+                "Current owner-reviewed gym and exercise catalog are missing.")
+        if(original.revision!=request.expectedCycleRevision ||
+            source.revision!=request.expectedSourceRevision ||
+            original.athleteId!=owner.athleteId ||
+            source.athleteId!=owner.athleteId ||
+            source.ownerKey!=owner.ownerKey)
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                "The program or gym changed. Review the latest saved version.")
+        val proposed=runCatching {
+            AdaptiveStrengthVolumeRepairDomain.propose(
+                AdaptiveStrengthVolumeRepairRequest(
+                    AdaptiveCycleOptionRequest(
+                        original,request.blockId,source.setup,source.catalog,
+                        request.coaching,
+                        CustomCycleCoachPermissions(adaptSetCount=true),
+                        emptyList()),
+                    request.maximumWorkingSetsPerSlot))
+        }.getOrElse {
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                "The proposed set counts could not pass the full-cycle review.")
+        }
+        val cycle=proposed.proposedOption?.proposedCycle
+        if(proposed.status!=
+            AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW ||
+            cycle==null || proposed.addedWorkingSets<=0 ||
+            proposed.repairedWeekCount<=0)
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                proposed.explanation)
+        val changes=runCatching {
+            reviewedStrengthVolumeSlots(original,cycle,request.blockId)
+        }.getOrNull().orEmpty()
+        if(changes.isEmpty() ||
+            changes.sumOf{it.afterWorkingSets-it.beforeWorkingSets}!=
+                proposed.addedWorkingSets)
+            return NativeStrengthVolumeRepairPreview.Rejected(
+                "The proposed slot changes did not match the reviewed dose.")
+        return NativeStrengthVolumeRepairPreview.Ready(
+            NativeStrengthVolumeRepairReady(request,rights.revision,
+                assistance.revision,cycle,proposed.addedWorkingSets,
+                proposed.repairedWeekCount,changes))
+    }
+
+    fun previewStrengthVolumeRepair(
+        request:NativeStrengthVolumeRepairRequest
+    ):NativeStrengthVolumeRepairPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeStrengthVolumeRepairPreview.Rejected(
+                "Current athlete is unavailable.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                reviewedStrengthDose(request)
+            }
+        }.getOrElse {NativeStrengthVolumeRepairPreview.Rejected(
+            "Unable to verify the current native program and coaching rules.")}
+    }
+
+    /**
+     * A separate athlete confirmation REPLAYS the entire independent engine
+     * repair under a single owner fence, including a freshly read permission
+     * revision and coaching opt-out. Never commit an old screen preview.
+     * The atomic draft CAS invalidates its previous program signoff and
+     * cannot rewrite any issued session, target, performed set or History.
+     */
+    fun acceptStrengthVolumeRepair(
+        reviewed:NativeStrengthVolumeRepairReady,athleteConfirmed:Boolean
+    ):NativeStrengthVolumeRepairDecision {
+        if(!athleteConfirmed)return NativeStrengthVolumeRepairDecision.Rejected(
+            "Confirm the exact working-set additions before saving.")
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeStrengthVolumeRepairDecision.Rejected(
+                "Current athlete is unavailable.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val fresh=reviewedStrengthDose(reviewed.request)
+                if(fresh !is NativeStrengthVolumeRepairPreview.Ready ||
+                    fresh.receipt!=reviewed)
+                    return@withOwnerTransaction NativeStrengthVolumeRepairDecision.Rejected(
+                        "The program, approved adaptations or review changed. Review again.")
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeStrengthVolumeRepairDecision.Rejected(
+                        "The signed-in athlete changed; no edits saved.")
+                when(val saved=customDraftStore.save(owner.ownerKey,
+                    reviewed.request.cycleId,
+                    reviewed.request.expectedCycleRevision,
+                    fresh.receipt.proposedCycle)) {
+                    is NativeCustomDraftWriteResult.Committed ->
+                        NativeStrengthVolumeRepairDecision.Saved(saved.revision)
+                    is NativeCustomDraftWriteResult.Rejected ->
+                        NativeStrengthVolumeRepairDecision.Rejected(
+                            "Source-backed draft revision changed or storage refused the edit.")
+                }
+            }
+        }.getOrElse {NativeStrengthVolumeRepairDecision.Rejected(
+            "Native storage could not commit the reviewed proposal. Nothing saved.")}
+    }
+
     fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAdaptivePermissionRead.Rejected(

@@ -2,6 +2,27 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Native athlete-reviewed strength-dose repair in Plan (2026-11-18):**
+The existing bounded Kotlin strength-block repair composer is now connected to
+the native custom-cycle Plan. An athlete who has run the full-cycle audit and
+explicitly enabled adaptive set-count proposals can inspect actual per-lift
+working-set additions, set a per-exercise maximum (4/5/6/8), and separately
+confirm saving a new custom-program DRAFT. The host checks the current owner,
+gym/catalog revision, program revision, versioned set-count grant, coaching
+opt-out and athlete-authored policy under one cross-process fence, generates
+and audits the candidate against the complete cycle, then REPLAYS that same
+review and requires exact proposal equality at the atomic draft-CAS commit.
+Any changed source, permissions, coach settings or original draft invalidates
+the preview. This is never an automatic cycle update, session issuance, load
+change or History edit. Existing workouts remain immutable; the newly edited
+cycle requires renewed signoff. The review is not persisted as an approval
+token across app restarts; a reopened Plan requires a fresh preview. Undo
+uses the same gym-revision check rather than silently restoring obsolete
+physical stack values. The original repair domain remains deliberately
+bounded to identical source-backed strength weeks, uniform sets and no custom
+overrides/amplifiers. Real user calibration, device/TalkBack coverage and
+robust non-uniform dose adaptation remain beta gates. No APK/AAB.
+
 **Native strength-block boundary dose and set-count evidence (2026-11-18):**
 Plan now distinguishes authored base working sets (not warm-ups or
 amplifier follow-ups) from the complete cycle's exact reviewed weekly

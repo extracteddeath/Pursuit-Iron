@@ -122,6 +122,8 @@ val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
             "**/PursuitIronApplication.kt",
             "**/AppPrivateKotlinLocalAthlete.kt",
             "**/NativeKotlin*.kt",
+            // Explicitly admitted owner-fenced, non-issuable strength review.
+            "**/NativeStrengthVolumeRepairReview.kt",
             "**/NativeComponents.kt",
             "**/NativeRestTimer.kt",
             "**/NativeExerciseFavorites.kt",

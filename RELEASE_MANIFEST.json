@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1016,
+  "build": 1017,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "f942f49578bff747494ab41f94ef4020b6923ae020f566bbe0fb352db00cfde9",
@@ -156,10 +156,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "67a2660b036815e45d6401c39c9735f9b7bc9434c0082eb9967dfeaf1689e1b6",
-    "index.html": "1fe70d23c02242521cd6a85a2108ad5b37d7ee2be3a97aed6e2d64099685cc06",
-    "sw.js": "124e17e9f813c911d50845bee705e67b5e4d1a55e8fff76f0d8a5c3ba649861d",
-    "BUILD_PROFILE.json": "a3c697af001e39d0e6c54dba23c8d77a7044957f2d1c63e4f2749a4729be83bf",
+    "modules/App.js": "ff835eabf125b6bcd4339eb9613ae46d81bac477216d17e3d56f32ca2368fd1f",
+    "index.html": "2401434cdb7b91ed379e75aacfb977383181b2cd9b34a5bfde2c25972485986f",
+    "sw.js": "13c82761eaea41a95b6dd39f0f3d029c6f6335dbb0d8f8491b7c9ff99f5d8907",
+    "BUILD_PROFILE.json": "27bdd5489a9e9e3ad7e8a05b687b1b0d8b256fa42d5730f9503d0c7869761cf9",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
     "app.css": "2cbb5b79495833cd8fe876adf46a963c7566c5077524a2a0cdb8f4ff06f43ccd",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -168,6 +168,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1016-r5bbdb67e19fdb203",
-  "uiMilestone": "Build 1016 · Strength transition continuity and accessible Machine A/B history"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1017-re87c7f1968880807",
+  "uiMilestone": "Build 1017 · Strength transition continuity and accessible Machine A/B history"
 }

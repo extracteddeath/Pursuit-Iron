@@ -197,4 +197,194 @@ class NativeMeasuredWorkoutParentFileStoreTest {
         } catch(_:IllegalArgumentException) {}
         assertNull(initial.journal.finishedByEventId)
     }
+
+    private val canonicalHistory by lazy {
+        NativeKotlinHistoryManifestFileStore(root)
+    }
+    private fun enrollHistory() {
+        val enrolled=canonicalHistory.enroll("owner-one","athlete-one") {o,a->
+            current==NativeKotlinOwnerIdentity(o,a) &&
+                o=="owner-one" && a=="athlete-one"
+        }
+        assertTrue(enrolled.toString(),enrolled is NativeHistoryLedgerResult.Durable)
+    }
+    private fun indexedStore()=NativeMeasuredWorkoutParentFileStore(
+        root,fence,identity,source,canonicalHistory)
+    private fun historyTransaction(
+        clock:NativeHistoryCompletionClock=NativeHistoryCompletionClock.Undated
+    )=NativeKotlinMeasuredHistoryTransaction(canonicalHistory,indexedStore(),
+        fence,identity,clock)
+
+    private fun recordAll(p:MeasuredWorkoutPlan) {
+        var revision=0L
+        p.sets.forEachIndexed{index,_->
+            val result=saved(indexedStore().record("owner-one","workout-one",
+                op(p,index+1,revision)))
+            revision=result.stored.journal.revision
+        }
+    }
+    private fun durableFinish(result:NativeMeasuredFinishResult):
+        NativeMeasuredFinishResult.Committed {
+        assertTrue(result.toString(),result is NativeMeasuredFinishResult.Committed)
+        return result as NativeMeasuredFinishResult.Committed
+    }
+
+    @Test fun measuredFinishSharesEnrolledCanonicalHistoryAndColdRetryDoesNotDuplicate() {
+        val p=approved(all=true)
+        enrollHistory()
+        val pre=canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable
+        assertTrue(pre.ledger.readyForHistoryReads)
+        assertFalse(pre.ledger.completions.any{
+            it.storedReceiptId.startsWith("measured-v1-")})
+        saved(indexedStore().issue("owner-one","workout-one"))
+        recordAll(p)
+        var clocks=0
+        val tx=historyTransaction(NativeHistoryCompletionClock {
+            clocks++;1_796_000_000_000L
+        })
+        val finish=MeasuredWorkoutOperation.Finish("finish-14",14)
+        denied(indexedStore().finish("owner-one","workout-one",finish),
+            NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
+        val committed=durableFinish(tx.complete("owner-one","athlete-one",
+            "workout-one",finish))
+        assertEquals(1,clocks)
+        assertEquals("finish-14",committed.completion.finishEventId)
+        assertTrue(committed.completion.storedReceiptId.startsWith("measured-v1-"))
+        assertEquals(15L,committed.completion.originalJournalRevision)
+        assertEquals(0L,committed.completion.savedCorrectionRevision)
+        assertEquals(1_796_000_000_000L,
+            committed.completion.completedAtEpochMillis)
+        assertEquals(1,committed.completion.completionOrder)
+        assertEquals(15L,committed.stored.journal.revision)
+        assertEquals("finish-14",committed.stored.journal.finishedByEventId)
+        assertFalse(committed.canChangeProgram)
+        assertFalse(committed.canIssueProgression)
+        val cold=(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertTrue(cold.readyForHistoryReads)
+        assertEquals(listOf(committed.completion),cold.completions)
+        val reopened=saved(indexedStore().open("owner-one","workout-one"))
+        assertEquals(committed.stored,reopened.stored)
+        assertEquals(committed.completion, durableFinish(historyTransaction(
+            NativeHistoryCompletionClock {error("Cannot replace original Finish time")}
+        ).complete("owner-one","athlete-one","workout-one",finish)).completion)
+        assertEquals(1,cold.completions.size)
+        denied(indexedStore().record("owner-one","workout-one",
+            op(p,1,15,event="post-finish")),
+            NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
+    }
+
+    @Test fun canonicalRedoWorksBeforeAndAfterParentFinishFileCommit() {
+        for(afterJournal in listOf(false,true)) {
+            // Each scenario has independent on-disk authority and receipt
+            // source. Never clear a pending ledger to repair interrupted IO.
+            val folder=TemporaryFolder()
+            folder.create()
+            val dir=folder.root.toPath()
+            val lock=NativeKotlinApprovalRevisionFence(dir)
+            val ledger=NativeKotlinHistoryManifestFileStore(dir)
+            val signed=NativeKotlinCurrentIdentity{
+                NativeKotlinOwnerIdentity("owner-one","athlete-one")
+            }
+            val p=approved()
+            val measured=NativeMeasuredWorkoutParentFileStore(dir,lock,
+                signed,source,ledger)
+            val txn=NativeKotlinMeasuredHistoryTransaction(ledger,measured,
+                lock,signed,NativeHistoryCompletionClock {
+                    error("A recovered intent must keep the original timestamp")
+                })
+            assertTrue(ledger.enroll("owner-one","athlete-one"){_,_->true}
+                is NativeHistoryLedgerResult.Durable)
+            assertTrue(measured.issue("owner-one","workout-one")
+                is NativeMeasuredWorkoutStoreResult.Durable)
+            var revision=0L
+            p.sets.forEachIndexed{i,_->
+                val old=measured.record("owner-one","workout-one",
+                    op(p,i+1,revision)) as NativeMeasuredWorkoutStoreResult.Durable
+                revision=old.stored.journal.revision
+            }
+            val event=MeasuredWorkoutOperation.Finish("redo-finish",revision)
+            val old=(ledger.open("owner-one","athlete-one")
+                as NativeHistoryLedgerResult.Durable).ledger
+            val intent=NativeHistoryWriteIntent.MeasuredFinish(
+                "workout-one",event,1_796_000_007_000L)
+            assertTrue(ledger.prepare("owner-one","athlete-one",old.revision,
+                intent) is NativeHistoryLedgerResult.Durable)
+            if(afterJournal) {
+                val applied=measured.applyPendingFinish("owner-one",
+                    "workout-one",event)
+                assertTrue(applied.toString(),
+                    applied is NativeMeasuredWorkoutStoreResult.Durable)
+            }
+            assertEquals(intent,(ledger.open("owner-one","athlete-one")
+                as NativeHistoryLedgerResult.Durable).ledger.pending)
+            denied(measured.record("owner-one","workout-one",
+                MeasuredWorkoutOperation.Record("during-pending",revision,
+                    "set-1",MeasuredSetOutcome.SKIPPED,null)),
+                NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
+            val done=txn.recover("owner-one","athlete-one")
+            val committed=durableFinish(done)
+            assertEquals("redo-finish",committed.completion.finishEventId)
+            assertEquals(1_796_000_007_000L,
+                committed.completion.completedAtEpochMillis)
+            assertNull((ledger.open("owner-one","athlete-one")
+                as NativeHistoryLedgerResult.Durable).ledger.pending)
+            assertTrue(durableFinish(txn.complete("owner-one","athlete-one",
+                "workout-one",event)).replayed)
+            folder.delete()
+        }
+    }
+
+    @Test fun measuredCompletionDoesNotConsumeAnotherJournalIntent() {
+        val p=approved()
+        enrollHistory()
+        saved(indexedStore().issue("owner-one","workout-one"))
+        recordAll(p)
+        val before=(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val foreign=NativeHistoryWriteIntent.Finish("other-workout",
+            KotlinJournalOperation.Finish("composer-event",0))
+        assertTrue(canonicalHistory.prepare("owner-one","athlete-one",
+            before.revision,foreign) is NativeHistoryLedgerResult.Durable)
+        val operation=MeasuredWorkoutOperation.Finish("measured-event",
+            p.sets.size.toLong())
+        val result=historyTransaction().complete("owner-one","athlete-one",
+            "workout-one",operation)
+        assertEquals(NativeMeasuredFinishRefusal.FOREIGN_PENDING_INTENT,
+            (result as NativeMeasuredFinishResult.Rejected).reason)
+        assertEquals(foreign,(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger.pending)
+        assertNull(saved(indexedStore().open("owner-one","workout-one"))
+            .stored.journal.finishedByEventId)
+    }
+
+    @Test fun corruptedParentAfterPreparedHistoryRemainsPendingAndNeverFabricatesFinish() {
+        val p=approved()
+        enrollHistory()
+        saved(indexedStore().issue("owner-one","workout-one"))
+        recordAll(p)
+        val open=(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val intent=NativeHistoryWriteIntent.MeasuredFinish("workout-one",
+            MeasuredWorkoutOperation.Finish("corrupt-finish",
+                p.sets.size.toLong()),null)
+        assertTrue(canonicalHistory.prepare("owner-one","athlete-one",
+            open.revision,intent) is NativeHistoryLedgerResult.Durable)
+        val file=Files.list(root).use{stream->
+            stream.filter{it.fileName.toString().startsWith("measured-parent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        Files.write(file,Files.readAllBytes(file).also{
+            it[20]=(it[20].toInt() xor 1).toByte()
+        })
+        val result=historyTransaction().recover("owner-one","athlete-one")
+        assertEquals(NativeMeasuredFinishRefusal.JOURNAL_UNAVAILABLE,
+            (result as NativeMeasuredFinishResult.Rejected).reason)
+        val after=(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertEquals(intent,after.pending)
+        assertFalse(after.readyForHistoryReads)
+        assertTrue(after.completions.isEmpty())
+    }
 }

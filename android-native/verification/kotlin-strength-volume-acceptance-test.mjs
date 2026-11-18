@@ -58,7 +58,10 @@ for(const required of [
   'CustomCycleDraftReceipt(',
   'applyRead(prior.cycleId,disk)',
   'strengthRepairReview=null',
-  'canUndo=true'
+  'canUndo=true',
+  'if(receipt.operation=="strength-dose-repair")',
+  'host.saveReviewedCustomCycleDraft(',
+  'NativeCustomDraftRefusal.STALE_REVISION'
 ])assert.ok(controller.includes(required),'Missing controller review/save: '+required);
 for(const required of [
   'repairReview=state.strengthRepairReview',

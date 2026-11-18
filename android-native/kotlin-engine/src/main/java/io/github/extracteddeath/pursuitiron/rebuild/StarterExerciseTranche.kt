@@ -2282,10 +2282,27 @@ object StarterExerciseTranche {
             indirect(TrainingMuscle.TRICEPS,"0.25"),
             indirect(TrainingMuscle.FRONT_DELTS,"0.25"))
         // END_REVIEWED_RATED_BANDS_V1
+    ) + listOf(
+        // Source-linked repetition movements only. Both are deliberately
+        // different from timed holds and assisted machines, which require
+        // their own non-load/assistance coaching semantics before admission.
+        entry("spanish-squat","squat","band-supported-spanish-squat",
+            ComposerPattern.SQUAT,ComposerRole.ACCESSORY,lower,
+            null,null,setOf("spanish-squat-support"),12..20,
+            "Spanish squats count full repetitions using an athlete-confirmed stable support band and anchor. The band provides positioning/support, NOT verified added resistance; no fabricated load or band-rating progression is permitted.",
+            direct(TrainingMuscle.QUADS),
+            indirect(TrainingMuscle.GLUTES,"0.25")),
+        entry("band-pushup","horizontal_press","rated-band-pushup",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            "rated-resistance-band-set",LoadBasis.EXERCISE_OVERRIDE,emptySet(),10..20,
+            "Banded push-ups require an actual athlete-confirmed manufacturer-rated band. Logged external load is its nominal band rating ONLY, not combined bodyweight or equivalent barbell load; distinct exercise/station history and attainable band stock are required.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.25"))
     )
 
     init {
-        require(definitions.size==361)
+        require(definitions.size==363)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

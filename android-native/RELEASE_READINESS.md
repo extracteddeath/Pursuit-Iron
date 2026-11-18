@@ -2,6 +2,28 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Fourteen non-repetition exercise measurement contracts (2026-11-18):**
+The eleven source-matched timed holds now have independent elapsed-SECONDS
+candidate measurements, with per-side times for Side Plank and Copenhagen
+Plank. Farmer's and Suitcase Carry have exact CENTIMETER distance candidates,
+with real per-hand dumbbells and explicit side/matched-pair evidence. Banded
+Push-Up has actual full-ROM repetitions with an exact gym-confirmed band
+configuration; non-linear elastic resistance is never called a constant
+pound-equivalent external load. Plate Pinch Hold and Weighted Plank require
+separately confirmed physical added mass and fixtures; the rest of the holds
+do not invent unloaded working weights. Corrected per-side observations,
+replay, completed/failed/skipped results and strict exercise/gym/station/band/
+load-specific read-only comparisons live in one pure Kotlin candidate
+journal. Source CI verifies all 14 exact original IDs and display names.
+
+**NOT YET ISSUABLE:** These are typed, independently testable candidate
+models, not 14 live workouts. The existing reps-only StarterExerciseTranche
+remains at **369/383** until authenticated Android owner/stock linkage,
+schema-versioned atomic persistence, actual UI entry/History, dose and
+progression behavior, and complete on-device acceptance are integrated.
+A green source ID or model test never grants parity, beta or APK readiness.
+No JavaScript is introduced into Android runtime.
+
 **Staged amplifier numeric-load consistency (2026-11-18):**
 Myo-reps, rest-pause and cluster follow-up continuation now compares REAL
 numeric loads (20, 20.0, 20.00) instead of BigDecimal representation

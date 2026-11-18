@@ -44,7 +44,7 @@ class NativeStrengthVolumeRepairReviewTest {
         assertEquals(listOf("bench-1","row-1","squat-1"),
             proposed.blocks.single().days.flatMap{it.slots}.map{it.slotId})
         assertEquals(6,original.blocks.single().days.flatMap{it.slots}.sumOf{it.sets.size})
-        assertEquals(6,original.blocks.single().days.flatMap{it.slots}.sumOf{it.sets.size})
+        assertEquals(9,proposed.blocks.single().days.flatMap{it.slots}.sumOf{it.sets.size})
     }
 
     @Test fun anUnchangedProposalHasNoFakeAddedSets() {

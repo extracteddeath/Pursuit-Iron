@@ -56,7 +56,11 @@ assert.doesNotMatch(tools,/\.record\(|\.save\(|\.finish\(|NativeKotlinCandidateH
 assert.match(generated,/NativeKotlinWorkoutTools\(/);
 assert.match(generated,/externalOpen=pinnedExerciseId==selected\.target\.exerciseId/);
 assert.match(generated,/showEditAction=showAll \|\| presentation\.finished/);
-assert.match(generated,/toolTargets\.none\{it\.setKey in journal\.effectiveSets\}/);
+// Rare replacement is now in Exercise Info. Recorded work must still
+// prohibit replacement without preventing same-exercise station selection.
+assert.match(generated,/hasRecordedExerciseWork=targets.any\{/);
+assert.match(generated,/onSwapExercise=if\(!infoWarmupsOnly && infoOptions\.canReplaceExercise\)/);
+assert.match(generated,/onChooseMachine=if\(!infoWarmupsOnly && infoOptions\.canChangeStation\)/);
 assert.match(custom,/NativeKotlinWorkoutTools\(/);
 assert.match(custom,/pinnedSlotId=slot\.slotId/);
 assert.match(custom,/externalOpen=pinnedSlotId==slot\.slotId/);

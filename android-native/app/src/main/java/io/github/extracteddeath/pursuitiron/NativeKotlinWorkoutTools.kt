@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,7 +25,9 @@ internal fun NativeKotlinWorkoutTools(
     onPinnedNote:(()->Unit)?,
     onSwap:(()->Unit)?,
     onWarmup:(()->Unit)?,
-    onSuperset:(()->Unit)?=null
+    onSuperset:(()->Unit)?=null,
+    onMachine:(()->Unit)?=null,
+    machineLabel:String?=null
 ) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
@@ -37,6 +40,13 @@ internal fun NativeKotlinWorkoutTools(
         }
         onSwap?.let {
             WorkoutTool("Swap exercise",Icons.Outlined.SwapHoriz,enabled,it)
+        }
+        // Occasional Machine A/B setup belongs with workout tools, not a
+        // prominent extra card between the coach and the working set.
+        // The existing machine selector still owns its exact source-verified sheet.
+        onMachine?.let {
+            WorkoutTool("Choose physical machine: ${machineLabel ?: "Not selected"}",
+                Icons.Outlined.Tune,enabled,it)
         }
         WorkoutTool("Session note",Icons.Outlined.EditNote,enabled,onSessionNote)
         onPinnedNote?.let {

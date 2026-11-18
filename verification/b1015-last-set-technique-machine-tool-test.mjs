@@ -27,10 +27,10 @@ assert.match(app, /className: "wpb-set-tech-tag"/);
 
 // Machine A/B and exercise Swap live in Exercise Info near the increment
 // settings; the compact workout action rail must not clip machine names.
-assert.match(app,/className: "wpb-exinfo-machine-tools"/);
-assert.match(app,/isMachineLike\(ex\.equip\) && _jsx\(WorkoutMachineVariantControl/);
+assert.match(machine,/className:'wpb-exinfo-machine-tools'/);
+assert.match(machine,/isMachineLike\(EX_BY_ID\[exerciseId\]\?\.equip\) &&/);
 assert.match(app,/onAssignLegacy:id=>attachOldMachineHistoryNow\(ei,id\)/);
-assert.match(app,/wpb-exinfo-swap-action/);
+assert.match(machine,/wpb-exinfo-swap-action/);
 const toolbar = app.slice(app.indexOf('className: "wpb-hscroll wpb-workout-tools'),
     app.indexOf('className: "wpb-set-head"'));
 assert.doesNotMatch(toolbar,/WorkoutMachineVariantControl|\{ k: "swap"/);

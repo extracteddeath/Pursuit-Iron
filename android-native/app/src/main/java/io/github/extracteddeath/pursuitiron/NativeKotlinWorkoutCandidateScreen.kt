@@ -843,24 +843,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 externalOpen=pinnedExerciseId==selected.target.exerciseId,
                 onExternalDismiss={pinnedExerciseId=null}
             )
-        if(selected!=null && journal!=null && !presentation.finished) {
-            val exercise=selected.target.exerciseId
-            val recorded=journal.snapshot.targets.filter{
-                it.exerciseId==exercise
-            }.any{it.setKey in journal.effectiveSets}
-            val options=NativeKotlinEquipmentRecoveryPolicy.review(
-                activeWorkout=!state.busy && !swapLoading,
-                hasPhysicalMachineConfig=activeMachineConfig!=null &&
-                    machineChoices.ready && !machineChoices.busy,
-                hasRecordedExerciseWork=recorded
-            )
-            NativeKotlinEquipmentRecoveryControl(
-                scopeKey="$workoutId:$exercise",
-                availability=options,busy=state.busy || swapLoading,
-                onChangeStation={openPhysicalMachineFor=exercise},
-                onReplaceExercise={reviewSwap(exercise)}
-            )
-        }
+        // Physical Machine A/B and workout-only replacement are exposed by
+        // the current source-verified Exercise Info sheet (Focus and All).
+        // No second full-width equipment banner interrupts the set editor.
         NativeKotlinWorkoutMachineSelector(activeMachineConfig,currentMachine,
             enabled=!state.busy && !presentation.finished &&
                 machineChoices.ready && !machineChoices.busy,

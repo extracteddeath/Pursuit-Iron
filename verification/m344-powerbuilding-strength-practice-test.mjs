@@ -36,9 +36,29 @@ for (const phase of phases) {
     for (const [lift, expected] of Object.entries(request.goal.liftFrequency))
         assert.equal(claims.filter(c => c.lift === lift).length, expected,
             phase + ': the phase must have real strength-claim slots, not only a scoring target');
-    const { program } = generateProgram(request, { phase, blockWeeks: 5 });
+    const { program, diagnostics } = generateProgram(request, { phase, blockWeeks: 5 });
     assert.equal(program.audit.result, 'pass', phase + ': ' + JSON.stringify(program.audit).slice(0, 1000));
     const catalog = createExerciseMap(request.customExercises);
+    const directArms = Object.fromEntries([
+        ['biceps','elbow_flexion'],['triceps','elbow_extension']
+    ].map(([muscle,family])=>[muscle,program.sessions.reduce((sum,session)=>
+        sum + session.exercises.reduce((n,e)=>n+
+            (catalog.get(e.exerciseId)?.movementFamily===family?e.sets:0),0),0)]));
+    if(phase==='strength_accumulation') {
+        assert.ok(directArms.biceps>=2,
+            'A long, five-day strength block with available cable/machine curls must not drop all direct biceps work: '+JSON.stringify({directArms,plan:program.sessions.map(s=>({name:s.name,slots:s.exercises.map(e=>e.exerciseId)})),repairs:diagnostics.lowFatigueArmMaintenance}));
+        assert.ok(directArms.triceps>=2,
+            'An attainable strength block must retain at least one independent, low-fatigue triceps exercise: '+JSON.stringify({directArms,repairs:diagnostics.lowFatigueArmMaintenance}));
+        assert.ok(diagnostics.lowFatigueArmMaintenance.every(a=>a.sets===2),
+            'Optional arm retention uses small, real logged work sets, not invisible fractional sets');
+        assert.ok(program.sessions.every(s=>s.exercises.filter(e=>
+            ['primary_strength','secondary_strength'].includes(e.role))
+            .every(e=>e.prescription.reps[0]>=1 && e.sets>=1)),
+            'Direct arm maintenance must not overwrite strength-specific loads, reps or sets');
+    }
+    if(phase==='peak')
+        assert.equal(diagnostics.lowFatigueArmMaintenance.length,0,
+            'Real Peak is a distinct low-fatigue taper, not mandatory arm-accessory expansion');
     const counts = Object.fromEntries(['bench_press','back_squat','deadlift'].map(lift => [lift,
         program.sessions.filter(s => s.exercises.some(e =>
             ['primary_strength', 'secondary_strength'].includes(e.role) &&

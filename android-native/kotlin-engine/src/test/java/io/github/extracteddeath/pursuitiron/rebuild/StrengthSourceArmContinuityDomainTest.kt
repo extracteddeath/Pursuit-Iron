@@ -115,4 +115,36 @@ class StrengthSourceArmContinuityDomainTest {
             updated,audit(updated),"hyper",catalog,"owner-a")
         assertEquals(setOf("curl","extension"),reviewed.preferredExerciseIds)
     }
+    @Test fun forearmFlexionAndExtensionStaySeparateAndSourceAudited() {
+        val c=cycle()
+        val oldDay=c.blocks.first().days.single()
+        val reviewed=c.copy(blocks=listOf(
+            c.blocks.first().copy(days=listOf(oldDay.copy(
+                slots=oldDay.slots+slot("f","wrist-flexion",3)+
+                    slot("x","wrist-extension",2)))),
+            c.blocks.last()))
+        val withForearms=catalog+listOf(
+            catalog("wrist-flexion",TrainingMuscle.WRIST_FLEXORS),
+            catalog("wrist-extension",TrainingMuscle.WRIST_EXTENSORS))
+        val review=StrengthSourceArmContinuityDomain.review(
+            reviewed,audit(reviewed),"hyper",withForearms,"owner-a")
+        assertEquals(StrengthSourceArmsStatus.REVIEW_READY,review.status)
+        assertEquals(listOf("curl","hammer","extension","wrist-flexion",
+            "wrist-extension"),review.candidates.map{it.exerciseId})
+        assertEquals(listOf(3,2),
+            review.candidates.takeLast(2).map{it.priorWorkingSets})
+        val indirectCatalog=withForearms.map{
+            if(it.exerciseId=="wrist-extension")
+                it.copy(credits=it.credits.map{c->
+                    c.copy(role=MuscleCreditRole.INDIRECT)})
+            else it
+        }
+        val stillDirect=StrengthSourceArmContinuityDomain.review(
+            reviewed,audit(reviewed),"hyper",indirectCatalog,"owner-a")
+        assertTrue("Direct flexion must remain independent",
+            "wrist-flexion" in stillDirect.preferredExerciseIds)
+        assertFalse("Indirect extension must never masquerade as direct",
+            "wrist-extension" in stillDirect.preferredExerciseIds)
+    }
+
 }

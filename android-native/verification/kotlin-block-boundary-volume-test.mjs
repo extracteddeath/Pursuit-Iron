@@ -4,6 +4,10 @@ import {readFileSync} from 'node:fs';
 const root='android-native/';
 const domain=readFileSync(root+
   'kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomCycleBlockComparisonDomain.kt','utf8');
+const sourceArmDomain=readFileSync(root+
+  'kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StrengthSourceArmContinuityDomain.kt','utf8');
+const sourceArmSelection=readFileSync(root+
+  'kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CoachAthleteExerciseSelectionDomain.kt','utf8');
 const tests=readFileSync(root+
   'kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/CustomCycleBlockComparisonDomainTest.kt','utf8');
 const ui=readFileSync(root+
@@ -73,3 +77,9 @@ for(const name of [
 assert.ok(tests.includes('assertEquals(-16,result.boundaryWorkingSetDelta)'));
 assert.ok(tests.includes('assertEquals(37,result.lowestNextWeekRetentionPercent)'));
 console.log('PASS native cycle boundary: final→first and weakest strength week, factual warnings, immutable workout history.');
+
+// Strength source continuity must match all five independently credited arm/
+// forearm functions flagged by the last-Hypertrophy → first-Strength audit.
+assert.match(sourceArmDomain,/TrainingMuscle\.WRIST_FLEXORS,TrainingMuscle\.WRIST_EXTENSORS/);
+assert.match(sourceArmSelection,/TrainingMuscle\.WRIST_EXTENSORS/);
+assert.match(sourceArmSelection,/source\.candidates\.size<=5/);

@@ -142,6 +142,54 @@ class CoachAthleteExerciseSelectionDomainTest {
         })
     }
 
+
+    @Test fun verifiedStrengthForearmFunctionsAreRequiredNotOptionalFillers() {
+        val setup=athlete()
+        val forearms=listOf(
+            movement("wrist-flexion",TrainingMuscle.WRIST_FLEXORS,
+                ComposerPattern.ISOLATION,ComposerRole.ACCESSORY),
+            movement("wrist-extension",TrainingMuscle.WRIST_EXTENSORS,
+                ComposerPattern.ISOLATION,ComposerRole.ACCESSORY))
+        val source=StrengthSourceArmReview(StrengthSourceArmsStatus.REVIEW_READY,
+            "source-cycle","athlete3",7,"hyper",listOf(
+                StrengthSourceArmCandidate("wrist-flexion",
+                    TrainingMuscle.WRIST_FLEXORS,3),
+                StrengthSourceArmCandidate("wrist-extension",
+                    TrainingMuscle.WRIST_EXTENSORS,2)),
+            "Final reviewed hypertrophy week")
+        val offered=listOf(choose("press",required=1),choose("back"))+
+            forearms.map{choose(it.exerciseId)}
+        val proposed=request(setup,offered=offered,patterns=1).copy(
+            catalog=catalog+forearms,
+            policy=policy(setup).copy(phase=TrainingPhase.STRENGTH),
+            sourceStrengthArms=source)
+        val reviewed=CoachAthleteExerciseSelectionDomain.review(proposed)
+        assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,reviewed.status)
+        assertEquals(setOf("press","back","wrist-flexion","wrist-extension"),
+            reviewed.choices.map{it.exerciseId}.toSet())
+        assertTrue(reviewed.choices.filter{
+            it.exerciseId.startsWith("wrist-")
+        }.all{it.requiredVisits==1 && it.minimumSetsPerVisit==2})
+        assertFalse(reviewed.mayIssueWorkout)
+        val missing=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(offered=offered.filter{
+                it.exerciseId!="wrist-extension"}))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,missing.status)
+        assertTrue(missing.issues.any{
+            it.kind==AthleteSelectionProblem.UNAVAILABLE_REQUIRED_EXERCISE})
+        val miscredited=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(catalog=(catalog+forearms).map{
+                if(it.exerciseId=="wrist-flexion")it.copy(
+                    credits=listOf(DeclaredMuscleCredit(
+                        TrainingMuscle.WRIST_EXTENSORS,
+                        MuscleCreditRole.DIRECT,n("1"))))
+                else it
+            }))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,miscredited.status)
+        assertTrue(miscredited.issues.any{
+            it.kind==AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED})
+    }
+
     @Test fun picksReviewedLoadableCoverageAndPrunesUnneededOptions() {
         val review=CoachAthleteExerciseSelectionDomain.review(request())
         assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,review.status)

@@ -21,10 +21,14 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
     warmupsOnly:Boolean=false,
     outcomes:Map<String,KotlinJournalSetOutcome> = emptyMap(),
     onSelectWarmup:((String)->Unit)?=null,
+    busy:Boolean=false,
+    machineLabel:String?=null,
+    onChooseMachine:(()->Unit)?=null,
+    onSwapExercise:(()->Unit)?=null,
     onHistory:()->Unit,
     onDismiss:()->Unit
 ) {
-    NativeEditSheet(busy=false,onDismiss=onDismiss) {
+    NativeEditSheet(busy=busy,onDismiss=onDismiss) {
         val visible=if(warmupsOnly)sets.filter{it.type==DraftSetType.WARMUP} else sets
         if(warmupsOnly)Text("Warm-up targets",style=MaterialTheme.typography.labelLarge,
             color=MaterialTheme.colorScheme.primary)
@@ -39,6 +43,33 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
         if(!note.isNullOrBlank()) {
             Text("Coach / program note",style=MaterialTheme.typography.titleSmall)
             Text(note,style=MaterialTheme.typography.bodyMedium)
+        }
+        // The source-issued rows, not a stale coach note, own the real set count.
+        // Warm-ups and amplifier follow-ups are not counted as working sets.
+        if(!warmupsOnly) {
+            Text("Planned working sets · "+sets.count{it.type==DraftSetType.WORKING},
+                style=MaterialTheme.typography.labelLarge,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(onChooseMachine!=null || onSwapExercise!=null) {
+                HorizontalDivider()
+                Text("Equipment and exercise",style=MaterialTheme.typography.titleSmall)
+                Text("A different physical machine keeps its own weights, Last and PRs. "+
+                    "A replacement exercise changes only this workout.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                onChooseMachine?.let { open ->
+                    OutlinedButton(onClick=open,enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
+                        Text("Physical machine · "+(machineLabel ?: "Choose or add machine"))
+                    }
+                }
+                onSwapExercise?.let { swap ->
+                    OutlinedButton(onClick=swap,enabled=!busy,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
+                        Text("Swap to another exercise")
+                    }
+                }
+            }
         }
         if(warmupsOnly && visible.isNotEmpty()) {
             val next=visible.firstOrNull{it.setKey !in outcomes}

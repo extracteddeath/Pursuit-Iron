@@ -28,8 +28,10 @@ data class CustomBlockComparisonFacts(
     val exposuresByExercise:Map<String,Int>,
     /** Present only when every week was measured by a matching cycle audit. */
     val auditedWeeklyWorkingSets:List<Int>?,
-    /** Exact declared direct muscle credits for the first audited week. */
-    val firstAuditedWeekDirectSets:Map<TrainingMuscle,BigDecimal>?
+    /** Exact direct-muscle credits at the first reviewed training week. */
+    val firstAuditedWeekDirectSets:Map<TrainingMuscle,BigDecimal>?,
+    /** Exact direct-muscle credits at the last reviewed training week. */
+    val lastAuditedWeekDirectSets:Map<TrainingMuscle,BigDecimal>? = null
 )
 
 data class CustomBlockMuscleChange(
@@ -57,7 +59,9 @@ data class CustomCycleBlockComparison(
     val auditIssueCount:Int?
 ) {
     val auditedDirectMuscleChanges:List<CustomBlockMuscleChange>? get() {
-        val earlier=prior.firstAuditedWeekDirectSets ?:return null
+        // The athlete leaves hypertrophy at its LAST effective week,
+        // not its first one. Overrides and per-week prescriptions matter.
+        val earlier=prior.lastAuditedWeekDirectSets ?:return null
         val later=next.firstAuditedWeekDirectSets ?:return null
         return earlier.keys.intersect(later.keys).mapNotNull{muscle->
             val before=earlier.getValue(muscle)
@@ -69,21 +73,59 @@ data class CustomCycleBlockComparison(
         }.thenBy{it.muscle.name})
     }
     val newlyTrackedMuscles:Set<TrainingMuscle>? get() {
-        val earlier=prior.firstAuditedWeekDirectSets ?:return null
+        val earlier=prior.lastAuditedWeekDirectSets ?:return null
         val later=next.firstAuditedWeekDirectSets ?:return null
         return later.keys-earlier.keys
     }
     val noLongerTrackedMuscles:Set<TrainingMuscle>? get() {
-        val earlier=prior.firstAuditedWeekDirectSets ?:return null
+        val earlier=prior.lastAuditedWeekDirectSets ?:return null
         val later=next.firstAuditedWeekDirectSets ?:return null
         return earlier.keys-later.keys
     }
     val baseWorkingSetDelta:Int get()=
         next.baseWorkingSets-prior.baseWorkingSets
-    val firstAuditedWeekDelta:Int? get()=
-        prior.auditedWeeklyWorkingSets?.firstOrNull()?.let {before->
+    /** Exact boundary: final prior week → first next week, including overrides. */
+    val boundaryWorkingSetDelta:Int? get()=
+        prior.auditedWeeklyWorkingSets?.lastOrNull()?.let {before->
             next.auditedWeeklyWorkingSets?.firstOrNull()?.minus(before)
         }
+    // Compatibility for older callers; the calculation is now boundary-based.
+    val firstAuditedWeekDelta:Int? get()=boundaryWorkingSetDelta
+    private fun percentage(before:Int,after:Int):Int? =
+        if(before<=0) null
+        else ((after.toLong()*100+before/2)/before).toInt()
+    /** The effective entry dose, never a claim that a drop is medically unsafe. */
+    val boundaryRetentionPercent:Int? get()=
+        prior.auditedWeeklyWorkingSets?.lastOrNull()?.let {before->
+            next.auditedWeeklyWorkingSets?.firstOrNull()?.let {after->
+                percentage(before,after)
+            }
+        }
+    /** A later low-dose strength week must not be hidden behind week one. */
+    val lowestNextWeekRetentionPercent:Int? get()=
+        prior.auditedWeeklyWorkingSets?.lastOrNull()?.let {before->
+            next.auditedWeeklyWorkingSets?.minOrNull()?.let {lowest->
+                percentage(before,lowest)
+            }
+        }
+    /** A factual high-severity review cue, not a replacement for the
+     * athlete-specific full-cycle auditor or its authorized dose bounds.
+     * If audited weeks are unavailable, only the authored BASE is assessed. */
+    val strengthHalfVolumeReviewRequired:Boolean get() {
+        if(prior.phase!=TrainingPhase.HYPERTROPHY ||
+            next.phase!=TrainingPhase.STRENGTH ||
+            prior.purpose!=CustomBlockPurpose.TRAINING ||
+            next.purpose!=CustomBlockPurpose.TRAINING)return false
+        val before=prior.auditedWeeklyWorkingSets?.lastOrNull()
+        val after=next.auditedWeeklyWorkingSets?.minOrNull()
+        return if(before!=null && after!=null)
+            before>=16 && after.toLong()*2<=before
+        else prior.baseWorkingSets>=16 &&
+            next.baseWorkingSets.toLong()*2<=prior.baseWorkingSets
+    }
+    val strengthHalfVolumeUsesAuditedWeeks:Boolean get()=
+        prior.auditedWeeklyWorkingSets!=null &&
+        next.auditedWeeklyWorkingSets!=null
     val mayApplyAutomatically:Boolean get()=false
     val mayApproveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -125,7 +167,8 @@ object CustomCycleBlockComparisonDomain {
             cycle.weekOverrides[block.blockId].orEmpty().size,
             slots.groupingBy{it.exerciseId}.eachCount().toSortedMap(),
             if(validWeeks)weeks.map{it.workingSets} else null,
-            if(validWeeks)weeks.first().directSets else null
+            if(validWeeks)weeks.first().directSets else null,
+            if(validWeeks)weeks.last().directSets else null
         )
     }
 

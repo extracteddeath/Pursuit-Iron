@@ -239,6 +239,18 @@ class MeasuredExerciseEntryDomainTest {
             MeasuredEntryRefusal.INVALID_ELAPSED_TIME)
     }
 
+    @Test fun failedHoldInClockModeUsesZeroMinutesSecondsForEverySide() {
+        val p=plan("side-plank")
+        val failure=accepted(MeasuredExerciseEntryDomain.parse(p,
+            MeasuredSetOutcome.FAILED_ATTEMPT,input(p,raw="0:00")))
+        assertEquals(2,failure.actual!!.sides.size)
+        assertTrue(failure.actual.sides.all{it.amount==0})
+        assertFalse(failure.approximateDistanceConversion)
+        refused(MeasuredExerciseEntryDomain.parse(p,
+            MeasuredSetOutcome.FAILED_ATTEMPT,input(p,raw="0")),
+            MeasuredEntryRefusal.INVALID_QUANTITY)
+    }
+
     @Test fun failureZeroAndSkipHaveExplicitSeparateSemantics() {
         val p=plan("farmers")
         val zero=accepted(MeasuredExerciseEntryDomain.parse(p,

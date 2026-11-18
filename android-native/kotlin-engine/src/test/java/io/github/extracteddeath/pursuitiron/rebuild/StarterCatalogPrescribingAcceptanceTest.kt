@@ -43,6 +43,8 @@ class StarterCatalogPrescribingAcceptanceTest {
         LoadBasis.LANDMINE_ADDED_PLATES->VerifiedLoadStock.Totals(LoadUnit.LB,
             basis,listOf(n("0"),n("20"),n("25"),n("30")))
         LoadBasis.EXERCISE_OVERRIDE->selectorized
+        LoadBasis.ASSISTANCE_COUNTERWEIGHT->VerifiedLoadStock.Stack(LoadUnit.LB,
+            basis,n("20"),n("5"),n("30"))
     }
     private fun calibratedLoad(spec:CatalogMovement):BigDecimal?=when(
         spec.expectedLoadBasis) {

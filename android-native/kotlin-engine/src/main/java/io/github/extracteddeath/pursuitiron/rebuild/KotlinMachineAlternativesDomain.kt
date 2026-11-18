@@ -130,7 +130,8 @@ object KotlinMachineAlternativesDomain {
         basis:LoadBasis
     ):VerifiedLoadStock.Stack? {
         if(!valid(config) || basis !in setOf(
-            LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,LoadBasis.EXERCISE_OVERRIDE))
+            LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,LoadBasis.EXERCISE_OVERRIDE,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT))
             return null
         val machine=config.machines.firstOrNull{it.id==machineId && it.active}
             ?:return null

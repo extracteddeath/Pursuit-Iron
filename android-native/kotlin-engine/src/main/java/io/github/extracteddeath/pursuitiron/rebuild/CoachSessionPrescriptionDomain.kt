@@ -191,11 +191,17 @@ object CoachSessionPrescriptionDomain {
         if(option.equipment==ComposerEquipment.Bodyweight &&
             (p.warmups.isNotEmpty() || p.scheme==SetLoadScheme.LAST_SET_BACKOFF))
             return null
+        // A lower counterweight makes the lift HARDER, not a back-off.
+        // Never invert the load convention for a special loading scheme.
+        val assistance=(option.equipment as? ComposerEquipment.Verified)
+            ?.inventory?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        if(assistance && p.scheme==SetLoadScheme.LAST_SET_BACKOFF)return null
         if(p.scheme==SetLoadScheme.LAST_SET_BACKOFF && visit.sets<2)return null
 
         val warmups=p.warmups.mapIndexed {i,w->
             val verified=load(option,w.load) ?:return null
-            if(workingValue==null || w.load>=workingValue)return null
+            if(workingValue==null || (if(assistance)
+                    w.load<=workingValue else w.load>=workingValue))return null
             DraftPrescribedSet(option.exerciseId+":d"+visit.dayIndex+":w"+i,
                 DraftSetType.WARMUP,i,verified,RepBand(w.reps,w.reps),null,
                 w.activeSeconds,w.restSeconds)

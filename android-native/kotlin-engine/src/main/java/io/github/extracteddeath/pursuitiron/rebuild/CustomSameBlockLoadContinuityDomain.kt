@@ -8,7 +8,8 @@ enum class CustomSameBlockLoadStatus {
     NO_IMMEDIATELY_PREVIOUS_DAY, CHANGED_CONTEXT, CHANGED_RECIPE,
     PREVIOUS_WORKOUT_INCOMPLETE, EQUIPMENT_UNVERIFIED,
     RESTRICTED_OR_LOW_READINESS, EFFORT_UNAVAILABLE, NEAR_FAILURE,
-    NO_LOWER_VERIFIED_BASELINE, WARMUP_EXCEEDS_LOAD, REVIEW_LOWER_REPEAT
+    NO_LOWER_VERIFIED_BASELINE, WARMUP_EXCEEDS_LOAD, REVIEW_LOWER_REPEAT,
+    ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW
 }
 
 data class CustomSameBlockLoadSet(
@@ -161,6 +162,14 @@ object CustomSameBlockLoadContinuityDomain {
         val stock=request.verifiedStock
             ?:return result(CustomSameBlockLoadStatus.EQUIPMENT_UNVERIFIED,
                 "Current verified physical loading is unavailable.",prior.evidence.workoutId)
+        // This baseline-reuse shortcut treats a smaller number as easier.
+        // Counterweight assistance runs in reverse; do not "repeat" a lower
+        // counterweight after fatigue, even when prior history is complete.
+        if(stock.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+            return result(
+                CustomSameBlockLoadStatus.ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW,
+                "A lower assisted-machine counterweight is HARDER, not a lower recovery load. Keep the current prescription and explicitly review assistance.",
+                prior.evidence.workoutId)
         val proposals=ArrayList<CustomSameBlockLoadSet>()
         var assumed=0
         for((oldSet,nextSet) in oldWork.zip(nextWork)) {

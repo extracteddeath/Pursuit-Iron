@@ -120,6 +120,9 @@ object CoachNextProgramLoadReviewDomain {
         if (stock == null || stock.unit != equipment.unit)
             return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "The exact gym load and equipment basis have not been confirmed.")
+        if(stock.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+            return denied(CoachNextLoadReviewStatus.NO_SAFE_CHANGE,
+                "Assisted-machine counterweights run backward: more assistance makes the movement easier. An ordinary earned load increase or return-to-heavy-load is not valid for this exercise.")
         val purpose=request.requestedPurpose
         if(purpose==ComposerSessionPurpose.UNSPECIFIED ||
             (request.requestedDayIndex!=null &&

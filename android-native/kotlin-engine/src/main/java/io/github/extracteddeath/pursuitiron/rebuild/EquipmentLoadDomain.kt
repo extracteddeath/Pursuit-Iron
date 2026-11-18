@@ -18,7 +18,11 @@ enum class LoadBasis {
     /** Mass of ONE bell, including a two-handed swing or a matched-pair row. */
     KETTLEBELL_EACH,
     /** Plates added at the loaded end; excludes the bar and pivot/base mass. */
-    LANDMINE_ADDED_PLATES;
+    LANDMINE_ADDED_PLATES,
+    /** Counterweight displayed by a verified assisted pull-up/dip machine.
+     * More is MORE assistance, never a stronger working lift. Append only
+     * to preserve historical enum ordinal / serialized value compatibility. */
+    ASSISTANCE_COUNTERWEIGHT;
 
     /** Physical free bars count even when the logged convention excludes bar mass. */
     val countsTowardBarbellLimit:Boolean
@@ -81,7 +85,8 @@ sealed interface VerifiedLoadStock {
     ) : VerifiedLoadStock {
         init {
             require(basis in setOf(LoadBasis.CABLE_STACK, LoadBasis.MACHINE_STACK,
-                LoadBasis.EXERCISE_OVERRIDE))
+                LoadBasis.EXERCISE_OVERRIDE,
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT))
         }
     }
 }

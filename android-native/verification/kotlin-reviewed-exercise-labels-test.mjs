@@ -30,18 +30,41 @@ for(const [id,label] of mappings.map(m=>[m[1],m[2]])) {
   assert.ok(label.length>=4 && !label.includes('${') && !label.startsWith('"'),
     'label must be a usable human-readable static Kotlin display name: '+id);
 }
-// The one admitted supported-band exercise logs repetitions with no external
-// load. Combined bodyweight+resistance, assisted stack, timed holds and carries
-// still require their own Kotlin measurement/progression models.
+// A band-supported squat remains unweighted. Assisted machines now have an
+// explicit inverse counterweight basis, independently audited provenance and
+// station identity; timed holds, carries and hybrid banded bodyweight exercise
+// still need separate measurement models.
 const fixtureUi=readFileSync(
   'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt','utf8');
 assert.ok(ids.includes('spanish-squat'));
 assert.match(labels,/"spanish-squat" to "Spanish Squat \(band-supported, reps\)"/);
 assert.match(fixtureUi,/"spanish-squat-support" to "Anchored Spanish squat support band"/);
-for(const id of ['band-pushup','assisted-pullup','assisted-dip','plank',
+for(const id of ['assisted-dip','assisted-chinup','assisted-pullup']) {
+  assert.ok(ids.includes(id),'Verified assisted counterweight source missing: '+id);
+  assert.ok(labels.includes('"'+id+'" to "'),
+    'Physical assisted machine must have its own visible label: '+id);
+}
+for(const id of ['band-pushup','plank',
   'dead-hang','farmers','weighted-plank']) {
   assert.ok(!ids.includes(id),
-    'Unmodeled timed/assisted/hybrid loading must not be admitted: '+id);
+    'Unmodeled timed/carry/hybrid loading must not be admitted: '+id);
+}
+// Every native load-advice entry must know that increasing machine
+// COUNTERWEIGHT is LESS demanding. Snapshot/History still own the actual.
+const kotlinRoot='android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/';
+const guardFiles=[
+  ['InWorkoutCoachDomain.kt','request.equipment?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['ConservativeProgressionReview.kt','ASSISTANCE_NEEDS_DECREASE_REVIEW'],
+  ['CoachNextProgramLoadReviewDomain.kt','stock.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['CustomSameBlockLoadContinuityDomain.kt','ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW'],
+  ['ReviewedFutureWeekProgressionDomain.kt','exercise.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['CoachSessionPrescriptionDomain.kt','if(assistance && p.scheme==SetLoadScheme.LAST_SET_BACKOFF)return null'],
+  ['CoachFirstProgramStartDomain.kt','val warmupLoad=if(assisted)inspected?.nextAbove']
+];
+for(const [file,needle] of guardFiles) {
+  const implementation=readFileSync(kotlinRoot+file,'utf8');
+  assert.ok(implementation.includes(needle),
+    'Assisted counterweight could silently invert load effort in '+file);
 }
 assert.ok(labels.includes('internal fun kotlinExerciseLabel(id:String)'),
   'fallback remains available only for truly unreviewed or custom identities');

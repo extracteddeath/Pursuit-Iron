@@ -19,6 +19,7 @@ internal fun kotlinLoadBasisLabel(basis:LoadBasis?):String=when(basis) {
     LoadBasis.SMITH_TOTAL -> "total Smith weight"
     LoadBasis.CABLE_STACK -> "cable stack"
     LoadBasis.MACHINE_STACK -> "machine stack"
+    LoadBasis.ASSISTANCE_COUNTERWEIGHT -> "assistance counterweight (more = easier)"
     LoadBasis.EXERCISE_OVERRIDE -> "exercise load"
     null -> "bodyweight"
 }

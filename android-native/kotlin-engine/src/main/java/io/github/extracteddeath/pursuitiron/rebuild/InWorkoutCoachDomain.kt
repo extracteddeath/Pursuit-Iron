@@ -115,6 +115,24 @@ object InWorkoutCoachDomain {
             return result(InWorkoutDirection.CONFIRM_ZERO_LOAD_SEMANTICS,
                 "Confirm whether zero represents bodyweight, assistance, or another loading setup.")
         val lastReps=checkNotNull(previous.actualReps)
+        // An assisted machine's numeric load is its COUNTERWEIGHT.
+        // A lower number is HARDER; the ordinary fatigue backoff algorithm
+        // would dangerously recommend the opposite of recovery. Never offer
+        // a smaller counterweight after missed reps or call it a backoff.
+        if(request.equipment?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT) {
+            if(actual.compareTo(kept)!=0)
+                return result(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,
+                    "The selected assisted counterweight differs from the previous set. More counterweight is easier, not a stronger load. Keep the issued next-set target until explicitly reviewed.")
+            if(lastReps<request.repBand.minimum)
+                return result(InWorkoutDirection.REVIEW_MORE_RECOVERY,
+                    "The assisted set missed the rep floor. Reducing the counterweight would make it HARDER. Review rest, form or an explicitly chosen higher assistance setting; the issued target is unchanged.")
+            if(previous.actualRir!=null && previous.actualRir<=1)
+                return result(InWorkoutDirection.REVIEW_MORE_RECOVERY,
+                    "This assisted set was demanding. Keep the issued counterweight; more assistance is easier, and no silent change is made.")
+            return result(InWorkoutDirection.BUILD_REPS_AS_PLANNED,
+                "Continue the prescribed assisted reps at the same verified counterweight. Less assistance requires separate reviewed progression.",
+                CoachConfidence.MODERATE)
+        }
         // When a verified original set is followed by a verified planned
         // lighter backoff, the coach should RECOGNIZE the plan rather than
         // suggest a second unscheduled reduction. Edited/unknown actuals

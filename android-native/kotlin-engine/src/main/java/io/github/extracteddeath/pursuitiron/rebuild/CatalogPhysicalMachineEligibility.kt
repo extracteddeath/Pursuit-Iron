@@ -72,7 +72,32 @@ object CatalogPhysicalMachineEligibility {
         "kelso-shrug" to ReviewedStation("scapular_retraction","supported-machine-kelso","kelso-shrug-machine")
     )
 
+    private val assistedSources=mapOf(
+        "assisted-dip" to ReviewedStation(
+            "horizontal_press","assisted-counterweight-dip",
+            "assisted-pullup-dip-counterweight"),
+        "assisted-chinup" to ReviewedStation(
+            "vertical_pull","assisted-counterweight-chinup",
+            "assisted-pullup-dip-counterweight"),
+        "assisted-pullup" to ReviewedStation(
+            "vertical_pull","assisted-counterweight-pullup",
+            "assisted-pullup-dip-counterweight")
+    )
     fun eligible(movement:CatalogMovement):Boolean {
+        if(movement.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT) {
+            val reviewed=assistedSources[movement.exerciseId] ?:return false
+            return movement.equipmentId==reviewed.implement &&
+                movement.familyId==reviewed.family &&
+                movement.variantId==reviewed.variant &&
+                movement.pattern==(if(movement.exerciseId=="assisted-dip")
+                    ComposerPattern.HORIZONTAL_PRESS else ComposerPattern.VERTICAL_PULL) &&
+                movement.role==ComposerRole.SECONDARY &&
+                movement.sourcePracticalReps==RepBand(8,12) &&
+                movement.requiredFacilityIds==setOf("assisted-pullup-dip") &&
+                movement.creditStatus==
+                    CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL &&
+                movement.creditReviewReference=="engineering-provisional-v1"
+        }
         // Preserve separately reviewed cable/machine stack behavior.
         if(movement.expectedLoadBasis in setOf(
                 LoadBasis.CABLE_STACK,LoadBasis.MACHINE_STACK))

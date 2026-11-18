@@ -53,7 +53,9 @@ enum class CustomNextWorkoutCoachingStatus {
     HOLD_MARKED_SAME_DAY_CAPACITY_DROP,
     BUILD_REPS,
     READY_FOR_LOAD_REVIEW,
-    HOLD_CURRENT_TARGETS
+    HOLD_CURRENT_TARGETS,
+    /** Smaller verified COUNTERWEIGHT is a harder assisted lift, never a normal external load increase. */
+    READY_FOR_ASSISTANCE_REVIEW
 }
 
 data class CustomNextSetCoaching(
@@ -635,6 +637,7 @@ object CustomNextWorkoutCoachingDomain {
         // the heaviest set into all working sets.
         var candidate:BigDecimal?=null
         var observedLoad:BigDecimal?=null
+        var assistanceCandidate=false
         if(appearances.size>=2) {
             val previous=appearances[appearances.size-2]
             val previousSlot=previous.snapshot.slots.singleOrNull{
@@ -694,20 +697,42 @@ object CustomNextWorkoutCoachingDomain {
                             },actual?.load,actual?.reps,actual?.actualRir,
                                 (set.prescription.load as DraftSetLoad.Verified).value,
                                 set.prescription.targetRir)
-                        })
-                    val reviewed=runCatching {
+                        },trainingDayId="${request.next.stamp.cycleId}:${request.next.weekday}:${target.slotId}")
+                    val assisted=straight.first().basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
+                    val assistedReview=if(assisted &&
+                        target.machineInstanceId!=null &&
+                        target.machineInstanceId==request.requestedMachineInstanceId &&
+                        request.verifiedStock?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                        runCatching {AssistedCounterweightProgressionDomain.review(
+                            AssistedCounterweightReviewRequest(
+                                workout(previous,priorFacts,previousSets),
+                                workout(latest,facts,oldSets),
+                                target.machineInstanceId,target.machineInstanceId,
+                                request.verifiedStock,request.maximumAuthorizedIncrease)
+                        )}.getOrNull() else null
+                    val reviewed=if(assisted)null else runCatching {
                         ConservativeProgressionReview.assess(
                             workout(previous,priorFacts,previousSets),
                             workout(latest,facts,oldSets),
                             request.verifiedStock,request.maximumAuthorizedIncrease)
                     }.getOrNull()
-                    observedLoad=reviewed?.currentObservedLoad
-                    candidate=reviewed?.reviewCandidate
+                    observedLoad=if(assisted)
+                        assistedReview?.currentAssistance else reviewed?.currentObservedLoad
+                    candidate=if(assisted)assistedReview?.suggestedAssistance
+                        else reviewed?.reviewCandidate
+                    assistanceCandidate=assisted && assistedReview?.canOfferForReview==true
                     if(reviewed!=null)assumedForReview=maxOf(assumedForReview,reviewed.assumedGoalRirSetCount)
+                    if(assistedReview!=null)assumedForReview=maxOf(
+                        assumedForReview,assistedReview.assumedGoalRirSetCount)
                 }
             }
         }
         return when {
+            candidate!=null && assistanceCandidate -> result(
+                CustomNextWorkoutCoachingStatus.READY_FOR_ASSISTANCE_REVIEW,
+                ids,latest.evidence.workoutId,suggestions,observedLoad,
+                normalized(checkNotNull(candidate)),
+                "Two complete same-day, same-machine sessions at the rep ceiling support LESS assistance on the next workout. The lower counterweight is harder, not a load drop. Every future set and its separately calibrated machine must be approved before training.")
             candidate!=null->result(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
                 ids,latest.evidence.workoutId,suggestions,observedLoad,
                 normalized(checkNotNull(candidate)),

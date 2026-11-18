@@ -101,10 +101,18 @@ class NativeKotlinCustomNextLoadApprovalFileStore(
             r.historyRevision>0&&r.week in 1..104&&r.weekday in 0..6&&
             r.setKeys.size in 1..32&&r.setKeys.distinct().size==r.setKeys.size&&
             r.setKeys.all{it.length in 1..240}&&
-            validLoad(r.originalLoad)&&validLoad(r.proposedLoad)&&
-            r.proposedLoad>r.originalLoad&&
-            validLoad(r.maximumAuthorizedIncrease)&&
-            r.proposedLoad.subtract(r.originalLoad)<=r.maximumAuthorizedIncrease)
+            validLoad(r.originalLoad)&&
+            (if(r.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+                r.proposedLoad>=zero &&
+                    r.proposedLoad<r.originalLoad &&
+                    r.proposedLoad.stripTrailingZeros().scale()<=3 &&
+                    r.originalLoad.subtract(r.proposedLoad)<=
+                        r.maximumAuthorizedIncrease
+            else validLoad(r.proposedLoad)&&
+                r.proposedLoad>r.originalLoad&&
+                r.proposedLoad.subtract(r.originalLoad)<=
+                    r.maximumAuthorizedIncrease)&&
+            validLoad(r.maximumAuthorizedIncrease))
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic);out.writeInt(version)

@@ -1280,3 +1280,32 @@ assert.match(stagedCoreAudit,/FIRST_PROGRAM_SEEDS_UNVERIFIED/);
 assert.match(stagedCoreAudit,/firstProgramSeeds\.inventoryOwner\(/);
 assert.match(stagedCoreAudit,/seedInventory\.seeds\.size/);
 assert.doesNotMatch(stagedCoreAudit,/firstProgramSeeds\.create\(/);
+
+
+// The custom future workout can now move an authenticated assisted-machine
+// COUNTERWEIGHT DOWN after two comparable workouts. This is a separate
+// signed and durable load approval, NOT a future-cycle upward-load overwrite.
+const assistedCoach=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomNextWorkoutCoachingDomain.kt');
+const assistedAmendment=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomNextLoadAmendmentDomain.kt');
+const assistedStore=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomNextLoadApprovalFileStore.kt');
+const assistedFutureUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinFutureWeekCoachScreen.kt');
+const assistedPrepared=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutPreparedStore.kt');
+assert.match(assistedCoach,/CustomNextWorkoutCoachingStatus.READY_FOR_ASSISTANCE_REVIEW/);
+assert.match(assistedCoach,/target.machineInstanceId==request.requestedMachineInstanceId/);
+assert.match(assistedCoach,/AssistedCounterweightProgressionDomain.review\(/);
+assert.match(assistedAmendment,/candidate>=current.value \|\| candidate<zero/);
+assert.match(assistedAmendment,/stock.basis!=current.basis/);
+assert.match(assistedAmendment,/warmup->/);
+assert.match(assistedStore,/r.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT/);
+assert.match(assistedStore,/r.originalLoad.subtract\(r.proposedLoad\)/);
+assert.match(assistedStore,/val now=derive\(/);
+assert.match(assistedPrepared,/loadApprovals\?\.readCurrent\(/);
+assert.match(assistedPrepared,/load\?\.amendment\?\.amended/);
+assert.match(assistedFutureUi,/Maximum counterweight reduction · gym units/);
+assert.match(assistedFutureUi,/if\(!isAssistedCounterweight\)/);
+assert.match(assistedFutureUi,/host.previewNextActivatedLoadAmendment\(/);
+assert.match(assistedFutureUi,/host.approveNextActivatedLoadAmendment\(/);
+assert.match(assistedFutureUi,/host.prepareActivatedFutureWorkout\(/);
+assert.match(assistedFutureUi,/it.loadApprovalFingerprint==expected.fingerprint/);
+assert.match(assistedFutureUi,/issueActivatedFutureWorkout\(/);
+assert.match(assistedFutureUi,/Keep current assistance/);

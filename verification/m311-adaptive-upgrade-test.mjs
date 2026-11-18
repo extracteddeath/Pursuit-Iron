@@ -153,8 +153,13 @@ const migratedQuality=migrated.cycle.blockMeta[1].splitDecision.realizedQuality;
 const migratedPreviousSets=weeklySets(captureShellVolumeSnapshot(conversion.currentProgram,conversion.currentProgram.config.weeks,EXERCISES));
 const continuity=migrated.nextProgram.nextEngine.strengthWeekContinuity;
 console.log('M311 strength continuity proof',JSON.stringify({before:migratedPreviousSets,after:actualAfter,repair:continuity?.changes?.length??0,weekly:migratedQuality.weeks.map(w=>w.weeklySets)}));
-assert.ok(continuity?.changes.length>0,'The formerly rejected conversion must repair its deficient later week');
-assert.equal(continuity.minimumWeeklySets,Math.ceil(migratedPreviousSets*.5));
+// Better first-pass exercise selection can avoid the formerly deficient
+// week entirely. It is a regression to REQUIRE an unnecessary repair.
+const continuityFloor=Math.ceil(migratedPreviousSets*.5);
+assert.ok(migratedQuality.weeks.every(w=>w.weeklySets>=continuityFloor),
+ 'A corrected first-pass strength program or its reviewed repair must protect every week');
+if(continuity?.changes?.length)
+ assert.equal(continuity.minimumWeeklySets,continuityFloor);
 assert.equal(migratedQuality.comparison,'ranked_engine_base_to_saved_executable_weeks');
 assert.equal(migratedQuality.weeks.length,migrated.nextProgram.config.weeks);
 assert.deepEqual(migrated.nextProgram.nextEngine.cycleTemplate.splitDecision.realizedQuality,migratedQuality);
@@ -169,7 +174,7 @@ for(const week of migratedQuality.weeks){
 // Removing the repair recreates the actual generation regression. Verify the
 // transaction changes only generated set counts and is deterministic/idempotent.
 const unrepaired=structuredClone(migrated.nextProgram);
-for(const change of continuity.changes)unrepaired.nextWeekPrescriptions[change.key][change.week].sets-=change.delta;
+for(const change of continuity?.changes??[])unrepaired.nextWeekPrescriptions[change.key][change.week].sets-=change.delta;
 delete unrepaired.nextEngine.strengthWeekContinuity;
 const frozenBefore=JSON.stringify(unrepaired);
 const repaired=preserveStrengthWeekContinuity(conversion.currentProgram,unrepaired,EXERCISES);

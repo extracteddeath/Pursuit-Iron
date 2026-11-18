@@ -1517,6 +1517,8 @@ internal fun NativeKotlinCustomJournalScreen(
                             infoSlotId=null
                             reviewSwap(slot)
                         }) else null,
+                    unavailableReason=if(!infoWarmupsOnly && !finished)
+                        infoOptions.reason else null,
                     outcomes=journal?.effectiveVisits.orEmpty().mapNotNull { (key,receipt)->
                         if(key.part!=CustomWorkoutVisitPart.MAIN)null
                         else (receipt.operation as? CustomWorkoutJournalOperation.Record)?.let{key.setKey to it.outcome}

@@ -25,17 +25,20 @@ assert.match(machineCss, /wpb-last-set-technique>summary/);
 assert.match(machineCss, /wpb-last-set-technique-help/);
 assert.match(app, /className: "wpb-set-tech-tag"/);
 
-// The machine-choice action is now a peer of Swap in the horizontal tools,
-// not an extra exercise-heading row. It still invokes the same runtime owner,
-// saved-gym machine catalog and focused chooser.
-assert.match(app, /\{ k: "machine", element: _jsx\(WorkoutMachineVariantControl/);
-const meta = app.indexOf('className: "wpb-exercise-meta"');
-const tools = app.indexOf('className: "wpb-hscroll wpb-workout-tools', meta);
-assert.ok(tools > meta);
-assert.doesNotMatch(app.slice(meta, tools), /WorkoutMachineVariantControl/);
-assert.match(machine, /wpb-machine-switch-trigger wpb-workout-tool/);
-assert.match(machine, /onSelect\?\.\(id\)/);
-assert.match(machine, /onCreate\(label,makeDefault\)/);
-assert.match(machineCss, /\.wpb-workout-tools>\.wpb-machine-switch/);
-assert.doesNotMatch(machineCss, /grid-row:4/);
-console.log('PASS final-set technique stays with logged row in Target/Last; Machine A/B stays accessible but secondary');
+// Machine A/B and exercise Swap live in Exercise Info near the increment
+// settings; the compact workout action rail must not clip machine names.
+assert.match(app,/className: "wpb-exinfo-machine-tools"/);
+assert.match(app,/isMachineLike\(ex\.equip\) && _jsx\(WorkoutMachineVariantControl/);
+assert.match(app,/onAssignLegacy:id=>attachOldMachineHistoryNow\(ei,id\)/);
+assert.match(app,/wpb-exinfo-swap-action/);
+const toolbar = app.slice(app.indexOf('className: "wpb-hscroll wpb-workout-tools'),
+    app.indexOf('className: "wpb-set-head"'));
+assert.doesNotMatch(toolbar,/WorkoutMachineVariantControl|\{ k: "swap"/);
+assert.match(machine,/wpb-machine-switch-trigger/);
+assert.match(machine,/onSelect\?\.\(id\)/);
+assert.match(machine,/onCreate\(label,makeDefault\)/);
+assert.match(machine,/onAssignLegacy\(id\)/);
+assert.match(machineCss,/wpb-exinfo-machine-tools/);
+assert.match(machineCss,/wpb-machine-switch-add span/);
+assert.doesNotMatch(machineCss,/\.wpb-workout-tools>\.wpb-machine-switch/);
+console.log('PASS techniques remain on logged set rows; Machine A/B and Swap live in Exercise Info with accessible full-width controls');

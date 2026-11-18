@@ -27,7 +27,7 @@ class StrengthExerciseMenuRecoveryDomainTest {
     }
     private val catalog by lazy{fixture.movements+extras()}
     private fun core()=listOf(
-        slot("bench",ComposerRole.PRIMARY),
+        slot("bench",ComposerRole.PRIMARY).copy(pinned=true),
         slot("row",ComposerRole.SECONDARY),
         slot("squat",ComposerRole.SECONDARY))
     private fun cycle():CustomTrainingCycle {

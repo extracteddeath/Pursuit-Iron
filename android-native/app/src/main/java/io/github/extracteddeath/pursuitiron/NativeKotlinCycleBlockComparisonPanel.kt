@@ -87,7 +87,11 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     cycle:CustomTrainingCycle,
     currentAudit:CustomCoachAudit?,
     onEditBlock:(String)->Unit,
-    enabled:Boolean=true
+    enabled:Boolean=true,
+    repairReview:NativeStrengthVolumeRepairReady?=null,
+    canRequestStrengthRepair:Boolean=false,
+    onRequestStrengthRepair:((String,Int)->Unit)?=null,
+    onAcceptStrengthRepair:(()->Unit)?=null
 ) {
     if(cycle.blocks.size<2)return
     var selected by rememberSaveable(cycle.cycleId){
@@ -213,6 +217,90 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
             Text("No loads, sets, training history or program approval were changed.",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val sourceContinuityIssue=currentAudit?.issues?.any {issue->
+            issue.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
+                issue.location.contains(".block.${next.blockId}")
+        }==true
+        if(next.phase==TrainingPhase.STRENGTH &&
+            (comparison.strengthHalfVolumeReviewRequired ||
+                sourceContinuityIssue || repairReview?.request?.blockId==next.blockId) &&
+            onRequestStrengthRepair!=null) {
+            HorizontalDivider()
+            PursuitSectionHeading("Adjust strength working sets",
+                "A proposed change keeps your exercises, individual loads, " +
+                    "RIR, days and other blocks intact. Nothing changes until you confirm.")
+            var maximumSets by rememberSaveable(cycle.cycleId,id) {
+                mutableIntStateOf(5)
+            }
+            Text("Maximum working sets for one exercise",
+                style=MaterialTheme.typography.labelLarge)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                listOf(4,5,6,8).forEach {cap->
+                    FilterChip(selected=maximumSets==cap,
+                        enabled=enabled,
+                        onClick={maximumSets=cap},
+                        label={Text("$cap sets")})
+                }
+            }
+            val verified=repairReview?.takeIf{
+                it.request.cycleId==cycle.cycleId &&
+                    it.request.expectedCycleRevision==cycle.revision &&
+                    it.request.blockId==next.blockId &&
+                    it.request.maximumWorkingSetsPerSlot==maximumSets
+            }
+            if(verified==null) {
+                OutlinedButton(
+                    modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),
+                    enabled=enabled && canRequestStrengthRepair,
+                    onClick={onRequestStrengthRepair(next.blockId,maximumSets)}
+                ) {Text("Review proposed strength adjustments")}
+                if(!canRequestStrengthRepair)Text(
+                    "Run the current complete cycle and coaching-policy review " +
+                        "and enable adaptive set-count proposals first.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text("${verified.additionsPerWeek} extra working sets in the " +
+                        "weekly template, for ${verified.weeksCovered} reviewed " +
+                        "strength weeks. No previously issued session is changed.",
+                    style=MaterialTheme.typography.bodyMedium)
+                verified.changedSlots.forEach {change->
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm),
+                        verticalAlignment=Alignment.CenterVertically) {
+                        Text(kotlinExerciseLabel(change.exerciseId)+
+                            " · "+compareWeekday(change.weekday),
+                            modifier=Modifier.weight(1f),
+                            style=MaterialTheme.typography.bodyMedium)
+                        Text("${change.beforeWorkingSets} → ${change.afterWorkingSets}",
+                            style=MaterialTheme.typography.labelLarge)
+                    }
+                }
+                var athleteConfirmed by remember(verified) {
+                    mutableStateOf(false)
+                }
+                Row(Modifier.fillMaxWidth(),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    Checkbox(checked=athleteConfirmed,enabled=enabled,
+                        onCheckedChange={athleteConfirmed=it})
+                    Text("I reviewed these working-set changes. Save them to " +
+                        "my custom program and require renewed program approval.",
+                        modifier=Modifier.weight(1f),
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                Button(
+                    enabled=enabled && athleteConfirmed &&
+                        onAcceptStrengthRepair!=null,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),
+                    onClick={onAcceptStrengthRepair?.invoke()}
+                ) {Text("Save reviewed strength adjustments")}
+                Text("This saves a new, undoable program draft. Historical " +
+                    "sets and finished workouts remain unchanged.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         comparison.newlyTrackedMuscles?.takeIf{it.isNotEmpty()}?.let{muscles->
             Text("Newly tracked muscles: ${muscles.sortedBy{it.ordinal}.joinToString{namedMuscle(it)}}. Earlier targets did not track these groups.",

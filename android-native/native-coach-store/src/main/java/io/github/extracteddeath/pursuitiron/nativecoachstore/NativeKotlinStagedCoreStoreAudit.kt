@@ -21,6 +21,7 @@ enum class NativeKotlinStagedCoreRefusal {
     INVALID_DIRECTORY_OR_IDENTITY,
     AUTHORING_SOURCE_UNAVAILABLE,
     DRAFTS_UNVERIFIED,
+    FIRST_PROGRAM_SEEDS_UNVERIFIED,
     CUSTOM_SIGNOFFS_UNVERIFIED,
     MACHINE_ROSTER_UNVERIFIED,
     COACH_SETTINGS_UNVERIFIED,
@@ -58,7 +59,9 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val savedFutureBlockContexts:Int=0,
         val customConsentRecords:Int=0,
         val revokedCustomConsents:Int=0,
-        val legacyCustomConsents:Int=0
+        val legacyCustomConsents:Int=0,
+        /** Owner-verified v1/v2 generated provenance; not an approval. */
+        val generatedFirstProgramSeeds:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -91,6 +94,8 @@ object NativeKotlinStagedCoreStoreAudit {
             val sources=NativeKotlinCustomAuthoringSourceFileStore(
                 stagedRoot,fence,identity)
             val drafts=NativeCustomCycleDraftFileStore(
+                stagedRoot,fence,identity)
+            val firstProgramSeeds=NativeKotlinFirstProgramSeedFileStore(
                 stagedRoot,fence,identity)
             val signoffs=NativeKotlinCustomCycleSignoffFileStore(
                 stagedRoot,fence,identity,drafts,sources)
@@ -145,6 +150,16 @@ object NativeKotlinStagedCoreStoreAudit {
                 if(savedDrafts !is NativeCustomDraftListResult.Ready)
                     return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.DRAFTS_UNVERIFIED)
+                // Generated seeds may legitimately predate a later athlete
+                // program edit or survive a crash before the first draft
+                // save. Preserve all of them without granting approvals.
+                // Scan *physical files*, not only IDs in current drafts:
+                // otherwise a corrupt or foreign v2 advanced-technique
+                // consent could silently disappear during restore.
+                val seedInventory=firstProgramSeeds.inventoryOwner(
+                    expected.ownerKey) as? NativeFirstProgramSeedInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.FIRST_PROGRAM_SEEDS_UNVERIFIED)
                 // Every archived custom-cycle consent and revocation has
                 // training significance, even if its draft was retired.
                 // A valid checksum alone does not re-approve the program.
@@ -314,7 +329,8 @@ object NativeKotlinStagedCoreStoreAudit {
                     futureContexts.records.size,
                     customConsents.records.size,
                     customConsents.records.count{it.revoked},
-                    customConsents.records.count{!it.revoked && !it.hasReviewedInputs})
+                    customConsents.records.count{!it.revoked && !it.hasReviewedInputs},
+                    seedInventory.seeds.size)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

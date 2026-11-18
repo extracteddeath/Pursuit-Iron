@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -52,6 +53,15 @@ sealed interface NativeFirstProgramSeedRead {
 sealed interface NativeFirstProgramSeedWrite {
     data object Committed:NativeFirstProgramSeedWrite
     data class Rejected(val reason:NativeFirstProgramSeedRefusal):NativeFirstProgramSeedWrite
+}
+
+/** Scan every physical generated-program seed, including valid orphan seeds
+ * after an interrupted create. This inventory NEVER approves a program. */
+sealed interface NativeFirstProgramSeedInventory {
+    data class Verified(val seeds:List<NativeFirstProgramSeed>):
+        NativeFirstProgramSeedInventory
+    data class Rejected(val reason:NativeFirstProgramSeedRefusal):
+        NativeFirstProgramSeedInventory
 }
 
 /**
@@ -139,7 +149,7 @@ class NativeKotlinFirstProgramSeedFileStore(
     }
 
     private fun decode(file:Path,ownerKey:String,athleteId:String,
-        requestedCycleId:String):NativeFirstProgramSeed? {
+        requestedCycleId:String?):NativeFirstProgramSeed? {
         if(!Files.exists(file))return null
         if(Files.isSymbolicLink(file) || Files.size(file) !in 44L..maxBytes.toLong())
             throw IOException("Invalid first-program seed path")
@@ -189,7 +199,8 @@ class NativeKotlinFirstProgramSeedFileStore(
             val withMyo=if(storedVersion>=2)data.readBoolean() else false
             val seed=NativeFirstProgramSeed(cycleId,title,weeks,
                 revision,policy,phase,loads,bodyweight,focuses,overhead,withMyo)
-            if(data.available()!=0 || cycleId!=requestedCycleId ||
+            if(data.available()!=0 ||
+                requestedCycleId!=null && cycleId!=requestedCycleId ||
                 !valid(seed))throw IOException("Invalid first-program seed")
             seed
         }
@@ -238,6 +249,62 @@ class NativeKotlinFirstProgramSeedFileStore(
         }catch(_:Exception) {
             NativeFirstProgramSeedWrite.Rejected(
                 NativeFirstProgramSeedRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Read-only, owner-fenced physical inventory for an isolated encrypted
+     * backup's staged restore verifier. No seed is treated as active consent,
+     * and an orphan seed is not discarded: it may record an interrupted
+     * first-program creation that never reached a saved draft.
+     *
+     * A renamed hash, unknown pending file, link, foreign owner, duplicate
+     * cycle identity or corrupt v1/v2 payload fails the ENTIRE inventory.
+     * This cannot recover against an existing live athlete installation.
+     */
+    fun inventoryOwner(ownerKey:String):NativeFirstProgramSeedInventory {
+        return try {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)
+                    ?:return@withOwnerTransaction NativeFirstProgramSeedInventory.Rejected(
+                        NativeFirstProgramSeedRefusal.NOT_AUTHORIZED)
+                if(!Files.exists(directory,LinkOption.NOFOLLOW_LINKS))
+                    return@withOwnerTransaction NativeFirstProgramSeedInventory.Verified(
+                        emptyList())
+                if(Files.isSymbolicLink(directory) ||
+                    !Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS))
+                    return@withOwnerTransaction NativeFirstProgramSeedInventory.Rejected(
+                        NativeFirstProgramSeedRefusal.CORRUPT)
+                val seeds=mutableListOf<NativeFirstProgramSeed>()
+                val ids=mutableSetOf<String>()
+                Files.list(directory).use{stream->
+                    val itr=stream.iterator()
+                    while(itr.hasNext()) {
+                        val item=itr.next()
+                        val name=item.fileName.toString()
+                        if(!name.startsWith("first-program-"))continue
+                        if(!name.endsWith(".bin") ||
+                            seeds.size>=4096 ||
+                            Files.isSymbolicLink(item) ||
+                            !Files.isRegularFile(item,LinkOption.NOFOLLOW_LINKS))
+                            throw IOException("Untrusted generated seed file")
+                        val seed=decode(item,ownerKey,current.athleteId,null)
+                            ?:throw IOException("Missing generated seed")
+                        if(path(ownerKey,seed.cycleId)!=item ||
+                            !ids.add(seed.cycleId))
+                            throw IOException("Renamed or duplicate generated seed")
+                        seeds+=seed
+                    }
+                }
+                if(owner(ownerKey)!=current)
+                    NativeFirstProgramSeedInventory.Rejected(
+                        NativeFirstProgramSeedRefusal.NOT_AUTHORIZED)
+                else NativeFirstProgramSeedInventory.Verified(
+                    seeds.sortedBy{it.cycleId})
+            }
+        }catch(_:Exception) {
+            NativeFirstProgramSeedInventory.Rejected(
+                NativeFirstProgramSeedRefusal.CORRUPT)
         }
     }
 

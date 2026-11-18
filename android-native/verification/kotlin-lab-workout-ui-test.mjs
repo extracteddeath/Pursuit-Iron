@@ -1242,3 +1242,21 @@ assert.match(firstHost,/includeMyoFinisher=includeMyoFinisher/);
 assert.match(firstSeed,/if\(seed\.includeMyoFinisher\)version else originalVersion/);
 assert.match(firstSeed,/if\(storedVersion>=2\)data\.readBoolean\(\) else false/);
 assert.doesNotMatch(firstUi,/includeMyoFinisher:Boolean=true/);
+
+
+// Restore auditing must inventory *physical* first-program provenance,
+// including legacy v1, opted-in v2 and legitimate unfinished-create orphans.
+// No malformed/foreign/renamed/partial seed may disappear just because it
+// is absent from the active draft list.
+const stagedFirstProgram=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinFirstProgramSeedFileStore.kt');
+const stagedCoreAudit=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinStagedCoreStoreAudit.kt');
+assert.match(stagedFirstProgram,/sealed interface NativeFirstProgramSeedInventory/);
+assert.match(stagedFirstProgram,/fun inventoryOwner\(ownerKey:String\)/);
+assert.match(stagedFirstProgram,/Files\.list\(directory\)/);
+assert.match(stagedFirstProgram,/decode\(item,ownerKey,current\.athleteId,null\)/);
+assert.match(stagedFirstProgram,/path\(ownerKey,seed\.cycleId\)!=item/);
+assert.match(stagedFirstProgram,/!name\.endsWith\("\.bin"\)/);
+assert.match(stagedCoreAudit,/FIRST_PROGRAM_SEEDS_UNVERIFIED/);
+assert.match(stagedCoreAudit,/firstProgramSeeds\.inventoryOwner\(/);
+assert.match(stagedCoreAudit,/seedInventory\.seeds\.size/);
+assert.doesNotMatch(stagedCoreAudit,/firstProgramSeeds\.create\(/);

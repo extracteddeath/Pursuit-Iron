@@ -317,6 +317,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.deepEqual(declarations.slice(beforeWaveNine+waveNineIds.length),
    [...ratedBandRequiredIds,'spanish-squat'],
    'only reviewed band IDs and the explicitly supported Spanish squat may follow wave nine');
+ const liveById=new Map(web.map(ex=>[ex.id,ex]));
  const spanish=liveById.get('spanish-squat');
  assert.ok(spanish,'supported Spanish squat missing from web source');
  assert.equal(spanish.name,'Spanish Squat');
@@ -329,7 +330,6 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
    'Spanish squat must demand confirmed support and have no numeric external load');
  // A new source catalog ID is not evidence of identical mechanics.
  // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
- const liveById=new Map(web.map(ex=>[ex.id,ex]));
  const fixtureById=new Map(requestedFixture.records.map(x=>[x.id,x]));
  for(const [id,name,equipment,reps] of requestedWebVariants) {
    const ex=fixtureById.get(id);

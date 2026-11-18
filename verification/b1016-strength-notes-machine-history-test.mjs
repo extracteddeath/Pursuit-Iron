@@ -26,7 +26,8 @@ assert.doesNotMatch(why,/children: \[t\.decided\.sets, " sets"/);
 // Strength accumulation is not a peaking taper: 50% was previously
 // considered fine, causing large long-cycle gaps despite unchanged days.
 assert.ok(phasePolicyFor('strength_accumulation').volumeMultiplier>=.88);
-assert.ok(phasePolicyFor('strength_accumulation').sessionCapacityMultiplier>=.88);
+assert.ok(phasePolicyFor('strength_accumulation').sessionCapacityMultiplier>=.75,
+    'Strength must reserve longer-rest capacity rather than fragment the week');
 assert.equal(strengthEntryMinimumSets(60),42);
 assert.equal(findStrengthVolumeCliff(60,[{week:1,weeklySets:50},{week:2,weeklySets:39}]).week,2);
 assert.equal(findStrengthVolumeCliff(60,[{week:1,weeklySets:42}]),null);

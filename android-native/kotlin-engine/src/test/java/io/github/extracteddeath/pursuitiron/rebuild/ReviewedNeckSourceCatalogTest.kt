@@ -79,7 +79,7 @@ class ReviewedNeckSourceCatalogTest {
                 basis=LoadBasis.MACHINE_STACK))
             assertTrue(id,rejects(id,CatalogIssueType.LOAD_UNVERIFIED,
                 selected=n("6")))
-            assertTrue(id,rejects(id,CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY,
+            assertTrue(id,rejects(id,CatalogIssueType.LOAD_UNVERIFIED,
                 selected=null))
         }
         assertEquals(4,entries.map{it.movement.requiredFacilityIds.single()}

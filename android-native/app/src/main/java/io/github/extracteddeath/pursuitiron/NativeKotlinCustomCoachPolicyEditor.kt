@@ -140,6 +140,9 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         return TrainingMuscleCoverage.forEditor(marker,saved) ?:emptyList()
     }
     val visibleMuscles=muscleScope(selectedPhase)
+    // A single unverified phase must block review of the WHOLE cycle,
+    // even when a different, valid phase is currently displayed.
+    val unverifiedPhases=phaseList.filter{muscleScope(it).isEmpty()}
     LaunchedEffect(selectedPhase,visibleMuscles) {
         if(selectedMuscle !in visibleMuscles)selectedMuscle=TrainingMuscle.CHEST
     }
@@ -253,17 +256,25 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     Text("Direct muscle targets · ${visibleMuscles.size} groups",
         style=MaterialTheme.typography.titleMedium)
     if(visibleMuscles.isEmpty()) {
-        Text("This policy's saved muscle scope could not be verified. Review the version and all requested targets before saving; no missing muscle is silently assumed to be zero.",
+        // A forged, future or partial scope is not an invitation to rebase a
+        // signed policy by tapping an upgrade button. Keep this phase read-only.
+        Text("This policy's saved muscle scope cannot be verified. This phase cannot be edited, upgraded or audited. Reopen the verified athlete policy before continuing.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.error)
-    } else if(visibleMuscles!=TrainingMuscleCoverage.current) {
+        return
+    }
+    if(visibleMuscles!=TrainingMuscleCoverage.current) {
         Text("This saved policy retains ${visibleMuscles.size} original muscle groups. Upgrading to ${TrainingMuscleCoverage.current.size} groups requires your own reviewed targets for every new muscle, including neck flexion, extension and lateral flexion.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    if(visibleMuscles!=TrainingMuscleCoverage.current) {
-        OutlinedButton(enabled=!busy,onClick={put("$phaseKey:muscleScope","v${TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)}")},
-            modifier=Modifier.heightIn(min=48.dp)) {Text("Add current muscle targets")}
+        OutlinedButton(enabled=!busy,onClick={
+            // Move focus to the FIRST new target, rather than making an
+            // athlete scroll through every already-saved historical group.
+            selectedMuscle=TrainingMuscleCoverage.current.firstOrNull{
+                it !in visibleMuscles
+            } ?: selectedMuscle
+            put("$phaseKey:muscleScope","v${TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)}")
+        },modifier=Modifier.heightIn(min=48.dp)) {Text("Add current muscle targets")}
     }
     Text("Enter a complete baseline and selected MEV/MAV/MRV for each group, including an explicitly entered 0 when that is your reviewed target. Direct-frequency days are separate from set volume. Focused and reduced muscles require a real authored change from baseline.",
         style=MaterialTheme.typography.bodySmall)
@@ -401,7 +412,15 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         if(issues.size>12)Text("${issues.size-12} more requirements. Resolve each phase and muscle before auditing.",
             style=MaterialTheme.typography.bodySmall)
     }
-    Button(enabled=!busy,modifier=Modifier.fillMaxWidth(),onClick={
+    if(unverifiedPhases.isNotEmpty()) {
+        Text("Cycle review is blocked by an unverified muscle scope in: "+
+            unverifiedPhases.joinToString{it.name.replace('_',' ')}+
+            ". Reopen the reviewed policy; no missing targets will be guessed.",
+            color=MaterialTheme.colorScheme.error,
+            style=MaterialTheme.typography.bodySmall)
+    }
+    Button(enabled=!busy && unverifiedPhases.isEmpty(),
+        modifier=Modifier.fillMaxWidth(),onClick={
         val result=run {
             val phases=phaseList.map{phase->
                 val key=phase.name

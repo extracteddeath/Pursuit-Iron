@@ -148,6 +148,10 @@ class NativeKotlinSegmentedRedoFileStore(
 
     private fun DataOutputStream.intent(value: NativeHistoryWriteIntent,dated:Boolean=false) {
         when (value) {
+            // A separate authenticated typed schema must be designed before
+            // any segmented redo could preserve seconds/meters/side facts.
+            is NativeHistoryWriteIntent.MeasuredFinish ->
+                throw IOException("measured History has no segmented redo schema")
             is NativeHistoryWriteIntent.Finish -> {
                 writeByte(1); writeUTF(value.workoutId)
                 writeUTF(value.operation.eventId)

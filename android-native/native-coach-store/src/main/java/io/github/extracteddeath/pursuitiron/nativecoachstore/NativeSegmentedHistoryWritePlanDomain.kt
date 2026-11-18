@@ -84,6 +84,9 @@ object NativeSegmentedHistoryWritePlanDomain {
 
     private fun validIntent(intent: NativeHistoryWriteIntent) =
         id.matches(intent.workoutId) && when (intent) {
+            // Refuse, do not misclassify as Composer/custom Finished facts.
+            // Canonical History v4 is currently the only measured authority.
+            is NativeHistoryWriteIntent.MeasuredFinish -> false
             is NativeHistoryWriteIntent.Finish ->
                 id.matches(intent.operation.eventId) &&
                     intent.operation.expectedJournalRevision in 0 until MAX_REVISION

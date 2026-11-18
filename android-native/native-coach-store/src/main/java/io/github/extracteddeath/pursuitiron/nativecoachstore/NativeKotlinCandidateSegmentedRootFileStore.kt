@@ -448,6 +448,11 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
             val intent = patch.consumedIntent
             d.writeUTF(intent.workoutId)
             when (intent) {
+                // The candidate segmented-root transport has no verified
+                // typed measurement implementation. Never fingerprint or
+                // acknowledge a measured Finish as another receipt type.
+                is NativeHistoryWriteIntent.MeasuredFinish ->
+                    throw IOException("measured History requires typed segmented migration")
                 is NativeHistoryWriteIntent.Finish -> {
                     d.writeByte(1)
                     d.writeUTF(intent.operation.eventId)

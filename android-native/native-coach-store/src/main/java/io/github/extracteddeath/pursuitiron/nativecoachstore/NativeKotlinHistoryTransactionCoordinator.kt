@@ -233,6 +233,11 @@ class NativeKotlinHistoryTransactionCoordinator(
                     intent.operation.eventId, result.revision, 0,intent.completedAtEpochMillis
                 )
             }
+            is NativeHistoryWriteIntent.MeasuredFinish -> {
+                // A measured parent Finish belongs only to the registered
+                // typed parent coordinator. Never replay it as Composer sets.
+                return denied(NativeHistoryTransactionRefusal.HISTORY_NOT_READY)
+            }
             is NativeHistoryWriteIntent.CustomCorrect -> {
                 // The Composer coordinator must never replay custom corrections.
                 return denied(NativeHistoryTransactionRefusal.HISTORY_NOT_READY)

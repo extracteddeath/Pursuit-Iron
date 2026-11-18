@@ -72,7 +72,10 @@ class NativeMeasuredWorkoutParentFileStore(
     private val root:Path,
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
-    private val approvals:NativeMeasuredApprovedWorkoutSource
+    private val approvals:NativeMeasuredApprovedWorkoutSource,
+    // Optional only for isolated pre-integration store tests. Production
+    // issuance must provide this exact shared, enrolled History authority.
+    private val history:NativeKotlinHistoryManifestFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val maxBytes=NativeMeasuredWorkoutParentCodec.MAX_BYTES
@@ -81,6 +84,14 @@ class NativeMeasuredWorkoutParentFileStore(
         runCatching{identity.signedInIdentity()}.getOrNull()
             ?.takeIf{ id.matches(owner) && it.ownerKey==owner &&
                 id.matches(it.athleteId) }
+
+    private fun ledgerReady(owner:String,athlete:String,workout:String):Boolean {
+        val source=history?:return true
+        val ledger=(source.open(owner,athlete) as?
+            NativeHistoryLedgerResult.Durable)?.ledger ?:return false
+        return ledger.pending==null &&
+            ledger.completions.none{it.workoutId==workout}
+    }
 
     private fun path(owner:String,workout:String):Path {
         val bytes=(owner+"\u0000"+workout).toByteArray(Charsets.UTF_8)
@@ -166,6 +177,9 @@ class NativeMeasuredWorkoutParentFileStore(
                 val athlete=active(ownerKey)
                     ?:return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
                         NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+                if(!ledgerReady(ownerKey,athlete.athleteId,workoutId))
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
                 val prior=fromDisk(ownerKey,athlete.athleteId,workoutId)
                 if(prior !is NativeMeasuredWorkoutStoreResult.Rejected ||
                     prior.reason!=NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
@@ -209,6 +223,9 @@ class NativeMeasuredWorkoutParentFileStore(
                 val athlete=active(ownerKey)
                     ?:return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
                         NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+                if(!ledgerReady(ownerKey,athlete.athleteId,workoutId))
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
                 val prior=fromDisk(ownerKey,athlete.athleteId,workoutId)
                 val old=(prior as? NativeMeasuredWorkoutStoreResult.Durable)
                     ?.stored ?:return@withOwnerTransaction prior
@@ -232,6 +249,61 @@ class NativeMeasuredWorkoutParentFileStore(
                         else checked.copy(replayed=false)
                     }
                 }
+            }
+        }.getOrElse{NativeMeasuredWorkoutStoreResult.Rejected(
+            NativeMeasuredWorkoutStoreRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
+     * Called ONLY by the enrolled History transaction after a matching intent
+     * has been durably prepared. Idempotent after a crash between journal
+     * commit and manifest finalize. Do not expose to screens/controllers.
+     */
+    internal fun applyPendingFinish(
+        ownerKey:String,workoutId:String,
+        operation:MeasuredWorkoutOperation.Finish
+    ):NativeMeasuredWorkoutStoreResult {
+        if(!id.matches(ownerKey) || !id.matches(workoutId))
+            return NativeMeasuredWorkoutStoreResult.Rejected(
+                NativeMeasuredWorkoutStoreRefusal.INVALID_ID)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val athlete=active(ownerKey)
+                    ?:return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+                val pending=(history?.open(ownerKey,athlete.athleteId)
+                    as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
+                    as? NativeHistoryWriteIntent.MeasuredFinish
+                if(pending?.workoutId!=workoutId ||
+                    pending?.operation!=operation)
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
+                val previous=fromDisk(ownerKey,athlete.athleteId,workoutId)
+                val old=(previous as? NativeMeasuredWorkoutStoreResult.Durable)
+                    ?.stored?:return@withOwnerTransaction previous
+                val decided=MeasuredWorkoutJournalDomain.reduce(
+                    old.journal,operation)
+                val updated=(decided as? MeasuredWorkoutDecision.Proposed)
+                    ?:return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.STALE_OR_INVALID_RECEIPT,
+                        (decided as MeasuredWorkoutDecision.Rejected).reason)
+                if(updated.replayed)
+                    return@withOwnerTransaction if(
+                        old.journal.finishedByEventId==operation.eventId &&
+                        old.journal.revision==operation.expectedRevision+1)
+                        previous else NativeMeasuredWorkoutStoreResult.Rejected(
+                            NativeMeasuredWorkoutStoreRefusal.STALE_OR_INVALID_RECEIPT)
+                if(active(ownerKey)!=athlete)
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+                val next=old.copy(journal=updated.journal)
+                commit(path(ownerKey,workoutId),next)
+                val verified=fromDisk(ownerKey,athlete.athleteId,workoutId)
+                if(verified !is NativeMeasuredWorkoutStoreResult.Durable ||
+                    verified.stored!=next)
+                    NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.STORAGE_UNAVAILABLE)
+                else verified.copy(replayed=false)
             }
         }.getOrElse{NativeMeasuredWorkoutStoreResult.Rejected(
             NativeMeasuredWorkoutStoreRefusal.STORAGE_UNAVAILABLE)}

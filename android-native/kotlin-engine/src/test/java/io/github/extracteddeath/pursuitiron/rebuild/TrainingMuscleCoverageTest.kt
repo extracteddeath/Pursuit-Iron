@@ -25,11 +25,20 @@ class TrainingMuscleCoverageTest {
         assertEquals((0..15).toList(),TrainingMuscleCoverage.legacyV1.map{it.ordinal})
         assertEquals(18,TrainingMuscleCoverage.legacyV2.size)
         assertEquals(20,TrainingMuscleCoverage.legacyV3.size)
-        assertEquals(22,TrainingMuscleCoverage.current.size)
+        assertEquals(22,TrainingMuscleCoverage.legacyV4.size)
+        assertEquals(25,TrainingMuscleCoverage.current.size)
+        assertEquals((0..21).toList(),
+            TrainingMuscleCoverage.legacyV4.map{it.ordinal})
+        assertEquals(listOf(TrainingMuscle.NECK_FLEXORS,
+            TrainingMuscle.NECK_EXTENSORS,TrainingMuscle.NECK_LATERAL_FLEXORS),
+            TrainingMuscleCoverage.current.drop(22))
         assertTrue(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.legacyV2))
         assertEquals(2,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.legacyV2))
         assertEquals(3,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.legacyV3))
-        assertEquals(4,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current))
+        assertEquals(4,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.legacyV4))
+        assertEquals(5,TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current))
+        assertFalse(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.legacyV4+
+            TrainingMuscle.NECK_FLEXORS))
         assertFalse(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.current.dropLast(1)))
         assertTrue(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.legacyV1))
         assertTrue(TrainingMuscleCoverage.isComplete(TrainingMuscleCoverage.current))
@@ -115,4 +124,44 @@ class TrainingMuscleCoverageTest {
         assertNotEquals(GoalPolicyStatus.MATCHED_FOR_REVIEW,review.status)
         assertTrue(review.issues.any{it.kind==GoalPolicyIssueKind.INVALID_DOSE})
     }
+    @Test fun originalFirstProgramV11Remains22RowsWhenNewNeckV5Exists() {
+        val input=StarterProgramReleaseFixture.request(
+            ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY)
+        val original=CoachFirstProgramStartDomain.review(input)
+        assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,
+            original.status)
+        assertEquals("v11",original.policy?.revision)
+        assertEquals(TrainingMuscleCoverage.legacyV4,
+            original.policy?.selectedBounds?.map{it.muscle})
+        assertEquals(22,original.policy?.baselineBounds?.size)
+        assertTrue(original.policy?.selectedBounds.orEmpty().none{
+            it.muscle.introducedIn==5
+        })
+        assertTrue(TrainingMuscleCoverage.isComplete(
+            original.policy?.selectedBounds?.map{it.muscle}.orEmpty()))
+    }
+
+    @Test fun v5NeckDoseIsIndependentWithoutUpgradingSignedV4Policy() {
+        val old=WeeklyDoseFeasibilityDomain.audit(
+            week(TrainingMuscleCoverage.legacyV4))
+        val selected=TrainingMuscleCoverage.current
+        val exposure=PlannedWorkingExposure("neck-work",0,ExposureSetKind.WORKING,
+            listOf(DeclaredMuscleCredit(TrainingMuscle.NECK_FLEXORS,
+                MuscleCreditRole.DIRECT,BigDecimal.ONE)),30,60)
+        val modern=WeeklyDoseFeasibilityDomain.audit(
+            week(selected).copy(exposures=week(selected).exposures+exposure))
+        assertFalse(old.muscles.containsKey(TrainingMuscle.NECK_FLEXORS))
+        assertEquals(BigDecimal.ONE,modern.muscles
+            .getValue(TrainingMuscle.NECK_FLEXORS).directWorkingSets)
+        for(m in listOf(TrainingMuscle.NECK_EXTENSORS,
+            TrainingMuscle.NECK_LATERAL_FLEXORS,TrainingMuscle.TRAPS))
+            assertEquals(zero,modern.muscles.getValue(m).directWorkingSets)
+        assertTrue(runCatching{
+            WeeklyDoseFeasibilityDomain.audit(
+                week(TrainingMuscleCoverage.legacyV4).copy(
+                    exposures=week(TrainingMuscleCoverage.legacyV4)
+                        .exposures+exposure))
+        }.isFailure)
+    }
+
 }

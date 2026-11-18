@@ -139,7 +139,7 @@ class ReviewedTrapBarCatalogTest {
         assertEquals("v9",old.policy?.revision)
         assertEquals("v11",fresh.policy?.revision)
         assertEquals(TrainingMuscleCoverage.legacyV2,old.policy?.selectedBounds?.map{it.muscle})
-        assertEquals(TrainingMuscleCoverage.current,fresh.policy?.selectedBounds?.map{it.muscle})
+        assertEquals(TrainingMuscleCoverage.legacyV4,fresh.policy?.selectedBounds?.map{it.muscle})
         assertEquals(old.prescription?.sessions,fresh.prescription?.sessions)
         assertEquals(old.policy?.selectedBounds,fresh.policy?.selectedBounds?.filter{it.muscle.introducedIn<=2})
     }

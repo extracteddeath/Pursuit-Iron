@@ -1,8 +1,28 @@
-/* Machine A/B is a secondary action inside workout tools, not a fourth
-   exercise-heading row or a large chip competing with the set editor. */
-#root .wpb-workout .wpb-workout-tools>.wpb-machine-switch{
-  display:inline-flex;flex:0 0 auto;min-width:0;max-width:148px;
+/* Machine A/B and exercise swap live next to weight-increment settings
+   in Exercise Info. This keeps the workout action rail from clipping them. */
+#root .wpb-workout .wpb-exinfo-machine-tools{
+  display:grid;gap:10px;min-width:0;margin:12px 0 16px;
+  padding:12px;border-radius:var(--pi-shape-card,18px);
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  background:var(--pi-color-card,var(--wpb-theme-card));
 }
+#root .wpb-workout .wpb-exinfo-machine-tools .wpb-machine-switch{
+  display:block;width:100%;max-width:100%;min-width:0;
+}
+#root .wpb-workout .wpb-exinfo-machine-tools .wpb-machine-switch-trigger,
+#root .wpb-workout .wpb-exinfo-swap-action{
+  display:flex;align-items:center;gap:10px;width:100%;min-width:0;
+  min-height:48px;box-sizing:border-box;padding:10px 12px;
+  font:inherit;font-weight:650;text-align:left;white-space:normal;
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-action,14px);background:transparent;
+  color:var(--wpb-theme-text);cursor:pointer;
+}
+#root .wpb-workout .wpb-exinfo-machine-tools .wpb-machine-switch-name{
+  white-space:normal;overflow:visible;text-overflow:clip;
+  min-width:0;overflow-wrap:anywhere;
+}
+#root .wpb-workout .wpb-exinfo-swap-action>svg{flex:0 0 auto}
 #root .wpb-workout .wpb-machine-switch{display:inline-flex;max-width:100%;min-width:0}
 #root .wpb-workout .wpb-machine-switch-trigger{
   display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;
@@ -88,6 +108,32 @@
   padding:10px 14px;border:none;border-radius:var(--pi-shape-action,16px);
   background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);
   font:inherit;font-weight:750;cursor:pointer;
+}
+/* Machine name, long button labels and the safe-area inset must never
+   truncate Add/Use at 320px or 200%-font screens. */
+#root .wpb .wpb-machine-switch-sheet .wpb-machine-switch-add{
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  flex-wrap:wrap;white-space:normal;text-align:center;overflow-wrap:anywhere;
+  padding-inline:12px;
+}
+#root .wpb .wpb-machine-switch-add span{min-width:0;overflow-wrap:anywhere}
+#root .wpb .wpb-machine-switch-add svg{flex:0 0 auto}
+#root .wpb .wpb-machine-legacy-assignment{
+  min-width:0;display:grid;gap:10px;padding:12px;
+  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
+  border-radius:var(--pi-shape-card,18px);
+}
+#root .wpb .wpb-machine-legacy-assignment p{
+  margin:0;color:var(--wpb-theme-muted);line-height:1.5;
+}
+#root .wpb .wpb-machine-legacy-choices{display:grid;gap:8px;min-width:0}
+#root .wpb .wpb-machine-legacy-choices button{
+  width:100%;min-width:0;box-sizing:border-box;min-height:48px;
+  white-space:normal;text-align:left;overflow-wrap:anywhere;
+}
+#root .wpb .wpb-machine-legacy-choices button[aria-pressed="true"]{
+  border-color:var(--wpb-theme-accent);
+  color:var(--wpb-theme-accent-ink);
 }
 #root .wpb .wpb-machine-switch-swap{
   min-height:48px;padding:10px 12px;width:100%;

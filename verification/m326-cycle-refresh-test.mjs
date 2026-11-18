@@ -116,11 +116,17 @@ assert.equal(highRefresh.blocks[1].id,cycle.blockIds[2]);
 assert.equal(highRefresh.cycle.blockIds[0],highVariety.id);
 assert.equal(highRefresh.blocks[0].nextEngine.program.audit.result,'pass');
 
-const webUi=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
-for(const term of ['refreshAdaptiveCyclePreviews','upgradeExistingCycleToAdaptive']){
- const pos=webUi.indexOf(term);
- console.log('M326 existing web cycle-upgrade UI path',term,
-     pos<0?'NOT FOUND':webUi.slice(Math.max(0,pos-450),pos+1900));
+// Temporary codebase route diagnostic: the rendering shell may call an
+// intermediary rather than importing the optimizer function name itself.
+const root=new URL('../modules/',import.meta.url);
+for(const file of fs.readdirSync(root,{recursive:true}).filter(path=>path.endsWith('.js'))){
+ const source=fs.readFileSync(new URL(file,root),'utf8');
+ for(const term of ['refreshAdaptiveCyclePreviews','upgradeExistingCycleToAdaptive',
+      'Upgrade future','Rebuild future','Rebuild previews']){
+     const at=source.indexOf(term);
+     if(at>=0) console.log('M326 web upgrade UI call-site',
+         file,term,source.slice(Math.max(0,at-300),at+1100));
+ }
 }
 console.log('PASS M326: actual custom exit continuity across all strength weeks, selected-gym previews, saved-ID/phase preservation, safe legacy activation and repeat refresh.');
 

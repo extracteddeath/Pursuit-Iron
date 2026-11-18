@@ -387,4 +387,89 @@ class NativeMeasuredWorkoutParentFileStoreTest {
         assertFalse(after.readyForHistoryReads)
         assertTrue(after.completions.isEmpty())
     }
+
+    private fun typedRead()=NativeKotlinMeasuredHistoryReadCoordinator(
+        canonicalHistory,indexedStore(),fence,identity)
+
+    @Test fun typedHistoryUsesSameCanonicalFinishAndRetainsExactHoldCarryBandFacts() {
+        val p=approved(all=true)
+        enrollHistory()
+        val before=typedRead().read("owner-one","athlete-one")
+            as NativeMeasuredHistoryReadResult.Review
+        assertTrue(before.history.verifiedMeasured.isEmpty())
+        assertFalse(before.history.provesAllHistory)
+        saved(indexedStore().issue("owner-one","workout-one"))
+        recordAll(p)
+        val done=durableFinish(historyTransaction().complete(
+            "owner-one","athlete-one","workout-one",
+            MeasuredWorkoutOperation.Finish("typed-history-finish",14)))
+        val fact=typedRead().read("owner-one","athlete-one")
+        assertTrue(fact.toString(),fact is NativeMeasuredHistoryReadResult.Review)
+        val report=(fact as NativeMeasuredHistoryReadResult.Review).history
+        assertEquals(1,report.verifiedMeasured.size)
+        val entry=report.verifiedMeasured.single()
+        assertEquals(done.completion,entry.manifest)
+        assertEquals(p,entry.stored.journal.approvedPlan)
+        assertEquals(14,entry.actualSets.size)
+        assertEquals("gym-one",entry.gymId)
+        assertFalse(report.mayPublishPr)
+        assertFalse(report.mayApplyProgression)
+        assertFalse(entry.mayPublishPr)
+        assertFalse(entry.mayApplyProgression)
+        assertEquals(report, (typedRead().read("owner-one","athlete-one")
+            as NativeMeasuredHistoryReadResult.Review).history)
+    }
+
+    @Test fun typedHistoryRefusesPendingOrCorruptedMeasuredFinishInsteadOfDroppingIt() {
+        val p=approved()
+        enrollHistory()
+        saved(indexedStore().issue("owner-one","workout-one"))
+        recordAll(p)
+        val old=(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val operation=MeasuredWorkoutOperation.Finish("typed-recover",4)
+        val intent=NativeHistoryWriteIntent.MeasuredFinish(
+            "workout-one",operation)
+        assertTrue(canonicalHistory.prepare("owner-one","athlete-one",
+            old.revision,intent) is NativeHistoryLedgerResult.Durable)
+        val pending=typedRead().read("owner-one","athlete-one")
+        assertEquals(NativeMeasuredHistoryRefusal.PENDING_TRANSACTION,
+            (pending as NativeMeasuredHistoryReadResult.Rejected).reason)
+        assertTrue(historyTransaction().recover("owner-one","athlete-one")
+            is NativeMeasuredFinishResult.Committed)
+        current=NativeKotlinOwnerIdentity("owner-one","other-athlete")
+        val unauthorized=typedRead().read("owner-one","athlete-one")
+        assertEquals(NativeMeasuredHistoryRefusal.NOT_AUTHORIZED,
+            (unauthorized as NativeMeasuredHistoryReadResult.Rejected).reason)
+        current=NativeKotlinOwnerIdentity("owner-one","athlete-one")
+        val file=Files.list(root).use{stream->
+            stream.filter{it.fileName.toString().startsWith("measured-parent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        Files.write(file,Files.readAllBytes(file).also{
+            it[21]=(it[21].toInt() xor 7).toByte()
+        })
+        val corrupted=typedRead().read("owner-one","athlete-one")
+        assertEquals(NativeMeasuredHistoryRefusal.UNVERIFIED_MEASUREMENT,
+            (corrupted as NativeMeasuredHistoryReadResult.Rejected).reason)
+        assertEquals(1,(canonicalHistory.open("owner-one","athlete-one")
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size)
+    }
+
+    @Test fun typedHistoryNeverInventsCompletionsBeforeExplicitEnrollment() {
+        val absent=typedRead().read("owner-one","athlete-one")
+        assertEquals(NativeMeasuredHistoryRefusal.NOT_ENROLLED,
+            (absent as NativeMeasuredHistoryReadResult.Rejected).reason)
+        enrollHistory()
+        val empty=typedRead().read("owner-one","athlete-one")
+        assertTrue(empty is NativeMeasuredHistoryReadResult.Review)
+        assertEquals(0,(empty as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured.size)
+        assertFalse(empty.history.provesAllHistory)
+        assertFalse(empty.history.mayPublishPr)
+        current=null
+        assertEquals(NativeMeasuredHistoryRefusal.NOT_AUTHORIZED,
+            (typedRead().read("owner-one","athlete-one")
+                as NativeMeasuredHistoryReadResult.Rejected).reason)
+    }
 }

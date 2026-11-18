@@ -57,6 +57,23 @@ object TrainingMuscleCoverage {
         else -> null
     }
 
+    /**
+     * Shared version authority for the athlete's native custom policy form.
+     * An untouched old v4 saved form MUST reopen 22 original rows; selecting
+     * v5 is an explicit edit and does NOT populate invented neck targets.
+     * A corrupt/future marker or incomplete saved scope fails closed.
+     */
+    fun forEditor(marker:String?,savedMuscles:Collection<TrainingMuscle>?):List<TrainingMuscle>? {
+        val version=when {
+            marker!=null ->
+                marker.takeIf{it.matches(Regex("^v[1-5]$"))}
+                    ?.removePrefix("v")?.toIntOrNull()
+            savedMuscles!=null -> versionOf(savedMuscles)
+            else -> versionOf(current)
+        }
+        return version?.let(::forVersion)
+    }
+
     fun versionOf(muscles:Collection<TrainingMuscle>):Int? {
         val distinct=muscles.toSet()
         if(distinct.size!=muscles.size)return null

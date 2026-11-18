@@ -683,6 +683,64 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                 }
             })
     }
+    if(confirmAssistance && active!=null && contextInputs!=null) {
+        val shown=assistancePreview
+        AlertDialog(
+            onDismissRequest={if(!busy)confirmAssistance=false},
+            title={Text("Use less machine assistance?")},
+            text={Text("Accept ${shown?.receipt?.originalLoad} → ${shown?.receipt?.proposedLoad} ${shown?.receipt?.unit?.name?.lowercase()} of counterweight on the exact saved assisted machine. This makes the next workout HARDER. The original cycle, warmups and all completed/issued workouts stay unchanged. A second confirmation is required to issue the new workout.")},
+            confirmButton={
+                Button(enabled=!busy && shown!=null && maxStep!=null,
+                    onClick={
+                        val offer=shown ?:return@Button
+                        val reduction=maxStep ?:return@Button
+                        confirmAssistance=false
+                        busy=true
+                        scope.launch {
+                            val expected=offer.receipt
+                            val (approval,preparedResult)=withContext(Dispatchers.IO) {
+                                runCatching {
+                                    val accepted=host.approveNextActivatedLoadAmendment(
+                                        expected.workoutId,absoluteWeek,weekday,
+                                        expected.slotId,contextInputs,readiness,restricted,
+                                        reduction,expected.fingerprint,
+                                        expected.historyRevision,expected.consentRevision,
+                                        expected.setKeys,expected.originalLoad,
+                                        expected.proposedLoad,true)
+                                    val ready=if(accepted is NativeCustomLoadWrite.Accepted)
+                                        host.prepareActivatedFutureWorkout(
+                                            expected.workoutId,active.cycleId,
+                                            absoluteWeek,weekday,contextInputs)
+                                    else null
+                                    accepted to ready
+                                }.getOrElse{null to null}
+                            }
+                            assistanceAccepted=(approval as? NativeCustomLoadWrite.Accepted)
+                                ?.receipt?.takeIf{it==expected}
+                            prepared=(preparedResult as? NativeCustomPrepareResult.Prepared)
+                                ?.workout?.takeIf{
+                                    it.workoutId==expected.workoutId &&
+                                        it.loadApprovalFingerprint==expected.fingerprint
+                                }
+                            notice=when {
+                                assistanceAccepted==null ->
+                                    "No change approved: ${approval ?: "verification unavailable"}. The authored workout is unchanged."
+                                prepared==null ->
+                                    "Assistance reduction accepted, but workout preparation was refused: ${preparedResult ?: "verification unavailable"}. Retry preparing without changing your approval."
+                                else ->
+                                    "Your verified less-assistance workout is prepared. Review it and issue separately to start logging."
+                            }
+                            if(assistanceAccepted==null)assistancePreview=null
+                            busy=false
+                        }
+                    }) {Text("Approve and prepare")}
+            },
+            dismissButton={
+                TextButton(enabled=!busy,onClick={confirmAssistance=false}){
+                    Text("Keep current assistance")
+                }
+            })
+    }
     if(confirmAcceptance && active!=null && contextInputs!=null) {
         val offered=offer;val stamp=consentPreview
         AlertDialog(onDismissRequest={if(!busy)confirmAcceptance=false},

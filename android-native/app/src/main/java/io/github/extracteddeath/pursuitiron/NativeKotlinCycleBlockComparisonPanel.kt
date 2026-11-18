@@ -218,6 +218,33 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        comparison.strengthDirectArmLosses?.takeIf{it.isNotEmpty()}?.let{lost->
+            HorizontalDivider()
+            PursuitSectionHeading("Direct arm work disappeared",
+                "Audited final hypertrophy week → first Strength week")
+            Text("These previously trained arm functions now have zero " +
+                    "direct working-set credit: "+
+                    lost.sortedBy{it.ordinal}.joinToString{namedMuscle(it)}+".",
+                style=MaterialTheme.typography.bodyMedium,
+                color=MaterialTheme.colorScheme.error)
+            Text("Indirect assistance from bench presses and rows is " +
+                    "still valuable, but it is not the same as the " +
+                    "athlete's previous direct curls or extensions. " +
+                    "Review available low-fatigue accessories, individual " +
+                    "load histories, recovery, muscle targets and real " +
+                    "session time before approving this block.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(
+                onClick={onEditBlock(next.blockId)},enabled=enabled,
+                modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
+            ) {Text("Review strength arm exercises")}
+            Text("This review does not restore exercises automatically, " +
+                    "overwrite completed sessions or waive the full " +
+                    "native coaching audit.",
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(comparison.strengthExerciseCollapseReviewRequired) {
             HorizontalDivider()
             PursuitSectionHeading("Strength exercise coverage needs review",

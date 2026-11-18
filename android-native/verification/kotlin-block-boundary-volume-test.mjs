@@ -16,6 +16,15 @@ assert.match(domain,/next\.auditedWeeklyWorkingSets\?\.firstOrNull\(\)/);
 assert.match(domain,/next\.auditedWeeklyWorkingSets\?\.minOrNull\(\)/);
 assert.match(domain,/prior\.lastAuditedWeekDirectSets/);
 assert.match(domain,/val strengthHalfVolumeReviewRequired:Boolean/);
+assert.match(domain,/data class CustomBlockDayExerciseChange/);
+assert.match(domain,/val strengthExerciseCollapseReviewRequired:Boolean/);
+assert.match(domain,/day\.priorExerciseCount>=6/);
+assert.match(domain,/day\.nextExerciseCount\*2<day\.priorExerciseCount/);
+assert.match(domain,/prior\.split==next\.split/);
+assert.match(domain,/prior\.weekdays\.toSet\(\)==next\.weekdays\.toSet\(\)/);
+assert.match(domain,/CustomTrainingCycleDomain\.week\(it,priorExit\)/);
+assert.match(domain,/CustomTrainingCycleDomain\.week\(it,nextEntry\)/);
+assert.match(domain,/val auditedDayRosters=matchedTraining/);
 assert.match(domain,/next\.phase!=TrainingPhase\.STRENGTH/);
 assert.match(domain,/strengthHalfVolumeUsesAuditedWeeks/);
 assert.match(domain,/audit\.structuralReview\?\.verifiedDraft==cycle/);
@@ -33,6 +42,11 @@ for(const text of [
   'Final prior week → first next week'
 ])assert.ok(ui.includes(text),'Missing visible native volume context: '+text);
 assert.match(ui,/comparison\.strengthHalfVolumeReviewRequired/);
+assert.match(ui,/comparison\.strengthExerciseCollapseReviewRequired/);
+assert.match(ui,/comparison\.exerciseRosterUsesReviewedWeeks/);
+assert.match(ui,/Review or restore strength exercises/);
+assert.match(ui,/onEditBlock\(next\.blockId\)/);
+assert.match(ui,/Set-count repair alone cannot restore an omitted exercise/);
 assert.match(ui,/comparison\.strengthHalfVolumeUsesAuditedWeeks/);
 assert.match(ui,/comparison\.matchingAuditStatus==/);
 assert.doesNotMatch(ui,/\.save\(|\.record\(|\.issueWorkout\(|\.finish\(/);
@@ -40,6 +54,8 @@ assert.doesNotMatch(ui,/\.save\(|\.record\(|\.issueWorkout\(|\.finish\(/);
 for(const name of [
   'fullyMeasuredUnresolvedAuditIsVisibleButNeverCalledApproval',
   'aLaterStrengthWeekCliffIsNotHiddenByItsSafeEntryWeek',
+  'eightToThreeSameSplitStrengthUpperIsFlaggedByExerciseNotSetCount',
+  'measuredRostersStillRequireSourceMatchedAuditAndNoFakePeakFloor',
   'anExplicitPeakBlockIsNotMisreportedAsStrengthVolumeCliff',
   'smallWeeksDoNotReceiveAnInventedUniversalVolumeFloor',
   'rejectsStaleIncompleteOrMismatchedAuditMeasurements'

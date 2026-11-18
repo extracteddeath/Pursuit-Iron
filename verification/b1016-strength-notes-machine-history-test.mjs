@@ -42,8 +42,8 @@ assert.ok(phasePolicyFor('peak').volumeMultiplier<.5,
 const toolRail=app.slice(app.indexOf('className: "wpb-hscroll wpb-workout-tools'),
     app.indexOf('className: "wpb-set-head"'));
 assert.doesNotMatch(toolRail,/WorkoutMachineVariantControl|\{ k: "swap"/);
-assert.match(app,/wpb-exinfo-machine-tools/);
-assert.match(app,/wpb-exinfo-swap-action/);
+assert.match(machine,/wpb-exinfo-machine-tools/);
+assert.match(machine,/wpb-exinfo-swap-action/);
 assert.match(machine,/onAssignLegacy/);
 assert.match(gymUI,/Original physical machine for older unlabelled history/);
 assert.match(css,/wpb-exinfo-machine-tools/);

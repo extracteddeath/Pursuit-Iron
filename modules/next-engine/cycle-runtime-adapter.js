@@ -318,6 +318,60 @@ export function unexplainedStrengthExerciseCollapse(previous, next, spec, reques
     }
     return null;
 }
+/**
+ * A converted custom program becomes the immutable FIRST prior block of a
+ * refreshed cycle. The regular transition guard only sees block[0] after
+ * creation, so it missed the exact saved custom-source -> future Strength
+ * boundary. Count ACTUAL distinct working exercises, not set totals (which
+ * are audited separately). Compare named days only when their training
+ * identity is supported; changing the split can redistribute movements.
+ *
+ * The 50% threshold is an engineering "review required" boundary, NOT a
+ * physiological exercise-count prescription or an eight-lift quota.
+ */
+export function reviewConvertedStrengthExerciseCoverage(sourceSnapshot, generated, sourceDays = []) {
+    if (!Array.isArray(sourceSnapshot?.sessions) || !Array.isArray(generated?.sessions)
+        || !sourceSnapshot.sessions.length || !generated.sessions.length)
+        return { code: 'SOURCE_EXERCISE_ROSTER_UNVERIFIED' };
+    const distinct = session => new Set((session?.exercises ?? [])
+        .filter(ex => Number(ex?.sets) > 0 && typeof ex.exerciseId === 'string')
+        .map(ex => ex.exerciseId)).size;
+    const original = sourceSnapshot.sessions.map(distinct);
+    const future = generated.sessions.map(distinct);
+    const totalOriginal = original.reduce((n, c) => n + c, 0);
+    const totalFuture = future.reduce((n, c) => n + c, 0);
+    if (original.some(n => n >= 6) && totalFuture * 2 < totalOriginal)
+        return { code: 'SOURCE_EXERCISE_WEEKLY_COLLAPSE',
+            sourceExercises: totalOriginal, strengthExercises: totalFuture };
+    // Only treat a saved day as a positional counterpart if its actual
+    // authored label identifies the same kind of workout. In a custom
+    // Full Body -> generated Full Body refresh, a single 8 -> 3 day must
+    // not hide inside a healthy weekly count. A changed split is allowed
+    // to distribute exercises differently and uses the weekly check above.
+    if (sourceDays.length === sourceSnapshot.sessions.length &&
+        sourceDays.length === generated.sessions.length) {
+        const identity = label => {
+            const v = String(label || '').toLowerCase().replace(/[_-]/g, ' ');
+            if (/full\s*body/.test(v)) return 'full_body';
+            if (/\bupper\b/.test(v)) return 'upper';
+            if (/\blower\b/.test(v)) return 'lower';
+            if (/\bpush\b/.test(v)) return 'push';
+            if (/\bpull\b/.test(v)) return 'pull';
+            if (/\blegs?\b/.test(v)) return 'legs';
+            return null;
+        };
+        for (let i = 0; i < sourceDays.length; i++) {
+            const from = identity(sourceDays[i]?.label);
+            const to = identity(generated.sessions[i]?.intent);
+            if (from && from === to && original[i] >= 6 &&
+                future[i] * 2 < original[i])
+                return { code: 'SOURCE_EXERCISE_DAY_COLLAPSE',
+                    day: sourceDays[i].label, sourceExercises: original[i],
+                    strengthExercises: future[i] };
+        }
+    }
+    return null;
+}
 function protectStrengthEntry(previous, next, spec, request) {
     if (previous?.phase !== 'hypertrophy_accumulation' || spec.phase !== 'strength_accumulation')
         return next;
@@ -901,17 +955,60 @@ export function generateNextCycleForShell(options) {
     let baseRequest = shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed);
     baseRequest.goal = { ...baseRequest.goal, type: goal };
 
+    // An existing custom program is a REAL source for the very first
+    // rebuilt future block. It is not an empty cycle starting at Strength.
+    // Preserve its exercise-variety capacity and favor its feasible movements
+    // before scoring alternative splits; do not force a number of exercises
+    // or promise that a heavy/long session always fits the previous roster.
+    const priorIsHypertrophy = options.previousShell &&
+        (options.previousPhase === 'hypertrophy_accumulation' ||
+            options.previousShell.nextEngine?.program?.phase === 'hypertrophy_accumulation');
+    const priorSourceSnapshot = priorIsHypertrophy
+        ? options.previousVolumeSnapshot ??
+            captureShellVolumeSnapshot(options.previousShell,
+                Math.max(1, Number(options.previousShell.config?.weeks ?? options.previousShell.weeks) || 1),
+                options.legacyExercises)
+        : null;
+    const sourceHasVariety = !!priorSourceSnapshot && !priorSourceSnapshot.missing &&
+        priorSourceSnapshot.sessions?.some(session =>
+            new Set(session.exercises.filter(ex=>ex.sets>0).map(ex=>ex.exerciseId)).size >= 6);
+
     // Program creation and cycle creation must share the same feasibility contract. The wizard
     // already proves buildability with capacity-aware generation; bypassing it here made valid
     // 60–90 minute Full Body cycles fail even though the equivalent single program passed.
     const entrySpec = specs[0];
     const entrySelection = chooseOptimizedCycleBlock(entrySpec, options.config, !!options.adaptTrainingSplit, candidateSpec => {
         const request = requestForBlock(baseRequest, options.config, candidateSpec, options.legacyExercises);
-        const attempt = firstPassingCapacityProgram(request, blockConfigForSpec(options.config, candidateSpec), {
+        const sourceContinuity = sourceHasVariety &&
+            candidateSpec.phase === 'strength_accumulation';
+        const exerciseMap = sourceContinuity ? createExerciseMap(request.customExercises) : null;
+        // Keep actual successful, available custom movements in preference
+        // order. The existing strength anchors, equipment bans, muscle-dose
+        // audit and session clock remain authoritative.
+        const priorPreferred = sourceContinuity ? [...new Set(
+            priorSourceSnapshot.sessions.flatMap(day => day.exercises.map(ex => ex.exerciseId))
+        )].filter(id => exerciseMap.has(id) &&
+            !(request.preferences?.avoidedExercises ?? []).includes(id)) : [];
+        const sourcedRequest = priorPreferred.length ? {
+            ...request, preferences: { ...request.preferences, preferredExercises: [
+                ...new Set([...(request.preferences?.preferredExercises ?? []), ...priorPreferred])
+            ] }
+        } : request;
+        const attempt = firstPassingCapacityProgram(sourcedRequest, blockConfigForSpec(options.config, candidateSpec), {
             phase: candidateSpec.phase, blockWeeks: candidateSpec.weeks,
-            progressionStyle: request.preferences?.progressionStyle
+            progressionStyle: sourcedRequest.preferences?.progressionStyle,
+            preservePriorExerciseVariety: sourceContinuity
         });
         checkRequestedPractice(attempt.result.program, candidateSpec, attempt.request);
+        if (sourceContinuity && attempt.result.program.audit.result === 'pass') {
+            const drop = reviewConvertedStrengthExerciseCoverage(
+                priorSourceSnapshot, attempt.result.program, options.previousShell.days);
+            if (drop)
+                throw new NextShellAdapterError('NEXT_CYCLE_CONVERTED_STRENGTH_EXERCISE_CLIFF',
+                    drop.code === 'SOURCE_EXERCISE_ROSTER_UNVERIFIED'
+                        ? 'Cannot verify the saved custom-program exercise roster. No upcoming block was changed.'
+                        : `Rebuilt strength ${drop.day ?? 'week'} would reduce distinct exercises from ${drop.sourceExercises} to ${drop.strengthExercises}. A strength block may reduce sets and use longer rests, but cannot silently discard this much established movement coverage. Change your time, split, or gym settings and rebuild again.`);
+        }
         return { next: attempt.result.program, request: attempt.request, previous: null, entryAttempt: attempt };
     }, options.previousShell ? { previousShell: options.previousShell, previousVolumeSnapshot: options.previousVolumeSnapshot, legacyExercises: options.legacyExercises } : null);
     const entryAttempt = entrySelection.entryAttempt;

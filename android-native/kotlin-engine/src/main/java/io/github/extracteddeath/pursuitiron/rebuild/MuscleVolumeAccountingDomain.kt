@@ -46,6 +46,17 @@ object TrainingMuscleCoverage {
     private val scopes=listOf(legacyV1,legacyV2,legacyV3,legacyV4,current)
         .map{it.toSet()}
 
+    /** Only an exact historical scope is eligible for editing or replay.
+     * An unknown future version cannot be silently mapped to 'current'. */
+    fun forVersion(version:Int):List<TrainingMuscle>? = when(version) {
+        1 -> legacyV1
+        2 -> legacyV2
+        3 -> legacyV3
+        4 -> legacyV4
+        5 -> current
+        else -> null
+    }
+
     fun versionOf(muscles:Collection<TrainingMuscle>):Int? {
         val distinct=muscles.toSet()
         if(distinct.size!=muscles.size)return null

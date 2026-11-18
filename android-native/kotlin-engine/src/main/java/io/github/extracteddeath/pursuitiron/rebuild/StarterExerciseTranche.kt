@@ -2321,10 +2321,41 @@ object StarterExerciseTranche {
             direct(TrainingMuscle.LATS),
             indirect(TrainingMuscle.BICEPS,"0.5"),
             indirect(TrainingMuscle.TRAPS,"0.25"))
+    ) + listOf(
+        // Current-web neck source names say WEIGHTED but misleadingly tag
+        // their equipment 'bodyweight'. None is unweighted or a timed hold.
+        // Exercise-specific physical resistance and a supported setup MUST be
+        // confirmed by the athlete. The four loading histories never transfer.
+        // Web metadata groups all neck anatomy together; Kotlin V5 instead
+        // tracks flexion, extension and lateral flexion separately.
+        entry("neck-extension","neck_extension","supported-weighted-extension",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "neck-extension-device",LoadBasis.EXERCISE_OVERRIDE,
+            setOf("supported-neck-extension"),12..20,
+            "Weighted neck extension requires a verified actual resistance setting and independently confirmed supported setup. The web bodyweight equipment token is not authority to invent a load. Direct NECK_EXTENSORS credit is provisional; no neck-curl or harness load transfer.",
+            direct(TrainingMuscle.NECK_EXTENSORS)),
+        entry("neck-curl","neck_flexion","supported-weighted-flexion",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "neck-flexion-device",LoadBasis.EXERCISE_OVERRIDE,
+            setOf("supported-neck-flexion"),12..20,
+            "Weighted neck curl requires confirmed physical resistance and a supported flexion station; it does not share neck extension or regular crunch loading, and neck flexor volume is separately tracked.",
+            direct(TrainingMuscle.NECK_FLEXORS)),
+        entry("neck-harness","neck_extension","harness-resisted-extension",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "neck-harness-device",LoadBasis.EXERCISE_OVERRIDE,
+            setOf("fitted-neck-harness"),12..20,
+            "A safely fitted athlete-confirmed neck harness and its actual independently verified resistance are mandatory. Despite extension muscle credit, a harness does not inherit the external resistance history of plate-supported neck extension.",
+            direct(TrainingMuscle.NECK_EXTENSORS)),
+        entry("neck-lateral","neck_lateral_flexion","supported-weighted-lateral",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            "neck-lateral-device",LoadBasis.EXERCISE_OVERRIDE,
+            setOf("supported-neck-lateral"),12..20,
+            "Lateral neck raising requires its own individually confirmed resistance and controlled supported position. Track lateral neck function independently; neither left/right loading equivalence nor neck curl/extension resistance is inferred.",
+            direct(TrainingMuscle.NECK_LATERAL_FLEXORS))
     )
 
     init {
-        require(definitions.size==365)
+        require(definitions.size==369)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

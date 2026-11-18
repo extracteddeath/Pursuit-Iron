@@ -16,6 +16,21 @@ approval bytes and policies are unchanged. Full device/TalkBack acceptance,
 all other assisted variants, recovery/periodization and real athlete
 superiority remain OPEN. No APK/AAB.
 
+**Assisted-machine Progress and record direction (2026-11-18):**
+A lower COUNTERWEIGHT means a harder assisted movement. Read-only per-exercise
+corrected trends now choose the **lowest** completed counterweight for each
+matching gym, physical Machine A/B, exercise and rep window (including an
+authentically recorded zero), preserving its own actually reported RIR.
+The M3 chart explicitly labels the machine's assistance value and direction.
+The mixed History facts no longer promote an easier high-assistance set into
+general heaviest-load, logged-single, Strength Standards or PR evidence;
+instead, separately identified physical stations receive honest
+`lowestAssistanceByMachine` records, displayed in Profile as **Least
+assistance** rather than **Heaviest logged**. Legacy unknown-station
+observations remain visible in full History without earning a fabricated
+station record. Device screenshot, TalkBack, real station calibration and
+full beta acceptance remain OPEN; no APK/AAB.
+
 **Production verdict: NOT READY.** There is a source-tested native training
 core, but substantial engine, feature, data and device acceptance work remains.
 The recent workout/restart checkpoints described individual improvements, not

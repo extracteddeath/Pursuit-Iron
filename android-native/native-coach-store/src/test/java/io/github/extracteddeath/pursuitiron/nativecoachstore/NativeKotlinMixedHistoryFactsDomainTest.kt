@@ -258,4 +258,52 @@ class NativeKotlinMixedHistoryFactsDomainTest {
         assertEquals(NativeMixedFactsResult.Rejected(NativeMixedFactsRefusal.INVALID_TIMELINE),
             NativeKotlinMixedHistoryFactsDomain.project(timeline(revision = 0)))
     }
+    @Test fun assistedMachineTracksLeastCounterweightNeverFalseStrengthOrPr() {
+        fun helped(i:Int,weight:Int,machine:String,gym:String="gym-1")=
+            composer(i,composerFact(i,reps=8,actualLoad=weight,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+                machineId=machine),gym)
+        val result=facts(
+            helped(1,60,"A"),helped(2,40,"A"),helped(3,50,"B"),
+            helped(4,30,"A","gym-2"),helped(5,0,"A"))
+        fun key(gym:String,machine:String)=NativeMixedMachineLoadKey(
+            gym,"bench",machine,LoadUnit.LB,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        assertEquals(n(0),result.lowestAssistanceByMachine
+            .getValue(key("gym-1","A")).actualLoad)
+        assertEquals("workout-5",result.lowestAssistanceByMachine
+            .getValue(key("gym-1","A")).workoutId)
+        assertEquals(n(50),result.lowestAssistanceByMachine
+            .getValue(key("gym-1","B")).actualLoad)
+        assertEquals(n(30),result.lowestAssistanceByMachine
+            .getValue(key("gym-2","A")).actualLoad)
+        assertEquals("workout-5",result.lastByExercise.getValue("bench").workoutId)
+        assertTrue(result.highestCompletedLoad.isEmpty())
+        assertTrue(result.bestLoggedSingleByLoad.isEmpty())
+        assertTrue(result.highestCompletedLoadByMachine.isEmpty())
+        assertTrue(result.bestLoggedSingleByMachine.isEmpty())
+        assertTrue(result.mostRepsAtLoad.isEmpty())
+        assertFalse(result.canPublishPr)
+        assertFalse(result.canIssueProgression)
+    }
+
+    @Test fun assistedMachineRefusesUnknownPhysicalStationAndSkipsBadActuals() {
+        fun helped(i:Int,weight:Int,machine:String?)=
+            composer(i,composerFact(i,reps=8,actualLoad=weight,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT,machineId=machine))
+        val result=facts(helped(1,70,null),helped(2,-10,"A"),
+            helped(3,40,"A"),helped(4,60,"B"))
+        assertEquals(2,result.lowestAssistanceByMachine.size)
+        val a=result.lowestAssistanceByMachine.entries.single{
+            it.key.machineInstanceId=="A"
+        }
+        assertEquals(n(40),a.value.actualLoad)
+        assertTrue(result.highestCompletedLoadByMachine.isEmpty())
+        val conventional=facts(composer(1,composerFact(1,
+            actualLoad=200,basis=LoadBasis.MACHINE_STACK,machineId="A")))
+        assertEquals(n(200),conventional.highestCompletedLoadByMachine.values
+            .single().actualLoad)
+        assertTrue(conventional.lowestAssistanceByMachine.isEmpty())
+    }
+
 }

@@ -1309,3 +1309,25 @@ assert.match(assistedFutureUi,/host.prepareActivatedFutureWorkout\(/);
 assert.match(assistedFutureUi,/it.loadApprovalFingerprint==expected.fingerprint/);
 assert.match(assistedFutureUi,/issueActivatedFutureWorkout\(/);
 assert.match(assistedFutureUi,/Keep current assistance/);
+
+// Assisted machine History and Progress must never rank a MORE helpful
+// counterweight as an improved strength best. A 0 counterweight can be a
+// real verified machine setting; the same source must isolate each gym/A/B.
+const helpedTrend=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeExercisePerformanceTrendDomain.kt');
+const helpedFacts=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinMixedHistoryFactsDomain.kt');
+const helpedPlot=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinExercisePerformanceTrend.kt');
+const helpedPanel=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMachineRecordsPanel.kt');
+const helpedProfile=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinStrengthStandardsScreen.kt');
+assert.match(helpedTrend,/val assistedCounterweight:Boolean get\(\)=basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT/);
+assert.match(helpedTrend,/LoadBasis.ASSISTANCE_COUNTERWEIGHT\)/);
+assert.match(helpedTrend,/key.assistedCounterweight ->/);
+assert.match(helpedTrend,/checkNotNull\(weight\)<checkNotNull\(previous.actualLoad\)/);
+assert.match(helpedFacts,/val lowestAssistanceByMachine:/);
+assert.match(helpedFacts,/if\(assisted\) \{/);
+assert.match(helpedFacts,/lowestAssistanceByMachine\[station\]=record/);
+assert.match(helpedFacts,/Collections.unmodifiableMap\(lowestAssistanceByMachine\)/);
+assert.match(helpedPlot,/Lowest completed machine counterweight/);
+assert.match(helpedPlot,/Machine assistance \(less = harder\)/);
+assert.match(helpedPanel,/assistanceByMachine:Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact>/);
+assert.match(helpedPanel,/if\(assisted\)"Least assistance" else "Heaviest logged"/);
+assert.match(helpedProfile,/assistanceByMachine=verifiedFacts.lowestAssistanceByMachine/);

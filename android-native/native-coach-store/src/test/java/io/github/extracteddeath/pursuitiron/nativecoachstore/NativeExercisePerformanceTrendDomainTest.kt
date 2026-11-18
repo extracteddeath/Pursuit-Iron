@@ -247,4 +247,42 @@ class NativeExercisePerformanceTrendDomainTest {
         assertEquals(listOf(n("100"),n("110")),points.map{it.actualLoad})
     }
 
+    @Test fun assistedCounterweightTrendUsesLeastAssistanceAndKeepsItsOwnRir() {
+        fun aided(order:Int,visit:Int,weight:String,rir:Int?)=
+            fact(order,visit,reps=8,weight=weight,
+                issued=load(weight,LoadUnit.LB,
+                    LoadBasis.ASSISTANCE_COUNTERWEIGHT),
+                machineId="A",actualRir=rir)
+        val result=trend(timeline(
+            composer(1,aided(1,1,"70",4),aided(1,2,"50",null)),
+            composer(2,aided(2,1,"60",0),aided(2,2,"40",3)),
+            composer(3,aided(3,1,"30",2),aided(3,2,"0",null)),
+            composer(4,fact(4,weight="90",issued=load("90",LoadUnit.LB,
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT),machineId="B")),
+            composer(5,fact(5,weight="-1",issued=load("10",LoadUnit.LB,
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT),machineId="A"))
+        ))
+        assertEquals(2,result.series.size)
+        val a=result.series.single{it.key.machineInstanceId=="A"}
+        assertTrue(a.key.assistedCounterweight)
+        assertEquals("gym-1",a.key.gymId)
+        assertEquals(listOf(n("50"),n("40"),n("0")),
+            a.points.map{it.actualLoad})
+        assertEquals(listOf(null,3,null),a.points.map{it.actualRir})
+        assertEquals(n("90"),result.series.single{
+            it.key.machineInstanceId=="B"
+        }.points.single().actualLoad)
+        assertFalse(result.canPublishPr)
+        assertFalse(result.canPrescribeWorkout)
+    }
+
+    @Test fun ordinaryHeaviestAndUnassistedRepTrendsKeepExistingDirection() {
+        val result=trend(timeline(composer(1,
+            fact(1,1,reps=8,weight="50",issued=load("50")),
+            fact(1,2,reps=8,weight="70",issued=load("70")))))
+        val one=result.series.single().points.single()
+        assertEquals(n("70"),one.actualLoad)
+        assertFalse(result.series.single().key.assistedCounterweight)
+    }
+
 }

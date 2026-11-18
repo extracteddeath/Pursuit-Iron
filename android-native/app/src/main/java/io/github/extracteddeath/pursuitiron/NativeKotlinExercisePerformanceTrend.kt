@@ -135,6 +135,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
                 }
             }
             if(selected!=null) {
+                val assisted=selected.key.assistedCounterweight
                 val points=selected.points.sortedBy{it.completionOrder}
                 val recent=points.takeLast(20)
                 val axis=NativeKotlinTrendAxisPolicy.project(
@@ -146,12 +147,17 @@ internal fun NativeKotlinExercisePerformanceTrend(
                 Text(
                     (if(bodyweight)
                         "Best completed unweighted working-set reps"
+                    else if(assisted)"Lowest completed machine counterweight"
                     else "Heaviest completed working set")+
                         " per session · ${selected.key.reps.label} · "+
                         (if(bodyweight)"bodyweight"
                             else kotlinLoadBasisLabel(selected.key.basis)),
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(assisted)
+                    Text("Lower machine counterweight means LESS assistance and a harder pull-up, chin-up or dip. A negative change in this number is not lost strength. These are actual selectable machine settings, not the weight lifted or an estimated 1RM.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(recent.size==1) {
                     PursuitHistoryStatus("One qualifying session",
                         sessionText(last.completionOrder) + " · ${measure(lastValue)}" +
@@ -165,7 +171,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     PursuitMetricStrip(listOf(
                         "First shown" to measure(firstValue),
                         "Latest" to measure(lastValue),
-                        "Difference" to difference
+                        (if(assisted)"Counterweight change" else "Difference") to difference
                     ))
                     PursuitFactualLinePlot(
                         recent.map{sample->
@@ -174,7 +180,9 @@ internal fun NativeKotlinExercisePerformanceTrend(
                                 manifests[sample.completionOrder]?.completedAtEpochMillis,
                                 actualRir=sample.actualRir,showActualEffort=true)
                         },
-                        if(bodyweight)"Completed reps" else "Completed working load",
+                        if(bodyweight)"Completed reps" else if(assisted)
+                            "Machine assistance (less = harder)"
+                        else "Completed working load",
                         ::measure
                     )
                     Text("First shown · "+sessionText(first.completionOrder)+" · "+
@@ -202,6 +210,7 @@ internal fun NativeKotlinExercisePerformanceTrend(
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     "Only the exact exercise, selected physical machine (when relevant), loading basis and rep window are compared. " +
+                    (if(assisted)"Smaller counterweight is a harder assisted movement; these machine settings are not external lifted weights. " else "") +
                     "Reported RIR belongs only to the selected recorded best working set in each session; missing effort is never estimated. Reps, effort and fatigue may still differ. These are recorded values, " +
                     "not an adjusted strength score, a PR certificate or a coaching target.",
                     style=MaterialTheme.typography.bodySmall,

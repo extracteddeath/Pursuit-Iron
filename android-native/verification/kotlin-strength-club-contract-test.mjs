@@ -33,9 +33,15 @@ assert.match(facts,/completion\.gymId/);
 assert.match(facts,/KotlinMachineAlternativesDomain\.validInstanceId\(machineId\)/);
 assert.match(facts,/if\(target\.basis!=LoadBasis\.BARBELL_TOTAL \|\| machineId==null\)/);
 assert.match(facts,/Collections\.unmodifiableMap\(highestByMachine\)/);
-assert.match(physical,/title="Physical machine bests"/);
-assert.match(physical,/Each physical machine has its own weight history/);
-assert.match(physical,/not certified PR badges/);
+assert.match(physical,/title="Physical machine records"/);
+assert.match(physical,/Each physical machine has its own completed working-set history/);
+assert.match(physical,/not comparable strength scores or PR badges/);
+assert.match(facts,/val lowestAssistanceByMachine:/);
+assert.match(physical,/Least assistance/);
+assert.match(physical,/assistanceByMachine/);
+assert.match(standards,/assistanceByMachine=verifiedFacts.lowestAssistanceByMachine/);
+assert.match(facts,/if\(assisted\) \{/);
+assert.match(facts,/lowestAssistanceByMachine\[station\]=record/);
 // Display identity now resolves through a read-only label adapter. Preserve
 // the exact history scope and require matching gym/exercise/machine on lookup.
 const stationLabels=read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMachineStationLabels.kt');
@@ -50,4 +56,4 @@ assert.match(standards,/verifiedFacts\.highestCompletedLoadByMachine/);
 assert.match(standards,/verifiedFacts\.bestLoggedSingleByMachine/);
 assert.match(standards,/host\.readMachineRoster\(\)/);
 assert.match(standards,/timeline\?\.manifestRevision==stamp/);
-console.log('PASS strength club and physical machine bests keep verified gym-scoped records separate from barbell references');
+console.log('PASS Strength Club excludes assisted counterweights from barbell PRs and displays honest gym-scoped least-assistance machine records');

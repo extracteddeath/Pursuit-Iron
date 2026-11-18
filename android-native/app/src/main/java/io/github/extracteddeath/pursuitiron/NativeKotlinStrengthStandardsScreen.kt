@@ -610,7 +610,8 @@ internal fun NativeKotlinStrengthStandardsScreen(
                         verifiedFacts.highestCompletedLoadByMachine,
                         verifiedFacts.bestLoggedSingleByMachine,
                         machineRoster,
-                        onOpenHistory={historyExerciseId=it})
+                        onOpenHistory={historyExerciseId=it},
+                        assistanceByMachine=verifiedFacts.lowestAssistanceByMachine)
                 }
                 PursuitSectionHeading("Your exercise favorites",
                     "Pin and arrange any movement in your verified training history. Open its complete actual sets, including corrections.")

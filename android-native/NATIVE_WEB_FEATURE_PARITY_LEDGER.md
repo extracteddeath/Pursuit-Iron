@@ -4,6 +4,26 @@
 
 **Status vocabulary:** **Implemented/source-tested** = exact behavior is in native source, with explicit tests/CI required before release; **Partial** = some native behavior exists but meaningful web capability is missing; **Open** = not verified in current Kotlin rebuild and must not be advertised as available; **Adapt** = web-specific mechanism not appropriate for native Android, preserve the user value by a native equivalent. No status is a release sign-off without real phone/foldable/TalkBack acceptance.
 
+## Neck physical-loading and muscle-scope checkpoint — November 18, 2026
+
+The Kotlin catalog now contains **369 of 383** exact source-matched web
+identities; **14** remain unmodeled (11 timed holds, two distance carries,
+and a banded push-up with combined elastic/bodyweight loading).
+The four newly mapped web neck identities are WEIGHTED exercises despite
+their ambiguous web equipment flag. Native authoring requires an
+actual individually verified resistance implement and a confirmed supported
+position. No old exercise weight is inherited on substitution. V5 separately
+tracks neck flexion, extension and lateral flexion instead of borrowing
+traps, delts or abs for missing muscle credit. V5 dose policies must
+explicitly declare all three; v1–v4 saved scopes remain valid without
+invented upgrades. Original first-program v11 22-row dose policy remains
+frozen and does not silently add neck targets to issued sessions.
+
+**This does NOT establish full engine parity or safe personalized neck
+training dose.** The web identities, physical loading and anatomical
+assignment are engineering-reviewed provisional. Signed workout/device
+acceptance and the 14 remaining measurement models are still release gates.
+
 ## Assisted physical counterweight parity checkpoint — November 17, 2026
 
 The independent Kotlin catalog now contains **365 of 383** exact effective web

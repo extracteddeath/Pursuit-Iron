@@ -255,7 +255,7 @@ class NativeMeasuredWorkoutParentFileStoreTest {
         assertEquals(0L,committed.completion.savedCorrectionRevision)
         assertEquals(1_796_000_000_000L,
             committed.completion.completedAtEpochMillis)
-        assertEquals(1,committed.completion.completionOrder)
+        assertEquals(1L,committed.completion.completionOrder)
         assertEquals(15L,committed.stored.journal.revision)
         assertEquals("finish-14",committed.stored.journal.finishedByEventId)
         assertFalse(committed.canChangeProgram)

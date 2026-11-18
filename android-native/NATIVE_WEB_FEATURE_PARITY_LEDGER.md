@@ -4,6 +4,32 @@
 
 **Status vocabulary:** **Implemented/source-tested** = exact behavior is in native source, with explicit tests/CI required before release; **Partial** = some native behavior exists but meaningful web capability is missing; **Open** = not verified in current Kotlin rebuild and must not be advertised as available; **Adapt** = web-specific mechanism not appropriate for native Android, preserve the user value by a native equivalent. No status is a release sign-off without real phone/foldable/TalkBack acceptance.
 
+## Current exact-ID inventory — November 17, 2026 (CI acceptance pending)
+
+The effective web built-in catalog now has **383 distinct identities**, including
+the seven November 17 reviewed source additions. The append-only Kotlin
+starter list in this candidate has **362 source-matched identities**.
+**21 remain absent**; the executable audit keeps these gaps explicit and does
+not equate source matches with engine feature parity or independent validation.
+
+- **3 assisted counterweight lifts:** an increased assistance setting is NOT
+  greater athlete strength; Kotlin progression and verified gym loading must
+  model the opposite resistance direction before exposing them.
+- **11 timed holds and 2 distance carries:** the current numeric
+  weight × repetitions journal cannot truthfully record elapsed seconds,
+  distance or duration-based progression.
+- **4 neck exercises:** the current muscle accounting lacks a neck compartment;
+  calibrated harness/plate loading and training-volume rules need review.
+- **1 hybrid banded push-up:** bodyweight plus nonlinear band resistance cannot
+  be represented as a plain free-weight load or a nominal band rating alone.
+
+A supported **Spanish squat** is appended with source identity, a required
+athlete-confirmed band/support fixture, full repetition logging and NO added
+weight or band-equivalence claim. Tests reject missing support and invented
+loads. The remaining 21 IDs remain discoverable in the *web* catalog but are
+not silently made issuable by the Kotlin engine. This is an explicit beta blocker
+until correct data models, coaching and real-device behavior are verified.
+
 ## Live web baseline reconciliation — Build 1011
 
 Historical source checkpoint, November 14: **318 of 376 exact active web IDs**

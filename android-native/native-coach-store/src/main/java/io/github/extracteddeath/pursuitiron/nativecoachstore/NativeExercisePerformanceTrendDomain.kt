@@ -32,6 +32,9 @@ data class NativeExerciseTrendKey(
     val machineInstanceId:String?=null
 ) {
     val bodyweightOnly:Boolean get()=basis==null
+    /** The factual value is the counterweight that helps the athlete.
+     * Lower is harder; this is NOT lifted mass or a strength-standard 1RM. */
+    val assistedCounterweight:Boolean get()=basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
 }
 data class NativeExerciseTrendPoint(
     val completionOrder:Long,
@@ -106,13 +109,17 @@ object NativeExercisePerformanceTrendDomain {
                 when(val issued=visit.issued) {
                     is DraftSetLoad.Verified -> {
                         val performed=actual.load ?:continue
-                        if(actual.unit!=issued.unit || performed<=zero ||
+                        val assistance=issued.basis==
+                            LoadBasis.ASSISTANCE_COUNTERWEIGHT
+                        if(actual.unit!=issued.unit ||
+                            (if(assistance)performed<zero else performed<=zero) ||
                             performed>max ||
                             performed.stripTrailingZeros().scale()>3)continue
                         val stationScoped=actual.machineInstanceId!=null ||
                             issued.basis in setOf(LoadBasis.MACHINE_STACK,
                                 LoadBasis.CABLE_STACK,LoadBasis.SMITH_TOTAL,
-                                LoadBasis.EXERCISE_OVERRIDE)
+                                LoadBasis.EXERCISE_OVERRIDE,
+                                LoadBasis.ASSISTANCE_COUNTERWEIGHT)
                         key=NativeExerciseTrendKey(issued.basis,window,
                             if(stationScoped)visit.gymId else null,
                             actual.machineInstanceId)
@@ -132,14 +139,24 @@ object NativeExercisePerformanceTrendDomain {
                 val sample=NativeExerciseTrendPoint(order,weight,actual.reps,actual.actualRir)
                 val bySession=candidates.getOrPut(key){linkedMapOf()}
                 val previous=bySession[order]
-                // The factual best load/reps rule remains unchanged. Ties keep
-                // original receipt order; RIR never ranks a set or creates a PR.
-                val improves=if(key.bodyweightOnly)
-                    previous==null || sample.performedReps>previous.performedReps
-                else previous==null ||
-                    checkNotNull(weight)>checkNotNull(previous.actualLoad) ||
-                    (checkNotNull(weight).compareTo(checkNotNull(previous.actualLoad))==0 &&
-                        sample.performedReps>previous.performedReps)
+                // A lower counterweight is a harder assisted set. Unlike
+                // external loads, ranking by a higher number would label
+                // increased assistance as greater strength. Keep exact
+                // source, station, rep window and actual-RIR provenance.
+                // These are descriptive selections, never strength PRs.
+                val improves=when {
+                    key.bodyweightOnly ->
+                        previous==null || sample.performedReps>previous.performedReps
+                    key.assistedCounterweight ->
+                        previous==null ||
+                            checkNotNull(weight)<checkNotNull(previous.actualLoad) ||
+                            (checkNotNull(weight).compareTo(checkNotNull(previous.actualLoad))==0 &&
+                                sample.performedReps>previous.performedReps)
+                    else ->previous==null ||
+                        checkNotNull(weight)>checkNotNull(previous.actualLoad) ||
+                        (checkNotNull(weight).compareTo(checkNotNull(previous.actualLoad))==0 &&
+                            sample.performedReps>previous.performedReps)
+                }
                 if(improves)bySession[order]=sample
             }
         }

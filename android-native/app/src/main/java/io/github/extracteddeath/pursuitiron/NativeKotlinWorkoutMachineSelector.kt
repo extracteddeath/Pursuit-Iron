@@ -236,7 +236,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
             open=false
         }
     }
-    if(showInlineTrigger) TextButton(
+    if(showInlineTrigger) {
+    TextButton(
         onClick={
             open=true
             // The exact same-day source is fetched only when this picker
@@ -255,6 +256,7 @@ internal fun NativeKotlinWorkoutMachineSelector(
         Text("Machine · $display",maxLines=1,
             overflow=TextOverflow.Ellipsis,
             style=MaterialTheme.typography.labelMedium)
+    }
     }
     if(open)ModalBottomSheet(onDismissRequest={open=false}) {
         Column(

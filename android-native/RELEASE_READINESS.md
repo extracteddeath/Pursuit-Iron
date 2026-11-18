@@ -2,6 +2,31 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Measured exercise owner-locked issue/open/record sidecar (2026-11-18):**
+An isolated native-coach-store component now creates real app-private
+measurement journal files for all 14 typed movement kinds, atomically
+under the shared current-owner approval revision fence. It asks an injected
+trusted approval authority for the *current, exact parent-workout set*
+under that lock; the UI cannot hand it an arbitrary plan for issuance.
+Each issued journal pins the originating approval identity/revision and
+source-verified full plan, then accepts correction-aware, actual-recorded
+set observations with CAS journal revisions, idempotent retries, verified
+atomic replacement and cold replay. Missing/wrong owner, changed-gym
+reissue, changed workout/set identity, corrupted, symlinked or unreadable
+files fail closed. The test authority supplies 14 source-pinned plans and
+exercises this storage boundary with real temporary files.
+
+**Scope restriction:** This is a file-owner *integration contract*, not
+a production approved-set source. No existing native coach/gym/program
+authority can yet issue the 14 typed candidates as an approved real
+workout. There is NO public Finish or History-publish action on the new
+sidecar. A parent-workout completion and history redo transaction must
+be implemented before these can be considered fully supported; a
+standalone finished set is not a legitimate indexed training session.
+The Material 3 editor, progress logic, whole-workout multi-set
+scheduling, signed-in host wiring, and real device testing remain open.
+Count remains 369/383 live reps-based exercises. No APK/AAB.
+
 **Measured exercise v1 recovery format (2026-11-18):**
 The new fourteen-exercise candidate domain now has an isolated native-coach-
 store versioned binary codec (PIM1) for an immutable typed measurement plan,

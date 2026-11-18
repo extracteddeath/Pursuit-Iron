@@ -80,6 +80,32 @@ data class CustomCycleBlockComparison(
             day.priorExerciseCount>=6 &&
             day.nextExerciseCount*2<day.priorExerciseCount
         }
+    /**
+     * Actual last hypertrophy week -> first strength week DIRECT work.
+     * A row/press with an indirect biceps/triceps contribution must not
+     * hide a complete loss of curls or extensions. This is a review cue,
+     * NOT a mandatory minimum isolation-set prescription.
+     *
+     * Null = no matching full-cycle audit, not "arms are fine".
+     * Peak is an intentional, separately reviewed taper.
+     */
+    val strengthDirectArmLosses:Set<TrainingMuscle>? get() {
+        if(prior.phase!=TrainingPhase.HYPERTROPHY ||
+            next.phase!=TrainingPhase.STRENGTH ||
+            prior.purpose!=CustomBlockPurpose.TRAINING ||
+            next.purpose!=CustomBlockPurpose.TRAINING)return emptySet()
+        val earlier=prior.lastAuditedWeekDirectSets ?:return null
+        val later=next.firstAuditedWeekDirectSets ?:return null
+        val armFunctions=setOf(TrainingMuscle.BICEPS,
+            TrainingMuscle.BRACHIALIS,TrainingMuscle.TRICEPS,
+            TrainingMuscle.WRIST_FLEXORS,TrainingMuscle.WRIST_EXTENSORS)
+        return armFunctions.filter{muscle->
+            val before=earlier[muscle]
+            val after=later[muscle]
+            before!=null && after!=null && before.signum()>0 &&
+                after.signum()==0
+        }.toSet()
+    }
     val auditedDirectMuscleChanges:List<CustomBlockMuscleChange>? get() {
         // The athlete leaves hypertrophy at its LAST effective week,
         // not its first one. Overrides and per-week prescriptions matter.

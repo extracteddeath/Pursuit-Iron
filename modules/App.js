@@ -23,7 +23,7 @@ import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from '
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
-import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
+import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput } from './workout-session-controls.js';
 import { latestMachineSet, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
 import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
@@ -13243,22 +13243,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                             const active = v === curInc;
                                                             return (_jsx("button", { className: "pressable wpb-exinfo-weight-choice", "aria-pressed": active, onClick: () => onSetExLoadInc(ex.id, v, unit), children: v === 0 ? `Auto (${defStep}${unit})` : `+${v}${unit}` }, v));
                                                         }) }), _jsxs("div", { className: "wpb-exinfo-helper", children: ["Sets how much each ", _jsx("span", { className: "mono", children: "+ / \u2212" }), " tap and weekly bump moves the load for this exercise."] })] }));
-                                        })(), _jsxs("section", { className: "wpb-exinfo-machine-tools", "aria-label": "Machine and exercise options", children: [
-                                            _jsx("div", { className: "wpb-ey8", children: "Equipment and exercise" }),
-                                            isMachineLike(ex.equip) && _jsx(WorkoutMachineVariantControl, {
-                                                key:`${day.id}:${e.slot}:${e.id}`,
-                                                gym:gymProfile?.id===sessionGymId ? gymProfile : null,
-                                                exerciseId:e.id,selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
-                                                dayId:day.id,history,unit,
-                                                onSelect:id=>switchPhysicalMachine(ei,id),
-                                                onCreate:(name,makeDefault)=>addPhysicalMachineNow(ei,name,makeDefault),
-                                                onAssignLegacy:id=>attachOldMachineHistoryNow(ei,id)
-                                            }),
-                                            _jsx("button", { type:"button",className:"pressable wpb-exinfo-swap-action",
-                                                onClick:()=>{setInfo(false);setSwap(true);},
-                                                "aria-label":`Swap ${ex.name} to another exercise`,
-                                                children:[_jsx(Repeat,{size:17,"aria-hidden":true})," Swap to another exercise"] })
-                                        ] }), (() => {
+                                        })(), _jsx(WorkoutMachineInfoActions, {
+                                            gym:gymProfile?.id===sessionGymId ? gymProfile : null,
+                                            exerciseId:e.id,exerciseName:ex.name,
+                                            selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
+                                            dayId:day.id,history,unit,
+                                            onSelect:id=>switchPhysicalMachine(ei,id),
+                                            onCreate:(name,makeDefault)=>addPhysicalMachineNow(ei,name,makeDefault),
+                                            onAssignLegacy:id=>attachOldMachineHistoryNow(ei,id),
+                                            onSwap:()=>{setInfo(false);setSwap(true);}
+                                        }), (() => {
                                             const goal = goals[ex.id];
                                             const bestW = liftBests(history, unit)[ex.id]?.w || 0;
                                             if (!bestW && perf?.[ex.id]?.weight)

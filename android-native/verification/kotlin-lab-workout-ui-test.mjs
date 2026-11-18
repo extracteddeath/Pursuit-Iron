@@ -1339,9 +1339,9 @@ assert.match(helpedProfile,/assistanceByMachine=verifiedFacts.lowestAssistanceBy
 const coachScopeUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCoachPolicyEditor.kt');
 const coachScopeDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MuscleVolumeAccountingDomain.kt');
 assert.match(coachScopeUi,/TrainingMuscleCoverage.forEditor\(marker,saved\)/);
-assert.match(coachScopeUi,/Adding current muscle targets/);
+assert.match(coachScopeUi,/Add current muscle targets/);
 assert.match(coachScopeUi,/neck flexion, extension and lateral flexion/);
-assert.match(coachScopeUi,/selectedBounds\.map\{it.muscle\}/);
+assert.match(coachScopeUi,/selectedBounds\s*\?\.map\{it.muscle\}/);
 assert.match(coachScopeUi,/muscleScope\(phase\).associateWith\{muscle->/);
 assert.doesNotMatch(coachScopeUi,/3 -> TrainingMuscleCoverage\.legacyV3\s*else -> TrainingMuscleCoverage\.current/);
 assert.match(coachScopeDomain,/fun forEditor\(marker:String\?,savedMuscles:Collection<TrainingMuscle>\?\)/);

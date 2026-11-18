@@ -35,8 +35,11 @@ data class StrengthSourceArmReview(
 }
 
 object StrengthSourceArmContinuityDomain {
+    // The independently tracked forearm functions must not disappear just
+    // because a strength block preserves a row/press exercise count.
     private val armMuscles=listOf(TrainingMuscle.BICEPS,
-        TrainingMuscle.BRACHIALIS,TrainingMuscle.TRICEPS)
+        TrainingMuscle.BRACHIALIS,TrainingMuscle.TRICEPS,
+        TrainingMuscle.WRIST_FLEXORS,TrainingMuscle.WRIST_EXTENSORS)
 
     fun review(
         cycle:CustomTrainingCycle?,
@@ -100,8 +103,8 @@ object StrengthSourceArmContinuityDomain {
             cycle.cycleId,cycle.athleteId,cycle.revision,priorBlockId,
             Collections.unmodifiableList(candidates),
             if(candidates.isEmpty())
-                "The resolved source does not contain directly credited, catalog-reviewed biceps, brachialis or triceps accessories."
-            else "The source has individually verified direct arm exercises. The next Strength week must still satisfy its full fatigue, load, equipment, time and dose checks before preserving them."
+                "The resolved source does not contain directly credited, catalog-reviewed arm or forearm accessories."
+            else "The source has individually verified direct arm and forearm exercises. The next Strength week must still satisfy its full fatigue, load, equipment, time and dose checks before preserving them."
         )
     }
 }

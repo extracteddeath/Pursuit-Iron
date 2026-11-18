@@ -177,9 +177,9 @@ object CoachAthleteExerciseSelectionDomain {
         val source=input.sourceStrengthArms
         val candidateSourceIds=source?.candidates?.map{it.exerciseId}.orEmpty()
         if(source!=null) {
-            // A saved direct curl/extension that gets sufficient INDIRECT
-            // volume from bench/row is not grounds to erase the actual
-            // source exercise. But a hand-written ID or stale athlete
+            // A saved direct curl, extension or wrist movement receiving
+            // sufficient INDIRECT volume from other lifts is not grounds
+            // to erase the athlete's actual source exercise. But a hand-written ID or stale athlete
             // review is not grounds to reinsert an unverified implement.
             val sourceValid=policy.phase==TrainingPhase.STRENGTH &&
                 source.status==StrengthSourceArmsStatus.REVIEW_READY &&
@@ -189,12 +189,13 @@ object CoachAthleteExerciseSelectionDomain {
                 source.cycleId?.isNotBlank()==true &&
                 candidateSourceIds.isNotEmpty() &&
                 candidateSourceIds.distinct().size==candidateSourceIds.size &&
-                source.candidates.size<=3 &&
+                source.candidates.size<=5 &&
                 source.candidates.all{candidate->
                     candidate.priorWorkingSets>0 &&
                     candidate.directMuscle in setOf(
                         TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
-                        TrainingMuscle.TRICEPS)
+                        TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
+                        TrainingMuscle.WRIST_EXTENSORS)
                 }
             if(!sourceValid) {
                 issue(AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED,

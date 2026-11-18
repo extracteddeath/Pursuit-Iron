@@ -36,7 +36,13 @@ for (const phase of phases) {
     for (const [lift, expected] of Object.entries(request.goal.liftFrequency))
         assert.equal(claims.filter(c => c.lift === lift).length, expected,
             phase + ': the phase must have real strength-claim slots, not only a scoring target');
-    const { program, diagnostics } = generateProgram(request, { phase, blockWeeks: 5 });
+    // Retention is activated only when a REAL preceding high-variety
+    // hypertrophy program exists. Ordinary/standalone Strength must not
+    // silently gain optional arm volume.
+    const { program, diagnostics } = generateProgram(request, {
+        phase, blockWeeks: 5,
+        preservePriorExerciseVariety: phase === 'strength_accumulation'
+    });
     assert.equal(program.audit.result, 'pass', phase + ': ' + JSON.stringify(program.audit).slice(0, 1000));
     const catalog = createExerciseMap(request.customExercises);
     const directArms = Object.fromEntries([
@@ -45,6 +51,9 @@ for (const phase of phases) {
         sum + session.exercises.reduce((n,e)=>n+
             (catalog.get(e.exerciseId)?.movementFamily===family?e.sets:0),0),0)]));
     if(phase==='strength_accumulation') {
+        // The selected five-day gym already allows useful low-fatigue arm
+        // work: direct elbow flexion and extension must be visible as real
+        // prescribed, logged workout slots, not credited only from rows/presses.
         assert.ok(directArms.biceps>=2,
             'A long, five-day strength block with available cable/machine curls must not drop all direct biceps work: '+JSON.stringify({directArms,plan:program.sessions.map(s=>({name:s.name,slots:s.exercises.map(e=>e.exerciseId)})),repairs:diagnostics.lowFatigueArmMaintenance}));
         assert.ok(directArms.triceps>=2,

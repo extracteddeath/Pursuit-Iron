@@ -133,8 +133,11 @@ class NativeMeasuredExerciseJournalFileStore(
     private fun decode(
         path:Path,owner:String,athlete:String,workout:String,set:String
     ):NativeMeasuredStoredSet? {
+        // A dangling symlink does NOT satisfy Files.exists; reject it before
+        // any missing-file check, or an issuance retry could erase it.
+        if(Files.isSymbolicLink(path))throw IOException("linked measured journal")
         if(!Files.exists(path))return null
-        if(Files.isSymbolicLink(path) || !Files.isRegularFile(path) ||
+        if(!Files.isRegularFile(path) ||
             Files.size(path) !in 44L..maxBytes.toLong())
             throw IOException("invalid measured journal file")
         val bytes=Files.readAllBytes(path)

@@ -580,21 +580,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             NativeKotlinWorkoutTools(
                 enabled=!state.busy && !swapLoading,
                 onSessionNote={showSessionNote=true},
-                // Open the same source-verified machine picker from the small
-                // workout tools rail. Nothing is changed until the sheet's
-                // explicit selection is durably acknowledged.
-                onMachine=activeMachineConfig?.let {
-                    {openPhysicalMachineFor=toolExercise}
-                },
-                machineLabel=activeMachineConfig?.machines
-                    ?.firstOrNull {it.id==currentMachine}?.label
-                    ?:if(activeMachineConfig!=null)"Choose machine" else null,
+                // Occasional A/B selection belongs in Exercise Info.
+                // The existing verified sheet still owns the actual choice.
+                onMachine=null,
                 onPinnedNote=toolExercise?.let {exerciseId->
                     {pinnedExerciseId=exerciseId}
                 },
-                onSwap=toolExercise?.takeIf {
-                    toolTargets.none{it.setKey in journal.effectiveSets}
-                }?.let {exerciseId->{reviewSwap(exerciseId)}},
+                onSwap=null,
                 onWarmup=toolExercise?.takeIf {
                     toolTargets.any{it.type==DraftSetType.WARMUP}
                 }?.let {exerciseId->{
@@ -970,7 +962,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         it.target.type==set.target.type},
                     showExerciseHeading=showAll || presentation.finished,
                     onHistory={historyExerciseId=set.target.exerciseId},
-                    onInfo={infoExerciseId=set.target.exerciseId},
+                    onInfo={
+                        selectedKey=set.target.setKey
+                        infoExerciseId=set.target.exerciseId
+                    },
                     onShowPlates={load,unit->
                         plateRequest=NativeComposerPlateRequest(
                             set.target.exerciseId,load,unit)
@@ -1200,6 +1195,22 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         }
         if(targets.isNotEmpty()) {
             val first=targets.first()
+            val infoConfig=issuedGymId?.let { gymId ->
+                if(exerciseId in eligibleMachineExercises)
+                    KotlinMachineAlternativesDomain.forGymExercise(
+                        machineRoster?.configurations.orEmpty(),gymId,exerciseId)
+                        ?:KotlinGymMachineAlternatives(gymId,exerciseId,null,emptyList())
+                else null
+            }
+            val infoMachine=workoutMachineChoice(machineChoices.encoded,exerciseId,null)
+            val infoOptions=NativeKotlinEquipmentRecoveryPolicy.review(
+                activeWorkout=presentation?.finished==false && !state.busy && !swapLoading,
+                hasPhysicalMachineConfig=infoConfig!=null &&
+                    machineChoices.ready && !machineChoices.busy,
+                hasRecordedExerciseWork=targets.any{
+                    it.setKey in journal?.effectiveSets.orEmpty()
+                }
+            )
             NativeKotlinWorkoutExerciseInfoSheet(
                 exerciseId=exerciseId,
                 sourceDescription="Issued generated workout · "+
@@ -1207,6 +1218,21 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     " · "+first.purpose.name.lowercase().replace('_',' '),
                 sets=composerWorkoutInfoSets(targets),
                 warmupsOnly=infoWarmupsOnly,
+                busy=state.busy || swapLoading || machineChoices.busy,
+                machineLabel=infoConfig?.machines?.firstOrNull{
+                    it.id==infoMachine
+                }?.label ?: "Choose or add machine",
+                onChooseMachine=if(!infoWarmupsOnly && infoOptions.canChangeStation)
+                    ({ 
+                        selectedKey=first.setKey
+                        infoExerciseId=null
+                        openPhysicalMachineFor=exerciseId
+                    }) else null,
+                onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)
+                    ({
+                        infoExerciseId=null
+                        reviewSwap(exerciseId)
+                    }) else null,
                 outcomes=journal?.effectiveSets.orEmpty().mapNotNull { (key,receipt)->
                     (receipt.operation as? KotlinJournalOperation.RecordSet)?.let{key to it.outcome}
                 }.toMap(),

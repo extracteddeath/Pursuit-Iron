@@ -875,7 +875,7 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   journal.includes('onInfo={infoSlotId=slot.slotId}') &&
   journal.includes('journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}') &&
   journal.includes('sets=customWorkoutInfoSets(slot.sets)') &&
-  composer.includes('onInfo={infoExerciseId=set.target.exerciseId}') &&
+  composer.includes('infoExerciseId=set.target.exerciseId') &&
   composer.includes('journal?.snapshot?.targets.orEmpty().filter') &&
   composer.includes('sets=composerWorkoutInfoSets(targets)') &&
   infoSheet.includes('internal fun composerWorkoutInfoSets(') &&
@@ -883,7 +883,12 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   infoSheet.includes('infoTitle(target.type,target.ordinal+1)') &&
   infoSheet.includes('infoTitle(target.type,position)') &&
   infoSheet.includes('targetRir?.toString() ?: "Not set"') &&
-  infoSheet.includes('NativeEditSheet(busy=false,onDismiss=onDismiss)') &&
+  infoSheet.includes('NativeEditSheet(busy=busy,onDismiss=onDismiss)') &&
+  infoSheet.includes('sets.count{it.type==DraftSetType.WORKING}') &&
+  infoSheet.includes('onChooseMachine?.let') &&
+  infoSheet.includes('onSwapExercise?.let') &&
+  composer.includes('onChooseMachine=if(!infoWarmupsOnly && infoOptions.canChangeStation)') &&
+  journal.includes('onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)') &&
   infoSheet.includes('Text("Open full exercise history")') &&
   !infoSheet.includes('controller.record('),
   'Info must be a read-only, source-backed sheet with exact planned set facts and a full History action for both workout types');

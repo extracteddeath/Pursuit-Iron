@@ -20,11 +20,20 @@ assert.match(picker,/showInlineTrigger:Boolean=true/);
 assert.match(picker,/if\(showInlineTrigger\) \{/);
 assert.match(picker,/LaunchedEffect\(externalOpen\)/);
 assert.match(picker,/onExternalOpenConsumed\?\.invoke\(\)/);
-assert.match(generated,/onMachine=activeMachineConfig\?\.let/);
-assert.match(generated,/openPhysicalMachineFor=toolExercise/);
-assert.match(generated,/showInlineTrigger=showAll \|\| presentation\.finished/);
-assert.match(custom,/onMachine=upcoming\?\.first\?\.takeIf/);
+// Focus no longer carries rare machine/swap icons in its tiny tool rail;
+// both verified actions are available through the existing Exercise Info.
+const info=readFileSync(root+'NativeKotlinWorkoutExerciseInfoSheet.kt','utf8');
+assert.match(generated,/onMachine=null/);
+assert.match(custom,/onMachine=null/);
+assert.match(generated,/onSwap=null/);
+assert.match(custom,/onSwap=null/);
+assert.match(info,/onChooseMachine:\(\(\)->Unit\)\?=null/);
+assert.match(info,/onSwapExercise:\(\(\)->Unit\)\?=null/);
+assert.match(info,/Equipment and exercise/);
+assert.match(info,/Planned working sets/);
+assert.match(generated,/openPhysicalMachineFor=exerciseId/);
 assert.match(custom,/openPhysicalMachineForSlot=slot\.slotId/);
+assert.match(generated,/showInlineTrigger=showAll \|\| presentation\.finished/);
 assert.match(custom,/showInlineTrigger=!focusOnNext \|\| finished/);
 // Focus opens exactly the same sheet as Equipment unavailable; neither
 // tool tap nor exercise navigation issues a load or alters logged sets.

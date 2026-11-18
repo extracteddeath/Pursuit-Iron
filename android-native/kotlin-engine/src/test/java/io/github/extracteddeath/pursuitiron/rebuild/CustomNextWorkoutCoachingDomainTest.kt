@@ -1361,4 +1361,129 @@ class CustomNextWorkoutCoachingDomainTest {
         }
     }
 
+    private fun assistanceStock()=VerifiedLoadStock.Stack(
+        LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,n(10),n(10),n(80))
+
+    private fun assistedNext(week:Int=5,machine:String?="A"):CustomWorkoutDaySnapshot {
+        val base=snapshot(week,exercise="assisted-pullup",loads=listOf(40,40))
+        val slot=base.slots.single()
+        return base.copy(slots=listOf(slot.copy(
+            familyId="vertical_pull",variantId="assisted-counterweight-pullup",
+            machineInstanceId=machine,
+            sets=slot.sets.map{set->
+                set.copy(prescription=set.prescription.copy(
+                    load=DraftSetLoad.Verified(LoadUnit.LB,
+                        LoadBasis.ASSISTANCE_COUNTERWEIGHT,n(40)),
+                    reps=RepBand(8,12)))
+            })))
+    }
+
+    private fun assistedCompleted(order:Long,week:Int,
+        machine:String="A",rir:Int?=3,actual:Int=40,
+        reps:Int=12):CustomCoachingHistoricalSession {
+        val source=completed(order,week,exercise="assisted-pullup",
+            issued=listOf(40,40),actual=listOf(actual,actual),
+            reps=listOf(reps,reps),rirs=listOf(rir,rir))
+        val amended=assistedNext(week,machine)
+        return source.copy(snapshot=amended,
+            evidence=source.evidence.copy(visits=source.evidence.visits.map{fact->
+                fact.copy(
+                    prescribedLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                        LoadBasis.ASSISTANCE_COUNTERWEIGHT,n(40)),
+                    prescribedReps=RepBand(8,12),
+                    actual=fact.actual?.copy(machineInstanceId=machine))
+            }))
+    }
+
+    private fun assistanceReview(
+        first:CustomCoachingHistoricalSession=assistedCompleted(1,3),
+        second:CustomCoachingHistoricalSession=assistedCompleted(2,4),
+        next:CustomWorkoutDaySnapshot=assistedNext(),
+        stock:VerifiedLoadStock?=assistanceStock()
+    )=CustomNextWorkoutCoachingDomain.review(
+        CustomNextWorkoutCoachingRequest(
+            next,"main",listOf(first,second),stock,n(10),
+            CoachReadiness.NORMAL,false,CustomRepForecastPolicy.TARGET_RIR_V2,
+            requestedMachineInstanceId="A"))
+
+    @Test fun assistedCustomCycleCanReviewAndPrepareOnlyLowerCounterweight() {
+        val result=assistanceReview()
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_ASSISTANCE_REVIEW,
+            result.status)
+        assertEquals(n(40),result.observedStraightSetLoad)
+        assertEquals(n(30),result.loadReviewCandidate)
+        assertTrue(result.explanation.contains("LESS assistance"))
+        assertEquals(2,result.nextSetSuggestions.size)
+        assertTrue(result.nextSetSuggestions.none{it.changed})
+        val next=assistedNext()
+        val proposed=CustomNextLoadAmendmentDomain.propose(
+            next,"main",result,assistanceStock(),n(10))
+            as CustomNextLoadAmendmentResult.Proposed
+        assertEquals(n(40),proposed.amendment.previousLoad)
+        assertEquals(n(30),proposed.amendment.proposedLoad)
+        assertEquals(LoadBasis.ASSISTANCE_COUNTERWEIGHT,proposed.amendment.basis)
+        assertTrue(proposed.amendment.amended.slots.single().sets.all{
+            (it.prescription.load as DraftSetLoad.Verified).value==n(30) &&
+                it.prescription.reps==RepBand(8,12) &&
+                it.prescription.targetRir==2
+        })
+        assertFalse(proposed.amendment.mayIssueWorkout)
+        assertFalse(proposed.amendment.mayEditCycle)
+    }
+
+    @Test fun assistedLoadPreviewCannotBorrowMachineOrUnreviewedSettings() {
+        val recent=assistedCompleted(2,4)
+        for(review in listOf(
+            assistanceReview(first=assistedCompleted(1,3,machine="B")),
+            assistanceReview(second=assistedCompleted(2,4,machine="B")),
+            assistanceReview(second=assistedCompleted(2,4,rir=0)),
+            assistanceReview(second=assistedCompleted(2,4,reps=10)),
+            assistanceReview(second=assistedCompleted(2,4,actual=50)),
+            assistanceReview(next=assistedNext(machine=null)),
+            assistanceReview(stock=null),
+            assistanceReview(stock=VerifiedLoadStock.Stack(LoadUnit.LB,
+                LoadBasis.MACHINE_STACK,n(10),n(10),n(80)))
+        )) {
+            assertFalse(review.status==
+                CustomNextWorkoutCoachingStatus.READY_FOR_ASSISTANCE_REVIEW)
+            assertNull(review.loadReviewCandidate)
+        }
+        assertEquals(n(40),(recent.evidence.visits.first()
+            .actual?.load))
+    }
+
+    @Test fun assistedAmendmentMustBeOneRealLowerStepAndKeepsEasierWarmups() {
+        val reviewed=assistanceReview()
+        val stock=assistanceStock()
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            assistedNext(),"main",reviewed,stock,n(5))
+            is CustomNextLoadAmendmentResult.Rejected)
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            assistedNext(),"main",reviewed,
+            VerifiedLoadStock.Stack(LoadUnit.LB,
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT,n(10),n(20),n(70)),n(10))
+            is CustomNextLoadAmendmentResult.Rejected)
+        val next=assistedNext()
+        val slot=next.slots.single()
+        val warmup=CustomWorkoutSetSnapshot(
+            "cycle:w5:d0:main:w1","main",0,
+            CustomAuthoredSet(DraftSetType.WARMUP,
+                DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.ASSISTANCE_COUNTERWEIGHT,n(50)),
+                RepBand(5,5),null,30,60))
+        val withWarmup=next.copy(slots=listOf(
+            slot.copy(sets=listOf(warmup)+slot.sets)))
+        val okay=CustomNextLoadAmendmentDomain.propose(
+            withWarmup,"main",reviewed,stock,n(10))
+            as CustomNextLoadAmendmentResult.Proposed
+        assertEquals(warmup,okay.amendment.amended.slots.single().sets.first())
+        val unsafeWarmup=warmup.copy(prescription=warmup.prescription.copy(
+            load=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT,n(20))))
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            next.copy(slots=listOf(slot.copy(
+                sets=listOf(unsafeWarmup)+slot.sets))),
+            "main",reviewed,stock,n(10)) is CustomNextLoadAmendmentResult.Rejected)
+    }
+
 }

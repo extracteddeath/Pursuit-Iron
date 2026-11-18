@@ -292,10 +292,53 @@ export function canRetargetStrengthEntryRoster(previous, request, spec) {
     return desiredSplit === previous?.split?.family
         && request?.schedule?.days?.length === previous.sessions.length;
 }
+// An exercise count is not a scientific training dose. Still, a >50%
+// UNREQUESTED loss of distinct movements on the SAME scheduled strength day
+// (e.g. eight upper-body exercises becoming three) demands an explicit
+// feasibility decision, not a seemingly healthy weekly set total packed
+// into three heavy lifts. Changes of split/day topology are not compared
+// slot-for-slot. Peak is a separate short taper and never uses this guard.
+// The fraction is an engineering review trigger, not a universal minimum
+// number of exercises or hypertrophy dose recommendation.
+export function unexplainedStrengthExerciseCollapse(previous, next, spec, request) {
+    if (previous?.phase !== 'hypertrophy_accumulation'
+        || spec?.phase !== 'strength_accumulation'
+        || next?.phase !== 'strength_accumulation'
+        || request?.preferences?.volumeApproach === 'minimalist'
+        || previous.split?.family !== next.split?.family
+        || previous.sessions?.length !== next.sessions?.length) return null;
+    for (let index=0; index<next.sessions.length; index++) {
+        const before=previous.sessions[index], after=next.sessions[index];
+        if (before.intent !== after.intent) continue;
+        const priorDistinct=new Set(before.exercises.map(ex=>ex.exerciseId)).size;
+        const nextDistinct=new Set(after.exercises.map(ex=>ex.exerciseId)).size;
+        if (priorDistinct >= 6 && nextDistinct < Math.ceil(priorDistinct * .5))
+            return { day:after.intent, previousExercises:priorDistinct,
+                strengthExercises:nextDistinct, sessionIndex:index };
+    }
+    return null;
+}
 function protectStrengthEntry(previous, next, spec, request) {
     if (previous?.phase !== 'hypertrophy_accumulation' || spec.phase !== 'strength_accumulation')
         return next;
     const before = totalSets(previous), floor = strengthEntryMinimumSets(before);
+    const lostVariety = unexplainedStrengthExerciseCollapse(previous, next, spec, request);
+    if (lostVariety) {
+        // Prefer a source-preserving, fully-audited retarget when athlete
+        // constraints can fit it. Do not silently force eight lifts in a
+        // shorter or heavier session: when this fails, give a typed refusal.
+        if (canRetargetStrengthEntryRoster(previous, request, spec)) {
+            try {
+                const preserved = retargetStatic(previous, request, spec.phase, spec.weeks);
+                if (preserved.audit.result === 'pass'
+                    && totalSets(preserved) >= floor
+                    && !unexplainedStrengthExerciseCollapse(previous,preserved,spec,request))
+                    return preserved;
+            } catch { /* Return a concrete safe refusal rather than altering the workout. */ }
+        }
+        throw new NextShellAdapterError('NEXT_CYCLE_STRENGTH_EXERCISE_COLLAPSE',
+            `Strength ${lostVariety.day} would drop from ${lostVariety.previousExercises} distinct exercises to ${lostVariety.strengthExercises}, despite the same weekly split. Working-set totals alone cannot justify abandoning that much movement coverage. Keep more useful accessory work, increase allowed session time, or choose another split; deliberate volume tapering belongs in Peak.`);
+    }
     if (before < 16 || totalSets(next) >= floor) return next;
     // A converted custom roster can be more faithful than a newly generated strength skeleton.
     // Try the audited same-roster prescription before refusing an extreme volume cliff.

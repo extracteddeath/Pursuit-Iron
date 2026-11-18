@@ -2,6 +2,20 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Neck V5 muscle coverage and physical exercise audit (2026-11-18):**
+Four exact web neck IDs now append to the existing stable Kotlin catalog,
+bringing SOURCE identities to **369 of 383**. Unlike legacy 'bodyweight'
+equipment metadata, the named weighted neck movements demand independently
+confirmed real physical resistance and a supported gym setup, with no silent
+load transfer or invented unloaded prescription. V5 explicitly separates
+neck flexors, extensors and lateral flexors; existing v1–v4 policy scopes
+and stored first-program v11 22-row coverage remain frozen. A partially
+declared new scope is rejected, not auto-filled. Source/muscle, equipment,
+eligibility and legacy-replay tests are required; validated personalized
+training dose, real device gym setup, logged progression quality and all
+**14 remaining** timed/carry/hybrid source gaps remain OPEN. This is source
+and domain work, NOT full exercise or engine parity. No APK/AAB.
+
 **Assisted-machine next-workout consent (2026-11-18):** The custom
 activated-block Coach now offers a separate next-session assistance review
 ONLY when the approved slot binds a real calibrated assisted machine. Exact

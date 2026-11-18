@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { summarizeStrengthWorkWeeks, findStrengthVolumeCliff } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { summarizeStrengthWorkWeeks, findStrengthVolumeCliff, strengthEntryMinimumSets } from '../modules/next-engine/cycle-runtime-adapter.js';
 
 // M321: the first/final sessions alone cannot protect the actual middle of a
 // strength accumulation block. Fabricate a deliberately uneven five-week
@@ -47,14 +47,19 @@ assert.equal(tied.executableWeakestPriorityLiftWeek,1);
 assert.throws(()=>summarizeStrengthWorkWeeks([]),
     error=>error?.code==='NEXT_CYCLE_REALIZED_WEEKS_MISSING');
 
+assert.equal(strengthEntryMinimumSets(60),42,'Normal strength entry preserves at least 70%');
+assert.equal(strengthEntryMinimumSets(15),0,'Small sessions skip aggregate floor');
 const volumeRows=[make(1,93,95,95),make(2,91,95,95),make(3,89,95,95),make(4,88,95,95)];
 volumeRows.forEach((row,i)=>{row.weeklySets=[52,50,24,53][i];});
 assert.equal(findStrengthVolumeCliff(60,volumeRows)?.week,3,
-    'A safe entry week must not conceal a later >50% executable set-volume cliff');
+    'A safe entry week must not conceal a later >30% strength-accumulation volume reduction');
 assert.equal(findStrengthVolumeCliff(60,volumeRows)?.weeklySets,24);
-volumeRows[2].weeklySets=30;
+volumeRows[2].weeklySets=41;
+assert.equal(findStrengthVolumeCliff(60,volumeRows)?.week,3,
+    '41 of 60 sets is below the 70% floor');
+volumeRows[2].weeklySets=42;
 assert.equal(findStrengthVolumeCliff(60,volumeRows),null,
-    'The 50% boundary remains allowed');
+    'Exactly 70% of prior weekly volume is acceptable');
 assert.equal(findStrengthVolumeCliff(15,volumeRows),null,
     'Small prior blocks retain the existing no-floor policy');
 assert.equal(findStrengthVolumeCliff(60,[]),null);

@@ -49,7 +49,15 @@ assert.throws(()=>summarizeStrengthWorkWeeks([]),
 
 assert.equal(strengthEntryMinimumSets(60),42,'Normal strength entry preserves at least 70%');
 assert.equal(strengthEntryMinimumSets(82),42,
-    'Exceptionally large hypertrophy weeks retain their already-audited 50%-drop safety class');
+    'Large weeks below the extreme capacity class retain more than half');
+assert.equal(strengthEntryMinimumSets(68),35,
+    'At the 68-set boundary, do not silently accept a half-volume strength block');
+assert.equal(strengthEntryMinimumSets(89),45,
+    'High but not extreme weeks must preserve strictly more than half');
+assert.equal(strengthEntryMinimumSets(90),45,
+    'At 90 working sets, a verified time-capped extreme week may retain half');
+assert.equal(strengthEntryMinimumSets(112),56,
+    'A verified 112-set source may enter a capacity-limited 56-set strength week');
 assert.equal(findStrengthVolumeCliff(82,[{week:2,weeklySets:48}]),null);
 assert.equal(strengthEntryMinimumSets(15),0,'Small sessions skip aggregate floor');
 const volumeRows=[make(1,93,95,95),make(2,91,95,95),make(3,89,95,95),make(4,88,95,95)];

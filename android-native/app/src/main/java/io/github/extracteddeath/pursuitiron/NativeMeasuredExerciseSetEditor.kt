@@ -86,9 +86,9 @@ internal fun NativeMeasuredExerciseSetEditor(
             plan.bandId else null,
         if(definition.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
             elapsed else null)
-    val completed=MeasuredExerciseEntryDomain.parse(
+    val completedReview=MeasuredExerciseEntryDomain.parse(
         plan,MeasuredSetOutcome.COMPLETED,submitted)
-        as? MeasuredExerciseEntryDecision.Accepted
+    val completed=completedReview as? MeasuredExerciseEntryDecision.Accepted
     val failed=MeasuredExerciseEntryDomain.parse(
         plan,MeasuredSetOutcome.FAILED_ATTEMPT,submitted)
         as? MeasuredExerciseEntryDecision.Accepted
@@ -245,6 +245,15 @@ internal fun NativeMeasuredExerciseSetEditor(
                             style=MaterialTheme.typography.bodySmall)
                     }
                 }
+                val invalid=(completedReview as? MeasuredExerciseEntryDecision.Rejected)
+                    ?.reason
+                if(invalid!=null && quantityBySide.values.any{it.isNotBlank()})
+                    Text(measuredInputHelp(invalid),
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.error)
+                Text("Only a confirmed native journal receipt saves this result.",
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Button(enabled=!busy && completed!=null && roundingAcknowledged,
                     modifier=Modifier.fillMaxWidth(),
                     onClick={
@@ -295,4 +304,28 @@ internal fun NativeMeasuredExerciseSetEditor(
             }
         }
     )
+}
+
+
+private fun measuredInputHelp(reason:MeasuredEntryRefusal):String=when(reason) {
+    MeasuredEntryRefusal.UNAPPROVED_PLAN ->
+        "This set needs a verified workout source."
+    MeasuredEntryRefusal.MISSING_OR_EXTRA_SIDE ->
+        "Enter a measured result for every required side."
+    MeasuredEntryRefusal.WRONG_QUANTITY_UNIT ->
+        "Choose a supported measurement unit."
+    MeasuredEntryRefusal.INVALID_QUANTITY ->
+        "Check the time, distance or repetition amount."
+    MeasuredEntryRefusal.WRONG_PHYSICAL_SETUP ->
+        "Physical equipment changed. Review the workout setup first."
+    MeasuredEntryRefusal.LOAD_ENTRY_REQUIRED ->
+        "Enter the weight actually used."
+    MeasuredEntryRefusal.UNVERIFIED_LOAD ->
+        "The entered weight is not available on this verified equipment."
+    MeasuredEntryRefusal.WRONG_OR_UNVERIFIED_BAND ->
+        "Select the gym-approved band setup first."
+    MeasuredEntryRefusal.INVALID_ELAPSED_TIME ->
+        "Optional carry elapsed time must be whole seconds."
+    MeasuredEntryRefusal.INVALID_ACTUAL ->
+        "This measurement does not match the issued exercise."
 }

@@ -363,11 +363,108 @@ function generateProgramOnce(requestInput, options) {
         // station changes. This transform is prescription-neutral and remains subject to the final audit.
         return optimizeSetupAwareSessionSequence(finalized, exerciseMap, request);
     });
-    const orderedEvents = createTrainingSetEvents(reconciledSessions, request.customExercises);
-    const finalBase = { ...assembled.base, sessions: reconciledSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };
+    // Strength accumulation is not a powerlifting-only exercise menu.
+    // A heavy bench/row contributes INDIRECT triceps/biceps work but cannot
+    // by itself count as a direct elbow-extension or elbow-flexion slot.
+    // Previous dose reconciliation can remove arm accessories even after
+    // all earlier functional/arm audits passed. Do this final, source-aware
+    // low-fatigue maintenance pass AFTER dose reconciliation and then run
+    // the complete arbiter again. Peak is deliberately exempt.
+    //
+    // 2-4 direct working sets per muscle are an engineering maintenance
+    // opportunity, NOT a universal hypertrophy threshold. Keep main lifts,
+    // their loads/reps/rest, equipment, RIR, weekly recovery, MRV and all
+    // available session clocks as hard constraints. No forced add on a
+    // minimalist plan or a severely time-limited training week.
+    const directArmSets = (sessions, family) => sessions.reduce((sum, session) =>
+        sum + session.exercises.reduce((n, ex) =>
+            n + (exerciseMap.get(ex.exerciseId)?.movementFamily === family
+                ? Math.max(0, Number(ex.sets) || 0) : 0), 0), 0);
+    let maintainedSessions = reconciledSessions;
+    const retainedArmAdditions = [];
+    if (phase === 'strength_accumulation' &&
+        request.preferences.volumeApproach !== 'minimalist' &&
+        request.schedule.days.length >= 3) {
+        const optionsForArm = [
+            { muscle: 'biceps', family: 'elbow_flexion',
+                intentOrder: ['pull', 'back_day', 'upper', 'arms', 'shoulders_arms', 'full', 'strength_full'] },
+            { muscle: 'triceps', family: 'elbow_extension',
+                intentOrder: ['push', 'bench_focus', 'press_focus', 'upper', 'arms', 'shoulders_arms', 'full', 'strength_full'] }
+        ];
+        const audited = (sessions) => {
+            const events = createTrainingSetEvents(sessions, request.customExercises);
+            const candidate = { ...assembled.base, sessions, events,
+                muscleLedger: deriveMuscleLedger(events) };
+            return auditProgram(candidate, request);
+        };
+        for (const { muscle, family, intentOrder } of optionsForArm) {
+            const defs = exerciseCatalog.filter(def =>
+                def.movementFamily === family &&
+                !def.flags.compound && !def.flags.barbell &&
+                def.fatigue.systemic <= 2 && def.fatigue.axial <= 1 &&
+                def.fatigue.lowerBack <= 1 &&
+                !request.preferences.avoidedExercises?.includes(def.id))
+                .sort((a, b) => a.setupCost - b.setupCost ||
+                    b.suitability.hypertrophy - a.suitability.hypertrophy ||
+                    a.id.localeCompare(b.id));
+            const opportunity = Math.min(4, Math.max(0,
+                4 - directArmSets(maintainedSessions, family)));
+            if (opportunity < 2 || !defs.length) continue;
+            // At most two small accessories per arm muscle across the
+            // entire week, preferentially on two DIFFERENT relevant days.
+            // A full set still takes its real clock time: no free sets.
+            let addedForMuscle = 0;
+            const usedDayIndexes = new Set();
+            while (addedForMuscle < opportunity) {
+                let best = null;
+                for (let index = 0; index < maintainedSessions.length; index++) {
+                    const session = maintainedSessions[index];
+                    if (usedDayIndexes.has(index) ||
+                        !(INTENT_MUSCLES[session.intent] ?? INTENT_MUSCLES.full).includes(muscle))
+                        continue;
+                    const intentRank = intentOrder.indexOf(session.intent);
+                    const rank = intentRank < 0 ? 25 : intentRank;
+                    for (const def of defs) {
+                        if (!equipmentEligibleForSession(def, session) ||
+                            session.exercises.some(ex => ex.exerciseId === def.id))
+                            continue;
+                        const addition = { ...plannedArmExercise(def), sets: 2 };
+                        const candidateSession = optimizeSetupAwareSessionSequence(
+                            finalizePlannedSession({
+                                ...session, exercises: [...session.exercises, addition],
+                                estimatedMinutes: 0
+                            }, request), exerciseMap, request);
+                        if (candidateSession.estimatedMinutes > session.maxMinutes)
+                            continue;
+                        const sessions = maintainedSessions.map((row, i) =>
+                            i === index ? candidateSession : row);
+                        const audit = audited(sessions);
+                        if (audit.result !== 'pass') continue;
+                        // Low-fatigue exercises should use idle clock capacity,
+                        // not crowd out the higher-priority heavy work.
+                        const score = rank * 100 +
+                            Math.max(0, candidateSession.estimatedMinutes -
+                                session.estimatedMinutes) +
+                            def.fatigue.systemic * 4 + def.setupCost;
+                        if (!best || score < best.score)
+                            best = { sessions, index, id: def.id, score };
+                    }
+                }
+                if (!best) break;
+                maintainedSessions = best.sessions;
+                usedDayIndexes.add(best.index);
+                retainedArmAdditions.push({ muscle, exerciseId: best.id,
+                    dayIndex: best.index, sets: 2 });
+                addedForMuscle += 2;
+            }
+        }
+    }
+    const orderedEvents = createTrainingSetEvents(maintainedSessions, request.customExercises);
+    const finalBase = { ...assembled.base, sessions: maintainedSessions, events: orderedEvents, muscleLedger: deriveMuscleLedger(orderedEvents) };
     const finalAudit = auditProgram(finalBase, request);
     const auditableProgram = { ...finalBase, audit: finalAudit };
     const program = { ...auditableProgram, explainability: buildProgramExplainability(auditableProgram, request) };
     if (finalAudit.result === 'pass') validateEngineProgram(program);
-    return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates, doseReconciliationAdjustments: doseReconciliation.adjustments, remainingDoseOverflow: doseReconciliation.remainingOverflow } };
+    return { program, diagnostics: { allocationDecisions: allocation.decisions, allocationDecisionLog: allocation.decisionLog, allocationMetrics: allocation.metrics, topologyRationale: topology.rationale, topologyCandidates: topology.candidates, doseReconciliationAdjustments: doseReconciliation.adjustments, remainingDoseOverflow: doseReconciliation.remainingOverflow,
+        lowFatigueArmMaintenance: retainedArmAdditions } };
 }

@@ -134,15 +134,10 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         val saved=reviewedInputs?.policiesByPhase?.get(phase)?.selectedBounds
             ?.map{it.muscle}?.toSet()
         val marker=fields["${phase.name}:muscleScope"]
-        // A persisted v4 = 22 muscles, not the latest v5 = 25. Missing
-        // markers on genuinely new programs use current; a malformed or
-        // future-version marker is NEVER treated as current.
-        val version=when {
-            marker!=null ->marker.removePrefix("v").toIntOrNull()
-            saved!=null ->TrainingMuscleCoverage.versionOf(saved)
-            else ->TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)
-        }
-        return version?.let(TrainingMuscleCoverage::forVersion) ?:emptyList()
+        // Pure Kotlin v1–v5 authority: no silent v4→v5 upgrade.
+        // Unknown or malformed markers fail closed; explicit new rows
+        // require actual athlete-authored target values.
+        return TrainingMuscleCoverage.forEditor(marker,saved) ?:emptyList()
     }
     val visibleMuscles=muscleScope(selectedPhase)
     LaunchedEffect(selectedPhase,visibleMuscles) {

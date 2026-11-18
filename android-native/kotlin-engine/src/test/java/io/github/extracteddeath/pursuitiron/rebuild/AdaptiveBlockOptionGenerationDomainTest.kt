@@ -25,6 +25,25 @@ class AdaptiveBlockOptionGenerationDomainTest {
         f.cycle(),"block-1",f.athlete(),f.movements,
         audit(),permissions,alternatives,includeKeep)
 
+    @Test fun adaptiveBlockReviewRejectsForgedOrStaleDirectArmSource() {
+        val foreignSource=StrengthSourceArmReview(
+            StrengthSourceArmsStatus.REVIEW_READY,
+            "old-different-cycle","athlete-1",2,"prior-hypertrophy",
+            listOf(StrengthSourceArmCandidate(
+                "unverified-curl",TrainingMuscle.BICEPS,2)),
+            "Untrusted caller-supplied source claim")
+        val altered=variant("source_override").copy(generation=
+            f.generation().copy(sourceStrengthArms=foreignSource))
+        val reviewed=AdaptiveBlockOptionGenerationDomain.review(
+            request(listOf(altered)))
+        assertEquals(AdaptiveBlockGenerationRefusal.SOURCE_ARM_CONTINUITY_UNVERIFIED,
+            reviewed.outcomes.single().refusal)
+        assertNull(reviewed.outcomes.single().generated)
+        assertEquals("keep_current",reviewed.recommendedOptionId)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.mayApplyAutomatically)
+    }
+
     @Test fun generatedAlternativesAndKeepCurrentReachSameAuditedQualityGate() {
         val input=request(listOf(variant("original_load"),
             variant("higher_verified_load","30")))

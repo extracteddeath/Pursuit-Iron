@@ -80,7 +80,7 @@ function describe(result){
  }
  assert.equal(d.workingWeekVolumeChange.previousWeeklySets,sum(b.sessions));
  assert.equal(d.workingWeekVolumeChange.currentWeeklySets,sum(a.sessions));
- assert.ok(sum(a.sessions)>=Math.ceil(sum(b.sessions)*.5));
+ assert.ok(sum(a.sessions)>=Math.ceil(sum(b.sessions)*.7));
  return {
   splits:[h.config.split,s.config.split],boundarySets:[sum(b.sessions),sum(a.sessions)],
   lastStrengthWeekSets:sum(end.sessions),

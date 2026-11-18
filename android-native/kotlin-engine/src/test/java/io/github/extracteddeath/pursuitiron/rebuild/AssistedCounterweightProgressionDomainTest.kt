@@ -94,6 +94,10 @@ class AssistedCounterweightProgressionDomainTest {
             assertFalse(byId.getValue(id).mayTransferPreviousLoad)
             assertFalse(CatalogPhysicalMachineEligibility.eligible(
                 movement.copy(variantId="unverified-machine")))
+            assertFalse(CatalogPhysicalMachineEligibility.eligible(
+                movement.copy(familyId="forged_family")))
+            assertFalse(CatalogPhysicalMachineEligibility.eligible(
+                movement.copy(requiredFacilityIds=emptySet())))
         }
         assertEquals(3,ids.map{byId.getValue(it).movement.variantId}.distinct().size)
         assertTrue(stock is VerifiedLoadStock.Stack)

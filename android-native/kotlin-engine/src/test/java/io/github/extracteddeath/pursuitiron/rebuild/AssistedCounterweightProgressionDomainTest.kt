@@ -128,7 +128,9 @@ class AssistedCounterweightProgressionDomainTest {
                 ComposerDay(day,ComposerFocus.FULL_BODY,
                     DeclaredSessionWindow(1,90,null,60))
             },
-            muscles,listOf(exercise),2)
+            // Only this one source-calibrated movement exists in the fixture;
+            // a requirement for two distinct patterns would be impossible.
+            muscles,listOf(exercise),2,1)
     }
     private fun prescription(warmup:String,scheme:SetLoadScheme=SetLoadScheme.STRAIGHT)=
         ExercisePrescriptionPolicy("assisted-pullup",

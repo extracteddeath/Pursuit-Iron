@@ -20,5 +20,6 @@ internal fun NativeHistoryCompletionClock.observe():Long?=
 internal val NativeHistoryWriteIntent.recordedCompletionTime:Long? get()=when(this) {
     is NativeHistoryWriteIntent.Finish -> completedAtEpochMillis
     is NativeHistoryWriteIntent.CustomFinish -> completedAtEpochMillis
+    is NativeHistoryWriteIntent.MeasuredFinish -> completedAtEpochMillis
     else -> null
 }

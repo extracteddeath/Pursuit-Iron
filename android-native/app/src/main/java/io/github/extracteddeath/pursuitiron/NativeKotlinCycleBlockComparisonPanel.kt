@@ -218,6 +218,43 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if(comparison.strengthExerciseCollapseReviewRequired) {
+            HorizontalDivider()
+            PursuitSectionHeading("Strength exercise coverage needs review",
+                if(comparison.exerciseRosterUsesReviewedWeeks)
+                    "Final hypertrophy week → first strength week · reviewed exercise rosters"
+                else "Based on saved block templates only; run the complete cycle review to verify week overrides.")
+            comparison.strengthDayExerciseChanges.filter {change->
+                change.priorExerciseCount>=6 &&
+                    change.nextExerciseCount*2<change.priorExerciseCount
+            }.forEach{change->
+                Text(compareWeekday(change.weekday)+": "+
+                        "${change.priorExerciseCount} → ${change.nextExerciseCount} exercises",
+                    style=MaterialTheme.typography.titleSmall,
+                    color=MaterialTheme.colorScheme.error)
+                if(change.droppedExerciseIds.isNotEmpty())Text(
+                    "Not present: "+change.droppedExerciseIds.sorted()
+                        .joinToString{ kotlinExerciseLabel(it) },
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("Heavier strength work can require more rest and a different " +
+                    "working-set dose, but it does not by itself justify " +
+                    "losing most established movement patterns. Review " +
+                    "muscle coverage, priority-lift practice, equipment and " +
+                    "session time. There is no universal eight-exercise quota.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(
+                onClick={onEditBlock(next.blockId)},
+                enabled=enabled,
+                modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
+            ) {Text("Review or restore strength exercises")}
+            Text("Set-count repair alone cannot restore an omitted exercise. " +
+                    "No exercise, prescription or training history was changed.",
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         val sourceContinuityIssue=currentAudit?.issues?.any {issue->
             issue.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
                 issue.location.contains(".block.${next.blockId}")

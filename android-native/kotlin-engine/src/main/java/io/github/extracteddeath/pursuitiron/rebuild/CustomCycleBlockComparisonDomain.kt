@@ -48,6 +48,14 @@ data class CustomBlockExposureChange(
     val afterVisits:Int
 )
 
+/** Per matched actual day, not a fabricated universal exercise quota. */
+data class CustomBlockDayExerciseChange(
+    val weekday:Int,
+    val priorExerciseCount:Int,
+    val nextExerciseCount:Int,
+    val droppedExerciseIds:Set<String>
+)
+
 data class CustomCycleBlockComparison(
     val prior:CustomBlockComparisonFacts,
     val next:CustomBlockComparisonFacts,
@@ -56,8 +64,22 @@ data class CustomCycleBlockComparison(
     val exerciseChanges:List<CustomBlockExposureChange>,
     /** A report of verified measurements may still contain audit failures. */
     val matchingAuditStatus:CustomCoachAuditStatus?,
-    val auditIssueCount:Int?
+    val auditIssueCount:Int?,
+    /** Source-verified resolved final→first day rosters when available;
+     * otherwise these differences are only the author's BASE templates. */
+    val strengthDayExerciseChanges:List<CustomBlockDayExerciseChange> = emptyList(),
+    val exerciseRosterUsesReviewedWeeks:Boolean=false
 ) {
+    /** Review trigger, never an evidence-free minimum of eight exercises. */
+    val strengthExerciseCollapseReviewRequired:Boolean get() =
+        prior.phase==TrainingPhase.HYPERTROPHY &&
+        next.phase==TrainingPhase.STRENGTH &&
+        prior.purpose==CustomBlockPurpose.TRAINING &&
+        next.purpose==CustomBlockPurpose.TRAINING &&
+        strengthDayExerciseChanges.any {day->
+            day.priorExerciseCount>=6 &&
+            day.nextExerciseCount*2<day.priorExerciseCount
+        }
     val auditedDirectMuscleChanges:List<CustomBlockMuscleChange>? get() {
         // The athlete leaves hypertrophy at its LAST effective week,
         // not its first one. Overrides and per-week prescriptions matter.
@@ -187,8 +209,54 @@ object CustomCycleBlockComparisonDomain {
             it.auditedCycleRevision==cycle.revision &&
             it.structuralReview?.verifiedDraft==cycle
         }
-        val prior=facts(cycle,cycle.blocks[index-1],validAudit)
-        val next=facts(cycle,cycle.blocks[index],validAudit)
+        val priorBlock=cycle.blocks[index-1]
+        val nextBlock=cycle.blocks[index]
+        val prior=facts(cycle,priorBlock,validAudit)
+        val next=facts(cycle,nextBlock,validAudit)
+        // Exercise-variety continuity is separate from total set continuity.
+        // Only compare weekday-for-weekday when the split is unchanged;
+        // a new split redistributes work and requires weekly coverage review.
+        // A complete revision-matched audit supplies effective day rosters,
+        // including saved week-specific overrides. Without that audit,
+        // report only base-authoring facts, NEVER claim reviewed clearance.
+        val matchedTraining=prior.phase==TrainingPhase.HYPERTROPHY &&
+            next.phase==TrainingPhase.STRENGTH &&
+            prior.purpose==CustomBlockPurpose.TRAINING &&
+            next.purpose==CustomBlockPurpose.TRAINING &&
+            prior.split==next.split &&
+            prior.weekdays.toSet()==next.weekdays.toSet()
+        val reviewedCycle=validAudit?.structuralReview?.takeIf {
+            prior.auditedWeeklyWorkingSets!=null &&
+            next.auditedWeeklyWorkingSets!=null
+        }
+        val priorExit=cycle.blocks.take(index).sumOf{it.weeks}
+        val nextEntry=priorExit+1
+        val auditedPrior=reviewedCycle?.let{
+            CustomTrainingCycleDomain.week(it,priorExit)
+        }
+        val auditedNext=reviewedCycle?.let{
+            CustomTrainingCycleDomain.week(it,nextEntry)
+        }
+        val auditedDayRosters=matchedTraining &&
+            auditedPrior?.blockId==prior.blockId &&
+            auditedNext?.blockId==next.blockId
+        val beforeDays=if(auditedDayRosters)checkNotNull(auditedPrior).days
+            else priorBlock.days
+        val afterDays=if(auditedDayRosters)checkNotNull(auditedNext).days
+            else nextBlock.days
+        fun workoutExercises(day:CustomTrainingDay):Set<String> =
+            day.slots.filter{slot->
+                slot.sets.any{set->set.type==DraftSetType.WORKING}
+            }.map{it.exerciseId}.toSet()
+        val matchedDayChanges=if(!matchedTraining)emptyList() else
+            beforeDays.mapNotNull{day->
+                val following=afterDays.singleOrNull{it.weekday==day.weekday}
+                    ?:return@mapNotNull null
+                val old=workoutExercises(day)
+                val new=workoutExercises(following)
+                if(old==new)null else CustomBlockDayExerciseChange(
+                    day.weekday,old.size,new.size,old-new)
+            }.sortedBy{it.weekday}
         val before=prior.exposuresByExercise
         val after=next.exposuresByExercise
         val changes=(before.keys+after.keys).sorted()
@@ -200,7 +268,8 @@ object CustomCycleBlockComparisonDomain {
         return CustomCycleBlockComparison(
             prior,next,next.weekdays.filterNot{it in prior.weekdays},
             prior.weekdays.filterNot{it in next.weekdays},
-            changes,validAudit?.status,validAudit?.issues?.size
+            changes,validAudit?.status,validAudit?.issues?.size,
+            matchedDayChanges,auditedDayRosters
         )
     }
 }

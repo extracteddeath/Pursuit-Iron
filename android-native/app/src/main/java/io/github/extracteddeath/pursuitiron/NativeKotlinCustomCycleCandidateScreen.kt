@@ -784,7 +784,21 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         }
                         showProgramEditor=true
                     },
-                    enabled=!busy
+                    enabled=!busy,
+                    repairReview=state.strengthRepairReview,
+                    canRequestStrengthRepair=permissionHost!=null &&
+                        state.coachingSuggestionsEnabled &&
+                        state.reviewedCoachInputs!=null &&
+                        state.coachingAudit?.structuralReview?.verifiedDraft==draft &&
+                        state.auditSourceRevision!=null &&
+                        state.auditSourceRevision==state.sourceRevision,
+                    onRequestStrengthRepair=if(permissionHost!=null)
+                        ({blockId,maximumWorkingSets->
+                            controller.reviewStrengthVolumeRepair(
+                                blockId,maximumWorkingSets)
+                        }) else null,
+                    onAcceptStrengthRepair=if(permissionHost!=null)
+                        ({controller.acceptStrengthVolumeRepair(true)}) else null
                 )
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)

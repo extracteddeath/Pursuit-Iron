@@ -265,7 +265,7 @@ export function WorkoutMachineVariantControl({
     return _jsxs('div',{className:'wpb-machine-switch',
         'data-noswipe':true,children:[
         _jsxs(UiAction,{type:'button',ref:trigger,
-            className:'wpb-machine-switch-trigger wpb-workout-tool',
+            className:'wpb-machine-switch-trigger',
              title:`Choose physical machine · ${selected.label}`,
             'aria-label':`Machine for ${EX_BY_ID[exerciseId]?.name||'exercise'}: ${selected.label}. Choose or add machine`,
             'aria-haspopup':'dialog','aria-expanded':open,

@@ -2293,10 +2293,38 @@ object StarterExerciseTranche {
             "Spanish squats count full repetitions using an athlete-confirmed stable support band and anchor. The band provides positioning/support, NOT verified added resistance; no fabricated load or band-rating progression is permitted.",
             direct(TrainingMuscle.QUADS),
             indirect(TrainingMuscle.GLUTES,"0.25"))
+    ) + listOf(
+        // Exact current-web assisted machine IDs, one logical training
+        // history per grip/movement. Counterweight is NOT external lifted
+        // mass: a larger number provides MORE help. Each actual requires
+        // the same gym's confirmed selectable station setting.
+        entry("assisted-dip","horizontal_press","assisted-counterweight-dip",
+            ComposerPattern.HORIZONTAL_PRESS,ComposerRole.SECONDARY,press,
+            "assisted-pullup-dip-counterweight",LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            setOf("assisted-pullup-dip"),8..12,
+            "Assisted chest dip uses the actual selected counterweight in the verified assisted dip machine. More counterweight means an easier movement; no ordinary higher-weight strength increment, bodyweight-only alias or other station history may transfer.",
+            direct(TrainingMuscle.CHEST),
+            indirect(TrainingMuscle.TRICEPS,"0.5"),
+            indirect(TrainingMuscle.FRONT_DELTS,"0.25")),
+        entry("assisted-chinup","vertical_pull","assisted-counterweight-chinup",
+            ComposerPattern.VERTICAL_PULL,ComposerRole.SECONDARY,pull,
+            "assisted-pullup-dip-counterweight",LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            setOf("assisted-pullup-dip"),8..12,
+            "Assisted chin-ups use their own recorded counterweight and grip identity, not weighted chin-up or assisted pull-up load history. Increasing assistance is not increased strength.",
+            direct(TrainingMuscle.LATS),
+            indirect(TrainingMuscle.BICEPS,"0.5")),
+        entry("assisted-pullup","vertical_pull","assisted-counterweight-pullup",
+            ComposerPattern.VERTICAL_PULL,ComposerRole.SECONDARY,pull,
+            "assisted-pullup-dip-counterweight",LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            setOf("assisted-pullup-dip"),8..12,
+            "Assisted pull-up uses a confirmed machine counterweight with independent station and exercise history. More counterweight is easier, and may never be treated as a conventional earned load increase.",
+            direct(TrainingMuscle.LATS),
+            indirect(TrainingMuscle.BICEPS,"0.5"),
+            indirect(TrainingMuscle.TRAPS,"0.25"))
     )
 
     init {
-        require(definitions.size==362)
+        require(definitions.size==365)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

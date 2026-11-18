@@ -601,7 +601,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     review.prescription?.sessions?.forEach {session ->
                         Text("Day ${session.dayIndex+1} · estimated ${session.estimatedMinutes ?: "?"} min",
                             style=MaterialTheme.typography.titleSmall)
-                        session.exercises.forEach {exercise ->
+                        session.exercises.forEachIndexed {exerciseIndex,exercise ->
                             val working=exercise.sets.filter {
                                 it.type==DraftSetType.WORKING
                             }
@@ -617,8 +617,12 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             if(state.includeMyoFinisher && state.canSaveDraft &&
                                 myoChoice?.dayIndex==session.dayIndex &&
                                 myoChoice?.exerciseId==exercise.exerciseId &&
-                                working.isNotEmpty()) {
-                                Text("Final working set · Myo-reps: up to 4 × 4 reps · 20 s rests",
+                                myoChoice?.exerciseIndex==exerciseIndex &&
+                                myoChoice?.setIndex==exercise.sets.indexOfLast {
+                                    it.type==DraftSetType.WORKING
+                                } &&
+                                myoChoice?.setKey==working.lastOrNull()?.stableSetKey) {
+                                Text("Final set ${working.size} of ${working.size} · Myo-reps: up to 4 × 4 reps · 20 s rests",
                                     style=MaterialTheme.typography.labelMedium,
                                     color=MaterialTheme.colorScheme.primary)
                                 Text("Stop early at 3 reps or if form declines. Log each mini-set separately.",

@@ -1236,6 +1236,26 @@ assert.match(firstConversion,/CustomCycleCoachAuditDomain\.review\(next,setup,cu
 assert.match(firstUi,/includeMyoFinisher:Boolean=false/);
 assert.match(firstUi,/fun chooseMyoFinisher\(enabled:Boolean\)/);
 assert.match(firstUi,/Optional myo-reps finisher/);
+assert.match(firstUi,/if\(review\.prescription==null\) scheduled\.sessions\.forEach/);
+// An opted-in generated technique must be visible at its actual reviewed
+// final working set, not only in an unrelated exercise-wide opt-in section.
+// No marker for an unreviewed cycle or for any other exercise/day.
+const myoSetStart=firstUi.indexOf('review.prescription?.sessions?.forEach {session ->');
+const myoSetMarker=firstUi.indexOf('Final set ${working.size} of ${working.size} · Myo-reps: up to 4 × 4 reps');
+const myoOptInPanel=firstUi.indexOf('if(myoChoice!=null && state.savedProgramId==null)');
+assert.ok(myoSetStart>=0 && myoSetMarker>myoSetStart &&
+  myoSetMarker<myoOptInPanel,'Final-set technique must be inside prescribed set review');
+for(const clause of [
+  'state.includeMyoFinisher && state.canSaveDraft',
+  'myoChoice?.dayIndex==session.dayIndex',
+  'myoChoice?.exerciseId==exercise.exerciseId',
+  'myoChoice?.exerciseIndex==exerciseIndex',
+  'myoChoice?.setIndex==exercise.sets.indexOfLast',
+  'myoChoice?.setKey==working.lastOrNull()?.stableSetKey',
+  'Log each mini-set separately.'
+])assert.ok(firstUi.slice(myoSetStart,myoSetMarker+600).includes(clause),
+  'Myo final-set marker must be exact, opt-in and source reviewed: '+clause);
+
 assert.match(firstUi,/includeMyoFinisher=before\.includeMyoFinisher/);
 assert.match(firstHost,/includeMyoFinisher=seed\.includeMyoFinisher/);
 assert.match(firstHost,/includeMyoFinisher=includeMyoFinisher/);

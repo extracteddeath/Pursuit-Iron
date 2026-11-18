@@ -1208,8 +1208,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     it.id==infoMachine
                 }?.label ?: "Choose or add machine",
                 onChooseMachine=if(!infoWarmupsOnly && infoOptions.canChangeStation)
-                    ({ 
-                        selectedKey=first.setKey
+                    ({
+                        // The Info action is not a Focus navigation request.
+                        // Keep the currently edited set and its unsaved fields.
                         infoExerciseId=null
                         openPhysicalMachineFor=exerciseId
                     }) else null,

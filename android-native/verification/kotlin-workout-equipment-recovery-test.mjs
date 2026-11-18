@@ -43,6 +43,13 @@ assert.match(generated,/onSwapExercise=if\(!infoWarmupsOnly && infoOptions\.canR
 assert.match(generated,/unavailableReason=if\(!infoWarmupsOnly/);
 assert.match(generated,/openPhysicalMachineFor=exerciseId/);
 assert.match(generated,/reviewSwap\(exerciseId\)/);
+// Opening a physical station is not an instruction to abandon the user's
+// edited working set (or navigate back to the first warm-up).
+const generatedMachineInfo=generated.slice(
+  generated.indexOf('onChooseMachine=if(!infoWarmupsOnly'),
+  generated.indexOf('onSwapExercise=if(!infoWarmupsOnly'));
+assert.ok(generatedMachineInfo.includes('openPhysicalMachineFor=exerciseId'));
+assert.doesNotMatch(generatedMachineInfo,/selectedKey=|controller\.record\(/);
 assert.match(generated,/openPhysicalMachineFor==selected\.target\.exerciseId/);
 assert.match(generated,/onExternalOpenConsumed=\{openPhysicalMachineFor=null\}/);
 assert.match(generated,/host\.reviewComposerWorkoutSwapChoices\(workoutId,exerciseId\)/);

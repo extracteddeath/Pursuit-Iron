@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+
+const read = file => readFileSync(new URL('../'+file,import.meta.url),'utf8');
+const gym = read('modules/gym-machine-variants.js');
+const loader = read('modules/gym-load-fields.js');
+const session = read('modules/workout-session-controls.js');
+const program = read('modules/program-exercise-options.js');
+const app = read('modules/App.js');
+const runtime = read('modules/workout-machine-runtime.js');
+
+// The original A/B creation, gym default and workout set switching remain the
+// only owners. Discoverability must never redefine progression or merge stacks.
+assert.match(gym,/open:true,children:/);
+assert.match(gym,/Machine A\/B · Add physical machines/);
+assert.match(gym,/No Machine A\/B alternatives saved in this gym yet/);
+assert.match(gym,/No physical variants for this exercise/);
+assert.match(gym,/setDefaultMachineVariant\(/);
+assert.match(gym,/addMachineVariant\(/);
+assert.match(loader,/GymMachineVariantFields,\{gym,onChange\}/);
+assert.match(program,/isMachineLike\(exercise\.equip\)/);
+assert.match(program,/Machine A\/B is selected during a workout/);
+assert.match(program,/Settings → Your gyms/);
+assert.match(session,/const isMachine=isMachineLike\(EX_BY_ID\[exerciseId\]\?\.equip\)/);
+assert.match(session,/if\(!isMachine\)return null/);
+assert.match(session,/!gym && _jsx\('p'/);
+assert.match(session,/wpb-machine-switch-trigger/);
+assert.match(session,/wpb-machine-switch-sheet/);
+assert.match(session,/onClick:\(\)=>\{setOpen\(true\);setMessage\(''\);\}/);
+assert.match(session,/onClick:\(\)=>choose\(machine\.id\)/);
+assert.match(session,/Add .*& use now/);
+assert.match(session,/onCreate\(label,makeDefault\)/);
+assert.match(session,/onSwap\(\)/);
+assert.match(session,/createPortal\(/);
+assert.match(session,/role:'alert'/);
+assert.match(session,/Same exercise, different physical machine/);
+assert.match(app,/onSelect:id=>switchPhysicalMachine\(ei,id\)/);
+assert.match(runtime,/if\(set\.done\)return set/);
+assert.match(app,/chooseWorkoutPhysicalMachine\(row,scope\)/);
+assert.match(app,/createWorkoutPhysicalMachine\(gymProfile,row\?\.id,name,makeDefault\)/);
+assert.match(runtime,/machineInstanceId:nextId/);
+assert.match(runtime,/withGymMachineConfig/);
+assert.match(app,/lastMachine=machineId \? latestMachineSet\(history/);
+assert.doesNotMatch(gym,/setProgram\(|history\.push\(/);
+assert.doesNotMatch(session,/localStorage\.setItem\(|history\.push\(/);
+assert.doesNotMatch(program,/setProgram\(|history\.push\(/);
+console.log('PASS A/B setup and workout switching are discoverable, while program drafts, logged sets, and machine histories remain independently owned');

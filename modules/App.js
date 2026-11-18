@@ -1,4 +1,6 @@
 import { GymLoadFields } from './gym-load-fields.js';
+import { exerciseBenchLevel, exerciseAttachmentFacet, matchesVariantFacets } from './exercise-variant-browse.js';
+import { ExercisePickerSheet as VariantExercisePickerSheet, ExerciseVariantFacetFilters } from './exercise-picker-sheet.js';
 import { PlateCalcSheet } from './loading-calculator.js';
 import { HistoryEditSheet } from './history-editor.js';
 import { BackupRestorePanel } from './backup-restore-panel.js';
@@ -21,8 +23,9 @@ import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from '
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
-import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineVariantControl, selectNumericInput } from './workout-session-controls.js';
-import { latestMachineSet, machineHistory, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput } from './workout-session-controls.js';
+import { latestMachineSet, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
+import { chooseWorkoutPhysicalMachine, createWorkoutPhysicalMachine, associateLegacyWorkoutMachine, withGymMachineConfig } from './workout-machine-runtime.js';
 import { useMachineChartScope, MachineChartScopePicker } from './machine-chart-scope.js';
 import { completedSetPR } from './workout-pr.js';
 import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
@@ -83,7 +86,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1011';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1018';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -3049,6 +3052,9 @@ const SUPPORT_BLURB = "This app is built by a tiny independent team and is compl
    generic bar pushdown and Straight-Bar Pushdown), while `visual` guarantees that different setups
    never silently fall back to the same generic picture. */
 const VARIANT_PRESENTATION = {
+    // Anterior-delt press: a near-upright seat, NOT interchangeable with a chest incline press.
+    "ad-press-barbell": { key: "ad-press-bar", name: "AD Press (Barbell)", setup: "Barbell + near-upright adjustable bench", detail: "Barbell and adjustable backrest · own load history", visual: "ad-press-bar", order: 10 },
+    "ad-press-smith": { key: "ad-press-smith", name: "AD Press (Smith Machine)", setup: "Smith + near-upright adjustable bench", detail: "Smith machine and adjustable backrest · own load history", visual: "ad-press-smith", order: 20 },
     // Triceps pushdowns
     "pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40 },
     "straight-bar-pushdown": { key: "pushdown-straight", name: "Straight-Bar Pushdown", setup: "Straight bar", detail: "Straight-bar attachment", visual: "straight-bar", order: 40, preferred: true },
@@ -3060,6 +3066,7 @@ const VARIANT_PRESENTATION = {
     "underhand-pushdown": { key: "pushdown-underhand", name: "Reverse-Grip Pushdown", setup: "Underhand bar", detail: "Straight bar · underhand grip", visual: "underhand-bar", order: 70 },
     // Triceps overhead extensions
     "oh-cable-ext": { key: "ohext-rope", name: "Rope Overhead Cable Extension", setup: "Rope attachment", detail: "High cable · rope attachment", visual: "overhead-rope", order: 10 },
+    "leaning-cable-ohext": { key: "ohext-leaning", name: "Leaning Cable Overhead Triceps Extension", setup: "Cable attachment", detail: "Leaning overhead cable setup · verify actual handle", visual: "overhead-lean", order: 15 },
     "db-oh-ext": { key: "ohext-db", name: "DB Overhead Extension", setup: "Single dumbbell", detail: "Single dumbbell", visual: "overhead-dumbbell", order: 20 },
     "ez-oh-ext": { key: "ohext-ez", name: "EZ-Bar Overhead Extension", setup: "EZ curl bar", detail: "EZ curl bar", visual: "overhead-ez", order: 30 },
     "bands-tricep-ext": { key: "ohext-band", name: "Banded Overhead Tricep Extension", setup: "Resistance band", detail: "Anchored resistance band", visual: "overhead-band", order: 40 },
@@ -3091,6 +3098,7 @@ const VARIANT_PRESENTATION = {
     "prone-rear-delt-raise": { key: "rear-prone-bodyweight", name: "Prone Rear Delt Raise", setup: "Bodyweight", detail: "Prone on the floor · unloaded arms", visual: "rear-prone-bodyweight", order: 40 },
     // Chest flyes
     "db-fly": { key: "chest-db", name: "Dumbbell Fly", setup: "Dumbbells + bench", detail: "Dumbbells · flat bench", visual: "chest-db", order: 10 },
+    "bottom-half-db-fly": { key: "chest-db-bottom", name: "Bottom-Half Dumbbell Fly", setup: "Dumbbells + flat bench", detail: "Bottom-half partial ROM · separate load history", visual: "chest-db-partial", order: 12 },
     "cable-fly": { key: "chest-cable", name: "Cable Fly", setup: "Dual cable", detail: "Dual cable · standing fly", visual: "chest-cable", order: 20 },
     "pec-deck": { key: "chest-machine", name: "Pec Deck", setup: "Pec-deck machine", detail: "Seated pec-deck machine", visual: "chest-machine", order: 30 },
     // Glute kickbacks
@@ -3124,6 +3132,8 @@ function movementFamilyOptions(ex, equipSet = null, banned = []) {
 }
 function movementFamilyTitle(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "AD Press setups";
     if (family === "tri-pushdown")
         return "Attachment options";
     if (family === "tri-ohext")
@@ -3142,8 +3152,10 @@ function movementFamilyTitle(ex) {
 }
 function movementFamilyDescription(ex) {
     const family = ex && EX_FAMILY[ex.id];
+    if (family === "ad-press")
+        return "Compare barbell and Smith AD Press setups; each uses its own load and exercise history.";
     if (family === "tri-ohext")
-        return "Same overhead-extension pattern with a rope cable, dumbbell, EZ-bar, or resistance band.";
+        return "Compare leaning cable, rope cable, dumbbell, EZ-bar and band overhead extensions; do not reuse a different variant's weight.";
     if (family === "tri-pushdown")
         return "Same pushdown pattern with a different cable attachment or single-arm setup.";
     if (family === "tri-kickback")
@@ -3153,7 +3165,7 @@ function movementFamilyDescription(ex) {
     if (family === "rear-delt-fly")
         return "Compare standing, seated, chest-supported, single-arm cable, dual-cable, and machine rear-delt fly setups.";
     if (family === "chest-fly")
-        return "Compare dumbbell-and-bench, standing cable, and pec-deck chest fly setups.";
+        return "Compare full-range and bottom-half dumbbell flyes, standing cable, and pec-deck setups; use separate targets.";
     if (family === "glute-kickback")
         return "Compare an ankle-strap cable kickback with the dedicated kickback machine.";
     return "Same movement, different attachment or setup. Choose a variant to view it.";
@@ -3224,12 +3236,18 @@ function AttachmentGlyph({ ex, size = 46 }) {
             const rear = visual.startsWith("rear"), sh = rear && seated ? "M27 14l10 13M31 20L12 24M31 20l21-7" : `M32 14v18M32 20L13 23${single ? "" : "M32 20l19 3"}`;
             return _jsxs("g", { children: [_jsx("circle", { cx: rear && seated ? "25" : "32", cy: "10", r: "4", ...S }), _jsx("path", { d: sh, ...S }), _jsx("path", { d: seated ? "M24 32h17M24 32l-5 7v8M41 32l5 7v8M20 34h25M23 34v13M42 34v13" : "M32 32l-7 15M32 32l7 15", ...(seated ? faint : S) }), cable ? _jsxs("g", { children: [_jsx("rect", { x: "54", y: "33", width: "6", height: "14", rx: "2", ...faint }), _jsx("path", { d: visual === "lateral-behind" ? "M57 37L13 23M27 29l10-3" : "M57 37L13 23", ...S }), visual === "lateral-cuff" ? _jsx("rect", { x: "10", y: "20", width: "6", height: "6", rx: "2", ...S }) : _jsx("path", { d: "M10 22h6", ...S, strokeWidth: "3.4" })] }) : band ? _jsx("path", { d: "M13 23L25 47M51 23L39 47", ...S, strokeWidth: "1.8" }) : _jsx("path", { d: `M8 23h10M10 19v8M16 19v8${single ? "" : "M46 23h10M48 19v8M54 19v8"}`, ...S, strokeWidth: "2.3" })] });
         }
+        if (visual === "ad-press-bar")
+            return _jsxs("g", { children: [_jsx("path", { d: "M20 46l12-28M18 44h23", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6M10 14h44M10 10v8M54 10v8", ...S })] });
+        if (visual === "ad-press-smith")
+            return _jsxs("g", { children: [_jsx("path", { d: "M10 6v42M54 6v42M10 15h44", ...faint }), _jsx("circle", { cx: "30", cy: "12", r: "4", ...S }), _jsx("path", { d: "M20 46l12-28M18 44h23M30 16l4 16M34 32l-9 12M34 32l12 11M31 22l-10-6M31 22l13-6", ...S }), _jsx("rect", { x: "8", y: "13", width: "5", height: "5", rx: "1", ...S }), _jsx("rect", { x: "51", y: "13", width: "5", height: "5", rx: "1", ...S })] });
         if (visual === "overhead-dumbbell")
             return _jsxs("g", { children: [_jsx("path", { d: "M20 26h24", ...S, strokeWidth: "4" }), _jsx("path", { d: "M14 17v18M19 19v14M45 19v14M50 17v18", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M11 21v10M53 21v10", ...faint })] });
         if (visual === "overhead-ez" || visual === "ez-bar")
             return _jsxs("g", { children: [_jsx("path", { d: "M8 26h10l6-6 8 12 8-12 6 6h10", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M8 17v18M12 20v12M52 20v12M56 17v18", ...S })] });
         if (visual === "overhead-band")
             return _jsxs("g", { children: [_jsx("path", { d: "M22 8c-7 7-10 17-8 27 1 6 5 10 10 10 5 0 8-4 8-9V19c0-7 3-11 8-11 5 0 9 5 10 13", ...S, strokeWidth: "3.4" }), _jsx("path", { d: "M20 7h24", ...faint }), _jsx("circle", { cx: "22", cy: "8", r: "3", ...F }), _jsx("circle", { cx: "44", cy: "8", r: "3", ...F })] });
+        if (visual === "overhead-lean")
+            return _jsxs("g", { children: [_jsx("rect", { x: "5", y: "8", width: "7", height: "34", rx: "2", ...faint }), _jsx("circle", { cx: "30", cy: "11", r: "4", ...S }), _jsx("path", { d: "M30 15l10 14M40 29l-6 18M40 29l15 14M28 17l-8 8M20 25l-8-5", ...S }), _jsx("path", { d: "M9 12l11 13M42 28l-4 3", ...faint })] });
         if (visual === "overhead-rope" || cableRope)
             return _jsxs("g", { children: [_jsx("path", { d: "M13 5v42", ...faint }), _jsx("rect", { x: "8", y: "5", width: "10", height: "18", rx: "3", ...S, opacity: ".65" }), _jsx("circle", { cx: "27", cy: "10", r: "4", ...S }), _jsx("path", { d: "M18 12h5M30 13l5 8v5", ...S }), _jsx("path", { d: "M35 26v5M35 31l-9 11M35 31l9 11", ...S, strokeWidth: "3.4" }), _jsx("circle", { cx: "24", cy: "44", r: "3.4", ...F }), _jsx("circle", { cx: "46", cy: "44", r: "3.4", ...F })] });
         if (visual === "rope")
@@ -3268,6 +3286,8 @@ function AttachmentGlyph({ ex, size = 46 }) {
         if (visual === "rear-machine")
             return _jsxs("g", { children: [_jsx("path", { d: "M23 44h18M25 29h14M27 29v15M37 29v15", ...faint }), _jsx("circle", { cx: "32", cy: "10", r: "4", ...S }), _jsx("path", { d: "M32 14v15M32 19L15 21M32 19l17 2", ...S }), _jsx("path", { d: "M12 12v18M52 12v18M12 17l3 4M52 17l-3 4", ...faint }), _jsx("circle", { cx: "15", cy: "21", r: "3", ...S }), _jsx("circle", { cx: "49", cy: "21", r: "3", ...S })] });
         // Chest fly scenes.
+        if (visual === "chest-db-partial")
+            return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L20 22M35 29l15-7", ...S }), _jsx("path", { d: "M11 22h10M13 19v6M19 19v6M49 22h10M51 19v6M57 19v6", ...S, strokeWidth: "2.2" }), _jsx("path", { d: "M17 13l3 3M47 16l3-3", ...faint, strokeDasharray: "2 3" })] });
         if (visual === "chest-db")
             return _jsxs("g", { children: [_jsx("path", { d: "M9 37h46M15 37v10M49 37v10", ...faint }), _jsx("circle", { cx: "25", cy: "28", r: "4", ...S }), _jsx("path", { d: "M29 29h18M35 29L16 14M35 29l19-15", ...S }), _jsx("path", { d: "M11 14h10M13 11v6M19 11v6M49 14h10M51 11v6M57 11v6", ...S, strokeWidth: "2.2" })] });
         if (visual === "chest-cable")
@@ -3606,11 +3626,7 @@ function navPop(stack) {
 
 /* Short-ROM isolations that suit a rest-pause / myo-rep extension rather than stretched partials. */
 
-/* Compact tag for the SET ROW the technique lands on. The full cue ("Last set: lengthened partials
-   — extra reps in the stretched position past failure") is the banner; this is the two-word badge
-   that sits on the actual last working set so the lifter can see WHICH set it applies to without
-   reading the banner and counting rows. Derived from the same cue string, so the two can't disagree
-   about what's prescribed. Returns null for anything that isn't a recognised technique. */
+/* Set-row technique labels follow the engine's authored final-set cue. */
 
 /* Last-set intensity technique, periodized the way the program prescribes it: nothing until at
    least the back half of the block, then a per-exercise technique layered onto the LAST set of
@@ -8452,14 +8468,29 @@ function SessionExerciseListSheet({ data, exIdx, onJump, onMove, onSkip, onAdd, 
                                     }, "aria-label": `Reorder ${ex?.name || "exercise"}. Drag, or use arrow keys.`, className: "pressable hit", style: { ...iconBtn(), width: 44, height: 44, flexShrink: 0, cursor: "grab", touchAction: "none" }, children: _jsx(GripVertical, { size: 17 }) }), _jsxs("button", { onClick: () => { onJump(i); onClose(); }, className: "pressable", "aria-label": `Jump to ${ex?.name || "exercise"}, ${done} of ${work.length} sets done`, "aria-current": cur ? "true" : undefined, style: { flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, color: C.text }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-6", children: [_jsx("span", { className: "mono wpb-type-caption-faint", style: { fontWeight: 700, flexShrink: 0 }, children: i + 1 }), _jsx("span", { className: "wpb-s956-fontsize-15 wpb-s956-fontweight-600 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: ex?.name || "Exercise" }), linked && _jsx(Layers, { size: 11, color: C.accentInk, className: "wpb-icon-no-shrink" })] }), _jsxs("div", { style: { fontSize: 11, color: done >= work.length && work.length > 0 ? C.accentInk : C.muted, marginTop: 2 }, children: [done, "/", work.length, " sets", ex ? ` · ${PART_LABEL[ex.part]}` : ""] })] }), _jsx("button", { onClick: () => onSkip(i), "aria-label": `Skip ${ex?.name || "exercise"} today`, className: "pressable hit", style: { ...iconBtn(), width: 44, height: 44 }, children: _jsx(X, { size: 15 }) })] }, i));
                     }) }), _jsx("div", { className: "wpb-s960-padding-10px-18px-0", children: _jsxs("button", { onClick: onAdd, className: "pressable", style: { width: "100%", padding: "12px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(Plus, { size: 16 }), " Add exercise"] }) })] }) }));
 }
-function ExercisePickerSheet({ onPick, onClose, banned = [], title = "Add exercise" }) {
-    const [q, setQ] = useState("");
-    const [part, setPart] = useState("all");
-    const list = useMemo(() => {
-        const ql = q.trim().toLowerCase();
-        return EXERCISES.filter(e => (part === "all" || e.part === part) && (!ql || exMatches(e, ql))).slice(0, 100);
-    }, [q, part]);
-    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-b961-overlay-06", children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "88%", display: "flex", flexDirection: "column", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-justifycontent-space-between wpb-s956-marginbottom-8", children: [_jsx("div", { className: "wpb-s956-fontsize-18 wpb-s956-fontweight-700", children: title }), _jsx("button", { className: "pressable hit", onClick: onClose, "aria-label": "Close", style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "wpb-s960-padding-0-18px wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Search, { size: 16, color: C.faint }), _jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: `Search ${EXERCISES.length} exercises…`, autoFocus: true, style: { flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 15 } })] }), _jsx("div", { className: "wpb-hscroll wpb-b964-layout-10", children: ["all", ...PART_ORDER].map(p => (_jsx("button", { onClick: () => setPart(p), className: "pressable", style: { flexShrink: 0, padding: "6px 12px", borderRadius: 999, border: `1px solid ${part === p ? C.accent : C.border}`, background: part === p ? C.accent : C.card, color: part === p ? C.accentText : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize", whiteSpace: "nowrap" }, children: p === "all" ? "All" : PART_LABEL[p] }, p))) }), _jsxs("div", { className: "wpb-scroll wpb-b965-layout-09", children: [list.map(e => (_jsxs("button", { onClick: () => onPick(e.id), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", marginBottom: 6, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", textAlign: "left", opacity: banned.includes(e.id) ? 0.5 : 1 }, children: [_jsxs("div", { className: "wpb-layout-flex-one", children: [_jsxs("div", { className: "wpb-type-value", children: [e.name, banned.includes(e.id) ? " · banned" : ""] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, textTransform: "capitalize" }, children: [PART_LABEL[e.part], " \u00B7 ", e.type] })] }), _jsx(Plus, { size: 16, color: C.accentInk })] }, e.id))), list.length === 0 && _jsx("div", { style: { textAlign: "center", color: C.muted, fontSize: 13, padding: "30px 0" }, children: "No exercises match." })] })] }) }));
+
+function variantSearchMatches(ex, input) {
+    const terms = String(input || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return true;
+    const label = [
+        ex.id, ex.name, variantDisplayName(ex), friendlyEquipment(ex),
+        exerciseBenchLevel(ex), exerciseAttachmentFacet(ex), ex.part, ex.type
+    ].filter(Boolean).join(" ").replace(/[_-]/g, " ").toLowerCase();
+    return terms.every(term => label.includes(term)) ||
+        exMatches(ex, String(input).trim().toLowerCase());
+}
+
+
+function ExercisePickerSheet(props) {
+    return _jsx(VariantExercisePickerSheet, { ...props,
+        exercises: EXERCISES,
+        parts: PART_ORDER,
+        partLabels: PART_LABEL,
+        displayName: variantDisplayName,
+        equipmentDescription: friendlyEquipment,
+        searchable: variantSearchMatches,
+        sheetDragRef
+    });
 }
 function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, day, sessionExerciseIds = null, scopeMode = "workout" }) {
     /* The same starved-region set the ranking used, so the badge and the order tell one story: an item
@@ -8470,13 +8501,18 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
     const [pending, setPending] = useState(null); // chosen replacement id awaiting scope choice
     const [weekOpen, setWeekOpen] = useState(false);
     const [query, setQuery] = useState("");
+    const [level, setLevel] = useState("all");
+    const [attachment, setAttachment] = useState("all");
     const peers = (sessionExerciseIds || day?.exercises || []).filter(id => id !== ex.id).map(id => EX_BY_ID[id]);
     const overlaps = useMemo(() => new Map(alts.map(a => [a.id, swapOverlapNames(a, peers, program, day)])), [alts, program, day, sessionExerciseIds]);
     const samePart = (a) => a.part === ex.part || secondaryOf(a).some(([pp]) => pp === ex.part);
-    const filtered = query.trim() === "" ? alts : alts.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+    // Start from the already-ranked/verified exercise pool; facet selection
+    // never widens it to unavailable gym equipment or a different machine ID.
+    const filtered = alts.filter(a => matchesVariantFacets(a, { level, attachment })
+        && variantSearchMatches(a, query));
     const familyIds = new Set(movementFamilyOptions(ex).map(a => a.id));
-    const familyAlts = query.trim() ? [] : alts.filter(a => familyIds.has(a.id));
-    const generalAlts = familyAlts.length ? filtered.filter(a => !familyIds.has(a.id)) : filtered;
+    const familyAlts = filtered.filter(a => familyIds.has(a.id));
+    const generalAlts = filtered.filter(a => !familyIds.has(a.id));
     const choose = (id) => scopeMode === "program" ? onPick(id, "program") : setPending(id);
     return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-b961-overlay-07", children: _jsx("div", { ref: sheetDragRef, onClick: (e) => e.stopPropagation(), style: { width: "100%", height: "min(82vh, 720px)", minHeight: 0, background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 16px calc(env(safe-area-inset-bottom) + 16px)", display: "flex", flexDirection: "column", overflow: "hidden", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: pending ? (() => {
                 const nx = EX_BY_ID[pending];
@@ -8491,7 +8527,9 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
                                     color: C.text,
                                     boxSizing: "border-box"
                                 } }), query && _jsx("button", { "aria-label": "Clear replacement search", onClick: () => setQuery(""), className: "pressable hit", style: { position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 30, height: 30, borderRadius: 999,
-                                    border: "none", background: "transparent", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 14 }) })] }), _jsx("div", { style: { fontSize: 12, color: C.faint, lineHeight: 1.45, marginBottom: 10, padding: "0 2px" }, children: "Ranked for your equipment, movement role, and this program's weekly muscle coverage." }), _jsxs("div", { className: "wpb-scroll wpb-swap-results wpb-b976-swap-results", "data-swap-results": true, children: [familyAlts.length > 0 && (_jsxs("div", { className: "wpb-s960-margin-6px-0-12px", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: movementFamilyTitle(ex) }), _jsx("div", { className: "pi-t-explain", children: movementFamilyDescription(ex) }), _jsx("div", { className: "wpb-s956-display-grid wpb-s956-gap-7", children: familyAlts.map(a => (_jsxs("button", { className: "pressable", "aria-label": `Swap to ${variantDisplayName(a)}`, onClick: () => choose(a.id), style: { width: "100%", minHeight: 64, display: "grid", gridTemplateColumns: "56px minmax(0,1fr) 20px", alignItems: "center", gap: 9, padding: "7px 9px 7px 7px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, textAlign: "left", cursor: "pointer" }, children: [_jsx("span", { style: { width: 56, height: 50, display: "grid", placeItems: "center", borderRadius: 10, background: C.bg2, color: C.accentInk }, children: _jsx(AttachmentGlyph, { ex: a, size: 42 }) }), _jsxs("span", { className: "wpb-s956-minwidth-0", children: [_jsx("span", { className: "wpb-s956-display-block wpb-s960-fontsize-12-5px wpb-s956-fontweight-700 wpb-s960-lineheight-1-25", children: variantDisplayName(a) }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.faint, marginTop: 2 }, children: friendlyEquipment(a) })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-b976-swap-chevron" })] }, a.id))) })] })), program && Array.isArray(program.days) && program.days.length > 1 && (_jsxs("div", { style: { marginTop: 8, marginBottom: 4, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setWeekOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", background: C.card, border: "none", cursor: "pointer", textAlign: "left" }, children: [_jsx(Calendar, { size: 14, color: C.accentInk }), _jsx("span", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: C.text }, children: "This week's training" }), _jsxs("span", { className: "wpb-type-micro-faint", children: ["see what else hits ", PART_LABEL[ex.part]] }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { transform: weekOpen ? "rotate(180deg)" : "none", flexShrink: 0 } })] }), weekOpen && (_jsxs("div", { style: { padding: "4px 13px 12px", background: C.card }, children: [program.days.map((d, di) => {
+                                    border: "none", background: "transparent", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 14 }) })] }), _jsx(ExerciseVariantFacetFilters, { candidates: alts, level, onLevel: setLevel,
+                attachment, onAttachment: setAttachment }),
+                _jsx("div", { style: { fontSize: 12, color: C.faint, lineHeight: 1.45, marginBottom: 10, padding: "0 2px" }, children: "Ranked for your equipment, movement role, and this program's weekly muscle coverage. Attachment, incline and physical machines are not interchangeable loads." }), _jsxs("div", { className: "wpb-scroll wpb-swap-results wpb-b976-swap-results", "data-swap-results": true, children: [familyAlts.length > 0 && (_jsxs("div", { className: "wpb-s960-margin-6px-0-12px", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: movementFamilyTitle(ex) }), _jsx("div", { className: "pi-t-explain", children: movementFamilyDescription(ex) }), _jsx("div", { className: "wpb-s956-display-grid wpb-s956-gap-7", children: familyAlts.map(a => (_jsxs("button", { className: "pressable", "aria-label": `Swap to ${variantDisplayName(a)}`, onClick: () => choose(a.id), style: { width: "100%", minHeight: 64, display: "grid", gridTemplateColumns: "56px minmax(0,1fr) 20px", alignItems: "center", gap: 9, padding: "7px 9px 7px 7px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, textAlign: "left", cursor: "pointer" }, children: [_jsx("span", { style: { width: 56, height: 50, display: "grid", placeItems: "center", borderRadius: 10, background: C.bg2, color: C.accentInk }, children: _jsx(AttachmentGlyph, { ex: a, size: 42 }) }), _jsxs("span", { className: "wpb-s956-minwidth-0", children: [_jsx("span", { className: "wpb-s956-display-block wpb-s960-fontsize-12-5px wpb-s956-fontweight-700 wpb-s960-lineheight-1-25", children: variantDisplayName(a) }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.faint, marginTop: 2 }, children: friendlyEquipment(a) })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-b976-swap-chevron" })] }, a.id))) })] })), program && Array.isArray(program.days) && program.days.length > 1 && (_jsxs("div", { style: { marginTop: 8, marginBottom: 4, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }, children: [_jsxs("button", { onClick: () => setWeekOpen(o => !o), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", background: C.card, border: "none", cursor: "pointer", textAlign: "left" }, children: [_jsx(Calendar, { size: 14, color: C.accentInk }), _jsx("span", { style: { flex: 1, fontSize: 13, fontWeight: 700, color: C.text }, children: "This week's training" }), _jsxs("span", { className: "wpb-type-micro-faint", children: ["see what else hits ", PART_LABEL[ex.part]] }), _jsx(ChevronDown, { size: 15, color: C.faint, style: { transform: weekOpen ? "rotate(180deg)" : "none", flexShrink: 0 } })] }), weekOpen && (_jsxs("div", { style: { padding: "4px 13px 12px", background: C.card }, children: [program.days.map((d, di) => {
                                                 const isToday = d.id === day?.id;
                                                 return (_jsxs("div", { style: { padding: "9px 0", borderTop: di === 0 ? "none" : `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: isToday ? C.accentInk : C.muted, marginBottom: 4 }, children: [d.label, isToday ? " · today" : ""] }), _jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-4", children: d.exercises.map((id, xi) => {
                                                                 const e2 = EX_BY_ID[id];
@@ -10828,7 +10866,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
                 resolved.length>0 && _jsxs('details',{className:'wpb-injury-resolved',children:[_jsx('summary',{children:'Resolved · '+resolved.length}),resolved.map(card)]})]})]})});
 }
 
-function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourceProgram, injuryLog = [], gymEquipment = null, gymProfile = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
+function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourceProgram, injuryLog = [], gymEquipment = null, gymProfile = null, onSaveGymMachineVariant = null, day: rawDay, weekIndex, unit, perf, onExit, onFinish, onSaveRoutine, onBan, banned = [], history = [], loadMode = "rir", onEditHistory, goals = {}, onSetGoal, restAutoStart = true, restScale = 1, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup, onSetExLoadInc, onUpdateProgramExercise, onSetRest }) {
     const [sessionProgressionState, setSessionProgressionState] = useState(() => {
         try { const snap = JSON.parse(localStorage.getItem(LIVE_KEY) || 'null');
             if (snap?.programId === sourceProgram.id && snap.dayId === rawDay.id && snap.weekIndex === weekIndex
@@ -10941,7 +10979,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 gymProfile?.machineVariants?.[id]?.instances?.length>0;
             const machineId=configured ? resolveMachineVariant(gymProfile,id).id : null;
             const lastMachine=machineId ? latestMachineSet(history,{
-                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id}) : null;
+                gymId:sessionGymId,exerciseId:id,machineInstanceId:machineId,dayId:day.id,gym:gymProfile}) : null;
             const comparableWeight=lastMachine ?
                 toUnit(lastMachine.weight,lastMachine.unit||unit,unit) : null;
             const machineSets=buildSets(EX_BY_ID[id],slot,suggestions[slot],true);
@@ -11007,25 +11045,35 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         });
         return changed ? out : next;
     });
-    const switchPhysicalMachine=(ei,nextId)=>{
+    const switchPhysicalMachine=(ei,nextId,sourceGym=gymProfile)=>{
+        const scope={gym:sourceGym,sessionGymId,nextId,history,dayId:day.id,unit};
+        const check=chooseWorkoutPhysicalMachine(dataRef.current[ei],scope);
+        if(!check.ok)return check;
+        setData(rows=>rows.map((row,i)=>i!==ei?row:
+            chooseWorkoutPhysicalMachine(row,scope).row??row));
+        return {ok:true};
+    };
+    const addPhysicalMachineNow=(ei,name,makeDefault=false)=>{
         const row=dataRef.current[ei];
-        if(!row||!gymProfile||gymProfile.id!==sessionGymId)return;
-        const chosen=resolveMachineVariant(gymProfile,row.id,nextId);
-        if(chosen.active===false||chosen.missing)return;
-        const last=latestMachineSet(history,{
-            gymId:sessionGymId,exerciseId:row.id,machineInstanceId:nextId,dayId:day.id});
-        const reference=last?toUnit(last.weight,last.unit||unit,unit):null;
-        setData(rows=>rows.map((item,i)=>{
-            if(i!==ei)return item;
-            return {...item,machineInstanceId:nextId,sets:item.sets.map(set=>{
-                if(set.done)return set; // completed set retains original machine forever
-                const weight=set.warm||set.sub?'':reference==null?''
-                    :String(Math.round(reference*1000)/1000);
-                return {...set,machineInstanceId:nextId,weight,auto:false,
-                    valueOwner:'user',suggested:undefined,hint:undefined,
-                    target:{...set.target,w:weight}};
-            })};
-        }));
+        if(!gymProfile || gymProfile.id!==sessionGymId || !onSaveGymMachineVariant)
+            return {ok:false,message:'Choose your workout gym before adding a machine.'};
+        const result=createWorkoutPhysicalMachine(gymProfile,row?.id,name,makeDefault);
+        if(!result.ok)return result;
+        if(!onSaveGymMachineVariant(sessionGymId,row.id,
+            result.nextGym.machineVariants[row.id]))
+            return {ok:false,message:'Could not save this machine at the active gym.'};
+        return switchPhysicalMachine(ei,result.id,result.nextGym);
+    };
+    const attachOldMachineHistoryNow=(ei,machineId)=>{
+        const row=dataRef.current[ei];
+        if(!gymProfile || gymProfile.id!==sessionGymId || !onSaveGymMachineVariant)
+            return {ok:false,message:'Choose the workout gym to assign earlier history.'};
+        const result=associateLegacyWorkoutMachine(gymProfile,row?.id,machineId);
+        if(!result.ok)return result;
+        if(!onSaveGymMachineVariant(sessionGymId,row.id,
+            result.nextGym.machineVariants[row.id]))
+            return {ok:false,message:'Could not save the original machine history assignment.'};
+        return {ok:true};
     };
     const [exIdx, setExIdx] = useState(() => Math.max(0, Math.min(data.length - 1, Number.isInteger(liveMatch?.exIdx) ? liveMatch.exIdx : 0)));
     const workoutRoot = useRef(null);
@@ -11747,7 +11795,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             :data[ei].id;
         const previousMachineSets=machineId && sessionGymId ?
             machineHistory(history,{gymId:sessionGymId,exerciseId:data[ei].id,
-                machineInstanceId:machineId,dayId:day.id}) : null;
+                machineInstanceId:machineId,dayId:day.id,gym:gymProfile}) : null;
         // A machine switch is not an overall PR. Each stack must earn its own.
         const previousMachineBest=previousMachineSets?.length
             ? Math.max(...previousMachineSets.map(row=>
@@ -12414,11 +12462,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                 const cell = computeCell(program, day, e.id, e.slot, weekIndex);
                 const isPrimary = e.slot === day.primaryIndex;
                 const wTotal = workOnly(e).length;
-                /* Row index of the LAST working set — the one the last-set technique actually applies to.
-                   The technique is prescribed per the block (cell.tech) but lands on a single set; without
-                   this the lifter saw a top banner and had to count rows to know where it applied. Excludes
-                   warm-ups and sub-sets (drop/myo), and the technique only makes sense when the lift has real
-                   working sets and isn't itself already a myo/drop extension. */
+                /* Select the last full working set, excluding warm-ups and mini-sets. */
                 const techTag = e.injuryAdjusted ? null : techSetTag(cell.tech);
                 const lastWorkRow = (() => {
                     if (!techTag)
@@ -12474,11 +12518,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             if (!moves)
                                 return null;
                             return (_jsxs("div", { "data-noswipe": true, className: "wpb-workout-card wpb-warmup-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-8", children: [_jsx(Flame, { size: 15, color: C.accentInk }), _jsx("span", { className: "wpb-layout-strong-15", children: "Warm-up & mobility" }), _jsx("button", { onClick: () => { setShowWarmup(false); onSetWarmupCard?.(false); setSnack({ msg: "Warm-up card hidden — Settings can bring it back", undo: () => { onSetWarmupCard?.(true); setSnack(null); } }); }, "aria-label": "Hide the warm-up card from now on", className: "pressable hit wpb-warmup-hide", children: "Hide" })] }), moves.map((m, i) => (_jsxs("div", { className: "wpb-warmup-step", children: [_jsx("span", { className: "wpb-warmup-number", children: i + 1 }), _jsx("span", { className: "wpb-warmup-instruction", children: m })] }, i))), _jsx("button", { onClick: () => setShowWarmup(false), className: "pressable wpb-warmup-finish", children: "Warmed up \u2014 let\u2019s train" })] }));
-                        })(), _jsx(WorkoutMachineVariantControl, {
-                            gym:gymProfile?.id===sessionGymId ? gymProfile : null,
-                            exerciseId:e.id,selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
-                            dayId:day.id,history,unit,onSelect:id=>switchPhysicalMachine(ei,id)
-                        }), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
+                        })(), _jsxs("div", { className: "wpb-exercise-heading wpb-s956-display-flex wpb-s956-alignitems-flex-start wpb-s956-gap-8", children: [_jsxs("div", { className: "wpb-layout-grow-min", children: [_jsxs("div", { className: "wpb-exercise-title-row", children: [_jsx("div", { className: "wpb-exercise-name wpb-s960-fontsize-22px wpb-s960-fontweight-780 wpb-s960-letterspacing-neg-0-55px wpb-s960-lineheight-1-16 wpb-s960-overflowwrap-anywhere", children: ex.name }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexdirection-column wpb-s956-alignitems-flex-end wpb-s956-gap-6 wpb-s956-flexshrink-0", children: [_jsxs("div", { className: "wpb-exercise-head-actions wpb-s956-display-flex wpb-s956-gap-8", children: [_jsx("button", { "aria-label": `Exercise info for ${ex.name}`, onClick: event => { infoOpenerRef.current = event.currentTarget; setInfo(true); }, title: "Exercise info", className: "pressable hit wpb-exercise-head-action", children: _jsx(Info, { size: 16 }) }), _jsx("button", { "aria-label": `History for ${ex.name}`, onClick: () => setHistSheet(true), title: "Exercise history", className: "pressable hit wpb-exercise-head-action", children: _jsx(History, { size: 16 }) }), confirmRemoveEx === ei ? (_jsxs("button", { onClick: () => removeExerciseFromSession(ei), title: "Tap again to skip for today", "aria-label": "Confirm skip exercise for today", className: "pressable hit wpb-exercise-head-action wpb-confirm-skip", children: [_jsx(SkipForward, { size: 14 }), " Skip?"] })) : (_jsx("button", { "aria-label": "Skip this exercise for today", onClick: () => setConfirmRemoveEx(ei), title: "Skip this exercise for today (stays in your program)", className: "pressable hit wpb-exercise-head-action", children: _jsx(SkipForward, { size: 15 }) }))] })] })] }), _jsx("div", { className: "wpb-exercise-tags", "data-exercise-tags": true,
     children: exerciseSessionTags(ex, e, day, cell).map(tag => _jsx("span", { children: tag }, tag)) }), _jsxs("div", { className: "wpb-exercise-meta", children: [e.added && !focus && _jsx("button", { type: "button", className: "wpb-session-choice wpb-adjust-sets pressable", "aria-label": "Adjust working sets for " + ex.name, onClick: () => setSetCountEdit({ index: ei, exerciseId: e.id, value: wTotal }), children: `${wTotal} sets · Adjust` }), _jsx("div", { className: "wpb-exercise-set-context", children: focus ? PART_LABEL[ex.part] : `${(e.superset || (ei > 0 && data[ei - 1].superset)) ? "Round" : "Set"} ${Math.min(wDone + 1, wTotal)} of ${wTotal} · ${PART_LABEL[ex.part]}` }), !program.config?.percentScheme && (() => {
                                             // name the progression style for EVERY exercise (not just dynamic double), so it's
                                             // always clear how this lift advances week to week.
@@ -12557,12 +12597,11 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 { k: "warm", active: e.sets.some(s => s.warm), label: e.sets.some(s => s.warm) ? "Remove warm-up" : "Warm-up", icon: Flame, on: () => toggleWarmups(ei) },
                                 { k: "ss", active: !!e.superset, hidden: !!program.config?.noSupersets, label: e.superset ? "Unlink superset" : "Superset", icon: Layers, on: () => e.superset ? toggleSuperset(ei) : setSupersetPick(true) },
                                 { k: "plateau", hidden: !workoutPlateaus[e.id], label: "Plateau options", icon: TrendingUp, on: () => setPlateauOpen(true) },
-                                { k: "swap", label: "Swap", icon: Repeat, on: () => setSwap(true) },
                                 { k: "session-note", hasNote: !!e.note, label: e.note ? "Edit session note" : "Session note", icon: Pencil, on: () => setSessionNotesOpen(true) },
                                 { k: "progression", hidden: !focus && !program.config?.percentScheme, label: "Progression", icon: TrendingUp, on: () => setProgressionEdit(true) },
                                 ...(exNotes[e.id] || exSetup[e.id] ? [] : [{ k: "pin", label: "Pin a note", icon: Pin, on: () => setPinEdit(true) }]),
                                 ...(barFor(ex) ? [{ k: "plates", label: "Plates", icon: Dumbbell, on: () => setCalc({ bar: barFor(ex), weight: plateSet?.weight || "" }) }] : []),
-                            ].filter(c => !c.hidden).map(c => (_jsx("button", { type: "button", onClick: c.on, className: "pressable wpb-workout-tool", "aria-label": c.label, title: c.label, "aria-pressed": c.active === undefined ? undefined : !!c.active, "data-selected": c.active ? "true" : undefined, "data-has-note": c.hasNote ? "true" : undefined, children: _jsx(c.icon, { size: 19, "aria-hidden": true }) }, c.k))) }), pinEdit ? _jsx(PinnedNoteEditor, { ex, note: exNotes[e.id], setup: exSetup[e.id], onNote: onSetExNote,
+                            ].filter(c => !c.hidden).map(c => (c.element || _jsx("button", { type: "button", onClick: c.on, className: "pressable wpb-workout-tool", "aria-label": c.label, title: c.label, "aria-pressed": c.active === undefined ? undefined : !!c.active, "data-selected": c.active ? "true" : undefined, "data-has-note": c.hasNote ? "true" : undefined, children: _jsx(c.icon, { size: 19, "aria-hidden": true }) }, c.k))) }), pinEdit ? _jsx(PinnedNoteEditor, { ex, note: exNotes[e.id], setup: exSetup[e.id], onNote: onSetExNote,
                                 onSetup: onSetExSetup, onClose: () => setPinEdit(false) }, e.id) : (exNotes[e.id] || exSetup[e.id]) ? (_jsxs("button", { className: "pressable wpb-workout-pinned-note", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${ex.name}`, children: [_jsx(Pin, { size: 12, color: C.accentInk, className: "wpb-icon-no-shrink" }), _jsxs("div", { className: "wpb-layout-grow-min", children: [_jsx(SetupFieldsDisplay, { ex: ex, value: exSetup[e.id] }), exNotes[e.id] && _jsx("div", { className: "wpb-workout-pinned-note-text", children: exNotes[e.id] })] }), _jsx(Pencil, { size: 11, color: C.faint, className: "wpb-icon-no-shrink" })] })) : null, !focus && (() => {
                             // Per-set DDP: when each set has its own weight, the session-level banner would be
                             // misleading (it shows only the first set's weight). Show a different banner instead.
@@ -12934,7 +12973,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                         style: { fontSize: 11, fontWeight: isActive && !s.done ? 700 : 600,
                                                             color: isActive && !s.done ? C.accentInk : C.muted, marginTop: 1 },
                                                         children: effortLabel(s.target.rir, loadMode)
-                                                    }), si === lastWorkRow && !s.done && techTag && (_jsx("div", { className: "wpb-set-tech-tag", children: techTag })), tunedApplied && isActive && (_jsx("div", { className: "wpb-type-micro-faint", style: { paddingTop: 2 }, children: "from last set" }))] }));
+                                                    }), tunedApplied && isActive && (_jsx("div", { className: "wpb-type-micro-faint", style: { paddingTop: 2 }, children: "from last set" }))] }));
                                                 })() }), _jsxs("div", { className: "wpb-b965-layout-19", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-5", children: [!s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, -1), label: "weight down", glyph: "\u2212" }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "next", "aria-label": "weight", onKeyDown: event => workoutNumericEnter(event, "reps"), value: s.weight, placeholder: (s.target?.w === "0" || s.target?.w === 0) ? "BW" : "—", readOnly: s.done, onChange: ev => editWeight(ei, si, ev.target.value), className: "mono wpb-num-input", style: { flex: 1, minWidth: 0, padding: "8px 4px", textAlign: "center", borderRadius: 8, border: s.hint && !s.done ? `1px solid ${s.hint === "up" ? C.accent : C.warn}` : (s.warm || s.sub ? `1px dashed ${C.border}` : `1px solid ${C.border}`), background: C.bg2, color: C.text, fontSize: narrowSet ? Math.max(10, 15 - Math.max(0, String(s.weight).length - 5) * 1.5) : 15, fontWeight: 600 } }), !s.done && _jsx(StepButton, { onStep: () => bumpWeight(ei, si, 1), label: "weight up", glyph: "+" })] }), (() => {
                                                         /* Plate maths sits under the WEIGHT BOX again. v485 moved it into a strip beneath
                                                            the whole row, which detached it from the number it describes — it is an
@@ -12967,7 +13006,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                 })] }), _jsxs("div", { className: "wpb-set-actions wpb-b965-layout-20", children: [_jsx("button", { onClick: () => toggleDone(ei, si), "aria-label": s.done ? "Mark set not done" : "Mark set done", "aria-pressed": s.done, "data-haptic-manual": "1", className: "pressable wpb-set-complete", style: {
                                                     width: 30, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, cursor: "pointer", flexShrink: 0,
                                                     background: s.done ? C.cardHi : "transparent", color: s.done ? C.muted : C.faint, display: "flex", alignItems: "center", justifyContent: "center"
-                                                }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) })] })] }), (() => {
+                                                }, children: _jsx(Check, { size: 17, strokeWidth: 3 }) })] })] }), si === lastWorkRow && techTag && (_jsxs("details", {
+                                        "data-last-set-technique": true, className: "wpb-last-set-technique",
+                                        children: [_jsxs("summary", { children: [_jsx(Zap, { size: 13, "aria-hidden": true }),
+                                            _jsx("span", { className: "wpb-set-tech-tag", children: `Last set · ${/partials/i.test(techTag) ? "Lengthened partials" : techTag.replace(/^\+\s*/, "")}` }),
+                                            _jsx(ChevronDown, { size: 13, "aria-hidden": true })] }),
+                                            _jsx("div", { className: "wpb-last-set-technique-help", children: techExplain(cell.tech) })]
+                                    })), (() => {
                                         // Only the latest unanswered set or a deliberately reopened set shows a picker.
                                         // The compact edit control stays directly under logged reps in the control grid.
                                         const loggable = s.done && !s.warm && !s.sub && parseFloat(s.weight) > 0;
@@ -13127,7 +13172,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                             if (!t)
                                                 return null;
                                             const summary = t.load.reason || t.decided.styleWhy || `This lift is using ${t.decided.style} progression for today's ${goalForDay(program, day)} session.`;
-                                            return (_jsxs("section", { "aria-label": `Why ${ex.name} has this prescription`, style: { marginBottom: 12, padding: "12px 13px", borderRadius: 14, background: C.accentDim, border: `1px solid ${C.accent}33` }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-7 wpb-s956-marginbottom-6", children: [_jsx(HelpCircle, { size: 15, color: C.accentInk }), _jsx("div", { className: "wpb-exinfo-why-title", children: "Why this?" })] }), _jsx("div", { className: "wpb-exinfo-why-copy", children: summary }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-6 wpb-s960-margintop-9px", children: [_jsxs("span", { className: "mono wpb-exinfo-why-chip", children: [t.decided.sets, " sets"] }), _jsxs("span", { className: "mono wpb-exinfo-why-chip", children: [t.decided.repRange[0], "\u2013", t.decided.repRange[1], " reps"] }), _jsxs("span", { className: "mono wpb-exinfo-why-chip", children: [t.decided.targetRIR, " RIR"] })] }), _jsxs("details", { className: "wpb-s956-margintop-8", children: [_jsx("summary", { className: "wpb-exinfo-why-disclosure", children: "How it was chosen" }), _jsxs("div", { className: "wpb-s956-display-grid wpb-s956-gap-5 wpb-s960-margintop-7px wpb-s960-fontsize-12px wpb-s960-lineheight-1-4", children: [_jsxs("div", { children: [_jsx("span", { className: "wpb-exinfo-muted", children: "Progression:" }), " ", _jsx("strong", { children: t.decided.style })] }), t.read.lastPerformance && _jsxs("div", { children: [_jsx("span", { className: "wpb-exinfo-muted", children: "Last time:" }), " ", _jsxs("span", { className: "mono", children: [t.read.lastPerformance.weight, " ", unit, " \u00D7 ", t.read.lastPerformance.reps] })] }), t.read.readiness && _jsxs("div", { children: [_jsx("span", { className: "wpb-exinfo-muted", children: "Readiness:" }), " ", Math.round(t.read.readiness.value), " \u00B7 ", t.read.readiness.band] }), t.decided.styleWhy && t.decided.styleWhy !== summary && _jsx("div", { className: "wpb-exinfo-muted", children: t.decided.styleWhy })] })] })] }));
+                                            return (_jsxs("section", { "aria-label": `Why ${ex.name} has this prescription`, style: { marginBottom: 12, padding: "12px 13px", borderRadius: 14, background: C.accentDim, border: `1px solid ${C.accent}33` }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-7 wpb-s956-marginbottom-6", children: [_jsx(HelpCircle, { size: 15, color: C.accentInk }), _jsx("div", { className: "wpb-exinfo-why-title", children: "Why this?" })] }), _jsx("div", { className: "wpb-exinfo-why-copy", children: summary }), _jsxs("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-6 wpb-s960-margintop-9px", children: [_jsxs("span", { className: "mono wpb-exinfo-why-chip", children: [wTotal, " sets"] }), _jsxs("span", { className: "mono wpb-exinfo-why-chip", children: [t.decided.repRange[0], "\u2013", t.decided.repRange[1], " reps"] }), _jsxs("span", { className: "mono wpb-exinfo-why-chip", children: [t.decided.targetRIR, " RIR"] })] }), _jsxs("details", { className: "wpb-s956-margintop-8", children: [_jsx("summary", { className: "wpb-exinfo-why-disclosure", children: "How it was chosen" }), _jsxs("div", { className: "wpb-s956-display-grid wpb-s956-gap-5 wpb-s960-margintop-7px wpb-s960-fontsize-12px wpb-s960-lineheight-1-4", children: [_jsxs("div", { children: [_jsx("span", { className: "wpb-exinfo-muted", children: "Progression:" }), " ", _jsx("strong", { children: t.decided.style })] }), t.read.lastPerformance && _jsxs("div", { children: [_jsx("span", { className: "wpb-exinfo-muted", children: "Last time:" }), " ", _jsxs("span", { className: "mono", children: [t.read.lastPerformance.weight, " ", unit, " \u00D7 ", t.read.lastPerformance.reps] })] }), t.read.readiness && _jsxs("div", { children: [_jsx("span", { className: "wpb-exinfo-muted", children: "Readiness:" }), " ", Math.round(t.read.readiness.value), " \u00B7 ", t.read.readiness.band] }), t.decided.styleWhy && t.decided.styleWhy !== summary && _jsx("div", { className: "wpb-exinfo-muted", children: t.decided.styleWhy })] })] })] }));
                                         })(), (() => {
                                             // effectiveRest with the override deliberately ignored (0) — this is the AUTO
                                             // number the control offers to fall back to, and it has to be the rest that will
@@ -13198,7 +13243,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                             const active = v === curInc;
                                                             return (_jsx("button", { className: "pressable wpb-exinfo-weight-choice", "aria-pressed": active, onClick: () => onSetExLoadInc(ex.id, v, unit), children: v === 0 ? `Auto (${defStep}${unit})` : `+${v}${unit}` }, v));
                                                         }) }), _jsxs("div", { className: "wpb-exinfo-helper", children: ["Sets how much each ", _jsx("span", { className: "mono", children: "+ / \u2212" }), " tap and weekly bump moves the load for this exercise."] })] }));
-                                        })(), (() => {
+                                        })(), _jsx(WorkoutMachineInfoActions, {
+                                            gym:gymProfile?.id===sessionGymId ? gymProfile : null,
+                                            exerciseId:e.id,exerciseName:ex.name,
+                                            selectedId:e.machineInstanceId??LEGACY_MACHINE_ID,
+                                            dayId:day.id,history,unit,
+                                            onSelect:id=>switchPhysicalMachine(ei,id),
+                                            onCreate:(name,makeDefault)=>addPhysicalMachineNow(ei,name,makeDefault),
+                                            onAssignLegacy:id=>attachOldMachineHistoryNow(ei,id),
+                                            onSwap:()=>{setInfo(false);setSwap(true);}
+                                        }), (() => {
                                             const goal = goals[ex.id];
                                             const bestW = liftBests(history, unit)[ex.id]?.w || 0;
                                             if (!bestW && perf?.[ex.id]?.weight)
@@ -13613,17 +13667,25 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                     });
                     if (!t)
                         return null;
+                    // Active workout edits own the number of working sets.
+                    // Original phase prescription remains available below.
+                    const liveRow=data.find(row=>row.slot===why.slot && row.id===why.ex.id);
+                    const liveWorkSetCount=liveRow ? workOnly(liveRow).length : t.decided.sets;
                     const Row = ({ k, v, dim }) => (_jsxs("div", { style: { display: "flex", gap: 8, padding: "5px 0", borderBottom: `1px solid ${C.border}44`, fontSize: 13 }, children: [_jsx("div", { style: { color: C.muted, flex: "0 0 44%" }, children: k }), _jsx("div", { className: "mono", style: { flex: 1, minWidth: 0, overflowWrap: "anywhere", color: dim ? C.muted : C.text, fontWeight: dim ? 500 : 700 }, children: v })] }));
                     const Head = ({ children }) => (_jsx("div", { style: { ...eyebrowAccent(), margin: "16px 0 4px" }, children: children }));
                     const none = _jsx("span", { style: { color: C.muted, fontWeight: 500 }, children: "nothing logged yet" });
-                    return (_jsx("div", { onClick: () => setWhy(null), className: "wpb-backdrop wpb-b961-overlay-01", children: _jsxs("div", { ref: sheetDragRef, onClick: ev => ev.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderRadius: "20px 20px 0 0", padding: "18px 18px calc(env(safe-area-inset-bottom) + 18px)", border: `1px solid ${C.border}`, animation: "sheetUp .25s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-2", children: [_jsx(HelpCircle, { size: 17, color: C.accentInk }), _jsx("div", { "data-dialog-title": true, className: "wpb-b962-layout-12", children: "Why this prescription?" }), _jsx("button", { "aria-label": "Close", onClick: () => setWhy(null), className: "pressable hit wpb-close-quiet", children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 2 }, children: [t.lift.name, " \u00B7 ", t.context.day.label, " \u00B7 week ", t.context.weekIndex, " of ", t.context.weeksTotal] }), _jsxs("div", { "data-prescription-summary": true, style: { background: C.card, borderRadius: 12, padding: 14, marginTop: 14 }, children: [_jsx("div", { className: "wpb-eya8", children: "Planned targets" }), _jsxs("div", { className: "wpb-s960-fontsize-19px wpb-s956-fontweight-700", children: [t.decided.sets, " sets \u00D7 ", t.decided.repRange[0], "\u2013", t.decided.repRange[1], " reps"] }), _jsxs("div", { className: "wpb-s956-fontsize-15 wpb-s956-fontweight-700 wpb-s956-margintop-6", children: [t.load.weight != null ? `${t.load.weight} ${unit}` : "Load not yet set", " \u00B7 ", t.decided.targetRIR, " RIR"] }), _jsx("div", { className: "wpb-type-body-muted", style: { marginTop: 8 }, children: "RIR means reps left before failure." }), t.load.reason && _jsx("div", { className: "wpb-s956-fontsize-15 wpb-s957-lineheight-1-5 wpb-s960-margintop-10px", children: t.load.reason })] }), _jsx("div", { className: "wpb-type-body-muted", style: { margin: "10px 0" }, children: "These are the starting targets. In-session edits and adjustments appear in your set rows." }), _jsxs("details", { children: [_jsx("summary", { style: { color: C.accentInk, cursor: "pointer", fontSize: 15, fontWeight: 700, padding: "12px 0" }, children: "Progression and evidence" }), _jsx(Head, { children: "What it prescribed" }), _jsx(Row, { k: "Load", v: t.load.weight != null ? `${t.load.weight} ${unit}${t.load.delta ? ` (${t.load.delta > 0 ? "+" : ""}${t.load.delta})` : ""}` : "—" }), _jsx(Row, { k: "Reason", v: t.load.reason || "—", dim: true }), _jsx(Row, { k: "Reps", v: `${t.decided.repRange[0]}-${t.decided.repRange[1]}` }), _jsx(Row, { k: "Sets", v: t.decided.sets }), _jsx(Row, { k: "Target RIR", v: t.decided.targetRIR }), t.load.snappedToRack && _jsx(Row, { k: "Rack", v: "rounded to a weight this gym actually has", dim: true }), t.load.cappedByGym && _jsx(Row, { k: "Gym ceiling", v: `${t.load.gymCeiling} ${unit} — held, build reps instead`, dim: true }), t.load.increment != null && _jsx(Row, { k: "Smallest jump here", v: `${t.load.increment} ${unit}`, dim: true }), _jsx(Head, { children: "How it chose the progression" }), _jsx(Row, { k: "Style", v: t.decided.style }), _jsx(Row, { k: "Chosen by", v: t.decided.styleSource, dim: true }), _jsx(Row, { k: "Because", v: t.decided.styleWhy, dim: true }), t.decided.override && _jsx(Row, { k: "Override", v: `${t.decided.override.kind} — ${t.decided.override.reason}`, dim: true }), t.decided.override && t.decided.override.clearsWhen && _jsx(Row, { k: "Clears when", v: t.decided.override.clearsWhen, dim: true }), _jsx(Head, { children: "What it read about you" }), _jsx(Row, { k: "Last time", v: t.read.lastPerformance ? `${t.read.lastPerformance.weight} ${unit} × ${t.read.lastPerformance.reps}` : none }), _jsx(Row, { k: "Estimated 1RM", v: t.read.e1rm != null ? `${Math.round(t.read.e1rm)} ${unit}` : none }), _jsx(Row, { k: "Sessions on this day", v: t.read.historyEntriesForThisDay, dim: true }), _jsx(Row, { k: "Stalled sessions", v: t.read.stallSessions, dim: true }), _jsx(Row, { k: "Plateau sessions", v: t.read.plateauSessions, dim: true }), t.read.readiness && _jsx(Row, { k: "Readiness", v: `${Math.round(t.read.readiness.value)} · ${t.read.readiness.band}${t.read.readiness.trim ? ` · trims ${t.read.readiness.trim} set` : ""}` }), t.read.readiness && t.read.readiness.why && _jsx(Row, { k: "Readiness note", v: t.read.readiness.why, dim: true }), t.read.perSet && _jsxs(_Fragment, { children: [_jsx(Head, { children: "Effort it used from last time" }), t.read.perSet.map(r => (_jsx(Row, { k: `Set ${r.set}${r.weight != null && r.reps != null ? ` — ${r.weight} × ${r.reps}` : ""}`, v: `${r.rir} RIR · ${r.source}` }, r.set)))] }), !t.read.perSet && _jsx(Row, { k: "Effort data", v: none }), _jsx("div", { className: "wpb-type-body-muted", style: { marginTop: 12 }, children: "Estimated 1RM is an estimate of your one-rep maximum from logged sets, not a tested maximum. These details use the saved prescription and available history." })] })] }) }));
+                    return (_jsx("div", { onClick: () => setWhy(null), className: "wpb-backdrop wpb-b961-overlay-01", children: _jsxs("div", { ref: sheetDragRef, onClick: ev => ev.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderRadius: "20px 20px 0 0", padding: "18px 18px calc(env(safe-area-inset-bottom) + 18px)", border: `1px solid ${C.border}`, animation: "sheetUp .25s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-center wpb-s956-gap-8 wpb-s956-marginbottom-2", children: [_jsx(HelpCircle, { size: 17, color: C.accentInk }), _jsx("div", { "data-dialog-title": true, className: "wpb-b962-layout-12", children: "Why this prescription?" }), _jsx("button", { "aria-label": "Close", onClick: () => setWhy(null), className: "pressable hit wpb-close-quiet", children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 2 }, children: [t.lift.name, " \u00B7 ", t.context.day.label, " \u00B7 week ", t.context.weekIndex, " of ", t.context.weeksTotal] }), _jsxs("div", { "data-prescription-summary": true, style: { background: C.card, borderRadius: 12, padding: 14, marginTop: 14 }, children: [_jsx("div", { className: "wpb-eya8", children: "Planned targets" }), _jsxs("div", { className: "wpb-s960-fontsize-19px wpb-s956-fontweight-700", children: [liveWorkSetCount, " sets \u00D7 ", t.decided.repRange[0], "\u2013", t.decided.repRange[1], " reps"] }), _jsxs("div", { className: "wpb-s956-fontsize-15 wpb-s956-fontweight-700 wpb-s956-margintop-6", children: [t.load.weight != null ? `${t.load.weight} ${unit}` : "Load not yet set", " \u00B7 ", t.decided.targetRIR, " RIR"] }), _jsx("div", { className: "wpb-type-body-muted", style: { marginTop: 8 }, children: "RIR means reps left before failure." }), t.load.reason && _jsx("div", { className: "wpb-s956-fontsize-15 wpb-s957-lineheight-1-5 wpb-s960-margintop-10px", children: t.load.reason })] }), _jsx("div", { className: "wpb-type-body-muted", style: { margin: "10px 0" }, children: "These are the starting targets. In-session edits and adjustments appear in your set rows." }), _jsxs("details", { children: [_jsx("summary", { style: { color: C.accentInk, cursor: "pointer", fontSize: 15, fontWeight: 700, padding: "12px 0" }, children: "Progression and evidence" }), _jsx(Head, { children: "What it prescribed" }), _jsx(Row, { k: "Load", v: t.load.weight != null ? `${t.load.weight} ${unit}${t.load.delta ? ` (${t.load.delta > 0 ? "+" : ""}${t.load.delta})` : ""}` : "—" }), _jsx(Row, { k: "Reason", v: t.load.reason || "—", dim: true }), _jsx(Row, { k: "Reps", v: `${t.decided.repRange[0]}-${t.decided.repRange[1]}` }), _jsx(Row, { k: "Sets", v: liveWorkSetCount }), _jsx(Row, { k: "Target RIR", v: t.decided.targetRIR }), t.load.snappedToRack && _jsx(Row, { k: "Rack", v: "rounded to a weight this gym actually has", dim: true }), t.load.cappedByGym && _jsx(Row, { k: "Gym ceiling", v: `${t.load.gymCeiling} ${unit} — held, build reps instead`, dim: true }), t.load.increment != null && _jsx(Row, { k: "Smallest jump here", v: `${t.load.increment} ${unit}`, dim: true }), _jsx(Head, { children: "How it chose the progression" }), _jsx(Row, { k: "Style", v: t.decided.style }), _jsx(Row, { k: "Chosen by", v: t.decided.styleSource, dim: true }), _jsx(Row, { k: "Because", v: t.decided.styleWhy, dim: true }), t.decided.override && _jsx(Row, { k: "Override", v: `${t.decided.override.kind} — ${t.decided.override.reason}`, dim: true }), t.decided.override && t.decided.override.clearsWhen && _jsx(Row, { k: "Clears when", v: t.decided.override.clearsWhen, dim: true }), _jsx(Head, { children: "What it read about you" }), _jsx(Row, { k: "Last time", v: t.read.lastPerformance ? `${t.read.lastPerformance.weight} ${unit} × ${t.read.lastPerformance.reps}` : none }), _jsx(Row, { k: "Estimated 1RM", v: t.read.e1rm != null ? `${Math.round(t.read.e1rm)} ${unit}` : none }), _jsx(Row, { k: "Sessions on this day", v: t.read.historyEntriesForThisDay, dim: true }), _jsx(Row, { k: "Stalled sessions", v: t.read.stallSessions, dim: true }), _jsx(Row, { k: "Plateau sessions", v: t.read.plateauSessions, dim: true }), t.read.readiness && _jsx(Row, { k: "Readiness", v: `${Math.round(t.read.readiness.value)} · ${t.read.readiness.band}${t.read.readiness.trim ? ` · trims ${t.read.readiness.trim} set` : ""}` }), t.read.readiness && t.read.readiness.why && _jsx(Row, { k: "Readiness note", v: t.read.readiness.why, dim: true }), t.read.perSet && _jsxs(_Fragment, { children: [_jsx(Head, { children: "Effort it used from last time" }), t.read.perSet.map(r => (_jsx(Row, { k: `Set ${r.set}${r.weight != null && r.reps != null ? ` — ${r.weight} × ${r.reps}` : ""}`, v: `${r.rir} RIR · ${r.source}` }, r.set)))] }), !t.read.perSet && _jsx(Row, { k: "Effort data", v: none }), _jsx("div", { className: "wpb-type-body-muted", style: { marginTop: 12 }, children: "Estimated 1RM is an estimate of your one-rep maximum from logged sets, not a tested maximum. These details use the saved prescription and available history." })] })] }) }));
                 })() }), _jsx(Exit, { when: histSheet, children: histSheet && (() => {
                     const cur = data[exIdx];
                     if (!cur)
                         return null;
                     const cex = EX_BY_ID[cur.id];
-                    const entries = history
-                        .filter(h => h.perf && h.perf[cur.id] && h.perf[cur.id].weight > 0)
+                    const selectedHistory=cur.machineInstanceId && sessionGymId
+                        ? historyForMachineRecommendation(history,cur.id,cur.machineInstanceId,
+                            sessionGymId,gymProfile) : history;
+                    const entries = selectedHistory
+                        .filter(h => h.perf && h.perf[cur.id] &&
+                            (h.perf[cur.id].sets?.some(set=>Number(set.w)>0) || Number(h.perf[cur.id].weight)>0))
                         .sort((a, b) => b.date - a.date)
                         .slice(0, 12);
                     const best = entries.reduce((m, h) => Math.max(m, sessionE1RM(h.perf[cur.id])), 0);
@@ -14807,10 +14869,10 @@ function MetricChart({ series, height = 210 }) {
    phone width and truncating the row would hide the ones added last), the reading for the CURRENT
    window, the chart, then the range pills. Range lives at the BOTTOM, next to the thumb, because it
    is the control you change most and the one you change while looking at the chart above it. */
-function ExerciseCharts({ history, id, defaultMetric = "e1rm" }) {
+function ExerciseCharts({ history, id, gyms = [], defaultMetric = "e1rm" }) {
     const [metric, setMetric] = useState(defaultMetric);
     const [win, setWin] = useState("all");
-    const {scopes,active,comparableHistory,setSelectedScope} = useMachineChartScope(history,id);
+    const {scopes,active,comparableHistory,setSelectedScope} = useMachineChartScope(history,id,gyms);
     const series = useMemo(() => exerciseSeries(comparableHistory, id, metric, win),
         [comparableHistory, id, metric, win]);
     const m = EX_METRIC_BY_ID[metric] || EX_METRICS[0];
@@ -18211,7 +18273,7 @@ function CyclesView({ onBack, cycles = [], saved = [], history = [], cycleInfo =
         }) : _jsxs("div", { className: "wpb-empty-state wpb-cycle-empty", children: [_jsx("p", { children: "No training cycles yet." }), _jsx(UiAction, { variant: "primary", onClick: onNew, children: "Create a cycle" })] }) })] });
 }
 /* ============================== LIBRARY VIEW ============================== */
-function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGoal, unit, history = [], navigationMemory, onCreateCustom, onCompare, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup }) {
+function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGoal, unit, history = [], gyms = [], navigationMemory, onCreateCustom, onCompare, exNotes = {}, onSetExNote, exSetup = {}, onSetExSetup }) {
     const [query, setQuery] = useState(() => navigationMemory?.query || "");
     const [part, setPart] = useState(() => navigationMemory?.part || "all");
     const [equip, setEquip] = useState(() => navigationMemory?.equip || "all");
@@ -18297,7 +18359,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                                     const label = isSub ? (set.kind === "drop" ? "D" : "M") : (si + 1);
                                                     return (_jsxs("div", { className: "wpb-exercise-history-set", "data-sub-set": isSub, children: [_jsx("span", { className: "mono wpb-exercise-history-index", children: label }), _jsxs("span", { className: "mono wpb-exercise-history-value", children: [set.w, " ", s.unit, set.r != null ? ` × ${set.r}` : ""] }), isSub && _jsx("span", { className: "wpb-exercise-history-kind", children: set.kind === "drop" ? "drop" : "myo" }), isTop && _jsx("span", { className: "wpb-exercise-history-top", children: "TOP SET" })] }, si));
                                                 })] }, i));
-                                    }) })) : (_jsxs("div", { className: "wpb-exercise-empty", children: [_jsx(Clock, { size: 26, className: "wpb-exercise-empty-icon" }), _jsx("div", { className: "wpb-exercise-empty-title", children: "No sessions logged yet" }), _jsx("div", { className: "wpb-exercise-empty-copy", children: "Log a workout with this exercise and your sets, PRs, and trend will show up here." })] }))), detailTab === "charts" && (detailTrend ? _jsx(ExerciseCharts, { history: history, id: detail.id })
+                                    }) })) : (_jsxs("div", { className: "wpb-exercise-empty", children: [_jsx(Clock, { size: 26, className: "wpb-exercise-empty-icon" }), _jsx("div", { className: "wpb-exercise-empty-title", children: "No sessions logged yet" }), _jsx("div", { className: "wpb-exercise-empty-copy", children: "Log a workout with this exercise and your sets, PRs, and trend will show up here." })] }))), detailTab === "charts" && (detailTrend ? _jsx(ExerciseCharts, { history: history, id: detail.id, gyms })
                                     : (_jsxs("div", { className: "wpb-exercise-empty", children: [_jsx(TrendingUp, { size: 26, className: "wpb-exercise-empty-icon" }), _jsx("div", { className: "wpb-exercise-empty-title", children: "Nothing logged yet" }), _jsx("div", { className: "wpb-exercise-empty-copy", children: "Log a session with this lift and its rep maxes, heaviest set and volume will chart here." })] }))), detailTab === "records" && (() => {
                                     const r = detailRecords;
                                     const has = r && (r.maxWeight || r.maxE1rm || r.maxVol);
@@ -21666,7 +21728,7 @@ function App() {
                                         setBirthEst(false);
                                     } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} banned exercise${prev.length === 1 ? "" : "s"}`, undo: () => { setBanned(prev); setAppToast(null); } }); }, onClearHistory: () => { const prev = history; setHistory([]); if (prev.length)
-                                        setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: (text, options) => importData(text, { ...(options || {}), preview: true }), onLibrary: () => pushView("library", "settings"), onImportProgram: importProgramText, onGallery: () => pushView("gallery", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, navigationMemory: screenNavigationMemory.current.library, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: updatePinnedNote, exSetup: exSetup, onSetExSetup: updateExerciseSetup })) : view === "compare" ? (_jsx(CompareView, { saved: saved, initialMode: compareMode, onBack: goBack })) : view === "gallery" ? (_jsx(GalleryView, { onBack: goBack, onImport: importProgramText })) : view === "cycles" ? (_jsx(CyclesView, { onBack: () => { setFocusCycle(null); goBack(); }, focusId: focusCycle, cycles: cycles, saved: saved, history: history, cycleInfo: liveCycleInfo, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles"), onReview: (c, i) => { setReviewOf({ cycleId: c.id, blockIdx: i }); pushView("blockReview", "cycles"); } })) : view === "cycleDetail" ? ((() => {
+                                        setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: (text, options) => importData(text, { ...(options || {}), preview: true }), onLibrary: () => pushView("library", "settings"), onImportProgram: importProgramText, onGallery: () => pushView("gallery", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, navigationMemory: screenNavigationMemory.current.library, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, gyms: gyms, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: updatePinnedNote, exSetup: exSetup, onSetExSetup: updateExerciseSetup })) : view === "compare" ? (_jsx(CompareView, { saved: saved, initialMode: compareMode, onBack: goBack })) : view === "gallery" ? (_jsx(GalleryView, { onBack: goBack, onImport: importProgramText })) : view === "cycles" ? (_jsx(CyclesView, { onBack: () => { setFocusCycle(null); goBack(); }, focusId: focusCycle, cycles: cycles, saved: saved, history: history, cycleInfo: liveCycleInfo, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles"), onReview: (c, i) => { setReviewOf({ cycleId: c.id, blockIdx: i }); pushView("blockReview", "cycles"); } })) : view === "cycleDetail" ? ((() => {
                                     const dc = cycles.find(c => c.id === detailCycleId);
                                     if (!dc)
                                         return _jsx(CyclesView, { onBack: goBack, cycles: cycles, saved: saved, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles") });
@@ -21738,6 +21800,12 @@ function App() {
                                                ones the room actually has. */
                                             gymEquipment: gymEquipment,
                                             gymProfile:activeGym,
+                                            onSaveGymMachineVariant:(gymId,exerciseId,config)=>{
+                                                if(activeGym?.id!==gymId || !EX_BY_ID[exerciseId])return false;
+                                                setGyms(gs=>withGymMachineConfig(
+                                                    gs,gymId,exerciseId,config,Date.now()));
+                                                return true;
+                                            },
                                             /* ⚠ THE DAY IS LOOKED UP FROM THE PROGRAM, NOT HELD AS A SECOND COPY. `sessionDay` is
                                                captured when the workout starts and is NOT updated by the things that legitimately
                                                change the day mid-workout — `updateProgramExercise` (the "Update my program" scope

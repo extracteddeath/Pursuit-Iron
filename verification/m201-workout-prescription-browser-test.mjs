@@ -91,7 +91,13 @@ try {
     restored=await rows();assert.equal(restored[1].reps,'14');assert.equal(restored[2].reps,'');assert.equal(restored[0].reps,'11');
     await open('?week=8');
     assert.equal(await page.evaluate(()=>/lengthened partial/i.test(document.body.textContent)),true,'markerless custom technique must render in the workout');
-    assert.equal(await page.evaluate(()=>document.body.textContent.includes('+ partials')),true,'the final working set must visibly carry the intensifier tag');
+    assert.equal(await page.evaluate(()=>{
+        const work=[...document.querySelectorAll('[data-testid^="set-0-"]')]
+            .filter(row=>row.getAttribute('data-warm')==='0'&&row.getAttribute('data-sub')==='0');
+        const technique=work.at(-1)?.querySelector('[data-last-set-technique]');
+        return !!technique&&technique.textContent.includes('Lengthened partials')
+            && work.slice(0,-1).every(row=>!row.querySelector('[data-last-set-technique]'));
+    }),true,'only the final working set visibly carries the lengthened partials technique');
     await open('?week=8&exercise=lat-raise');
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets.some(s=>s.sub&&s.kind==='myo'));
     assert.equal((await rows()).filter(s=>s.sub&&s.kind==='myo'&&s.prescribed).length,3);

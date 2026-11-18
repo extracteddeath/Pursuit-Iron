@@ -77,6 +77,9 @@ export const contractGroups = Object.freeze({
         // Draft PRs run this group, so approved fixes receive early runnable evidence.
         'm378-web-approved-regressions-test.mjs',
         'machine-instances-test.mjs',
+        'b1012-machine-ab-discoverability-test.mjs',
+        'b1015-last-set-technique-machine-tool-test.mjs',
+        'b1016-strength-notes-machine-history-test.mjs',
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
         'home-utility-owner-test.mjs',
@@ -108,6 +111,8 @@ export const contractGroups = Object.freeze({
         'b1000-workout-controls-test.mjs',
         'b1001-root-font-owner-test.mjs',
         'b1011-m3e-foundation-test.mjs',
+        'b1012-exercise-variant-browse-test.mjs',
+        'b1014-requested-exercise-coverage-test.mjs',
         'ui-card-architecture-test.mjs',
         'shared-metric-owner-test.mjs',
         'shared-sheet-heading-owner-test.mjs',
@@ -212,6 +217,7 @@ export const browserShards = Object.freeze({
         'shorter-session-browser-test.mjs',
         'b896-expressive-workout-browser-test.mjs',
         'b993-workout-info-browser-test.mjs',
+        'b1013-workout-machine-quick-switch-browser-test.mjs',
         'b994-workout-finish-browser-test.mjs',
         'b889-injury-journal-browser-test.mjs',
         'b886-set-number-options-browser-test.mjs',
@@ -237,6 +243,7 @@ export const browserShards = Object.freeze({
         'm220-day-progression-browser-test.mjs'
     ]),
     'integration': Object.freeze([
+        'b1012-exercise-variant-browse-browser-test.mjs',
         'home-entry-hierarchy-browser-test.mjs',
         'b911-chart-favorites-polish-browser-test.mjs',
         'b907-profile-polish-browser-test.mjs',

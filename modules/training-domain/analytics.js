@@ -363,12 +363,14 @@ const SET_ROW_BLEED = 16;
 const REDUCE_FRACTION = 0.6;
 
 const EX_FAMILY = {
+    // AD Press variations use different implements and independent loading.
+    "ad-press-barbell": "ad-press", "ad-press-smith": "ad-press",
     // triceps pushdowns (cable, vertical pressdown — swap the handle)
     "pushdown": "tri-pushdown", "rope-pushdown": "tri-pushdown", "ez-pushdown": "tri-pushdown",
     "v-bar-pushdown": "tri-pushdown", "straight-bar-pushdown": "tri-pushdown",
     "dual-rope-pushdown": "tri-pushdown", "single-pushdown": "tri-pushdown", "underhand-pushdown": "tri-pushdown",
     // triceps overhead extensions
-    "oh-cable-ext": "tri-ohext", "db-oh-ext": "tri-ohext", "ez-oh-ext": "tri-ohext", "bands-tricep-ext": "tri-ohext",
+    "oh-cable-ext": "tri-ohext", "leaning-cable-ohext": "tri-ohext", "db-oh-ext": "tri-ohext", "ez-oh-ext": "tri-ohext", "bands-tricep-ext": "tri-ohext",
     // triceps kickbacks
     "tricep-kickback": "tri-kickback", "cable-tri-kickback": "tri-kickback",
     // side-delt lateral raises
@@ -382,6 +384,7 @@ const EX_FAMILY = {
     "seated-rear-fly": "rear-delt-fly", "single-cable-rear-fly": "rear-delt-fly", "chest-supported-rear-fly": "rear-delt-fly", "prone-rear-delt-raise": "rear-delt-fly",
     // chest flyes (flat)
     "cable-fly": "chest-fly", "pec-deck": "chest-fly", "db-fly": "chest-fly",
+    "bottom-half-db-fly": "chest-fly",
     // glute kickbacks
     "cable-kickback": "glute-kickback", "glute-kickback-machine": "glute-kickback"
 };

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { addMachineVariant, editMachineVariant, setDefaultMachineVariant, resolveMachineVariant,
     stampMachineSet, machineHistory, latestMachineSet, comparableMachineScope,
-    historyForMachineRecommendation, LEGACY_MACHINE_ID } from '../modules/next-engine/machine-instances.js';
+    historyForMachineRecommendation, assignLegacyMachineHistory, sanitizeMachineVariants,
+    LEGACY_MACHINE_ID } from '../modules/next-engine/machine-instances.js';
 
 const gymX = { id:'gymX' }, gymY={ id:'gymY' };
 const A={id:'A',label:'Machine A',loading:{unit:'lb',minimum:10,increment:5,maximum:300}};
@@ -45,38 +46,46 @@ x=editMachineVariant(x,'chest_press','A',{active:false});
 assert.equal(resolveMachineVariant(x,'chest_press').id,'B');
 assert.equal(resolveMachineVariant(x,'chest_press','A',{forNewWorkout:false}).active,false);
 assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',machineInstanceId:'A'}).length,3);
+
+/* Older untagged sets belong to the machine that was physically used,
+   never to whichever variant was created second or made default later.
+   Attaching history changes a gym-scoped view, NOT the original receipts. */
+const rawHistory=JSON.stringify(history);
+assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'B',gym:x}).length,2);
+assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',gym:x}).length,3);
+x=assignLegacyMachineHistory(x,'chest_press','A');
+assert.equal(x.machineVariants.chest_press.legacyHistoryMachineId,'A');
+const aWithOld=machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',dayId:'upper',gym:x});
+assert.deepEqual(aWithOld.map(v=>v.weight),[200,205,190]);
+assert.equal(aWithOld.at(-1).recordedMachineInstanceId,LEGACY_MACHINE_ID,
+    'Audit preserves the original unlabelled receipt identity');
+assert.deepEqual(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'B',dayId:'upper',gym:x}).map(v=>v.weight),[140,145]);
+assert.equal(latestMachineSet(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',dayId:'upper',gym:x}).weight,190);
+assert.equal(historyForMachineRecommendation(history,'chest_press','A','gymX',x)
+    .at(-1).perf.chest_press.sets.length,1);
+assert.equal(historyForMachineRecommendation(history,'chest_press','B','gymX',x)
+    .at(-1).perf.chest_press.sets.length,0);
+assert.equal(machineHistory(history,{gymId:'gymY',exerciseId:'chest_press',
+    machineInstanceId:'A',gym:x}).length,0,
+    'GymX assignment never leaks to GymY');
+assert.equal(sanitizeMachineVariants(x.machineVariants).chest_press.legacyHistoryMachineId,'A');
+const xRenamed=editMachineVariant(x,'chest_press','A',{label:'Original Press'});
+assert.equal(xRenamed.machineVariants.chest_press.legacyHistoryMachineId,'A');
+const withThird=addMachineVariant(xRenamed,'chest_press',{id:'C',label:'New Stack'});
+assert.equal(withThird.machineVariants.chest_press.legacyHistoryMachineId,'A');
+assert.deepEqual(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'C',gym:withThird}),[]);
+assert.throws(()=>assignLegacyMachineHistory(x,'chest_press','unknown'),/existing physical machine/);
+const restored=assignLegacyMachineHistory(x,'chest_press',null);
+assert.equal(restored.machineVariants.chest_press.legacyHistoryMachineId,undefined);
+assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',dayId:'upper',gym:restored}).length,2);
+assert.equal(JSON.stringify(history),rawHistory,'A/B assignment cannot mutate saved training history');
+console.log('PASS original-machine history assignment: no A/B load transfer, cross-gym leak or old receipt rewrite.');
+
 console.log('Machine-instance web engine: 18 invariants pass.');
-
-// Release certification must include every cached module and static asset.
-import fs from 'node:fs';
-import crypto from 'node:crypto';
-const hash = value => crypto.createHash('sha256').update(value).digest('hex');
-const worker = fs.readFileSync(new URL('../sw.js', import.meta.url),'utf8');
-const start = worker.indexOf('const SHELL=');
-const end = worker.indexOf('];',start);
-assert.ok(start>=0 && end>start,'service-worker shell list missing');
-const shell = JSON.parse(worker.slice(start+'const SHELL='.length,end+1));
-const cacheHash = hash(shell.sort().map(path=>
-    path+':'+hash(fs.readFileSync(new URL('../'+path.slice(2),import.meta.url)))+
-    String.fromCharCode(10)
-).join('')).slice(0,16);
-console.log('MACHINE_A_B_SHELL_REVISION='+cacheHash);
-const release=JSON.parse(fs.readFileSync(new URL('../RELEASE_MANIFEST.json',import.meta.url),'utf8'));
-const profile=JSON.parse(fs.readFileSync(new URL('../BUILD_PROFILE.json',import.meta.url),'utf8'));
-assert.equal(profile.cache,release.cache,'web cache must belong to the exact shipped release');
-assert.equal(profile.cache.endsWith('-r'+cacheHash),true,
-    'new physical-machine modules must be included in exact offline shell digest');
-assert.ok(worker.includes('const CACHE="'+profile.cache+'"'),
-    'the service worker must use the certified release cache');
-for(const [file,digest] of Object.entries(release.runtimeFiles))
-    assert.equal(hash(fs.readFileSync(new URL('../'+file,import.meta.url))),digest,
-        'uncertified production runtime: '+file);
-for(const [file,digest] of Object.entries(release.uiFiles))
-    assert.equal(hash(fs.readFileSync(new URL('../'+file,import.meta.url))),digest,
-        'uncertified production UI: '+file);
-const aggregate=Object.keys(release.runtimeFiles).sort()
-    .map(file=>file+':'+release.runtimeFiles[file]+String.fromCharCode(10)).join('');
-assert.equal(hash(aggregate),release.runtimeAggregate,'runtime aggregate mismatch');
-console.log('MACHINE_A_B_RELEASE_CERTIFIED build='+release.build+
-    ' modules='+Object.keys(release.runtimeFiles).length);
-

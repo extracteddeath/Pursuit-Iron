@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/engine-api.js';
 
-import { generateNextCycleForShell, convertProgramToNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, convertProgramToNextCycleForShell, strengthEntryMinimumSets } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
 import { publicMevLedger, PUBLIC_MEV_REGIONS } from '../modules/next-engine/public-mev.js';
@@ -44,7 +44,7 @@ for(const probe of cases){
   assert.equal(current.audit.result,'pass');
   assert.equal(current.sessions.length,config.days,'Cycle preserves the athlete\'s weekly frequency');
   assert.equal(result.blocks[1].config.split,decision.selectedSplit);
-  if(before>=16) assert.ok(after>=Math.ceil(before*.5),
+  if(before>=16) assert.ok(after>=strengthEntryMinimumSets(before),
     `${probe.label}: strength must not cliff from ${before} to ${after} sets`);
   assert.ok(Number.isInteger(decision.regionalCarryoverPercent));
   assert.ok(decision.regionalCarryoverPercent>=0&&decision.regionalCarryoverPercent<=100);
@@ -89,7 +89,7 @@ console.log('PASS M303: longitudinal split adaptation respects working-set safet
   const base=converted.currentProgram.nextEngine.program;
   const strength=converted.blocks[0].nextEngine.program;
   const before=sets(base),after=sets(strength);
-  if(before>=16) assert.ok(after>=Math.ceil(before*.5),
+  if(before>=16) assert.ok(after>=strengthEntryMinimumSets(before),
     `Converted strength entry cannot fall from ${before} to ${after} sets`);
   assert.equal(strength.audit.result,'pass');
   assert.equal(strength.sessions.length,base.sessions.length);

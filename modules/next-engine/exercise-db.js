@@ -74,6 +74,17 @@ export function createExerciseCatalog(customExercises = []) {
     }
     return [...EXERCISES, ...custom];
 }
+/**
+ * Automatic program candidates remain backward-compatible while new
+ * specialist variants are provisional. They are still in EXERCISES and
+ * EXERCISE_MAP for explicit program/workout Add and Swap, independent
+ * history and manual prescriptions. Unreviewed setups cannot silently
+ * displace a lifter's existing program in a generated cycle.
+ */
+export function createAutomaticExerciseCatalog(customExercises = []) {
+    return createExerciseCatalog(customExercises)
+        .filter(ex => ex.source !== 'pursuit_requested_variant_20261117');
+}
 export function createExerciseMap(customExercises = []) {
     // An isolated Map copy is required: callers may mutate lookup indexes.
     // Skip rebuilding every custom-free catalog just to derive the same map.

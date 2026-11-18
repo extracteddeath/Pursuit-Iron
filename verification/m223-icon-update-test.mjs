@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import './machine-instance-release-certificate.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';

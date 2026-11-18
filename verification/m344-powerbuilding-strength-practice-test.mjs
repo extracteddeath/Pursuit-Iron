@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/engine-api.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
-import { requestForBlock } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { requestForBlock, generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { generateProgram } from '../modules/next-engine/generate.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
@@ -36,9 +36,38 @@ for (const phase of phases) {
     for (const [lift, expected] of Object.entries(request.goal.liftFrequency))
         assert.equal(claims.filter(c => c.lift === lift).length, expected,
             phase + ': the phase must have real strength-claim slots, not only a scoring target');
-    const { program } = generateProgram(request, { phase, blockWeeks: 5 });
+    // Retention is activated only when a REAL preceding high-variety
+    // hypertrophy program exists. Ordinary/standalone Strength must not
+    // silently gain optional arm volume.
+    const { program, diagnostics } = generateProgram(request, {
+        phase, blockWeeks: 5,
+        preservePriorExerciseVariety: phase === 'strength_accumulation'
+    });
     assert.equal(program.audit.result, 'pass', phase + ': ' + JSON.stringify(program.audit).slice(0, 1000));
     const catalog = createExerciseMap(request.customExercises);
+    const directArms = Object.fromEntries([
+        ['biceps','elbow_flexion'],['triceps','elbow_extension']
+    ].map(([muscle,family])=>[muscle,program.sessions.reduce((sum,session)=>
+        sum + session.exercises.reduce((n,e)=>n+
+            (catalog.get(e.exerciseId)?.movementFamily===family?e.sets:0),0),0)]));
+    if(phase==='strength_accumulation') {
+        // The selected five-day gym already allows useful low-fatigue arm
+        // work: direct elbow flexion and extension must be visible as real
+        // prescribed, logged workout slots, not credited only from rows/presses.
+        assert.ok(directArms.biceps>=2,
+            'A long, five-day strength block with available cable/machine curls must not drop all direct biceps work: '+JSON.stringify({directArms,plan:program.sessions.map(s=>({name:s.name,slots:s.exercises.map(e=>e.exerciseId)})),repairs:diagnostics.lowFatigueArmMaintenance}));
+        assert.ok(directArms.triceps>=2,
+            'An attainable strength block must retain at least one independent, low-fatigue triceps exercise: '+JSON.stringify({directArms,repairs:diagnostics.lowFatigueArmMaintenance}));
+        assert.ok(diagnostics.lowFatigueArmMaintenance.every(a=>a.sets===2),
+            'Optional arm retention uses small, real logged work sets, not invisible fractional sets');
+        assert.ok(program.sessions.every(s=>s.exercises.filter(e=>
+            ['primary_strength','secondary_strength'].includes(e.role))
+            .every(e=>e.prescription.reps[0]>=1 && e.sets>=1)),
+            'Direct arm maintenance must not overwrite strength-specific loads, reps or sets');
+    }
+    if(phase==='peak')
+        assert.equal(diagnostics.lowFatigueArmMaintenance.length,0,
+            'Real Peak is a distinct low-fatigue taper, not mandatory arm-accessory expansion');
     const counts = Object.fromEntries(['bench_press','back_squat','deadlift'].map(lift => [lift,
         program.sessions.filter(s => s.exercises.some(e =>
             ['primary_strength', 'secondary_strength'].includes(e.role) &&
@@ -134,6 +163,42 @@ const noChange = requestForBlock(threeDays, { ...config, split: 'full_body', day
     { phase: 'strength_accumulation', weeks: 5, split: 'full_body' });
 assert.ok(Object.keys(noChange.goal.liftFrequency ?? {}).length === 0);
 
+// End-to-end cycle preview: report real exercise slots per day rather
+// than equating an increased set total with restored movement variety.
+const previewCycle = generateNextCycleForShell({
+    templateId:'custom',
+    config:{...config,name:'ULPPL continuity'},
+    blocks:[
+        {phase:'hypertrophy_accumulation',weeks:3},
+        {phase:'strength_accumulation',weeks:3},
+        {phase:'peak',weeks:2}
+    ],
+    legacyExercises:EXERCISES,seed:34410,
+    makeId:(()=>{let n=0;return ()=>`m344-coverage-${++n}`})(),
+    adaptBetweenBlocks:true,adaptTrainingSplit:false
+});
+const actualExerciseCounts=previewCycle.blocks.map(block=>({
+    phase:block.nextEngine.program.phase,
+    counts:block.nextEngine.program.sessions.map(session=>({
+        intent:session.intent,exercises:session.exercises.length,
+        minutes:Math.round(session.estimatedMinutes)
+    }))
+}));
+assert.ok(actualExerciseCounts.every(block=>block.counts.length===5));
+// This is a genuine source-preserving five-day cycle, not a fabricated
+// eight-exercise toy. It must keep legitimate accessory variety alongside
+// exact bench/squat/hinge practice, or refuse the phase before saving.
+const priorUpper=actualExerciseCounts[0].counts.find(day=>day.intent==='upper');
+const strengthUpper=actualExerciseCounts[1].counts.find(day=>day.intent==='upper');
+assert.ok(priorUpper.exercises>=6,'The fixture must exercise a high-variety hypertrophy Upper day');
+assert.ok(strengthUpper.exercises>=Math.ceil(priorUpper.exercises/2),
+    'Same-split strength Upper must not lose over half its distinct exercise menu');
+assert.ok(actualExerciseCounts[1].counts.every(day=>day.exercises>=2),
+    'Real strength program must retain actual complementary movements across ULPPL');
+const peakRows=previewCycle.blocks[2].nextEngine.program.sessions;
+assert.ok(peakRows.every(day=>day.estimatedMinutes<=day.maxMinutes+.01),
+    'Intentional Peak reduction must still obey the actual session time constraint');
+console.log('M344 real five-day ULPPL exercise-count transition: '+JSON.stringify(actualExerciseCounts));
 assert.equal(JSON.stringify({ config, base }), before, 'Phase generation must not mutate athlete settings or past blocks');
 console.log('M344 actual Both / ULPPL phase training audit: ' + JSON.stringify(result));
 console.log('PASS M344: ULPPL Both strength/peak requires repeated bench and squat with a real Push incline variant; explicit intent remains intact.');

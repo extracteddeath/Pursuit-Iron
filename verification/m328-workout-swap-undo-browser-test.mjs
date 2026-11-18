@@ -64,8 +64,13 @@ try{
      assert.ok(found,'expected button '+label);
  };
  const openSwap=async()=>{
-     await page.waitForSelector('.wpb-workout-tool');
-     await button('Swap');
+     // Machine A/B and workout-only replacement now live inside Exercise
+     // Info. Test the actual athlete path rather than a removed toolbar
+     // shortcut, including reopening the sheet after Resume/Undo.
+     await page.waitForSelector('button[aria-label^="Exercise info for "]');
+     await page.click('button[aria-label^="Exercise info for "]');
+     await page.waitForSelector('.wpb-exinfo-swap-action');
+     await page.click('.wpb-exinfo-swap-action');
      await page.waitForSelector('.wpb-swap-list button.opt');
      await page.$eval('.wpb-swap-list button.opt',b=>b.click());
      await page.waitForFunction(()=>document.body.textContent.includes('Apply this swap'));

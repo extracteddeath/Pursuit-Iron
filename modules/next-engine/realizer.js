@@ -1,5 +1,5 @@
 // M230 canonical realizer stage. Stage context is local to one realization.
-import { createExerciseCatalog, createExerciseMap } from './exercise-db.js';
+import { createAutomaticExerciseCatalog, createExerciseMap } from './exercise-db.js';
 import { phasePolicyFor } from './phase-policy.js';
 import { createMusclePrescriptions } from './prescription.js';
 import { repairMajorArmCoverage as run_repairMajorArmCoverage } from './realizer-arm-repair.js';
@@ -62,7 +62,7 @@ export function realizeSessions(plans, request, targetDose = {}, directTargetDos
         blockWeeks: options.blockWeeks,
         requestedProgressionStyle: options.requestedProgressionStyle
     };
-    const exerciseCatalog = createExerciseCatalog(request.customExercises);
+    const exerciseCatalog = createAutomaticExerciseCatalog(request.customExercises);
     const exerciseMap = createExerciseMap(request.customExercises);
     const sessions = plans.map(plan => ({ plan, defs: [], exercises: [], importance: [] }));
     const ledger = { fractional: {}, direct: {} };

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { EXERCISES, EX_BY_ID } from '../modules/training-domain/catalog.js';
-import { generateNextCycleForShell, convertProgramToNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, convertProgramToNextCycleForShell, reviewConvertedStrengthExerciseCoverage } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { nextExerciseIdForShellExercise } from '../modules/next-engine/shell-projection.js';
 import { refreshAdaptiveCyclePreviews, authoredCycleExitSnapshot, upgradeExistingCycleToAdaptive } from '../modules/next-engine/adaptive-cycle-upgrade.js';
 import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
 import { shellExercisePerformableFor } from '../modules/next-engine/shell-equipment.js';
@@ -55,6 +57,77 @@ assert.throws(()=>refreshAdaptiveCyclePreviews({...options,saved:saved.map((p,i)
 const flagged=upgradeExistingCycleToAdaptive(cycle,saved,history).cycle;
 const repeated=refreshAdaptiveCyclePreviews({...options,cycle:flagged});
 assert.equal(repeated.blocks.length,2,'Already-upgraded cycles can replace stale previews');
+// The athlete's concrete bug: an authored eight-movement custom day was
+// converted into a cycle; its OLD strength preview had three movements.
+const priorSession={exercises:Array.from({length:8},(_,i)=>({
+    exerciseId:'fixture-'+i,sets:3
+}))};
+const threeSession={intent:'full_body',exercises:priorSession.exercises.slice(0,3)};
+const fourSession={intent:'full_body',exercises:priorSession.exercises.slice(0,4)};
+const sourceProof={sessions:[priorSession,priorSession,priorSession]};
+const oldStrength={sessions:[threeSession,threeSession,threeSession]};
+const inputProof=JSON.stringify({sourceProof,oldStrength});
+assert.equal(reviewConvertedStrengthExerciseCoverage(sourceProof,oldStrength,
+    Array.from({length:3},(_,i)=>({label:'Full Body '+(i+1)}))).code,
+    'SOURCE_EXERCISE_WEEKLY_COLLAPSE',
+    'Three movements must not be disguised as a healthy custom→strength entry');
+assert.equal(reviewConvertedStrengthExerciseCoverage(sourceProof,
+    {sessions:[fourSession,fourSession,fourSession]},
+    Array.from({length:3},(_,i)=>({label:'Full Body '+(i+1)}))),null,
+    'Four meaningful movements may fit a stronger lift/rest program; eight is not a fixed quota');
+assert.equal(JSON.stringify({sourceProof,oldStrength}),inputProof,
+    'The source-based check must remain pure and preserve saved programs');
+
+// Full end-to-end refresh of a real eight-exercise authored program.
+// Distinct mapped movements must still be available in the chosen gym.
+const canPerform=shellExercisePerformableFor({equipment});
+const sourceExerciseIds=new Set(legacy.days[0].exercises);
+const extras=EXERCISES.filter(ex=>!sourceExerciseIds.has(ex.id) && canPerform(ex)
+    && nextExerciseIdForShellExercise(ex)).slice(0,2).map(ex=>ex.id);
+assert.equal(extras.length,2,'Fixture needs two additional available mapped movements');
+const highVariety=structuredClone(legacy);
+for(const day of highVariety.days){
+    day.exercises.push(...extras);
+    for(let slot=0;slot<day.exercises.length;slot++)
+        highVariety.overrides[`${day.id}:${slot}`]={
+            ...(highVariety.overrides[`${day.id}:${slot}`]??{}),
+            sets:3,reps:'8-12',rir:'2',rest:90
+        };
+    assert.equal(new Set(day.exercises).size,8);
+}
+const highSaved=[highVariety,...saved.slice(1)];
+const highFrozen=JSON.stringify({highSaved,cycle,history});
+const highRefresh=refreshAdaptiveCyclePreviews({
+    ...options,saved:highSaved,now:326001
+});
+const highStrength=highRefresh.blocks[0];
+const highCounts=highStrength.days.map(day=>new Set(day.exercises).size);
+console.log('M326 converted eight-exercise custom→strength refreshed exercise counts:',
+    JSON.stringify({prior:highVariety.days.map(day=>day.exercises.length),
+        generated:highCounts,split:highStrength.config.split}));
+assert.ok(highCounts.reduce((n,v)=>n+v,0)>=12,
+    'An eight-exercise custom source cannot regenerate a three-exercise-per-day strength future');
+assert.ok(highStrength.days.every((day,i)=>day.exercises.every(id=>canPerform(EX_BY_ID[id]))),
+    'Refreshed strength roster must remain compatible with selected equipment');
+assert.equal(JSON.stringify({highSaved,cycle,history}),highFrozen,
+    'Refreshing may not mutate source custom program, future saved plans or workout history');
+assert.equal(highRefresh.blocks[0].id,cycle.blockIds[1]);
+assert.equal(highRefresh.blocks[1].id,cycle.blockIds[2]);
+assert.equal(highRefresh.cycle.blockIds[0],highVariety.id);
+assert.equal(highRefresh.blocks[0].nextEngine.program.audit.result,'pass');
+
+// The upgrade must remain reachable from the existing saved-cycle UI,
+// not become a headless generator change with no way to refresh real data.
+const webUi=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+const transport=fs.readFileSync(new URL('../modules/generation-worker.js',import.meta.url),'utf8');
+assert.match(webUi,/Refresh future blocks for this gym/,
+    'Adaptive saved cycles expose their manual refresh action');
+assert.match(webUi,/Upgrade future blocks to adaptive/,
+    'Converted fixed cycles expose their first-time upgrade action');
+assert.match(webUi,/onUpgradeAdaptive\(cycle\.id\)/,
+    'The saved cycle ID is sent to the existing guarded upgrade operation');
+assert.match(transport,/refresh_cycle:\s*refreshAdaptiveCyclePreviews/,
+    'Refresh requests continue to reach the canonical engine through the worker');
 console.log('PASS M326: actual custom exit continuity across all strength weeks, selected-gym previews, saved-ID/phase preservation, safe legacy activation and repeat refresh.');
 
 // Specific machines remain unavailable even when another machine makes the

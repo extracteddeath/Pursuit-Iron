@@ -290,6 +290,10 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                                                     "wrist-roller-handle",
                                                     "single-weight-plate",
                                                     "hand-gripper-device",
+                                                    "neck-extension-device",
+                                                    "neck-flexion-device",
+                                                    "neck-harness-device",
+                                                    "neck-lateral-device",
                                                     RatedResistanceBandDomain.EQUIPMENT_ID))
                                                     PhysicalStockEditorKind.EXACT_LOADS
                                                 else PhysicalStockEditorKind.VERIFIED_STACK

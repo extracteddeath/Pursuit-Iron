@@ -2,6 +2,30 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Measured exercise Material 3 entry component (2026-11-18):**
+An isolated real Compose form now consumes an authenticated issued typed
+set and accepts actual hold seconds/MM:SS, distance centimeters/meters/
+feet, banded repetitions and independent left/right observations. It
+reuses the source-specific Kotlin parser, keeps target and actual weight
+separate, never treats a different band or physical station as equivalent,
+and shows the exact unit and stored result on edit. Switching units clears
+unsubmitted numbers rather than silently relabeling them; conversions
+from feet must be explicitly acknowledged when centimeter rounding occurs.
+Completed, failed-zero and skipped outcomes are distinct, confirmation
+is required for exceptional entries, and correction receives a fresh
+event ID with the current journal revision and corrects-event ID. Only an
+external owner-fenced native record callback can persist an observation;
+the form never calls Finish or claims an optimistic journal/history write.
+UI source contracts assert the wiring, but real-device interaction has NOT
+been accepted.
+
+**Not yet exposed to beta users:** This component has no issued measured
+plan route in the current app. The host must independently approve the
+parent multi-set workout and gym, provide the stored set, handle callback
+failure and completion, and join final History transaction before this
+can appear as fully supported training. Live catalog remains 369/383 until
+end-to-end validation. No APK.
+
 **Typed athlete input conversion for the 14 measured exercises (2026-11-18):**
 A pure Kotlin entry policy now parses real active quantities for all
 source-exact timed, distance and banded movements. Holds accept seconds or

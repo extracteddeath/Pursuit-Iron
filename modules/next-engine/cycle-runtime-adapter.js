@@ -272,13 +272,15 @@ const totalSets = program => program.sessions.reduce((n, session) =>
 // duration/equipment constraints cannot safely support this continuity.
 export function strengthEntryMinimumSets(previousSets) {
     if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
-    // Moderate weeks must keep >=70% of productive work. Exceptionally
-    // high hypertrophy source weeks (e.g. 82 sets) cannot always fit the
-    // longer rests of strength within the SAME athlete-approved time cap.
-    // Preserve >=58% there, with a 46-set bridge through the transition;
-    // never turn a high-volume strength week into a peak-sized 50% taper.
-    return Math.min(Math.ceil(previousSets * .7),
-        Math.max(46, Math.ceil(previousSets * .58)));
+    // Moderate hypertrophy sources preserve >=70% across the strength
+    // transition. Extremely large absolute source weeks (>68 working sets)
+    // cannot retain that proportion at strength-specific rests within the
+    // same approved session capacity; keep the prior 50%-drop safety guard
+    // for that high-volume class rather than failing an otherwise validated
+    // cycle. This exception is not a Peak taper or a general set cut rule.
+    return previousSets > 68
+        ? Math.floor(previousSets * .5) + 1
+        : Math.ceil(previousSets * .7);
 }
 // Split search adds a concrete split to every candidate, including the original split.
 // That is not itself a structural change. A roster-locked volume rescue is valid

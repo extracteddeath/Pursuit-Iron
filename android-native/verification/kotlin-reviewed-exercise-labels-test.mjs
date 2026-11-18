@@ -49,6 +49,23 @@ for(const id of ['band-pushup','plank',
   assert.ok(!ids.includes(id),
     'Unmodeled timed/carry/hybrid loading must not be admitted: '+id);
 }
+// Every native load-advice entry must know that increasing machine
+// COUNTERWEIGHT is LESS demanding. Snapshot/History still own the actual.
+const kotlinRoot='android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/';
+const guardFiles=[
+  ['InWorkoutCoachDomain.kt','request.equipment?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['ConservativeProgressionReview.kt','ASSISTANCE_NEEDS_DECREASE_REVIEW'],
+  ['CoachNextProgramLoadReviewDomain.kt','stock.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['CustomSameBlockLoadContinuityDomain.kt','ASSISTANCE_NEEDS_SEPARATE_RECOVERY_REVIEW'],
+  ['ReviewedFutureWeekProgressionDomain.kt','exercise.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT'],
+  ['CoachSessionPrescriptionDomain.kt','if(assistance && p.scheme==SetLoadScheme.LAST_SET_BACKOFF)return null'],
+  ['CoachFirstProgramStartDomain.kt','val warmupLoad=if(assisted)inspected?.nextAbove']
+];
+for(const [file,needle] of guardFiles) {
+  const implementation=readFileSync(kotlinRoot+file,'utf8');
+  assert.ok(implementation.includes(needle),
+    'Assisted counterweight could silently invert load effort in '+file);
+}
 assert.ok(labels.includes('internal fun kotlinExerciseLabel(id:String)'),
   'fallback remains available only for truly unreviewed or custom identities');
 console.log(`PASS complete source-matched display labels for ${ids.length} reviewed Kotlin exercise IDs`);

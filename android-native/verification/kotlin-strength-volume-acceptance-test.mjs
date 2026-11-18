@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const root='android-native/';
+const gradle=readFileSync(root+'app/build.gradle.kts','utf8');
+assert.ok(gradle.includes('"**/NativeStrengthVolumeRepairReview.kt"'),
+  'A new native candidate source MUST be explicitly staged in the Kotlin-only app');
 const pkg=root+'app/src/main/java/io/github/extracteddeath/pursuitiron/';
 const host=readFileSync(pkg+'NativeKotlinCandidateHost.kt','utf8');
 const model=readFileSync(pkg+'NativeStrengthVolumeRepairReview.kt','utf8');

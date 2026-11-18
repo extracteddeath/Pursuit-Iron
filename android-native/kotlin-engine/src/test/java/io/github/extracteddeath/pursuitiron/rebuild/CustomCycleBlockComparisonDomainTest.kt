@@ -136,6 +136,45 @@ class CustomCycleBlockComparisonDomainTest {
             cycle(),"strength")).strengthExerciseCollapseReviewRequired)
     }
 
+    @Test fun zeroDirectArmsAreFlaggedEvenWithoutEightToThreeExerciseLoss() {
+        val source=cycle()
+        val measured=audit(source)
+        val weeks=measured.weeks.mapIndexed{index,week->
+            when(index) {
+                1 ->week.copy(directSets=week.directSets+
+                    (TrainingMuscle.TRICEPS to BigDecimal("2")))
+                2 ->week.copy(directSets=mapOf(
+                    TrainingMuscle.BICEPS to BigDecimal.ZERO,
+                    TrainingMuscle.BRACHIALIS to BigDecimal.ZERO,
+                    TrainingMuscle.TRICEPS to BigDecimal.ZERO,
+                    TrainingMuscle.WRIST_FLEXORS to BigDecimal.ZERO,
+                    TrainingMuscle.WRIST_EXTENSORS to BigDecimal.ZERO))
+                else ->week
+            }
+        }
+        val revised=measured.copy(weeks=weeks)
+        val compared=checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            source,"strength",revised))
+        assertEquals(setOf(
+            TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
+            TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
+            TrainingMuscle.WRIST_EXTENSORS),
+            compared.strengthDirectArmLosses)
+        assertFalse(compared.strengthExerciseCollapseReviewRequired)
+        assertFalse(compared.mayIssueWorkout)
+        assertFalse(compared.mayApplyAutomatically)
+        assertNull(checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            source,"strength")).strengthDirectArmLosses)
+        assertEquals(source,cycle())
+        val peak=source.copy(blocks=listOf(source.blocks.first(),
+            source.blocks[1].copy(phase=TrainingPhase.PEAK)))
+        val peakAudit=revised.copy(structuralReview=
+            CustomCycleReview(CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,
+                emptyList(),4,peak))
+        assertTrue(checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            peak,"strength",peakAudit)).strengthDirectArmLosses.isNullOrEmpty())
+    }
+
     @Test fun reportsThirtyToElevenWithoutCallingItSafeOrBetter() {
         val c=cycle()
         val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(

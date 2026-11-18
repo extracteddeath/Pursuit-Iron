@@ -235,7 +235,7 @@ private object NativeHistoryLedgerBinary {
                 out.writeUTF(entry.finishEventId)
                 out.writeLong(entry.originalJournalRevision)
                 out.writeLong(entry.savedCorrectionRevision)
-                if(dated)out.time(entry.completedAtEpochMillis)
+                if(format>=3)out.time(entry.completedAtEpochMillis)
             }
             when (val intent = state.pending) {
                 null -> out.writeByte(0)
@@ -244,14 +244,14 @@ private object NativeHistoryLedgerBinary {
                     out.writeUTF(intent.workoutId)
                     out.writeUTF(intent.operation.eventId)
                     out.writeLong(intent.operation.expectedJournalRevision)
-                    if(dated)out.time(intent.completedAtEpochMillis)
+                    if(format>=3)out.time(intent.completedAtEpochMillis)
                 }
                 is NativeHistoryWriteIntent.CustomFinish -> {
                     out.writeByte(3)
                     out.writeUTF(intent.workoutId)
                     out.writeUTF(intent.operation.eventId)
                     out.writeLong(intent.operation.expectedRevision)
-                    if(dated)out.time(intent.completedAtEpochMillis)
+                    if(format>=3)out.time(intent.completedAtEpochMillis)
                 }
                 is NativeHistoryWriteIntent.MeasuredFinish -> {
                     out.writeByte(5)

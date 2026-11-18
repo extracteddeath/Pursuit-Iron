@@ -258,7 +258,7 @@ class MeasuredExerciseEntryDomainTest {
     @Test fun aReviewNeverWritesAthleteHistoryOrCertifiesAnUnapprovedSet() {
         val p=plan("plank")
         refused(MeasuredExerciseEntryDomain.parse(
-            p.copy(confirmedFixtures=setOf("forged")),
+            p.copy(sides=setOf(MeasuredSide.LEFT)),
             MeasuredSetOutcome.COMPLETED,input(p)),
             MeasuredEntryRefusal.UNAPPROVED_PLAN)
         val preview=accepted(MeasuredExerciseEntryDomain.parse(

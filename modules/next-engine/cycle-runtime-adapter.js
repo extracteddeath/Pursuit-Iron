@@ -35,7 +35,14 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
             const strength = ex.role === 'primary_strength' || ex.role === 'secondary_strength';
             const sourceScale = strength ? sourcePolicy.strengthVolumeMultiplier : sourcePolicy.volumeMultiplier;
             const targetScale = strength ? targetPolicy.strengthVolumeMultiplier : targetPolicy.volumeMultiplier;
+            // On hypertrophy -> strength ACCUMULATION, keep most authored
+            // working sets on the same exercise skeleton. Higher strength
+            // rest and lower reps remain independently prescribed; this is
+            // NOT the separate Peak taper. Ordinary strength-only program
+            // generation keeps its established audited phase policy.
             const ratio = sourceScale > 0 ? targetScale / sourceScale : 1;
+            const retainedRatio = previous.phase === 'hypertrophy_accumulation' &&
+                target === 'strength_accumulation' ? Math.max(.9, ratio) : ratio;
             const prescription = {
                 reps: repsForPhase(def, ex.role, targetPolicy),
                 rir: rirForPhase(ex.role, targetPolicy),
@@ -53,7 +60,7 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
             return {
                 ...ex,
                 ...(workingSetCap !== undefined ? { workingSetCap } : {}),
-                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * ratio))),
+                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * retainedRatio))),
                 prescription,
                 progressionStyle: progressionSelection.style,
                 progression: progressionInstruction(progressionSelection.style),

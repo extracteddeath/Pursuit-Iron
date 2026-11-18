@@ -83,3 +83,39 @@ console.log('PASS native cycle boundary: final→first and weakest strength week
 assert.match(sourceArmDomain,/TrainingMuscle\.WRIST_FLEXORS,TrainingMuscle\.WRIST_EXTENSORS/);
 assert.match(sourceArmSelection,/TrainingMuscle\.WRIST_EXTENSORS/);
 assert.match(sourceArmSelection,/source\.candidates\.size<=5/);
+
+const menuDomain=readFileSync(root+
+  'kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StrengthExerciseMenuRecoveryDomain.kt','utf8');
+const menuTests=readFileSync(root+
+  'kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/StrengthExerciseMenuRecoveryDomainTest.kt','utf8');
+const host=readFileSync(root+
+  'app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt','utf8');
+const controller=readFileSync(root+
+  'app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleController.kt','utf8');
+const plan=readFileSync(root+
+  'app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt','utf8');
+
+// A real 8→3 menu needs EXERCISE continuity, not just more sets.
+assert.match(menuDomain,/strengthExerciseCollapseReviewRequired/);
+assert.match(menuDomain,/CustomTrainingCycleDomain\.week/);
+assert.match(menuDomain,/AdaptiveCycleOptionReviewDomain\.review/);
+assert.match(menuDomain,/permissions\.adaptExercises/);
+assert.match(menuDomain,/StrengthMenuRecoveryStatus\.READY_FOR_ATHLETE_REVIEW/);
+assert.match(menuDomain,/mayAlterHistory:Boolean get\(\)=false/);
+for(const test of [
+  'realExitWeekMenuRestoresFiveDistinctAccessoriesWithoutMutatingSource',
+  'capacityAndConstrainedSourceNeverPretendTheyRestoredEverything',
+  'fullProposeNeverTreatsInjectedStructuralAuditAsAuthority'
+])assert.ok(menuTests.includes(test),'Missing Strength menu JVM test: '+test);
+assert.match(host,/fun previewStrengthMenuRecovery\(/);
+assert.match(host,/fun acceptStrengthMenuRecovery\(/);
+assert.match(host,/CustomCycleChangeKind\.EXERCISES !in rights\.allowedKinds/);
+assert.match(host,/fresh\.receipt!=reviewed/);
+assert.match(host,/customDraftStore\.save\(owner\.ownerKey/);
+assert.match(controller,/fun reviewStrengthExerciseMenu\(/);
+assert.match(controller,/fun acceptStrengthExerciseMenu\(/);
+assert.match(controller,/"strength-menu-recovery"/);
+assert.match(ui,/Preview source exercise recovery/);
+assert.match(ui,/Confirm and save recovered exercises/);
+assert.match(plan,/menuRecoveryReview=state\.strengthMenuRecoveryReview/);
+console.log('PASS source-audited Strength menu recovery: real draft → owner-fenced Plan preview/consent → CAS/undo; no automatic issue.');

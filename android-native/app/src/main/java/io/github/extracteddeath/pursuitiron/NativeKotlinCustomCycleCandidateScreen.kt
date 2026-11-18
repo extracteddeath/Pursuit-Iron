@@ -798,7 +798,21 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 blockId,maximumWorkingSets)
                         }) else null,
                     onAcceptStrengthRepair=if(permissionHost!=null)
-                        ({controller.acceptStrengthVolumeRepair(true)}) else null
+                        ({controller.acceptStrengthVolumeRepair(true)}) else null,
+                    menuRecoveryReview=state.strengthMenuRecoveryReview,
+                    canRequestMenuRecovery=permissionHost!=null &&
+                        state.coachingSuggestionsEnabled &&
+                        state.reviewedCoachInputs!=null &&
+                        state.coachingAudit?.structuralReview?.verifiedDraft==draft &&
+                        state.auditSourceRevision!=null &&
+                        state.auditSourceRevision==state.sourceRevision,
+                    onRequestMenuRecovery=if(permissionHost!=null)
+                        ({blockId,maxExercises->
+                            controller.reviewStrengthExerciseMenu(
+                                blockId,maxExercises)
+                        }) else null,
+                    onAcceptMenuRecovery=if(permissionHost!=null)
+                        ({controller.acceptStrengthExerciseMenu(true)}) else null
                 )
                 NativeKotlinCustomCycleCalibrationPanel(
                     controller,state,onOpenIssuedWorkout)

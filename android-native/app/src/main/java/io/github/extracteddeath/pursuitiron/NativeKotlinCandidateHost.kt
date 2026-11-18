@@ -2268,6 +2268,129 @@ internal class NativeKotlinCandidateHost(context:Context) {
             "Native storage could not commit the reviewed proposal. Nothing saved.")}
     }
 
+    /**
+     * Strength exercise-menu continuity is not a set-count repair. Its
+     * permissions, gym, signed coaching settings and saved source revision
+     * must be freshly verified, including on the explicit acceptance turn.
+     */
+    private fun reviewedStrengthMenu(
+        request:NativeStrengthMenuRecoveryRequest
+    ):NativeStrengthMenuRecoveryPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Sign in to review the saved training cycle.")
+        if(request.expectedCycleRevision<1 ||
+            request.expectedSourceRevision<1 ||
+            request.maximumExercisesPerDay !in 1..32 ||
+            request.maximumRestoredPerDay !in 1..8)
+            return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Check the current cycle, gym and exercise capacity.")
+        val assistance=(coachSettings.read(owner.ownerKey)
+            as? NativeCoachSettingsRead.Current)?.settings
+            ?:return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Current coaching preferences are not verified.")
+        if(assistance.athleteId!=owner.athleteId ||
+            !assistance.policy.coachingSuggestionsEnabled)
+            return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Coaching proposals are disabled for this athlete.")
+        val rights=(adaptiveCyclePermissions.read(owner.ownerKey,
+            request.cycleId) as? NativeAdaptivePermissionRead.Found)?.receipt
+            ?:return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Authorize Adapt exercises for this cycle first.")
+        if(rights.athleteId!=owner.athleteId ||
+            CustomCycleChangeKind.EXERCISES !in rights.allowedKinds)
+            return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Adapt exercises is not enabled for this saved cycle.")
+        val original=(customDraftStore.read(owner.ownerKey,
+            request.cycleId) as? NativeCustomDraftReadResult.Found)?.draft
+            ?:return NativeStrengthMenuRecoveryPreview.Rejected(
+                "The latest saved cycle could not be verified.")
+        val source=(authoringSourceStore.read(owner.ownerKey)
+            as? NativeAuthoringSourceRead.Found)?.source
+            ?:return NativeStrengthMenuRecoveryPreview.Rejected(
+                "The current gym and reviewed movement inventory are missing.")
+        if(original.revision!=request.expectedCycleRevision ||
+            source.revision!=request.expectedSourceRevision ||
+            original.athleteId!=owner.athleteId ||
+            source.athleteId!=owner.athleteId ||
+            source.ownerKey!=owner.ownerKey)
+            return NativeStrengthMenuRecoveryPreview.Rejected(
+                "The cycle or gym changed. Review the latest version.")
+        val proposal=runCatching {
+            StrengthExerciseMenuRecoveryDomain.propose(
+                StrengthMenuRecoveryRequest(
+                    AdaptiveCycleOptionRequest(original,request.blockId,
+                        source.setup,source.catalog,request.coaching,
+                        CustomCycleCoachPermissions(adaptExercises=true),
+                        emptyList()),
+                    request.maximumExercisesPerDay,
+                    request.maximumRestoredPerDay))
+        }.getOrElse{
+            return NativeStrengthMenuRecoveryPreview.Rejected(
+                "The source exercise menu could not be audited.")
+        }
+        val accepted=proposal.reviewedOption?.proposedCycle
+        if(proposal.status!=
+            StrengthMenuRecoveryStatus.READY_FOR_ATHLETE_REVIEW ||
+            accepted==null || proposal.restored.isEmpty() ||
+            accepted.revision!=original.revision+1 ||
+            accepted.blocks.filterNot{it.blockId==request.blockId}!=
+                original.blocks.filterNot{it.blockId==request.blockId})
+            return NativeStrengthMenuRecoveryPreview.Rejected(
+                proposal.explanation)
+        return NativeStrengthMenuRecoveryPreview.Ready(
+            NativeStrengthMenuRecoveryReady(request,rights.revision,
+                assistance.revision,accepted,proposal.restored))
+    }
+
+    fun previewStrengthMenuRecovery(
+        request:NativeStrengthMenuRecoveryRequest
+    ):NativeStrengthMenuRecoveryPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeStrengthMenuRecoveryPreview.Rejected(
+                "Current athlete is unavailable.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                reviewedStrengthMenu(request)
+            }
+        }.getOrElse {NativeStrengthMenuRecoveryPreview.Rejected(
+            "Unable to review the exact Strength source and gym. Nothing saved.")}
+    }
+
+    fun acceptStrengthMenuRecovery(
+        reviewed:NativeStrengthMenuRecoveryReady,
+        athleteConfirmed:Boolean
+    ):NativeStrengthMenuRecoveryDecision {
+        if(!athleteConfirmed)return NativeStrengthMenuRecoveryDecision.Rejected(
+            "Confirm the exact restored exercise list before saving.")
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeStrengthMenuRecoveryDecision.Rejected(
+                "Current athlete is unavailable.")
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val fresh=reviewedStrengthMenu(reviewed.request)
+                if(fresh !is NativeStrengthMenuRecoveryPreview.Ready ||
+                    fresh.receipt!=reviewed)
+                    return@withOwnerTransaction NativeStrengthMenuRecoveryDecision.Rejected(
+                        "Source, permissions or coaching changed. Review again.")
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeStrengthMenuRecoveryDecision.Rejected(
+                        "Signed-in athlete changed. No draft was edited.")
+                when(val saved=customDraftStore.save(owner.ownerKey,
+                    reviewed.request.cycleId,
+                    reviewed.request.expectedCycleRevision,
+                    fresh.receipt.proposedCycle)) {
+                    is NativeCustomDraftWriteResult.Committed ->
+                        NativeStrengthMenuRecoveryDecision.Saved(saved.revision)
+                    is NativeCustomDraftWriteResult.Rejected ->
+                        NativeStrengthMenuRecoveryDecision.Rejected(
+                            "Saved draft revision changed or storage rejected the edit.")
+                }
+            }
+        }.getOrElse {NativeStrengthMenuRecoveryDecision.Rejected(
+            "The atomic native save failed. History and existing workouts are unchanged.")}
+    }
+
     fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAdaptivePermissionRead.Rejected(

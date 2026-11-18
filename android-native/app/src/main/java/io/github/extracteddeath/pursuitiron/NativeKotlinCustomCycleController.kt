@@ -74,7 +74,8 @@ internal data class NativeKotlinCustomCycleState(
     val pendingCalibrations:List<NativeCustomPreparedWorkout> = emptyList(),
     val pendingCalibrationAcceptances:List<NativeBlockCalibrationReceipt> = emptyList(),
     /** Source- and permission-verified, non-issuable draft repair preview. */
-    val strengthRepairReview:NativeStrengthVolumeRepairReady?=null
+    val strengthRepairReview:NativeStrengthVolumeRepairReady?=null,
+    val strengthMenuRecoveryReview:NativeStrengthMenuRecoveryReady?=null
 )
 
 /**
@@ -482,6 +483,7 @@ internal class NativeKotlinCustomCycleController(
                             auditSourceRevision = null,
                             reviewedCoachInputs = null,
                             strengthRepairReview = null,
+                            strengthMenuRecoveryReview = null,
                             nextCycleSlot = null,
                             nextSlotCycleRevision = null,
                             weekEditReview = null,
@@ -531,6 +533,7 @@ internal class NativeKotlinCustomCycleController(
             coachingAudit=null,
             reviewedCoachInputs=null,
             strengthRepairReview=null,
+            strengthMenuRecoveryReview=null,
             nextCycleSlot=null,
             nextSlotCycleRevision=null,
             weekEditReview=null,
@@ -1775,6 +1778,81 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
+    /**
+     * Recover source-authored, source-reviewed vanished Strength exercises.
+     * Preview and Save are separate actions and source revisions; an empty or
+     * stale audit never becomes permission to modify the saved program.
+     */
+    fun reviewStrengthExerciseMenu(blockId:String,maxExercisesPerDay:Int)=run {
+        val shown=current.value
+        val cycle=shown.draft
+        val sourceRevision=shown.sourceRevision
+        val audited=shown.coachingAudit
+        val inputs=shown.reviewedCoachInputs
+        if(cycle==null || sourceRevision==null || inputs==null ||
+            shown.auditSourceRevision!=sourceRevision ||
+            audited==null || audited.auditedCycleRevision!=cycle.revision ||
+            audited.structuralReview?.verifiedDraft!=cycle ||
+            !shown.coachingSuggestionsEnabled) {
+            current.value=current.value.copy(strengthMenuRecoveryReview=null,
+                message="Review the current full cycle, gym and coaching policy before restoring exercises.")
+            return@run
+        }
+        val response=host.previewStrengthMenuRecovery(
+            NativeStrengthMenuRecoveryRequest(cycle.cycleId,blockId,
+                cycle.revision,sourceRevision,inputs,maxExercisesPerDay))
+        current.value=when(response) {
+            is NativeStrengthMenuRecoveryPreview.Ready ->
+                current.value.copy(strengthMenuRecoveryReview=response.receipt,
+                    message="Reviewed "+response.receipt.restored.size+
+                        " actual source exercise(s) for Strength. Confirm the exact choices before saving.")
+            is NativeStrengthMenuRecoveryPreview.Rejected ->
+                current.value.copy(strengthMenuRecoveryReview=null,
+                    message="Strength menu proposal unavailable: "+response.explanation)
+        }
+    }
+
+    fun acceptStrengthExerciseMenu(athleteConfirmed:Boolean)=run {
+        val shown=current.value
+        val reviewed=shown.strengthMenuRecoveryReview
+        val prior=shown.draft
+        if(!athleteConfirmed || reviewed==null || prior==null ||
+            shown.sourceRevision!=reviewed.request.expectedSourceRevision ||
+            prior.revision!=reviewed.request.expectedCycleRevision ||
+            prior.cycleId!=reviewed.request.cycleId) {
+            current.value=current.value.copy(strengthMenuRecoveryReview=null,
+                message="The source exercise review is stale. Recheck before saving.")
+            return@run
+        }
+        when(val saved=host.acceptStrengthMenuRecovery(
+            reviewed,athleteConfirmed)) {
+            is NativeStrengthMenuRecoveryDecision.Saved -> {
+                val disk=host.readCustomCycleDraft(prior.cycleId)
+                if(disk is NativeCustomDraftReadResult.Found &&
+                    disk.draft==reviewed.proposedCycle &&
+                    disk.draft.revision==saved.newCycleRevision) {
+                    applyRead(prior.cycleId,disk)
+                    lastUndo=CustomCycleDraftReceipt(
+                        "strength-menu-recovery",prior,reviewed.proposedCycle)
+                    current.value=current.value.copy(canUndo=true,
+                        strengthMenuRecoveryReview=null,
+                        message="Saved "+reviewed.restored.size+
+                            " source exercise(s) in Strength. The old approval is stale; review and sign the new program before its next workout.")
+                } else {
+                    applyRead(prior.cycleId,disk)
+                    current.value=current.value.copy(strengthMenuRecoveryReview=null,
+                        message="The saved result could not be verified. Reloaded disk state without claiming success.")
+                }
+            }
+            is NativeStrengthMenuRecoveryDecision.Rejected -> {
+                val disk=host.readCustomCycleDraft(prior.cycleId)
+                applyRead(prior.cycleId,disk)
+                current.value=current.value.copy(strengthMenuRecoveryReview=null,
+                    message="Strength exercises were not saved: "+saved.explanation)
+            }
+        }
+    }
+
     fun undo() = run {
         val saved = current.value.draft ?: return@run
         val receipt = lastUndo ?: return@run
@@ -1788,7 +1866,8 @@ internal class NativeKotlinCustomCycleController(
         // A strength repair changed physical working-set prescriptions
         // against a particular verified gym source. Its Undo must obey
         // the same source-revision fence, never restore an obsolete stack.
-        val write = if(receipt.operation=="strength-dose-repair") {
+        val write = if(receipt.operation in setOf("strength-dose-repair",
+            "strength-menu-recovery")) {
             val source= current.value.sourceRevision
             if(source==null)NativeCustomDraftWriteResult.Rejected(
                 NativeCustomDraftRefusal.STALE_REVISION)

@@ -196,8 +196,14 @@ object AdaptiveBlockOptionGenerationDomain {
                     option.generation.sourceStrengthArms!=verifiedArms ->
                     AdaptiveBlockGenerationRefusal.SOURCE_ARM_CONTINUITY_UNVERIFIED
                 isHypertrophyToStrength && request.permissions.adaptExercises &&
-                    sourceArmEvidence?.status==
-                        StrengthSourceArmsStatus.SOURCE_UNVERIFIED ->
+                    (sourceArmEvidence?.status==
+                        StrengthSourceArmsStatus.SOURCE_UNVERIFIED ||
+                        (verifiedArms!=null &&
+                            !option.generation.selectFromOfferedCatalog)) ->
+                    // A future Strength block with proven lost direct curls
+                    // cannot quietly use the old "unselected" candidate
+                    // route. Require explicit athlete adapt-exercises opt-in
+                    // AND an equipment-verified adaptive shortlist.
                     AdaptiveBlockGenerationRefusal.SOURCE_ARM_CONTINUITY_UNVERIFIED
                 !sameSource || setup==null ||
                     !option.generation.setup.mayReviewProgramCandidate ||

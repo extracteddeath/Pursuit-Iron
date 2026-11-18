@@ -2,6 +2,24 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Native strength-block boundary dose and set-count evidence (2026-11-18):**
+Plan now distinguishes authored base working sets (not warm-ups or
+amplifier follow-ups) from the complete cycle's exact reviewed weekly
+working-set measurements, including saved week overrides. A strength block
+is compared against the actual **last hypertrophy week**, not its first;
+every subsequent strength week is also inspected for a later half-volume
+drop. Direct-muscle changes (including biceps, brachialis, wrist flexors and
+wrist extensors) use the same exit-to-entry boundary. A large strength
+reduction has a conspicuous factual review cue, explicitly distinguished
+from Peak's intentional taper and from the athlete-specific full-cycle
+coach approval. Stale, incomplete or mismatched audit data fails closed to
+base-only comparison and asks for a fresh audit; no set/target, journal,
+program consent or history writes occur. Pure Kotlin regressions and a
+native Compose source contract cover the real boundary, later weak weeks,
+overrides and the difference between strength and Peak. Device visibility,
+full individualized volume adequacy and beta authorization remain open;
+no APK/AAB.
+
 **Measured exercise owner-locked issue/open/record sidecar (2026-11-18):**
 An isolated native-coach-store component now creates real app-private
 measurement journal files for all 14 typed movement kinds, atomically

@@ -30,6 +30,19 @@ for(const [id,label] of mappings.map(m=>[m[1],m[2]])) {
   assert.ok(label.length>=4 && !label.includes('${') && !label.startsWith('"'),
     'label must be a usable human-readable static Kotlin display name: '+id);
 }
+// The one admitted supported-band exercise logs repetitions with no external
+// load. Combined bodyweight+resistance, assisted stack, timed holds and carries
+// still require their own Kotlin measurement/progression models.
+const fixtureUi=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymFacilityChoices.kt','utf8');
+assert.ok(ids.includes('spanish-squat'));
+assert.match(labels,/"spanish-squat" to "Spanish Squat \(band-supported, reps\)"/);
+assert.match(fixtureUi,/"spanish-squat-support" to "Anchored Spanish squat support band"/);
+for(const id of ['band-pushup','assisted-pullup','assisted-dip','plank',
+  'dead-hang','farmers','weighted-plank']) {
+  assert.ok(!ids.includes(id),
+    'Unmodeled timed/assisted/hybrid loading must not be admitted: '+id);
+}
 assert.ok(labels.includes('internal fun kotlinExerciseLabel(id:String)'),
   'fallback remains available only for truly unreviewed or custom identities');
 console.log(`PASS complete source-matched display labels for ${ids.length} reviewed Kotlin exercise IDs`);

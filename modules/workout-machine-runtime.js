@@ -6,7 +6,7 @@
  * Pure functions: Gym remains the shared store's owner, and WorkoutSession
  * remains the only writer of the current session's actual sets.
  */
-import { addMachineVariant, latestMachineSet, resolveMachineVariant } from './next-engine/machine-instances.js';
+import { addMachineVariant, assignLegacyMachineHistory, latestMachineSet, resolveMachineVariant } from './next-engine/machine-instances.js';
 import { EX_BY_ID, isMachineLike, toUnit } from './engine-api.js';
 
 const fail=message=>({ok:false,message});
@@ -27,7 +27,7 @@ export function chooseWorkoutPhysicalMachine(row,{
     if(row.machineInstanceId===nextId)return {ok:true,row};
     const last=latestMachineSet(history,{
         gymId:sessionGymId,exerciseId:row.id,
-        machineInstanceId:nextId,dayId
+        machineInstanceId:nextId,dayId,gym
     });
     const reference=last?toUnit(last.weight,last.unit||unit,unit):null;
     return {ok:true,row:{
@@ -60,6 +60,17 @@ export function createWorkoutPhysicalMachine(gym,exerciseId,label,makeDefault=fa
         const nextGym=addMachineVariant(gym,exerciseId,instance,makeDefault);
         return {ok:true,nextGym,id:instance.id};
     }catch(error){return fail(String(error?.message||'Unable to add physical machine'));}
+}
+
+/** Only the athlete can identify which existing machine owns old unassigned sets.
+ * A/B PR and load histories remain isolated; nothing edits the old receipts. */
+export function associateLegacyWorkoutMachine(gym, exerciseId, machineInstanceId) {
+    if(!gym || !isMachineLike(EX_BY_ID[exerciseId]?.equip))
+        return fail('Choose an existing machine in the workout gym.');
+    try {
+        const nextGym=assignLegacyMachineHistory(gym,exerciseId,machineInstanceId);
+        return {ok:true,nextGym};
+    } catch(error) {return fail(String(error?.message||'History assignment could not be saved'));}
 }
 
 /** Apply a validated exercise-scoped machine catalog to its existing gym.

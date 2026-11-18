@@ -72,7 +72,9 @@ internal data class NativeKotlinCustomCycleState(
     val calibrationReset:NativePreparedManualResetPreview.Ready? = null,
     val issuedCalibrationId:String? = null,
     val pendingCalibrations:List<NativeCustomPreparedWorkout> = emptyList(),
-    val pendingCalibrationAcceptances:List<NativeBlockCalibrationReceipt> = emptyList()
+    val pendingCalibrationAcceptances:List<NativeBlockCalibrationReceipt> = emptyList(),
+    /** Source- and permission-verified, non-issuable draft repair preview. */
+    val strengthRepairReview:NativeStrengthVolumeRepairReady?=null
 )
 
 /**
@@ -479,6 +481,7 @@ internal class NativeKotlinCustomCycleController(
                             evidenceSourceRevision = null,
                             auditSourceRevision = null,
                             reviewedCoachInputs = null,
+                            strengthRepairReview = null,
                             nextCycleSlot = null,
                             nextSlotCycleRevision = null,
                             weekEditReview = null,
@@ -527,6 +530,7 @@ internal class NativeKotlinCustomCycleController(
         current.value=previous.copy(
             coachingAudit=null,
             reviewedCoachInputs=null,
+            strengthRepairReview=null,
             nextCycleSlot=null,
             nextSlotCycleRevision=null,
             weekEditReview=null,
@@ -1686,6 +1690,85 @@ internal class NativeKotlinCustomCycleController(
             order.add(target, moved)
             CustomCycleBuilderDomain.reorderBlocks(
                 draft, draft.revision, order)
+        }
+    }
+
+    /**
+     * Exact saved-cycle strength repair, not a phase-wide algorithmic rewrite.
+     * The coach policy must have been reviewed against this same source,
+     * even when the review is UNRESOLVED because volume falls too sharply.
+     * A preview can never approve or replace a workout automatically.
+     */
+    fun reviewStrengthVolumeRepair(blockId:String,maxSetsPerSlot:Int) = run {
+        val shown=current.value
+        val draft=shown.draft
+        val sourceRevision=shown.sourceRevision
+        val audited=shown.coachingAudit
+        val inputs=shown.reviewedCoachInputs
+        if(draft==null || sourceRevision==null || inputs==null ||
+            shown.auditSourceRevision!=sourceRevision ||
+            audited==null || audited.auditedCycleRevision!=draft.revision ||
+            audited.structuralReview?.verifiedDraft!=draft ||
+            !shown.coachingSuggestionsEnabled) {
+            current.value=current.value.copy(strengthRepairReview=null,
+                message="Review the saved full cycle, gym and coaching rules first. No dose change was proposed.")
+            return@run
+        }
+        val proposal=host.previewStrengthVolumeRepair(
+            NativeStrengthVolumeRepairRequest(
+                draft.cycleId,blockId,draft.revision,sourceRevision,
+                inputs,maxSetsPerSlot))
+        current.value=when(proposal) {
+            is NativeStrengthVolumeRepairPreview.Ready ->
+                current.value.copy(strengthRepairReview=proposal.receipt,
+                    message="Reviewed ${proposal.receipt.additionsPerWeek} additional working sets per week in ${proposal.receipt.weeksCovered} strength week(s). Check the specific exercise changes and confirm before saving.")
+            is NativeStrengthVolumeRepairPreview.Rejected ->
+                current.value.copy(strengthRepairReview=null,
+                    message="Strength dose proposal unavailable: ${proposal.explanation}")
+        }
+    }
+
+    /** Athlete confirmation calls the owner-fenced host that independently
+     * re-reads/re-audits the WHOLE cycle and CAS-saves only the new draft.
+     * The former program consent is stale; workouts already issued remain.
+     */
+    fun acceptStrengthVolumeRepair(athleteConfirmed:Boolean) = run {
+        val shown=current.value
+        val reviewed=shown.strengthRepairReview
+        val prior=shown.draft
+        if(!athleteConfirmed || reviewed==null || prior==null ||
+            shown.sourceRevision!=reviewed.request.expectedSourceRevision ||
+            prior.revision!=reviewed.request.expectedCycleRevision ||
+            prior.cycleId!=reviewed.request.cycleId) {
+            current.value=current.value.copy(strengthRepairReview=null,
+                message="The review is no longer current. Recheck the exact proposal; nothing saved.")
+            return@run
+        }
+        when(val decision=host.acceptStrengthVolumeRepair(
+            reviewed,athleteConfirmed)) {
+            is NativeStrengthVolumeRepairDecision.Saved -> {
+                val disk=host.readCustomCycleDraft(prior.cycleId)
+                if(disk is NativeCustomDraftReadResult.Found &&
+                    disk.draft==reviewed.proposedCycle &&
+                    disk.draft.revision==decision.newCycleRevision) {
+                    applyRead(prior.cycleId,disk)
+                    lastUndo=CustomCycleDraftReceipt(
+                        "strength-dose-repair",prior,reviewed.proposedCycle)
+                    current.value=current.value.copy(canUndo=true,
+                        strengthRepairReview=null,
+                        message="Saved strength working-set changes · revision ${decision.newCycleRevision}. The previous program approval is no longer current; review and sign this updated cycle before another workout.")
+                } else {
+                    applyRead(prior.cycleId,disk)
+                    current.value=current.value.copy(strengthRepairReview=null,
+                        message="The save result could not be verified. Reloaded the durable program; do not assume the proposal was applied.")
+                }
+            }
+            is NativeStrengthVolumeRepairDecision.Rejected -> {
+                val disk=host.readCustomCycleDraft(prior.cycleId)
+                applyRead(prior.cycleId,disk)
+                current.value=current.value.copy(strengthRepairReview=null,
+                    message="Strength proposal not saved: ${decision.explanation}")
+            }
         }
     }
 

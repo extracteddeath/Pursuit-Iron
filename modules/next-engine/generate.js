@@ -364,6 +364,11 @@ function generateProgramOnce(requestInput, options) {
         return optimizeSetupAwareSessionSequence(finalized, exerciseMap, request);
     });
     // Strength accumulation is not a powerlifting-only exercise menu.
+    // A source-verified hypertrophy→strength transition retains useful arm
+    // assistance when the actual athlete's previous movement menu warrants
+    // it. Do NOT alter standalone Strength, novice strength, or Peak without
+    // that concrete continuity evidence; doing so changes unrelated training
+    // programs and can worsen dose/recovery quality.
     // A heavy bench/row contributes INDIRECT triceps/biceps work but cannot
     // by itself count as a direct elbow-extension or elbow-flexion slot.
     // Previous dose reconciliation can remove arm accessories even after
@@ -383,6 +388,7 @@ function generateProgramOnce(requestInput, options) {
     let maintainedSessions = reconciledSessions;
     const retainedArmAdditions = [];
     if (phase === 'strength_accumulation' &&
+        options?.preservePriorExerciseVariety === true &&
         request.preferences.volumeApproach !== 'minimalist' &&
         request.schedule.days.length >= 3) {
         const optionsForArm = [
@@ -442,7 +448,21 @@ function generateProgramOnce(requestInput, options) {
                         if (audit.result !== 'pass') continue;
                         // Low-fatigue exercises should use idle clock capacity,
                         // not crowd out the higher-priority heavy work.
-                        const score = rank * 100 +
+                        // If the athlete already has supinated curls,
+                        // prefer a neutral/hammer bias on the next exposure,
+                        // and vice versa; do not create a six-set same-grip
+                        // block that later triggers the separate brachialis
+                        // functional audit.
+                        const coverage = evaluateArmCoverage(
+                            maintainedSessions, request, exerciseMap).ledger;
+                        const bias = armCoverageBias(def);
+                        const biasPenalty = family !== 'elbow_flexion' ? 0 :
+                            coverage.bicepsBiasedSets < 1
+                                ? (bias === 'biceps_bias' ? 0 : 250)
+                                : coverage.brachialisBiasedSets < 1
+                                    ? (bias === 'brachialis_bias' ? 0 : 250)
+                                    : 0;
+                        const score = biasPenalty + rank * 100 +
                             Math.max(0, candidateSession.estimatedMinutes -
                                 session.estimatedMinutes) +
                             def.fatigue.systemic * 4 + def.setupCost;

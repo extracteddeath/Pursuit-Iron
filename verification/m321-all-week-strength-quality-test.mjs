@@ -48,6 +48,9 @@ assert.throws(()=>summarizeStrengthWorkWeeks([]),
     error=>error?.code==='NEXT_CYCLE_REALIZED_WEEKS_MISSING');
 
 assert.equal(strengthEntryMinimumSets(60),42,'Normal strength entry preserves at least 70%');
+assert.equal(strengthEntryMinimumSets(82),48,
+    'Exceptionally large hypertrophy weeks are bound by approved strength session capacity');
+assert.equal(findStrengthVolumeCliff(82,[{week:2,weeklySets:48}]),null);
 assert.equal(strengthEntryMinimumSets(15),0,'Small sessions skip aggregate floor');
 const volumeRows=[make(1,93,95,95),make(2,91,95,95),make(3,89,95,95),make(4,88,95,95)];
 volumeRows.forEach((row,i)=>{row.weeklySets=[52,50,24,53][i];});

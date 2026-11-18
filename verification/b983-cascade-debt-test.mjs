@@ -106,8 +106,11 @@ assert.ok((app.match(/style: \{/g)||[]).length<=874,
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').length<=2659430,
-  'Combined App and stylesheet must not grow after sheet-chrome consolidation');
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'')// B1016 adds a real accessible machine-history owner and actual-set explanation
+// while keeping all new geometry in the shared external stylesheet. Retain a
+// measured +2k bound; further uncontrolled App/CSS growth still fails.
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').length<=2661430,
+  'Combined App and stylesheet may grow at most 2k for the reviewed Machine A/B Exercise Info feature; no restored inline-style debt');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
 const sharedRoles=['faint','support-muted','caption-faint','section-intro','confirm-copy'];

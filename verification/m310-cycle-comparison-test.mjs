@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/engine-api.js';
 
-import { generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { generateNextCycleForShell, strengthEntryMinimumSets } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { captureShellVolumeSnapshot } from '../modules/next-engine/volume-repair.js';
 
 // M310: old fixed-split behavior and new goal-optimized adaptation are tested
@@ -80,7 +80,7 @@ function describe(result){
  }
  assert.equal(d.workingWeekVolumeChange.previousWeeklySets,sum(b.sessions));
  assert.equal(d.workingWeekVolumeChange.currentWeeklySets,sum(a.sessions));
- assert.ok(sum(a.sessions)>=Math.ceil(sum(b.sessions)*.7));
+ assert.ok(sum(a.sessions)>=strengthEntryMinimumSets(sum(b.sessions)));
  return {
   splits:[h.config.split,s.config.split],boundarySets:[sum(b.sessions),sum(a.sessions)],
   lastStrengthWeekSets:sum(end.sessions),

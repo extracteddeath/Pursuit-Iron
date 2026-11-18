@@ -1782,7 +1782,16 @@ internal class NativeKotlinCustomCycleController(
                 canUndo = false, message = "Undo is no longer valid for this revision.")
             return@run
         }
-        val write = host.saveCustomCycleDraft(result.draft, saved.revision)
+        // A strength repair changed physical working-set prescriptions
+        // against a particular verified gym source. Its Undo must obey
+        // the same source-revision fence, never restore an obsolete stack.
+        val write = if(receipt.operation=="strength-dose-repair") {
+            val source= current.value.sourceRevision
+            if(source==null)NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STALE_REVISION)
+            else host.saveReviewedCustomCycleDraft(
+                result.draft,saved.revision,source)
+        } else host.saveCustomCycleDraft(result.draft,saved.revision)
         lastUndo = null
         auditedInputs = null
         pendingWeekEdit = null

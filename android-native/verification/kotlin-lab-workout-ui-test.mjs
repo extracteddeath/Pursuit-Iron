@@ -1375,6 +1375,8 @@ assert.match(measuredEditor,/MeasuredEntryUnit\.MINUTES_SECONDS/);
 assert.match(measuredEditor,/MeasuredEntryUnit\.FEET/);
 assert.match(measuredEditor,/roundedApproved/);
 assert.match(measuredEditor,/Checkbox\(/);
+assert.match(measuredEditor,/val failedInput=submitted\.copy\(quantityBySide=plan\.sides\.associateWith\{"0"\}\)/);
+assert.match(measuredEditor,/MeasuredExerciseEntryDomain\.parse\([\s\S]*?MeasuredSetOutcome\.FAILED_ATTEMPT,failedInput/);
 assert.match(measuredEditor,/MeasuredJournalOperation\.Record\(/);
 assert.match(measuredEditor,/UUID\.randomUUID\(\)/);
 assert.match(measuredEditor,/journal\.revision,outcome,actual,previous\?\.eventId/);

@@ -12,7 +12,7 @@ const POLICIES = {
         hypertrophyRirShift: 0, strengthRirShift: 0, strengthRepBias: 'normal', advancedTechniqueBudget: 1, specificityBias: 1, sessionCapacityMultiplier: .95
     },
     strength_accumulation: {
-        phase: 'strength_accumulation', volumeMultiplier: .9, strengthVolumeMultiplier: 1,
+        phase: 'strength_accumulation', volumeMultiplier: .8, strengthVolumeMultiplier: .96,
         hypertrophyRirShift: 1, strengthRirShift: 0, strengthRepBias: 'lower', advancedTechniqueBudget: 0, specificityBias: 1.14, sessionCapacityMultiplier: .78
     },
     intensification: {

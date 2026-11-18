@@ -32,6 +32,15 @@ export function parseNativeStarterIds(source) {
   return [...source.matchAll(/\bentry\("([a-z0-9_-]+)"/g)].map(m=>m[1]);
 }
 const nativeStarterIds=parseNativeStarterIds(native);
+// A separate typed model can be source-reviewed without prematurely
+// claiming that legacy reps-based workout issuance/storage supports it.
+const measurementCandidatePath=join(root,
+  'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MeasuredExerciseDomain.kt');
+const measuredSource=readFileSync(measurementCandidatePath,'utf8');
+const measuredCandidates=[...measuredSource.matchAll(
+  /MeasuredExerciseDefinition\("([^"]+)","([^"]+)",\s*MeasuredExerciseKind\.([A-Z_]+),MeasuredLoadKind\.([A-Z_]+),\s*MeasuredSideRule\.([A-Z_]+)/g
+)].map(([,id,name,kind,loadKind,sideRule])=>({id,name,kind,loadKind,sideRule}));
+
 const pinnedVariantPath=join(root,
   'android-native/kotlin-engine/verification/requested-web-variants-20261117.json');
 const pinned=JSON.parse(readFileSync(pinnedVariantPath,'utf8'));
@@ -130,7 +139,48 @@ export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
   };
 }
 
+function assertMeasuredCandidateSourceIntegrity() {
+  const expected=Object.values(pendingMeasurementSemantics).flat().filter(
+    id=>!nativeStarterIds.includes(id));
+  assert.equal(expected.length,14,
+    'The next tranche is precisely 11 timed, two distance and one hybrid movements');
+  assert.equal(measuredCandidates.length,14,
+    'Every missing movement needs a separate typed Kotlin measurement candidate');
+  assert.deepEqual(new Set(measuredCandidates.map(x=>x.id)),new Set(expected));
+  const sourceById=new Map(reviewedWebBaseline.map(ex=>[ex.id,ex]));
+  for(const candidate of measuredCandidates) {
+    const source=sourceById.get(candidate.id);
+    assert.ok(source,'Missing verified web source identity: '+candidate.id);
+    assert.equal(candidate.name,source.name,
+      'A Kotlin measurement must use the exact web exercise name: '+candidate.id);
+    const reason=[...Object.entries(pendingMeasurementSemantics)]
+      .find(([,ids])=>ids.includes(candidate.id))?.[0];
+    assert.equal(candidate.kind,
+      reason==='TIMED_HOLD' ? 'HOLD_SECONDS' :
+      reason==='DISTANCE_CARRY' ? 'CARRY_CENTIMETERS' :
+      'BANDED_REPETITIONS',
+      'Never reclassify held seconds, carry distance or elastic repetitions: '+candidate.id);
+    assert.equal(nativeStarterIds.includes(candidate.id),false,
+      'Typed candidate must not enter the reps-only issued catalog prematurely: '+candidate.id);
+  }
+  const byId=new Map(measuredCandidates.map(x=>[x.id,x]));
+  for(const id of ['plate-pinch','weighted-plank'])
+    assert.equal(byId.get(id)?.loadKind,'VERIFIED_ADDED_LOAD');
+  for(const id of ['farmers','suitcase-carry'])
+    assert.equal(byId.get(id)?.loadKind,'VERIFIED_PER_HAND');
+  assert.equal(byId.get('band-pushup')?.loadKind,'BANDED_BODYWEIGHT');
+  assert.equal(byId.get('side-plank')?.sideRule,'LEFT_AND_RIGHT');
+  assert.equal(byId.get('copenhagen')?.sideRule,'LEFT_AND_RIGHT');
+  assert.equal(byId.get('suitcase-carry')?.sideRule,'EXPLICIT_SINGLE_SIDE');
+  // This inventory is NOT a readiness/issuance test. Actual owners, v1
+  // atomic persistence, the UI, and performance-dose parity are still open.
+  return {exactSourceCandidates:measuredCandidates.length,
+    typedMeasurementKinds:{timed:11,distance:2,hybrid:1},
+    issueAndDurableJournalCertified:0,releaseReady:false};
+}
+
 function selfTest() {
+  assertMeasuredCandidateSourceIntegrity();
   assert.deepEqual(parseNativeStarterIds(
     'entry("bench","family",...)\nentry("wrist-curl","family",...)\nentry("reverse-wrist-curl","family",...)'
   ),['bench','wrist-curl','reverse-wrist-curl'],
@@ -202,6 +252,7 @@ else {
     nativeStarterPath:'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StarterExerciseTranche.kt',
     nativeStarterSha256:sha256(native)
   };
+  report.measuredCandidateContracts=assertMeasuredCandidateSourceIntegrity();
   report.scope='Catalog source coverage only. Not program, cycle, progression or Android feature parity.';
   // Never print hundreds of rows into CI logs; full rows remain in artifact.
   console.log(JSON.stringify({
@@ -212,6 +263,7 @@ else {
     webBuiltinsNotInStarter:report.webBuiltinsNotInStarter,
     independentlyCertifiedMappings:report.independentlyCertifiedMappings,
     topUnmappedFamilies:report.missingByMovementFamily.slice(0,12),
+    measuredCandidateContracts:report.measuredCandidateContracts,
     missingByMeasurementSemantics:report.missingByMeasurementSemantics
   },null,2));
   if(args.has('--write-report')) {

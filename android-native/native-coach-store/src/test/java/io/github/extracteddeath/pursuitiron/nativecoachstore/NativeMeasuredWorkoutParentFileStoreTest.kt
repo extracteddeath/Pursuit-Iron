@@ -472,4 +472,41 @@ class NativeMeasuredWorkoutParentFileStoreTest {
             (typedRead().read("owner-one","athlete-one")
                 as NativeMeasuredHistoryReadResult.Rejected).reason)
     }
+
+    @Test fun measuredChronologyExportsRealUnitsWithoutInventingRepetitionPrs() {
+        val p=approved(all=true)
+        enrollHistory()
+        saved(indexedStore().issue("owner-one","workout-one"))
+        recordAll(p)
+        val committed=durableFinish(historyTransaction().complete(
+            "owner-one","athlete-one","workout-one",
+            MeasuredWorkoutOperation.Finish("mixed-typed-finish",14)))
+        val timeline=NativeKotlinMixedHistoryTimeline("athlete-one",
+            committed.manifestRevision,listOf(
+                NativeKotlinMixedHistoryCompletion.Measured(
+                    committed.completion,committed.stored)))
+        val csv=NativeKotlinVerifiedHistoryCsvExport.prepare(timeline)
+        assertTrue(csv.toString(),csv is NativeKotlinHistoryCsvResult.Ready)
+        val output=csv as NativeKotlinHistoryCsvResult.Ready
+        assertEquals(1,output.sessionCount)
+        assertEquals(14,output.rowCount)
+        for(expected in listOf("pursuit-iron-history-v4",
+            "measurement_kind","measurement_unit","measured_sides",
+            "physical_setup_id","band_id","target_measurement",
+            "actual_carry_seconds","HOLD_SECONDS","CARRY_CENTIMETERS",
+            "BANDED_REPETITIONS","SECONDS","CENTIMETERS","REPETITIONS",
+            "LEFT:25|RIGHT:25","blue-band")) {
+            assertTrue("Missing exact typed History export column or fact: "+
+                expected,output.csv.contains(expected))
+        }
+        val facts=NativeKotlinMixedHistoryFactsDomain.project(timeline)
+        assertTrue(facts.toString(),facts is NativeMixedFactsResult.Review)
+        val verified=(facts as NativeMixedFactsResult.Review).facts
+        assertEquals(listOf("workout-one"),verified.completedWorkoutIds)
+        assertTrue(verified.lastByExercise.isEmpty())
+        assertTrue(verified.highestCompletedLoad.isEmpty())
+        assertTrue(verified.bestLoggedSingleByLoad.isEmpty())
+        assertFalse(verified.canPublishPr)
+        assertFalse(verified.canIssueProgression)
+    }
 }

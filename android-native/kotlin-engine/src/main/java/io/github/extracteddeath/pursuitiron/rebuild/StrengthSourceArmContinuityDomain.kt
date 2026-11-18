@@ -50,9 +50,9 @@ object StrengthSourceArmContinuityDomain {
             cycle?.cycleId,cycle?.athleteId,cycle?.revision,priorBlockId,emptyList(),reason)
         val structural=coachAudit?.structuralReview
         if(cycle==null || cycle.athleteId!=expectedAthleteId ||
-            cycle.revision<1 ||
+            cycle.revision<1 || coachAudit==null ||
             coachAudit.auditedCycleRevision!=cycle.revision ||
-            structural?.verifiedDraft!=cycle ||
+            structural==null || structural.verifiedDraft!=cycle ||
             structural.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW)
             return reject("The athlete's exact saved custom cycle and its current source audit are required.")
         if(catalog.map{it.exerciseId}.distinct().size!=catalog.size)

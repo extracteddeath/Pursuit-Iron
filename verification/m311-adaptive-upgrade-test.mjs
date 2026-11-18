@@ -152,6 +152,7 @@ assert.equal(migrated.nextProgram.nextEngine.program.audit.result,'pass');
 const migratedQuality=migrated.cycle.blockMeta[1].splitDecision.realizedQuality;
 const migratedPreviousSets=weeklySets(captureShellVolumeSnapshot(conversion.currentProgram,conversion.currentProgram.config.weeks,EXERCISES));
 const continuity=migrated.nextProgram.nextEngine.strengthWeekContinuity;
+console.log('M311 strength continuity proof',JSON.stringify({before:migratedPreviousSets,after:actualAfter,repair:continuity?.changes?.length??0,weekly:migratedQuality.weeks.map(w=>w.weeklySets)}));
 assert.ok(continuity?.changes.length>0,'The formerly rejected conversion must repair its deficient later week');
 assert.equal(continuity.minimumWeeklySets,Math.ceil(migratedPreviousSets*.5));
 assert.equal(migratedQuality.comparison,'ranked_engine_base_to_saved_executable_weeks');

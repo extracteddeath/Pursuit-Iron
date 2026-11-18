@@ -162,7 +162,12 @@ function selfTest() {
     (n,group)=>n+group.ids.length,0);
   assert.equal(pendingCount,completeAudit.webBuiltinsNotInStarter);
   assert.equal(completeAudit.missingByMeasurementSemantics
-    .find(x=>x.reason==='ASSISTED_COUNTERWEIGHT')?.ids.length,3);
+    .find(x=>x.reason==='ASSISTED_COUNTERWEIGHT')?.ids.length??0,0,
+    'All three reviewed assisted machine identities must be source matched');
+  for(const id of pendingMeasurementSemantics.ASSISTED_COUNTERWEIGHT)
+    assert.ok(nativeStarterIds.includes(id),'Missing reviewed assisted machine: '+id);
+  assert.equal(completeAudit.webBuiltinsNotInStarter,18,
+    'The current reconciled web catalog must have exactly 18 remaining measurement gaps');
   assert.equal(completeAudit.missingByMeasurementSemantics
     .find(x=>x.reason==='HYBRID_BODYWEIGHT_AND_BAND')?.ids[0],'band-pushup');
   assert.equal(incomplete.webBuiltinsNotInStarter,1);

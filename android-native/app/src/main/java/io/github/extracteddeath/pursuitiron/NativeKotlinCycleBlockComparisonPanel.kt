@@ -161,13 +161,24 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         if(priorAuditedSets!=null && nextAuditedSets!=null) {
             HorizontalDivider()
             PursuitSectionHeading("Full-cycle measurements",
-                "Includes exact saved week overrides. Review status is shown separately.")
+                "Effective working sets include saved week overrides. Compare the " +
+                    "actual phase boundary, not the first week of both blocks.")
             PursuitMetricStrip(listOf(
-                "Earlier weeks" to auditedRange(priorAuditedSets),
-                "Next weeks" to auditedRange(nextAuditedSets),
-                "First-week change" to (
-                    comparison.firstAuditedWeekDelta?.let(::signedCount) ?: "—")
+                "Previous exit week" to (priorAuditedSets.lastOrNull()?.toString() ?: "—"),
+                "Next entry week" to (nextAuditedSets.firstOrNull()?.toString() ?: "—"),
+                "Entry change" to (
+                    comparison.boundaryWorkingSetDelta?.let(::signedCount) ?: "—")
             ))
+            Text(
+                "Next block by week: " +
+                    nextAuditedSets.mapIndexed {index,sets->
+                        "W${index+1} $sets"
+                    }.joinToString(" · ") +
+                    ". Lowest week retains " +
+                    (comparison.lowestNextWeekRetentionPercent?.let{"$it%"} ?: "—") +
+                    " of the previous block's exit week.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 if(comparison.matchingAuditStatus==
                     CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
@@ -176,11 +187,31 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                     "unresolved audit finding(s). They are not coaching clearance.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-        } else if(prior.weekOverrideCount>0 || next.weekOverrideCount>0) {
-            Text("One or both blocks include week-specific prescriptions. " +
-                "Run the full-cycle review to compare their effective weekly sets; " +
-                "the base totals above exclude overrides.",
+        } else {
+            Text("Exact block-entry volume is not audited. Run the " +
+                "full-cycle review before approving strength or peak; " +
+                "base working sets exclude week overrides.",
                 style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(comparison.strengthHalfVolumeReviewRequired) {
+            HorizontalDivider()
+            Text("Strength working-set drop needs review",
+                style=MaterialTheme.typography.titleMedium,
+                color=MaterialTheme.colorScheme.error)
+            Text(
+                if(comparison.strengthHalfVolumeUsesAuditedWeeks)
+                    "At least one strength week has half or fewer of the working " +
+                        "sets in the final hypertrophy week. This is not a normal " +
+                        "strength accumulation target by default. Check your " +
+                        "individualized dose, session limits and recovery audit."
+                else "The authored strength block has half or fewer of the base " +
+                    "working sets. This is only a preliminary warning: obtain " +
+                    "the complete audited weekly schedule, including overrides.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No loads, sets, training history or program approval were changed.",
+                style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         comparison.newlyTrackedMuscles?.takeIf{it.isNotEmpty()}?.let{muscles->
@@ -197,8 +228,8 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
             if(changes.isNotEmpty()) {
                 HorizontalDivider()
                 PursuitSectionHeading("Audited direct muscle sets",
-                    "First week of each block, using your reviewed catalog's " +
-                        "declared direct-set credits. No completion or recovery inferred.")
+                    "Final prior week → first next week, using reviewed direct-set " +
+                        "credits and saved week overrides. No completion or recovery inferred.")
                 changes.take(if(expandAllMuscles)changes.size else 6).forEach{change->
                     Row(Modifier.fillMaxWidth(),
                         horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm),

@@ -2,6 +2,16 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Native Coach invalid-scope and upgrade UX guard (2026-11-18):**
+An unverified future, forged or partial saved phase scope is now a
+read-only, clearly identified blocker, rather than a candidate for a
+one-click "upgrade" that could obscure older values. The full-cycle audit
+button remains disabled if ANY phase has an unverified scope, including a
+phase not currently displayed. An explicit verified older-scope upgrade
+lands on the first newly required muscle so its values can be authored
+rather than inferred. Native UI contracts must pass; device/TalkBack
+acceptance and signed policy end-to-end lifecycle remain open. No APK/AAB.
+
 **Native custom Coach policy v4→v5 form compatibility (2026-11-18):**
 The actual native custom policy editor now resolves each saved phase
 through the same exact v1–v5 muscle-scope authority used for coaching dose.

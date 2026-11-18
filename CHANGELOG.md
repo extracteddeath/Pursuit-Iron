@@ -1,3 +1,10 @@
+## Build 1016 — Strength transition volume, set-count notes and original machine history
+
+- Strength accumulation following hypertrophy protects weekly working-set continuity without applying a peak taper or silently inventing sets that breach approved session capacity. Extremely high source-volume blocks use an explicit bounded continuity floor.
+- Exercise Info shows the workout's actual working-set count after edits, instead of a stale three-set prescription note when four sets are scheduled.
+- Machine A/B and exercise Swap controls live beside the exercise weight increment in Exercise Info, with a full-width narrow-screen layout to avoid clipping Add Machine.
+- An athlete may explicitly associate older machine-unlabelled observations with the original physical machine, not the newly created alternative. History, Last, PR evidence and charts remain station-scoped, and old saved receipts are unchanged.
+
 ## Build 1011 — Physical machine A/B progressions and gym defaults
 
 - A single logical machine exercise can now use distinct physical stations in each saved gym (Machine A/B), with its own default, label, active status and load increment.

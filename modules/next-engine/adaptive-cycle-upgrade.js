@@ -84,7 +84,11 @@ export function refreshAdaptiveCyclePreviews(options) {
     const generated = generateNextCycleForShell({ templateId: 'custom', config, blocks: specs,
         existingBlockWeeks: weeksOf(current), seed: cycle.seed, legacyExercises, makeId,
         banned: options.banned || [], adaptBetweenBlocks: true, adaptTrainingSplit: true,
-        previousShell: current, previousVolumeSnapshot });
+        // The authored current block is NOT a fresh cycle entry. Carry its
+        // verified phase identity into the first future-block generator so
+        // it can preserve custom exercise coverage, not only aggregate sets.
+        previousShell: current, previousVolumeSnapshot,
+        previousPhase: cycle.blockMeta[active]?.phase });
     const blocks = generated.blocks.map((p, offset) => {
         const index = active + 1 + offset, meta = cycle.blockMeta[index];
         return { ...p, icon: future[offset].icon, iconColor: future[offset].iconColor, folder: future[offset].folder,

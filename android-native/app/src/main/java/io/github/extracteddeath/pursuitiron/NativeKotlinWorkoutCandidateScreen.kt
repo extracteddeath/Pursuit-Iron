@@ -1218,6 +1218,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         infoExerciseId=null
                         reviewSwap(exerciseId)
                     }) else null,
+                unavailableReason=if(!infoWarmupsOnly &&
+                    presentation?.finished==false)infoOptions.reason else null,
                 outcomes=journal?.effectiveSets.orEmpty().mapNotNull { (key,receipt)->
                     (receipt.operation as? KotlinJournalOperation.RecordSet)?.let{key to it.outcome}
                 }.toMap(),

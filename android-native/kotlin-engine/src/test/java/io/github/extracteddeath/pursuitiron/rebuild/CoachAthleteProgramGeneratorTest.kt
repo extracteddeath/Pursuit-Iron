@@ -82,6 +82,72 @@ class CoachAthleteProgramGeneratorTest {
         checkNotNull(s.reviewed).trainingWeekdays.associateWith {1200},
         3,1,extra)
 
+    @Test fun futureStrengthComposerPreservesSourceArmVisitsButNotWithoutConsent() {
+        val athlete=setup()
+        val strengthPolicy=policy(athlete,TrainingPhase.STRENGTH,
+            purposes=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 1,
+                ComposerSessionPurpose.GENERAL_PREPARATION to 2),
+            primaries=mapOf("bench" to 1))
+        val editedBounds=strengthPolicy.selectedBounds.map {
+            if(it.muscle in setOf(TrainingMuscle.BICEPS,
+                TrainingMuscle.BRACHIALIS,TrainingMuscle.TRICEPS))
+                it.copy(mav=n("4"),mrv=n("8"))
+            else it
+        }
+        val authored=strengthPolicy.copy(baselineBounds=editedBounds,
+            selectedBounds=editedBounds)
+        val extras=listOf(
+            movement("supinated-curl",TrainingMuscle.BICEPS,
+                ComposerPattern.ISOLATION,role=ComposerRole.ACCESSORY),
+            movement("neutral-hammer",TrainingMuscle.BRACHIALIS,
+                ComposerPattern.ISOLATION,role=ComposerRole.ACCESSORY),
+            movement("triceps-extension",TrainingMuscle.TRICEPS,
+                ComposerPattern.ISOLATION,role=ComposerRole.ACCESSORY))
+        val source=StrengthSourceArmReview(
+            StrengthSourceArmsStatus.REVIEW_READY,"prior-cycle",
+            "athlete2",6,"hypertrophy",listOf(
+                StrengthSourceArmCandidate("supinated-curl",
+                    TrainingMuscle.BICEPS,3),
+                StrengthSourceArmCandidate("neutral-hammer",
+                    TrainingMuscle.BRACHIALIS,2),
+                StrengthSourceArmCandidate("triceps-extension",
+                    TrainingMuscle.TRICEPS,3)),
+            "exact prior custom program and audited phase exit")
+        val original=request(s=athlete,phase=TrainingPhase.STRENGTH,
+            policy=authored,choices=movements.map{choice(it.exerciseId)}+
+                extras.map{choice(it.exerciseId).copy(requiredVisits=0)})
+            .copy(catalog=movements+extras,
+                maximumExercisesPerDay=5,
+                selectFromOfferedCatalog=true,
+                sourceStrengthArms=source)
+        val generated=CoachAthleteProgramGenerator.generate(original)
+        assertEquals("Source-backed arm retention should create actual " +
+                "audited strength exercise visits: "+generated.issues,
+            AthleteGenerationStatus.GENERATED_FOR_REVIEW,generated.status)
+        val visits=checkNotNull(generated.candidate?.catalogReview?.draft)
+            .visits.map{it.exerciseId}
+        for(ex in extras)assertTrue("No actual "+ex.exerciseId+
+            " strength visit in emitted week: "+visits,
+            ex.exerciseId in visits)
+        val chosen=checkNotNull(generated.exerciseSelection)
+        for(ex in extras)assertTrue(chosen.choices.any {
+            it.exerciseId==ex.exerciseId && it.requiredVisits>=1
+        })
+        assertFalse(generated.mayIssueWorkout)
+        assertFalse(generated.maySaveProgram)
+
+        val noPermission=CoachAthleteProgramGenerator.generate(
+            original.copy(selectFromOfferedCatalog=false))
+        assertEquals(AthleteGenerationStatus.INPUTS_UNRESOLVED,
+            noPermission.status)
+        assertTrue(noPermission.issues.any {
+            it.kind==AthleteGenerationIssueKind.EXERCISE_SELECTION_UNRESOLVED
+        })
+        val peak=CoachAthleteProgramGenerator.generate(
+            original.copy(phase=TrainingPhase.PEAK))
+        assertEquals(AthleteGenerationStatus.INPUTS_UNRESOLVED,peak.status)
+    }
+
     @Test fun refusesIncompleteProfileOrMissingPolicyWithoutGuessing() {
         val valid=request()
         val incomplete=CoachAthleteProgramGenerator.generate(

@@ -16,6 +16,31 @@ data class CustomWorkoutExecutionStep(
  * Supersets warm up each member first, then alternate authored working sets.
  * A triggered amplifier remains with its main before moving to a partner. */
 object CustomWorkoutExecutionDomain {
+    /**
+     * Actual physical loads are NUMBERS, not presentation strings. BigDecimal
+     * equals() distinguishes 20, 20.0 and 20.00, but these are the same
+     * physical load. Keep unit and Machine A/B exact; null is permitted only
+     * when both observations are explicitly unweighted bodyweight.
+     *
+     * This is used for staged short-rest technique continuation and for
+     * correcting an activation set after dependent follow-ups have been
+     * logged. It never converts units or transfers weights between machines.
+     */
+    internal fun sameActualLoadAndStation(
+        first:KotlinPerformedSet?,
+        second:KotlinPerformedSet?
+    ):Boolean {
+        if(first==null || second==null)return first==null && second==null
+        if(first.unit!=second.unit ||
+            first.machineInstanceId!=second.machineInstanceId)return false
+        val firstLoad=first.load
+        val secondLoad=second.load
+        if(firstLoad==null || secondLoad==null)
+            return firstLoad==null && secondLoad==null &&
+                first.unit==null && second.unit==null
+        return firstLoad.compareTo(secondLoad)==0
+    }
+
     fun orderedSets(snapshot:CustomWorkoutDaySnapshot):List<CustomWorkoutExecutionStep> = buildList {
         val visited=mutableSetOf<Int>()
         for((index,slot) in snapshot.slots.withIndex()) {
@@ -118,9 +143,7 @@ object CustomWorkoutExecutionDomain {
                 // but never unlock more same-load work from changed equipment.
                 val activation=main.performed ?:break
                 val observed=recorded.performed ?:break
-                if(observed.load!=activation.load ||
-                    observed.unit!=activation.unit ||
-                    observed.machineInstanceId!=activation.machineInstanceId)break
+                if(!sameActualLoadAndStation(activation,observed))break
                 observedFollowUpReps+=observed.reps
                 val continueTraining=when(amp.kind) {
                     CustomAmplifierKind.MYO_REPS ->

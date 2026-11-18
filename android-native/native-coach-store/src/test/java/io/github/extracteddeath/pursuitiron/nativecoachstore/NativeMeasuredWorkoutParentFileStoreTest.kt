@@ -455,4 +455,21 @@ class NativeMeasuredWorkoutParentFileStoreTest {
         assertEquals(1,(canonicalHistory.open("owner-one","athlete-one")
             as NativeHistoryLedgerResult.Durable).ledger.completions.size)
     }
+
+    @Test fun typedHistoryNeverInventsCompletionsBeforeExplicitEnrollment() {
+        val absent=typedRead().read("owner-one","athlete-one")
+        assertEquals(NativeMeasuredHistoryRefusal.NOT_ENROLLED,
+            (absent as NativeMeasuredHistoryReadResult.Rejected).reason)
+        enrollHistory()
+        val empty=typedRead().read("owner-one","athlete-one")
+        assertTrue(empty is NativeMeasuredHistoryReadResult.Review)
+        assertEquals(0,(empty as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured.size)
+        assertFalse(empty.history.provesAllHistory)
+        assertFalse(empty.history.mayPublishPr)
+        current=null
+        assertEquals(NativeMeasuredHistoryRefusal.NOT_AUTHORIZED,
+            (typedRead().read("owner-one","athlete-one")
+                as NativeMeasuredHistoryReadResult.Rejected).reason)
+    }
 }

@@ -1352,3 +1352,11 @@ assert.match(coachScopeDomain,/savedMuscles!=null && savedVersion==null/);
 assert.match(coachScopeDomain,/savedVersion!=null ->savedVersion/);
 assert.match(coachScopeDomain,/4 -> legacyV4/);
 assert.match(coachScopeDomain,/5 -> current/);
+// An invalid or future/partial saved phase scope must not be silently
+// changed through an upgrade button or approved from another phase.
+assert.match(coachScopeUi,/val unverifiedPhases=phaseList.filter\{muscleScope\(it\).isEmpty\(\)\}/);
+assert.match(coachScopeUi,/if\(visibleMuscles.isEmpty\(\)\) \{[\s\S]*?return/);
+assert.match(coachScopeUi,/Button\(enabled=!busy && unverifiedPhases.isEmpty\(\)/);
+// Explicit upgrades land on the first not-yet-covered muscle, so an older
+// athlete does not have to search through all existing saved rows.
+assert.match(coachScopeUi,/selectedMuscle=TrainingMuscleCoverage.current.firstOrNull\{/);

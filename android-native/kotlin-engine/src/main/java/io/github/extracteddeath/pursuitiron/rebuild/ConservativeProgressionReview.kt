@@ -41,7 +41,9 @@ enum class IncreaseReviewReason {
     CURRENT_LOAD_UNVERIFIED,
     NO_HIGHER_VERIFIED_LOAD,
     INCREMENT_EXCEEDS_USER_LIMIT,
-    QUALIFIED_FOR_REVIEW
+    QUALIFIED_FOR_REVIEW,
+    /** Counterweight increases make assisted exercise easier, not stronger. */
+    ASSISTANCE_NEEDS_DECREASE_REVIEW
 }
 
 data class IncreaseReview(
@@ -158,6 +160,11 @@ object ConservativeProgressionReview {
         })
             return result(IncreaseReviewReason.ISSUED_LOAD_NOT_COMPLETED)
 
+        // Normal double progression only offers a HIGHER external load.
+        // Assisted counterweights run in the opposite physical direction;
+        // never propose an increase as a strength achievement.
+        if(verifiedStock?.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+            return result(IncreaseReviewReason.ASSISTANCE_NEEDS_DECREASE_REVIEW)
         val inspected=EquipmentLoadDomain.inspect(verifiedStock,observed,latest.unit)
         if(inspected !is LoadInspection.Confirmed)
             return result(IncreaseReviewReason.CONFIRMED_INVENTORY_REQUIRED)

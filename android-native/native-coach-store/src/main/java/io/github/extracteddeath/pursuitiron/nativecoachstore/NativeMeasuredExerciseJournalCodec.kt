@@ -67,29 +67,19 @@ internal object NativeMeasuredExerciseJournalCodec {
                 writeUTF(stock.increment.toPlainString())
                 writeUTF(stock.maximum.toPlainString())
             }
-            is VerifiedLoadStock.Barbell -> {
-                writeByte(3);writeUTF(stock.unit.name)
-                writeUTF(stock.barWeight.toPlainString())
-                require(stock.pairedPlates.size in 1..12)
-                writeInt(stock.pairedPlates.size)
-                stock.pairedPlates.entries.sortedBy{it.key}.forEach{(plate,count)->
-                    writeUTF(plate.toPlainString());writeInt(count)
-                }
-            }
-            is VerifiedLoadStock.Smith -> {
-                writeByte(4);writeUTF(stock.unit.name)
-                writeUTF(stock.barWeight.toPlainString())
-                require(stock.pairedPlates.size in 1..12)
-                writeInt(stock.pairedPlates.size)
-                stock.pairedPlates.entries.sortedBy{it.key}.forEach{(plate,count)->
-                    writeUTF(plate.toPlainString());writeInt(count)
-                }
-            }
+            // None of the fourteen reviewed movements uses a paired bar.
+            // Refuse unsupported physical inventory rather than emitting a
+            // snapshot which could never be decoded and cold-recovered.
+            is VerifiedLoadStock.Barbell,
+            is VerifiedLoadStock.Smith ->
+                throw IOException("paired bar stock is not a supported measured setup")
         }
     }
-    private fun DataInputStream.loadUnit():LoadUnit =
-        LoadUnit.entries.singleOrNull{it.name==readUTF()}
+    private fun DataInputStream.loadUnit():LoadUnit {
+        val name=readUTF()
+        return LoadUnit.entries.singleOrNull{it.name==name}
             ?:throw IOException("unknown physical load unit")
+    }
 
     private fun DataInputStream.loadBasis():LoadBasis {
         val value=readUTF()

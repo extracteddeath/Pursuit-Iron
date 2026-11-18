@@ -1133,9 +1133,11 @@ assert.ok(betaGradle.includes('verifyEarlyBetaRuntime') &&
   'Early beta release must refuse the legacy JS engine and document single-policy ownership');
 
 const musclePolicyEditor=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCoachPolicyEditor.kt');
-for(const phrase of ['1 -> TrainingMuscleCoverage.legacyV1',
-  '2 -> TrainingMuscleCoverage.legacyV2','3 -> TrainingMuscleCoverage.legacyV3',
-  'TrainingMuscleCoverage.versionOf(it)',
+// Exact v1–v5 scope selection belongs to pure TrainingMuscleCoverage.forEditor.
+// Do not require a duplicate Compose when/switch that would regress future versions.
+for(const phrase of [
+  'TrainingMuscleCoverage.forEditor(marker,saved)',
+  'TrainingMuscleCoverage.versionOf(',
   'put("$phaseKey:muscleScope","v${TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)}")'])
   assert.ok(musclePolicyEditor.includes(phrase),'saved policy scope or explicit current-scope upgrade lost: '+phrase);
 console.log('PASS native workout recording and verified Finish-to-History/Coach navigation and safe Last draft');
@@ -1331,3 +1333,22 @@ assert.match(helpedPlot,/Machine assistance \(less = harder\)/);
 assert.match(helpedPanel,/assistanceByMachine:Map<NativeMixedMachineLoadKey,NativeMixedCompletedLoadFact>/);
 assert.match(helpedPanel,/if\(assisted\)"Least assistance" else "Heaviest logged"/);
 assert.match(helpedProfile,/assistanceByMachine=verifiedFacts.lowestAssistanceByMachine/);
+
+
+// The native Coach editor must NOT silently expand a saved 22-muscle v4
+// signed policy when the latest reviewed catalog adds v5 neck functions.
+// All future/unknown markers must fail closed instead of falling back.
+const coachScopeUi=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCoachPolicyEditor.kt');
+const coachScopeDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MuscleVolumeAccountingDomain.kt');
+assert.match(coachScopeUi,/TrainingMuscleCoverage.forEditor\(marker,saved\)/);
+assert.match(coachScopeUi,/Add current muscle targets/);
+assert.match(coachScopeUi,/neck flexion, extension and lateral flexion/);
+assert.match(coachScopeUi,/selectedBounds\s*\?\.map\{it.muscle\}/);
+assert.match(coachScopeUi,/muscleScope\(phase\).associateWith\{muscle->/);
+assert.doesNotMatch(coachScopeUi,/3 -> TrainingMuscleCoverage\.legacyV3\s*else -> TrainingMuscleCoverage\.current/);
+assert.match(coachScopeDomain,/fun forEditor\(marker:String\?,savedMuscles:Collection<TrainingMuscle>\?\)/);
+assert.match(coachScopeDomain,/marker!=null ->/);
+assert.match(coachScopeDomain,/savedMuscles!=null && savedVersion==null/);
+assert.match(coachScopeDomain,/savedVersion!=null ->savedVersion/);
+assert.match(coachScopeDomain,/4 -> legacyV4/);
+assert.match(coachScopeDomain,/5 -> current/);

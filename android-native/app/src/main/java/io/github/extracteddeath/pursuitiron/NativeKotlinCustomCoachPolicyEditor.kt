@@ -134,14 +134,10 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         val saved=reviewedInputs?.policiesByPhase?.get(phase)?.selectedBounds
             ?.map{it.muscle}?.toSet()
         val marker=fields["${phase.name}:muscleScope"]
-        val version=marker?.removePrefix("v")?.toIntOrNull()
-            ?:saved?.let{TrainingMuscleCoverage.versionOf(it)}
-        return when(version) {
-            1 -> TrainingMuscleCoverage.legacyV1
-            2 -> TrainingMuscleCoverage.legacyV2
-            3 -> TrainingMuscleCoverage.legacyV3
-            else -> TrainingMuscleCoverage.current
-        }
+        // Pure Kotlin v1–v5 authority: no silent v4→v5 upgrade.
+        // Unknown or malformed markers fail closed; explicit new rows
+        // require actual athlete-authored target values.
+        return TrainingMuscleCoverage.forEditor(marker,saved) ?:emptyList()
     }
     val visibleMuscles=muscleScope(selectedPhase)
     LaunchedEffect(selectedPhase,visibleMuscles) {
@@ -256,10 +252,16 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     HorizontalDivider()
     Text("Direct muscle targets · ${visibleMuscles.size} groups",
         style=MaterialTheme.typography.titleMedium)
-    if(visibleMuscles!=TrainingMuscleCoverage.current) {
-        Text("This saved policy retains its original muscle coverage. Adding current muscle targets requires your own reviewed values.",
+    if(visibleMuscles.isEmpty()) {
+        Text("This policy's saved muscle scope could not be verified. Review the version and all requested targets before saving; no missing muscle is silently assumed to be zero.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.error)
+    } else if(visibleMuscles!=TrainingMuscleCoverage.current) {
+        Text("This saved policy retains ${visibleMuscles.size} original muscle groups. Upgrading to ${TrainingMuscleCoverage.current.size} groups requires your own reviewed targets for every new muscle, including neck flexion, extension and lateral flexion.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if(visibleMuscles!=TrainingMuscleCoverage.current) {
         OutlinedButton(enabled=!busy,onClick={put("$phaseKey:muscleScope","v${TrainingMuscleCoverage.versionOf(TrainingMuscleCoverage.current)}")},
             modifier=Modifier.heightIn(min=48.dp)) {Text("Add current muscle targets")}
     }

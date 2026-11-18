@@ -164,4 +164,45 @@ class TrainingMuscleCoverageTest {
         }.isFailure)
     }
 
+    @Test fun nativeCoachEditorReopensV4WithoutSilentlyAddingNeckTargets() {
+        val old=TrainingMuscleCoverage.legacyV4
+        assertEquals(22,old.size)
+        assertEquals(old,TrainingMuscleCoverage.forEditor("v4",old))
+        assertEquals(old,TrainingMuscleCoverage.forEditor(null,old))
+        assertEquals(4,TrainingMuscleCoverage.versionOf(old))
+        assertTrue(TrainingMuscleCoverage.forEditor("v4",old)!!
+            .none{it.introducedIn>=5})
+        assertEquals(TrainingMuscleCoverage.current,
+            TrainingMuscleCoverage.forEditor(null,null))
+    }
+
+    @Test fun nativeCoachEditorRequiresAnExplicitV5SelectionAndNeverFillsValues() {
+        val original=TrainingMuscleCoverage.legacyV4
+        val newScope=TrainingMuscleCoverage.forEditor("v5",original)
+        assertEquals(25,newScope?.size)
+        assertEquals(original,newScope?.filter{it.introducedIn<=4})
+        assertEquals(setOf(TrainingMuscle.NECK_FLEXORS,
+            TrainingMuscle.NECK_EXTENSORS,
+            TrainingMuscle.NECK_LATERAL_FLEXORS),
+            newScope?.filter{it.introducedIn==5}?.toSet())
+        assertEquals(original,TrainingMuscleCoverage.forVersion(4))
+        assertEquals(TrainingMuscleCoverage.current,TrainingMuscleCoverage.forVersion(5))
+        assertNull(TrainingMuscleCoverage.forVersion(6))
+        for(marker in listOf("v6","v0","vnull","v-1","v04","4","","vgarbled")) {
+            assertNull(marker,TrainingMuscleCoverage.forEditor(marker,original))
+        }
+        assertNull(TrainingMuscleCoverage.forEditor(null,original.dropLast(1)))
+        assertEquals(original,TrainingMuscleCoverage.forEditor("v4",null))
+        // A stale editor marker may not silently drop a signed v4 policy's
+        // remaining 6 muscles. Only the explicit new v5 choice is allowed.
+        assertNull(TrainingMuscleCoverage.forEditor("v1",original))
+        assertNull(TrainingMuscleCoverage.forEditor("v2",original))
+        assertNull(TrainingMuscleCoverage.forEditor("v3",original))
+        assertNull(TrainingMuscleCoverage.forEditor("v4",TrainingMuscleCoverage.current))
+        assertEquals(TrainingMuscleCoverage.legacyV1,
+            TrainingMuscleCoverage.forEditor("v1",null))
+        assertEquals(TrainingMuscleCoverage.current,
+            TrainingMuscleCoverage.forEditor("v5",TrainingMuscleCoverage.legacyV1))
+    }
+
 }

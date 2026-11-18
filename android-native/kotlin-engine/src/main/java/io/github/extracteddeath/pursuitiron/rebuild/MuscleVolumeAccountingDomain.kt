@@ -46,6 +46,41 @@ object TrainingMuscleCoverage {
     private val scopes=listOf(legacyV1,legacyV2,legacyV3,legacyV4,current)
         .map{it.toSet()}
 
+    /** Only an exact historical scope is eligible for editing or replay.
+     * An unknown future version cannot be silently mapped to 'current'. */
+    fun forVersion(version:Int):List<TrainingMuscle>? = when(version) {
+        1 -> legacyV1
+        2 -> legacyV2
+        3 -> legacyV3
+        4 -> legacyV4
+        5 -> current
+        else -> null
+    }
+
+    /**
+     * Shared version authority for the athlete's native custom policy form.
+     * An untouched old v4 saved form MUST reopen 22 original rows; selecting
+     * v5 is an explicit edit and does NOT populate invented neck targets.
+     * A corrupt/future marker or incomplete saved scope fails closed.
+     */
+    fun forEditor(marker:String?,savedMuscles:Collection<TrainingMuscle>?):List<TrainingMuscle>? {
+        val savedVersion=savedMuscles?.let(::versionOf)
+        if(savedMuscles!=null && savedVersion==null)return null
+        val version=when {
+            marker!=null ->
+                marker.takeIf{it.matches(Regex("^v[1-5]$"))}
+                    ?.removePrefix("v")?.toIntOrNull()
+            savedVersion!=null ->savedVersion
+            else ->versionOf(current)
+        } ?:return null
+        // The only version-changing button is explicit upgrade to current.
+        // A corrupted/restored marker may NOT downgrade a signed scope and
+        // silently discard targets. An unknown future scope fails closed.
+        if(savedVersion!=null && version!=savedVersion && version!=5)
+            return null
+        return forVersion(version)
+    }
+
     fun versionOf(muscles:Collection<TrainingMuscle>):Int? {
         val distinct=muscles.toSet()
         if(distinct.size!=muscles.size)return null

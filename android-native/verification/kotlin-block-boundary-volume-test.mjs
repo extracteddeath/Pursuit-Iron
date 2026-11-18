@@ -18,6 +18,11 @@ assert.match(domain,/prior\.lastAuditedWeekDirectSets/);
 assert.match(domain,/val strengthHalfVolumeReviewRequired:Boolean/);
 assert.match(domain,/data class CustomBlockDayExerciseChange/);
 assert.match(domain,/val strengthExerciseCollapseReviewRequired:Boolean/);
+assert.match(domain,/val strengthDirectArmLosses:Set<TrainingMuscle>\?/);
+assert.match(domain,/prior\.lastAuditedWeekDirectSets \?:return null/);
+assert.match(domain,/next\.firstAuditedWeekDirectSets \?:return null/);
+assert.match(domain,/before\.signum\(\)>0/);
+assert.match(domain,/after\.signum\(\)==0/);
 assert.match(domain,/day\.priorExerciseCount>=6/);
 assert.match(domain,/day\.nextExerciseCount\*2<day\.priorExerciseCount/);
 assert.match(domain,/prior\.split==next\.split/);
@@ -43,6 +48,10 @@ for(const text of [
 ])assert.ok(ui.includes(text),'Missing visible native volume context: '+text);
 assert.match(ui,/comparison\.strengthHalfVolumeReviewRequired/);
 assert.match(ui,/comparison\.strengthExerciseCollapseReviewRequired/);
+assert.match(ui,/comparison\.strengthDirectArmLosses\?\.takeIf/);
+assert.match(ui,/Direct arm work disappeared/);
+assert.match(ui,/Review strength arm exercises/);
+assert.match(ui,/Indirect assistance from bench presses and rows/);
 assert.match(ui,/comparison\.exerciseRosterUsesReviewedWeeks/);
 assert.match(ui,/Review or restore strength exercises/);
 assert.match(ui,/onEditBlock\(next\.blockId\)/);
@@ -56,6 +65,7 @@ for(const name of [
   'aLaterStrengthWeekCliffIsNotHiddenByItsSafeEntryWeek',
   'eightToThreeSameSplitStrengthUpperIsFlaggedByExerciseNotSetCount',
   'measuredRostersStillRequireSourceMatchedAuditAndNoFakePeakFloor',
+  'zeroDirectArmsAreFlaggedEvenWithoutEightToThreeExerciseLoss',
   'anExplicitPeakBlockIsNotMisreportedAsStrengthVolumeCliff',
   'smallWeeksDoNotReceiveAnInventedUniversalVolumeFloor',
   'rejectsStaleIncompleteOrMismatchedAuditMeasurements'

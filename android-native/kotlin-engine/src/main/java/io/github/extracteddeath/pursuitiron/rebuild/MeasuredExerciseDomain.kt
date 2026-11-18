@@ -404,11 +404,13 @@ object MeasuredExerciseComparisonDomain {
             a.physicalSetupId!=b.physicalSetupId || a.bandId!=b.bandId ||
             a.sides!=b.sides || a.unit!=b.unit ||
             first.unit!=second.unit || first.bandId!=second.bandId ||
-            first.physicalSetupId!=second.physicalSetupId ||
-            first.actualExternalLoad?.compareTo(second.actualExternalLoad
-                ?:return MeasuredComparison.NOT_COMPARABLE)
-                != (if(first.actualExternalLoad==null) null else 0) ||
-            (first.actualExternalLoad==null)!=(second.actualExternalLoad==null))
+            first.physicalSetupId!=second.physicalSetupId)
+            return MeasuredComparison.NOT_COMPARABLE
+        val earlierLoad=first.actualExternalLoad
+        val laterLoad=second.actualExternalLoad
+        if((earlierLoad==null)!=(laterLoad==null) ||
+            (earlierLoad!=null && (laterLoad==null ||
+                earlierLoad.compareTo(laterLoad)!=0)))
             return MeasuredComparison.NOT_COMPARABLE
         val old=first.sides.associate{it.side to it.amount}
         val current=second.sides.associate{it.side to it.amount}

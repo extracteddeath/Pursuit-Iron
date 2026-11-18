@@ -243,6 +243,14 @@ class NativeMeasuredExerciseJournalFileStoreTest {
         denied(store().issue("owner-one",p.workoutId,p.setKey),
             NativeMeasuredStoreRefusal.CORRUPT_RECORD)
         assertTrue(Files.isSymbolicLink(path))
+        // A now-dangling link must not be mistaken for an unissued set and
+        // replaced with a fresh, falsely approved empty journal.
+        Files.delete(elsewhere)
+        denied(store().open("owner-one",p.workoutId,p.setKey),
+            NativeMeasuredStoreRefusal.CORRUPT_RECORD)
+        denied(store().issue("owner-one",p.workoutId,p.setKey),
+            NativeMeasuredStoreRefusal.CORRUPT_RECORD)
+        assertTrue(Files.isSymbolicLink(path))
     }
 
     @Test fun unknownParentOrForgedSetDoesNotCreateWorkoutOrHistory() {

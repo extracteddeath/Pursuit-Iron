@@ -273,13 +273,12 @@ const totalSets = program => program.sessions.reduce((n, session) =>
 export function strengthEntryMinimumSets(previousSets) {
     if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
     // Moderate hypertrophy sources preserve >=70% across the strength
-    // transition. Extremely large absolute source weeks (>68 working sets)
-    // cannot retain that proportion at strength-specific rests within the
-    // same approved session capacity; keep the prior 50%-drop safety guard
-    // for that high-volume class rather than failing an otherwise validated
-    // cycle. This exception is not a Peak taper or a general set cut rule.
-    return previousSets > 68
-        ? Math.ceil(previousSets * .5)
+    // transition. High-capacity weeks (68+ working sets) may not be
+    // maintainable at that percentage with strength-specific rest periods.
+    // At those limits preserve strictly MORE than half, even in a middle
+    // strength week. Peak tapers use their own explicit policy.
+    return previousSets >= 68
+        ? Math.floor(previousSets * .5) + 1
         : Math.ceil(previousSets * .7);
 }
 // Split search adds a concrete split to every candidate, including the original split.

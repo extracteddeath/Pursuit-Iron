@@ -336,8 +336,21 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                     "existing workouts or transfers Machine A/B histories.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+                var menuAthleteConfirmed by remember(current) {
+                    mutableStateOf(false)
+                }
+                Row(Modifier.fillMaxWidth(),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    Checkbox(checked=menuAthleteConfirmed,enabled=enabled,
+                        onCheckedChange={menuAthleteConfirmed=it})
+                    Text("I reviewed the recovered exercises and their working "+
+                        "sets. Save a new program draft that requires renewed approval.",
+                        modifier=Modifier.weight(1f),
+                        style=MaterialTheme.typography.bodyMedium)
+                }
                 Button(
-                    enabled=enabled && onAcceptMenuRecovery!=null,
+                    enabled=enabled && menuAthleteConfirmed &&
+                        onAcceptMenuRecovery!=null,
                     onClick={onAcceptMenuRecovery?.invoke()},
                     modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)
                 ) {Text("Confirm and save recovered exercises")}

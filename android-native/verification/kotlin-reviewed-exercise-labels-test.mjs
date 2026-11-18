@@ -59,6 +59,19 @@ for(const [id,name,fixture] of [
   assert.ok(fixtureUi.includes('"'+fixture+'" to "'),
     'Neck movement requires an explicitly selectable confirmed support: '+id);
 }
+// Real neck weight settings are discrete by default in the Gym editor.
+// A missing inventory never becomes a guessed continuous machine stack.
+const gymEditor=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt','utf8');
+const stockLabels=readFileSync(
+  'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPhysicalStockDraft.kt','utf8');
+for(const id of ['neck-extension-device','neck-flexion-device',
+  'neck-harness-device','neck-lateral-device']) {
+  assert.ok(gymEditor.includes('"'+id+'"'),
+    'Loaded neck movement must choose athlete-verified exact stock: '+id);
+  assert.ok(stockLabels.includes('"'+id+'" -> "'),
+    'Gym must name the physical implement, not invent a generic stack: '+id);
+}
 for(const id of ['band-pushup','plank',
   'dead-hang','farmers','weighted-plank']) {
   assert.ok(!ids.includes(id),

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { addMachineVariant, editMachineVariant, setDefaultMachineVariant, resolveMachineVariant,
     stampMachineSet, machineHistory, latestMachineSet, comparableMachineScope,
-    historyForMachineRecommendation, LEGACY_MACHINE_ID } from '../modules/next-engine/machine-instances.js';
+    historyForMachineRecommendation, assignLegacyMachineHistory, sanitizeMachineVariants,
+    LEGACY_MACHINE_ID } from '../modules/next-engine/machine-instances.js';
 
 const gymX = { id:'gymX' }, gymY={ id:'gymY' };
 const A={id:'A',label:'Machine A',loading:{unit:'lb',minimum:10,increment:5,maximum:300}};
@@ -45,4 +46,46 @@ x=editMachineVariant(x,'chest_press','A',{active:false});
 assert.equal(resolveMachineVariant(x,'chest_press').id,'B');
 assert.equal(resolveMachineVariant(x,'chest_press','A',{forNewWorkout:false}).active,false);
 assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',machineInstanceId:'A'}).length,3);
+
+/* Older untagged sets belong to the machine that was physically used,
+   never to whichever variant was created second or made default later.
+   Attaching history changes a gym-scoped view, NOT the original receipts. */
+const rawHistory=JSON.stringify(history);
+assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'B',gym:x}).length,2);
+assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',gym:x}).length,3);
+x=assignLegacyMachineHistory(x,'chest_press','A');
+assert.equal(x.machineVariants.chest_press.legacyHistoryMachineId,'A');
+const aWithOld=machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',dayId:'upper',gym:x});
+assert.deepEqual(aWithOld.map(v=>v.weight),[200,205,190]);
+assert.equal(aWithOld.at(-1).recordedMachineInstanceId,LEGACY_MACHINE_ID,
+    'Audit preserves the original unlabelled receipt identity');
+assert.deepEqual(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'B',dayId:'upper',gym:x}).map(v=>v.weight),[140,145]);
+assert.equal(latestMachineSet(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',dayId:'upper',gym:x}).weight,190);
+assert.equal(historyForMachineRecommendation(history,'chest_press','A','gymX',x)
+    .at(-1).perf.chest_press.sets.length,1);
+assert.equal(historyForMachineRecommendation(history,'chest_press','B','gymX',x)
+    .at(-1).perf.chest_press.sets.length,0);
+assert.equal(machineHistory(history,{gymId:'gymY',exerciseId:'chest_press',
+    machineInstanceId:'A',gym:x}).length,1,
+    'GymX assignment never leaks to GymY');
+assert.equal(sanitizeMachineVariants(x.machineVariants).chest_press.legacyHistoryMachineId,'A');
+const xRenamed=editMachineVariant(x,'chest_press','A',{label:'Original Press'});
+assert.equal(xRenamed.machineVariants.chest_press.legacyHistoryMachineId,'A');
+const withThird=addMachineVariant(xRenamed,'chest_press',{id:'C',label:'New Stack'});
+assert.equal(withThird.machineVariants.chest_press.legacyHistoryMachineId,'A');
+assert.deepEqual(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'C',gym:withThird}),[]);
+assert.throws(()=>assignLegacyMachineHistory(x,'chest_press','unknown'),/existing physical machine/);
+const restored=assignLegacyMachineHistory(x,'chest_press',null);
+assert.equal(restored.machineVariants.chest_press.legacyHistoryMachineId,undefined);
+assert.equal(machineHistory(history,{gymId:'gymX',exerciseId:'chest_press',
+    machineInstanceId:'A',dayId:'upper',gym:restored}).length,2);
+assert.equal(JSON.stringify(history),rawHistory,'A/B assignment cannot mutate saved training history');
+console.log('PASS original-machine history assignment: no A/B load transfer, cross-gym leak or old receipt rewrite.');
+
 console.log('Machine-instance web engine: 18 invariants pass.');

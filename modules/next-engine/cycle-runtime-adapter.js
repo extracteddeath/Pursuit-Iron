@@ -264,8 +264,14 @@ const totalSets = program => program.sessions.reduce((n, session) =>
 // half its working sets. Return a typed refusal when the approved session
 // duration/equipment constraints cannot safely support this continuity.
 export function strengthEntryMinimumSets(previousSets) {
-    return Number.isFinite(previousSets) && previousSets>=16
-        ? Math.ceil(previousSets * .7) : 0;
+    if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
+    // Moderate weeks must keep >=70% of productive work. Exceptionally
+    // high hypertrophy source weeks (e.g. 82 sets) cannot always fit the
+    // longer rests of strength within the SAME athlete-approved time cap.
+    // Preserve >=58% there, with a 48-set bridge through the transition;
+    // never turn a high-volume strength week into a peak-sized 50% taper.
+    return Math.min(Math.ceil(previousSets * .7),
+        Math.max(48, Math.ceil(previousSets * .58)));
 }
 // Split search adds a concrete split to every candidate, including the original split.
 // That is not itself a structural change. A roster-locked volume rescue is valid

@@ -28,6 +28,15 @@ sealed interface NativeKotlinMixedHistoryCompletion {
         /** Read from the independently verified immutable issued workout. */
         val gymId: String = ""
     ) : NativeKotlinMixedHistoryCompletion
+
+    /** Exact typed seconds/distance/band facts, never a Composer rep set. */
+    data class Measured(
+        override val manifest:KotlinHistoryManifestEntry,
+        val stored:NativeMeasuredWorkoutStored
+    ):NativeKotlinMixedHistoryCompletion {
+        val mayPublishPr:Boolean get()=false
+        val mayApplyProgression:Boolean get()=false
+    }
 }
 
 data class NativeKotlinMixedHistoryTimeline(
@@ -43,7 +52,7 @@ data class NativeKotlinMixedHistoryTimeline(
 enum class NativeKotlinMixedHistoryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, NOT_ENROLLED,
     PENDING_TRANSACTION, INVALID_MANIFEST, UNVERIFIED_COMPOSER,
-    UNVERIFIED_CUSTOM, MANIFEST_CHANGED, STORAGE_UNAVAILABLE
+    UNVERIFIED_CUSTOM, UNVERIFIED_MEASURED, MANIFEST_CHANGED, STORAGE_UNAVAILABLE
 }
 
 sealed interface NativeKotlinMixedHistoryReadResult {
@@ -155,7 +164,9 @@ class NativeKotlinMixedHistoryReadCoordinator(
     private val identity: NativeKotlinCurrentIdentity,
     private val fence: NativeKotlinApprovalRevisionFence,
     /** Null means custom saved edits remain deliberately unavailable. */
-    private val customCorrections: NativeKotlinCustomSavedCorrectionFileStore? = null
+    private val customCorrections: NativeKotlinCustomSavedCorrectionFileStore? = null,
+    /** Mandatory if the ledger contains typed measured Finish receipts. */
+    private val measuredStore:NativeMeasuredWorkoutParentFileStore?=null
 ) {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -783,7 +794,26 @@ class NativeKotlinMixedHistoryReadCoordinator(
         val values = ArrayList<NativeKotlinMixedHistoryCompletion>(
             ledger.completions.size)
         for (entry in ledger.completions) {
-            if (entry.storedReceiptId.startsWith("custom-")) {
+            if (entry.storedReceiptId.startsWith("measured-")) {
+                val stored=(measuredStore?.open(owner,entry.workoutId)
+                    as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
+                    ?:return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED)
+                if(stored.ownerKey!=owner || stored.athleteId!=athlete ||
+                    stored.journal.approvedPlan.workoutId!=entry.workoutId ||
+                    stored.journal.revision!=entry.originalJournalRevision ||
+                    stored.journal.finishedByEventId!=entry.finishEventId ||
+                    entry.savedCorrectionRevision!=0L ||
+                    !entry.storedReceiptId.matches(
+                        Regex("^measured-v1-[a-f0-9]{64}$")) ||
+                    stored.journal.bySetKey.values.any{
+                        it.effectiveRecord==null} ||
+                    runCatching{
+                        NativeMeasuredWorkoutFinishReceipt.compute(stored)
+                    }.getOrNull()!=entry.storedReceiptId)
+                    return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_MEASURED)
+                values.add(NativeKotlinMixedHistoryCompletion.Measured(
+                    entry,stored))
+            } else if (entry.storedReceiptId.startsWith("custom-")) {
                 val stored = customStore.open(owner, entry.workoutId)
                 val journal = (stored as? NativeCustomJournalResult.Durable)
                     ?.issued?.journal

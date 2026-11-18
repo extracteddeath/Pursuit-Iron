@@ -25,6 +25,7 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
     machineLabel:String?=null,
     onChooseMachine:(()->Unit)?=null,
     onSwapExercise:(()->Unit)?=null,
+    unavailableReason:String?=null,
     onHistory:()->Unit,
     onDismiss:()->Unit
 ) {
@@ -50,7 +51,8 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
             Text("Planned working sets · "+sets.count{it.type==DraftSetType.WORKING},
                 style=MaterialTheme.typography.labelLarge,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(onChooseMachine!=null || onSwapExercise!=null) {
+            if(onChooseMachine!=null || onSwapExercise!=null ||
+                !unavailableReason.isNullOrBlank()) {
                 HorizontalDivider()
                 Text("Equipment and exercise",style=MaterialTheme.typography.titleSmall)
                 Text("A different physical machine keeps its own weights, Last and PRs. "+
@@ -68,6 +70,10 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
                         modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
                         Text("Swap to another exercise")
                     }
+                }
+                unavailableReason?.takeIf{it.isNotBlank()}?.let {reason->
+                    Text(reason,style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

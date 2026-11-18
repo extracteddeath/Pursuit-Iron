@@ -29,7 +29,7 @@ internal object NativeMeasuredWorkoutParentCodec {
         val journal=stored.journal
         require(listOf(stored.ownerKey,stored.athleteId,
             stored.approvalId).all(id::matches) &&
-            stored.approvalRevision>=1 && journal.finishedByEventId==null)
+            stored.approvalRevision>=1)
         require(MeasuredWorkoutJournalDomain.replay(
             journal.approvedPlan,journal.receipts)==journal)
         require(journal.approvedPlan.sets.size in 1..MAX_SETS &&
@@ -59,8 +59,10 @@ internal object NativeMeasuredWorkoutParentCodec {
                         out.writeUTF(op.setKey)
                     }
                     is MeasuredWorkoutOperation.Finish -> {
-                        // Finish is NOT durably permitted in this sidecar.
-                        throw IOException("canonical history transaction required")
+                        // Only the owner-fenced parent store's pending-ledger
+                        // replay path can construct and write this receipt.
+                        out.writeByte(2);out.writeUTF(op.eventId)
+                        out.writeLong(op.expectedRevision)
                     }
                 }
             }
@@ -139,24 +141,27 @@ internal object NativeMeasuredWorkoutParentCodec {
                     val receipts=List(receiptCount) {
                         val applied=input.readLong()
                         val kind=input.readUnsignedByte()
-                        if(kind!=1)throw IOException(
-                            "measured Finish cannot be stored without History")
                         val eventId=input.readUTF()
                         val expected=input.readLong()
-                        val setKey=input.readUTF()
-                        val recorded=events[setKey to eventId]
-                            ?:throw IOException("parent references unknown child receipt")
-                        MeasuredWorkoutReceipt(applied,
-                            MeasuredWorkoutOperation.Record(eventId,
-                                expected,setKey,recorded.outcome,
-                                recorded.actual,recorded.correctsEventId))
+                        val operation=when(kind) {
+                            1 -> {
+                                val setKey=input.readUTF()
+                                val recorded=events[setKey to eventId]
+                                    ?:throw IOException("parent references unknown child receipt")
+                                MeasuredWorkoutOperation.Record(eventId,
+                                    expected,setKey,recorded.outcome,
+                                    recorded.actual,recorded.correctsEventId)
+                            }
+                            2 -> MeasuredWorkoutOperation.Finish(eventId,expected)
+                            else -> throw IOException("unknown measured parent operation")
+                        }
+                        MeasuredWorkoutReceipt(applied,operation)
                     }
                     if(input.available()!=0)
                         throw IOException("trailing measured parent data")
                     val recovered=MeasuredWorkoutJournalDomain.replay(bundle,
                         receipts) ?:throw IOException("measured parent replay failed")
                     if(recovered.revision!=revision ||
-                        recovered.finishedByEventId!=null ||
                         recovered.bySetKey!=original.bySetKey+
                             children.associate{
                                 it.immutablePlan.setKey to it

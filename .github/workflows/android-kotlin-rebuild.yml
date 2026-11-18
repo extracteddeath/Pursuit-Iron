@@ -42,6 +42,7 @@ on:
       - 'android-native/app/src/main/AndroidManifest.xml'
       - 'android-native/app/src/release/AndroidManifest.xml'
       - 'android-native/verification/kotlin-lab-navigation-test.mjs'
+      - 'android-native/verification/kotlin-strength-volume-acceptance-test.mjs'
       - 'android-native/verification/kotlin-lab-workout-ui-test.mjs'
       - 'android-native/verification/kotlin-block-boundary-volume-test.mjs'
       - 'android-native/verification/kotlin-swap-visible-name-search-test.mjs'
@@ -169,6 +170,7 @@ jobs:
       - name: Verify focused editable Kotlin workout logging
         run: |
           node android-native/verification/kotlin-lab-workout-ui-test.mjs
+          node android-native/verification/kotlin-strength-volume-acceptance-test.mjs
           node android-native/verification/kotlin-block-boundary-volume-test.mjs
           node android-native/verification/kotlin-workout-focus-leveling-scope-test.mjs
           node android-native/verification/kotlin-swap-visible-name-search-test.mjs

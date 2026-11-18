@@ -787,7 +787,7 @@ class StarterExerciseTrancheTest {
     @Test fun newlyReviewedBenchAccessoriesRequireSpecificFixturesAndNoPhantomLoading() {
         val byId=StarterExerciseTranche.entries().associateBy{it.legacyCuratedId}
         val ids=listOf("decline-situp","back-ext-45","prone-y-raise")
-        assertEquals(361,byId.size)
+        assertEquals(362,byId.size)
         assertTrue(ids.all{it in byId})
         assertEquals(listOf(RepBand(12,20),RepBand(12,20),RepBand(12,20)),
             ids.map{byId.getValue(it).practicalRepBand})
@@ -835,6 +835,45 @@ class StarterExerciseTrancheTest {
         val extension=byId.getValue("back-ext-45").movement
         assertEquals(setOf(TrainingMuscle.SPINAL_ERECTORS,TrainingMuscle.GLUTES,
             TrainingMuscle.HAMSTRINGS),extension.credits.map{it.muscle}.toSet())
+    }
+
+    @Test fun bandSupportedSpanishSquatRequiresRealFixtureAndNeverAcceptsImaginedLoad() {
+        val entry=StarterExerciseTranche.entries().single{
+            it.legacyCuratedId=="spanish-squat"
+        }
+        assertEquals(RepBand(12,20),entry.practicalRepBand)
+        assertEquals(ComposerPattern.SQUAT,entry.movement.pattern)
+        assertEquals(ComposerRole.ACCESSORY,entry.movement.role)
+        assertNull(entry.movement.equipmentId)
+        assertNull(entry.movement.expectedLoadBasis)
+        assertEquals(setOf("spanish-squat-support"),entry.movement.requiredFacilityIds)
+        assertEquals(TrainingMuscle.QUADS,
+            entry.movement.credits.single{
+                it.role==MuscleCreditRole.DIRECT
+            }.muscle)
+        assertFalse(entry.mayTransferPreviousLoad)
+
+        fun inspect(load:BigDecimal?,facilities:Set<String>) =
+            CoachExerciseCatalogDomain.review(StarterExerciseTranche.forGym(
+                template(),listOf(choice("spanish-squat",load)),
+                CatalogGym(emptyMap(),emptySet(),facilities)))
+        val missing=inspect(null,emptySet())
+        assertTrue(missing.issues.any{
+            it.kind==CatalogIssueType.FACILITY_UNAVAILABLE})
+        val supported=inspect(null,setOf("spanish-squat-support"))
+        assertFalse(supported.issues.any{
+            it.kind==CatalogIssueType.FACILITY_UNAVAILABLE ||
+                it.kind==CatalogIssueType.LOAD_UNVERIFIED})
+        val invented=inspect(n("10"),setOf("spanish-squat-support"))
+        assertTrue(invented.issues.any{
+            it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY})
+        assertFalse(supported.mayIssueWorkout)
+        assertFalse(supported.mayOverwriteAuthoredProgram)
+        // Hybrid bodyweight + band-resistance moves are intentionally absent
+        // until the engine can measure/coach that combined loading convention.
+        assertFalse(StarterExerciseTranche.entries().any {
+            it.legacyCuratedId=="band-pushup"
+        })
     }
 
 }

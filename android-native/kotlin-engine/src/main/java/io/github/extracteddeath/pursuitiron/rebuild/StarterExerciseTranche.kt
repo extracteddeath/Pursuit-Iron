@@ -2282,10 +2282,21 @@ object StarterExerciseTranche {
             indirect(TrainingMuscle.TRICEPS,"0.25"),
             indirect(TrainingMuscle.FRONT_DELTS,"0.25"))
         // END_REVIEWED_RATED_BANDS_V1
+    ) + listOf(
+        // Source-linked Spanish squat is full-repetition BODYWEIGHT work;
+        // its band is positioning support rather than added load. Timed
+        // holds, carries, assisted machines and combined bodyweight+band
+        // resistance remain excluded until their semantics are modeled.
+        entry("spanish-squat","squat","band-supported-spanish-squat",
+            ComposerPattern.SQUAT,ComposerRole.ACCESSORY,lower,
+            null,null,setOf("spanish-squat-support"),12..20,
+            "Spanish squats count full repetitions using an athlete-confirmed stable support band and anchor. The band provides positioning/support, NOT verified added resistance; no fabricated load or band-rating progression is permitted.",
+            direct(TrainingMuscle.QUADS),
+            indirect(TrainingMuscle.GLUTES,"0.25"))
     )
 
     init {
-        require(definitions.size==361)
+        require(definitions.size==362)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

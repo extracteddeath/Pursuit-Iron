@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { summarizeStrengthWorkWeeks, findStrengthVolumeCliff, strengthEntryMinimumSets } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { summarizeStrengthWorkWeeks, findStrengthVolumeCliff, strengthEntryMinimumSets, unexplainedStrengthExerciseCollapse } from '../modules/next-engine/cycle-runtime-adapter.js';
 
 // M321: the first/final sessions alone cannot protect the actual middle of a
 // strength accumulation block. Fabricate a deliberately uneven five-week
@@ -74,5 +74,37 @@ assert.equal(findStrengthVolumeCliff(60,volumeRows),null,
 assert.equal(findStrengthVolumeCliff(15,volumeRows),null,
     'Small prior blocks retain the existing no-floor policy');
 assert.equal(findStrengthVolumeCliff(60,[]),null);
+
+// Eight distinct upper-body exercises should never silently turn into
+// three on the SAME Upper day of a regular strength-accumulation block.
+const upper=n=>({intent:'upper',day:0,
+    exercises:Array.from({length:n},(_,i)=>({exerciseId:'upper-'+i,sets:2}))});
+const lower={intent:'lower',day:2,exercises:[
+    {exerciseId:'squat',sets:3},{exerciseId:'hinge',sets:3}]};
+const hypertrophy={phase:'hypertrophy_accumulation',split:{family:'ulppl'},
+    sessions:[upper(8),lower]};
+const strength={phase:'strength_accumulation',split:{family:'ulppl'},
+    sessions:[upper(3),lower]};
+const standard={preferences:{volumeApproach:'standard'}};
+assert.deepEqual(unexplainedStrengthExerciseCollapse(hypertrophy,strength,
+    {phase:'strength_accumulation'},standard),{
+        day:'upper',previousExercises:8,strengthExercises:3,sessionIndex:0
+    },'Count collapse must be reviewed independently of weekly set totals');
+assert.equal(unexplainedStrengthExerciseCollapse(hypertrophy,
+    {...strength,sessions:[upper(5),lower]},
+    {phase:'strength_accumulation'},standard),null,
+    'Five productive movements may be appropriate; eight is not a quota');
+assert.equal(unexplainedStrengthExerciseCollapse(hypertrophy,
+    {...strength,phase:'peak'}, {phase:'peak'},standard),null,
+    'A short, deliberately planned Peak taper is not strength accumulation');
+assert.equal(unexplainedStrengthExerciseCollapse(hypertrophy,
+    {...strength,split:{family:'upper_lower'}},
+    {phase:'strength_accumulation'},standard),null,
+    'Different weekly splits have redistributed exercises; compare weekly coverage');
+assert.equal(unexplainedStrengthExerciseCollapse(hypertrophy,strength,
+    {phase:'strength_accumulation'},{preferences:{volumeApproach:'minimalist'}}),null,
+    'Explicit minimalist intent must not be silently overwritten');
+assert.equal(JSON.stringify(hypertrophy.sessions[0]),JSON.stringify(upper(8)),
+    'Exercise continuity diagnostics cannot mutate the saved previous phase');
 
 console.log('PASS M321: middle-week strength-practice and muscle-dose shortfalls cannot be hidden by successful endpoints; immutable and stable scoring.');

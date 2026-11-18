@@ -120,12 +120,14 @@ class AssistedCounterweightProgressionDomainTest {
             ComposerEquipment.Verified(LoadUnit.LB,n("40"),assistedStock),
             listOf(DeclaredMuscleCredit(TrainingMuscle.LATS,
                 MuscleCreditRole.DIRECT,n("1"))),
-            60,60,2,2,1,1,1,5,
+            60,60,2,2,3,3,1,5,
             role=ComposerRole.SECONDARY,sourcePracticalReps=RepBand(8,12))
         return ComposerRequest(ComposerSplit.FULL_BODY,
             TrainingPhase.HYPERTROPHY,
-            listOf(ComposerDay(0,ComposerFocus.FULL_BODY,
-                DeclaredSessionWindow(1,90,null,60))),
+            listOf(0,2,4).map{day->
+                ComposerDay(day,ComposerFocus.FULL_BODY,
+                    DeclaredSessionWindow(1,90,null,60))
+            },
             muscles,listOf(exercise),2)
     }
     private fun prescription(warmup:String,scheme:SetLoadScheme=SetLoadScheme.STRAIGHT)=
@@ -141,7 +143,7 @@ class AssistedCounterweightProgressionDomainTest {
         val good=CoachSessionPrescriptionDomain.draft(composer(),
             listOf(prescription("50")))
         assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,good.status)
-        val sets=good.sessions.single().exercises.single().sets
+        val sets=good.sessions.first().exercises.single().sets
         assertEquals(DraftSetType.WARMUP,sets.first().type)
         assertEquals(n("50"),(sets.first().load as DraftSetLoad.Verified).value)
         assertTrue(sets.drop(1).all {

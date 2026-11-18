@@ -55,6 +55,12 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     var repPreview by remember {mutableStateOf<NativeCustomNextRepPreview.Ready?>(null)}
     var repAccepted by remember {mutableStateOf<NativeCustomNextRepReceipt?>(null)}
     var repWorkoutId by rememberSaveable {mutableStateOf("")}
+    // A counterweight decrease uses the existing separately persisted custom
+    // next-workout load approval, never future-cycle upward-load consent.
+    var assistancePreview by remember {mutableStateOf<NativeCustomLoadPreview.Ready?>(null)}
+    var assistanceAccepted by remember {mutableStateOf<NativeCustomNextLoadReceipt?>(null)}
+    var assistanceWorkoutId by rememberSaveable {mutableStateOf("")}
+    var confirmAssistance by remember {mutableStateOf(false)}
     var confirmRepAcceptance by remember {mutableStateOf(false)}
     var handoff by remember {
         mutableStateOf<NativeAcceptedFutureWeekLoadHandoff.Ready?>(null)
@@ -71,6 +77,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         session=null;slotId="";coaching=null;offer=null;consentPreview=null;accepted=null
         handoff=null;prepared=null;issued=null;confirmAcceptance=false
         confirmRepAcceptance=false;repPreview=null;repAccepted=null;repWorkoutId=""
+        assistancePreview=null;assistanceAccepted=null;assistanceWorkoutId=""
+        confirmAssistance=false
         confirmIssue=false;notice=null
     }
     fun clearOffer() {
@@ -78,6 +86,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
         coaching=null;offer=null;consentPreview=null;accepted=null;handoff=null
         prepared=null;issued=null;confirmAcceptance=false;confirmIssue=false
         confirmRepAcceptance=false;repPreview=null;repAccepted=null;repWorkoutId=""
+        assistancePreview=null;assistanceAccepted=null;assistanceWorkoutId=""
+        confirmAssistance=false
         notice=null
     }
     LaunchedEffect(host) {
@@ -111,6 +121,15 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     val repForecastPolicy=assistance?.let{
         CustomRepForecastPolicyDomain.newProposal(it)
     } ?: CustomRepForecastPolicy.TARGET_RIR_V2 // never used when disabled
+    val currentSlot=session?.slots?.singleOrNull{it.slotId==slotId}
+    val currentWorkingSets=currentSlot?.sets?.filter{
+        it.prescription.type==DraftSetType.WORKING
+    }.orEmpty()
+    val isAssistedCounterweight=currentWorkingSets.isNotEmpty() &&
+        currentWorkingSets.all{
+            (it.prescription.load as? DraftSetLoad.Verified)?.basis==
+                LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        }
     val maxStep=remember(maxStepText) {
         runCatching{BigDecimal(maxStepText.trim())}.getOrNull()
             ?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
@@ -231,7 +250,9 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     enabled=!busy,
                     onValueChange={maxStepText=it;clearOffer()},
                     isError=maxStep==null,
-                    label={Text("Maximum approved increase · gym units")},
+                    label={Text(if(isAssistedCounterweight)
+                        "Maximum counterweight reduction · gym units"
+                    else "Maximum approved increase · gym units")},
                     singleLine=true,modifier=Modifier.fillMaxWidth())
                 if(assistance?.offersFatigueAdvice==true) {
                     Text("How are you feeling?",

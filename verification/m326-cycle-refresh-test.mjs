@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { EXERCISES, EX_BY_ID } from '../modules/training-domain/catalog.js';
 import { generateNextCycleForShell, convertProgramToNextCycleForShell, reviewConvertedStrengthExerciseCoverage } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { nextExerciseIdForShellExercise } from '../modules/next-engine/shell-projection.js';
@@ -80,8 +81,8 @@ assert.equal(JSON.stringify({sourceProof,oldStrength}),inputProof,
 // Full end-to-end refresh of a real eight-exercise authored program.
 // Distinct mapped movements must still be available in the chosen gym.
 const canPerform=shellExercisePerformableFor({equipment});
-const originalIds=new Set(legacy.days[0].exercises);
-const extras=EXERCISES.filter(ex=>!originalIds.has(ex.id) && canPerform(ex)
+const sourceExerciseIds=new Set(legacy.days[0].exercises);
+const extras=EXERCISES.filter(ex=>!sourceExerciseIds.has(ex.id) && canPerform(ex)
     && nextExerciseIdForShellExercise(ex)).slice(0,2).map(ex=>ex.id);
 assert.equal(extras.length,2,'Fixture needs two additional available mapped movements');
 const highVariety=structuredClone(legacy);
@@ -115,6 +116,12 @@ assert.equal(highRefresh.blocks[1].id,cycle.blockIds[2]);
 assert.equal(highRefresh.cycle.blockIds[0],highVariety.id);
 assert.equal(highRefresh.blocks[0].nextEngine.program.audit.result,'pass');
 
+const webUi=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
+for(const term of ['refreshAdaptiveCyclePreviews','upgradeExistingCycleToAdaptive']){
+ const pos=webUi.indexOf(term);
+ console.log('M326 existing web cycle-upgrade UI path',term,
+     pos<0?'NOT FOUND':webUi.slice(Math.max(0,pos-450),pos+1900));
+}
 console.log('PASS M326: actual custom exit continuity across all strength weeks, selected-gym previews, saved-ID/phase preservation, safe legacy activation and repeat refresh.');
 
 // Specific machines remain unavailable even when another machine makes the

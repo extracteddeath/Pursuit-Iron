@@ -734,39 +734,15 @@ internal fun NativeKotlinCustomJournalScreen(
                     if(focusOnNext)NativeKotlinWorkoutTools(
                         enabled=!busy,
                         onSessionNote={noteError=null;showSessionNote=true},
-                        // This only requests the existing owner-fenced sheet;
-                        // Focus does not need a second permanent Machine A/B row.
-                        onMachine=upcoming?.first?.takeIf {
-                            it.exerciseId in eligibleMachineExercises
-                        }?.let {slot->
-                            {openPhysicalMachineForSlot=slot.slotId}
-                        },
-                        machineLabel=upcoming?.first?.takeIf {
-                            it.exerciseId in eligibleMachineExercises
-                        }?.let {slot->
-                            val selectedId=workoutMachineChoice(
-                                machineChoices.encoded,slot.exerciseId,null)
-                            machineRoster?.configurations.orEmpty()
-                                .firstOrNull {
-                                    it.gymId==current.originalSnapshot.stamp.gymId &&
-                                        it.exerciseId==slot.exerciseId
-                                }?.machines?.firstOrNull{it.id==selectedId}?.label
-                                ?: "Choose machine"
-                        },
+                        // Machine A/B lives in Exercise Info, not the Focus rail.
+                        onMachine=null,
                         onSuperset=activeSupersetGroup?.let {group->
                             {supersetRoundGroup=group}
                         },
                         onPinnedNote=upcoming?.first?.let {slot->
                             {pinnedSlotId=slot.slotId}
                         },
-                        onSwap=upcoming?.first?.takeIf {slot->
-                            slot.supersetGroup==null && slot.sets.none {set->
-                                current.receipts.any {receipt->
-                                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
-                                        ?.visit?.setKey==set.setKey
-                                }
-                            }
-                        }?.let {slot->{reviewSwap(slot)}},
+                        onSwap=null,
                         onWarmup=upcoming?.first?.takeIf {slot->
                             slot.sets.any{it.prescription.type==DraftSetType.WARMUP}
                         }?.let {slot->{
@@ -1512,6 +1488,31 @@ internal fun NativeKotlinCustomJournalScreen(
     infoSlotId?.let { slotId ->
         journal?.snapshot?.slots?.firstOrNull{it.slotId==slotId}
             ?.let { slot ->
+                val infoGymId=journal?.originalSnapshot?.stamp?.gymId
+                val infoConfig=infoGymId?.let {gymId->
+                    if(slot.exerciseId in eligibleMachineExercises)
+                        KotlinMachineAlternativesDomain.forGymExercise(
+                            machineRoster?.configurations.orEmpty(),gymId,slot.exerciseId)
+                            ?:KotlinGymMachineAlternatives(gymId,slot.exerciseId,
+                                null,emptyList())
+                    else null
+                }
+                val infoMachine=workoutMachineChoice(
+                    machineChoices.encoded,slot.exerciseId,null)
+                val infoRecorded=slot.sets.any{set->
+                    journal?.receipts.orEmpty().any{receipt->
+                        (receipt.operation as? CustomWorkoutJournalOperation.Record)
+                            ?.visit?.setKey==set.setKey
+                    }
+                }
+                val infoOptions=NativeKotlinEquipmentRecoveryPolicy.review(
+                    activeWorkout=!busy && !finished &&
+                        journal?.finishedByEventId==null,
+                    hasPhysicalMachineConfig=infoConfig!=null &&
+                        machineChoices.ready && !machineChoices.busy,
+                    hasRecordedExerciseWork=infoRecorded,
+                    linkedSuperset=slot.supersetGroup!=null
+                )
                 NativeKotlinWorkoutExerciseInfoSheet(
                     exerciseId=slot.exerciseId,
                     sourceDescription="Issued custom workout · "+
@@ -1521,6 +1522,20 @@ internal fun NativeKotlinCustomJournalScreen(
                     sets=customWorkoutInfoSets(slot.sets),
                     note=slot.coachNote.takeIf{it.isNotBlank()},
                     warmupsOnly=infoWarmupsOnly,
+                    busy=busy || machineChoices.busy,
+                    machineLabel=infoConfig?.machines?.firstOrNull{
+                        it.id==infoMachine
+                    }?.label ?: "Choose or add machine",
+                    onChooseMachine=if(!infoWarmupsOnly && infoOptions.canChangeStation)
+                        ({
+                            infoSlotId=null
+                            openPhysicalMachineForSlot=slot.slotId
+                        }) else null,
+                    onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)
+                        ({
+                            infoSlotId=null
+                            reviewSwap(slot)
+                        }) else null,
                     outcomes=journal?.effectiveVisits.orEmpty().mapNotNull { (key,receipt)->
                         if(key.part!=CustomWorkoutVisitPart.MAIN)null
                         else (receipt.operation as? CustomWorkoutJournalOperation.Record)?.let{key.setKey to it.outcome}

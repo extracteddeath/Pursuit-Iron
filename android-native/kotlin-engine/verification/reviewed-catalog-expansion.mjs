@@ -315,7 +315,18 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.deepEqual(declarations.slice(beforeWaveNine,beforeWaveNine+waveNineIds.length),
    waveNineIds,'two wave-nine real implements must remain append-stable');
  assert.deepEqual(declarations.slice(beforeWaveNine+waveNineIds.length),
-   ratedBandRequiredIds,'only source-reviewed rated-band IDs may follow wave nine');
+   [...ratedBandRequiredIds,'spanish-squat'],
+   'only reviewed band IDs and the explicitly supported Spanish squat may follow wave nine');
+ const spanish=liveById.get('spanish-squat');
+ assert.ok(spanish,'supported Spanish squat missing from web source');
+ assert.equal(spanish.name,'Spanish Squat');
+ assert.equal(spanish.movementFamily,'squat');
+ assert.deepEqual(spanish.equipment,['bands']);
+ assert.deepEqual(spanish.practicalReps,[12,20]);
+ assert.equal(spanish.source,'legacy_v661');
+ assert.match(source,
+   /entry\("spanish-squat","squat","band-supported-spanish-squat",\s*ComposerPattern\.SQUAT,ComposerRole\.ACCESSORY,lower,\s*null,null,setOf\("spanish-squat-support"\),12\.\.20/,
+   'Spanish squat must demand confirmed support and have no numeric external load');
  // A new source catalog ID is not evidence of identical mechanics.
  // Fail closed when the web metadata, exact ID, equipment or rep band drifts.
  const liveById=new Map(web.map(ex=>[ex.id,ex]));
@@ -365,7 +376,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
      'wave-nine source must not reclassify the loaded implement as bodyweight');
  }
  const total=49+count+requestedIds.length+waveEightIds.length+
-   waveNineIds.length+ratedBandRequiredIds.length;
+   waveNineIds.length+ratedBandRequiredIds.length+1;
  assert.ok(source.includes('require(definitions.size=='+total+')'),
    'Kotlin exact source count must include independently reviewed additions');
  assert.ok(source.includes(') + listOf(\\n') || source.includes(') + listOf('),
@@ -373,7 +384,7 @@ export function validateReviewedCatalogExpansion(manifest,source,web=EXERCISES) 
  assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false')&&
    !expected.includes('mayTransferPreviousLoad'),
    'reviewed IDs may never implicitly transfer historical loading');
- return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length,total};
+ return {originalStablePrefixCount:49,additions:count+requestedIds.length+waveEightIds.length+waveNineIds.length+1,total};
 }
 
 export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
@@ -385,7 +396,7 @@ export function writeReviewedCatalogExpansion(manifest,source,web=EXERCISES) {
  return source.slice(0,from)+replacement+source.slice(to+END.length)
    .replace('require(definitions.size=='+previous+')',
      'require(definitions.size=='+(49+count+requestedIds.length+waveEightIds.length+
-       waveNineIds.length+ratedBandRequiredIds.length)+')');
+       waveNineIds.length+ratedBandRequiredIds.length+1)+')');
 }
 function requireCount(source) {
  const m=source.match(/require\(definitions\.size==(\d+)\)/);
@@ -395,7 +406,12 @@ function requireCount(source) {
 function selfTest() {
  const m=JSON.parse(readFileSync(manifestPath,'utf8'));
  const src=readFileSync(nativePath,'utf8');
- assert.equal(validateReviewedCatalogExpansion(m,src).total,361);
+ assert.equal(validateReviewedCatalogExpansion(m,src).total,362);
+ const unverifiedSupport=src.replace(
+   'null,null,setOf("spanish-squat-support"),12..20',
+   'null,null,emptySet(),12..20');
+ assert.throws(()=>validateReviewedCatalogExpansion(m,unverifiedSupport),
+   /Spanish squat must demand confirmed support/);
  const waveNineDrift=EXERCISES.map(ex=>ex.id==='svend-press'
    ?{...ex,practicalReps:[5,8]}:ex);
  assert.throws(()=>validateReviewedCatalogExpansion(m,src,waveNineDrift),

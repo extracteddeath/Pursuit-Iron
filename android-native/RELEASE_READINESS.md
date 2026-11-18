@@ -27,6 +27,51 @@ The Material 3 editor, progress logic, whole-workout multi-set
 scheduling, signed-in host wiring, and real device testing remain open.
 Count remains 369/383 live reps-based exercises. No APK/AAB.
 
+**Measured exercise Material 3 entry component (2026-11-18):**
+An isolated real Compose form now consumes an authenticated issued typed
+set and accepts actual hold seconds/MM:SS, distance centimeters/meters/
+feet, banded repetitions and independent left/right observations. It
+reuses the source-specific Kotlin parser, keeps target and actual weight
+separate, never treats a different band or physical station as equivalent,
+and shows the exact unit and stored result on edit. Switching units clears
+unsubmitted numbers rather than silently relabeling them; conversions
+from feet must be explicitly acknowledged when centimeter rounding occurs.
+Completed, failed-zero and skipped outcomes are distinct, confirmation
+is required for exceptional entries, and correction receives a fresh
+event ID with the current journal revision and corrects-event ID. Only an
+external owner-fenced native record callback can persist an observation;
+the form never calls Finish or claims an optimistic journal/history write.
+UI source contracts assert the wiring, but real-device interaction has NOT
+been accepted.
+
+**Not yet exposed to beta users:** This component has no issued measured
+plan route in the current app. The host must independently approve the
+parent multi-set workout and gym, provide the stored set, handle callback
+failure and completion, and join final History transaction before this
+can appear as fully supported training. Live catalog remains 369/383 until
+end-to-end validation. No APK.
+
+**Typed athlete input conversion for the 14 measured exercises (2026-11-18):**
+A pure Kotlin entry policy now parses real active quantities for all
+source-exact timed, distance and banded movements. Holds accept seconds or
+MM:SS (up to 3600 seconds); carries accept explicit centimeters, meters
+with hundredth precision or feet with an explicit nearest-centimeter
+approximation flag; banded push-ups accept integer repetitions only. Per-side
+fields must match the issued measurement plan. Added/hand-held mass must be
+entered by the athlete, have the correct unit and be a verified attainable
+physical amount. Bodyweight and banded lifts never invent external stack
+weights; band IDs and physical setups cannot change silently. Skips and
+failed zero-attempts stay separate from completed performance; carry time
+is optional metadata, never distance. Parsed actuals are revalidated
+against the authoritative typed measurement domain, not saved by the parser.
+JVM tests exercise all 14 with actual data and negative source/stock cases.
+
+**Still not interactive beta UI:** The typed parser does not authorize a
+new workout, commit a journal or automatically display a Compose field.
+Its output is preview-only until the native owner-fenced recorder, approved
+program model, final exercise input controls and History transaction are
+wired and accepted. No APK/AAB.
+
 **Measured exercise v1 recovery format (2026-11-18):**
 The new fourteen-exercise candidate domain now has an isolated native-coach-
 store versioned binary codec (PIM1) for an immutable typed measurement plan,

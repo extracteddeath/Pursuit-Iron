@@ -6,7 +6,7 @@ import { Check, ChevronDown, Repeat, Plus } from 'lucide-react';
 import { createPortal } from '../vendor/react-dom.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { UiAction, UiField } from './ui-primitives.js';
-import { latestMachineSet, LEGACY_MACHINE_ID, resolveMachineVariant } from './next-engine/machine-instances.js';
+import { latestMachineSet, machineHistory, LEGACY_MACHINE_ID, resolveMachineVariant } from './next-engine/machine-instances.js';
 import { EX_BY_ID, isMachineLike, isWorkSet } from './engine-api.js';
 import { workoutNavLabel } from './workout-nav-labels.js';
 import { navigateChoiceRow } from './ui-choice-navigation.js';
@@ -87,7 +87,8 @@ export function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) 
 
 /**
  * Machine identity is selected at the machine, not in a program-edit screen.
- * A quiet machine choice sits in workout tools rather than the set header.
+ * Machine choices belong in Exercise Info alongside weight increments,
+ * not a clipped extra button on the narrow workout action rail.
  * One focused sheet provides existing physical machines, their own last
  * performances, quick machine creation, or the existing exercise swap.
  *
@@ -104,8 +105,30 @@ export function nextPhysicalMachineLabel(instances=[]) {
     return 'Other machine';
 }
 
+/** Machine A/B and exercise replacement are one responsive Exercise Info
+ * section, beside the per-exercise loading step; not toolbar controls. */
+export function WorkoutMachineInfoActions({
+    gym,exerciseId,exerciseName,selectedId,dayId,history,unit,
+    onSelect,onCreate,onAssignLegacy,onSwap
+}) {
+    return _jsxs('section',{className:'wpb-exinfo-machine-tools',
+        'aria-label':'Machine and exercise options',children:[
+        _jsx('div',{className:'wpb-ey8',children:'Equipment and exercise'}),
+        !!gym && isMachineLike(EX_BY_ID[exerciseId]?.equip) &&
+            _jsx(WorkoutMachineVariantControl,{
+                gym,exerciseId,selectedId,dayId,history,unit,
+                onSelect,onCreate,onAssignLegacy
+            }),
+        _jsxs('button',{type:'button',className:'pressable wpb-exinfo-swap-action',
+            onClick:onSwap,
+            'aria-label':`Swap ${exerciseName} to another exercise`,
+            children:[_jsx(Repeat,{size:17,'aria-hidden':true}),
+                ' Swap to another exercise']})
+    ]});
+}
+
 export function WorkoutMachineVariantControl({
-    gym,exerciseId,selectedId,dayId,history=[],unit,onSelect,onCreate,onSwap
+    gym,exerciseId,selectedId,dayId,history=[],unit,onSelect,onCreate,onSwap,onAssignLegacy
 }) {
     const isMachine=isMachineLike(EX_BY_ID[exerciseId]?.equip);
     const [open,setOpen]=useState(false);
@@ -133,9 +156,16 @@ export function WorkoutMachineVariantControl({
     const choices=[...additional,...available.filter(item=>item.id!==selected.id ||
         !additional.some(old=>old.id===item.id))];
     const hint=nextPhysicalMachineLabel(instances);
+    // Raw, untagged historical rows are not reassigned by adding Machine B.
+    // An athlete may explicitly associate these old observations with the
+    // original physical machine, without changing any stored receipts.
+    const olderSets=gym?machineHistory(history,{
+        gymId:gym.id,exerciseId,machineInstanceId:LEGACY_MACHINE_ID
+    }):[];
+    const legacyOwner=config?.legacyHistoryMachineId ?? null;
     const describeLast=instance=>{
         const prior=gym?latestMachineSet(history,{
-            gymId:gym.id,exerciseId,machineInstanceId:instance.id,dayId
+            gymId:gym.id,exerciseId,machineInstanceId:instance.id,dayId,gym
         }):null;
         return prior
             ? `Last: ${prior.weight} ${prior.unit??unit} × ${prior.reps} reps`
@@ -149,6 +179,14 @@ export function WorkoutMachineVariantControl({
             if(result?.ok===false)throw new Error(result.message||'Cannot use that machine');
             close();
         } catch(error){setMessage(error?.message||'Cannot change this machine');}
+    };
+    const attachOlder=id=>{
+        if(!onAssignLegacy)return setMessage('History assignment is unavailable for this gym.');
+        try {
+            const result=onAssignLegacy(id);
+            if(result?.ok!==true)throw new Error(result?.message||'Could not save the original machine assignment');
+            setMessage(id?'Older history is now associated with this original machine.':'Older history is unassigned again.');
+        }catch(error){setMessage(String(error?.message||'Cannot associate history'));}
     };
     const add=event=>{
         event.preventDefault();
@@ -195,6 +233,27 @@ export function WorkoutMachineVariantControl({
                         ]
                     },machine.id))
                 ]}),
+            !!gym && olderSets.length>0 && instances.length>0 && _jsxs('section',{
+                className:'wpb-machine-legacy-assignment',
+                'aria-label':'Original machine for older workout history',children:[
+                _jsx('h3',{children:'Where do your older sets belong?'}),
+                _jsx('p',{children:`${olderSets.length} earlier set${olderSets.length===1?'':'s'} had no physical machine label. Assign them to the machine you actually used. New machines never inherit that history automatically.`}),
+                _jsxs('div',{className:'wpb-machine-legacy-choices',children:[
+                    ...instances.map(instance=>_jsx(UiAction,{
+                        type:'button',
+                        'aria-pressed':legacyOwner===instance.id,
+                        disabled:instance.id===legacyOwner,
+                        onClick:()=>attachOlder(instance.id),
+                        children:legacyOwner===instance.id
+                            ?`${instance.label} · older history attached`
+                            :`Attach old sets to ${instance.label}`
+                    },instance.id)),
+                    !!legacyOwner && _jsx(UiAction,{
+                        type:'button',onClick:()=>attachOlder(null),
+                        children:'Leave older history unassigned'
+                    })
+                ]})
+            ]}),
             !!gym && _jsxs('form',{className:'wpb-machine-switch-create',onSubmit:add,
                 children:[
                     _jsxs('div',{className:'wpb-machine-switch-create-heading',children:[
@@ -228,7 +287,7 @@ export function WorkoutMachineVariantControl({
     return _jsxs('div',{className:'wpb-machine-switch',
         'data-noswipe':true,children:[
         _jsxs(UiAction,{type:'button',ref:trigger,
-            className:'wpb-machine-switch-trigger wpb-workout-tool',
+            className:'wpb-machine-switch-trigger',
              title:`Choose physical machine · ${selected.label}`,
             'aria-label':`Machine for ${EX_BY_ID[exerciseId]?.name||'exercise'}: ${selected.label}. Choose or add machine`,
             'aria-haspopup':'dialog','aria-expanded':open,

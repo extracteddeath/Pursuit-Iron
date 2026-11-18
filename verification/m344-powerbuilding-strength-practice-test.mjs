@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { EXERCISES } from '../modules/engine-api.js';
 import { shellConfigToNextRequest } from '../modules/next-engine/app-shell-adapter.js';
-import { requestForBlock } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { requestForBlock, generateNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { createStrengthClaims, normalizeRequest } from '../modules/next-engine/prescription.js';
 import { generateProgram } from '../modules/next-engine/generate.js';
 import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
@@ -134,6 +134,42 @@ const noChange = requestForBlock(threeDays, { ...config, split: 'full_body', day
     { phase: 'strength_accumulation', weeks: 5, split: 'full_body' });
 assert.ok(Object.keys(noChange.goal.liftFrequency ?? {}).length === 0);
 
+// End-to-end cycle preview: report real exercise slots per day rather
+// than equating an increased set total with restored movement variety.
+const previewCycle = generateNextCycleForShell({
+    templateId:'custom',
+    config:{...config,name:'ULPPL continuity'},
+    blocks:[
+        {phase:'hypertrophy_accumulation',weeks:3},
+        {phase:'strength_accumulation',weeks:3},
+        {phase:'peak',weeks:2}
+    ],
+    legacyExercises:EXERCISES,seed:34410,
+    makeId:(()=>{let n=0;return ()=>`m344-coverage-${++n}`})(),
+    adaptBetweenBlocks:true,adaptTrainingSplit:false
+});
+const actualExerciseCounts=previewCycle.blocks.map(block=>({
+    phase:block.nextEngine.program.phase,
+    counts:block.nextEngine.program.sessions.map(session=>({
+        intent:session.intent,exercises:session.exercises.length,
+        minutes:Math.round(session.estimatedMinutes)
+    }))
+}));
+assert.ok(actualExerciseCounts.every(block=>block.counts.length===5));
+// This is a genuine source-preserving five-day cycle, not a fabricated
+// eight-exercise toy. It must keep legitimate accessory variety alongside
+// exact bench/squat/hinge practice, or refuse the phase before saving.
+const priorUpper=actualExerciseCounts[0].counts.find(day=>day.intent==='upper');
+const strengthUpper=actualExerciseCounts[1].counts.find(day=>day.intent==='upper');
+assert.ok(priorUpper.exercises>=6,'The fixture must exercise a high-variety hypertrophy Upper day');
+assert.ok(strengthUpper.exercises>=Math.ceil(priorUpper.exercises/2),
+    'Same-split strength Upper must not lose over half its distinct exercise menu');
+assert.ok(actualExerciseCounts[1].counts.every(day=>day.exercises>=2),
+    'Real strength program must retain actual complementary movements across ULPPL');
+const peakRows=previewCycle.blocks[2].nextEngine.program.sessions;
+assert.ok(peakRows.every(day=>day.estimatedMinutes<=day.maxMinutes+.01),
+    'Intentional Peak reduction must still obey the actual session time constraint');
+console.log('M344 real five-day ULPPL exercise-count transition: '+JSON.stringify(actualExerciseCounts));
 assert.equal(JSON.stringify({ config, base }), before, 'Phase generation must not mutate athlete settings or past blocks');
 console.log('M344 actual Both / ULPPL phase training audit: ' + JSON.stringify(result));
 console.log('PASS M344: ULPPL Both strength/peak requires repeated bench and squat with a real Push incline variant; explicit intent remains intact.');

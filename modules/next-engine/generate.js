@@ -58,7 +58,19 @@ function generateProgramOnce(requestInput, options) {
     const experienceCapacityMultiplier = normalized.athlete.experience === 'novice' ? .75 : normalized.athlete.experience === 'intermediate' ? .9 : 1;
     const experienceExerciseCap = normalized.athlete.experience === 'novice' ? 6 : normalized.athlete.experience === 'intermediate' ? 8 : 12;
     const responseCapacityMultiplier = normalized.preferences?.responseCapacityScale ?? 1;
-    const capacityMultiplier = policy.sessionCapacityMultiplier * experienceCapacityMultiplier * responseCapacityMultiplier;
+    // A source-verified hypertrophy -> strength block may keep a similar
+    // movement menu while heavier sets, intensity, RIR and rest change.
+    // Do not multiply its exercise-count complexity budget by the
+    // strength-volume taper: these are different programming variables.
+    // This does not force any number of exercises: time, joint recovery,
+    // equipment and actual dose audits still decide what can be used.
+    // Standalone strength and genuine Peak retain their prior explicit
+    // capacity policy. The caller supplies this ONLY during a supported
+    // athlete-owned continuation with meaningful prior session variety.
+    const continuityVariety = options?.preservePriorExerciseVariety === true &&
+        phase === 'strength_accumulation';
+    const phaseExerciseScale = continuityVariety ? 1 : policy.sessionCapacityMultiplier;
+    const capacityMultiplier = phaseExerciseScale * experienceCapacityMultiplier * responseCapacityMultiplier;
     const split = normalized.preferences.lockedSplit ?? normalized.preferences.preferredSplit;
     // Full-body structures have a three-region identity (push + pull + lower). Phase tapering may cut
     // sets and accessories aggressively, but an exercise-count target below three is internally

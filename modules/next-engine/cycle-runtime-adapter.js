@@ -35,7 +35,14 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
             const strength = ex.role === 'primary_strength' || ex.role === 'secondary_strength';
             const sourceScale = strength ? sourcePolicy.strengthVolumeMultiplier : sourcePolicy.volumeMultiplier;
             const targetScale = strength ? targetPolicy.strengthVolumeMultiplier : targetPolicy.volumeMultiplier;
+            // On hypertrophy -> strength ACCUMULATION, keep most authored
+            // working sets on the same exercise skeleton. Higher strength
+            // rest and lower reps remain independently prescribed; this is
+            // NOT the separate Peak taper. Ordinary strength-only program
+            // generation keeps its established audited phase policy.
             const ratio = sourceScale > 0 ? targetScale / sourceScale : 1;
+            const retainedRatio = previous.phase === 'hypertrophy_accumulation' &&
+                target === 'strength_accumulation' ? Math.max(.9, ratio) : ratio;
             const prescription = {
                 reps: repsForPhase(def, ex.role, targetPolicy),
                 rir: rirForPhase(ex.role, targetPolicy),
@@ -53,7 +60,7 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
             return {
                 ...ex,
                 ...(workingSetCap !== undefined ? { workingSetCap } : {}),
-                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * ratio))),
+                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * retainedRatio))),
                 prescription,
                 progressionStyle: progressionSelection.style,
                 progression: progressionInstruction(progressionSelection.style),
@@ -259,6 +266,22 @@ function checkRequestedPractice(program, spec, request) {
 }
 const totalSets = program => program.sessions.reduce((n, session) =>
     n + session.exercises.reduce((sets, ex) => sets + (Number(ex.sets) || 0), 0), 0);
+// Strength accumulation retains productive work; it is not a peak/taper. An
+// already-large hypertrophy week may reduce fatigue, but never silently lose
+// half its working sets. Return a typed refusal when the approved session
+// duration/equipment constraints cannot safely support this continuity.
+export function strengthEntryMinimumSets(previousSets) {
+    if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
+    // Moderate hypertrophy sources preserve >=70% across the strength
+    // transition. High-capacity weeks (68+ working sets) may not fit that
+    // proportion with strength-specific rest in the same approved session.
+    // Preserve >50% for 68–89 sets; truly exceptional weeks (90+ sets) may
+    // keep exactly 50% when the verified session limits cannot fit more.
+    // Peak is an explicit taper with a separate policy.
+    return previousSets >= 90 ? Math.ceil(previousSets * .5)
+        : previousSets >= 68 ? Math.floor(previousSets * .5) + 1
+        : Math.ceil(previousSets * .7);
+}
 // Split search adds a concrete split to every candidate, including the original split.
 // That is not itself a structural change. A roster-locked volume rescue is valid
 // when the executable schedule still matches and no new lift-frequency intent was
@@ -269,10 +292,53 @@ export function canRetargetStrengthEntryRoster(previous, request, spec) {
     return desiredSplit === previous?.split?.family
         && request?.schedule?.days?.length === previous.sessions.length;
 }
+// An exercise count is not a scientific training dose. Still, a >50%
+// UNREQUESTED loss of distinct movements on the SAME scheduled strength day
+// (e.g. eight upper-body exercises becoming three) demands an explicit
+// feasibility decision, not a seemingly healthy weekly set total packed
+// into three heavy lifts. Changes of split/day topology are not compared
+// slot-for-slot. Peak is a separate short taper and never uses this guard.
+// The fraction is an engineering review trigger, not a universal minimum
+// number of exercises or hypertrophy dose recommendation.
+export function unexplainedStrengthExerciseCollapse(previous, next, spec, request) {
+    if (previous?.phase !== 'hypertrophy_accumulation'
+        || spec?.phase !== 'strength_accumulation'
+        || next?.phase !== 'strength_accumulation'
+        || request?.preferences?.volumeApproach === 'minimalist'
+        || previous.split?.family !== next.split?.family
+        || previous.sessions?.length !== next.sessions?.length) return null;
+    for (let index=0; index<next.sessions.length; index++) {
+        const before=previous.sessions[index], after=next.sessions[index];
+        if (before.intent !== after.intent) continue;
+        const priorDistinct=new Set(before.exercises.map(ex=>ex.exerciseId)).size;
+        const nextDistinct=new Set(after.exercises.map(ex=>ex.exerciseId)).size;
+        if (priorDistinct >= 6 && nextDistinct < Math.ceil(priorDistinct * .5))
+            return { day:after.intent, previousExercises:priorDistinct,
+                strengthExercises:nextDistinct, sessionIndex:index };
+    }
+    return null;
+}
 function protectStrengthEntry(previous, next, spec, request) {
     if (previous?.phase !== 'hypertrophy_accumulation' || spec.phase !== 'strength_accumulation')
         return next;
-    const before = totalSets(previous), floor = Math.ceil(before * .5);
+    const before = totalSets(previous), floor = strengthEntryMinimumSets(before);
+    const lostVariety = unexplainedStrengthExerciseCollapse(previous, next, spec, request);
+    if (lostVariety) {
+        // Prefer a source-preserving, fully-audited retarget when athlete
+        // constraints can fit it. Do not silently force eight lifts in a
+        // shorter or heavier session: when this fails, give a typed refusal.
+        if (canRetargetStrengthEntryRoster(previous, request, spec)) {
+            try {
+                const preserved = retargetStatic(previous, request, spec.phase, spec.weeks);
+                if (preserved.audit.result === 'pass'
+                    && totalSets(preserved) >= floor
+                    && !unexplainedStrengthExerciseCollapse(previous,preserved,spec,request))
+                    return preserved;
+            } catch { /* Return a concrete safe refusal rather than altering the workout. */ }
+        }
+        throw new NextShellAdapterError('NEXT_CYCLE_STRENGTH_EXERCISE_COLLAPSE',
+            `Strength ${lostVariety.day} would drop from ${lostVariety.previousExercises} distinct exercises to ${lostVariety.strengthExercises}, despite the same weekly split. Working-set totals alone cannot justify abandoning that much movement coverage. Keep more useful accessory work, increase allowed session time, or choose another split; deliberate volume tapering belongs in Peak.`);
+    }
     if (before < 16 || totalSets(next) >= floor) return next;
     // A converted custom roster can be more faithful than a newly generated strength skeleton.
     // Try the audited same-roster prescription before refusing an extreme volume cliff.
@@ -595,8 +661,8 @@ export function summarizeStrengthWorkWeeks(weeks) {
 // Preserve the same transition safety floor throughout strength accumulation,
 // not only at entry. This does not apply to deliberate peak/recovery tapers.
 export function findStrengthVolumeCliff(previousSets, weeks) {
-    return Number.isFinite(previousSets) && previousSets >= 16 && Array.isArray(weeks)
-        ? weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5)) ?? null
+    return strengthEntryMinimumSets(previousSets)>0 && Array.isArray(weeks)
+        ? weeks.find(week => week.weeklySets < strengthEntryMinimumSets(previousSets)) ?? null
         : null;
 }
 export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = [], priorSnapshot = null) {
@@ -717,7 +783,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
         ...(realizedSelection ? { realizedSelection } : {}),
         reason: automatic
             ? realizedSelection
-                ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, then compared ${realizedSelection.evaluatedFinalists} finalists using the weakest executable work week. Prioritized strength-lift practice, muscle coverage, regional continuity, training time and the strength-entry volume floor were protected.`
+                ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, then compared ${realizedSelection.evaluatedFinalists} finalists using the weakest executable work week. Prioritized strength-lift practice, muscle coverage, regional continuity, training time and the strength-entry 70% weekly set-volume floor were protected.`
                 : `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and ranked their initial muscle coverage, relevant lift practice and training capacity. Planned prescriptions can still change at the block transition.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
     };

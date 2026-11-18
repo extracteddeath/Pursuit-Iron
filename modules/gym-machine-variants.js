@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useState } from 'react';
 import { EXERCISES, isMachineLike } from './engine-api.js';
-import { addMachineVariant, editMachineVariant, setDefaultMachineVariant } from './next-engine/machine-instances.js';
+import { addMachineVariant, assignLegacyMachineHistory, editMachineVariant, setDefaultMachineVariant } from './next-engine/machine-instances.js';
 import { UiAction, UiField, UiSummary } from './ui-primitives.js';
 
 // Gym-owned settings, not program edits: the exercise still has one muscle-dose identity.
@@ -36,7 +36,7 @@ export function GymMachineVariantFields({gym,onChange}) {
         _jsx('p',{className:'wpb-gym-guidance',children:
             'Choose a machine exercise below and add Machine A, Machine B, or more. '+
             'Set the gym default, then tap Done to save. During a workout, use the '+
-            'Machine A/B selector above the exercise title to switch physical machines. '+
+            'Exercise Info → Equipment and exercise to choose a physical machine. '+
             'The Program view shows the movement, not the physical machine; switching '+
             'does not change your exercise selection or combine weight histories.'}),
         _jsx('p',{className:'wpb-gym-guidance',children:
@@ -75,6 +75,24 @@ export function GymMachineVariantFields({gym,onChange}) {
                     }})
             ]})
         ]},instance.id)),
+        instances.length>0 && _jsxs('div',{className:'wpb-gym-field-block',children:[
+            _jsx('strong',{children:'Which original machine owns older workout history?'}),
+            _jsx('p',{className:'wpb-gym-guidance',children:
+                'Older sets without a machine label stay separate until you choose. '+
+                'Assign them to the physical machine you used before adding alternatives; '+
+                'Machine B does not inherit Machine A weights. This does not rewrite old workouts.'}),
+            _jsx(UiField,{as:'select',className:'wpb-ui-control',
+                'aria-label':'Original physical machine for older unlabelled history',
+                value:saved.legacyHistoryMachineId||'',
+                onChange:event=>edit(()=>assignLegacyMachineHistory(gym,exerciseId,
+                    event.target.value||null)),
+                children:[
+                    _jsx('option',{value:'',children:'Keep older history unassigned'}),
+                    ...instances.map(instance=>_jsx('option',{
+                        value:instance.id,children:instance.label
+                    },instance.id))
+                ]})
+        ]}),
         _jsxs('div',{className:'wpb-gym-inline',children:[
             _jsx(UiField,{as:'input',value:label,className:'wpb-ui-control','aria-label':'Name of new physical machine',maxLength:80,
                 onChange:event=>setLabel(event.target.value),placeholder:'Machine A'}),

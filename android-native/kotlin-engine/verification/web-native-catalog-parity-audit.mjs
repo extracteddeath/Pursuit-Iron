@@ -32,6 +32,29 @@ export function parseNativeStarterIds(source) {
   return [...source.matchAll(/\bentry\("([a-z0-9_-]+)"/g)].map(m=>m[1]);
 }
 const nativeStarterIds=parseNativeStarterIds(native);
+const pinnedVariantPath=join(root,
+  'android-native/kotlin-engine/verification/requested-web-variants-20261117.json');
+const pinned=JSON.parse(readFileSync(pinnedVariantPath,'utf8'));
+assert.equal(pinned.schemaVersion,1,'pinned source parity format changed');
+assert.equal(pinned.sourcePullRequest,671,'source review provenance changed');
+assert.equal(pinned.records.length,7,'all seven exact requested variants must be reviewed');
+// The Kotlin rebuild intentionally does not load/execute web JavaScript code
+// at runtime. Its frozen web source may be older than current main. Supply
+// only the seven exact source-pinned identities from the reviewed web PR,
+// checking the live branch records if they already exist.
+const currentBranchById=new Map(EXERCISES.map(x=>[x.id,x]));
+const missingPinned=[];
+for(const record of pinned.records) {
+  const existing=currentBranchById.get(record.id);
+  if(existing) {
+    for(const key of ['id','name','equipment','movementFamily','practicalReps','source'])
+      assert.deepEqual(existing[key],record[key],
+        'current web source conflicts with pinned reviewed variant: '+record.id+'/'+key);
+  } else missingPinned.push(record);
+}
+const reviewedWebBaseline=[...EXERCISES,...missingPinned];
+assert.equal(new Set(reviewedWebBaseline.map(x=>x.id)).size,
+  reviewedWebBaseline.length,'reviewed web baseline has duplicate IDs');
 const sha256=buffer=>createHash('sha256').update(buffer).digest('hex');
 
 // CI-only explanations of web movements which must NOT be passed through the
@@ -122,7 +145,7 @@ function selfTest() {
     {id:'cable_press',name:'Cable Press',movementFamily:'horizontal_press'}
   ];
   const incomplete=reviewCatalogCoverage(sample,['bench']);
-  const completeAudit=reviewCatalogCoverage(EXERCISES,nativeStarterIds);
+  const completeAudit=reviewCatalogCoverage(reviewedWebBaseline,nativeStarterIds);
   assert.ok(nativeStarterIds.includes('spanish-squat'),
     'Only a confirmed-support, repetition-based Spanish squat is admitted');
   assert.ok(!nativeStarterIds.includes('band-pushup'),
@@ -131,7 +154,11 @@ function selfTest() {
     .find(group=>group.reason==='UNCLASSIFIED_REVIEW_REQUIRED');
   assert.equal(unexplained,undefined,
     'Every missing current-web exercise needs a named measurement/parity gap');
-  const pendingCount=completeAudit.missingByMeasurementSemantics.reduce(
+  assert.equal(completeAudit.webEffectiveBuiltins,
+    EXERCISES.length+missingPinned.length);
+  assert.equal(completeAudit.webEffectiveBuiltins,383,
+    'frozen branch plus reviewed seven-variant source must match current web inventory');
+    const pendingCount=completeAudit.missingByMeasurementSemantics.reduce(
     (n,group)=>n+group.ids.length,0);
   assert.equal(pendingCount,completeAudit.webBuiltinsNotInStarter);
   assert.equal(completeAudit.missingByMeasurementSemantics
@@ -156,9 +183,14 @@ if(args.has('--self-test')) selfTest();
 else {
   if(!args.has('--audit') && !args.has('--release'))
     throw Error('Choose --self-test, --audit or --release');
-  const report=reviewCatalogCoverage(EXERCISES,nativeStarterIds);
+  const report=reviewCatalogCoverage(reviewedWebBaseline,nativeStarterIds);
   report.source={
     legacyCatalogFiles:webPaths.map(p=>({path:p,sha256:sha256(readFileSync(join(root,p)))})),
+    additionalPinnedWebSource:{path:'android-native/kotlin-engine/verification/requested-web-variants-20261117.json',
+      sha256:sha256(readFileSync(pinnedVariantPath)),
+      sourcePullRequest:pinned.sourcePullRequest,
+      sourceCommit:pinned.sourceCommit,
+      newlyAddedToFrozenBranch:missingPinned.length},
     nativeStarterPath:'android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/StarterExerciseTranche.kt',
     nativeStarterSha256:sha256(native)
   };

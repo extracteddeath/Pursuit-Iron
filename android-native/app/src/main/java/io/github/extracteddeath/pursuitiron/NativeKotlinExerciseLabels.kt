@@ -363,7 +363,10 @@ private val kotlinExerciseNames=mapOf(
     "bands-squat" to "Banded Resistance Squat",
     "bands-tricep-ext" to "Banded Overhead Tricep Extension",
     "bands-chest-press" to "Banded Horizontal Chest Press",
-    "spanish-squat" to "Spanish Squat (band-supported, reps)"
+    "spanish-squat" to "Spanish Squat (band-supported, reps)",
+    "assisted-dip" to "Assisted Dip (counterweight)",
+    "assisted-chinup" to "Assisted Chin-Up (counterweight)",
+    "assisted-pullup" to "Assisted Pull-Up (counterweight)"
 )
 
 internal fun kotlinExerciseLabel(id:String):String=kotlinExerciseNames[id]

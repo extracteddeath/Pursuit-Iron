@@ -154,4 +154,22 @@ class AssistedCounterweightProgressionDomainTest {
             CoachSessionPrescriptionDomain.draft(composer(),
                 listOf(prescription("50",SetLoadScheme.LAST_SET_BACKOFF))).status)
     }
+    @Test fun inWorkoutCoachNeverSuggestsHarderLowerAssistanceAfterMissedReps() {
+        val observation=WorkingSetFact(0,SetOutcome.COMPLETED,
+            n("40"),6,0,n("40"),2)
+        val candidate=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
+            RepBand(8,12),2,listOf(observation),1,n("40"),LoadUnit.LB,
+            stock,n("10"),false,CoachReadiness.NORMAL,false))
+        assertEquals(InWorkoutDirection.REVIEW_MORE_RECOVERY,candidate.direction)
+        assertNull(candidate.weightForHumanReview)
+        assertEquals(n("40"),candidate.issuedTargetUnchanged)
+        assertTrue(candidate.message.contains("HARDER"))
+        val achieved=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
+            RepBand(8,12),2,listOf(observation.copy(
+                actualReps=10,actualRir=3)),1,n("40"),LoadUnit.LB,
+            stock,n("10"),false,CoachReadiness.NORMAL,false))
+        assertEquals(InWorkoutDirection.BUILD_REPS_AS_PLANNED,achieved.direction)
+        assertNull(achieved.weightForHumanReview)
+    }
+
 }

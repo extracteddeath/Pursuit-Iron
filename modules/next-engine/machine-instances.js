@@ -3,7 +3,9 @@
  * Movement identity drives programming and volume; physical identity drives load
  * progression, load PRs, strength trends and Last/Target comparisons.
  *
- * Unlabeled historical sets remain LEGACY, never reassigned to a newly added A.
+ * Unlabeled history stays LEGACY unless the athlete explicitly assigns its
+ * original gym/exercise history to a verified physical machine. The mapping
+ * is virtual and reversible; recorded set receipts are never rewritten.
  */
 export const LEGACY_MACHINE_ID = '__legacy_machine__';
 export const UNKNOWN_GYM_ID = '__unknown_gym__';
@@ -50,7 +52,10 @@ function updatedGym(gym, exerciseId, next) {
     requiredId(exerciseId, 'logical exercise ID');
     return { ...gym, machineVariants: {
         ...object(gym.machineVariants),
-        [exerciseId]: { defaultId: next.defaultId ?? null, instances: next.instances.map(v => ({ ...v, ...(v.loading ? {loading:{...v.loading}} : {}) })) }
+        [exerciseId]: { defaultId: next.defaultId ?? null,
+            instances: next.instances.map(v => ({ ...v, ...(v.loading ? {loading:{...v.loading}} : {}) })),
+            ...(next.legacyHistoryMachineId && next.instances.some(v => v.id === next.legacyHistoryMachineId)
+                ? { legacyHistoryMachineId: next.legacyHistoryMachineId } : {}) }
     }};
 }
 export function addMachineVariant(gym, exerciseId, instance, makeDefault = false) {
@@ -60,7 +65,8 @@ export function addMachineVariant(gym, exerciseId, instance, makeDefault = false
     if (instances.some(v => v.id === created.id)) throw new TypeError('Duplicate machine instance ID');
     return updatedGym(gym, exerciseId, {
         defaultId: makeDefault || !current.defaultId ? created.id : current.defaultId,
-        instances: [...instances, created]
+        instances: [...instances, created],
+        legacyHistoryMachineId: current.legacyHistoryMachineId
     });
 }
 export function editMachineVariant(gym, exerciseId, instanceId, patch) {
@@ -71,13 +77,15 @@ export function editMachineVariant(gym, exerciseId, instanceId, patch) {
         ? ensureInstance({ ...v, ...patch, id: instanceId, loading: patch?.loading === undefined ? v.loading : patch.loading }, true) : v);
     if (current.defaultId === instanceId && next.find(v => v.id === instanceId)?.active === false)
         throw new TypeError('Choose a different default before deactivating this machine');
-    return updatedGym(gym, exerciseId, {defaultId:current.defaultId, instances:next});
+    return updatedGym(gym, exerciseId, {defaultId:current.defaultId, instances:next,
+        legacyHistoryMachineId:current.legacyHistoryMachineId});
 }
 export function setDefaultMachineVariant(gym, exerciseId, instanceId) {
     const current = configFor(gym, exerciseId);
     const found = variantList(gym, exerciseId).find(v => v.id === instanceId && v.active !== false);
     if (!found) throw new TypeError('Default must be an active machine in this gym');
-    return updatedGym(gym, exerciseId, {defaultId:instanceId, instances:current.instances});
+    return updatedGym(gym, exerciseId, {defaultId:instanceId, instances:current.instances,
+        legacyHistoryMachineId:current.legacyHistoryMachineId});
 }
 /** Existing saved selections take priority even if that machine is deactivated. */
 export function resolveMachineVariant(gym, exerciseId, selectedId = null, { forNewWorkout = true } = {}) {
@@ -116,11 +124,30 @@ export function stampMachineSet(set, {gymId, exerciseId, machineInstanceId}) {
 export function machineIdOfSet(set, performance) {
     return set?.machineInstanceId ?? performance?.machineInstanceId ?? LEGACY_MACHINE_ID;
 }
+/** Attach pre-variant history only by an explicit per-gym/per-exercise choice.
+ * No logged bytes, dates, amounts, or already-identified machine sets change. */
+export function assignLegacyMachineHistory(gym, exerciseId, machineInstanceId = null) {
+    const current = configFor(gym, exerciseId);
+    const instances = variantList(gym, exerciseId);
+    if (machineInstanceId !== null && !instances.some(v => v.id === machineInstanceId))
+        throw new TypeError('Choose an existing physical machine for older history');
+    return updatedGym(gym, exerciseId, { defaultId: current.defaultId,
+        instances, legacyHistoryMachineId: machineInstanceId });
+}
+/** Older unassigned sets may be virtually associated with ONE chosen original
+ * machine, never with the newly introduced alternative by default. */
+export function effectiveMachineHistoryId(set, performance, gym, exerciseId) {
+    const recorded = machineIdOfSet(set, performance);
+    if (recorded !== LEGACY_MACHINE_ID) return recorded;
+    const assignment = configFor(gym, exerciseId).legacyHistoryMachineId;
+    return validId(assignment) && variantList(gym, exerciseId).some(v => v.id === assignment)
+        ? assignment : LEGACY_MACHINE_ID;
+}
 /**
  * Returns only observed completed working sets in one truly comparable scope.
  * Intra-workout A/B switches survive as separate rows, without dropping history.
  */
-export function machineHistory(history, { gymId, exerciseId, machineInstanceId, dayId = null }) {
+export function machineHistory(history, { gymId, exerciseId, machineInstanceId, dayId = null, gym = null }) {
     if (!validId(exerciseId) || !gymId ||
         !machineInstanceId || (dayId !== null && !String(dayId))) return [];
     const records = [];
@@ -133,11 +160,13 @@ export function machineHistory(history, { gymId, exerciseId, machineInstanceId, 
             const weight = Number(set?.w), reps = Number(set?.r);
             if (!set || set.warm || set.sub || set.done === false ||
                 !(reps > 0) || !(weight >= 0) || !Number.isFinite(weight) ||
-                machineIdOfSet(set, performance) !== machineInstanceId) continue;
+                effectiveMachineHistoryId(set, performance,
+                    gym?.id === gymId ? gym : null, exerciseId) !== machineInstanceId) continue;
             records.push({ date:entry.date, workoutId:entry.id ?? null, dayId:entry.dayId,
                 gymId, exerciseId, machineInstanceId,
                 setIndex:Number.isInteger(set.workingSetIndex) ? set.workingSetIndex : index,
-                weight, reps, rir:set.rir ?? null, unit: entry.unit ?? null });
+                weight, reps, rir:set.rir ?? null, unit: entry.unit ?? null,
+                recordedMachineInstanceId: machineIdOfSet(set, performance) });
         }
     }
     return records.sort((a,b) => Number(a.date || 0)-Number(b.date || 0));
@@ -146,7 +175,7 @@ export function latestMachineSet(history, scope) {
     return machineHistory(history, scope).at(-1) ?? null;
 }
 /** Filter a targeted exercise without stripping other exercises or their muscle dose. */
-export function historyForMachineRecommendation(history, exerciseId, machineInstanceId, gymId) {
+export function historyForMachineRecommendation(history, exerciseId, machineInstanceId, gymId, gym = null) {
     return (Array.isArray(history) ? history : []).map(entry => {
         const performance = entry?.perf?.[exerciseId];
         if (!performance?.sets || (entry.gymId ?? UNKNOWN_GYM_ID) !== gymId)
@@ -154,7 +183,8 @@ export function historyForMachineRecommendation(history, exerciseId, machineInst
                 ? { ...entry, perf: { ...entry.perf, [exerciseId]: { ...performance, sets: [] } } }
                 : entry;
         const sets = performance.sets.filter(set =>
-            machineIdOfSet(set, performance) === machineInstanceId);
+            effectiveMachineHistoryId(set, performance,
+                gym?.id === gymId ? gym : null, exerciseId) === machineInstanceId);
         return { ...entry, perf: { ...entry.perf,
             [exerciseId]: { ...performance, sets,
                 weight: sets.length ? Math.max(...sets.map(s => Number(s.w)).filter(Number.isFinite)) : null,
@@ -177,7 +207,9 @@ export function sanitizeMachineVariants(raw) {
         if (!instances.length) continue;
         const preferred = instances.find(v => v.id === record.defaultId && v.active)
             ?? instances.find(v => v.active);
-        out[exerciseId] = { defaultId: preferred?.id ?? null, instances };
+        out[exerciseId] = { defaultId: preferred?.id ?? null, instances,
+            ...(instances.some(v => v.id === record.legacyHistoryMachineId)
+                ? { legacyHistoryMachineId: record.legacyHistoryMachineId } : {}) };
     }
     return out;
 }

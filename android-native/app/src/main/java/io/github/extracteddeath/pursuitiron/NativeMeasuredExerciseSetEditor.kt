@@ -89,11 +89,14 @@ internal fun NativeMeasuredExerciseSetEditor(
     val completedReview=MeasuredExerciseEntryDomain.parse(
         plan,MeasuredSetOutcome.COMPLETED,submitted)
     val completed=completedReview as? MeasuredExerciseEntryDecision.Accepted
+    // A deliberate Failed action means ZERO completed measurement. Do not
+    // make athletes enter zero in every left/right/time/distance field;
+    // preserve independently entered actual physical weight and band setup.
+    val failedInput=submitted.copy(quantityBySide=plan.sides.associateWith{"0"})
     val failed=MeasuredExerciseEntryDomain.parse(
-        plan,MeasuredSetOutcome.FAILED_ATTEMPT,submitted)
+        plan,MeasuredSetOutcome.FAILED_ATTEMPT,failedInput)
         as? MeasuredExerciseEntryDecision.Accepted
-    val approximate=completed?.approximateDistanceConversion==true ||
-        failed?.approximateDistanceConversion==true
+    val approximate=completed?.approximateDistanceConversion==true
     val roundingAcknowledged=!approximate || roundedApproved
     val label=when(unit) {
         MeasuredEntryUnit.SECONDS->"Seconds"
@@ -267,7 +270,7 @@ internal fun NativeMeasuredExerciseSetEditor(
                         Text("Skip")
                     }
                     OutlinedButton(
-                        enabled=!busy && failed!=null && roundingAcknowledged,
+                        enabled=!busy && failed!=null,
                         modifier=Modifier.weight(1f),
                         onClick={confirmOutcome=MeasuredSetOutcome.FAILED_ATTEMPT}) {
                         Text("Failed")
@@ -287,11 +290,11 @@ internal fun NativeMeasuredExerciseSetEditor(
             "Skip this set?" else "Record a failed attempt?")},
         text={Text(if(pending==MeasuredSetOutcome.SKIPPED)
             "Skipping logs an explicit outcome, not completed work."
-            else "A failed attempt records zero completed seconds, distance or reps. "+
-                "It cannot earn progression.")},
+            else "This logs zero completed seconds, distance or reps at the "+
+                "actual attempted setup and weight. It cannot earn progression.")},
         confirmButton={
             Button(enabled=!busy && (pending==MeasuredSetOutcome.SKIPPED ||
-                failed!=null && roundingAcknowledged),
+                failed!=null),
                 onClick={
                     confirmOutcome=null
                     commit(pending,

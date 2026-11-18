@@ -182,7 +182,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
     priorWorkingKeys:List<WorkoutReferenceKey> = emptyList(),
     onRequestHistory:(()->Unit)?=null,
     externalOpen:Boolean=false,
-    onExternalOpenConsumed:(()->Unit)?=null
+    onExternalOpenConsumed:(()->Unit)?=null,
+    showInlineTrigger:Boolean=true
 ) {
     if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
@@ -235,7 +236,7 @@ internal fun NativeKotlinWorkoutMachineSelector(
             open=false
         }
     }
-    TextButton(
+    if(showInlineTrigger) TextButton(
         onClick={
             open=true
             // The exact same-day source is fetched only when this picker

@@ -37,7 +37,8 @@ enum class AdaptiveBlockGenerationStatus {
 enum class AdaptiveBlockGenerationRefusal {
     DIFFERENT_ATHLETE_OR_GYM,
     FUTURE_SCHEDULE_REQUIRES_APPROVAL,
-    INVALID_PROSPECTIVE_CONTEXT, MISSING_PHASE_POLICY
+    INVALID_PROSPECTIVE_CONTEXT, MISSING_PHASE_POLICY,
+    SOURCE_ARM_CONTINUITY_UNVERIFIED
 }
 data class AdaptiveBlockGenerationOutcome(
     val optionId:String,
@@ -138,6 +139,27 @@ object AdaptiveBlockOptionGenerationDomain {
             request.alternatives.size)
         val source=request.athleteSetup.reviewed
         val allowed=source!=null && request.athleteSetup.mayReviewProgramCandidate
+        val targetIndex=request.approvedCycle.blocks.indexOfFirst{
+            it.blockId==request.targetBlockId
+        }
+        val priorBlock=request.approvedCycle.blocks.getOrNull(targetIndex-1)
+        val isHypertrophyToStrength=priorBlock?.phase==TrainingPhase.HYPERTROPHY &&
+            priorBlock.purpose==CustomBlockPurpose.TRAINING &&
+            request.approvedCycle.blocks.getOrNull(targetIndex)?.phase==
+                TrainingPhase.STRENGTH
+        // This is the LIVE adaptive-block generator entry. Re-derive source
+        // proof from the athlete's whole cycle and actual reviewed gym, not
+        // from a caller-supplied "keep arms" boolean. No JS fallback.
+        val sourceArmEvidence=if(allowed && isHypertrophyToStrength &&
+            request.permissions.adaptExercises) {
+            val sourceAudit=CustomCycleCoachAuditDomain.review(
+                request.approvedCycle,request.athleteSetup,
+                request.catalog,request.coaching)
+            StrengthSourceArmContinuityDomain.review(
+                request.approvedCycle,sourceAudit,
+                checkNotNull(priorBlock).blockId,request.catalog,
+                checkNotNull(source).athleteProfileId)
+        } else null
         val sameSource=allowed && source!!.athleteProfileId==
             request.approvedCycle.athleteId &&
             source.goal==request.approvedCycle.goal
@@ -161,7 +183,28 @@ object AdaptiveBlockOptionGenerationDomain {
                 setup.hardTrainingDays!=source.hardTrainingDays ||
                 setup.longTrainingDays!=source.longTrainingDays ||
                 setup.declaredRestDays!=source.declaredRestDays)
+            val verifiedArms=sourceArmEvidence?.takeIf {
+                it.status==StrengthSourceArmsStatus.REVIEW_READY
+            }
+            val generatedInput=if(verifiedArms!=null &&
+                option.generation.selectFromOfferedCatalog &&
+                option.generation.phase==TrainingPhase.STRENGTH)
+                    option.generation.copy(sourceStrengthArms=verifiedArms)
+                else option.generation
             val refusal=when {
+                option.generation.sourceStrengthArms!=null &&
+                    option.generation.sourceStrengthArms!=verifiedArms ->
+                    AdaptiveBlockGenerationRefusal.SOURCE_ARM_CONTINUITY_UNVERIFIED
+                isHypertrophyToStrength && request.permissions.adaptExercises &&
+                    (sourceArmEvidence?.status==
+                        StrengthSourceArmsStatus.SOURCE_UNVERIFIED ||
+                        (verifiedArms!=null &&
+                            !option.generation.selectFromOfferedCatalog)) ->
+                    // A future Strength block with proven lost direct curls
+                    // cannot quietly use the old "unselected" candidate
+                    // route. Require explicit athlete adapt-exercises opt-in
+                    // AND an equipment-verified adaptive shortlist.
+                    AdaptiveBlockGenerationRefusal.SOURCE_ARM_CONTINUITY_UNVERIFIED
                 !sameSource || setup==null ||
                     !option.generation.setup.mayReviewProgramCandidate ||
                     option.generation.catalog!=request.catalog ||
@@ -193,7 +236,7 @@ object AdaptiveBlockOptionGenerationDomain {
                 GeneratedAdaptiveBlockDomain.propose(
                     GeneratedAdaptiveBlockRequest(request.approvedCycle,
                         request.targetBlockId,option.optionId,
-                        option.generation,option.prescriptions))
+                        generatedInput,option.prescriptions))
             if(generated?.status==GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW) {
                 candidates+=checkNotNull(generated.proposedOption)
                 if(context!=null)prospective[option.optionId]=context

@@ -30,7 +30,13 @@ data class AthleteProgramGenerationRequest(
      */
     val selectFromOfferedCatalog:Boolean=false,
     val maximumSelectedOptions:Int=32,
-    val visitTimings:List<ComposerVisitTiming> = emptyList()
+    val visitTimings:List<ComposerVisitTiming> = emptyList(),
+    /**
+     * Source-audited hypertrophy -> strength exercise continuity. Supplying
+     * no evidence retains existing native generation exactly. Explicit
+     * adaptation is required; saved custom blocks are never edited here.
+     */
+    val sourceStrengthArms:StrengthSourceArmReview?=null
 )
 enum class AthleteGenerationStatus {
     INPUTS_UNRESOLVED, PLACEMENTS_UNRESOLVED, GENERATED_FOR_REVIEW
@@ -487,6 +493,14 @@ object CoachAthleteProgramGenerator {
                 "Strength and peak phases must name primary lifts and skill-day counts.")
             return result(AthleteGenerationStatus.INPUTS_UNRESOLVED)
         }
+        if(input.sourceStrengthArms!=null &&
+            (!input.selectFromOfferedCatalog ||
+                input.phase!=TrainingPhase.STRENGTH)) {
+            fail("sourceStrengthArms",
+                AthleteGenerationIssueKind.EXERCISE_SELECTION_UNRESOLVED,
+                "Preserve direct arms only from a verified prior hypertrophy block when the athlete has opted into adapting the future strength exercise menu. Peak and custom-locked plans remain unchanged.")
+            return result(AthleteGenerationStatus.INPUTS_UNRESOLVED)
+        }
         // Non-destructive choice mode is the default: custom authoring
         // remains authoritative until the athlete explicitly opts into
         // screening a larger, source-backed offer pool.
@@ -495,7 +509,8 @@ object CoachAthleteProgramGenerator {
                 AthleteExerciseSelectionRequest(input.setup,policy,
                     input.catalog,input.choices,counts.keys,
                     input.preferredPatternsPerDay,
-                    input.maximumSelectedOptions))
+                    input.maximumSelectedOptions,
+                    input.sourceStrengthArms))
         else null
         if(selection!=null &&
             selection.status!=AthleteSelectionStatus.SHORTLIST_FOR_REVIEW) {

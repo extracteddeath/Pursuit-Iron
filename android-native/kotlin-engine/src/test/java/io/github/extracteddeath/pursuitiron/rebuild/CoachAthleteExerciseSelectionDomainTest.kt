@@ -75,6 +75,73 @@ class CoachAthleteExerciseSelectionDomainTest {
         AthleteExerciseSelectionRequest(s,policy(s),catalog,offered,
             setOf(ComposerFocus.FULL_BODY),patterns,max)
 
+    @Test fun strengthShortlistPreservesActualSourceArmVisitsNotIndirectCredits() {
+        val setup=athlete()
+        val source=StrengthSourceArmReview(StrengthSourceArmsStatus.REVIEW_READY,
+            "source-cycle","athlete3",7,"hyper",listOf(
+                StrengthSourceArmCandidate("curl",TrainingMuscle.BICEPS,2),
+                StrengthSourceArmCandidate("hammer",TrainingMuscle.BRACHIALIS,3),
+                StrengthSourceArmCandidate("extension",TrainingMuscle.TRICEPS,2)),
+            "Source-audited previous hypertrophy working sets")
+        val extra=listOf(
+            movement("curl",TrainingMuscle.BICEPS,ComposerPattern.ISOLATION,
+                ComposerRole.ACCESSORY),
+            movement("hammer",TrainingMuscle.BRACHIALIS,ComposerPattern.ISOLATION,
+                ComposerRole.ACCESSORY),
+            movement("extension",TrainingMuscle.TRICEPS,ComposerPattern.ISOLATION,
+                ComposerRole.ACCESSORY))
+        val offer=listOf(choose("press",required=1),choose("back"))+
+            extra.map{choose(it.exerciseId,visits=2)}
+        val proposed=request(setup,offered=offer,patterns=1).copy(
+            catalog=catalog+extra,
+            policy=policy(setup).copy(phase=TrainingPhase.STRENGTH),
+            sourceStrengthArms=source)
+        val answer=CoachAthleteExerciseSelectionDomain.review(proposed)
+        assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,answer.status)
+        assertEquals(setOf("press","back","curl","hammer","extension"),
+            answer.choices.map{it.exerciseId}.toSet())
+        for(id in listOf("curl","hammer","extension")) {
+            val retained=answer.choices.single{it.exerciseId==id}
+            assertEquals(1,retained.requiredVisits)
+            assertEquals(2,retained.minimumSetsPerVisit)
+            assertEquals(n("25"),retained.selectedLoad)
+        }
+        assertFalse(answer.mayIssueWorkout)
+        assertFalse(answer.mayOverwriteCustomProgram)
+        // The ordinary selection without source evidence still retains
+        // its existing greedy, unpinned behavior.
+        val ordinary=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(sourceStrengthArms=null))
+        assertTrue(ordinary.choices.none {
+            it.exerciseId in setOf("curl","hammer","extension")
+        })
+
+        val unavailable=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(offered=offer.filter{it.exerciseId!="hammer"}))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,unavailable.status)
+        assertTrue(unavailable.issues.any {
+            it.kind==AthleteSelectionProblem.UNAVAILABLE_REQUIRED_EXERCISE
+        })
+        val stale=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(sourceStrengthArms=source.copy(
+                athleteId="another-athlete")))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,stale.status)
+        assertTrue(stale.issues.any{
+            it.kind==AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED
+        })
+        val changedFunction=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(catalog=(catalog+extra).map{
+                if(it.exerciseId=="hammer")it.copy(
+                    credits=listOf(DeclaredMuscleCredit(
+                        TrainingMuscle.BICEPS,MuscleCreditRole.INDIRECT,n("1"))))
+                else it
+            }))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,changedFunction.status)
+        assertTrue(changedFunction.issues.any{
+            it.kind==AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED
+        })
+    }
+
     @Test fun picksReviewedLoadableCoverageAndPrunesUnneededOptions() {
         val review=CoachAthleteExerciseSelectionDomain.review(request())
         assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,review.status)

@@ -34,6 +34,27 @@ export function parseNativeStarterIds(source) {
 const nativeStarterIds=parseNativeStarterIds(native);
 const sha256=buffer=>createHash('sha256').update(buffer).digest('hex');
 
+// CI-only explanations of web movements which must NOT be passed through the
+// current numeric weight × reps Kotlin journal. This inventory does not
+// silently re-label a timed hold as repetitions, a carry as sets or a machine
+// counterweight as resistance (where more assistance would mean stronger).
+const pendingMeasurementSemantics={
+  ASSISTED_COUNTERWEIGHT:['assisted-dip','assisted-chinup','assisted-pullup'],
+  TIMED_HOLD:['superman','plank','side-plank','plate-pinch','dead-hang',
+    'hollow-hold','copenhagen','wall-sit','l-sit','weighted-plank','towel-hang'],
+  DISTANCE_CARRY:['farmers','suitcase-carry'],
+  NECK_LOADING_AND_MUSCLE_COVERAGE:['neck-extension','neck-curl',
+    'neck-harness','neck-lateral'],
+  HYBRID_BODYWEIGHT_AND_BAND:['band-pushup']
+};
+const pendingById=new Map();
+for(const [reason,ids] of Object.entries(pendingMeasurementSemantics))
+  for(const id of ids) {
+    assert.ok(!pendingById.has(id),'Duplicate missing-measurement classification: '+id);
+    pendingById.set(id,reason);
+  }
+
+
 export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
   assert.ok(Array.isArray(legacyExercises) && Array.isArray(nativeStarter));
   assert.ok(legacyExercises.length>0,'missing canonical web catalog');
@@ -66,6 +87,14 @@ export function reviewCatalogCoverage(legacyExercises,nativeStarter) {
     independentlyCertifiedMappings:0,
     sourceMatchedIds:sourceMatched.map(x=>x.id),
     missingByMovementFamily:families,
+    missingByMeasurementSemantics:Object.entries(pendingMeasurementSemantics)
+      .map(([reason,ids])=>({
+        reason,ids:ids.filter(id=>unmapped.some(ex=>ex.id===id))
+      })).filter(group=>group.ids.length)
+      .concat(unmapped.filter(ex=>!pendingById.has(ex.id)).length ? [{
+        reason:'UNCLASSIFIED_REVIEW_REQUIRED',
+        ids:unmapped.filter(ex=>!pendingById.has(ex.id)).map(ex=>ex.id)
+      }] : []),
     webUnmappedDefinitions:unmapped.map(x=>({
       id:x.id,name:x.name,movementFamily:x.movementFamily??null,
       equipment:x.equipment??[]
@@ -93,6 +122,22 @@ function selfTest() {
     {id:'cable_press',name:'Cable Press',movementFamily:'horizontal_press'}
   ];
   const incomplete=reviewCatalogCoverage(sample,['bench']);
+  const completeAudit=reviewCatalogCoverage(EXERCISES,nativeStarterIds);
+  assert.ok(nativeStarterIds.includes('spanish-squat'),
+    'Only a confirmed-support, repetition-based Spanish squat is admitted');
+  assert.ok(!nativeStarterIds.includes('band-pushup'),
+    'Hybrid bodyweight+band resistance is not an ordinary numeric working weight');
+  const unexplained=completeAudit.missingByMeasurementSemantics
+    .find(group=>group.reason==='UNCLASSIFIED_REVIEW_REQUIRED');
+  assert.equal(unexplained,undefined,
+    'Every missing current-web exercise needs a named measurement/parity gap');
+  const pendingCount=completeAudit.missingByMeasurementSemantics.reduce(
+    (n,group)=>n+group.ids.length,0);
+  assert.equal(pendingCount,completeAudit.webBuiltinsNotInStarter);
+  assert.equal(completeAudit.missingByMeasurementSemantics
+    .find(x=>x.reason==='ASSISTED_COUNTERWEIGHT')?.ids.length,3);
+  assert.equal(completeAudit.missingByMeasurementSemantics
+    .find(x=>x.reason==='HYBRID_BODYWEIGHT_AND_BAND')?.ids[0],'band-pushup');
   assert.equal(incomplete.webBuiltinsNotInStarter,1);
   assert.equal(incomplete.exactIdMatches,1);
   assert.equal(incomplete.independentlyCertifiedMappings,0);
@@ -126,7 +171,8 @@ else {
     exactIdMatches:report.exactIdMatches,
     webBuiltinsNotInStarter:report.webBuiltinsNotInStarter,
     independentlyCertifiedMappings:report.independentlyCertifiedMappings,
-    topUnmappedFamilies:report.missingByMovementFamily.slice(0,12)
+    topUnmappedFamilies:report.missingByMovementFamily.slice(0,12),
+    missingByMeasurementSemantics:report.missingByMeasurementSemantics
   },null,2));
   if(args.has('--write-report')) {
     const path=join(here,'..','reports','web-native-catalog-parity-audit.json');

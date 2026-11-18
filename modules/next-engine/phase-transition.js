@@ -203,8 +203,12 @@ export function transitionProgramPhase(previous, request, target, evidence) {
     // Adaptive transitions must use the same soft-capacity contract as initial program/cycle creation.
     // A valid 60–90 minute Full Body cycle can otherwise enter Strength with a raw generation that
     // violates Full Body coverage even though a nearby capacity candidate passes the normal arbiter.
+    const priorVariety = previous?.phase === 'hypertrophy_accumulation'
+        && target === 'strength_accumulation'
+        && (previous.sessions ?? []).some(session => session.exercises.length >= 6);
     const generation = firstPassingCapacityProgram(request, evidence?.capacityConfig, {
         phase: target,
+        preservePriorExerciseVariety: priorVariety,
         // New exercises introduced by the target phase must use the actual next-block duration too.
         // Otherwise a four-week block can accidentally start a five-plus-week wave simply because
         // the exercise has no prior history for the adaptive pass to correct.

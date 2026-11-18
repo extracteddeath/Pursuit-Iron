@@ -548,7 +548,10 @@ assert.ok(comparisonDomain.includes('object CustomCycleBlockComparisonDomain') &
   blockComparison.includes('NativeKotlinCycleBlockComparisonPanel(') &&
   blockComparison.includes('CustomCycleBlockComparisonDomain.compare(cycle,id,currentAudit)') &&
   blockComparison.includes('PursuitMetricStrip(listOf(') &&
-  blockComparison.includes('firstAuditedWeekDelta') &&
+  blockComparison.includes('boundaryWorkingSetDelta') &&
+  blockComparison.includes('comparison.strengthHalfVolumeReviewRequired') &&
+  comparisonDomain.includes('prior.auditedWeeklyWorkingSets?.lastOrNull()') &&
+  comparisonDomain.includes('next.auditedWeeklyWorkingSets?.minOrNull()') &&
   blockComparison.includes('onEditBlock(next.blockId)') &&
   blockComparison.includes('No new program has been generated or approved here.') &&
   plan.includes('NativeKotlinCycleBlockComparisonPanel(') &&

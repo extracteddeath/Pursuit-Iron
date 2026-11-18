@@ -57,7 +57,13 @@ class CustomCycleBlockComparisonDomainTest {
                     TrainingMuscle.BRACHIALIS to BigDecimal("2"),
                     TrainingMuscle.WRIST_FLEXORS to BigDecimal("3"),
                     TrainingMuscle.WRIST_EXTENSORS to BigDecimal("1"))),
-            measurement(2,"base",TrainingPhase.HYPERTROPHY,30),
+            // Later-week authored/override dose is the real phase exit.
+            measurement(2,"base",TrainingPhase.HYPERTROPHY,30,
+                mapOf(
+                    TrainingMuscle.BICEPS to BigDecimal("9"),
+                    TrainingMuscle.BRACHIALIS to BigDecimal("4"),
+                    TrainingMuscle.WRIST_FLEXORS to BigDecimal("5"),
+                    TrainingMuscle.WRIST_EXTENSORS to BigDecimal("3"))),
             measurement(3,"strength",TrainingPhase.STRENGTH,14,
                 mapOf(
                     TrainingMuscle.BICEPS to BigDecimal("3"),
@@ -74,6 +80,10 @@ class CustomCycleBlockComparisonDomainTest {
         assertEquals(30,result.prior.baseWorkingSets)
         assertEquals(11,result.next.baseWorkingSets)
         assertEquals(-19,result.baseWorkingSetDelta)
+        assertTrue(result.strengthHalfVolumeReviewRequired)
+        assertFalse(result.strengthHalfVolumeUsesAuditedWeeks)
+        assertNull(result.boundaryRetentionPercent)
+        assertNull(result.lowestNextWeekRetentionPercent)
         assertEquals(listOf(4),result.addedWeekdays)
         assertEquals(listOf(2),result.removedWeekdays)
         assertEquals(setOf("squat","deadlift"),
@@ -93,20 +103,26 @@ class CustomCycleBlockComparisonDomainTest {
             c,"strength",audit(c)))
         assertEquals(listOf(28,30),result.prior.auditedWeeklyWorkingSets)
         assertEquals(listOf(14,11),result.next.auditedWeeklyWorkingSets)
-        assertEquals(-14,result.firstAuditedWeekDelta)
+        // The previous EXIT is 30, not week-one's 28.
+        assertEquals(-16,result.boundaryWorkingSetDelta)
+        assertEquals(-16,result.firstAuditedWeekDelta)
+        assertEquals(47,result.boundaryRetentionPercent)
+        assertEquals(37,result.lowestNextWeekRetentionPercent)
+        assertTrue(result.strengthHalfVolumeReviewRequired)
+        assertTrue(result.strengthHalfVolumeUsesAuditedWeeks)
         assertEquals(CustomCoachAuditStatus.UNRESOLVED,
             result.matchingAuditStatus)
         assertEquals(1,result.auditIssueCount)
         val muscleChanges=checkNotNull(result.auditedDirectMuscleChanges)
             .associateBy {it.muscle}
         assertEquals(4,muscleChanges.size)
-        assertEquals(BigDecimal("-5"),
+        assertEquals(BigDecimal("-6"),
             muscleChanges.getValue(TrainingMuscle.BICEPS).delta)
-        assertEquals(BigDecimal("-1"),
+        assertEquals(BigDecimal("-3"),
             muscleChanges.getValue(TrainingMuscle.BRACHIALIS).delta)
-        assertEquals(BigDecimal("-2"),
+        assertEquals(BigDecimal("-4"),
             muscleChanges.getValue(TrainingMuscle.WRIST_FLEXORS).delta)
-        assertEquals(BigDecimal("1"),
+        assertEquals(BigDecimal("-1"),
             muscleChanges.getValue(TrainingMuscle.WRIST_EXTENSORS).delta)
     }
 
@@ -139,6 +155,10 @@ class CustomCycleBlockComparisonDomainTest {
             val report=checkNotNull(CustomCycleBlockComparisonDomain.compare(
                 c,"strength",bad))
             assertNull(report.firstAuditedWeekDelta)
+            assertNull(report.boundaryRetentionPercent)
+            assertNull(report.lowestNextWeekRetentionPercent)
+            assertFalse(report.strengthHalfVolumeUsesAuditedWeeks)
+            assertTrue(report.strengthHalfVolumeReviewRequired)
             assertNull(report.next.auditedWeeklyWorkingSets)
             assertNull(report.auditedDirectMuscleChanges)
         }
@@ -147,6 +167,41 @@ class CustomCycleBlockComparisonDomainTest {
         val first=CustomCycleBlockComparisonDomain.compare(c,"base",original)
         assertNull(missingTarget)
         assertNull(first)
+    }
+
+    @Test fun aLaterStrengthWeekCliffIsNotHiddenByItsSafeEntryWeek() {
+        val c=cycle()
+        val first=audit(c)
+        val edited=first.copy(weeks=first.weeks.map {week->
+            if(week.absoluteWeek==3)week.copy(workingSets=20) else week
+        })
+        val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(c,"strength",edited))
+        assertEquals(67,result.boundaryRetentionPercent)
+        assertEquals(37,result.lowestNextWeekRetentionPercent)
+        assertEquals(-10,result.boundaryWorkingSetDelta)
+        assertTrue(result.strengthHalfVolumeReviewRequired)
+        assertTrue(result.strengthHalfVolumeUsesAuditedWeeks)
+    }
+
+    @Test fun anExplicitPeakBlockIsNotMisreportedAsStrengthVolumeCliff() {
+        val c=cycle()
+        val changed=c.copy(blocks=listOf(c.blocks[0],
+            c.blocks[1].copy(phase=TrainingPhase.PEAK)))
+        val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(changed,"strength"))
+        assertFalse(result.strengthHalfVolumeReviewRequired)
+    }
+
+    @Test fun smallWeeksDoNotReceiveAnInventedUniversalVolumeFloor() {
+        val c=cycle()
+        val lowBase=c.blocks[0].copy(days=c.blocks[0].days.map {day ->
+            day.copy(slots=day.slots.map {slot ->
+                slot.copy(sets=slot.sets.take(4))
+            })
+        })
+        val changed=c.copy(blocks=listOf(lowBase,c.blocks[1]))
+        val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(changed,"strength"))
+        assertEquals(8,result.prior.baseWorkingSets)
+        assertFalse(result.strengthHalfVolumeReviewRequired)
     }
 
     @Test fun sameMovementExposureChangesAreCountedByVisits() {

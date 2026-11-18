@@ -52,7 +52,8 @@ data class ReviewedFutureWeekProgression(
 object ReviewedFutureWeekProgressionDomain {
     internal fun requiresPhysicalMachineIdentity(basis:LoadBasis?):Boolean =
         basis in setOf(LoadBasis.MACHINE_STACK,LoadBasis.CABLE_STACK,
-            LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE)
+            LoadBasis.SMITH_TOTAL,LoadBasis.EXERCISE_OVERRIDE,
+            LoadBasis.ASSISTANCE_COUNTERWEIGHT)
 
     /** A bound station's attainable stack, never the generic exercise stock. */
     internal fun confirmedBoundMachineStock(
@@ -183,6 +184,12 @@ object ReviewedFutureWeekProgressionDomain {
         val exercise=request.catalog.singleOrNull {it.exerciseId==slot.exerciseId}
             ?:return refuse(ReviewedFutureWeekProgressionStatus.UNVERIFIED_SOURCE,
                 "The selected exercise is missing from the reviewed catalog.",
+                audit=sourceAudit)
+        // Full-week auto-load amendments are higher-is-harder only.
+        // An assisted-machine counterweight must never borrow that direction.
+        if(exercise.expectedLoadBasis==LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+            return refuse(ReviewedFutureWeekProgressionStatus.HOLD_WITHOUT_AMENDMENT,
+                "Assisted counterweight requires its own decrease-assistance review, never the ordinary weight-increase progression.",
                 audit=sourceAudit)
         val physical=requiresPhysicalMachineIdentity(exercise.expectedLoadBasis)
         val stock=if(physical)confirmedBoundMachineStock(

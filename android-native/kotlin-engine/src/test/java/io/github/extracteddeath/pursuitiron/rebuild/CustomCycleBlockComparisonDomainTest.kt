@@ -73,6 +73,69 @@ class CustomCycleBlockComparisonDomainTest {
             measurement(4,"strength",TrainingPhase.STRENGTH,11)),
         "profile-revision",c.revision,emptyMap())
 
+    /** No scientific rule requires eight movements. But reducing an
+     * established same-split Upper from eight to three warrants a truthful
+     * movement-coverage review, independent of working-set total or RIR. */
+    private fun highVarietyCycle(nextUpperCount:Int=3):CustomTrainingCycle {
+        val c=cycle()
+        val hyper=c.blocks.first().copy(days=c.blocks.first().days.map {day->
+            if(day.weekday!=0)day else day.copy(slots=
+                day.slots+ (1..7).map{i->
+                    slot("hyper-extra-$i","upper-accessory-$i",2,false)
+                })
+        })
+        val strength=c.blocks[1].copy(days=c.blocks[1].days.map{day->
+            if(day.weekday==0)day.copy(slots=
+                day.slots + (1 until nextUpperCount).map{i->
+                    slot("strength-extra-$i","upper-accessory-$i",2,false)
+                })
+            else day.copy(weekday=2)
+        })
+        return c.copy(blocks=listOf(hyper,strength))
+    }
+
+    @Test fun eightToThreeSameSplitStrengthUpperIsFlaggedByExerciseNotSetCount() {
+        val c=highVarietyCycle()
+        val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            c,"strength"))
+        assertTrue(result.strengthExerciseCollapseReviewRequired)
+        assertFalse(result.exerciseRosterUsesReviewedWeeks)
+        assertEquals(8,result.strengthDayExerciseChanges.single{
+            it.weekday==0}.priorExerciseCount)
+        assertEquals(3,result.strengthDayExerciseChanges.single{
+            it.weekday==0}.nextExerciseCount)
+        assertEquals(7,result.strengthDayExerciseChanges.single{
+            it.weekday==0}.droppedExerciseIds.size)
+        assertFalse(result.mayApplyAutomatically)
+        assertFalse(result.mayIssueWorkout)
+        assertEquals(1,cycle().blocks.first().days.first().slots.size)
+    }
+
+    @Test fun measuredRostersStillRequireSourceMatchedAuditAndNoFakePeakFloor() {
+        val c=highVarietyCycle()
+        val reviewed=checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            c,"strength",audit(c)))
+        assertTrue(reviewed.exerciseRosterUsesReviewedWeeks)
+        assertTrue(reviewed.strengthExerciseCollapseReviewRequired)
+        assertEquals(8,reviewed.strengthDayExerciseChanges.first().priorExerciseCount)
+        assertEquals(3,reviewed.strengthDayExerciseChanges.first().nextExerciseCount)
+        val half=highVarietyCycle(nextUpperCount=4)
+        assertFalse(checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            half,"strength")).strengthExerciseCollapseReviewRequired)
+        val changedSplit=c.copy(blocks=listOf(c.blocks.first(),
+            c.blocks[1].copy(split=CustomSplitIdentity.Freeform("PPL"))))
+        assertFalse(checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            changedSplit,"strength")).strengthExerciseCollapseReviewRequired)
+        val peak=c.copy(blocks=listOf(c.blocks.first(),
+            c.blocks[1].copy(phase=TrainingPhase.PEAK)))
+        assertFalse(checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            peak,"strength")).strengthExerciseCollapseReviewRequired)
+        // If the week's scheduled days change, don't equate Monday of one
+        // split with an unrelated later training day by position.
+        assertFalse(checkNotNull(CustomCycleBlockComparisonDomain.compare(
+            cycle(),"strength")).strengthExerciseCollapseReviewRequired)
+    }
+
     @Test fun reportsThirtyToElevenWithoutCallingItSafeOrBetter() {
         val c=cycle()
         val result=checkNotNull(CustomCycleBlockComparisonDomain.compare(

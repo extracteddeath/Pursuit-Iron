@@ -18,7 +18,10 @@ data class AthleteExerciseSelectionRequest(
     val offered:List<CatalogExerciseChoice>,
     val usableFocus:Set<ComposerFocus>,
     val preferredPatternsPerDay:Int,
-    val maximumOptions:Int=32
+    val maximumOptions:Int=32,
+    /** Explicit opt-in from an audited final hypertrophy training week.
+     * Empty/default is byte-for-byte legacy shortlist behavior. */
+    val sourceStrengthArms:StrengthSourceArmReview?=null
 )
 enum class AthleteSelectionStatus {
     INPUT_UNRESOLVED, COVERAGE_UNRESOLVED, SHORTLIST_FOR_REVIEW
@@ -26,7 +29,8 @@ enum class AthleteSelectionStatus {
 enum class AthleteSelectionProblem {
     PROFILE_OR_POLICY, INVALID_CATALOG, UNAVAILABLE_REQUIRED_EXERCISE,
     TOO_MANY_REQUIRED_EXERCISES, MISSING_DOSE_COVERAGE,
-    MISSING_DIRECT_DAYS, MISSING_MOVEMENT_VARIETY, NO_ELIGIBLE_OPTIONS
+    MISSING_DIRECT_DAYS, MISSING_MOVEMENT_VARIETY, NO_ELIGIBLE_OPTIONS,
+    SOURCE_ARM_CONTINUITY_UNVERIFIED
 }
 data class AthleteSelectionIssue(
     val kind:AthleteSelectionProblem,
@@ -170,7 +174,52 @@ object CoachAthleteExerciseSelectionDomain {
                 "The offered, uniquely identified movement pool or selection budget is invalid.")
             return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
         }
+        val source=input.sourceStrengthArms
+        val candidateSourceIds=source?.candidates?.map{it.exerciseId}.orEmpty()
+        if(source!=null) {
+            // A saved direct curl/extension that gets sufficient INDIRECT
+            // volume from bench/row is not grounds to erase the actual
+            // source exercise. But a hand-written ID or stale athlete
+            // review is not grounds to reinsert an unverified implement.
+            val sourceValid=policy.phase==TrainingPhase.STRENGTH &&
+                source.status==StrengthSourceArmsStatus.REVIEW_READY &&
+                source.athleteId==athlete.athleteProfileId &&
+                source.sourceCycleRevision!=null &&
+                source.sourceCycleRevision>0 &&
+                source.cycleId?.isNotBlank()==true &&
+                candidateSourceIds.isNotEmpty() &&
+                candidateSourceIds.distinct().size==candidateSourceIds.size &&
+                source.candidates.size<=3 &&
+                source.candidates.all{candidate->
+                    candidate.priorWorkingSets>0 &&
+                    candidate.directMuscle in setOf(
+                        TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
+                        TrainingMuscle.TRICEPS)
+                }
+            if(!sourceValid) {
+                issue(AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED,
+                    "sourceStrengthArms",
+                    "A current athlete-owned, structurally audited H→Strength source is needed before requesting saved direct-arm visits.")
+                return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
+            }
+        }
         val catalog=input.catalog.associateBy {it.exerciseId}
+        if(source!=null && source.candidates.any{candidate->
+            val spec=catalog[candidate.exerciseId]
+            spec==null || spec.role!=ComposerRole.ACCESSORY ||
+                spec.pattern!=ComposerPattern.ISOLATION ||
+                spec.creditStatus!=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
+                spec.creditReviewReference.isNullOrBlank() ||
+                spec.credits.none{credit->
+                    credit.muscle==candidate.directMuscle &&
+                        credit.role==MuscleCreditRole.DIRECT
+                }
+        }) {
+            issue(AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED,
+                "sourceStrengthArms",
+                "The current catalog does not certify the same direct arm function and stable exercise identity as the saved source.")
+            return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
+        }
         val eligible=LinkedHashMap<String,CatalogExerciseChoice>()
         for(choice in input.offered.sortedBy {it.exerciseId}) {
             val reason=excludedReason(athlete,catalog[choice.exerciseId],
@@ -180,7 +229,7 @@ object CoachAthleteExerciseSelectionDomain {
         }
         val pinned=input.offered.filter {it.requiredVisits>0 }
             .map {it.exerciseId}.toSet()+
-            policy.primaryLiftMinimumDays.keys
+            policy.primaryLiftMinimumDays.keys+candidateSourceIds
         val unavailable=pinned-eligible.keys
         if(unavailable.isNotEmpty()) {
             issue(AthleteSelectionProblem.UNAVAILABLE_REQUIRED_EXERCISE,
@@ -193,7 +242,17 @@ object CoachAthleteExerciseSelectionDomain {
                 "maximumOptions","The athlete has more pinned lifts than the selection budget.")
             return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
         }
-        for(id in pinned.sorted())selected[id]=eligible.getValue(id)
+        for(id in pinned.sorted()) {
+            val provided=eligible.getValue(id)
+            // The selected source exercise becomes an ACTUAL minimum visit
+            // of its independently prescribed load, sets, RIR and rest.
+            // Never invent an alternate device, one-rep max, or set count.
+            // The downstream weekly composer may still reject this attempt
+            // for clock/recovery/volume; that is a truthful unresolved plan.
+            selected[id]=if(id in candidateSourceIds)
+                provided.copy(requiredVisits=maxOf(1,provided.requiredVisits))
+            else provided
+        }
         val constraints=policy.selectedBounds.associateBy {it.muscle}
         fun capacity(muscle:TrainingMuscle):BigDecimal =
             selected.values.fold(zero) {sum,choice ->

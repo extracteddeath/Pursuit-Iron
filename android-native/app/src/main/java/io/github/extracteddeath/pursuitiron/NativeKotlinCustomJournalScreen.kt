@@ -853,28 +853,9 @@ internal fun NativeKotlinCustomJournalScreen(
                             "Already recorded sets keep their original machine.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    if(!finished && current.finishedByEventId==null) {
-                        val recorded=slot.sets.any{set ->
-                            current.receipts.any{receipt ->
-                                (receipt.operation as? CustomWorkoutJournalOperation.Record)
-                                    ?.visit?.setKey==set.setKey
-                            }
-                        }
-                        val options=NativeKotlinEquipmentRecoveryPolicy.review(
-                            activeWorkout=!busy,
-                            hasPhysicalMachineConfig=config!=null &&
-                                machineChoices.ready && !machineChoices.busy,
-                            hasRecordedExerciseWork=recorded,
-                            linkedSuperset=slot.supersetGroup!=null
-                        )
-                        NativeKotlinEquipmentRecoveryControl(
-                            scopeKey="$workoutId:${slot.slotId}",
-                            availability=options,
-                            busy=busy,
-                            onChangeStation={openPhysicalMachineForSlot=slot.slotId},
-                            onReplaceExercise={reviewSwap(slot)}
-                        )
-                    }
+                    // Exercise Info owns both workout-only replacement and
+                    // same-exercise Machine A/B. No full-width duplicate in
+                    // the active custom set editor.
                     NativeKotlinWorkoutMachineSelector(config,selectedMachineId,
                         enabled=!busy && !finished && current.finishedByEventId==null &&
                             machineChoices.ready && !machineChoices.busy,
@@ -1536,6 +1517,8 @@ internal fun NativeKotlinCustomJournalScreen(
                             infoSlotId=null
                             reviewSwap(slot)
                         }) else null,
+                    unavailableReason=if(!infoWarmupsOnly && !finished)
+                        infoOptions.reason else null,
                     outcomes=journal?.effectiveVisits.orEmpty().mapNotNull { (key,receipt)->
                         if(key.part!=CustomWorkoutVisitPart.MAIN)null
                         else (receipt.operation as? CustomWorkoutJournalOperation.Record)?.let{key.setKey to it.outcome}

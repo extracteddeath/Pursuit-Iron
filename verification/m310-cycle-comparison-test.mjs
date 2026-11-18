@@ -115,6 +115,7 @@ for(const sample of cases){
    'The four-day goal-optimized seed must test a real training-split change');
  }
  if(sample.label==='5-day ULPPL size-to-strength'){
+  console.log('M310 strength diversity versus adaptive evidence',JSON.stringify({old:{latDose:old.latDose,perDaySets:old.perDaySets,splits:old.splits},current:{latDose:current.latDose,perDaySets:current.perDaySets,splits:current.splits}}));
   assert.ok(current.latDose[1]>=old.latDose[1]+2,
    'Adaptive split must protect meaningfully more actual lat work than fixed ULPPL in this case');
   assert.ok(current.liftPractice.deadlift>old.liftPractice.deadlift,

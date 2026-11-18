@@ -8,7 +8,8 @@ import { estimateSessionMinutes } from './realizer-time-budget.js';
 
 export /* M230:PRESERVE:top.strengthSetsForAllocation:BEGIN */
 function strengthSetsForAllocation(allocation, session, request, policy) {
-    const shortSession = session.maxMinutes <= 35;
+    // compactStrength: the capacity ladder's last rung (capacity-generation.js) for a request nothing else builds.
+    const shortSession = session.maxMinutes <= 35 || request.preferences?.compactStrength === true;
     const denseThreeDayStrength = request.goal.type === 'strength' && request.schedule.days.length <= 3;
     const baseSets = allocation.role === 'primary_strength'
         ? (request.athlete.experience === 'novice' ? 3 : (shortSession ? 3 : 4))

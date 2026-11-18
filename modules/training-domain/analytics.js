@@ -3576,7 +3576,8 @@ function auditProgramWeek(program, weekIndex, opts) {
        FOCUSED is a different claim: the app said it would emphasise it. */
     const focused = Array.isArray(o.focusList) ? o.focusList : Object.keys((program.config && program.config.focus) || {});
     focused.forEach(part => {
-        const mev = landmarkFor(part).mev, sets = vol[part] || 0;
+        // The program's own landmarks: an engine plan's targets for this lifter, not the intermediate table.
+        const mev = landmarkFor(part, undefined, program).mev, sets = vol[part] || 0;
         if (sets < mev)
             add("focus-under-mev", `${PART_LABEL[part] || part} is emphasised but gets ${sets.toFixed(1)} sets, under its ${mev}-set minimum`);
     });
@@ -3587,7 +3588,9 @@ function auditProgramWeek(program, weekIndex, opts) {
             return;
         if (!landmarkFor(part))
             return;
-        const ceiling = compositeMrv(part);
+        // With the program: an engine plan is held to the ceiling its own targets set for this lifter (an advanced
+        // lifter's quads 25.2, not the intermediate table's 20, which flagged a correct 21-set peak week).
+        const ceiling = compositeMrv(part, program);
         if (Number.isFinite(ceiling) && sets > ceiling + 0.5)
             add("over-engine-ceiling", `${PART_LABEL[part] || part} at ${sets.toFixed(1)} sets exceeds the planned ${ceiling}-set ceiling`);
     });

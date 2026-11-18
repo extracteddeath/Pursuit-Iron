@@ -3,7 +3,7 @@
 // Every expectation is measured against the same request built with `sessionFill: false` (the plan as the
 // realizer generated it), with limits computed here from that control and the engine's own targets.
 import assert from 'node:assert/strict';
-import { EXERCISES, EX_BY_ID, GYM_PRESETS, estimateMinutes, auditProgramWeek } from '../modules/engine-api.js';
+import { EXERCISES, EX_BY_ID, GYM_PRESETS, estimateMinutes, auditProgramWeek, weeklyVolume } from '../modules/engine-api.js';
 import { generateNextProgramForShell, nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
 import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
 
@@ -128,4 +128,48 @@ for (const program of [...filled, fixed]) {
 }
 assert.ok(projected >= 3, '5 fixture armed: plans with an added lift');
 console.log(`PASS 5 ${projected} extended plans re-project to the same reps, effort and rest.`);
+// 6. The capacity ladder's last rung. Four heavy sets at four minutes' rest filled a 40-minute full-body day and
+//    the request was refused for a missing push; it now builds on the short-session strength dose, and says so.
+{ const compact = build({ name: 'two-day mixed', unit: 'kg', goal: 'both', experience: 'intermediate', days: 2, weeks: 4, session: 's40', equipment: KITS.full, split: 'full_body' });
+  assert.ok(compact, '6 the request builds');
+  assert.equal(compact.nextEngine.request.preferences.compactStrength, true, '6 the compact dose is written on the request');
+  const heavy = Object.values(compact.nextWeekPrescriptions).map(weeks => weeks[1]).filter(cell => cell.role === 'primary_strength');
+  assert.ok(heavy.length >= 2 && heavy.every(cell => cell.sets === 3), '6 primary lifts take three sets: ' + heavy.map(c => c.sets).join(','));
+  for (const week of weeksOf(compact)) shown(compact, week).forEach(minutes => assert.ok(minutes <= 40, '6 inside the 40-minute limit'));
+  const ordinary = filled.find(p => p && p.config.goal === 'both');
+  assert.ok(ordinary && ordinary.nextEngine.request.preferences.compactStrength !== true, '6 a request that builds as asked never takes the compact dose');
+  console.log('PASS 6 a refused two-day mixed plan builds on three heavy sets, recorded on its request.'); }
+
+// 7. A focus never costs the muscle it names, and a focused muscle with a day to spare gets a lift.
+{ const focusCase = (config, part) => { const plain = build(config), focusedPlan = build({ ...config, focus: { [part]: 1 } });
+      assert.ok(plain && focusedPlan, `7 ${config.name} builds with and without the focus`);
+      return { plain, focusedPlan, was: weeklyVolume(plain, 1)[part] || 0, now: weeklyVolume(focusedPlan, 1)[part] || 0 }; };
+  const mixed3 = { name: 'mixed 3d', unit: 'kg', goal: 'both', experience: 'intermediate', days: 3, weeks: 4, session: 's40', equipment: KITS.full, split: 'full_body' };
+  let raised = 0;
+  for (const part of ['shoulders', 'chest', 'lats', 'quads', 'hamstrings', 'glutes', 'biceps', 'triceps']) {
+      const r = focusCase(mixed3, part);
+      assert.ok(r.now >= r.was - 1e-6, `7 ${part}: focus ${r.now} is not below the plain plan's ${r.was}`);
+      if (r.now > r.was + .01) raised++;
+      for (const week of weeksOf(r.focusedPlan)) shown(r.focusedPlan, week).forEach(minutes => assert.ok(minutes <= 40, `7 ${part}: focus stays inside the limit`));
+  }
+  assert.ok(raised >= 5, `7 ${raised} of 8 focused muscles got more`);
+  // The fallback: a rebuild around the focus that lands below the plain plan starts from the plain roster instead.
+  // (Its first reproducer, a 3-day shoulders focus, stopped needing it when the week-set allocator stopped moving a
+  // set off a 2-set lift onto a 1-set one; this request still does.)
+  const fallback = focusCase({ ...mixed3, name: 'mixed 4d', days: 4 }, 'quads');
+  assert.equal(fallback.focusedPlan.nextEngine.focusDose.start, 'unfocused_roster', '7 the 4-day quads build starts from the plain roster (the focused roster gave quads less)');
+  assert.ok(fallback.now >= fallback.was - 1e-6, `7 fallback quads ${fallback.now} is not below the plain plan's ${fallback.was}`);
+  const lats = focusCase({ name: 'ppl 3d', unit: 'kg', goal: 'both', experience: 'beginner', days: 3, weeks: 4, session: 's60', equipment: KITS.full, split: 'ppl' }, 'lats');
+  assert.ok(lats.now >= lats.was + 1.5, `7 lats ${lats.was} -> ${lats.now}`);
+  assert.ok(lats.focusedPlan.nextEngine.sessionFill.added.some(a => a.reason === 'focus'), '7 the lats focus added a lift (one pulldown at its cap could take no more sets)');
+  console.log(`PASS 7 focus: ${raised} of 8 muscles raised on a tight 40-minute week, none lowered; lats ${lats.was} -> ${lats.now} with ${lats.focusedPlan.nextEngine.sessionFill.added.find(a => a.reason === 'focus').exercise}.`); }
+
+// 8. A ramp week that would show past the limit gives its added sets back, and no lift loses its last set.
+{ const held = build({ name: 'five short days', unit: 'kg', goal: 'hypertrophy', experience: 'beginner', days: 5, weeks: 4, session: 's20', equipment: KITS.full, split: 'ulppl' });
+  assert.ok(held?.nextEngine.displayHeld?.length, '8 fixture armed: the plan builds and records held weeks');
+  for (const week of weeksOf(held)) shown(held, week).forEach(minutes => assert.ok(minutes <= 20, `8 week ${week} shows ${minutes} on a 20-minute limit`));
+  for (const { key, week } of held.nextEngine.displayHeld) { const cell = held.nextWeekPrescriptions[key][week];
+      assert.ok(cell.sets >= 1 && !STRENGTH.has(cell.role), '8 a held lift keeps a set and is not strength work');
+  }
+  console.log(`PASS 8 ${held.nextEngine.displayHeld.length} ramp sets given back; every week inside 20 minutes.`); }
 console.log('PASS B1013 session fill.');

@@ -184,7 +184,12 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 { const before = JSON.parse(C.exportStore());
   const id = Object.keys(before.perf)[0]; const w0 = parseFloat(before.perf[id].weight);
   const wkKg = C.home().week.volume;
+  // A machine step is hardware: 5 kg becomes the 10 lb step a stack has, not 11 (main's canonicalExerciseIncrement).
+  const stepPid = before.saved[0].id, stepEx = before.saved[0].days[0].exercises[0];
+  C.setExLoadStep({ programId: stepPid, id: stepEx, value: 5 });
   const r = C.switchUnit({ to: 'lb' }); const after = JSON.parse(C.exportStore());
+  { const inc = after.saved.find((p) => p.id === stepPid)?.exLoadInc?.[stepEx];
+    ok(inc?.unit === 'lb' && inc.v === 10, 'a 5 kg machine step converts to a real 10 lb step (' + JSON.stringify(inc) + ')'); }
   const wkLb = C.home().week.volume;
   ok(!(wkKg > 0) || Math.abs(wkLb - wkKg * 2.2046226) <= 2, "this week's volume follows the new unit (" + wkKg + ' kg → ' + wkLb + ' lb)');
   ok(r.ok && after.unit === 'lb' && after.saved.every((p) => p.config.unit === 'lb'), 'switchUnit to lb relabels programs');
@@ -192,7 +197,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(JSON.stringify(after.history) === JSON.stringify(before.history), 'history untouched');
   ok(Math.abs(parseFloat(after.bodyweight) - Math.round(parseFloat(before.bodyweight) * 2.2046226 * 2) / 2) < 1e-9, 'bodyweight converted');
   C.startSession({}); ok(C.switchUnit({ to: 'kg' }).ok === false, 'switching is refused with a workout open'); C.discardSession();
-  ok(C.switchUnit({ to: 'kg' }).ok && JSON.parse(C.exportStore()).unit === 'kg', 'switch back to kg'); }
+  ok(C.switchUnit({ to: 'kg' }).ok && JSON.parse(C.exportStore()).unit === 'kg', 'switch back to kg');
+  ok(JSON.parse(C.exportStore()).saved.find((p) => p.id === stepPid)?.exLoadInc?.[stepEx]?.v === 5, 'and back to the 5 kg step');
+  C.setExLoadStep({ programId: stepPid, id: stepEx, value: 0 }); }
 
 // 14. Training cycles (App.js buildCycle / doCompleteCycleBlock / doDeleteCycle / BlockReviewView)
 { C.init({});
@@ -459,6 +466,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   s = C.act({ type: 'readiness', label: 'Run down', factor: 0.88 });
   const w1 = Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight);
   ok(s.readinessDone && s.readinessLabel === 'Run down' && (w0 === 0 || w1 < w0), 'readiness scales loads down (' + w0 + ' -> ' + w1 + ')');
+  // Main's shared policy (modules/workout-readiness.js): "Feeling strong" puts the planned loads back, and a lighter
+  // load is one the equipment has.
+  s = C.act({ type: 'readiness', label: 'Feeling strong', factor: 1 });
+  const wBack = Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight);
+  ok(wBack === w0, 'readiness back to Feeling strong restores the planned load (' + w1 + ' -> ' + wBack + ')');
+  s = C.act({ type: 'readiness', label: 'Run down', factor: 0.88 });
+  ok(Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight) === w1, 'the same readiness answer gives the same load again');
   const hadWarm = s.exercises[0].hasWarm;
   s = C.act({ type: 'warmups', ei: 0 });
   ok(s.exercises[0].hasWarm === !hadWarm, 'warm-ups toggle on the first lift');

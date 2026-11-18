@@ -45,6 +45,41 @@ Within `generate.js`, muscle prescriptions and strength claims feed a provisiona
 
 Paths in this table are relative to `modules/next-engine/`. `coach-regression.js` remains production code because the arbiter calls its objective guardrails. The higher-level verification oracle lives in `verification/coach-quality-oracle.mjs` and is not precached.
 
+## Session length: two clocks, one promise
+
+The realizer budgets a day with its own clock (`realizer-time-budget.js`). The app shows the shell's clock (`analytics.js` `daySeconds`), which also charges changing stations, loading and warm-up ramps, and whose rest is the timer the workout actually runs. The shell registers its clock in `shell-session-clock.js`; that module also owns `SESSION_BANDS`. Every rule below is judged on the displayed clock when one is registered.
+
+**The selected maximum is hard.** `generateNextProgramForShell` and `generateNextCycleForShell` take these steps in order and stop at the first plan that fits:
+
+1. Referee: a day that shows over gets its internal budget tightened by the overshoot and the plan is rebuilt with the same seed. A tighter plan is taken only if it keeps protected coverage (`shellPlanQuality`). A budget the engine refuses is not the end: the same days tighten by a further two minutes, within the attempt bound, because a tighter budget can make the realizer choose a shorter roster it accepts (a 40-minute PPL legs day was refused at 31 internal minutes and built at 29). Cycles do the same.
+2. Move (`moveLiftsOffOverDays`): one accessory goes to the shortest day that trains the same muscles. Dose-neutral.
+3. Hold (`holdWeeksToDisplayedLimit`): a week whose added sets carry a day past the limit gives them back, a ramp set first, never a lift's last set, never under a region's floor or its week-one dose.
+4. Refusal: a plan that still shows over is refused with `TIME_LIMIT` and the audit's recovery suggestions. Named strength programs (`STRENGTH_STRUCTURES`, percentage schemes) are literal contracts and keep their written length.
+
+**The lower edge is a target the dose model can overrule.** `finalizeGeneratedShellVolume` finishes a generated plan in recorded steps (`nextEngine.sessionFill`):
+
+| Step | Function | When |
+|---|---|---|
+| Movement pattern | `ensureMovementPatterns` | New plans. A week with no pulling, pushing or leg work at all gets a compound; where the day has no time it replaces one accessory. |
+| Focus lift | `ensureFocusLifts` | New plans with a focus. A focused region its existing lifts cannot bring to the promised gain gets a lift, preferring a movement function the week lacks. |
+| Lift for a short day | `extendSessionsTowardBand` | New plans. A day under the band's lower edge with fewer lifts than the band targets. |
+| Dose and capacity | `reconcileShellWeekDose`, `enforceShellWeekCapacity` | Always. |
+| Sets for a short day | `fillSessionsTowardBand` | Always, including later cycle blocks, which keep their roster. |
+
+Limits on every added lift or set: a region's first week stays at or under its modeled upper dose and grows at most a third (or two sets) over what the realizer gave it; no week passes a region or muscle ceiling; a lift starts on at most four sets and the fill never passes five; no day passes its limit on either clock; no new hard collision between consecutive days. The engine audit (every severity, every work week) runs once on the finished plan; a plan it likes less is retried without the blamed days, then dropped. Strength work, the lifter's own edits, minimalist plans and named strength programs are never touched.
+
+What stays short is the dose model, by design: strength days are built around one heavy lift, a second lower-body strength exposure is not stacked on a day that already has one (`selectStrengthClaimsForCapacity`), strength-phase accessories are held at the preferred dose, and five or six long days hold more time than the weekly ceilings allow. The plan shows its real length.
+
+**Capacity ladder** (`capacity-generation.js`): the requested seed, a deterministic seed family, fewer optional lifts, a lower minimum edge, and last the compact strength dose (`preferences.compactStrength`: three primary sets, two secondary), written on the request so a rebuild reproduces it. Only a request nothing else builds reaches that rung.
+
+**Focus** (`withFocusDose`): a focused muscle gets at least two more effective weekly sets than the same request without the focus, inside its ceiling, or the plan records `focusDose.status: 'limited'` with the regions it could not serve. A focused build that would leave a focused head with less than the plain build starts from the plain roster instead (`focusDose.start: 'unfocused_roster'`).
+
+**Week sets** (`simulation.js` `allocateWeekSets`): a week's set factor applies to the session total, rounded once, and the leftover sets go to the lifts still owed the most (`raw − allocated`). A lift lifted to its one-set minimum has already been paid more than its share, so it does not also compete with the fraction of its raw count; when it did, a one-set lateral raise took a second set ahead of the two-set lifts beside it and, in a tapering block, a region's only lat lift went from two sets to one.
+
+**The week audit judges an engine plan by that plan's landmarks** (`analytics.js` `auditProgramWeek`: `landmarkFor(part, _, program)`, `compositeMrv(part, program)`). Without the program it used the intermediate table for every lifter: an advanced plan's correct 21-set quads week was flagged against 20, and focus minimums were judged against numbers the engine never planned to.
+
+**Saved data**: a rebuilt engine source is stored as the JSON a save produces (`asSavedEngineSource`) and keeps each lift's generated base prescription (`withSourcePrescriptions`), so a program equals itself after a save and week-one effort never becomes the block's base.
+
 ## One writer per prescription field
 
 `nextEngine.program` is the audited base-program snapshot. `nextWeekPrescriptions[day:slot][week]` is its executable projection, including phase modulation and a requested recovery week. All generated-plan surfaces resolve through `getNextShellCell`.
@@ -72,7 +107,7 @@ Weekly recaps, logged muscle/regional volume, strength-score maturity, strength 
 
 `phase-transition.js` carries successful/protected exercises and per-exercise evidence into a new phase. Automatic progression selection knows block length and phase; explicit methods remain explicit. `simulation.js` supplies the weekly prescription projection used by production and shares tested progression context with the multi-block simulator.
 
-`cycle-runtime-adapter.js` creates previews through the same passing-plan contract. Adaptive previews transition phases; static previews retarget dosage while retaining exercise identity. Static later blocks then reconcile the exact projected regional dose without replacing the roster. When a real block completes, advancement checks history readiness, can insert recovery from fatigue evidence, and replaces the future preview with a history-informed block. It refuses to replace a preview that already has workout history.
+`cycle-runtime-adapter.js` creates previews through the same passing-plan contract. Adaptive previews transition phases; static previews retarget dosage while retaining exercise identity. Static later blocks then reconcile the exact projected regional dose without replacing the roster. When reconciliation leaves a region over its phase ceiling, the block is refused unless the roster is at its floor for that region: every lift that could give back a set of it, other than protected strength work, is already down to one set (`lockedOverflowAtFloor`). Then the only way under the ceiling is dropping a movement, which a locked cycle may not do; the block is kept, the engine audit must still pass, and `lockedCycleVolumeRepair` records `status: 'locked_floor'` with the overflow (M202 pins both the accepted floor and the refused above-floor case; the reproduced case was Strength Peak on dumbbells, chest 8.5 against 8.4 from protected bench plus one-set accessories). When a real block completes, advancement checks history readiness, can insert recovery from fatigue evidence, and replaces the future preview with a history-informed block. It refuses to replace a preview that already has workout history.
 
 Cycle-wide roster edits remap slot stores by surviving exercise identity before assigning replacements. They preserve each receiving phase's own cells, explicit methods and ownership metadata; they do not copy dose from the edited phase. Volume, loading and history share `resolveNextShellExerciseId`, which also handles previously saved stale propagation metadata without rewriting the backup. Standalone conversion and real block completion consume `captureShellBaseProgram`, a temporary, re-audited live-roster projection. The stored immutable base is not changed into a second prescription writer. `continuationProgressionStyle` preserves explicit global/per-lift methods while leaving Auto eligible for phase/evidence selection.
 

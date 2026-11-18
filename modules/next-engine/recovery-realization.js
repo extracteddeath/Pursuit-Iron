@@ -145,12 +145,22 @@ function collisionRelevance(def, sourceIndex, collisions) {
  * normal generator audit. Strength anchors are immovable. This function does not decide that a move is
  * better; it only enumerates plausible coach-like repairs for the weekly recovery optimizer to test.
  */
+/** Whether any dose-neutral redistribution reduces the weekly recovery objective: the same answer as
+ * `proposeRecoveryRedistributions(...).length > 0`, without scoring every proposal. The audit only needs
+ * the yes/no, and each proposal's score is a full weekday-permutation search (720 orders on a six-day week),
+ * so it stops at the first proposal that passes the same improvement test, taken in the same shortlist order. */
+export function hasRecoveryRedistribution(sessions, request) {
+    return recoveryRedistributions(sessions, request, true);
+}
 export function proposeRecoveryRedistributions(sessions, request) {
+    return recoveryRedistributions(sessions, request, false);
+}
+function recoveryRedistributions(sessions, request, existsOnly) {
     const defs = createExerciseMap(request.customExercises);
     const collisions = weeklyRecoveryCollisions(sessions, request);
     const baseline = assessWeeklyRecovery(sessions, request);
     if (!collisions.length && baseline.score <= .0001)
-        return [];
+        return existsOnly ? false : [];
     const softPolish = collisions.length === 0;
     const proposals = [];
     const seen = new Set();
@@ -217,6 +227,10 @@ export function proposeRecoveryRedistributions(sessions, request) {
     const shortlist = softPolish
         ? [...proposals].sort((a, b) => (a.quickHard ?? 99) - (b.quickHard ?? 99) || ((a.quickScore ?? Infinity) - (b.quickScore ?? Infinity)) || b.relevance - a.relevance).slice(0, 24)
         : proposals;
+    const improves = recovery => recovery.hardCollisions < baseline.hardCollisions
+        || (recovery.hardCollisions === baseline.hardCollisions && recovery.score < baseline.score - .0001);
+    if (existsOnly)
+        return shortlist.some(proposal => improves(optimizeWeeklyRecovery(proposal.sessions, request)));
     const ranked = shortlist.map(proposal => {
         const recovery = optimizeWeeklyRecovery(proposal.sessions, request);
         return { ...proposal, fastHard: recovery.hardCollisions, fastScore: recovery.score };

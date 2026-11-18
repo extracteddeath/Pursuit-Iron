@@ -9,7 +9,7 @@ import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
 import { generateProgram } from './generate.js';
-import { moveLiftsOffOverDays, finalizeGeneratedShellVolume, ensureFocusedRegionDose, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
+import { captureShellVolumeSnapshot, holdWeeksToDisplayedLimit, moveLiftsOffOverDays, finalizeGeneratedShellVolume, ensureFocusedRegionDose, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
 import { PCT_SCHEMES } from './percentage-protocols.js';
 import { STRENGTH_STRUCTURES } from './config.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
@@ -464,6 +464,7 @@ function rejectionRecovery(result, request) {
    dropped and the best plan found is kept: a short day that cannot lose anything more stays as it was rather
    than failing the build. */
 const DISPLAY_FIT_ATTEMPTS = 6;
+const REFUSED_TRIM_STEP = 2;
 const INTERNAL_BUDGET_FLOOR = 12;
 export function displayedBandMax(config) {
     return (SESSION_BANDS[String(config?.session || 's60')] ?? SESSION_BANDS.s60).maxMinutes;
@@ -502,12 +503,17 @@ export function generateNextProgramForShell(options) {
     const overDaysOf = (over) => Object.keys(over).filter(day => over[day] > 0).sort((a, b) => over[b] - over[a]);
     // Every over day at once, tightening by what each attempt still shows over. A rebuild can pick different
     // lifts, so one attempt that is no better is not the end: keep tightening from where it landed.
-    let trim = {}, over = bestOver;
+    // A budget the engine refuses is not the end either: a tighter one can make it choose a shorter roster that fits
+    // (a 40-minute legs day refused at 31 internal minutes and built at 29), so the same days tighten by a further
+    // REFUSED_TRIM_STEP minutes each time, within the same attempt bound.
+    let trim = {}, over = bestOver, lastOverDays = overDaysOf(bestOver);
     for (let attempt = 0; attempt < DISPLAY_FIT_ATTEMPTS && totalOver(bestOver) > 0; attempt++) {
-        trim = tightened(trim, over, overDaysOf(over));
+        const days = over ? overDaysOf(over) : lastOverDays;
+        if (!days.length) break;
+        trim = tightened(trim, over ?? Object.fromEntries(days.map(day => [day, REFUSED_TRIM_STEP])), days);
+        lastOverDays = days;
         over = attemptWith(trim);
-        if (!over) break;
-        if (totalOver(over) <= 0) break;
+        if (over && totalOver(over) <= 0) break;
     }
     // Then one day at a time from the best plan found: a week often has one day with nothing left to give
     // (the engine refuses its tighter budget) and others that can still come down.
@@ -516,7 +522,10 @@ export function generateNextProgramForShell(options) {
         for (const day of overDaysOf(bestOver)) {
             if (!(bestOver[day] > 0)) continue;
             const before = totalOver(bestOver);
-            attemptWith(tightened(bestTrim, bestOver, [day]));
+            // As above: a refused budget is followed by a tighter one, three times at most.
+            let single = tightened(bestTrim, bestOver, [day]);
+            for (let deeper = 0; deeper < 3 && !attemptWith(single); deeper++)
+                single = { ...single, [day]: single[day] + REFUSED_TRIM_STEP };
             if (totalOver(bestOver) < before) moved = true;
         }
         if (!moved) break;
@@ -525,6 +534,22 @@ export function generateNextProgramForShell(options) {
         // Nothing tighter builds: move a lift to a day with room instead (dose-neutral).
         const moved = moveLiftsOffOverDays(best.program, options.legacyExercises, (SESSION_BANDS[options.config?.session] ?? SESSION_BANDS.s60).maxMinutes);
         if (moved !== best.program) best = { ...best, program: moved, nextProgram: moved.nextEngine.program };
+        // Then a week whose added sets carry a day past the limit gives them back.
+        const held = holdWeeksToDisplayedLimit(best.program, options.legacyExercises, (SESSION_BANDS[options.config?.session] ?? SESSION_BANDS.s60).maxMinutes);
+        if (held !== best.program) best = { ...best, program: held };
+        // The selected maximum is the one hard promise of a session length. A plan that still shows over it has
+        // nothing left to give without dropping a region under its floor, so the request does not fit: it is
+        // refused like any other, with the audit's own time-limit recovery (a longer session, or another day).
+        // Named strength programs are literal contracts and keep their written length.
+        const still = shellSessionOvershoot(best.program, displayedBandMax(options.config)) ?? [];
+        if (still.some(minutes => minutes > 0) && !options.config?.percentScheme && !STRENGTH_STRUCTURES.has(options.config?.split)) {
+            const sessions = best.program.nextEngine.program.sessions;
+            const findings = still.map((minutes, index) => minutes > 0 ? { severity: 'critical', code: 'TIME_LIMIT', sessionId: sessions[index]?.id,
+                message: `${sessions[index]?.name ?? 'A session'} shows ${Math.round(displayedBandMax(options.config) + minutes)} minutes against a ${displayedBandMax(options.config)}-minute limit.` } : null).filter(Boolean);
+            let recovery; try { recovery = buildGenerationRecoveryPlan({ result: 'reject', findings }, best.request); } catch { recovery = undefined; }
+            throw new NextShellAdapterError('NEXT_ENGINE_REJECTED',
+                `Pursuit Engine ${best.program.nextEngine.program.engineVersion} could not fit this request inside its session length.`, recovery);
+        }
     }
     return best;
 }
@@ -538,18 +563,36 @@ export function focusedPublicRegions(config) {
 }
 /* Build the same request without the focus and require the focused plan to beat it (volume-repair
    ensureFocusedRegionDose). A refused or failed comparison build leaves the focused plan as generated. */
-function withFocusDose(program, options, displayTrim) {
-    const regions = focusedPublicRegions(options.config);
-    if (!regions.length) return program;
-    let unfocused;
+/* The same request without its focus: what a focused muscle's dose is measured against. Null when there is no focus. */
+function unfocusedBaseline(options, displayTrim) {
+    if (!focusedPublicRegions(options.config).length) return null;
     try {
         const { focus, focusList, ...config } = options.config;
-        unfocused = buildNextProgramForShell({ ...options, config, makeId: () => 'focus-baseline' }, displayTrim).program;
-    } catch { return program; }
+        return buildNextProgramForShell({ ...options, config, makeId: () => 'focus-baseline' }, displayTrim).program;
+    } catch { return null; }
+}
+function withFocusDose(program, options, unfocused) {
+    const regions = focusedPublicRegions(options.config);
+    if (!regions.length || !unfocused) return program;
     // A focus set may not push a day past the limit on the displayed clock (or further past, if it already was).
     const max = displayedBandMax(options.config), before = shellSessionOvershoot(program, max);
     const accept = !before ? null : candidate => shellSessionOvershoot(candidate, max).every((minutes, i) => minutes <= Math.max(0, before[i]));
-    return ensureFocusedRegionDose(program, unfocused, options.legacyExercises, regions, accept);
+    const focused = ensureFocusedRegionDose(program, unfocused, options.legacyExercises, regions, accept);
+    // A focus may never cost the muscle it names. Rebuilding around a priority can land on a different week (four
+    // heavy sets where the plain build had three) that leaves a focused head with less than the plain plan gave
+    // it. Then the plain plan's roster is the better start: it takes the focus sets instead, and keeps the
+    // lifter's focus in its config so the next block is built around it again.
+    const dose = plan => captureShellVolumeSnapshot(plan, 1, options.legacyExercises)?.regions ?? {};
+    const plain = dose(unfocused), got = dose(focused);
+    if (!regions.some(region => (got[region] ?? 0) < (plain[region] ?? 0) - 1e-6)) return focused;
+    const start = { ...unfocused, id: program.id, name: program.name, config: program.config };
+    const beforeStart = shellSessionOvershoot(start, max);
+    const fallback = ensureFocusedRegionDose(start, unfocused, options.legacyExercises, regions,
+        !beforeStart ? null : candidate => shellSessionOvershoot(candidate, max).every((minutes, i) => minutes <= Math.max(0, beforeStart[i])));
+    const alt = dose(fallback);
+    const better = regions.every(region => (alt[region] ?? 0) >= (plain[region] ?? 0) - 1e-6)
+        && regions.reduce((sum, region) => sum + (alt[region] ?? 0) - (got[region] ?? 0), 0) > 0;
+    return better ? { ...fallback, nextEngine: { ...fallback.nextEngine, focusDose: { ...fallback.nextEngine.focusDose, start: 'unfocused_roster' } } } : focused;
 }
 
 /** A request with each named weekday's internal budget tightened by `displayTrim[day]` minutes. */
@@ -620,7 +663,9 @@ function buildNextProgramForShell(options, displayTrim) {
         } : {})
     };
 
-    const finalProgram = withSupplementalSlots(withFocusDose(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises, { extend: true, fill: options.sessionFill !== false }), options, displayTrim));
+    const unfocused = unfocusedBaseline(options, displayTrim);
+    const finalProgram = withSupplementalSlots(withFocusDose(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises, { extend: true,
+        fill: options.sessionFill !== false, focus: unfocused ? { regions: focusedPublicRegions(options.config), unfocused } : null }), options, unfocused));
     return {
         program: finalProgram,
         nextProgram: finalProgram.nextEngine.program,

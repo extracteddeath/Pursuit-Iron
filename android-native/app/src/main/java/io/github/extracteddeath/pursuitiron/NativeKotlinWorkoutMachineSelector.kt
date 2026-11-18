@@ -182,7 +182,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
     priorWorkingKeys:List<WorkoutReferenceKey> = emptyList(),
     onRequestHistory:(()->Unit)?=null,
     externalOpen:Boolean=false,
-    onExternalOpenConsumed:(()->Unit)?=null
+    onExternalOpenConsumed:(()->Unit)?=null,
+    showInlineTrigger:Boolean=true
 ) {
     if(config==null || (config.machines.isEmpty() && onCreate==null))return
     var open by remember(config.gymId,config.exerciseId) { mutableStateOf(false) }
@@ -235,6 +236,7 @@ internal fun NativeKotlinWorkoutMachineSelector(
             open=false
         }
     }
+    if(showInlineTrigger) {
     TextButton(
         onClick={
             open=true
@@ -254,6 +256,7 @@ internal fun NativeKotlinWorkoutMachineSelector(
         Text("Machine · $display",maxLines=1,
             overflow=TextOverflow.Ellipsis,
             style=MaterialTheme.typography.labelMedium)
+    }
     }
     if(open)ModalBottomSheet(onDismissRequest={open=false}) {
         Column(

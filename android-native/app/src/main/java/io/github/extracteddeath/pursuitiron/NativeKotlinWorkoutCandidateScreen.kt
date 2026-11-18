@@ -580,6 +580,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             NativeKotlinWorkoutTools(
                 enabled=!state.busy && !swapLoading,
                 onSessionNote={showSessionNote=true},
+                // Open the same source-verified machine picker from the small
+                // workout tools rail. Nothing is changed until the sheet's
+                // explicit selection is durably acknowledged.
+                onMachine=activeMachineConfig?.let {
+                    {openPhysicalMachineFor=toolExercise}
+                },
+                machineLabel=activeMachineConfig?.machines
+                    ?.firstOrNull {it.id==currentMachine}?.label
+                    ?:if(activeMachineConfig!=null)"Choose machine" else null,
                 onPinnedNote=toolExercise?.let {exerciseId->
                     {pinnedExerciseId=exerciseId}
                 },
@@ -881,7 +890,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             onRequestHistory={stationHistoryRequested=true},
             externalOpen=selected!=null &&
                 openPhysicalMachineFor==selected.target.exerciseId,
-            onExternalOpenConsumed={openPhysicalMachineFor=null})
+            onExternalOpenConsumed={openPhysicalMachineFor=null},
+            showInlineTrigger=showAll || presentation.finished)
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)

@@ -15,14 +15,19 @@ enum class TrainingMuscle(val introducedIn:Int=1) {
     QUADS, HAMSTRINGS, GLUTES, CALVES, ABS,
     HIP_ABDUCTORS(2), HIP_ADDUCTORS(2),
     SPINAL_ERECTORS(3), TRAPS(3),
-    SERRATUS_ANTERIOR(4), TIBIALIS_ANTERIOR(4)
+    SERRATUS_ANTERIOR(4), TIBIALIS_ANTERIOR(4),
+    /** The web 'neck' bucket does not describe interchangeable movement
+     * capacity. Keep head flexion, extension and lateral flexion separate. */
+    NECK_FLEXORS(5), NECK_EXTENSORS(5), NECK_LATERAL_FLEXORS(5)
 }
 
 /**
  * Saved policies keep their exact declared coverage. A complete v1 policy
  * still has the original 16 rows; v2 keeps its exact 18 hip-inclusive rows.
  * V3 retains its 20 spinal-erector/trapezius-inclusive rows.
- * Current policies separately track serratus anterior and tibialis anterior.
+ * V4 retains its original 22 rows including serratus anterior and
+ * tibialis anterior. New V5 policies separately track neck flexion,
+ * extension and lateral flexion with three explicit muscle rows.
  * Never fill absent rows with invented zeroes, accept a
  * partial original scope, or silently upgrade a signed policy.
  */
@@ -33,9 +38,13 @@ object TrainingMuscleCoverage {
         TrainingMuscle.entries.filter{it.introducedIn<=2})
     val legacyV3:List<TrainingMuscle> = Collections.unmodifiableList(
         TrainingMuscle.entries.filter{it.introducedIn<=3})
+    /** Frozen 22-row v4 policy, including first-program reference v11. */
+    val legacyV4:List<TrainingMuscle> = Collections.unmodifiableList(
+        TrainingMuscle.entries.filter{it.introducedIn<=4})
     val current:List<TrainingMuscle> = Collections.unmodifiableList(
         TrainingMuscle.entries.toList())
-    private val scopes=listOf(legacyV1,legacyV2,legacyV3,current).map{it.toSet()}
+    private val scopes=listOf(legacyV1,legacyV2,legacyV3,legacyV4,current)
+        .map{it.toSet()}
 
     fun versionOf(muscles:Collection<TrainingMuscle>):Int? {
         val distinct=muscles.toSet()

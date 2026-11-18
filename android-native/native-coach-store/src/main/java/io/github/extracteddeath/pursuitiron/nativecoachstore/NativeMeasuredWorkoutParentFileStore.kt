@@ -275,7 +275,7 @@ class NativeMeasuredWorkoutParentFileStore(
                     as? NativeHistoryLedgerResult.Durable)?.ledger?.pending
                     as? NativeHistoryWriteIntent.MeasuredFinish
                 if(pending?.workoutId!=workoutId ||
-                    pending.operation!=operation)
+                    pending?.operation!=operation)
                     return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
                         NativeMeasuredWorkoutStoreRefusal.HISTORY_TRANSACTION_REQUIRED)
                 val previous=fromDisk(ownerKey,athlete.athleteId,workoutId)

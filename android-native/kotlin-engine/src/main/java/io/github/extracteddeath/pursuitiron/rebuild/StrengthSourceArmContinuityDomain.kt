@@ -48,12 +48,12 @@ object StrengthSourceArmContinuityDomain {
         fun reject(reason:String)=StrengthSourceArmReview(
             StrengthSourceArmsStatus.SOURCE_UNVERIFIED,
             cycle?.cycleId,cycle?.athleteId,cycle?.revision,priorBlockId,emptyList(),reason)
+        val structural=coachAudit?.structuralReview
         if(cycle==null || cycle.athleteId!=expectedAthleteId ||
             cycle.revision<1 ||
-            coachAudit?.auditedCycleRevision!=cycle.revision ||
-            coachAudit.structuralReview?.verifiedDraft!=cycle ||
-            coachAudit.structuralReview.status!=
-                CustomCycleReviewStatus.READY_FOR_COACH_REVIEW)
+            coachAudit.auditedCycleRevision!=cycle.revision ||
+            structural?.verifiedDraft!=cycle ||
+            structural.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW)
             return reject("The athlete's exact saved custom cycle and its current source audit are required.")
         if(catalog.map{it.exerciseId}.distinct().size!=catalog.size)
             return reject("The exercise inventory contains ambiguous stable identities.")
@@ -66,7 +66,7 @@ object StrengthSourceArmContinuityDomain {
             return reject("Only the last hypertrophy training week before a real future Strength block can support this continuity review.")
         val exitWeek=cycle.blocks.take(index+1).sumOf{it.weeks}
         val prior=CustomTrainingCycleDomain.week(
-            coachAudit.structuralReview,exitWeek)
+            structural,exitWeek)
         if(prior==null || prior.blockId!=priorBlockId ||
             prior.phase!=TrainingPhase.HYPERTROPHY)
             return reject("The exact final hypertrophy week could not be resolved, including overrides.")

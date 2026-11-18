@@ -4,6 +4,34 @@
 
 **Status vocabulary:** **Implemented/source-tested** = exact behavior is in native source, with explicit tests/CI required before release; **Partial** = some native behavior exists but meaningful web capability is missing; **Open** = not verified in current Kotlin rebuild and must not be advertised as available; **Adapt** = web-specific mechanism not appropriate for native Android, preserve the user value by a native equivalent. No status is a release sign-off without real phone/foldable/TalkBack acceptance.
 
+## Assisted physical counterweight parity checkpoint — November 17, 2026
+
+The independent Kotlin catalog now contains **365 of 383** exact effective web
+identities, with **18** requiring additional measurement semantics. This pass
+adds the exact active-web assisted dip, chin-up and pull-up IDs as *different*
+movements that share a verified physical assisted pull-up/dip apparatus,
+but **not** their history, load claims or progression baseline.
+
+The athlete records the physical machine's displayed **COUNTERWEIGHT**, not
+the body's lifted mass. Higher settings mean **more help**, not increased
+strength. The new append-only loading basis supports exact, gym-confirmed
+selectable counterweight settings and labels them accordingly in workout
+review/history. Authoring requires the real assisted station. A beginner
+warm-up, when available, selects a *higher assistance setting*; lower
+assistance as a warm-up or ordinary higher-weight backoff is rejected.
+Normal upward-load progression, future-week auto-amendment and return-to-
+demonstrated-heavy-load pathways **cannot** treat higher assistance as an
+earned increase. An independent pure, read-only candidate can instead suggest
+one exact lower assistance setting after two same-day, same-machine, uniform
+completed rep-ceiling sessions meeting RIR constraints. It requires explicit
+athlete review and **cannot commit** a program/workout change.
+
+Still open: verified end-to-end coached decrease-assistance acceptance,
+full machine-specific on-device history, physical gym setup accessibility,
+signed warmup/journal replay across older records, and the separate non-rep
+hold/carry/hybrid/neck data models. Neither source ID count nor CI proves full
+native feature parity or beta readiness. No APK/AAB.
+
 ## Current exact-ID inventory — November 17, 2026 (CI acceptance pending)
 
 The effective web built-in catalog now has **383 distinct identities**, including

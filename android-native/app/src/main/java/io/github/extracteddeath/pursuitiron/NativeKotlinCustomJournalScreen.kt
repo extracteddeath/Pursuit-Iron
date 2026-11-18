@@ -734,6 +734,25 @@ internal fun NativeKotlinCustomJournalScreen(
                     if(focusOnNext)NativeKotlinWorkoutTools(
                         enabled=!busy,
                         onSessionNote={noteError=null;showSessionNote=true},
+                        // This only requests the existing owner-fenced sheet;
+                        // Focus does not need a second permanent Machine A/B row.
+                        onMachine=upcoming?.first?.takeIf {
+                            it.exerciseId in eligibleMachineExercises
+                        }?.let {slot->
+                            {openPhysicalMachineForSlot=slot.slotId}
+                        },
+                        machineLabel=upcoming?.first?.takeIf {
+                            it.exerciseId in eligibleMachineExercises
+                        }?.let {slot->
+                            val selectedId=workoutMachineChoice(
+                                machineChoices.encoded,slot.exerciseId,null)
+                            machineRoster?.configurations.orEmpty()
+                                .firstOrNull {
+                                    it.gymId==current.originalSnapshot.stamp.gymId &&
+                                        it.exerciseId==slot.exerciseId
+                                }?.machines?.firstOrNull{it.id==selectedId}?.label
+                                ?: "Choose machine"
+                        },
                         onSuperset=activeSupersetGroup?.let {group->
                             {supersetRoundGroup=group}
                         },
@@ -896,7 +915,9 @@ internal fun NativeKotlinCustomJournalScreen(
                         }.map{WorkoutReferenceKey(it.setKey)},
                         onRequestHistory={stationHistoryRequested=true},
                         externalOpen=openPhysicalMachineForSlot==slot.slotId,
-                        onExternalOpenConsumed={openPhysicalMachineForSlot=null})
+                        onExternalOpenConsumed={openPhysicalMachineForSlot=null},
+                        showInlineTrigger=!focusOnNext || finished ||
+                            current.finishedByEventId!=null)
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)

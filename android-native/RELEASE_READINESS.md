@@ -2,6 +2,23 @@
 
 As of 2026-11-16. Active branch: `architecture/kotlin-engine-rebuild`.
 
+**Measured exercise v1 recovery format (2026-11-18):**
+The new fourteen-exercise candidate domain now has an isolated native-coach-
+store versioned binary codec (PIM1) for an immutable typed measurement plan,
+all factual per-side observations and every correction/Finish receipt. On
+decode it checks a caller-provided owner/athlete identity, SHA-256 corruption
+digest, bounded length and source-verified plan, then replays the entire
+receipt sequence through the one Kotlin measurement reducer. Unknown format,
+wrong owner, truncation, reordering, false Finish and changed file content
+fail closed. It does not alter old PIJ/PICJ workout files. The digest is
+integrity-only, NOT identity authentication.
+
+**Not an issued or durable workout yet:** No Android file owner, authenticated
+current gym signoff, on-disk CAS or M3 set recorder is wired to the new codec;
+it must not be displayed as completed training or counted as full parity.
+Further real-device recovery, history-index transaction, independent
+progression policy and 14-exercise UI acceptance remain beta gates. No APK.
+
 **Fourteen non-repetition exercise measurement contracts (2026-11-18):**
 The eleven source-matched timed holds now have independent elapsed-SECONDS
 candidate measurements, with per-side times for Side Plank and Copenhagen

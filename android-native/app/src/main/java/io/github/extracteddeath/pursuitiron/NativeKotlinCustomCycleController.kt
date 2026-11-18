@@ -642,6 +642,7 @@ internal class NativeKotlinCustomCycleController(
             // A new authored coaching review invalidates an earlier
             // strength proposal even if draft/source revisions match.
             strengthRepairReview=null,
+            strengthMenuRecoveryReview=null,
             signoff=host.readCustomCycleConsent(disk.draft.cycleId,inputs),
             signoffRefusal=null,
             message="Whole-cycle coach audit: ${result.issues.size} actionable issues across ${result.weeks.size} evaluated weeks. No workout approved.")

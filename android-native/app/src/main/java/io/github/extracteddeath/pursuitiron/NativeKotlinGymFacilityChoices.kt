@@ -82,6 +82,10 @@ internal val kotlinGymFacilityGroups=listOf(
         "press-board" to "Bench press board",
         "nordic-anchor" to "Nordic curl anchor",
         "spanish-squat-support" to "Anchored Spanish squat support band",
+        "supported-neck-extension" to "Supported weighted neck-extension setup",
+        "supported-neck-flexion" to "Supported weighted neck-curl setup",
+        "fitted-neck-harness" to "Properly fitted loaded neck harness",
+        "supported-neck-lateral" to "Supported lateral neck-loading setup",
         "pushup-handles" to "Push-up handles",
         "secure-doorway-anchor" to "Secure doorway exercise anchor",
         "stability-ball" to "Stability ball"))

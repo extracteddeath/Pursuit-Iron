@@ -193,10 +193,16 @@ class TrainingMuscleCoverageTest {
         }
         assertNull(TrainingMuscleCoverage.forEditor(null,original.dropLast(1)))
         assertEquals(original,TrainingMuscleCoverage.forEditor("v4",null))
-        assertTrue(TrainingMuscleCoverage.forEditor("v1",original)!!
-            .containsAll(TrainingMuscleCoverage.legacyV1))
+        // A stale editor marker may not silently drop a signed v4 policy's
+        // remaining 6 muscles. Only the explicit new v5 choice is allowed.
+        assertNull(TrainingMuscleCoverage.forEditor("v1",original))
+        assertNull(TrainingMuscleCoverage.forEditor("v2",original))
+        assertNull(TrainingMuscleCoverage.forEditor("v3",original))
+        assertNull(TrainingMuscleCoverage.forEditor("v4",TrainingMuscleCoverage.current))
         assertEquals(TrainingMuscleCoverage.legacyV1,
-            TrainingMuscleCoverage.forEditor("v1",original))
+            TrainingMuscleCoverage.forEditor("v1",null))
+        assertEquals(TrainingMuscleCoverage.current,
+            TrainingMuscleCoverage.forEditor("v5",TrainingMuscleCoverage.legacyV1))
     }
 
 }

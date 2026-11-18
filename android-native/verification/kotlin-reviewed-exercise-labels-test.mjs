@@ -44,6 +44,21 @@ for(const id of ['assisted-dip','assisted-chinup','assisted-pullup']) {
   assert.ok(labels.includes('"'+id+'" to "'),
     'Physical assisted machine must have its own visible label: '+id);
 }
+// Neck source equipment is misleading: all four are weighted movements.
+// A provisional V5 anatomical credit and verified real-world resistance
+// plus a named supported setup are mandatory before any native issuance.
+for(const [id,name,fixture] of [
+  ['neck-extension','Weighted Neck Extension','supported-neck-extension'],
+  ['neck-curl','Weighted Neck Curl','supported-neck-flexion'],
+  ['neck-harness','Neck Harness Raise','fitted-neck-harness'],
+  ['neck-lateral','Lateral Neck Raise','supported-neck-lateral']
+]) {
+  assert.ok(ids.includes(id),'Reviewed neck source missing: '+id);
+  assert.ok(labels.includes('"'+id+'" to "'+name+'"'),
+    'Neck exercise must keep canonical athlete-readable name: '+id);
+  assert.ok(fixtureUi.includes('"'+fixture+'" to "'),
+    'Neck movement requires an explicitly selectable confirmed support: '+id);
+}
 for(const id of ['band-pushup','plank',
   'dead-hang','farmers','weighted-plank']) {
   assert.ok(!ids.includes(id),

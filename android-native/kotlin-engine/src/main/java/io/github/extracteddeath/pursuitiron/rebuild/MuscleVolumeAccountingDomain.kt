@@ -64,14 +64,21 @@ object TrainingMuscleCoverage {
      * A corrupt/future marker or incomplete saved scope fails closed.
      */
     fun forEditor(marker:String?,savedMuscles:Collection<TrainingMuscle>?):List<TrainingMuscle>? {
+        val savedVersion=savedMuscles?.let(::versionOf)
+        if(savedMuscles!=null && savedVersion==null)return null
         val version=when {
             marker!=null ->
                 marker.takeIf{it.matches(Regex("^v[1-5]$"))}
                     ?.removePrefix("v")?.toIntOrNull()
-            savedMuscles!=null -> versionOf(savedMuscles)
-            else -> versionOf(current)
-        }
-        return version?.let(::forVersion)
+            savedVersion!=null ->savedVersion
+            else ->versionOf(current)
+        } ?:return null
+        // The only version-changing button is explicit upgrade to current.
+        // A corrupted/restored marker may NOT downgrade a signed scope and
+        // silently discard targets. An unknown future scope fails closed.
+        if(savedVersion!=null && version!=savedVersion && version!=5)
+            return null
+        return forVersion(version)
     }
 
     fun versionOf(muscles:Collection<TrainingMuscle>):Int? {

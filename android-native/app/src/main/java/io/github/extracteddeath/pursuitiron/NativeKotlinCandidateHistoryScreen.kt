@@ -144,6 +144,24 @@ internal fun NativeKotlinCandidateHistoryScreen(
             }
         }.distinct().sortedBy(::kotlinExerciseLabel)
     }
+    // A timed hold/distance result must not open a repetition-based
+    // exercise-history or Strength Standards chart.
+    val measuredOnlyExercises=remember(verified) {
+        val typed=verified?.completions.orEmpty()
+            .filterIsInstance<NativeKotlinMixedHistoryCompletion.Measured>()
+            .flatMap{it.stored.journal.approvedPlan.sets.map{p->p.exerciseId}}
+            .toSet()
+        val rep=verified?.completions.orEmpty().flatMap{entry->
+            when(entry) {
+                is NativeKotlinMixedHistoryCompletion.Composer ->
+                    entry.evidence.sets.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Custom ->
+                    entry.evidence.visits.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
+            }
+        }.toSet()
+        typed-rep
+    }
     val filteredMovements=remember(searchableMovements,exerciseSearch) {
         val query=exerciseSearch.trim()
         if(query.isEmpty())emptyList()
@@ -327,7 +345,13 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                     .horizontalScroll(rememberScrollState()),
                                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                                     filteredMovements.take(visibleExerciseCount).forEach{exercise->
-                                        Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                                        if(exercise in measuredOnlyExercises) {
+                                            FilterChip(
+                                                selected=exerciseSearch==exercise,
+                                                onClick={exerciseSearch=exercise},
+                                                label={Text("Measured · ${kotlinExerciseLabel(exercise)}")}
+                                            )
+                                        } else Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
                                             OutlinedButton(onClick={historyExerciseId=exercise}) {
                                                 Text(kotlinExerciseLabel(exercise))
                                             }

@@ -27,6 +27,24 @@ assert.ok(measured.includes('rememberSaveable(workoutId)') &&
   measured.includes('Matching pair confirmed') &&
   measured.includes('host.previewMeasuredWorkoutConsent(') &&
   measured.includes('host.confirmMeasuredWorkoutConsent('));
+// Focus mode renders ONE authenticated active editor, not 64 expanded forms.
+// Only a real durable set receipt may auto-advance; no optimistic skip/finish.
+const measuredFocus=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MeasuredWorkoutFocusDomain.kt');
+assert.ok(measured.includes('MeasuredWorkoutFocusDomain.review(') &&
+  measured.includes('afterDurableRecord(journal,') &&
+  measured.includes('focusSetKey=next') &&
+  measured.includes('Jump to a set') &&
+  measured.includes('Previous') &&
+  measured.includes('Up next:') &&
+  measured.includes('focus.selectedOrdinal') &&
+  measured.includes('NativeMeasuredExerciseSetEditor(') &&
+  !measured.includes('journal.approvedPlan.sets.forEach{set->'),
+  'Workout must show one selected issued set with explicit navigation and only verified progression');
+assert.ok(measuredFocus.includes('after.revision!=before.revision+1') &&
+  measuredFocus.includes('after.receipts.dropLast(1)!=before.receipts') &&
+  measuredFocus.includes('before.bySetKey[setKey]?.effectiveRecord!=null') &&
+  measuredFocus.includes('after.bySetKey[it.setKey]?.effectiveRecord==null'));
+
 assert.ok(measuredBuilder.includes('MeasuredWorkoutJournalDomain.begin(it)') &&
   measuredBuilder.includes('sourceRevision') &&
   measuredBuilder.includes('set-$index') &&

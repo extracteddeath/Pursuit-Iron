@@ -101,6 +101,44 @@ class StrengthExerciseMenuRecoveryDomainTest {
         assertFalse(result.mayAlterHistory)
     }
 
+    @Test fun retainedOnAnotherDayDoesNotCountAsRestoringLostStrengthDay() {
+        // The reported 8 -> 3 Monday collapse is still real even if a
+        // dropped Monday curl survived as a strength exercise on Wednesday.
+        // Day-scoped restoration should NOT mistake any-week coverage for
+        // restoring the original Monday training exposure.
+        val original=cycle()
+        val oldStrength=original.blocks.last()
+        val changed=original.copy(blocks=original.blocks.dropLast(1)+
+            oldStrength.copy(days=oldStrength.days.map {day ->
+                if(day.weekday==2)day.copy(slots=day.slots+
+                    slot("curl",ComposerRole.ACCESSORY))
+                else day
+            }))
+        val firstDayBefore=changed.blocks.last().days.single{it.weekday==0}
+        val otherDayBefore=changed.blocks.last().days.single{it.weekday==2}
+        assertEquals(3,firstDayBefore.slots.size)
+        assertTrue(otherDayBefore.slots.any{it.exerciseId=="curl"})
+        val review=StrengthExerciseMenuRecoveryDomain.preview(
+            request(changed),audit(changed))
+        assertEquals(review.explanation,
+            StrengthMenuRecoveryStatus.PREVIEW_ONLY,review.status)
+        assertEquals(extraIds,review.restored.map{it.exerciseId})
+        assertEquals(setOf(0),review.restored.map{it.weekday}.toSet())
+        val candidate=checkNotNull(review.proposedCycle)
+        val monday=candidate.blocks.last().days.single{it.weekday==0}
+        val wednesday=candidate.blocks.last().days.single{it.weekday==2}
+        assertEquals(8,monday.slots.size)
+        assertEquals(1,monday.slots.count{it.exerciseId=="curl"})
+        assertEquals(otherDayBefore,wednesday)
+        assertEquals(changed.blocks.first(),candidate.blocks.first())
+        assertEquals(firstDayBefore,
+            changed.blocks.last().days.single{it.weekday==0})
+        assertEquals(1,changed.blocks.last().days.single{it.weekday==0}
+            .slots.count{it.exerciseId=="bench"})
+        assertFalse(review.maySaveProgram)
+        assertFalse(review.mayIssueWorkout)
+    }
+
     @Test fun capacityAndConstrainedSourceNeverPretendTheyRestoredEverything() {
         val c=cycle()
         val first=StrengthExerciseMenuRecoveryDomain.preview(request(c,max=5),

@@ -142,8 +142,16 @@ class MeasuredSessionAuthoringDomainTest {
         }))
         assertNull(MeasuredSessionAuthoringDomain.compose(
             "measured-mixed-1",3,profile,emptyList()))
+        // 32 otherwise valid selections can still exceed the 64-set
+        // journal bound. The composer must refuse, not silently truncate.
         assertNull(MeasuredSessionAuthoringDomain.compose(
-            "measured-mixed-1",3,profile,real+real+real+real+real+real))
+            "measured-mixed-1",3,profile,
+            List(32){MeasuredSessionSelection("plank",35,3)}))
+        // A separate authoring cap forbids an unbounded number of
+        // individually valid entries even when the set count is small.
+        assertNull(MeasuredSessionAuthoringDomain.compose(
+            "measured-mixed-1",3,profile,
+            List(33){MeasuredSessionSelection("plank",35,1)}))
         val gymWithoutBands=profile.copy(gym=profile.gym.copy(
             availableAttachments=emptySet()))
         assertTrue(MeasuredSessionAuthoringDomain.available(gymWithoutBands)

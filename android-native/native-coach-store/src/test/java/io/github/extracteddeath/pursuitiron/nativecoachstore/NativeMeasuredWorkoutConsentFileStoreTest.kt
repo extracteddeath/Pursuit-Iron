@@ -33,7 +33,8 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         root,fence,identity,sources,history,composer,custom)
     private fun parent()=NativeMeasuredWorkoutParentFileStore(
         root,fence,identity,approvals(),history,composer,custom)
-    private fun source(version:Long=1,withBands:Boolean=false):NativeCustomAuthoringSnapshot {
+    private fun source(version:Long=1,withBands:Boolean=false,
+        withMeasuredLoads:Boolean=false):NativeCustomAuthoringSnapshot {
         val setup=CoachAthleteSetupDomain.review(AthleteSetupDraft(
             profileRevision="profile-1",athleteProfileId="athlete-1",
             goal=AthleteTrainingGoal.HYPERTROPHY,
@@ -42,10 +43,20 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             trainingWeekdays=setOf(0,2,4),timezoneId="America/New_York",
             sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
             hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
-            gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
+            gym=GymProfileDraft("gym-1",LoadUnit.LB,
+                if(withMeasuredLoads)mapOf(
+                    "dumbbell-rack" to VerifiedLoadStock.Totals(
+                        LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                        listOf("20","25","30").map {java.math.BigDecimal(it)}),
+                    "single-weight-plate" to VerifiedLoadStock.Totals(
+                        LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
+                        listOf("10","20","25").map {java.math.BigDecimal(it)}))
+                else emptyMap(),
                 setOf("pullup-bar","wall-support")+
                     (if(withBands)setOf("bands","verified-band-pushup-setup")
-                        else emptySet()),
+                        else emptySet())+
+                    (if(withMeasuredLoads)setOf("dumbbells","pinchable-plates",
+                        "secure-plank-load-placement") else emptySet()),
                 if(withBands)setOf("band-blue","rope-attachment") else emptySet()),
             allowBodyweight=true,allowSupersets=false,
             allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
@@ -367,6 +378,97 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
                     as NativeMeasuredConsentResult.Rejected).reason)
         assertTrue(approvals().preview("owner-1",p,1)
             is NativeMeasuredConsentResult.Preview)
+    }
+
+
+    @Test fun fourLoadedMeasuredModelsUseOnlyVerifiedDumbbellsOrPhysicalPlates() {
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            sources.publish("owner-1",0,source(withMeasuredLoads=true)))
+        assertTrue(history.enroll("owner-1","athlete-1"){o,a->
+            signed==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val gym=source(withMeasuredLoads=true).setup.reviewed!!.gym
+        val ids=listOf("farmers","suitcase-carry","plate-pinch","weighted-plank")
+        for((index,id) in ids.withIndex()) {
+            val def=MeasuredExerciseCatalogDomain.find(id)!!
+            val equipment=MeasuredPhysicalStockSource.equipmentIdFor(id)!!
+            val exact=if(equipment=="dumbbell-rack")"25" else "20"
+            val workout="loaded-${index+1}"
+            val setupId=def.requiredFixtures.firstOrNull()?:equipment
+            val sides=if(id=="suitcase-carry" || id=="plate-pinch")
+                setOf(MeasuredSide.RIGHT) else setOf(MeasuredSide.BOTH)
+            val plan=MeasuredExerciseSetPlan(workout,"set-1",id,"gym-1",1,
+                setupId,if(def.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
+                    2200 else 40,
+                sides,def.requiredFixtures,
+                physicalStock=gym.confirmedStock[equipment],
+                intendedExternalLoad=java.math.BigDecimal(exact),
+                unit=LoadUnit.LB,matchedPairConfirmed=(id=="farmers"))
+            val parentPlan=MeasuredWorkoutPlan(workout,"gym-1",1,listOf(plan))
+            assertTrue(id,approvals().preview("owner-1",parentPlan,1)
+                is NativeMeasuredConsentResult.Preview)
+            assertTrue(id,approvals().confirm("owner-1",parentPlan,1,true)
+                is NativeMeasuredConsentResult.Approved)
+            assertTrue(id,parent().issue("owner-1",workout)
+                is NativeMeasuredWorkoutStoreResult.Durable)
+            val actual=MeasuredExerciseActual(setupId,
+                sides.map{MeasuredSideResult(it,if(def.kind==
+                    MeasuredExerciseKind.CARRY_CENTIMETERS)2250 else 45)},
+                actualExternalLoad=java.math.BigDecimal(exact),unit=LoadUnit.LB,
+                elapsedSeconds=if(def.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
+                    23 else null)
+            assertTrue(id,parent().record("owner-1",workout,
+                MeasuredWorkoutOperation.Record("record-${index+1}",0,
+                    "set-1",MeasuredSetOutcome.COMPLETED,actual))
+                is NativeMeasuredWorkoutStoreResult.Durable)
+            val finish=NativeKotlinMeasuredHistoryTransaction(
+                history,parent(),fence,identity).complete("owner-1","athlete-1",
+                    workout,MeasuredWorkoutOperation.Finish("finish-${index+1}",1))
+            assertTrue("$id: $finish",finish is NativeMeasuredFinishResult.Committed)
+        }
+        val historyRead=NativeKotlinMeasuredHistoryReadCoordinator(
+            history,parent(),fence,identity).read("owner-1","athlete-1")
+        assertTrue(historyRead is NativeMeasuredHistoryReadResult.Review)
+        val measured=(historyRead as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured
+        assertEquals(4,measured.size)
+        assertEquals(ids.toSet(),measured.flatMap{entry->
+            entry.stored.journal.approvedPlan.sets.map{it.exerciseId}
+        }.toSet())
+        assertTrue(measured.all{entry->
+            entry.stored.journal.bySetKey.values.single().effectiveRecord!=null
+        })
+    }
+
+    @Test fun loadedMeasuredSessionsRejectUnverifiedStockAndPhantomPairs() {
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            sources.publish("owner-1",0,source(withMeasuredLoads=true)))
+        assertTrue(history.enroll("owner-1","athlete-1"){o,a->
+            signed==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val actualStock=source(withMeasuredLoads=true).setup.reviewed!!.gym
+            .confirmedStock.getValue("dumbbell-rack")
+        val base=MeasuredExerciseSetPlan("bad-load","set-1",
+            "farmers","gym-1",1,"dumbbell-rack",2000,
+            setOf(MeasuredSide.BOTH),emptySet(),physicalStock=actualStock,
+            intendedExternalLoad=java.math.BigDecimal("25"),unit=LoadUnit.LB,
+            matchedPairConfirmed=true)
+        fun preview(p:MeasuredExerciseSetPlan)=approvals().preview(
+            "owner-1",MeasuredWorkoutPlan("bad-load","gym-1",1,listOf(p)),1)
+        assertTrue(preview(base) is NativeMeasuredConsentResult.Preview)
+        for(bad in listOf(
+            base.copy(physicalSetupId="floor"),
+            base.copy(matchedPairConfirmed=false),
+            base.copy(intendedExternalLoad=java.math.BigDecimal("27")),
+            base.copy(physicalStock=VerifiedLoadStock.Totals(
+                LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                listOf(java.math.BigDecimal("25"))))
+        )) assertEquals(NativeMeasuredConsentRefusal.UNVERIFIED_GYM_OR_EXERCISE,
+            (preview(bad) as NativeMeasuredConsentResult.Rejected).reason)
+        val unilateral=base.copy(exerciseId="suitcase-carry",
+            sides=setOf(MeasuredSide.LEFT),matchedPairConfirmed=true)
+        assertEquals(NativeMeasuredConsentRefusal.UNVERIFIED_GYM_OR_EXERCISE,
+            (preview(unilateral) as NativeMeasuredConsentResult.Rejected).reason)
     }
 
 }

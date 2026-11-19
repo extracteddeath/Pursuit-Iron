@@ -15,13 +15,15 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 import java.util.UUID
 
 /**
  * Kotlin-only athlete-facing entry into already verified typed parent journals.
- * Timed holds and explicitly source-verified banded push-up repetitions
- * are independently measured. Carries and loaded holds still require
- * exact physical stock and setup authoring, never a 0-lb rep placeholder.
+ * All 14 typed exercise identities can now be explicitly authored if the
+ * actual athlete/gym source verifies their fixtures and physical stock.
+ * They are not automatically inserted into adaptive cycles or masqueraded
+ * as a zero-pound repetition prescription.
  */
 @Composable
 internal fun NativeKotlinMeasuredWorkoutScreen(
@@ -37,6 +39,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var message by rememberSaveable{mutableStateOf<String?>(null)}
     var selectedId by rememberSaveable{mutableStateOf("plank")}
     var selectedBandId by rememberSaveable{mutableStateOf("")}
+    var selectedSide by rememberSaveable{mutableStateOf("LEFT")}
+    var targetExternalLoad by rememberSaveable{mutableStateOf("")}
+    var matchedPairConfirmed by rememberSaveable{mutableStateOf(false)}
     var target by rememberSaveable{mutableStateOf("30")}
     var setCount by rememberSaveable{mutableIntStateOf(2)}
     var review by remember{mutableStateOf<NativeMeasuredConsentResult.Preview?>(null)}
@@ -68,43 +73,90 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     // never become a band just because the gym has a band facility.
     val verifiedBands=gym?.availableAttachments.orEmpty()
         .filter{it.startsWith("band-") && it.length>5}.sorted()
-    val options=MeasuredExerciseCatalogDomain.all.filter { definition ->
-        setup!=null && setup.allowBodyweight &&
-            definition.exerciseId !in setup.excludedExerciseIds &&
-            definition.requiredFixtures.all{it in confirmed} &&
-            (definition.loadKind==MeasuredLoadKind.UNWEIGHTED &&
-                definition.kind==MeasuredExerciseKind.HOLD_SECONDS ||
-                definition.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT &&
-                definition.kind==MeasuredExerciseKind.BANDED_REPETITIONS &&
-                "bands" in fixtures && verifiedBands.isNotEmpty())
+    val options=MeasuredExerciseCatalogDomain.all.filter { choice ->
+        val equipment=MeasuredPhysicalStockSource.equipmentIdFor(choice.exerciseId)
+        val stock=equipment?.let{gym?.confirmedStock?.get(it)}
+        setup!=null && choice.exerciseId !in setup.excludedExerciseIds &&
+            choice.requiredFixtures.all{it in confirmed} &&
+            when(choice.loadKind) {
+                MeasuredLoadKind.UNWEIGHTED ->
+                    setup.allowBodyweight &&
+                        choice.kind==MeasuredExerciseKind.HOLD_SECONDS
+                MeasuredLoadKind.BANDED_BODYWEIGHT ->
+                    setup.allowBodyweight &&
+                        choice.kind==MeasuredExerciseKind.BANDED_REPETITIONS &&
+                        "bands" in gym?.availableFacilities.orEmpty() &&
+                        verifiedBands.isNotEmpty()
+                MeasuredLoadKind.VERIFIED_ADDED_LOAD,
+                MeasuredLoadKind.VERIFIED_PER_HAND ->
+                    stock!=null && stock.basis==choice.expectedBasis &&
+                        stock.unit==gym?.unit &&
+                        (choice.kind!=MeasuredExerciseKind.CARRY_CENTIMETERS ||
+                            "dumbbells" in gym?.availableFacilities.orEmpty()) &&
+                        (choice.exerciseId!="weighted-plank" ||
+                            setup.allowBodyweight)
+            }
     }
     val definition=options.firstOrNull{it.exerciseId==selectedId}
     val banded=definition?.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT
+    val loaded=definition?.loadKind in setOf(MeasuredLoadKind.VERIFIED_ADDED_LOAD,
+        MeasuredLoadKind.VERIFIED_PER_HAND)
     val verifiedBand=selectedBandId.takeIf{banded && it in verifiedBands}
-    val quantity=target.toIntOrNull()
-    val station=definition?.requiredFixtures?.firstOrNull()?.let {
-        when {
-            it=="pull-up-bar" && "pullup-bar" in fixtures -> "pullup-bar"
-            it=="stable-wall" && "wall-support" in fixtures -> "wall-support"
-            else -> it
-        }
-    } ?: "floor"
+    val equipmentId=definition?.exerciseId?.let(
+        MeasuredPhysicalStockSource::equipmentIdFor)
+    val verifiedStock=if(loaded)equipmentId?.let{gym?.confirmedStock?.get(it)}
+        else null
+    val targetWeight=if(loaded)runCatching{
+        BigDecimal(targetExternalLoad.trim())
+    }.getOrNull() else null
+    val exactLoad=if(loaded && targetWeight!=null && gym!=null) {
+        val inspection=EquipmentLoadDomain.inspect(
+            verifiedStock,targetWeight,gym.unit)
+        inspection is LoadInspection.Confirmed && inspection.exact
+    } else !loaded
+    // Carries are displayed as meters; persisted targets are exact integer
+    // centimeters. No rounding may silently alter a requested distance.
+    val quantity=if(definition?.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
+        runCatching{BigDecimal(target.trim()).multiply(BigDecimal("100"))
+            .intValueExact()}.getOrNull()
+        else target.toIntOrNull()
+    val station=if(definition?.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
+        equipmentId ?: "unverified-carry"
+        else definition?.requiredFixtures?.firstOrNull()?.let {
+            when {
+                it=="pull-up-bar" && "pullup-bar" in fixtures -> "pullup-bar"
+                it=="stable-wall" && "wall-support" in fixtures -> "wall-support"
+                else -> it
+            }
+        } ?: "floor"
     val sides=when(definition?.sideRule) {
         MeasuredSideRule.BOTH ->setOf(MeasuredSide.BOTH)
         MeasuredSideRule.LEFT_AND_RIGHT ->
             setOf(MeasuredSide.LEFT,MeasuredSide.RIGHT)
+        MeasuredSideRule.EXPLICIT_SINGLE_SIDE ->
+            setOf(if(selectedSide=="RIGHT")MeasuredSide.RIGHT else MeasuredSide.LEFT)
         else -> emptySet()
     }
-    val amountValid=quantity!=null && quantity in
-        (if(banded)1..100 else 1..3600)
+    val amountValid=quantity!=null && quantity in (when(definition?.kind) {
+        MeasuredExerciseKind.CARRY_CENTIMETERS -> 1..1_000_000
+        MeasuredExerciseKind.BANDED_REPETITIONS -> 1..100
+        else -> 1..3600
+    })
     val candidate=if(definition!=null && source!=null && gym!=null &&
         amountValid && quantity!=null && setCount in 1..4 &&
-        (!banded || verifiedBand!=null))
+        (!banded || verifiedBand!=null) &&
+        (!loaded || (verifiedStock!=null && targetWeight!=null && exactLoad &&
+            (definition.exerciseId!="farmers" || matchedPairConfirmed))))
         MeasuredWorkoutPlan(workoutId,gym.gymId,source.revision,
             (1..setCount).map { number ->
                 MeasuredExerciseSetPlan(workoutId,"set-"+number,
                     definition.exerciseId,gym.gymId,source.revision,
                     station,quantity,sides,definition.requiredFixtures,
+                    physicalStock=verifiedStock,
+                    intendedExternalLoad=if(loaded)targetWeight else null,
+                    unit=if(loaded)gym.unit else null,
+                    matchedPairConfirmed=definition.exerciseId=="farmers" &&
+                        matchedPairConfirmed,
                     bandId=verifiedBand,
                     gymConfirmedBandIds=if(verifiedBand!=null)
                         setOf(verifiedBand) else emptySet())
@@ -120,9 +172,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             TextButton(enabled=!busy,onClick=onClose){Text("Minimize")}
         }
         if(stored==null) {
-            Text("Timed holds record actual seconds. Verified banded push-ups "+
-                "record repetitions with the selected real band, never "+
-                "an invented resistance weight or automatic PR.",
+            Text("Record real hold seconds, carry distance, or banded "+
+                "repetitions. Actual equipment and loads are verified, "+
+                "never guessed or converted into automatic PRs.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             when(sourceRead) {
@@ -134,7 +186,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     else {
                         Box {
                             OutlinedButton(enabled=!busy,onClick={menuOpen=true}) {
-                                Text(definition?.displayName ?: "Choose a hold")
+                                Text(definition?.displayName ?: "Choose a measured exercise")
                             }
                             DropdownMenu(expanded=menuOpen,
                                 onDismissRequest={menuOpen=false}) {
@@ -142,9 +194,13 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                     DropdownMenuItem(text={Text(choice.displayName)},
                                         onClick={
                                             selectedId=choice.exerciseId
-                                            target=if(choice.kind==
-                                                MeasuredExerciseKind.BANDED_REPETITIONS)
-                                                "10" else "30"
+                                            target=when(choice.kind) {
+                                                MeasuredExerciseKind.BANDED_REPETITIONS -> "10"
+                                                MeasuredExerciseKind.CARRY_CENTIMETERS -> "20"
+                                                else -> "30"
+                                            }
+                                            targetExternalLoad=""
+                                            matchedPairConfirmed=false
                                             review=null;message=null;menuOpen=false
                                         })
                                 }
@@ -152,11 +208,18 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         }
                         OutlinedTextField(value=target,onValueChange={
                             target=it;review=null},
-                            label={Text(if(banded)"Target repetitions per set"
-                                else "Target seconds per set")},
+                            label={Text(when(definition?.kind) {
+                                MeasuredExerciseKind.BANDED_REPETITIONS ->
+                                    "Target repetitions per set"
+                                MeasuredExerciseKind.CARRY_CENTIMETERS ->
+                                    "Target carry distance (meters)"
+                                else -> "Target seconds per set"
+                            })},
                             enabled=!busy,modifier=Modifier.fillMaxWidth(),
                             singleLine=true,keyboardOptions=KeyboardOptions(
-                                keyboardType=KeyboardType.Number))
+                                keyboardType=if(definition?.kind==
+                                    MeasuredExerciseKind.CARRY_CENTIMETERS)
+                                    KeyboardType.Decimal else KeyboardType.Number))
                         Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                             (1..4).forEach{number->
                                 FilterChip(selected=setCount==number,
@@ -169,6 +232,47 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         Text("Verified physical setup: "+station,
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(definition?.sideRule==MeasuredSideRule.EXPLICIT_SINGLE_SIDE) {
+                            Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                                listOf("LEFT","RIGHT").forEach{side->
+                                    FilterChip(selected=selectedSide==side,
+                                        enabled=!busy,onClick={
+                                            selectedSide=side;review=null
+                                        },label={Text(side.lowercase()
+                                            .replaceFirstChar{it.uppercase()})})
+                                }
+                            }
+                        }
+                        if(loaded) {
+                            Text("Select the actual externally added weight, "+
+                                "not bodyweight or a calculated system load. "+
+                                "Only physically verified selectable weights may be used.",
+                                style=MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(value=targetExternalLoad,onValueChange={
+                                targetExternalLoad=it;review=null
+                            },label={Text("Target load ("+gym?.unit+")"+
+                                if(definition?.loadKind==MeasuredLoadKind.VERIFIED_PER_HAND)
+                                    " per hand" else " added mass")},
+                                keyboardOptions=KeyboardOptions(
+                                    keyboardType=KeyboardType.Decimal),
+                                singleLine=true,enabled=!busy,
+                                modifier=Modifier.fillMaxWidth())
+                            if(targetExternalLoad.isNotBlank() && !exactLoad)
+                                Text("This load is not an exact value in the "+
+                                    "confirmed gym equipment stock.",
+                                    color=MaterialTheme.colorScheme.error,
+                                    style=MaterialTheme.typography.bodySmall)
+                            if(definition?.exerciseId=="farmers")
+                                Row {
+                                    Checkbox(checked=matchedPairConfirmed,
+                                        enabled=!busy,onCheckedChange={
+                                            matchedPairConfirmed=it;review=null
+                                        })
+                                    Text("I physically confirmed two matching "+
+                                        "dumbbells at this weight",
+                                        style=MaterialTheme.typography.bodySmall)
+                                }
+                        }
                         if(banded) {
                             Text("Select the exact resistance band saved in your gym. "+
                                 "Band resistance is not converted to pounds.",
@@ -227,9 +331,10 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 } finally{busy=false}
                             }
                         }) {Text("Resume an already-approved session")}
-                    Text("Loaded holds and carries still require their own "+
-                        "verified equipment-specific authoring, and are not "+
-                        "selectable here.",
+                    Text("Loaded holds and carries require verified "+
+                        "dumbbell-rack or single-weight-plate stock and "+
+                        "their real fixtures in your saved gym. They never "+
+                        "reuse an unverified machine or calculated bodyweight.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }

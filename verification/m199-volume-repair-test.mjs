@@ -73,7 +73,8 @@ if (horizontal[0].s === horizontal[1].s) {
     destination.exercises.push(item.e); item.s = destination;
 }
 for (const { e } of horizontal.slice(0, 2)) {
-    e.exerciseId = 'cs-db-row'; e.name = 'Chest-Supported Dumbbell Row'; e.sets = 2;
+    // One set each: with back dosed above chest (prescription MUSCLE_SCALE), two 2-set rows already reach upper-back MEV.
+    e.exerciseId = 'cs-db-row'; e.name = 'Chest-Supported Dumbbell Row'; e.sets = 1;
 }
 const two = bridge(twoEngine);
 assert.ok(auditShellVolume(two, EXERCISES).issues.some(i => i.region === 'upper_back'), 'fixture must start below MEV');

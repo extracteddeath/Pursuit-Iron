@@ -117,3 +117,37 @@ export function resizeWorkingSets(row, requested) {
 export function workoutTechniqueRest(set, restScale = 1) {
     return Math.max(8, Math.round((set.kind === 'drop' ? 10 : 15) * (restScale || 1)));
 }
+
+// A logged working set's load carries to the later working sets of the same lift that have no load yet
+// (a first-time lift, a quick workout), so the lifter isn't retyping it. Unlogging takes the carried
+// load back off, unless the lifter has changed it since.
+export function carryLoggedLoad(sets, si) {
+    const w = String(sets?.[si]?.weight ?? '').trim();
+    if (!(parseFloat(w) > 0)) return sets;
+    return sets.map((s, j) => (j <= si || !s || s.done || s.warm || s.sub || String(s.weight ?? '').trim() !== '' ? s : { ...s, weight: w, carriedFrom: si }));
+}
+export function uncarryLoggedLoad(sets, si) {
+    const w = String(sets?.[si]?.weight ?? '').trim();
+    return sets.map((s) => {
+        if (!s || s.done || s.carriedFrom !== si) return s;
+        const { carriedFrom, ...rest } = s;
+        return String(s.weight ?? '').trim() === w ? { ...rest, weight: '' } : rest;
+    });
+}
+
+/* A superset or circuit set to a fixed number of rounds (program.rounds, "dayId:slot") gets exactly that many working
+   sets in the workout: extra prescribed sets drop off the end with their own drop/myo sub-sets, and missing ones
+   repeat the last working set's target, not logged. Warm-ups are untouched. The program editor's Rounds control
+   stored this but the workout ignored it (the native app has applied it since its first release). */
+export function withGroupRounds(sets, rounds) {
+    if (!(rounds > 0) || !Array.isArray(sets)) return sets;
+    const isWork = s => !s.warm && !s.sub;
+    const work = sets.filter(isWork);
+    if (!work.length || work.length === rounds) return sets;
+    if (work.length > rounds) {
+        let n = 0;
+        return sets.filter(s => s.warm || (isWork(s) ? ++n <= rounds : n <= rounds));
+    }
+    const last = work[work.length - 1];
+    return [...sets, ...Array.from({ length: rounds - work.length }, () => ({ ...last, done: false }))];
+}

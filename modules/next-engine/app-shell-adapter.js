@@ -8,19 +8,20 @@ import { prescriptionForSimulationWeek } from './simulation.js';
 import { applyExperienceRirFloor } from './realizer-prescriptions.js';
 import { createInitialCycleState } from './cycles.js';
 import { filterFeasibleLiftPriorities } from './prescription.js';
-import { finalizeGeneratedShellVolume } from './volume-repair.js';
+import { generateProgram } from './generate.js';
+import { captureShellVolumeSnapshot, holdWeeksToDisplayedLimit, moveLiftsOffOverDays, finalizeGeneratedShellVolume, ensureFocusedRegionDose, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
+import { PCT_SCHEMES } from './percentage-protocols.js';
+import { STRENGTH_STRUCTURES } from './config.js';
 import { shellExercisePerformableFor as performableFor } from './shell-equipment.js';
 export { setShellEquipmentExpander } from './shell-equipment.js';
+import { shellSessionOvershoot, SESSION_BANDS } from './shell-session-clock.js';
+export { setShellSessionClock } from './shell-session-clock.js';
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_SETS = {
     1: ['monday'], 2: ['monday', 'friday'], 3: ['monday', 'wednesday', 'friday'], 4: ['monday', 'wednesday', 'friday', 'sunday'],
     5: ['monday', 'tuesday', 'thursday', 'friday', 'sunday'], 6: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sunday'], 7: DAY_ORDER
 };
 const DAY_TO_JS = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
-const SESSION_BANDS = {
-    s20: { minMinutes: 0, maxMinutes: 20 }, s40: { minMinutes: 20, maxMinutes: 40 }, s60: { minMinutes: 40, maxMinutes: 60 },
-    s90: { minMinutes: 60, maxMinutes: 90 }, s120: { minMinutes: 90, maxMinutes: 120 }, s120p: { minMinutes: 120, maxMinutes: 150 }
-};
 // Preserve the proven session-complexity expectations from the production generator while letting
 // Engine 0.56 own the exercise choices and dosage. The old app treated the lower edge as the promise
 // and the upper edge as allowance; M48 accidentally collapsed that contract to an upper cap only.
@@ -30,7 +31,6 @@ const SESSION_EXERCISES = {
     s120: { hypertrophy: 9, strength: 8, mixed: 8 }, s120p: { hypertrophy: 11, strength: 10, mixed: 11 }
 };
 const SUPPORTED_SPLITS = new Set(['full_body', 'upper_lower', 'ppl', 'ulppl', 'pplul', 'custom', 'hybrid', 'phul', 'phat', 'bro', 'arnold', 'five_three_one', 'five31_beginner', 'strength_fb', 'academy_prep', 'texas', 'gzclp', 'rippler', 'jt', 'glute_focus', 'full_body_patterns', 'torso_limbs', 'ppla', 'ula', 'sbd_power', 'upper_lower_alt']);
-const STRENGTH_STRUCTURES = new Set(['five_three_one', 'five31_beginner', 'strength_fb', 'academy_prep', 'texas', 'gzclp', 'rippler', 'jt', 'sbd_power']);
 const OHP_STRUCTURES = new Set(['five_three_one', 'five31_beginner', 'gzclp', 'rippler', 'jt']);
 
 
@@ -147,9 +147,23 @@ function mapBanned(banned, legacy) {
     }
     return [...out];
 }
+/* ⚠ STRENGTH PREREQUISITES ARE NOT TECHNIQUE. The catalog rates a Nordic curl, a sissy squat and a bodyweight
+   reverse Nordic at technicalComplexity 1 — they are simple to learn — and as bodyweight isolations they cost no
+   equipment, so they were the engine's answer to "hamstrings / quads isolation" whenever the kit lacked a leg-curl
+   or leg-extension machine. Measured across 352 "New to lifting" programs: Sissy Squat in 66%, Nordic Curl in 58%.
+   Each needs strength a new lifter does not have yet (a Nordic's lowering phase is supramaximal for most trained
+   lifters), so for none/beginner they are kept out of generation the same way a banned lift is. TECHNICAL_LIFTS
+   (training-domain/analytics.js) are the shell's own list of high-skill barbell variants, gated the same way. The
+   lifter can still add or swap any of them in by hand. */
+const NOVICE_GATED = ['nordic', 'sissy-squat', 'bodyweight-reverse-nordic', 'pistol-squat', 'ab-wheel', 'dragon-flag', 'hanging-raise',
+    'good-morning', 'zercher-squat', 'snatch-deadlift', 'deficit-barbell-deadlift', 'jefferson-curl', 'jefferson-squat', 'z-press',
+    'bradford-press', 'power-shrug', 'pendlay-row', 'meadows-row', 'ghr', 'copenhagen'];
+export function noviceGatedExercises(config) {
+    return config?.experience === 'none' || config?.experience === 'beginner' ? [...NOVICE_GATED] : [];
+}
 export function shellConfigToNextRequest(config, banned = [], legacyExercises = [], seed) {
     const split = splitOf(config.split);
-    const avoided = new Set(mapBanned(banned, legacyExercises));
+    const avoided = new Set(mapBanned([...banned, ...noviceGatedExercises(config)], legacyExercises));
     const canPerform = performableFor(config);
     const byId = new Map(legacyExercises.map(ex => [ex.id, ex]));
     const byName = new Map();
@@ -399,10 +413,13 @@ export function nextProgramToShellProgram(nextProgram, config, legacyExercises, 
         const primaryIndex = Math.max(0, session.exercises.findIndex((x) => x.role === 'primary_strength'));
         return { id, label: session.name, type: legacyTypeForIntent(session.intent), focus: session.intent, exercises: mapped, primaryIndex };
     });
+    /* weekPlan slots are MONDAY-FIRST (buildWeekPlan's IDEAL_SLOTS, and both shells read slot i as weekday
+       [1,2,3,4,5,6,0][i]); `schedule` is keyed by JS weekday (0 = Sunday). Writing weekPlan[js] shifted every
+       suggested day one weekday early, so "Use this schedule" moved Monday's session to Sunday. */
     const weekPlan = Array(7).fill(null);
     const schedule = {};
     nextProgram.sessions.forEach((session, index) => { const js = DAY_TO_JS[session.day]; if (Number.isInteger(js)) {
-        weekPlan[js] = index;
+        weekPlan[(js + 6) % 7] = index;
         schedule[js] = days[index].id;
     } });
     return {
@@ -442,13 +459,181 @@ function rejectionRecovery(result, request) {
     }
 }
 
+/* The realizer's internal clock and the clock the app displays are two models. A plan can pass the first and
+   still show over the limit the lifter chose (transitions, loading and ramps are only on the displayed one), in
+   week 1 or once the block's set ramp arrives. The displayed clock is the one the lifter holds the plan to, so
+   it referees: any day that shows over gets its internal budget tightened by the overshoot and the plan is
+   rebuilt, same seed. The tightened budget is saved in the request, so later blocks inherit it. A tighter
+   budget the engine refuses, or one whose plan gives up protected coverage (volume-repair shellPlanQuality), is
+   dropped and the best plan found is kept: a short day that cannot lose anything more stays as it was rather
+   than failing the build. */
+const DISPLAY_FIT_ATTEMPTS = 6;
+const REFUSED_TRIM_STEP = 2;
+const INTERNAL_BUDGET_FLOOR = 12;
+export function displayedBandMax(config) {
+    return (SESSION_BANDS[String(config?.session || 's60')] ?? SESSION_BANDS.s60).maxMinutes;
+}
+function overshootByWeekday(built, config) {
+    const over = shellSessionOvershoot(built.program, displayedBandMax(config));
+    if (!over) return null;
+    const sessions = built.program.nextEngine?.program?.sessions ?? [];
+    const out = {};
+    over.forEach((minutes, index) => { const day = sessions[index]?.day; if (day) out[day] = minutes; });
+    return out;
+}
+const totalOver = (over) => Object.values(over).reduce((sum, m) => sum + Math.max(0, m), 0);
 export function generateNextProgramForShell(options) {
-    const originalRequest = shellConfigToNextRequest(
+    const first = buildNextProgramForShell(options, null);
+    let best = first, bestOver = overshootByWeekday(first, options.config);
+    if (!bestOver || totalOver(bestOver) <= 0) return first;
+    let bestTrim = {};
+    // A shorter plan is only taken when it keeps what the first one had (volume-repair shellPlanQuality).
+    const firstQuality = shellPlanQuality(first.program, options.legacyExercises);
+    // Returns the candidate's overshoot (null when the engine refuses the tighter budget).
+    const attemptWith = (trim) => {
+        let candidate;
+        try { candidate = buildNextProgramForShell(options, trim); }
+        catch { return null; }
+        const over = overshootByWeekday(candidate, options.config);
+        if (over && totalOver(over) < totalOver(bestOver)
+            && shellPlanQualityKept(firstQuality, shellPlanQuality(candidate.program, options.legacyExercises))) { best = candidate; bestOver = over; bestTrim = trim; }
+        return over;
+    };
+    const tightened = (trim, over, days) => {
+        const next = { ...trim };
+        for (const day of days) next[day] = (next[day] ?? 0) + Math.max(1, Math.ceil(over[day]));
+        return next;
+    };
+    const overDaysOf = (over) => Object.keys(over).filter(day => over[day] > 0).sort((a, b) => over[b] - over[a]);
+    // Every over day at once, tightening by what each attempt still shows over. A rebuild can pick different
+    // lifts, so one attempt that is no better is not the end: keep tightening from where it landed.
+    // A budget the engine refuses is not the end either: a tighter one can make it choose a shorter roster that fits
+    // (a 40-minute legs day refused at 31 internal minutes and built at 29), so the same days tighten by a further
+    // REFUSED_TRIM_STEP minutes each time, within the same attempt bound.
+    let trim = {}, over = bestOver, lastOverDays = overDaysOf(bestOver);
+    for (let attempt = 0; attempt < DISPLAY_FIT_ATTEMPTS && totalOver(bestOver) > 0; attempt++) {
+        const days = over ? overDaysOf(over) : lastOverDays;
+        if (!days.length) break;
+        trim = tightened(trim, over ?? Object.fromEntries(days.map(day => [day, REFUSED_TRIM_STEP])), days);
+        lastOverDays = days;
+        over = attemptWith(trim);
+        if (over && totalOver(over) <= 0) break;
+    }
+    // Then one day at a time from the best plan found: a week often has one day with nothing left to give
+    // (the engine refuses its tighter budget) and others that can still come down.
+    for (let round = 0; round < 2 && totalOver(bestOver) > 0; round++) {
+        let moved = false;
+        for (const day of overDaysOf(bestOver)) {
+            if (!(bestOver[day] > 0)) continue;
+            const before = totalOver(bestOver);
+            // As above: a refused budget is followed by a tighter one, three times at most.
+            let single = tightened(bestTrim, bestOver, [day]);
+            for (let deeper = 0; deeper < 3 && !attemptWith(single); deeper++)
+                single = { ...single, [day]: single[day] + REFUSED_TRIM_STEP };
+            if (totalOver(bestOver) < before) moved = true;
+        }
+        if (!moved) break;
+    }
+    if (totalOver(bestOver) > 0 && options.sessionFill !== false) {
+        // Nothing tighter builds: move a lift to a day with room instead (dose-neutral).
+        const moved = moveLiftsOffOverDays(best.program, options.legacyExercises, (SESSION_BANDS[options.config?.session] ?? SESSION_BANDS.s60).maxMinutes);
+        if (moved !== best.program) best = { ...best, program: moved, nextProgram: moved.nextEngine.program };
+        // Then a week whose added sets carry a day past the limit gives them back.
+        const held = holdWeeksToDisplayedLimit(best.program, options.legacyExercises, (SESSION_BANDS[options.config?.session] ?? SESSION_BANDS.s60).maxMinutes);
+        // The limit wins over a focus set; the focus record then says what the finished plan gives.
+        if (held !== best.program) best = { ...best, program: withFocusRecordOf(held, options.legacyExercises) };
+        // The selected maximum is the one hard promise of a session length. A plan that still shows over it has
+        // nothing left to give without dropping a region under its floor, so the request does not fit: it is
+        // refused like any other, with the audit's own time-limit recovery (a longer session, or another day).
+        // Named strength programs are literal contracts and keep their written length.
+        const still = shellSessionOvershoot(best.program, displayedBandMax(options.config)) ?? [];
+        if (still.some(minutes => minutes > 0) && !options.config?.percentScheme && !STRENGTH_STRUCTURES.has(options.config?.split)) {
+            const sessions = best.program.nextEngine.program.sessions;
+            const findings = still.map((minutes, index) => minutes > 0 ? { severity: 'critical', code: 'TIME_LIMIT', sessionId: sessions[index]?.id,
+                message: `${sessions[index]?.name ?? 'A session'} shows ${Math.round(displayedBandMax(options.config) + minutes)} minutes against a ${displayedBandMax(options.config)}-minute limit.` } : null).filter(Boolean);
+            let recovery; try { recovery = buildGenerationRecoveryPlan({ result: 'reject', findings }, best.request); } catch { recovery = undefined; }
+            throw new NextShellAdapterError('NEXT_ENGINE_REJECTED',
+                `Pursuit Engine ${best.program.nextEngine.program.engineVersion} could not fit this request inside its session length.`, recovery);
+        }
+    }
+    return best;
+}
+
+/* The regions a lifter's focus names, in the engine's public-region terms. "Shoulders" is the delt complex the
+   app trains directly (side and rear; pressing already covers the front), "back" is width and thickness. */
+const FOCUS_REGIONS = { back: ['lats', 'upper_back'], shoulders: ['side_delts', 'rear_delts'], abs: ['core'] };
+export function focusedPublicRegions(config) {
+    const names = [...(config?.focusList ?? []), ...Object.entries(config?.focus ?? {}).filter(([, value]) => Math.round(Number(value) || 0) > 0).map(([key]) => key)];
+    return [...new Set(names.flatMap(name => FOCUS_REGIONS[name] ?? [name]))];
+}
+/* Build the same request without the focus and require the focused plan to beat it (volume-repair
+   ensureFocusedRegionDose). A refused or failed comparison build leaves the focused plan as generated. */
+/* The same request without its focus: what a focused muscle's dose is measured against. Null when there is no focus. */
+function unfocusedBaseline(options, displayTrim) {
+    if (!focusedPublicRegions(options.config).length) return null;
+    try {
+        const { focus, focusList, ...config } = options.config;
+        return buildNextProgramForShell({ ...options, config, makeId: () => 'focus-baseline' }, displayTrim).program;
+    } catch { return null; }
+}
+function withFocusRecordOf(program, legacyExercises) {
+    const record = program?.nextEngine?.focusDose;
+    if (!record?.target) return program;
+    const regions = captureShellVolumeSnapshot(program, 1, legacyExercises)?.regions;
+    if (!regions) return program;
+    const unresolved = Object.keys(record.target).filter(region => (regions[region] ?? 0) + .05 < record.target[region]);
+    if (!unresolved.length && record.status !== 'limited') return program;
+    return { ...program, nextEngine: { ...program.nextEngine, focusDose: { ...record, unresolved,
+        status: unresolved.length ? 'limited' : record.changes?.length ? 'improved' : 'unchanged', ...(unresolved.length ? { limitedBy: 'session_limit' } : {}) } } };
+}
+function withFocusDose(program, options, unfocused) {
+    const regions = focusedPublicRegions(options.config);
+    if (!regions.length || !unfocused) return program;
+    // A focus set may not push a day past the limit on the displayed clock (or further past, if it already was).
+    const max = displayedBandMax(options.config), before = shellSessionOvershoot(program, max);
+    const accept = !before ? null : candidate => shellSessionOvershoot(candidate, max).every((minutes, i) => minutes <= Math.max(0, before[i]));
+    const focused = ensureFocusedRegionDose(program, unfocused, options.legacyExercises, regions, accept);
+    // A focus may never cost the muscle it names. Rebuilding around a priority can land on a different week (four
+    // heavy sets where the plain build had three) that leaves a focused head with less than the plain plan gave
+    // it. Then the plain plan's roster is the better start: it takes the focus sets instead, and keeps the
+    // lifter's focus in its config so the next block is built around it again.
+    const dose = plan => captureShellVolumeSnapshot(plan, 1, options.legacyExercises)?.regions ?? {};
+    const plain = dose(unfocused), got = dose(focused);
+    if (!regions.some(region => (got[region] ?? 0) < (plain[region] ?? 0) - 1e-6)) return focused;
+    const start = { ...unfocused, id: program.id, name: program.name, config: program.config };
+    const beforeStart = shellSessionOvershoot(start, max);
+    const fallback = ensureFocusedRegionDose(start, unfocused, options.legacyExercises, regions,
+        !beforeStart ? null : candidate => shellSessionOvershoot(candidate, max).every((minutes, i) => minutes <= Math.max(0, beforeStart[i])));
+    const alt = dose(fallback);
+    const better = regions.every(region => (alt[region] ?? 0) >= (plain[region] ?? 0) - 1e-6)
+        && regions.reduce((sum, region) => sum + (alt[region] ?? 0) - (got[region] ?? 0), 0) > 0;
+    return better ? { ...fallback, nextEngine: { ...fallback.nextEngine, focusDose: { ...fallback.nextEngine.focusDose, start: 'unfocused_roster' } } } : focused;
+}
+
+/** A request with each named weekday's internal budget tightened by `displayTrim[day]` minutes. */
+export function requestWithDisplayTrim(request, displayTrim) {
+    if (!displayTrim) return request;
+    return {
+        ...request,
+        schedule: {
+            ...request.schedule,
+            days: request.schedule.days.map(day => {
+                const cut = displayTrim[day.day] ?? 0;
+                if (!(cut > 0)) return day;
+                const maxMinutes = Math.max(INTERNAL_BUDGET_FLOOR, day.maxMinutes - cut);
+                return { ...day, maxMinutes, minMinutes: Math.min(day.minMinutes ?? 0, maxMinutes) };
+            })
+        }
+    };
+}
+
+function buildNextProgramForShell(options, displayTrim) {
+    const originalRequest = requestWithDisplayTrim(shellConfigToNextRequest(
         options.config,
         options.banned ?? [],
         options.legacyExercises,
         options.seed
-    );
+    ), displayTrim);
     const attempt = firstPassingCapacityProgram(
         originalRequest,
         options.config,
@@ -493,13 +678,61 @@ export function generateNextProgramForShell(options) {
         } : {})
     };
 
-    const finalProgram = finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises);
+    const unfocused = unfocusedBaseline(options, displayTrim);
+    const finalProgram = withSupplementalSlots(withFocusDose(finalizeGeneratedShellVolume(legacyProgram, options.legacyExercises, { extend: true,
+        fill: options.sessionFill !== false, focus: unfocused ? { regions: focusedPublicRegions(options.config), unfocused } : null }), options, unfocused));
     return {
         program: finalProgram,
         nextProgram: finalProgram.nextEngine.program,
         request,
         diagnostics: result.diagnostics
     };
+}
+
+/* A percentage program's supplemental work (config.assistance, e.g. "bbb" = 5×10 at 50% TM) is the SAME lift
+   repeated right after its main-lift wave. The generator builds the main lifts and accessories; this inserts the
+   supplemental slot after each day's main lift as its tier-2 slot (day.t2Index), shifting later slot-keyed state
+   (overrides, weekly cells, superset links) so nothing is re-associated with the wrong lift. Loads come from the
+   canonical percentage reader (SUPPLEMENTAL_PROTOCOLS); the cell carries the set count and rep target. */
+const SUPPLEMENTAL_CELL = {
+    bbb: { sets: 5, reps: '10', deloadReps: '5', rir: '3-5', rest: 90 },
+    // 5/3/1 for Beginners First-Set-Last: 5×5 at the week's first-set percentage of the PAIRED main lift.
+    fsl: { sets: 5, reps: '5', deloadReps: '5', rir: '3-5', rest: 120 }
+};
+// Wendler's beginner pairs: each main lift's day also trains its partner as First-Set-Last volume.
+const NOVICE_PAIR = { 'back-squat': 'bb-bench', 'bb-bench': 'back-squat', deadlift: 'ohp', ohp: 'deadlift' };
+export function withSupplementalSlots(program) {
+    const cfg = program?.config || {};
+    const mode = cfg.percentScheme === '531' && SUPPLEMENTAL_CELL[cfg.assistance] && cfg.assistance !== 'fsl' ? cfg.assistance
+        : cfg.percentScheme === '531beg' ? 'fsl' : null;
+    if (!mode || program.engineSource !== 'pursuit-next') return program;
+    const spec = SUPPLEMENTAL_CELL[mode], scheme = PCT_SCHEMES[cfg.percentScheme];
+    const overrides = { ...(program.overrides || {}) }, nwp = { ...(program.nextWeekPrescriptions || {}) }, ss = { ...(program.ss || {}) };
+    const nextIdOf = (legacyId) => Object.values(overrides).find((o) => o?.legacyExerciseId === legacyId && o.nextExerciseId)?.nextExerciseId ?? null;
+    // The wave's deload week (and any explicit deload after the block) runs the light supplemental, so its cell says so.
+    const deload = (w) => Number(w) > (Number(program.weeks) || Infinity) || (Number(w) - 1) % scheme.weeks.length === scheme.deloadWeek;
+    const cellsLike = (weeks) => Object.fromEntries(Object.keys(weeks || {}).map((w) => [w, { sets: spec.sets, reps: deload(w) ? spec.deloadReps : spec.reps,
+        rir: spec.rir, rest: spec.rest, role: 'secondary_strength', progressionStyle: 'e1rm', tech: null }]));
+    const days = program.days.map((day) => {
+        const p = day.primaryIndex;
+        if (!Number.isInteger(p) || p < 0 || p >= day.exercises.length || day.t2Index != null) return day;
+        const mainId = day.exercises[p], liftId = mode === 'fsl' ? NOVICE_PAIR[mainId] : mainId;
+        const nextId = liftId === mainId ? overrides[`${day.id}:${p}`]?.nextExerciseId : nextIdOf(liftId);
+        if (!liftId || !nextId) return day; // no partner this day can name: leave the generated day as it is
+        const key = (slot) => `${day.id}:${slot}`;
+        // Shift every later slot up by one, last first so no key is overwritten before it moves.
+        for (let slot = day.exercises.length - 1; slot > p; slot--) {
+            if (key(slot) in overrides) { overrides[key(slot + 1)] = overrides[key(slot)]; delete overrides[key(slot)]; }
+            if (key(slot) in nwp) { nwp[key(slot + 1)] = nwp[key(slot)]; delete nwp[key(slot)]; }
+            if (key(slot) in ss) { ss[key(slot + 1)] = ss[key(slot)]; delete ss[key(slot)]; }
+        }
+        delete ss[key(p)]; // the main lift no longer sits next to its old superset partner
+        overrides[key(p + 1)] = { nextEngine: true, nextExerciseId: nextId, legacyExerciseId: liftId, supplemental: mode };
+        nwp[key(p + 1)] = cellsLike(nwp[key(p)]);
+        const exercises = [...day.exercises]; exercises.splice(p + 1, 0, liftId);
+        return { ...day, exercises, t2Index: p + 1 };
+    });
+    return { ...program, days, overrides, nextWeekPrescriptions: nwp, ss };
 }
 
 export function splitBuildability(config, legacyExercises = []) {

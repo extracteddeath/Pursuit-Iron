@@ -14,8 +14,11 @@ import { transitionProgramPhase } from './phase-transition.js';
 import { historyDecision, withProgramExplainability } from './explainability.js';
 import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from './workout-history-adapter.js';
 import { requestWithAthleteResponse } from './athlete-response.js';
-import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError } from './app-shell-adapter.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity } from './volume-repair.js';
+import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError, requestWithDisplayTrim, displayedBandMax } from './app-shell-adapter.js';
+import { shellSessionOvershoot } from './shell-session-clock.js';
+import { STRENGTH_STRUCTURES } from './config.js';
+import { buildGenerationRecoveryPlan } from './generation-recovery.js';
+import { holdWeeksToDisplayedLimit, lockedOverflowAtFloor, repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -936,7 +939,80 @@ export function repeatCycleOptions(cycle) {
         adaptTrainingSplit: !!(snapshot.adaptTrainingSplit ?? cycle.adaptTrainingSplit)
     };
 }
+/* Same referee as a single program (app-shell-adapter generateNextProgramForShell): the clock the app displays
+   decides whether a block's day fits the lifter's limit. A weekday that shows over in any block gets its internal
+   budget tightened in the cycle's base request and the cycle is rebuilt with the same seed and id. Two rebuilds at
+   most (a cycle build scores many candidates per block); a tighter budget the engine refuses is dropped. */
+function cycleOvershootByWeekday(built, config) {
+    const max = displayedBandMax(config), out = {};
+    for (const block of built.blocks) {
+        if (block.config?.session && block.config.session !== (config?.session || 's60')) continue;
+        const over = shellSessionOvershoot(block, max);
+        if (!over) return null;
+        const sessions = block.nextEngine?.program?.sessions ?? [];
+        over.forEach((minutes, index) => { const day = sessions[index]?.day; if (day) out[day] = Math.max(out[day] ?? -Infinity, minutes); });
+    }
+    return out;
+}
 export function generateNextCycleForShell(options) {
+    const seed = (options.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
+    const cid = (options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`))();
+    const pinned = { ...options, seed, cycleId: cid };
+    const sum = over => Object.values(over).reduce((n, m) => n + Math.max(0, m), 0);
+    const first = buildNextCycleForShell(pinned, null);
+    let best = first, bestOver = cycleOvershootByWeekday(best, options.config);
+    if (!bestOver || sum(bestOver) <= 0) return best;
+    const firstQuality = first.blocks.map(block => shellPlanQuality(block, options.legacyExercises));
+    let trim = {}, over = bestOver, bestTrim = {};
+    for (let attempt = 0; attempt < 2 && sum(bestOver) > 0; attempt++) {
+        trim = { ...trim };
+        let tightened = false;
+        for (const [day, minutes] of Object.entries(over)) if (minutes > 0) { trim[day] = (trim[day] ?? 0) + Math.ceil(minutes); tightened = true; }
+        // No day of the last build was over, so the same trim would rebuild the same cycle.
+        if (!tightened) break;
+        let candidate;
+        // A refused budget keeps the last overshoot, so the next attempt tightens the same days further: a tighter
+        // budget can make the engine choose a shorter roster that it accepts.
+        try { candidate = buildNextCycleForShell(pinned, trim); }
+        catch { continue; }
+        over = cycleOvershootByWeekday(candidate, options.config);
+        if (!over) break;
+        const kept = candidate.blocks.length === first.blocks.length && candidate.blocks.every((block, i) =>
+            shellPlanQualityKept(firstQuality[i], shellPlanQuality(block, options.legacyExercises)));
+        if (sum(over) < sum(bestOver) && kept) { best = candidate; bestOver = over; bestTrim = trim; }
+    }
+    // Then the worst day alone, a little harder each time: one day is often the only one over (a legs day at 42
+    // minutes in a week whose other days run 25), and tightening every day at once can cost coverage elsewhere.
+    for (let attempt = 0; attempt < 3 && sum(bestOver) > 0; attempt++) {
+        const [day, minutes] = Object.entries(bestOver).sort((a, b) => b[1] - a[1])[0];
+        const single = { ...bestTrim, [day]: (bestTrim[day] ?? 0) + Math.ceil(minutes) + 1 + attempt * 2 };
+        let candidate;
+        try { candidate = buildNextCycleForShell(pinned, single); }
+        catch { continue; }
+        const candidateOver = cycleOvershootByWeekday(candidate, options.config);
+        if (!candidateOver) break;
+        const kept = candidate.blocks.length === first.blocks.length && candidate.blocks.every((block, i) =>
+            shellPlanQualityKept(firstQuality[i], shellPlanQuality(block, options.legacyExercises)));
+        if (sum(candidateOver) < sum(bestOver) && kept) { best = candidate; bestOver = candidateOver; bestTrim = single; }
+    }
+    if (sum(bestOver) > 0) {
+        // As for a single program: a week whose added sets carry a day past the limit gives them back, and a cycle
+        // with a block that still shows over does not fit its session length and is refused with that recovery.
+        const max = displayedBandMax(options.config);
+        const sameBand = block => !block.config?.session || block.config.session === (options.config?.session || 's60');
+        best = { ...best, blocks: best.blocks.map(block => sameBand(block) ? holdWeeksToDisplayedLimit(block, options.legacyExercises, max) : block) };
+        const named = options.config?.percentScheme || STRENGTH_STRUCTURES.has(options.config?.split);
+        const findings = named ? [] : best.blocks.filter(sameBand).flatMap(block => (shellSessionOvershoot(block, max) ?? []).map((minutes, index) => minutes > 0
+            ? { severity: 'critical', code: 'TIME_LIMIT', sessionId: block.nextEngine?.program?.sessions?.[index]?.id,
+                message: `${block.name ?? 'A block'}: a session shows ${Math.round(max + minutes)} minutes against a ${max}-minute limit.` } : null).filter(Boolean));
+        if (findings.length) {
+            let recovery; try { recovery = buildGenerationRecoveryPlan({ result: 'reject', findings }, best.blocks[0].nextEngine.request); } catch { recovery = undefined; }
+            throw new NextShellAdapterError('NEXT_ENGINE_REJECTED', 'Pursuit Engine could not fit this cycle inside its session length.', recovery);
+        }
+    }
+    return best;
+}
+function buildNextCycleForShell(options, displayTrim) {
     const templateId = options.templateId;
     const isCustom = templateId === 'custom';
     const template = isCustom ? { id: 'custom', name: 'Custom cycle' } : cycleTemplates().find(t => t.id === templateId);
@@ -950,9 +1026,8 @@ export function generateNextCycleForShell(options) {
     const goal = isCustom
         ? (options.config?.goal === 'strength' ? 'strength' : options.config?.goal === 'hypertrophy' ? 'hypertrophy' : 'mixed')
         : goalForCycleTemplate(templateId);
-    const seed = (options.seed ?? Math.max(1, Math.floor(Date.now() % 2147483647))) >>> 0;
-    const cid = (options.makeId ?? (() => `next-cycle-${Math.random().toString(36).slice(2, 10)}`))();
-    let baseRequest = shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed);
+    const seed = options.seed, cid = options.cycleId;
+    let baseRequest = requestWithDisplayTrim(shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed), displayTrim);
     baseRequest.goal = { ...baseRequest.goal, type: goal };
 
     // An existing custom program is a REAL source for the very first
@@ -1058,15 +1133,17 @@ export function generateNextCycleForShell(options) {
                 throw new NextShellAdapterError('NEXT_CYCLE_STATIC_ROSTER_CHANGED', 'Locked cycle volume repair changed the exercise roster.');
             const beforeOver = baseRepair.before.issues.filter(issue => issue.status === 'over');
             const afterOver = weeklyRepair.after.issues.filter(issue => issue.status === 'over');
-            if (afterOver.length)
+            const atFloor = afterOver.length > 0 && lockedOverflowAtFloor(weeklyRepair.after, options.legacyExercises, legacy);
+            if (afterOver.length && !atFloor)
                 throw new NextShellAdapterError('NEXT_CYCLE_STATIC_VOLUME_REJECTED', `The locked exercise skeleton could not safely fit the ${phaseLabel(spec.phase).toLowerCase()} accessory-volume ceiling.`, afterOver);
             next = legacy.nextEngine.program;
             legacy.nextEngine.lockedCycleVolumeRepair = {
-                status: baseRepair.changed || weeklyRepair.changed ? 'success' : 'unchanged',
+                status: atFloor ? 'locked_floor' : baseRepair.changed || weeklyRepair.changed ? 'success' : 'unchanged',
                 changed: baseRepair.changed || weeklyRepair.changed,
                 rosterPreserved: true,
                 beforeOver: beforeOver.map(issue => ({ region: issue.region, actual: issue.v, ceiling: issue.mrv })),
-                afterOver: []
+                // Overflow left only when every trimmable lift is at one set (lockedOverflowAtFloor).
+                afterOver: atFloor ? afterOver.map(issue => ({ region: issue.region, actual: issue.v, ceiling: issue.mrv, week: issue.week })) : []
             };
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);

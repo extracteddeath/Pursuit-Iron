@@ -44,3 +44,6 @@ export const ALL_MUSCLES = [...CORE_MUSCLES, ...OPTIONAL_MUSCLES];
  * Shared by topology (where exposures are planned) and realization (where sets must actually land).
  */
 export const NOVICE_FULL_BODY_PATTERN_EXPOSURES = Object.freeze({ quads: 2, hamstrings: 2 });
+
+// Named strength programs are literal lift contracts (5/3/1, Texas Method, GZCLP...): built and kept as written.
+export const STRENGTH_STRUCTURES = new Set(['five_three_one', 'five31_beginner', 'strength_fb', 'academy_prep', 'texas', 'gzclp', 'rippler', 'jt', 'sbd_power']);

@@ -64,7 +64,13 @@ object StrengthDoseBoundaryGuardDomain {
         val index=cycle.blocks.indexOfFirst{it.blockId==targetBlockId}
         if(index<=0)
             return result(StrengthDoseBoundaryStatus.NOT_COMPARABLE)
-        val previous=cycle.blocks[index-1]
+        // Deload and performance-test weeks do not redefine the actual
+        // training baseline. Stop at the nearest earlier TRAINING block;
+        // a different intervening training phase remains non-comparable.
+        val priorIndex=(index-1 downTo 0).firstOrNull {
+            cycle.blocks[it].purpose==CustomBlockPurpose.TRAINING
+        } ?:return result(StrengthDoseBoundaryStatus.NOT_COMPARABLE)
+        val previous=cycle.blocks[priorIndex]
         val target=cycle.blocks[index]
         if(previous.phase!=TrainingPhase.HYPERTROPHY ||
             target.phase!=TrainingPhase.STRENGTH ||
@@ -74,8 +80,8 @@ object StrengthDoseBoundaryGuardDomain {
             previous.days.map{it.weekday}.toSet()!=
                 target.days.map{it.weekday}.toSet())
             return result(StrengthDoseBoundaryStatus.NOT_COMPARABLE)
-        val exitWeek=cycle.blocks.take(index).sumOf{it.weeks}
-        val entryWeek=exitWeek+1
+        val exitWeek=cycle.blocks.take(priorIndex+1).sumOf{it.weeks}
+        val entryWeek=cycle.blocks.take(index).sumOf{it.weeks}+1
         val prior=CustomTrainingCycleDomain.week(structure,exitWeek)
         val next=CustomTrainingCycleDomain.week(structure,entryWeek)
         if(prior==null || next==null ||

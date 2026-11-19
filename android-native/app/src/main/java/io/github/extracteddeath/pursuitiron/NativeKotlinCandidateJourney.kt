@@ -488,6 +488,7 @@ private fun NativeKotlinCandidateTrainEntry(
     onReviewSwapInProgram:(NativeKotlinProgramSwapHandoff)->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
+    var measuredOpen by rememberSaveable { mutableStateOf(false) }
     var resumable by remember(host) {
         mutableStateOf<NativeCustomResumeReview?>(null)
     }
@@ -503,8 +504,8 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var resumeChecking by remember(host) {mutableStateOf(false)}
     val sessionState by controller.state.collectAsStateWithLifecycle()
-    LaunchedEffect(customWorkoutId,selectedId) {
-        onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null)
+    LaunchedEffect(customWorkoutId,selectedId,measuredOpen) {
+        onActiveWorkoutChanged(customWorkoutId!=null || selectedId!=null || measuredOpen)
     }
     LaunchedEffect(generatedWorkoutId) {
         if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)
@@ -610,7 +611,16 @@ private fun NativeKotlinCandidateTrainEntry(
             refreshUnfinishedWorkouts()
         }
     }
-    if(customWorkoutId!=null) {
+    if(measuredOpen) {
+        workoutScreens.SaveableStateProvider("measured-session") {
+            NativeKotlinMeasuredWorkoutScreen(host,
+                onClose={measuredOpen=false},
+                onViewHistory={workoutId->
+                    measuredOpen=false
+                    onViewFinishedHistory(workoutId)
+                })
+        }
+    } else if(customWorkoutId!=null) {
         workoutScreens.SaveableStateProvider("custom:$customWorkoutId") {
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
             onClose={onOpenCustomWorkout(null)},
@@ -776,6 +786,13 @@ private fun NativeKotlinCandidateTrainEntry(
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
                 }
+            }
+            PursuitCard {
+                PursuitSectionHeading("Timed holds",
+                    "Record verified duration and left/right outcomes without inventing rep PRs.")
+                PursuitPrimaryAction("Create measured hold workout",
+                    enabled=!searching && !reviewingResume,
+                    onClick={measuredOpen=true})
             }
             PursuitCard {
                 Text("Your training program",style=MaterialTheme.typography.titleMedium)

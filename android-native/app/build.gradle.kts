@@ -122,6 +122,9 @@ val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
             "**/PursuitIronApplication.kt",
             "**/AppPrivateKotlinLocalAthlete.kt",
             "**/NativeKotlin*.kt",
+            // Explicitly admit the typed measurement set editor alongside
+            // its now source-verified native Train screen.
+            "**/NativeMeasuredExerciseSetEditor.kt",
             // Explicitly admitted owner-fenced, non-issuable strength review.
             "**/NativeStrengthVolumeRepairReview.kt",
             "**/NativeStrengthMenuRecoveryReview.kt",

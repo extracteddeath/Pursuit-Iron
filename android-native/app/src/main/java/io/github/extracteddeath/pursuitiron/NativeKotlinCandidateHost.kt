@@ -1257,6 +1257,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
 
     /** Typed workout creation is a two-step explicit preview/confirm action.
      * No raw legacy practical-reps conversion or user-created source grant. */
+    /** Read only current authenticated native gym/catalog facts, never an
+     * issuance grant. The consent owner independently rechecks every fact. */
+    fun reviewMeasuredAuthoringSource():NativeAuthoringSourceRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceRead.Rejected(
+                NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return authoringSourceStore.read(owner.ownerKey)
+    }
+
     fun previewMeasuredWorkoutConsent(
         plan:MeasuredWorkoutPlan,expectedSourceRevision:Long
     ):NativeMeasuredConsentResult {

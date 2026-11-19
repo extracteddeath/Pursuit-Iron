@@ -489,6 +489,12 @@ private fun NativeKotlinCandidateTrainEntry(
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
     var measuredOpen by rememberSaveable { mutableStateOf(false) }
+    var measuredResumeId by rememberSaveable {mutableStateOf<String?>(null)}
+    var measuredEntryVersion by rememberSaveable {mutableIntStateOf(0)}
+    var measuredError by rememberSaveable {mutableStateOf<String?>(null)}
+    var resumableMeasured by remember(host) {
+        mutableStateOf<NativeMeasuredInventoryResult?>(null)
+    }
     var resumable by remember(host) {
         mutableStateOf<NativeCustomResumeReview?>(null)
     }
@@ -568,10 +574,15 @@ private fun NativeKotlinCandidateTrainEntry(
         reviewingResume=true
         visibleUnfinishedCount=20
         resumable=null
+        resumableMeasured=null
         try {
-            resumable=withContext(Dispatchers.IO) {
-                runCatching {host.reviewResumableCustomWorkouts()}.getOrNull()
+            val reports=withContext(Dispatchers.IO) {
+                Pair(
+                    runCatching {host.reviewResumableCustomWorkouts()}.getOrNull(),
+                    runCatching {host.reviewUnfinishedMeasuredWorkouts()}.getOrNull())
             }
+            resumable=reports.first
+            resumableMeasured=reports.second
         } finally {
             reviewingResume=false
         }
@@ -612,11 +623,19 @@ private fun NativeKotlinCandidateTrainEntry(
         }
     }
     if(measuredOpen) {
-        workoutScreens.SaveableStateProvider("measured-session") {
+        workoutScreens.SaveableStateProvider(
+            "measured:${measuredResumeId ?: "new-$measuredEntryVersion"}") {
             NativeKotlinMeasuredWorkoutScreen(host,
-                onClose={measuredOpen=false},
+                resumeWorkoutId=measuredResumeId,
+                onClose={
+                    measuredOpen=false
+                    measuredResumeId=null
+                    scope.launch {refreshUnfinishedWorkouts()}
+                },
                 onViewHistory={workoutId->
                     measuredOpen=false
+                    measuredResumeId=null
+                    scope.launch {refreshUnfinishedWorkouts()}
                     onViewFinishedHistory(workoutId)
                 })
         }
@@ -790,9 +809,71 @@ private fun NativeKotlinCandidateTrainEntry(
             PursuitCard {
                 PursuitSectionHeading("Timed holds",
                     "Record verified duration and left/right outcomes without inventing rep PRs.")
+                when(val review=resumableMeasured) {
+                    is NativeMeasuredInventoryResult.Ready -> {
+                        if(review.workouts.isNotEmpty()) {
+                            Text("${review.workouts.size} unfinished measured sessions",
+                                style=MaterialTheme.typography.labelMedium)
+                            review.workouts.take(20).forEach {item->
+                                OutlinedButton(
+                                    enabled=!searching && !resumeChecking && !reviewingResume,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={
+                                        resumeChecking=true
+                                        measuredError=null
+                                        scope.launch {
+                                            try {
+                                                val opened=withContext(Dispatchers.IO) {
+                                                    host.openMeasuredWorkout(item.workoutId)
+                                                }
+                                                if(opened is NativeMeasuredWorkoutStoreResult.Durable &&
+                                                    opened.stored.journal.finishedByEventId==null) {
+                                                    measuredResumeId=item.workoutId
+                                                    measuredOpen=true
+                                                } else {
+                                                    measuredError="The measured session is no longer verified. Refresh your saved workouts."
+                                                }
+                                            } catch(_:Exception) {
+                                                measuredError="Could not verify the saved measured session."
+                                            } finally {resumeChecking=false}
+                                        }
+                                    }) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Text(item.exerciseIds.joinToString(" · ",limit=2,
+                                            truncated="…") {kotlinExerciseLabel(it)},
+                                            style=MaterialTheme.typography.titleSmall)
+                                        Text("${item.recordedSets} of ${item.totalSets} sets recorded",
+                                            style=MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                            if(review.workouts.size>20)
+                                Text("Showing 20 verified sessions. Refresh after completing one.",
+                                    style=MaterialTheme.typography.bodySmall)
+                        } else Text("No unfinished measured sessions.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    is NativeMeasuredInventoryResult.Rejected ->
+                        Text("Measured resume is unavailable (${review.reason.name.lowercase().replace('_',' ')}). No unverified session was opened.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    null -> if(!reviewingResume)Text(
+                        "Measured resume inventory could not be verified. Refresh to retry.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                measuredError?.let {
+                    Text(it,color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                }
                 PursuitPrimaryAction("Create measured hold workout",
-                    enabled=!searching && !reviewingResume,
-                    onClick={measuredOpen=true})
+                    enabled=!searching && !reviewingResume && !resumeChecking,
+                    onClick={
+                        measuredResumeId=null
+                        measuredEntryVersion++
+                        measuredError=null
+                        measuredOpen=true
+                    })
             }
             PursuitCard {
                 Text("Your training program",style=MaterialTheme.typography.titleMedium)

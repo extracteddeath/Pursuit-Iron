@@ -7,6 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import android.os.SystemClock
+import kotlinx.coroutines.delay
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredStoredSet
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
@@ -74,6 +76,40 @@ internal fun NativeMeasuredExerciseSetEditor(
     var confirmOutcome by rememberSaveable(plan.workoutId,plan.setKey,journal.revision) {
         mutableStateOf<MeasuredSetOutcome?>(null)
     }
+    // The timer is a separate, explicitly operated observation aid.
+    // Its value never becomes a performed set without athlete confirmation
+    // and the same authenticated record callback as manual measurements.
+    var stopwatchStarted by rememberSaveable(plan.workoutId,plan.setKey,journal.revision){
+        mutableLongStateOf(-1L)
+    }
+    var stopwatchBootEpoch by rememberSaveable(plan.workoutId,plan.setKey,journal.revision){
+        mutableLongStateOf(-1L)
+    }
+    var stopwatchStopped by rememberSaveable(plan.workoutId,plan.setKey,journal.revision){
+        mutableLongStateOf(-1L)
+    }
+    var stopwatchSide by rememberSaveable(plan.workoutId,plan.setKey,journal.revision){
+        mutableStateOf(plan.sides.sortedBy{it.ordinal}.first().name)
+    }
+    var stopwatchError by rememberSaveable(plan.workoutId,plan.setKey,journal.revision){
+        mutableStateOf<String?>(null)
+    }
+    var nowMonotonic by remember{mutableLongStateOf(SystemClock.elapsedRealtime())}
+    LaunchedEffect(stopwatchStarted) {
+        while(stopwatchStarted>=0L) {
+            nowMonotonic=SystemClock.elapsedRealtime()
+            delay(125L)
+        }
+    }
+    val stopwatch=MeasuredHoldStopwatchState(
+        startedMonotonicMs=stopwatchStarted.takeIf{it>=0L},
+        approximateBootEpochMs=stopwatchBootEpoch.takeIf{it>=0L},
+        stoppedElapsedMs=stopwatchStopped.takeIf{it>=0L})
+    val stopwatchDisplay=if(stopwatchStarted<0L && stopwatchStopped<0L)
+        "00:00.0"
+        else MeasuredHoldStopwatchDomain.display(
+            stopwatch,nowMonotonic,System.currentTimeMillis())
+    val stopwatchSeconds=MeasuredHoldStopwatchDomain.usableSeconds(stopwatch)
     val quantityBySide=buildMap {
         if(MeasuredSide.BOTH in plan.sides)put(MeasuredSide.BOTH,both)
         if(MeasuredSide.LEFT in plan.sides)put(MeasuredSide.LEFT,left)
@@ -193,6 +229,116 @@ internal fun NativeMeasuredExerciseSetEditor(
                     Text("Switching units clears unsaved quantities.",
                         style=MaterialTheme.typography.labelSmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if(definition.kind==MeasuredExerciseKind.HOLD_SECONDS) {
+                    Surface(color=MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape=MaterialTheme.shapes.large,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(PursuitSpace.sm),
+                            verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                            Text("Hold stopwatch",
+                                style=MaterialTheme.typography.titleMedium)
+                            Text(stopwatchDisplay ?: "Time unavailable · reset",
+                                style=MaterialTheme.typography.headlineMedium,
+                                color=if(stopwatchDisplay==null)
+                                    MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurface)
+                            if(plan.sides.size>1) {
+                                Text("Apply result to",
+                                    style=MaterialTheme.typography.labelMedium)
+                                Row(horizontalArrangement=Arrangement.spacedBy(
+                                    PursuitSpace.xs)) {
+                                    plan.sides.sortedBy{it.ordinal}.forEach{side->
+                                        FilterChip(
+                                            selected=stopwatchSide==side.name,
+                                            enabled=!busy && !stopwatch.running,
+                                            onClick={stopwatchSide=side.name},
+                                            label={Text(side.name.lowercase()
+                                                .replaceFirstChar{it.uppercase()})})
+                                    }
+                                }
+                            }
+                            Row(horizontalArrangement=Arrangement.spacedBy(
+                                PursuitSpace.xs),modifier=Modifier.fillMaxWidth()) {
+                                Button(enabled=!busy && !stopwatch.running,
+                                    modifier=Modifier.weight(1f),onClick={
+                                        val mono=SystemClock.elapsedRealtime()
+                                        val state=MeasuredHoldStopwatchDomain.start(
+                                            mono,System.currentTimeMillis())
+                                        if(state!=null) {
+                                            stopwatchStarted=checkNotNull(
+                                                state.startedMonotonicMs)
+                                            stopwatchBootEpoch=checkNotNull(
+                                                state.approximateBootEpochMs)
+                                            stopwatchStopped=-1L
+                                            nowMonotonic=mono
+                                            stopwatchError=null
+                                        } else stopwatchError=
+                                            "The stopwatch clock is unavailable."
+                                    }) {Text(if(stopwatchStopped>=0L)
+                                        "Restart" else "Start")}
+                                OutlinedButton(enabled=!busy && stopwatch.running,
+                                    modifier=Modifier.weight(1f),onClick={
+                                        val stopped=MeasuredHoldStopwatchDomain.stop(
+                                            stopwatch,SystemClock.elapsedRealtime(),
+                                            System.currentTimeMillis())
+                                        if(stopped!=null) {
+                                            stopwatchStarted=-1L
+                                            stopwatchBootEpoch=-1L
+                                            stopwatchStopped=checkNotNull(
+                                                stopped.stoppedElapsedMs)
+                                            stopwatchError=null
+                                        } else {
+                                            stopwatchStarted=-1L
+                                            stopwatchBootEpoch=-1L
+                                            stopwatchStopped=-1L
+                                            stopwatchError="The stopwatch clock "+
+                                                "changed or expired. Enter the "+
+                                                "actual hold time manually."
+                                        }
+                                    }) {Text("Stop")}
+                            }
+                            if(stopwatchSeconds!=null) {
+                                OutlinedButton(
+                                    enabled=!busy,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={
+                                        val text=if(unit==
+                                            MeasuredEntryUnit.MINUTES_SECONDS)
+                                            (stopwatchSeconds/60).toString()+":"+
+                                                (stopwatchSeconds%60).toString()
+                                                    .padStart(2,'0')
+                                            else stopwatchSeconds.toString()
+                                        when(stopwatchSide) {
+                                            MeasuredSide.BOTH.name ->both=text
+                                            MeasuredSide.LEFT.name ->left=text
+                                            MeasuredSide.RIGHT.name ->right=text
+                                        }
+                                        roundedApproved=false
+                                        stopwatchError=null
+                                    }) {Text("Use ${stopwatchSeconds}s for "+
+                                        stopwatchSide.lowercase()
+                                            .replaceFirstChar{it.uppercase()})}
+                            }
+                            TextButton(enabled=!busy &&
+                                (stopwatchStarted>=0L || stopwatchStopped>=0L),
+                                onClick={
+                                    stopwatchStarted=-1L
+                                    stopwatchBootEpoch=-1L
+                                    stopwatchStopped=-1L
+                                    stopwatchError=null
+                                }) {Text("Reset stopwatch")}
+                            stopwatchError?.let{
+                                Text(it,color=MaterialTheme.colorScheme.error,
+                                    style=MaterialTheme.typography.bodySmall)
+                            }
+                            Text("Stopwatch seconds are rounded down. Use copies "+
+                                "them into your unsaved field only; Record set "+
+                                "still requires explicit confirmation.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
                 plan.sides.sortedBy{it.ordinal}.forEach{side->
                     val value=when(side) {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     onViewHistory:(String)->Unit
 ) {
     val scope=rememberCoroutineScope()
+    val measuredEditorStates=rememberSaveableStateHolder()
     var busy by remember{mutableStateOf(false)}
     var sourceRead by remember(host){mutableStateOf<NativeAuthoringSourceRead?>(null)}
     var stored by remember(host){mutableStateOf<NativeMeasuredWorkoutStored?>(null)}
@@ -471,6 +473,12 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    // Keep each set's UNSAVED numeric input and optional
+                    // running stopwatch independent across Previous/Next.
+                    // The durable journal, not this saveable UI holder,
+                    // remains the sole owner of recorded results.
+                    measuredEditorStates.SaveableStateProvider(
+                        "measured:$workoutId:${set.setKey}") {
                     NativeMeasuredExerciseSetEditor(
                         NativeMeasuredStoredSet(current.ownerKey,
                             current.athleteId,current.approvalId,
@@ -503,6 +511,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 } finally{busy=false}
                             }
                         })
+                    }
                 }
                 Button(enabled=!busy && journal.canProposeFinish,
                     modifier=Modifier.fillMaxWidth(),

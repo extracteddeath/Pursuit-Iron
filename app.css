@@ -4924,7 +4924,7 @@ background:var(--pi-color-card)!important;
 }
 
 .wpb .wpb-notice{
-  position:absolute;left:var(--pi-space-4);right:var(--pi-space-4);
+  position:absolute;left:var(--pi-space-4);right:var(--pi-space-4);max-width:672px;margin-inline:auto;
   bottom:var(--pi-notice-bottom,8px);max-height:var(--pi-notice-max-height,100%);
   display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);
   padding:var(--pi-space-3) var(--pi-space-4);z-index:48;overflow:auto;
@@ -5370,6 +5370,9 @@ background:var(--pi-color-card)!important;
     border-right-color:CanvasText!important;
   }
 }
+
+/* The program editor is a deep route outside the tab shell; wide, tall windows give it Plan's reading width. */
+@media (min-width:840px) and (min-height:640px){#root .wpb:has([data-view-frame="program"]){--pi-shell-max:760px}}
 
 /* M286 / R88 — one medium-width workspace in tall portrait AND short
    landscape windows. A 900×480 foldable viewport no longer wastes nearly half

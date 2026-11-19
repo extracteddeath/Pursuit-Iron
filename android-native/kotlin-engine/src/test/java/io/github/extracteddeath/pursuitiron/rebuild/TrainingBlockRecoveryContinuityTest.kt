@@ -288,13 +288,13 @@ class TrainingBlockRecoveryContinuityTest {
                 reviewInput,permissions,emptyList()),
             maximumWorkingSetsPerSlot=cap))
 
-    @Test fun generatedStrengthRepairActuallyProducesAudited24SetWeek() {
+    @Test fun generatedStrengthRepairPreservesDoseAndEachPostDeloadTrainingDay() {
         val source=cycle()
         val repaired=autoRepair(source)
         assertEquals(repaired.explanation,
             AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
             repaired.status)
-        assertEquals(13,repaired.addedWorkingSets)
+        assertEquals(14,repaired.addedWorkingSets)
         assertFalse(repaired.searchTruncated)
         assertTrue(repaired.comparison.sourceRepairRequired)
         assertEquals("auto_strength_dose_repair",
@@ -302,17 +302,28 @@ class TrainingBlockRecoveryContinuityTest {
         assertEquals(AdaptiveCycleOptionStatus.READY_FOR_REVIEW,
             repaired.comparison.evaluated.single().status)
         val changed=checkNotNull(repaired.proposedOption).proposedCycle
+        // The additional 14th set is needed for a genuine post-deload day
+        // collapse. Thirteen sets met weekly dose but left one same-weekday
+        // exposure at/below half its real final-Hypertrophy workload.
+        val repairedStructure=checkNotNull(
+            repaired.comparison.evaluated.single().coachingAudit?.structuralReview)
+        val dayBoundary=StrengthDoseBoundaryGuardDomain.review(
+            repairedStructure,"strength")
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,dayBoundary.status)
+        assertEquals(1,dayBoundary.hypertrophyExitWeek)
+        assertEquals(3,dayBoundary.strengthEntryWeek)
+        assertTrue(dayBoundary.affectedDays.isEmpty())
         assertEquals(source.revision+1,changed.revision)
         assertEquals(source.blocks.take(2),changed.blocks.take(2))
         assertEquals(source.weekOverrides,changed.weekOverrides)
-        assertEquals(listOf(30,9,24),
+        assertEquals(listOf(30,9,25),
             repaired.comparison.evaluated.single()
                 .coachingAudit!!.weeks.map {it.workingSets})
         val measured=repaired.comparison.evaluated.single()
             .coachingAudit!!.weeks.last()
         for(muscle in listOf(
             TrainingMuscle.CHEST,TrainingMuscle.LATS,TrainingMuscle.QUADS)) {
-            assertEquals(n("8"),measured.directSets.getValue(muscle))
+            assertTrue(measured.directSets.getValue(muscle)>=n("8"))
             assertTrue(measured.totalSetCredits.getValue(muscle)<=n("10"))
         }
         assertTrue(measured.estimatedSecondsByDay.values.all {
@@ -373,7 +384,7 @@ class TrainingBlockRecoveryContinuityTest {
         assertEquals(repaired.explanation,
             AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,repaired.status)
         val audit=checkNotNull(repaired.comparison.evaluated.single().coachingAudit)
-        assertEquals(listOf(31,9,24),audit.weeks.map{it.workingSets})
+        assertEquals(listOf(31,9,25),audit.weeks.map{it.workingSets})
         assertEquals(n("1"),audit.weeks.first().directSets[TrainingMuscle.HIP_ABDUCTORS])
         assertFalse(audit.weeks.last().directSets.containsKey(TrainingMuscle.HIP_ABDUCTORS))
         assertFalse(checkNotNull(repaired.proposedOption).proposedCycle.blocks.last()
@@ -394,11 +405,11 @@ class TrainingBlockRecoveryContinuityTest {
             AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
             proposed.status)
         assertEquals(3,proposed.repairedWeekCount)
-        assertEquals(13,proposed.addedWorkingSets)
+        assertEquals(14,proposed.addedWorkingSets)
         val repaired=checkNotNull(proposed.proposedOption).proposedCycle
         assertEquals(3,repaired.blocks.last().weeks)
         assertEquals(source.blocks.take(2),repaired.blocks.take(2))
-        assertEquals(listOf(30,9,24,24,24),
+        assertEquals(listOf(30,9,25,25,25),
             proposed.comparison.evaluated.single()
                 .coachingAudit!!.weeks.map {it.workingSets})
         val after=proposed.comparison.evaluated.single()
@@ -407,7 +418,7 @@ class TrainingBlockRecoveryContinuityTest {
         assertTrue(after.all {week->
             listOf(TrainingMuscle.CHEST,TrainingMuscle.LATS,
                 TrainingMuscle.QUADS).all {muscle->
-                week.directSets.getValue(muscle)==n("8") &&
+                week.directSets.getValue(muscle)>=n("8") &&
                     week.totalSetCredits.getValue(muscle)<=n("10")
             }
         })

@@ -235,4 +235,59 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
                 as NativeMeasuredInventoryResult.Rejected).reason)
     }
 
+
+    @Test fun approvedButNotIssuedConsentSurvivesRestartAndDoesNotForgeWorkout() {
+        enroll()
+        val initial=approvals().reviewConfirmedUnissued("owner-1")
+        assertTrue(initial is NativeMeasuredConsentInventoryResult.Ready)
+        assertTrue((initial as NativeMeasuredConsentInventoryResult.Ready)
+            .confirmed.isEmpty())
+        assertTrue(approvals().confirm("owner-1",plan(),1,true)
+            is NativeMeasuredConsentResult.Approved)
+        // Reconstruct the store after process death; this is a real saved
+        // athlete confirmation, NOT a set journal or completed History.
+        val pending=approvals().reviewConfirmedUnissued("owner-1")
+        assertTrue(pending.toString(),
+            pending is NativeMeasuredConsentInventoryResult.Ready)
+        assertEquals(listOf("session-1"),
+            (pending as NativeMeasuredConsentInventoryResult.Ready)
+                .confirmed.map{it.workoutId})
+        assertEquals(1,pending.confirmed.single().plannedSets)
+        assertEquals(listOf("plank"),pending.confirmed.single().exerciseIds)
+        assertTrue(parent().open("owner-1","session-1")
+            is NativeMeasuredWorkoutStoreResult.Rejected)
+        assertTrue(parent().issue("owner-1","session-1")
+            is NativeMeasuredWorkoutStoreResult.Durable)
+        assertTrue((approvals().reviewConfirmedUnissued("owner-1")
+            as NativeMeasuredConsentInventoryResult.Ready).confirmed.isEmpty())
+
+        signed=NativeKotlinOwnerIdentity("foreign-owner","foreign-athlete")
+        assertEquals(NativeMeasuredConsentInventoryRefusal.NOT_AUTHORIZED,
+            (approvals().reviewConfirmedUnissued("owner-1")
+                as NativeMeasuredConsentInventoryResult.Rejected).reason)
+    }
+
+    @Test fun pendingConsentNeverRestoresAfterSourceChangeOrFileMismatch() {
+        enroll()
+        assertTrue(approvals().confirm("owner-1",plan(),1,true)
+            is NativeMeasuredConsentResult.Approved)
+        val file=Files.list(root).use{stream->
+            stream.filter{it.fileName.toString().startsWith("measured-consent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val wrong=root.resolve("measured-consent-"+ "0".repeat(64)+".bin")
+        Files.write(wrong,Files.readAllBytes(file))
+        assertEquals(NativeMeasuredConsentInventoryRefusal.CORRUPT_RECORD,
+            (approvals().reviewConfirmedUnissued("owner-1")
+                as NativeMeasuredConsentInventoryResult.Rejected).reason)
+        Files.delete(wrong)
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertTrue((approvals().reviewConfirmedUnissued("owner-1")
+            as NativeMeasuredConsentInventoryResult.Ready).confirmed.isEmpty())
+        assertEquals(NativeMeasuredWorkoutStoreRefusal.APPROVAL_UNAVAILABLE,
+            (parent().issue("owner-1","session-1")
+                as NativeMeasuredWorkoutStoreResult.Rejected).reason)
+    }
+
 }

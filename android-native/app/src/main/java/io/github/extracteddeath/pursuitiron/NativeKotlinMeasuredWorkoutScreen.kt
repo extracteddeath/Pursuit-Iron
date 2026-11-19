@@ -262,14 +262,76 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                     },label={Text(bandId.removePrefix("band-")
                                         .replace('-',' '))})
                             }
-                        } else if("bands" in fixtures &&
-                            "verified-band-pushup-setup" in confirmed &&
+                        } else if("bands" in gym?.availableFacilities.orEmpty() &&
+                            "verified-band-pushup-setup" in
+                                (gym?.availableFacilities.orEmpty()+
+                                 gym?.availableAttachments.orEmpty()) &&
                             verifiedBands.isEmpty()) {
                             Text("To log banded push-ups, save a distinct "+
                                 "band-* ID in the gym's available attachments.",
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        if(queuedDrafts.isNotEmpty()) {
+                            Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape=MaterialTheme.shapes.large,
+                                modifier=Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(PursuitSpace.md),
+                                    verticalArrangement=Arrangement.spacedBy(
+                                        PursuitSpace.xs)) {
+                                    Text("Your measured session",
+                                        style=MaterialTheme.typography.titleMedium)
+                                    if(!draftMatches || !draftsValid ||
+                                        queuedCandidate==null) {
+                                        Text("This unsaved draft no longer matches "+
+                                            "the verified athlete, gym, equipment or "+
+                                            "source revision. Clear it to start again.",
+                                            color=MaterialTheme.colorScheme.error,
+                                            style=MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        selections.forEachIndexed{index,item->
+                                            val name=MeasuredExerciseCatalogDomain
+                                                .find(item.exerciseId)?.displayName
+                                                ?:item.exerciseId
+                                            Text("${index+1}. $name · "+
+                                                "${item.sets} sets",
+                                                style=MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Text("${queuedCandidate.sets.size} total "+
+                                            "typed sets. The current editor is not "+
+                                            "included until you tap Add exercise.",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Row(horizontalArrangement=Arrangement.spacedBy(
+                                        PursuitSpace.xs)) {
+                                        TextButton(enabled=!busy,onClick={
+                                            queuedDrafts=queuedDrafts.dropLast(1)
+                                            if(queuedDrafts.isEmpty())draftSourceKey=""
+                                            review=null;message=null
+                                        }) {Text("Remove last")}
+                                        TextButton(enabled=!busy,onClick={
+                                            queuedDrafts=emptyList()
+                                            draftSourceKey=""
+                                            review=null;message=null
+                                        }) {Text("Clear draft")}
+                                    }
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            modifier=Modifier.fillMaxWidth(),
+                            enabled=!busy && appendable,
+                            onClick={
+                                val current=currentSelection
+                                    ?:return@OutlinedButton
+                                val currentKey=sourceKey
+                                    ?:return@OutlinedButton
+                                if(queuedDrafts.isEmpty())draftSourceKey=currentKey
+                                queuedDrafts=queuedDrafts+
+                                    MeasuredSessionAuthoringDomain.saveDraft(current)
+                                review=null;message=null
+                            }) {Text("Add exercise to session")}
                         Button(enabled=!busy && candidate!=null,
                             modifier=Modifier.fillMaxWidth(),onClick={
                                 val proposal=candidate ?:return@Button
@@ -288,25 +350,16 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                         message="Measured source review unavailable."
                                     } finally{busy=false}
                                 }
-                            }) {Text("Review measured workout")}
+                            }) {Text(if(queuedDrafts.isEmpty())
+                                "Review current exercise"
+                                else "Review ${candidate?.sets?.size ?: 0} queued sets")}
                     }
-                    OutlinedButton(enabled=!busy,
-                        modifier=Modifier.fillMaxWidth(),onClick={
-                            busy=true;message=null
-                            scope.launch {
-                                try {
-                                    val result=withContext(Dispatchers.IO) {
-                                        host.issueMeasuredWorkout(workoutId)
-                                    }
-                                    if(result is NativeMeasuredWorkoutStoreResult.Durable)
-                                        stored=result.stored
-                                    else message="No existing approved session "+
-                                        "was available to resume."
-                                } catch(_:Exception) {
-                                    message="Approved session could not be reopened."
-                                } finally{busy=false}
-                            }
-                        }) {Text("Resume an already-approved session")}
+                    Text("Already confirmed a session? Return to Train to "+
+                        "resume its owner-verified saved approval or "+
+                        "unfinished workout. This editor never guesses a "+
+                        "saved workout ID.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Loaded holds and carries require verified "+
                         "dumbbell-rack or single-weight-plate stock and "+
                         "their real fixtures in your saved gym. They never "+

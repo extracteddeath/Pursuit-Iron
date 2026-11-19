@@ -85,14 +85,14 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 MeasuredLoadKind.BANDED_BODYWEIGHT ->
                     setup.allowBodyweight &&
                         choice.kind==MeasuredExerciseKind.BANDED_REPETITIONS &&
-                        "bands" in gym.availableFacilities &&
+                        "bands" in gym?.availableFacilities.orEmpty() &&
                         verifiedBands.isNotEmpty()
                 MeasuredLoadKind.VERIFIED_ADDED_LOAD,
                 MeasuredLoadKind.VERIFIED_PER_HAND ->
                     stock!=null && stock.basis==choice.expectedBasis &&
-                        stock.unit==gym.unit &&
+                        stock.unit==gym?.unit &&
                         (choice.kind!=MeasuredExerciseKind.CARRY_CENTIMETERS ||
-                            "dumbbells" in gym.availableFacilities) &&
+                            "dumbbells" in gym?.availableFacilities.orEmpty()) &&
                         (choice.exerciseId!="weighted-plank" ||
                             setup.allowBodyweight)
             }
@@ -137,11 +137,11 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             setOf(if(selectedSide=="RIGHT")MeasuredSide.RIGHT else MeasuredSide.LEFT)
         else -> emptySet()
     }
-    val amountValid=quantity!=null && quantity in when(definition?.kind) {
+    val amountValid=quantity!=null && quantity in (when(definition?.kind) {
         MeasuredExerciseKind.CARRY_CENTIMETERS -> 1..1_000_000
         MeasuredExerciseKind.BANDED_REPETITIONS -> 1..100
         else -> 1..3600
-    }
+    })
     val candidate=if(definition!=null && source!=null && gym!=null &&
         amountValid && quantity!=null && setCount in 1..4 &&
         (!banded || verifiedBand!=null) &&
@@ -335,7 +335,6 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         "dumbbell-rack or single-weight-plate stock and "+
                         "their real fixtures in your saved gym. They never "+
                         "reuse an unverified machine or calculated bodyweight.",
-
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }

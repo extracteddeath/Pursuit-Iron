@@ -147,6 +147,27 @@ class StrengthSourceArmContinuityDomainTest {
             "wrist-extension" in stillDirect.preferredExerciseIds)
     }
 
+
+    @Test fun directBicepsAndBrachialisCreditsRemainIndependentOnSameLift() {
+        val original=cycle()
+        val overlapping=catalog.map{movement ->when(movement.exerciseId){
+            "curl" -> movement.copy(credits=movement.credits+
+                DeclaredMuscleCredit(TrainingMuscle.BRACHIALIS,
+                    MuscleCreditRole.DIRECT,BigDecimal.ONE))
+            "hammer" -> movement.copy(creditStatus=CatalogCreditStatus.UNREVIEWED)
+            else -> movement
+        }}
+        val reviewed=StrengthSourceArmContinuityDomain.review(
+            original,audit(original),"hyper",overlapping,"owner-a")
+        assertEquals(StrengthSourceArmsStatus.REVIEW_READY,reviewed.status)
+        assertEquals(listOf("curl","curl","extension"),
+            reviewed.candidates.map{it.exerciseId})
+        assertEquals(listOf(TrainingMuscle.BICEPS,
+            TrainingMuscle.BRACHIALIS,TrainingMuscle.TRICEPS),
+            reviewed.candidates.map{it.directMuscle})
+        assertEquals(setOf("curl","extension"),reviewed.preferredExerciseIds)
+    }
+
     @Test fun deloadAndPerformanceTestBridgeKeepRealArmSource() {
         val source=cycle()
         val deload=source.blocks.first().copy(

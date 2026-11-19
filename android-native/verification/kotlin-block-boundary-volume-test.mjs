@@ -96,8 +96,8 @@ const plan=readFileSync(root+
   'app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt','utf8');
 
 // A real 8→3 menu needs EXERCISE continuity, not just more sets.
-assert.match(menuDomain,/StrengthRosterBoundaryGuardDomain\\.review/);
-assert.match(menuDomain,/boundary\\.affectedDays/);
+assert.match(menuDomain,/StrengthRosterBoundaryGuardDomain\.review/);
+assert.match(menuDomain,/boundary\.affectedDays/);
 assert.doesNotMatch(menuDomain,/retainedAnywhere/,
   'A movement present on Wednesday must not hide a lost Monday exposure');
 assert.match(menuDomain,/CustomTrainingCycleDomain\.week/);
@@ -120,10 +120,10 @@ assert.match(controller,/fun acceptStrengthExerciseMenu\(/);
 assert.match(controller,/"strength-menu-recovery"/);
 assert.match(ui,/Preview source exercise recovery/);
 assert.match(ui,/Confirm and save recovered exercises/);
-assert.match(ui,/StrengthRosterBoundaryGuardDomain\\.review\\(it,id\\)/);
-assert.match(ui,/val affectedStrengthMenus=strengthRoster\\?\\.affectedDays\\.orEmpty\\(\\)/);
-assert.match(ui,/if\\(strengthCoverageReviewRequired\\)/);
-assert.match(ui,/if\\(strengthCoverageReviewRequired &&/);
+assert.match(ui,/StrengthRosterBoundaryGuardDomain\.review\(it,id\)/);
+assert.match(ui,/val affectedStrengthMenus=strengthRoster\?\.affectedDays\.orEmpty\(\)/);
+assert.match(ui,/if\(strengthCoverageReviewRequired\)/);
+assert.match(ui,/if\(strengthCoverageReviewRequired &&/);
 assert.match(ui,/Intervening recovery or performance-test weeks are not/);
 for(const name of [
   'recoveryAndTestBridgesPreserveActualHypertrophyExitForStrength'

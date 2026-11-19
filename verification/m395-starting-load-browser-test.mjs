@@ -21,7 +21,7 @@ try{
         await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle0'});
         await page.waitForSelector('.wpb-home');
         assert.match(await page.$eval('.wpb-session-game-plan',node=>node.textContent),/Starting estimate.*bodyweight and experience/,'Home labels profile-derived seeds');
-        await page.evaluate(()=>[...document.querySelectorAll('button')].find(node=>node.textContent.trim()==='Preview · Time available').click());
+        await page.evaluate(()=>document.querySelector('.wpb-home-preview-action').click());
         await page.waitForSelector('.wpb-next-workout-view');
         assert.match(await page.$eval('.wpb-session-game-plan',node=>node.textContent),/Starting estimate/,'Preview retains the estimate explanation');
         await page.click('.wpb-preview-start');await page.waitForSelector('.wpb-workout');

@@ -18081,7 +18081,7 @@ function CycleDoseTransition({ change, source = 'saved' }) {
 function CycleStrengthDoseSummary({ program }) {
     const report = describeStrengthDoseLimit(program?.nextEngine?.strengthEntryDose);
     if (!report) return null;
-    return _jsxs("details", { className: "wpb-strength-dose-review",
+    return _jsxs("details", { className: "wpb-strength-dose-review wpb-cycle-week-outlook-detail",
         "data-strength-dose-status": report.status, children: [
         _jsx("summary", { className: "wpb-cycle-dose-summary", children: report.heading }),
         _jsx("p", { className: "wpb-cycle-dose-caption", children: report.explanation }),
@@ -18090,7 +18090,7 @@ function CycleStrengthDoseSummary({ program }) {
                 _jsx("dt", { children: row.label }),
                 _jsxs("dd", { children: [
                     `${row.actual} of ${row.requested} requested credited sets · feasible ${row.feasible}`,
-                    _jsx("span", { className: "wpb-strength-dose-reason", children: row.reason })
+                    _jsx("div", { className: "wpb-cycle-dose-caption", children: row.reason })
                 ] })
             ] }, row.region)) }),
         report.missing > 0 && _jsx("p", { className: "wpb-cycle-dose-caption", children:

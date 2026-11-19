@@ -96,6 +96,31 @@ for(const required of [
   'AdaptiveCycleOptionReviewDomain.review(',
   'AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW'
 ])assert.ok(engine.includes(required),'Missing bounded Kotlin generator gate: '+required);
+const maskedDayTests=readFileSync(root+'kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/AdaptiveStrengthDayDoseRepairTest.kt','utf8');
+for(const required of [
+  'StrengthDoseBoundaryGuardDomain.review(',
+  'val affectedDays=dayBoundary?.affectedDays.orEmpty()',
+  'val dayFloor=affectedDays.associate',
+  'val dayWorking=block.days.associate',
+  'val localGap=positive(',
+  'compareByDescending<Placement> {it.dayBenefit}',
+  'val repairedBoundary=repairedStructure?.let',
+  'if(affectedDays.isEmpty())'
+])assert.ok(engine.includes(required),
+  'Strength dose repair must reconcile real source-backed weekday losses: '+required);
+for(const required of [
+  'StrengthDoseBoundaryGuardDomain.review(it,id)',
+  'val affectedStrengthDays=strengthDayDose?.affectedDays.orEmpty()',
+  'if(affectedStrengthDays.isNotEmpty())',
+  'affectedStrengthDays.isNotEmpty() ||',
+  'onRequestStrengthRepair(next.blockId,maximumSets)'
+])assert.ok(comparison.includes(required),
+  'Native Plan must explain the exact lost day and offer reviewed repair: '+required);
+for(const name of [
+  'reconstructsDayDoseDespiteUnchangedWeeklyTotalWithoutMutatingSource',
+  'consentAndUnattainableSetCapacityRefuseWithoutWriting'
+])assert.ok(maskedDayTests.includes(name),
+  'Need positive and refusal tests for hidden per-day Strength loss');
 for(const name of [
   'generatedStrengthRepairActuallyProducesAudited24SetWeek',
   'strengthRepairDoesNotRecreateMusclesAbsentFromTheSavedTargetScope',

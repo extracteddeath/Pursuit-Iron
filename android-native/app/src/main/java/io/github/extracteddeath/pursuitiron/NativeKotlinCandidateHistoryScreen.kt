@@ -19,6 +19,7 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 /** Display real corrected native facts. No JS history, estimated PRs or invented dates. */
 @Composable
@@ -996,49 +997,33 @@ private fun NativeKotlinMeasuredHistoryRows(
         "Each side and its original physical setup are preserved. These are not loaded-rep personal records.")
     journal.approvedPlan.sets.forEach{plan->
         val definition=MeasuredExerciseCatalogDomain.find(plan.exerciseId)
-        val receipt=journal.bySetKey[plan.setKey]?.effectiveRecord
-            ?.operation as? MeasuredJournalOperation.Record
-        val unit=when(definition?.kind) {
-            MeasuredExerciseKind.HOLD_SECONDS -> "sec"
-            MeasuredExerciseKind.CARRY_CENTIMETERS -> "cm"
-            MeasuredExerciseKind.BANDED_REPETITIONS -> "reps"
-            null -> "units"
+        val review=MeasuredWorkoutResultReviewDomain.review(
+            plan,journal.bySetKey[plan.setKey])
+        val target=when(definition?.kind) {
+            MeasuredExerciseKind.HOLD_SECONDS -> plan.targetAmount.toString()+" s"
+            MeasuredExerciseKind.CARRY_CENTIMETERS ->
+                BigDecimal(plan.targetAmount).movePointLeft(2)
+                    .stripTrailingZeros().toPlainString()+" m"
+            MeasuredExerciseKind.BANDED_REPETITIONS ->
+                plan.targetAmount.toString()+" reps"
+            null -> "measurement unavailable"
         }
         Column(Modifier.fillMaxWidth().padding(vertical=PursuitSpace.xs),
             verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
             Text((definition?.displayName?:kotlinExerciseLabel(plan.exerciseId))+
-                " · Target ${plan.targetAmount} $unit",
+                " · Target "+target,
                 style=MaterialTheme.typography.labelLarge)
-            Text(when(receipt?.outcome) {
-                MeasuredSetOutcome.COMPLETED -> "Completed"
-                MeasuredSetOutcome.FAILED_ATTEMPT -> "Failed attempt"
-                MeasuredSetOutcome.SKIPPED -> "Skipped"
-                null -> "No verified result"
-            },style=MaterialTheme.typography.labelMedium,
+            Text(review.statusLabel,
+                style=MaterialTheme.typography.labelMedium,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            receipt?.actual?.let{actual->
-                actual.sides.sortedBy{it.side.ordinal}.forEach{side->
-                    val sideLabel=when(side.side) {
-                        MeasuredSide.BOTH -> "Result"
-                        MeasuredSide.LEFT -> "Left"
-                        MeasuredSide.RIGHT -> "Right"
-                    }
-                    Text("$sideLabel · ${side.amount} $unit",
-                        style=MaterialTheme.typography.bodyMedium)
-                }
-                actual.actualExternalLoad?.let{load->
-                    Text("External load · ${load.stripTrailingZeros().toPlainString()} ${actual.unit?.name.orEmpty()}",
-                        style=MaterialTheme.typography.bodySmall)
-                }
-                actual.elapsedSeconds?.let{elapsed->
-                    Text("Carry duration · ${elapsed}s",
-                        style=MaterialTheme.typography.bodySmall)
-                }
+            review.actualSummary?.let { summary ->
+                Text((if(review.status==MeasuredSetReviewStatus.FAILED_ATTEMPT)
+                    "Attempt · " else "Actual · ")+summary,
+                    style=MaterialTheme.typography.bodyMedium)
             }
-            plan.bandId?.let{band->
-                Text("Verified band · $band",
-                    style=MaterialTheme.typography.bodySmall)
-            }
+            // A band, external mass or distance is displayed as performed
+            // only when it belongs to the effective verified observation.
+            // Original targets and physical stations remain separate facts.
             Text("Physical setup · ${plan.physicalSetupId}",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

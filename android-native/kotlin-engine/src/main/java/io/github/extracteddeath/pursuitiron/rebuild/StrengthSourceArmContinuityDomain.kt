@@ -118,7 +118,10 @@ object StrengthSourceArmContinuityDomain {
             }.sortedWith(compareByDescending<StrengthSourceArmCandidate>{
                 it.priorWorkingSets
             }.thenBy{it.exerciseId}).firstOrNull()
-        }.distinctBy{it.exerciseId}
+        }
+        // One genuinely direct-credit exercise can serve more than one
+        // independently tracked muscle. Keep each function's evidence;
+        // preferredExerciseIds still deduplicates the generator shortlist.
         return StrengthSourceArmReview(
             if(candidates.isEmpty())StrengthSourceArmsStatus.NO_REVIEWABLE_ARM_SOURCE
             else StrengthSourceArmsStatus.REVIEW_READY,

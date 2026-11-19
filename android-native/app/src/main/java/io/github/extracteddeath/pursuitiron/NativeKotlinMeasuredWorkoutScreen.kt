@@ -148,12 +148,13 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         Button(enabled=!busy && candidate!=null,
                             modifier=Modifier.fillMaxWidth(),onClick={
                                 val proposal=candidate ?:return@Button
+                                val sourceRevision=source?.revision ?:return@Button
                                 busy=true;message=null
                                 scope.launch {
                                     try {
                                         val result=withContext(Dispatchers.IO) {
                                             host.previewMeasuredWorkoutConsent(
-                                                proposal,source.revision)
+                                                proposal,sourceRevision)
                                         }
                                         review=result as? NativeMeasuredConsentResult.Preview
                                         if(result is NativeMeasuredConsentResult.Rejected)

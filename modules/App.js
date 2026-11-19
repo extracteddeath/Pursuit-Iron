@@ -949,7 +949,6 @@ function StyleTag({ theme } = {}) {
       .wpb-primary-action:not(:where(.wpb-gym-done)){border-radius:var(--r-md)!important;}
       .wpb-action-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
       .wpb-action-tile{min-height:68px;border-radius:var(--r-lg)!important;box-shadow:0 1px 0 rgba(255,255,255,.025);}
-      .wpb-metric-strip{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px!important;}
       .wpb-metric{border:1px solid ${C.borderSoft};border-radius:var(--r-md)!important;background:${C.card};}
       .wpb-empty-state{padding:34px 20px!important;margin:14px 0;border:1px dashed ${C.border};border-radius:var(--r-xl);background:color-mix(in srgb,${C.card} 62%,transparent);}
       .wpb-carousel-card{border-radius:var(--r-lg)!important;border-color:${C.borderSoft}!important;box-shadow:var(--shadow-1);}
@@ -1075,7 +1074,6 @@ function StyleTag({ theme } = {}) {
       .wpb-home-hero>button:first-child{border-radius:10px!important;}
       .wpb-home .wpb-action-grid{gap:8px!important;}
       .wpb-home .wpb-action-tile{min-height:62px!important;border-radius:12px!important;}
-      .wpb-home .wpb-metric-strip{gap:6px!important;}
       .wpb-home .wpb-metric{padding-top:10px!important;padding-bottom:10px!important;}
 
       .wpb-wizard .opt{border-radius:12px!important;border-color:${C.borderSoft}!important;background:${C.card}!important;}
@@ -1100,7 +1098,6 @@ function StyleTag({ theme } = {}) {
       .wpb-home .wpb-action-grid{gap:7px!important;margin-bottom:16px!important;}
       .wpb-home .wpb-action-tile{min-height:58px!important;padding:11px 12px!important;border-radius:11px!important;}
       .wpb-home .wpb-action-tile>div:first-child{width:31px!important;height:31px!important;border-radius:9px!important;}
-      .wpb-home .wpb-metric-strip{border-top:1px solid ${C.borderSoft};border-bottom:1px solid ${C.borderSoft};border-radius:0!important;padding:2px 0!important;}
       .wpb-home .wpb-metric{border:0!important;border-radius:0!important;padding:9px 6px!important;}
       .wpb-home .wpb-carousel-card{width:198px!important;padding:13px!important;border-radius:12px!important;}
 
@@ -1132,7 +1129,6 @@ function StyleTag({ theme } = {}) {
       .wpb-page-shell:not(.wpb-workout) .wpb-empty-state svg{width:30px!important;height:30px!important;opacity:.72;}
       .wpb-page-shell:not(.wpb-workout) .wpb-dialog,.wpb-page-shell:not(.wpb-workout) .wpb-pop{border-radius:14px!important;padding:17px!important;box-shadow:0 18px 50px rgba(0,0,0,.28)!important;}
       .wpb-home .wpb-home-hero{margin-bottom:12px!important;}
-      .wpb-home .wpb-metric-strip{margin-bottom:16px!important;}
       .wpb-home .wpb-carousel-card{width:190px!important;}
       .wpb-program .wpb-day-card{margin-bottom:7px!important;}
       .wpb-program .wpb-day-meta{gap:5px!important;}
@@ -1228,7 +1224,6 @@ function StyleTag({ theme } = {}) {
       .wpb-home .wpb-action-tile{min-height:54px!important;padding:9px 11px!important;border-color:${C.borderSoft}!important;background:${C.card}!important;}
       .wpb-home .wpb-action-tile:first-child{border-color:color-mix(in srgb,${C.accent} 34%,${C.borderSoft})!important;background:${C.accentDim}!important;}
       .wpb-home .wpb-action-tile>div:first-child{width:29px!important;height:29px!important;border-radius:8px!important;}
-      .wpb-home .wpb-metric-strip{margin-top:2px!important;margin-bottom:14px!important;background:transparent!important;}
       .wpb-home .wpb-metric{padding:8px 5px!important;}
 
       .wpb-program-header{padding-left:16px!important;padding-right:16px!important;}
@@ -1740,11 +1735,6 @@ function StyleTag({ theme } = {}) {
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
          better than separate tiles and reduce the generated-dashboard look. */
-      .wpb-home .wpb-metric-strip{
-        background:transparent!important;
-        border-left:0!important;border-right:0!important;
-        border-radius:0!important;
-      }
       .wpb-home .wpb-action-tile{background:transparent!important;}
       .wpb-home .wpb-action-tile:first-child{background:transparent!important;}
       .wpb-home .wpb-home-hero{border-radius:var(--r-hero)!important;}

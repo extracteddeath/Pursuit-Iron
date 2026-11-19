@@ -43,25 +43,27 @@ internal object NativeStrengthPhaseBoundaryDisplayDomain {
         audit:CustomCoachAudit?,
         dose:StrengthDoseBoundaryReview?
     ):Set<TrainingMuscle>? {
-        if(audit?.auditedCycleRevision!=cycle.revision ||
-            audit.structuralReview?.verifiedDraft!=cycle ||
-            dose?.status !in setOf(
+        val approvedAudit=audit ?:return null
+        val boundary=dose ?:return null
+        if(approvedAudit.auditedCycleRevision!=cycle.revision ||
+            approvedAudit.structuralReview?.verifiedDraft!=cycle ||
+            boundary.status !in setOf(
                 StrengthDoseBoundaryStatus.CONTINUOUS,
                 StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW))
             return null
-        val before=audit.weeks.singleOrNull{
-            it.absoluteWeek==dose.hypertrophyExitWeek &&
+        val before=approvedAudit.weeks.singleOrNull{
+            it.absoluteWeek==boundary.hypertrophyExitWeek &&
                 it.phase==TrainingPhase.HYPERTROPHY &&
                 it.blockPurpose==CustomBlockPurpose.TRAINING
         }
-        val after=audit.weeks.singleOrNull{
-            it.absoluteWeek==dose.strengthEntryWeek &&
+        val after=approvedAudit.weeks.singleOrNull{
+            it.absoluteWeek==boundary.strengthEntryWeek &&
                 it.phase==TrainingPhase.STRENGTH &&
                 it.blockPurpose==CustomBlockPurpose.TRAINING
         }
         if(before==null || after==null ||
-            before.workingSets!=dose.hypertrophyWorkingSets ||
-            after.workingSets!=dose.strengthWorkingSets)return null
+            before.workingSets!=boundary.hypertrophyWorkingSets ||
+            after.workingSets!=boundary.strengthWorkingSets)return null
         return setOf(TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
             TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
             TrainingMuscle.WRIST_EXTENSORS).filter { muscle ->

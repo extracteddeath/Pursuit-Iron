@@ -145,7 +145,10 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         assertEquals(NativeMeasuredConsentRefusal.UNVERIFIED_GYM_OR_EXERCISE,
             (approvals().preview("owner-1",fake,1)
                 as NativeMeasuredConsentResult.Rejected).reason)
-        assertTrue(approvals().preview("owner-1",plan("dead-hang"),1)
+        val honest=plan("dead-hang").copy(sets=listOf(
+            plan("dead-hang").sets.single().copy(
+                physicalSetupId="pullup-bar")))
+        assertTrue(approvals().preview("owner-1",honest,1)
             is NativeMeasuredConsentResult.Preview)
         assertTrue(approvals().confirm("owner-1",plan(),1,true)
             is NativeMeasuredConsentResult.Approved)

@@ -147,6 +147,18 @@ class NativeMeasuredWorkoutConsentFileStore(
         for(planSet in plan.sets) {
             val definition=MeasuredExerciseCatalogDomain.find(planSet.exerciseId)
                 ?:return false
+            // The recorded station must be an actual selected physical
+            // fixture, not an arbitrary UI-entered label masquerading as
+            // a rack, wall, hanging station or verified band setup.
+            val sourceSetups=definition.requiredFixtures+
+                (if("pull-up-bar" in definition.requiredFixtures)
+                    setOf("pullup-bar") else emptySet())+
+                (if("stable-wall" in definition.requiredFixtures)
+                    setOf("wall-support") else emptySet())
+            if(sourceSetups.isNotEmpty()) {
+                if(planSet.physicalSetupId !in sourceSetups)return false
+            } else if(planSet.physicalSetupId !in witnessed &&
+                planSet.physicalSetupId !in setOf("floor","mat-floor"))return false
             if(planSet.exerciseId in reviewed.excludedExerciseIds ||
                 planSet.confirmedFixtures.any{it !in witnessed} ||
                 planSet.gymConfirmedBandIds.any{it !in gym.availableAttachments} ||

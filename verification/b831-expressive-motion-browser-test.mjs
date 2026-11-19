@@ -2206,7 +2206,7 @@ try {
         await page.waitForSelector('.wpb-visual-plate-bar');
         const barDiagram=await page.$eval('.wpb-visual-plate-bar', async el=>{
           const { platesPerSide } = await import('/modules/engine-api.js');
-          const weight=document.querySelector('.wpb-backdrop input[placeholder="Target weight (lb)"]').value;
+          const weight=document.querySelector('.wpb-backdrop #calculator-target').value;
           const expected=platesPerSide(Number(weight),'barbell','lb').plates;
           const plates=[...el.querySelectorAll('.wpb-visual-plate')].map(x=>Number(x.dataset.plate));
           return {label:el.getAttribute('aria-label'),side:el.dataset.plateSide,plates,expected};

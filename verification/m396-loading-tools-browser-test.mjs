@@ -18,7 +18,7 @@ try{
   await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle0'});await page.waitForSelector('[aria-label="Calculators"]');
   const original=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   await page.click('[aria-label="Calculators"]');
-  const target='input[placeholder="Target weight (lb)"]';
+  const target='#calculator-target';
   const type=async(selector,value)=>{await page.$eval(selector,node=>{node.focus();node.select();});await page.keyboard.type(value);};
   await page.waitForSelector(target);await type(target,'92..5');
   assert.equal(await page.$('.wpb-visual-plate-bar'),null,'a malformed target must not become a lower valid load');

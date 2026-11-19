@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,14 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         mutableStateOf(resumeWorkoutId ?:
             "measured-"+UUID.randomUUID().toString().replace("-",""))
     }
+    // Draft values are saveable UI intent only. Approved sessions and
+    // recorded facts live exclusively in owner-verified native files.
+    var queuedDrafts by rememberSaveable(workoutId) {
+        mutableStateOf(emptyList<String>())
+    }
+    var draftSourceKey by rememberSaveable(workoutId) {
+        mutableStateOf("")
+    }
     suspend fun reload() {
         val read=withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
         stored=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
@@ -63,105 +72,73 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     val source=(sourceRead as? NativeAuthoringSourceRead.Found)?.source
     val setup=source?.setup?.reviewed
     val gym=setup?.gym
-    val fixtures=(gym?.availableFacilities.orEmpty()+
-        gym?.availableAttachments.orEmpty()).toSet()
-    val confirmed=fixtures+
-        (if("pullup-bar" in fixtures)setOf("pull-up-bar") else emptySet())+
-        (if("wall-support" in fixtures)setOf("stable-wall") else emptySet())
-    // Only IDs explicitly saved as band-* attachments in the current gym
-    // are physical resistance bands. Rope and cable handle attachments
-    // never become a band just because the gym has a band facility.
-    val verifiedBands=gym?.availableAttachments.orEmpty()
-        .filter{it.startsWith("band-") && it.length>5}.sorted()
-    val options=MeasuredExerciseCatalogDomain.all.filter { choice ->
-        val equipment=MeasuredPhysicalStockSource.equipmentIdFor(choice.exerciseId)
-        val stock=equipment?.let{gym?.confirmedStock?.get(it)}
-        setup!=null && choice.exerciseId !in setup.excludedExerciseIds &&
-            choice.requiredFixtures.all{it in confirmed} &&
-            when(choice.loadKind) {
-                MeasuredLoadKind.UNWEIGHTED ->
-                    setup.allowBodyweight &&
-                        choice.kind==MeasuredExerciseKind.HOLD_SECONDS
-                MeasuredLoadKind.BANDED_BODYWEIGHT ->
-                    setup.allowBodyweight &&
-                        choice.kind==MeasuredExerciseKind.BANDED_REPETITIONS &&
-                        "bands" in gym?.availableFacilities.orEmpty() &&
-                        verifiedBands.isNotEmpty()
-                MeasuredLoadKind.VERIFIED_ADDED_LOAD,
-                MeasuredLoadKind.VERIFIED_PER_HAND ->
-                    stock!=null && stock.basis==choice.expectedBasis &&
-                        stock.unit==gym?.unit &&
-                        (choice.kind!=MeasuredExerciseKind.CARRY_CENTIMETERS ||
-                            "dumbbells" in gym?.availableFacilities.orEmpty()) &&
-                        (choice.exerciseId!="weighted-plank" ||
-                            setup.allowBodyweight)
-            }
-    }
+
+    val options=if(setup!=null)MeasuredSessionAuthoringDomain.available(setup)
+        else emptyList()
     val definition=options.firstOrNull{it.exerciseId==selectedId}
     val banded=definition?.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT
-    val loaded=definition?.loadKind in setOf(MeasuredLoadKind.VERIFIED_ADDED_LOAD,
-        MeasuredLoadKind.VERIFIED_PER_HAND)
+    val loaded=definition?.loadKind in setOf(
+        MeasuredLoadKind.VERIFIED_ADDED_LOAD,MeasuredLoadKind.VERIFIED_PER_HAND)
+    val verifiedBands=gym?.availableAttachments.orEmpty()
+        .filter{it.startsWith("band-") && it.length>5}.sorted()
     val verifiedBand=selectedBandId.takeIf{banded && it in verifiedBands}
-    val equipmentId=definition?.exerciseId?.let(
-        MeasuredPhysicalStockSource::equipmentIdFor)
-    val verifiedStock=if(loaded)equipmentId?.let{gym?.confirmedStock?.get(it)}
-        else null
     val targetWeight=if(loaded)runCatching{
         BigDecimal(targetExternalLoad.trim())
     }.getOrNull() else null
+    val verifiedStock=definition?.exerciseId?.let{
+        MeasuredPhysicalStockSource.equipmentIdFor(it)
+    }?.let{gym?.confirmedStock?.get(it)}
     val exactLoad=if(loaded && targetWeight!=null && gym!=null) {
-        val inspection=EquipmentLoadDomain.inspect(
+        val checked=EquipmentLoadDomain.inspect(
             verifiedStock,targetWeight,gym.unit)
-        inspection is LoadInspection.Confirmed && inspection.exact
+        checked is LoadInspection.Confirmed && checked.exact
     } else !loaded
-    // Carries are displayed as meters; persisted targets are exact integer
-    // centimeters. No rounding may silently alter a requested distance.
+    // A carry is entered in meters but stored as exact centimeters.
+    // Reject fractional centimeters rather than silently rounding them.
     val quantity=if(definition?.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
         runCatching{BigDecimal(target.trim()).multiply(BigDecimal("100"))
             .intValueExact()}.getOrNull()
         else target.toIntOrNull()
-    val station=if(definition?.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
-        equipmentId ?: "unverified-carry"
-        else definition?.requiredFixtures?.firstOrNull()?.let {
-            when {
-                it=="pull-up-bar" && "pullup-bar" in fixtures -> "pullup-bar"
-                it=="stable-wall" && "wall-support" in fixtures -> "wall-support"
-                else -> it
-            }
-        } ?: "floor"
-    val sides=when(definition?.sideRule) {
-        MeasuredSideRule.BOTH ->setOf(MeasuredSide.BOTH)
-        MeasuredSideRule.LEFT_AND_RIGHT ->
-            setOf(MeasuredSide.LEFT,MeasuredSide.RIGHT)
-        MeasuredSideRule.EXPLICIT_SINGLE_SIDE ->
-            setOf(if(selectedSide=="RIGHT")MeasuredSide.RIGHT else MeasuredSide.LEFT)
-        else -> emptySet()
-    }
-    val amountValid=quantity!=null && quantity in (when(definition?.kind) {
-        MeasuredExerciseKind.CARRY_CENTIMETERS -> 1..1_000_000
-        MeasuredExerciseKind.BANDED_REPETITIONS -> 1..100
-        else -> 1..3600
-    })
-    val candidate=if(definition!=null && source!=null && gym!=null &&
-        amountValid && quantity!=null && setCount in 1..4 &&
-        (!banded || verifiedBand!=null) &&
-        (!loaded || (verifiedStock!=null && targetWeight!=null && exactLoad &&
-            (definition.exerciseId!="farmers" || matchedPairConfirmed))))
-        MeasuredWorkoutPlan(workoutId,gym.gymId,source.revision,
-            (1..setCount).map { number ->
-                MeasuredExerciseSetPlan(workoutId,"set-"+number,
-                    definition.exerciseId,gym.gymId,source.revision,
-                    station,quantity,sides,definition.requiredFixtures,
-                    physicalStock=verifiedStock,
-                    intendedExternalLoad=if(loaded)targetWeight else null,
-                    unit=if(loaded)gym.unit else null,
-                    matchedPairConfirmed=definition.exerciseId=="farmers" &&
-                        matchedPairConfirmed,
-                    bandId=verifiedBand,
-                    gymConfirmedBandIds=if(verifiedBand!=null)
-                        setOf(verifiedBand) else emptySet())
-            })
+    val currentSelection=if(definition!=null && quantity!=null)
+        MeasuredSessionSelection(definition.exerciseId,quantity,setCount,
+            singleSide=if(definition.sideRule==
+                MeasuredSideRule.EXPLICIT_SINGLE_SIDE)
+                if(selectedSide=="RIGHT")MeasuredSide.RIGHT else MeasuredSide.LEFT
+                else null,
+            targetExternalLoad=targetWeight,
+            bandId=verifiedBand,
+            matchedPairConfirmed=definition.exerciseId=="farmers" &&
+                matchedPairConfirmed)
         else null
+    val sourceKey=source?.let{
+        it.ownerKey+"|"+it.athleteId+"|"+it.revision+"|"+
+            it.setup.reviewed?.gym?.gymId
+    }
+    val draftMatches=queuedDrafts.isEmpty() ||
+        (sourceKey!=null && sourceKey==draftSourceKey)
+    val parsedDrafts=queuedDrafts.map{
+        MeasuredSessionAuthoringDomain.restoreDraft(it)
+    }
+    val draftsValid=queuedDrafts.size==parsedDrafts.count{it!=null}
+    val selections=parsedDrafts.filterNotNull()
+    val queuedCandidate=if(queuedDrafts.isNotEmpty() && draftMatches &&
+        draftsValid && source!=null && setup!=null)
+        MeasuredSessionAuthoringDomain.compose(
+            workoutId,source.revision,setup,selections) else null
+    val singleCandidate=if(currentSelection!=null && source!=null &&
+        setup!=null)
+        MeasuredSessionAuthoringDomain.compose(
+            workoutId,source.revision,setup,listOf(currentSelection))
+        else null
+    val appendable=if(singleCandidate!=null && draftMatches &&
+        draftsValid && source!=null && setup!=null)
+        MeasuredSessionAuthoringDomain.compose(workoutId,source.revision,
+            setup,selections+checkNotNull(currentSelection))!=null
+        else false
+    val candidate=if(queuedDrafts.isEmpty())singleCandidate
+        else queuedCandidate
+    val station=singleCandidate?.sets?.firstOrNull()?.physicalSetupId
+        ?:definition?.requiredFixtures?.firstOrNull() ?: "floor"
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(PursuitSpace.md),
@@ -286,14 +263,76 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                     },label={Text(bandId.removePrefix("band-")
                                         .replace('-',' '))})
                             }
-                        } else if("bands" in fixtures &&
-                            "verified-band-pushup-setup" in confirmed &&
+                        } else if("bands" in gym?.availableFacilities.orEmpty() &&
+                            "verified-band-pushup-setup" in
+                                (gym?.availableFacilities.orEmpty()+
+                                 gym?.availableAttachments.orEmpty()) &&
                             verifiedBands.isEmpty()) {
                             Text("To log banded push-ups, save a distinct "+
                                 "band-* ID in the gym's available attachments.",
                                 style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        if(queuedDrafts.isNotEmpty()) {
+                            Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape=MaterialTheme.shapes.large,
+                                modifier=Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(PursuitSpace.md),
+                                    verticalArrangement=Arrangement.spacedBy(
+                                        PursuitSpace.xs)) {
+                                    Text("Your measured session",
+                                        style=MaterialTheme.typography.titleMedium)
+                                    if(!draftMatches || !draftsValid ||
+                                        queuedCandidate==null) {
+                                        Text("This unsaved draft no longer matches "+
+                                            "the verified athlete, gym, equipment or "+
+                                            "source revision. Clear it to start again.",
+                                            color=MaterialTheme.colorScheme.error,
+                                            style=MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        selections.forEachIndexed{index,item->
+                                            val name=MeasuredExerciseCatalogDomain
+                                                .find(item.exerciseId)?.displayName
+                                                ?:item.exerciseId
+                                            Text("${index+1}. $name · "+
+                                                "${item.sets} sets",
+                                                style=MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Text("${queuedCandidate.sets.size} total "+
+                                            "typed sets. The current editor is not "+
+                                            "included until you tap Add exercise.",
+                                            style=MaterialTheme.typography.bodySmall,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Row(horizontalArrangement=Arrangement.spacedBy(
+                                        PursuitSpace.xs)) {
+                                        TextButton(enabled=!busy,onClick={
+                                            queuedDrafts=queuedDrafts.dropLast(1)
+                                            if(queuedDrafts.isEmpty())draftSourceKey=""
+                                            review=null;message=null
+                                        }) {Text("Remove last")}
+                                        TextButton(enabled=!busy,onClick={
+                                            queuedDrafts=emptyList()
+                                            draftSourceKey=""
+                                            review=null;message=null
+                                        }) {Text("Clear draft")}
+                                    }
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            modifier=Modifier.fillMaxWidth(),
+                            enabled=!busy && appendable,
+                            onClick={
+                                val current=currentSelection
+                                    ?:return@OutlinedButton
+                                val currentKey=sourceKey
+                                    ?:return@OutlinedButton
+                                if(queuedDrafts.isEmpty())draftSourceKey=currentKey
+                                queuedDrafts=queuedDrafts+
+                                    MeasuredSessionAuthoringDomain.saveDraft(current)
+                                review=null;message=null
+                            }) {Text("Add exercise to session")}
                         Button(enabled=!busy && candidate!=null,
                             modifier=Modifier.fillMaxWidth(),onClick={
                                 val proposal=candidate ?:return@Button
@@ -312,25 +351,16 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                         message="Measured source review unavailable."
                                     } finally{busy=false}
                                 }
-                            }) {Text("Review measured workout")}
+                            }) {Text(if(queuedDrafts.isEmpty())
+                                "Review current exercise"
+                                else "Review ${candidate?.sets?.size ?: 0} queued sets")}
                     }
-                    OutlinedButton(enabled=!busy,
-                        modifier=Modifier.fillMaxWidth(),onClick={
-                            busy=true;message=null
-                            scope.launch {
-                                try {
-                                    val result=withContext(Dispatchers.IO) {
-                                        host.issueMeasuredWorkout(workoutId)
-                                    }
-                                    if(result is NativeMeasuredWorkoutStoreResult.Durable)
-                                        stored=result.stored
-                                    else message="No existing approved session "+
-                                        "was available to resume."
-                                } catch(_:Exception) {
-                                    message="Approved session could not be reopened."
-                                } finally{busy=false}
-                            }
-                        }) {Text("Resume an already-approved session")}
+                    Text("Already confirmed a session? Return to Train to "+
+                        "resume its owner-verified saved approval or "+
+                        "unfinished workout. This editor never guesses a "+
+                        "saved workout ID.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Loaded holds and carries require verified "+
                         "dumbbell-rack or single-weight-plate stock and "+
                         "their real fixtures in your saved gym. They never "+
@@ -408,10 +438,54 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     review?.let{candidateReview->
         AlertDialog(onDismissRequest={if(!busy)review=null},
             title={Text("Approve exact measured session?")},
-            text={Text("Confirm "+candidateReview.plan.sets.size+
-                " exact measured sets from your verified gym. The actual "+
-                "results are entered separately. No automatic PR, weight "+
-                "equivalent or program changes.")},
+            text={
+                Column(Modifier.heightIn(max=380.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    Text("Review every set from this exact source-approved "+
+                        "plan before starting. Values below are targets, "+
+                        "never automatically recorded results.",
+                        style=MaterialTheme.typography.bodySmall)
+                    candidateReview.plan.sets.forEachIndexed {index,set->
+                        val definition=MeasuredExerciseCatalogDomain.find(
+                            set.exerciseId)
+                        val amount=when(definition?.kind) {
+                            MeasuredExerciseKind.CARRY_CENTIMETERS ->
+                                BigDecimal(set.targetAmount).movePointLeft(2)
+                                    .stripTrailingZeros().toPlainString()+" meters"
+                            MeasuredExerciseKind.BANDED_REPETITIONS ->
+                                "${set.targetAmount} reps"
+                            else -> "${set.targetAmount} seconds"
+                        }
+                        Text("${index+1}. "+
+                            (definition?.displayName ?:set.exerciseId)+
+                            " · $amount",
+                            style=MaterialTheme.typography.bodyMedium)
+                        val approvedExternalLoad=set.intendedExternalLoad
+                        val equipment=buildList {
+                            if(approvedExternalLoad!=null)
+                                add(approvedExternalLoad.toPlainString()+" "+
+                                    set.unit+" "+
+                                    if(definition?.loadKind==
+                                        MeasuredLoadKind.VERIFIED_PER_HAND)
+                                        "per hand" else "added")
+                            if(set.bandId!=null)add("Band: "+set.bandId)
+                            if(set.sides!=setOf(MeasuredSide.BOTH))
+                                add("Sides: "+set.sides.joinToString{
+                                    it.name.lowercase()})
+                            if(set.matchedPairConfirmed)
+                                add("Matching pair confirmed")
+                            add("Station: "+set.physicalSetupId)
+                        }
+                        Text(equipment.joinToString(" · "),
+                            style=MaterialTheme.typography.labelSmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("No automatic PR, invented band weight, "+
+                        "program changes or logged performances.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+            },
             confirmButton={
                 Button(enabled=!busy,onClick={
                     review=null;busy=true;message=null

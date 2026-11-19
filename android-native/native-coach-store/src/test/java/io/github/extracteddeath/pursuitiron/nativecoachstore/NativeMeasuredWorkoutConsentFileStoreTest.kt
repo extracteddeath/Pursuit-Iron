@@ -471,4 +471,77 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             (preview(unilateral) as NativeMeasuredConsentResult.Rejected).reason)
     }
 
+
+    @Test fun mixedMeasuredSessionColdReplaysAndFinishesAsOneRealHistoryWorkout() {
+        val current=source(withBands=true,withMeasuredLoads=true)
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            sources.publish("owner-1",0,current))
+        assertTrue(history.enroll("owner-1","athlete-1"){o,a->
+            signed==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val setup=checkNotNull(current.setup.reviewed)
+        val selections=listOf(
+            MeasuredSessionSelection("plank",35,2),
+            MeasuredSessionSelection("farmers",2000,1,
+                targetExternalLoad=java.math.BigDecimal("25"),
+                matchedPairConfirmed=true),
+            MeasuredSessionSelection("band-pushup",12,1,bandId="band-blue"),
+            MeasuredSessionSelection("plate-pinch",40,1,
+                singleSide=MeasuredSide.LEFT,
+                targetExternalLoad=java.math.BigDecimal("20")))
+        val plan=checkNotNull(MeasuredSessionAuthoringDomain.compose(
+            "mixed-verified-1",current.revision,setup,selections))
+        assertEquals(5,plan.sets.size)
+        assertEquals((1..5).map{"set-$it"},plan.sets.map{it.setKey})
+        assertTrue(approvals().preview("owner-1",plan,1)
+            is NativeMeasuredConsentResult.Preview)
+        assertTrue(approvals().confirm("owner-1",plan,1,true)
+            is NativeMeasuredConsentResult.Approved)
+        // Exactly this set of heterogeneous measurements must be saved;
+        // none may be issued or logged as generic numeric reps.
+        assertTrue(parent().issue("owner-1",plan.workoutId)
+            is NativeMeasuredWorkoutStoreResult.Durable)
+        assertEquals(listOf(plan.workoutId),
+            (parent().reviewUnfinished("owner-1")
+                as NativeMeasuredInventoryResult.Ready).workouts.map{it.workoutId})
+        for((index,set) in plan.sets.withIndex()) {
+            val actual=MeasuredExerciseActual(set.physicalSetupId,
+                set.sides.sortedBy{it.ordinal}.map {
+                    MeasuredSideResult(it,when(set.exerciseId) {
+                        "farmers"->2400
+                        "band-pushup"->15
+                        else->43
+                    })
+                },actualExternalLoad=set.intendedExternalLoad,
+                unit=set.unit,bandId=set.bandId,
+                elapsedSeconds=if(set.exerciseId=="farmers")36 else null)
+            val saved=parent().record("owner-1",plan.workoutId,
+                MeasuredWorkoutOperation.Record("measured-${index+1}",
+                    index.toLong(),set.setKey,
+                    MeasuredSetOutcome.COMPLETED,actual))
+            assertTrue("${set.exerciseId}: $saved",
+                saved is NativeMeasuredWorkoutStoreResult.Durable)
+        }
+        val beforeFinish=parent().open("owner-1",plan.workoutId)
+        assertTrue(beforeFinish is NativeMeasuredWorkoutStoreResult.Durable)
+        assertEquals(5L,(beforeFinish as NativeMeasuredWorkoutStoreResult.Durable)
+            .stored.journal.revision)
+        val completed=NativeKotlinMeasuredHistoryTransaction(
+            history,parent(),fence,identity).complete("owner-1","athlete-1",
+                plan.workoutId,MeasuredWorkoutOperation.Finish("mixed-finish",5L))
+        assertTrue(completed.toString(),
+            completed is NativeMeasuredFinishResult.Committed)
+        val replayed=NativeKotlinMeasuredHistoryReadCoordinator(
+            history,parent(),fence,identity).read("owner-1","athlete-1")
+        assertTrue(replayed is NativeMeasuredHistoryReadResult.Review)
+        val historySet=(replayed as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured.single().stored.journal
+        assertEquals("mixed-finish",historySet.finishedByEventId)
+        assertEquals(plan.sets.map{it.exerciseId},
+            historySet.approvedPlan.sets.map{it.exerciseId})
+        assertEquals(5,historySet.bySetKey.values.count{it.effectiveRecord!=null})
+        assertTrue((parent().reviewUnfinished("owner-1")
+            as NativeMeasuredInventoryResult.Ready).workouts.isEmpty())
+    }
+
 }

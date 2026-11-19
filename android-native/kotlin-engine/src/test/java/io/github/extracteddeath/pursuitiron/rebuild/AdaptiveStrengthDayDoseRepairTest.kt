@@ -35,8 +35,10 @@ class AdaptiveStrengthDayDoseRepairTest {
     private fun request(permission:Boolean=true,limit:Int=10):
         AdaptiveStrengthVolumeRepairRequest {
         val base=checkNotNull(fixture.generation().policy)
-        val generous=base.selectedBounds.map{
-            it.copy(mev=n("0"),mav=n("12"),mrv=n("45"),minimumDirectDays=0)
+        val generous=base.selectedBounds.map{dose->
+            if(dose.mrv>BigDecimal.ZERO)
+                dose.copy(mev=n("2"),mav=n("9"),mrv=n("16"),minimumDirectDays=1)
+            else dose
         }
         val h=base.copy(baselineBounds=generous,selectedBounds=generous)
         val s=h.copy(policyId="strength-day-dose",revision="strength-v2",
@@ -68,6 +70,11 @@ class AdaptiveStrengthDayDoseRepairTest {
         assertEquals(27,before.hypertrophyWorkingSets)
         assertEquals(27,before.strengthWorkingSets)
         assertEquals(listOf(StrengthDayDoseLoss(0,16,8)),before.affectedDays)
+        val sourceAudit=CustomCycleCoachAuditDomain.review(original,
+            fixture.athlete(),fixture.movements,input.review.coaching)
+        assertEquals("Source audit: ${sourceAudit.status} /${sourceAudit.issues}",
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
+            sourceAudit.status)
         val outcome=AdaptiveStrengthVolumeRepairDomain.propose(input)
         assertEquals(outcome.explanation+" / "+outcome.comparison.evaluated.map{
             it.status to it.coachingAudit?.issues},

@@ -57,7 +57,14 @@ object StrengthRosterBoundaryGuardDomain {
             cycle==null)return result(StrengthRosterBoundaryStatus.SOURCE_UNVERIFIED)
         val index=cycle.blocks.indexOfFirst{it.blockId==targetBlockId}
         if(index<=0)return result(StrengthRosterBoundaryStatus.NOT_COMPARABLE)
-        val prior=cycle.blocks[index-1]
+        // A reviewed recovery/deload or performance-test bridge must NOT
+        // replace the athlete's final normal hypertrophy training week.
+        // Compare against the nearest earlier TRAINING block, but never
+        // skip another training phase to manufacture continuity.
+        val priorIndex=(index-1 downTo 0).firstOrNull {
+            cycle.blocks[it].purpose==CustomBlockPurpose.TRAINING
+        } ?:return result(StrengthRosterBoundaryStatus.NOT_COMPARABLE)
+        val prior=cycle.blocks[priorIndex]
         val target=cycle.blocks[index]
         if(prior.phase!=TrainingPhase.HYPERTROPHY ||
             target.phase!=TrainingPhase.STRENGTH ||
@@ -66,8 +73,8 @@ object StrengthRosterBoundaryGuardDomain {
             prior.split!=target.split ||
             prior.days.map{it.weekday}.toSet()!=target.days.map{it.weekday}.toSet())
             return result(StrengthRosterBoundaryStatus.NOT_COMPARABLE)
-        val exitWeek=cycle.blocks.take(index).sumOf{it.weeks}
-        val entryWeek=exitWeek+1
+        val exitWeek=cycle.blocks.take(priorIndex+1).sumOf{it.weeks}
+        val entryWeek=cycle.blocks.take(index).sumOf{it.weeks}+1
         val exit=CustomTrainingCycleDomain.week(structure,exitWeek)
         val entry=CustomTrainingCycleDomain.week(structure,entryWeek)
         if(exit==null || entry==null ||

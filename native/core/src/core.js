@@ -15,6 +15,8 @@ import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSess
 import { withSessionPlanChoice } from '../../../modules/session-plan.js';
 import { reviewProgramChanges, withProgramRevision } from '../../../modules/program-review.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
+import { adjustWorkoutReadiness, READINESS_CHOICES } from '../../../modules/workout-readiness.js';
+import { canonicalExerciseIncrement } from '../../../modules/next-engine/loading.js';
 import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout, resizeWorkingSets, carryLoggedLoad, uncarryLoggedLoad, withGroupRounds } from '../../../modules/workout-context.js';
 
 const { EX_BY_ID, EXERCISES } = E;
@@ -1026,7 +1028,9 @@ function setView(s, i, ex, prBase, prev = null) {
         type: s.typeOverride || (s.target?.failure ? 'failure' : 'standard'),
         prev: prev ? { w: prev.w, r: prev.r ?? null } : null,
         // live-autoregulation.js: a pending set the engine eased after a harder-than-planned one
-        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : s.liveAdjustment.action === 'set_backoffs_from_top' ? 'backoff' : null) : null
+        adjusted: !s.done && !E.userOwnsRuntimeSet?.(s) && s.liveAdjustment ? (s.liveAdjustment.action === 'reduce_pending_load' ? 'load' : s.liveAdjustment.action === 'cap_pending_reps' ? 'reps' : s.liveAdjustment.action === 'set_backoffs_from_top' ? 'backoff' : s.liveAdjustment.action === 'suggest_pending_load_reduction' ? 'suggest' : null) : null,
+        // live-autoregulation.js: two missed accessory sets suggest a lower load; the lifter applies it or not
+        suggestedLoad: !s.done && s.loadAdvice?.toLoad > 0 ? String(s.loadAdvice.toLoad) : null
     };
 }
 
@@ -1491,9 +1495,12 @@ const ACTIONS = {
         if (sore !== undefined) { const m = { ...(S.live.fbSore || {}) }; if (!sore || m[part] === sore) delete m[part]; else m[part] = sore; S.live.fbSore = m; }
         return d;
     },
-    // App.js applyReadiness: scale today's unlogged, app-owned loads; down-scaling always lands lower.
+    // App.js applyReadiness: the shared session-only policy (modules/workout-readiness.js). Only unlogged, app-owned
+    // working loads move, snapped to loads the equipment has; "Feeling strong" puts the planned loads back.
     readiness({ label = '—', factor = 1 }, ctx, d) {
         S.live.readiness = { label, factor };
+        if (isReadinessLevel(factor)) return withReadiness(d, factor);
+        // Re-entry after time off is not a readiness level: its own factor, always a real step lighter.
         if (factor === 1) return d;
         const u = unit();
         return d.map((e) => {
@@ -1632,7 +1639,10 @@ const ACTIONS = {
         const suggestion = E.sessionSuggestion(nextProgram, ctx.day, row.slot, anchors, unit(), ctx.wk, ctx.H);
         const prescribed = prescribeSets(nextProgram, ctx.day, ex, row.slot, ctx.wk, unit(), suggestion, anchors, ctx.P, ctx.H, true);
         S.live.sessionProgressions = choices;
-        return d.map((item) => (item.id !== row.id ? item : { ...item, sets: refreshProgressionSets(item.sets, prescribed, E.userOwnsRuntimeSet) }));
+        // As App.js: the re-prescribed sets take today's readiness again, so a style change cannot undo the check-in.
+        const next = d.map((item) => (item.id !== row.id ? item : { ...item, sets: refreshProgressionSets(item.sets, prescribed, E.userOwnsRuntimeSet) }));
+        const factor = S.live.readiness?.factor ?? 1;
+        return isReadinessLevel(factor) ? withReadiness(next, factor) : next;
     },
     // The design's pause on the workout clock: the elapsed time holds; resuming shifts the start by the pause.
     pauseTimer(_, ctx, d) {
@@ -1642,6 +1652,11 @@ const ACTIONS = {
     resetTimer(_, ctx, d) { S.live.startedAt = now(); S.live.elapsedMs = 0; S.live.pausedAt = null; return d; }
 };
 
+const isReadinessLevel = (factor) => READINESS_CHOICES.some((choice) => choice.factor === factor);
+function withReadiness(rows, factor) {
+    return adjustWorkoutReadiness(rows, factor, { exerciseFor: (id) => EX_BY_ID[id], unit: unit(),
+        snapLoad: (ex, weight, u) => E.loadableAtOrBelow(ex, weight, u), ownsSet: E.userOwnsRuntimeSet });
+}
 function lighterOf(row, ex) {
     if (!row || !ex || E.isAssistedEx(ex)) return row;
     return lighterPendingWorkout(row, (w) => E.loadableAtOrBelow(ex, w, unit()), E.userOwnsRuntimeSet);
@@ -3342,7 +3357,7 @@ export function switchUnit({ to }) {
             ...(p.trainingMax ? { trainingMaxUnit: to } : {}) };
         if (np.trainingMax) np.trainingMax = convMap(np.trainingMax);
         if (np.gz) { const g = {}; for (const id in np.gz) g[id] = { ...np.gz[id], ...(np.gz[id]?.t2w != null ? { t2w: conv(np.gz[id].t2w) } : {}) }; np.gz = g; }
-        if (np.exLoadInc) { const e = {}; for (const id in np.exLoadInc) { const v = np.exLoadInc[id]; e[id] = (v && v.v != null) ? { ...v, v: conv(v.v), unit: to } : v; } np.exLoadInc = e; }
+        if (np.exLoadInc) { const e = {}; for (const id in np.exLoadInc) { const v = np.exLoadInc[id]; e[id] = (v && v.v != null) ? { ...v, v: canonicalExerciseIncrement(v, to) ?? conv(v.v), unit: to } : v; } np.exLoadInc = e; }
         return np;
     };
     const st = S.store;

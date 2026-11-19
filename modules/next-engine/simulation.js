@@ -565,7 +565,11 @@ function allocateWeekSets(exercises, factors) {
     const caps = exercises.map((ex, i) => Math.max(mins[i], ex.workingSetCap ?? Infinity));
     const out = raw.map((r, i) => Math.min(caps[i], Math.max(mins[i], Math.floor(r))));
     let left = Math.round(raw.reduce((a, b) => a + b, 0)) - out.reduce((a, b) => a + b, 0);
-    const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac || a.i - b.i);
+    // Leftover sets go by what each exercise is still owed (raw minus what it already has), not by the fraction
+    // of its raw count: an exercise lifted to its one-set minimum has already been paid more than its share. By
+    // fraction, a one-set lateral raise (0.92 raw at a 0.92 taper) was given a second set ahead of the 2-set rear-delt
+    // fly and pulldown (1.84 raw each), so the fly fell to 1 and, a week later, a region's only lat lift went 2 -> 1.
+    const order = raw.map((r, i) => ({ i, owed: r - out[i] })).sort((a, b) => b.owed - a.owed || a.i - b.i);
     while (left > 0) {
         const eligible = order.filter(({ i }) => out[i] < caps[i]);
         if (!eligible.length) break;

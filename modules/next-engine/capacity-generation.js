@@ -110,6 +110,16 @@ export function firstPassingCapacityProgram(request, config, generationOptions =
         }
     }
 
+    // Last rung. Four heavy sets at four minutes' rest can fill a 40-minute day by themselves, leaving a
+    // full-body day without its push or pull and the request refused. Before refusing, try the same ladder with
+    // the short-session strength dose (three primary sets, two secondary). The choice is written on the request,
+    // so a rebuild or a shared plan reproduces it.
+    if (request?.preferences?.compactStrength !== true && Object.keys(request?.goal?.liftPriorities ?? {}).length) {
+        const compact = firstPassingCapacityProgram({ ...request, preferences: { ...request.preferences, compactStrength: true } }, config, generationOptions);
+        if (compact.result.program?.audit?.result === 'pass') return { ...compact, adjusted: true, compactStrength: true,
+            requestedTarget: requestedExerciseTarget(request), requestedMinimumMinutes: requestedMinimumMinutes(request), requestedSeed: canonicalSeed(request?.seed) };
+    }
+
     return {
         request,
         result: initial,

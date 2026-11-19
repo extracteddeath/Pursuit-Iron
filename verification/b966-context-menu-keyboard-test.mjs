@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const motion = fs.readFileSync('modules/ui-motion.js', 'utf8');
+const ui = fs.readFileSync('modules/ui-menu.js', 'utf8');
+assert.ok(motion.includes('function availableMenuItems(menu)'), 'One authoritative menu eligibility check');
+assert.ok(motion.includes('(availableMenuItems(el)[0] || el).focus({ preventScroll: true });'), 'Initial focus skips inert or disabled items and falls back to menu');
+assert.ok(motion.includes('const items = availableMenuItems(menu);'), 'Arrow and Home/End navigation use the same enabled list');
+assert.ok(motion.includes("at < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1)"), 'ArrowUp from menu container lands on last usable item');
+assert.ok(motion.includes("if (e.key === 'Tab') {\n                // Closing via React"), 'Tab is owned by menu dismissal');
+assert.ok(ui.includes("'role': 'menu'") || ui.includes("role: 'menu'"), 'Shared ContextMenu retains ARIA menu semantics');
+assert.ok(ui.includes('const close = () => { if (anchor?.isConnected) anchor.focus({ preventScroll: true }); onClose(); };'), 'Dismissal returns focus to triggering control');
+console.log('PASS B966 menu focus eligibility, keyboard navigation and return-to-anchor contract.');

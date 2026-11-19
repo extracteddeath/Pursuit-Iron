@@ -1,3 +1,113 @@
+## Build 942 / M396 — Loading tools, complete input and gym unit integrity
+
+Continue from published Build 941 / PR #369, merge cdab546087e79cceefba6f4bc4c2584616319790. All post-merge workflows and the actual public online/offline/manual-target/resume and estimate journeys passed. Keep the user's substantial-batch preference.
+
+Reproduce on Build 941: calculator target 92..5 renders plates for 92; fractional 1RM reps are stripped into another integer; zero available pairs produce an unexplained dash. The gym load-unit action changes the unit token without converting limits or racks. normalizeGyms also discards updatedAt, removing the clock needed to identify newer gym edits. Preserve these failing cases before changing the owners.
+
+Move the calculator to modules/loading-calculator.js and the gym numeric fields to modules/gym-load-fields.js. Use the shared SessionChoiceDialog, UiChoice and UiAction, retaining the original sheet gesture through an optional panel ref. One scrolling body keeps the calculator title/Close reachable. Relative type, adaptable choices, complete labels and themed status/results work at 320/393/834/1280px and actual 200% text. The narrow enlarged-text replay catches and repairs heading/selector clipping. Real touch dismissal and return focus retain the existing motion/focus owners; Workout/Focus ledger geometry stays protected.
+
+modules/training-domain/loading-tools.js owns complete numeric parsing and read-only calculator projections, reusing production platesPerSide and e1rm. Invalid raw typing cannot turn into a lower weight, integer or partial rack. 1RM entry uses the existing model's 1–12 rep range instead of silently capping a larger entry. Percentage loads retain the original downward 5 lb/2.5 kg rounding and can open the plate view in one action. The plate view always states the actual achievable load, including empty inventories and below-bar targets.
+
+The existing gym list remains the draft and its existing Done callback remains the writer. Raw rack/bar/limit/count fields survive edits until validation; invalid Done focuses the affected field and opens its disclosure. Convert all racks and limits together with exact history-unit conversion; bar masses keep their separate unit context. Retain zero Smith bars, unedited precision, inactive-gym values and explicit plate inventories. The transient inventoryText property never becomes saved gym data. Preserve the source gym's updatedAt through normalization. No generation, progression, set-entry, history or recovery policy is replaced.
+
+Retire forty calculator inline objects and retain one computed plate height: combined enforced presentation budget 2,123 → 2,084. External/embedded/repeated priority ceilings stay 2,073/1,053/14. Include both new view modules in the scanner. App.js shrinks by about 14.4 kB at the implementation snapshot; this is source ownership cleanup, not a measured download or startup claim.
+
+Extend B846/B831/B875 and add M396 domain/browser gates to the existing registry. Require all source groups, full 13-stage lifecycle audit, independent engine export/parity, all seven browser groups and release/offline identity checks on the final candidate. Publish one Build 942, then require exact hosted-file parity plus actual public online/offline/calculator/gym/typed-workout-resume replays. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open.
+
+Next: continue cohesive Program editing and inspection families and remaining shared forms; prioritize reproduced prescription, persistence and interaction defects. The broader source refactor and launch/device acceptance remain in progress.
+
+## Build 941 / M395 — Reviewed web engine patch
+
+Integrate the user-provided web-engine-changes.patch after Build 940 publication. The attachment repeats the recovery diff and assumes a plate-count helper absent from this branch; apply recovery once and adapt the plate helpers to the maintained source.
+
+Starting loads are explicitly labelled heuristics, used only when the planned lift has no positive progression target. Prefer recent completed own/related sets; normalize revisions, use numeric history dates, retain precise lb/kg conversion and accept RIR zero. Use the latest completed exposure within 90 days rather than an all-time maximum. Connect bodyweight, units, experience and sex from the existing App state. Snap estimates through the existing equipment grid and respect gym ceilings. Percentage prescriptions, declined changes, session replacements, entered values and resumed workouts retain their existing authority. The label asks the user to check the first set; it does not promise automatic calibration that has not occurred.
+
+Scale the recovery dip by the session's existing effort cost. Six on-plan hard sets keep the full dip; one light exposure produces a smaller dip. Preserve elapsed/measured recovery timing and effort calibration. This is a heuristic model change, not measured physiological recovery.
+
+Retain legacy injury preferences, add optional descriptive severity and preview the selected preference. Legacy severity remains unknown: choosing to skip lifts is not a report of sharp pain. Severity can seed a preference, and the user can change it. Saving an injury does not automatically modify the workout; existing exercise review and explicit Apply remain required. Preserve completed sets, source linking, retry idempotence and authored preferences.
+
+Save per-unit plate-pair counts on the gym, preserve them through normalization, and expose staged count editing under the existing gym form. Use a bounded solver for plate math so it cannot invent pairs or miss a reachable combination after a greedy dead end. An explicit empty inventory stays empty. Existing callers without pair counts retain size-only plate behavior.
+
+Extend B846 and B889 behavioral/browser gates and add M395 evidence/seed/recovery coverage to the owned registry. Require source, lifecycle, independent export, all seven browser groups and release identity gates before merge, then verify hosted hashes and online/offline/resume behavior. Engine generator version remains 0.65.9; this app-domain policy release is Build 941. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open.
+
+## Build 940 / M394 — Authored targets, Program rows and prescription integrity
+
+Continue from Build 939 / PR #367, merge 645cc96807f3c8bf78e875e2bfa487397803fda4. Keep the user's larger-batch preference: publish related improvements and their verification together.
+
+Reproduce two defects before fixing them: clearing Sets inserts 1, and the rep target 10-20oops becomes 10. A follow-up replay also finds invalid cells being interpreted as a neutral 8–12 range by the progression reader. Keep raw target typing in one local presentation component until Apply. Validate complete whole-number sets (1–20) and positive whole rep counts/ranges in the canonical domain. The atomic manual-target writer marks only semantically changed fields as user-owned, preserves untouched weekly set arrays, and retains rest, RIR, techniques, rosters and history. Display the selected week's scalar set count and a canonical rep range instead of serializing stored arrays into inputs. Cancel writes nothing. Pending target editors block Review, Start, Back, week/day changes and Settings until Apply or Cancel.
+
+Reject malformed authored/engine-owned rep ranges at canonical cell projection; they cannot produce working sets or progression decisions. Historical rep snapshots use the same complete parser. The shared App launch owner refuses invalid targets without saving or starting a partial workout. An upgrade replay reproduces the initial guard blocking a pre-existing valid workout whose saved plan is malformed. Restrict the new-prescription guard to new starts; the existing resume path retains its persisted rows and user-owned values. The added M222 recovery case preserves 190 lb × 5 and every recorded row. Preview uses its existing primary action to return directly to Program for repair. Preserve valid numeric programming, loading, progression thresholds, recorded workout facts and resume ownership.
+
+Move the exercise-row shell, grip, heading, metadata, badges and actions to shared CSS. Manual targets use labelled, touchable fields beneath the exercise, native form submission, inline errors and shared actions. The existing M222 browser gate covers dark/light, 320/393/834/1280px, actual 200% text in a short viewport, pending-input guards, exact review/save/reload, untouched 3/4/5/6 weekly sets, matching Program/Preview/live week-three targets, persisted-invalid repair and Home launch refusal. Retain the existing settings, Cable Fly DP/DDP and protected-resume cases. Lower external priorities 2,106 → 2,073 and combined inline objects 2,141 → 2,123; embedded 1,053 and repeated priorities 14 stay unchanged. Include the new view module in the debt scanner.
+
+Require final source, lifecycle, independent-engine, seven browser groups and release checks; publish one Build 940, then verify exact hosted bytes and online/offline/resume journeys. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open. Continue the broader UI/UX and engine audit in cohesive passes.
+
+October 27 release follow-through reproduces a further data-entry defect: native Back bypasses Program's on-screen Back action and discards pending raw targets. Nominate the existing Program Back action in the native navigation bridge so it retains the same target guard and saved-draft review. Extend M222 with the failing native-Back case, exact raw-text/focus/data preservation and Keep editing. No second navigation, persistence or prescription owner. Keep these changes in Build 940; align the release milestone and changelog before final certification.
+
+## Build 939 / M393 — Library discovery and detail batch
+
+**Release preference:** The user requested larger coherent batches on October 27. Finish related improvements and verification together; do not create a new build for each small change.
+
+Continue from published Build 938 / PR #366, merge 4af05ccf8392773ea8afa4865f6993752a9e6a5c. All candidate/post-merge workflows and public dark/light online/offline/resume journeys passed, with 133/133 hosted hashes matching.
+
+R54 reproduces the reported Library browsing defect on unchanged Build 938: its five-row pinned header is 290px tall at 393px, leaving 65.96% of the Library viewport for results. Move search and the three filter rows into the existing results scroll owner. Keep a compact toolbar with Back, Library, Find and Compare. The final 320/393px dark/light fixtures measure a 65px toolbar and 92.37% reading space after scrolling. Find returns the actual scrolling owner(s) to search and focuses the existing input without resetting filters. Preserve filter restoration, Compare/Back scroll memory, selected-chip visibility and the wide list/detail pane.
+
+Consolidate the complete LibraryView presentation into one semantic CSS family: catalog, empty states, detail chrome, notes, history, records, metadata, movement variants, technique/demo and goal controls. Retire 115 static inline objects and superseded external/embedded Library layers. The only remaining Library inline object is the calculated goal progress width. Tighten combined inline 2,256 → 2,141; external priorities 2,173 → 2,106; embedded 1,134 → 1,053; repeated priorities remain 14. Preserve shared motion, palette, focus, selected-state, content-visibility and adaptive-pane owners. No new runtime module or parallel data/engine owner.
+
+The same task replay reproduces a goal defect: entering 92..5 stores 92. Validate a complete finite positive decimal before Save, retain invalid raw typing, and keep updates with the existing onSetGoal writer. Give the form a visible unit label, shared actions, Cancel and explicit Remove goal. Clear staged goal text when selecting another exercise. R54 checks invalid/empty input, exact 212.5 lb save, Cancel, Remove, exercise isolation, Ban/Unban, larger text and reachable actions in a short phone window; authored training and logged facts remain unchanged. R74 protects reading space at enlarged text, and R65 selects the actual second exercise independently of the added controls node.
+
+Require final-head source/lifecycle/independent/seven-browser/release gates, then hosted-byte parity and public online/offline/resume checks. Physical Android/IME/TalkBack/interruption/foldable acceptance stays open. The broader refactor continues with Program and other cohesive surfaces; this batch does not claim full launch acceptance.
+
+## Build 938 / M392 — Settings choice and theme ownership
+
+Continue after Build 937 / PR #365 merged as 7c8664eb0f659ad928177b0c7433349c0d839872. All five candidate workflows passed, including the seven browser groups. Deployed verification is recorded separately.
+
+The extended existing R76 fixture fails on unchanged Build 937: every theme label stays 11.5px when actual document text doubles. The earlier per-element enlargement fixture could not detect that fixed-size defect. Move theme presentation from the embedded stylesheet/inline objects into the Settings CSS family, use relative type and a text-relative grid, and reuse UiChoice. Preserve the native disclosure, all palette values and existing theme callback; only the two real swatch colors remain inline.
+
+Six preference groups retain their exact callbacks and measured moving indicator, with explicit accessible group names and shared class-owned presentation. Remove superseded theme rules, obsolete preference font/layout overrides, and inline scroll/anchor spacing. Measured combined inline objects 2,284 → 2,256; external priorities 2,188 → 2,173; embedded priorities 1,143 → 1,134; repeated priorities remain 14. No new module, storage schema, engine formula, history writer or gesture owner.
+
+R76 covers both palettes at 320/393/900/1280px, actual 200% root text in the expanded theme chooser, complete labels and usable targets, keyboard theme selection and exact persisted preference values, reversal, and authored content/logged facts. Changing then restoring experience legitimately advances the existing program modification timestamp; the training-content comparison explicitly excludes only that timestamp. Preserve all existing Profile/Progress/Settings enlargement coverage, and run source/lifecycle/independent/seven-browser/release gates on the final candidate before merge. Require hosted hash parity and a real offline browser journey afterward.
+
+Next: remaining Program/Library detail/editor families and source retirement, then measured device acceptance. Physical Android/IME/TalkBack/interruption/foldable checks remain open. Do not call the entire refactor or launch acceptance complete from browser passes.
+
+## Build 935 — publication resumption and remaining refactor
+
+The user explicitly authorized publication to the existing Pursuit Iron destination on October 26, followed by a review of the remaining refactor. This resolves the publication-scope blocker recorded historically under M388/M389 below. Resume existing PR #362, preserving its M387 work and adding the complete M388/M389 candidate. The release remains Build 935 / Engine 0.65.9. Require exact-head source, lifecycle, independent-engine, seven-browser and release checks before merge; verify the deployed files and public offline execution afterward.
+
+Recovered candidate source matches its certified 124 runtime / eight UI hashes and 134 offline entries. The prior workspace's Git backing was no longer available; a fixed source snapshot was retained for verification and publication. Do not infer that a Git checkout with the correct release label contains the complete candidate.
+
+Measured remaining presentation debt at this snapshot: 2,303 combined inline style objects (2,291 in App), 2,188 external priorities, 1,143 embedded priorities and 14 repeated priorities. App is 2,079,620 characters / 2,085,472 bytes and 21,771 lines. These counts include calculated runtime geometry and are not a list of styles that can all be deleted. Relative to published Build 933, the complete 934–935 slice retires 123 inline objects and 170 priorities.
+
+| Existing owner | Inline style objects in function | Next bounded work |
+| --- | ---: | --- |
+| ProgramView | 345 | Continue compact configuration and exercise inspection families with staged Save/Cancel and canonical prescription readers. |
+| LibraryView | 135 | Move search/filter/detail presentation into shared roles; preserve filter context, swaps and equipment constraints. |
+| SettingsView | 118 | Consolidate remaining category/field/action styling; preserve storage, backup and current values. |
+| CompareView | 81 | Readable side-by-side program comparison with canonical values and stable enlarged-text layout. |
+| Home | 71 | Retire remaining presentation only after proving pointer targets and native scroll stay stable. |
+| SwapSheet / AddSheet | 62 / 40 | Share search/result/selection structure without changing roster transactions. |
+| WorkoutSession | 566 | Keep logging geometry protected. Change only bounded families with set-entry, rest, Focus, interruption and persistence replay. |
+
+These are AST counts within each top-level function, including nested presentation; they must not be summed into a second global budget. Prioritize reproduced data/prescription defects, then Program/Library/Settings families. For each slice, remove superseded rules in the same change, lower the existing ceilings, and compare real rendered states. No second engine, style system, history ledger or menu/gesture owner.
+
+Physical Android keyboard/IME, TalkBack, touch/Back, OS interruptions and foldable/landscape acceptance remain open. Automated browser checks do not complete that device gate. The CSS/inline reduction target is still in progress; this is not completion of the full source refactor.
+
+## M387 — stable pointer targets, natural Home flow and shared menus (Build 934)
+
+Continue from published Build 933 (PR #361, merge f9e086f). Its 15 candidate checks, all 19 post-merge checks after one unchanged integration retry, 131 hosted hashes and four actual public offline training-max journeys passed. The first post-merge job exposed two navigation timeouts on a slow runner; do not dismiss them as infrastructure without reproducing the interaction.
+
+The extended existing B887 fixture fails on unchanged Build 933: after scrolling Program, metadata is 17px tall in the first frame and 0px in the following frame. A separate real-pointer handoff captures Home's program target at y=431.875, then finds it at y=371.875 after the scroll event. A click using the original coordinates can miss the button. Day actions also stay 14px when the document text size doubles. Preserve these failing reproductions before changing the owners.
+
+Move Home's supporting brand/date/greeting into the existing scrolling content, retaining the shared fixed app bar and the initial hierarchy. Delete the height/opacity clipping effect, its refs and its compact-state marker. Context now moves once with native scrolling instead of changing the scroll viewport underneath a located target. Program retains its compact metadata behavior but applies it directly in the scroll event, with natural-content resize observation for text/title reflow. The new pointer test clicks the coordinates captured before the next frame; it does not wait away a displacement or replace the action with a DOM click.
+
+modules/ui-menu.js replaces all three menu renderers: Home program actions, Program day actions and the day picker. Screens keep the same state/actions and pass a live anchor. The existing ui-motion menu owner measures untransformed row size and actual anchor geometry, respects the visual viewport, clears the live dock/navigation, and coalesces resize/scroll work. Register/clean up per-menu size observers; no second positioning or keyboard system. The common renderer portals into the existing app root, focuses the first item, preserves Arrow/Home/End, reveals focused overflow rows without scrolling the background, and restores the anchor on dismissal. Tab closes the menu. Preserve complete day labels, selected/done/next facts, disabled actions and all program transactions.
+
+Replace the competing menu stylesheet layers with one themed, scalable family. Remove 45 external and 15 embedded priorities; lower 2303 → 2258 external, 1198 → 1183 embedded, 15 → 14 repeated declarations, and 2426 → 2410 inline styles. Retire the old three renderers, guessed heights, stored rectangles and duplicate menu-opener tracking. Menu placement remains measured geometry, with no inline presentation objects. Engine 0.65.9, generation/progression policy, storage schema, workout logger values and historical prescriptions are unchanged.
+
+Existing B887 covers native and simulated 4× narrow-phone pointer handoff plus 320/393/900px dark/light layouts; three menu kinds, 100/200% text, short-window resize, long labels, keyboard/focus, Delete Cancel and immutable saved/history/cycle/draft data. R53 now checks actual context visibility and the fixed compact app bar instead of the retired compact flag. B831 retains AA contrast, connected menu shapes, untransformed size-read coalescing, actual dock clearance, motion and keyboard behavior. Keep Home hierarchy, created-cycle/preview/day-delete, source/lifecycle/independent/all-seven-browser and release gates. Require exact deployed bytes and public offline replay after merge; retain the 173-entry verification registry.
+
+Next: continue the remaining cohesive Library/Program surfaces and measured resilience work. Prioritize reproduced prescription/persistence or interaction defects. Broader debt targets and physical Android/IME/TalkBack/interruption acceptance remain open.
+
 ## M386 — safe training-max input, staged editing and truthful review (Build 933)
 
 Continue from published Build 932 (PR #360, merge 87d4afa). Its 15 candidate and 19 post-merge checks passed, all 130 hosted file hashes matched, and both public offline note journeys passed with 131 cached entries.
@@ -657,3 +767,100 @@ The source/rendered-screen audit at main `f1725a3` defines a task-based placemen
 6. **Settings/tools — pending.** Categories by purpose, shared controls and clear global/gym/program scopes; retain every existing preference/tool and safe restore/Undo.
 7. **Workout/overlays — pending certification.** Surrounding consistency only; verify keyboard/rest/active-set visibility, notes/plates/amplifiers, completion and recovery without reworking the ledger.
 8. **Whole-app/device sign-off — pending.** Compare populated/empty states together, large text, themes, motion interruption, offline and physical Android. Passing CSS debt budgets alone does not certify deliberate design.
+
+
+## Build 934 / M388 — shared program-switcher and gym styles (local candidate)
+
+Continues M387 on branch `improve/m387-stable-program-navigation`. Program switching and gym setup now share configuration-sheet presentation with named state/field roles. Retired 76 static inline objects, 70 external priorities (including one newly exposed shadowed achievement width) and 40 embedded priorities. No training-policy, storage-schema or business callback changes. Final budgets: external 2,188 / embedded 1,143 / inline 2,334 / repeated 14. Combined Build 934 reduction from published Build 933: 170 priorities and 92 inline objects.
+
+A 32-case populated sheet comparison covers two themes, four widths and normal/200% text. Normal geometry matches; gym choice chips and Done now follow doubled text rather than priority font locks. R74 caught the retired gym backdrop keyboard ceiling; the shared backdrop now owns that visual-viewport bound. Existing B831 adds search/empty/recovery checks with seven valid programs. Existing B846 adds staged equipment cancellation, keyboard toggling, short landscape and enlarged text while retaining zero-Smith and lb/kg conversion. Visual review, full local gates and publication status are recorded at the end of this section when complete.
+
+Publication is blocked locally: automatic approval review rejected the attempted branch push because it did not recognize publication authorization for this candidate to the public repository. Connected GitHub metadata confirms the existing destination is `extracteddeath/Pursuit-Iron` and the account has admin/push access; this does not resolve the approval-scope question. No workaround push or external write was attempted after rejection. Complete local checks and preserve the candidate before requesting publication approval.
+
+
+Final local validation: all 127 source contracts passed (generation 20, adaptation 32, quality 6, integration 69). All 45 browser gates passed across the seven registered groups. The first parallel lifecycle run timed out on M218's Week 5 viewport wait; the unchanged strict test passed alone, then the complete lifecycle group passed. No timeout or assertion was weakened. Final B831 additionally verifies enlarged switcher title/Done separation, full-width guidance, search and empty-state recovery; final B846 passes five window/theme/text cases with staged cancellation, keyboard equipment edits and bar conversion. R74's complete 14-case matrix was rerun after the shared header reflow. Normal-size sheet geometry matches all 16 baseline comparisons; 32 sheet states, ordinary motion, forced colors and phone/tablet captures were inspected. Engine hashes match all 81 previously certified next-engine/training-domain/API modules; AST comparison preserves every business expression and transaction in both migrated functions.
+
+Narrow enlarged-text headers now put guidance below the title/action row, and the program-switcher percentage/chevron sit below a full-width name. Shared choice chips and Done follow text scaling; normal layout stays stable. Release packaging and the 933→934 build-progression guard pass. Physical Android/IME/TalkBack and deployed-byte verification remain separate. This is a local Build 934 candidate, not a publication claim. Next: obtain publication approval for this existing public destination, push this branch, require all exact-head CI checks, merge and verify hosted/offline bytes. Continue shared-style migration with the remaining compact configuration and Progress/History owners; preserve Workout/Focus geometry.
+
+
+## Build 935 / M389 — history correction safety and editor consolidation (local candidate)
+
+Branch `improve/m389-history-correction`, based on the complete local M388 candidate. A browser reproduction entered `92..5` in a historical load and clicked Save; four stored bench sets became three, losing the first set. The old inline editor also remained inside a contained/virtualized history row, with a clipped heading, off-screen Minutes and actions behind navigation.
+
+The extracted editor now preserves raw typing and compares the staged values/counts to canonical normalizeEditedHistoryEntry output before saving. A refused malformed/incomplete or non-finite correction keeps the draft and original history intact. Reopening during exit motion gets a fresh draft key; a reproduced Cancel/reopen race no longer revives canceled values. The App correction transaction, stamped setter, mirror and Undo owners are unchanged. UI uses shared actions/theme/type/spacing roles with no inline styling; existing Exit and drag/focus/Back owners handle a portal outside the contained row. The sheet has a scroll body, independent reachable actions, visual-viewport bounds and enlarged-text field reflow. The theme-role audit also found undefined tokens in the completed-day glyph and incomplete training-max warning. Both now use existing live roles; app.css has no undefined --wpb-theme-* references.
+
+Retired 31 inline objects; budgets external 2,188 / embedded 1,143 / inline 2,303 / repeated 14. No engine API or training-policy changes. Existing B881 adds four real correction matrices, mixed stored/current units, invalid load/reps/RIR/minutes refusal, kept typing, Save/Cancel/Undo/reload, sub-set/target ownership, explicit set removals, add/remove-lift cancellation, keyboard bounds, focus and browser Back. All earlier import/restore/transfer-failure tests remain. Final validation/publication status follows below.
+
+Publication remains blocked by automatic approval review. After the user was asked to approve publication, “Continue the path towards launch readiness” was rejected as insufficient to authorize public source disclosure. No alternate export/write was attempted. PR #362 already exists at c375417 and all five workflows are green, but it contains only the M387 menu/navigation portion; local 62a65d4 has the exact same tree. Main remains f9e086f (Build 933). M388 and M389 are local. The private branch now descends from public c375417; both local commits were replayed and the full tested tree was verified identical before/after that alignment. The prior M388 branch is preserved. After explicit publication approval, push this branch, require exact-head CI, merge and verify hosted/offline bytes. Physical Android/IME/TalkBack certification remains open.
+
+Final local evidence: all 127 source contracts passed (20 generation, 32 adaptation, 6 quality, 69 integration), and all 45 browser gates passed across the seven registered groups. After the rapid-reopen fix, the affected B881 gate passed all four matrices, including ordinary-motion cancellation, overflow refusal, mixed units, explicit removals, Undo, Back and reload; its earlier transfer/import cases also passed. The final integration source group was rerun without changing assertions. B831 waits for its existing entrance motion to settle before measuring its unchanged 70px row minimum; no threshold was relaxed. Phone/light/dark and enlarged-text captures were reviewed. All 81 next-engine/training-domain/API module hashes match published Build 933. All 21 app.css theme roles resolve to the 22 live palette publishers. Ownership budgets pass at 2,188 external priorities, 1,143 embedded priorities, 14 repeated priorities and 2,303 inline objects: 123 inline objects and 170 priorities retired across the local 934–935 candidate. Release packaging certifies 124 runtime files, 134 offline entries, the new editor precache entry and the 933→935 progression. M178 passed real waiting-update/Restart, companion activation, offline reload and preserved training storage. No physical Android/IME/TalkBack or deployed-byte claim is made.
+
+
+## Build 937 / M391 — Library rhythm and one-axis route motion
+
+- Replace 19 static Library presentation objects with theme-backed spacing owners for the header, search and clear action, two scrollable filter rows, four status choices and result rows. All data, keyboard focus, catalog behavior and training history remain owned by App.
+- Use shared 4/8px spacing, 48px header/search actions and at least 44px filter targets across phone and enlarged-text layouts.
+- Shorten root navigation's single lead-card entrance, prevent simultaneous diagonal tab-linked travel, and preserve separate exercise-detail motion, Workout/Focus geometry and reduced-motion semantics.
+- Keep complete Plan labels in a 2-by-2 grid at 320px. Tighten the combined inline-style ceiling from 2,303 to 2,284; external/embedded/repeated priority counts stay at 2,188/1,143/14. The switcher browser check retains its 70px layout requirement and accepts only a 0.001px DOMRect floating-point tolerance after entrance settles.
+- Release requires certified cache and all exact-head CI/browser groups, public offline byte verification, and physical Android acceptance separately.
+
+
+## Build 953 — Workout spacing and continued web/PWA readiness
+
+Continue from published B952. The repeated spacing report exposed a verification gap: a small gap between control boxes can still leave excessive space between their centered text. Center the title within the existing name/action row, reduce the normal progression row from 36px to 32px, remove the toolbar's 4px leading margin, and use 48px normal-mode tools. Focus retains its 48px tools through the existing rule's fallback. Edit existing owners; add no priority overrides or inline styles.
+
+B896 now measures the actual progression/tool text gap (at most 24px), title/context spacing (at most 14px for its short-title fixture), zero-to-4px control separation and 48px tool targets. Its existing phone/tablet, Focus, rest, navigation, per-set ownership and load/reps alignment coverage stays in place. The final visible-label gap is measured against a 26px limit with 48px hit targets.
+
+Readiness continues with all registered source contracts, complete training lifecycle audit, all seven browser groups, independent engine export/parity, release/cache integrity and deployed-byte verification. Record final evidence in the PR. Physical Android keyboard, interruption and TalkBack checks remain the device-only acceptance work in R90; the deliverable remains the web/PWA.
+
+
+## Build 954 — Verified static presentation consolidation
+
+One shared owner replaces 52 duplicated static App JSX style objects (45 icons, seven modal overlays). Remove 12 superseded same-selector/same-at-rule important declarations; preserve CSS fallbacks and all dynamic inline geometry. Tighten the enforced budgets to 2,061 external priorities, zero repeated-important collisions, and 2,032 inline objects. No training engine or storage API changes. Browser regression must cover Workout/Focus, dialogs, responsive themes, layout and accessibility. This is a measured first cleanup batch; remaining legitimate dynamic styles and legacy declarations require separate audits.
+
+
+## Build 955 — Program/Workout static layout ownership
+
+Scoped refactor of 74 exact first-prop static JSX style objects in the Program (23) and Workout (51) component owners. Reuse one shared CSS family for grow/min-width, truncation, repeated heading/type and compact layout rows. No new important declarations, no dynamic style migration, no training/recording policy or storage changes. Keep the 48px workout actions and B953 density intact. Tighten the static-inline debt ceiling from 2,032 to 1,958; require all exact-head browser, engine, offline and release checks plus production byte verification. Physical Android remains a separate sign-off.
+
+
+## Build 956 — Shared static Program/Workout declarations
+
+Migrate 88 further first-property static JSX presentation objects in Program (37) and Workout (51) into 46 reusable class-owned CSS property/value rules. Share spacing tokens for 4/8/12/16px values. Do not alter the engine, history, storage, dynamic state/geometry, timers, Focus or working set controls. No new important declarations. Lower inline style budget 1,958 to 1,870 and enforce call-site guards. This is a scoped cleanup, not a claim that all remaining inline styles are safe to remove. Require candidate/main browser, engine, offline, release and hosted byte checks; physical Android remains separately gated.
+
+
+## Build 957 — Cross-screen shared style ownership
+
+Retire 113 more literal first-property JSX inline style objects across 13 screen and card owners: Home 10, Settings 18, Progress detail 9, Strength snapshot 9, one-rep-max tool 9, comparison 21, exercise charts 1, Thousand Club 5, heatmap 7, Gallery 5, block review 12, legacy cards 1, changelog 6. Reuse 28 B956 CSS declaration owners and add only ten new CSS rules for the remaining shared values. Preserve actual computed sizes/spacing, data-driven styles, training engine, set logger, and motion. No new important rules. Ownership debt ceiling tightens 1,870 to 1,757. Full candidate and deployed browser/core/engine integrity remain compulsory; physical Android testing separate.
+
+
+## Build 958 — Cross-screen shared CSS reuse
+
+Migrate 80 strictly literal first-prop JSX style objects across Plan, Next, Home, Settings, Progress, comparison, recovery, profile form, conversion, volume and exercise sheets. Reuse 27 existing B956/B957 property owners and add just three missing declarations. No new priority overrides; preserve all dynamic training values, colors, measured geometry, accessibility callbacks, history, and animation. Tighten verified inline-style ceiling from 1,757 to 1,677. Maintain end-to-end core/engine/browser/offline gates and deployed byte verification; physical Android certification remains separate.
+
+ 
+## Build 959 — Shared dialog dismissal and keyboard containment
+
+Fix shared session dialogs so a nondismissible review cannot close from the scrim or Escape; keep Tab inside all sheets, including read-only ones, and restore focus to the original trigger on closing. Close buttons use consistent 48px targets and readable long-title wrapping on phone/tablet. Add source and real-browser regression coverage without engine, set-logging, history, storage, or dynamic animation changes. Publish after complete release, engine, UI, browser and offline integrity; Android hardware certification remains separate.
+
+Build 959 certification note: automated source, release and browser checks must pass on the final candidate commit before merging; Android hardware testing and hosted deployment remain independent sign-offs.
+
+ 
+## Build 960 — Shared CSS reuse across remaining static JSX
+
+Retire 133 additional strictly static JSX presentation objects from App across Plan, Workout, Next, Progress, Profile and onboarding, reusing the B955–B958 property owners wherever values match and adding only required missing utilities. Each migrated value is layout or typography; retain all state-driven colors, values, calculations, transitions, inline animation and interaction ownership. Tighten verified presentation debt ceiling 1,677 → 1,544; add a permanent exact-debt/utility-ownership contract and retain the zero-duplicate-priority and 2,061-CSS-priority ceilings. This migration is paint/layout parity work, not an engine change. Complete full engine, browser, offline, version and hosted-byte verification before sign-off; physical Android review separately required.
+
+
+## Build 961 — Dialog overlay and information-icon CSS ownership
+
+Consolidate 25 repeated fixed modal backdrop style objects into a deduplicated set of static CSS variants, keeping each original overlay's backdrop opacity, z-index, alignment, padding, animation and independent dismiss callback. Move 11 repeated informational Lucide icon offsets to one shared rule. Preserve all dynamic colors, workout logging, focus ownership, program logic, movement timing and history. Reduce static inline-presentation debt ceiling 1,544 → 1,508 and add a permanent explicit owner/geometry guard. Require all candidate browser, lifecycle, release, offline and production-byte checks; physical Android remains a distinct release sign-off.
+
+B961 certification gate: verify the finalized release's real browser shards, engine lifecycle, release identity and hosted asset parity before merge. Large static CSS overlay migration has no training state changes; mobile hardware remains separate.
+
+
+## Build 962 — Atomic gym input edits and continued style consolidation
+
+Repair staged gym bar weight/plate inventory edits by applying each change against the latest gym object, not a captured render's barWeights/platePairs. Preserve zero-weight Smith values across subsequent edits, and assert controlled-input focus/typing in real browser cases at 320/393/900/1024px. Move 17 additional fully static JSX layout objects into 17 CSS owners without changing dynamic training state or introducing priority selectors. Keep engine, workout logging, calendar, persistence and motion semantics intact. A completed, fully green PR/browser release is required before deployment. Physical Android/TalkBack certification remains separate.
+
+
+Build 962 final regression outcome: the R74 first-use Wizard's split step was crashing because feasibility verdicts with no explanation array were treated as if `items.length` always existed. All five such field reads are now normalized through an array guard; the existing available/unavailable verdicts remain unchanged. The swap-scroll contract now validates the CSS owner after the B962 style migration, and B893's deliberately failed worker build waits for the outcome instead of briefly reading an unmounted step. Release byte hashes were regenerated without an extra build bump. Full PR browser, core and engine gates must pass before merge.

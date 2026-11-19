@@ -175,9 +175,9 @@ def seek(pattern, tries=8):
     return scroll_up_to(pattern, tries=tries) or scroll_to(pattern, tries=tries + 4)
 
 
-def wizard(name, cycle=False, shots=False):
+def wizard(name, cycle=False, shots=False, split=None):
     """The setup (the prototype's flow): pick the format, a few pages of questions, then the ranked splits — wait for
-    the best fit, name it, build."""
+    the best fit (or pick `split` by name from the ranked list), name it, build."""
     if cycle:
         tap(r"^\|Training cycle$|Training cycle\|", "wizard-cycle")
     tap(r"^\|Continue$", "wizard-mode" if shots else None)
@@ -202,6 +202,14 @@ def wizard(name, cycle=False, shots=False):
                     shot("wizard-ranked-list")
                     if not find(r"^Rank 2: ", timeout=4):
                         FAILS.append("ranked splits list has no second split")
+            # A later check needs a particular split; the best fit can change with the engine (Upper / Lower and
+            # Full Body sit 0.1 apart at the defaults), so it is picked by name rather than assumed to rank first.
+            if split:
+                row = r"^Rank \d+: " + re.escape(split) + ","
+                if seek(row):
+                    tap(row)
+                else:
+                    FAILS.append(f"ranked splits have no {split}")
             if seek(r"Program name|Cycle name"):
                 tap(r"Program name|Cycle name")
                 adb("shell", "input", "text", name.replace(" ", "%s"))
@@ -1416,7 +1424,8 @@ if tap(r"^\|New( program)?$", required=False):
             back()
     row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New( program)?$", "cycle-setup"):
-    wizard("Smoke Cycle", cycle=True)
+    # Upper / Lower: the schedule check below needs two days that share a name ("Lower").
+    wizard("Smoke Cycle", cycle=True, split="Upper / Lower")
     time.sleep(8)
     shot("cycle-built")
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")

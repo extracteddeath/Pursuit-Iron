@@ -88,7 +88,10 @@ export function refreshProgressionSets(current, prescribed, owns) {
         if (set.warm || set.sub) return set;
         const fresh = work[workIndex++];
         if (!fresh || set.done || owns(set) || set.added || set.typeOverride) return set;
-        return { ...set, weight: fresh.weight, reps: fresh.reps, target: fresh.target,
+        // A different progression method owns a new baseline. Do not let the old
+        // readiness snapshot re-apply itself to the previous method's weights.
+        const { readinessBaseWeight, readinessFactor, ...unadjusted } = set;
+        return { ...unadjusted, weight: fresh.weight, reps: fresh.reps, target: fresh.target,
             hint: fresh.hint, suggested: fresh.suggested, autoTuned: false };
     });
 }
@@ -210,15 +213,14 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
                     opportunity = { type: 'reps', weight, reps, bestReps };
             }
         }
+        const estimatedTarget = proposed.find(set => set.target?.estimate)?.target;
         const proposedReason = proposed.some(set => set.target?.nextAction === 'percentage')
             ? 'This lift follows the saved percentage program and training max for this week. Its programmed weights and reps stay together.'
-            : proposed.find(set => set.target?.estimate)
-                ? `Starting estimate ${proposed.find(set => set.target?.estimate).target.w} ${unit}. ${startingEstimateText(proposed.find(set => set.target?.estimate).target.estimate, unit)} Your first set calibrates the rest.`
+            : estimatedTarget
+                ? `Starting estimate ${estimatedTarget.w} ${unit}. ${startingEstimateText(estimatedTarget.estimate, unit)} Check the load on your first set.`
             : proposedSuggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
         const reason = change.undone ? suggestion.reason : proposedReason;
-        const action = proposedSuggestion?.action;
-        const category = action === 'increase_load' || action === 'add_reps' ? 'Progression'
-            : action === 'decrease_load' ? 'Load adjustment' : program.config?.percentScheme ? 'Programmed targets' : 'Rep target';
+        const category = change.category;
         return [{ id, name: ex.name, slot, cell, range, suggestion, proposed, effective, reason, proposedReason,
             style: resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day.id),
             protocol: techniqueProtocolFromCell(cell), change, category, opportunity }];

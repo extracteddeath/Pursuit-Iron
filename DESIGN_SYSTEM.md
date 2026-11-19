@@ -1,5 +1,9 @@
 # Pursuit Iron design-system contract
 
+### M396 — loading-tool form and calculator ownership
+
+Calculators uses the shared session dialog and existing panel gesture ref, with persistent title/Close and one native scrolling body. Shared choices/actions, semantic theme roles, relative type and adaptable grids replace its static inline geometry and paint. Only the calculated plate height remains inline. Gym loading fields share the existing gym CSS family, connected labels, raw input validation, readable units and 48px controls. Numeric preparation and unit conversion live behind engine-api; the views do not recreate training or plate calculations. The presentation guard includes both extracted views and tightens the inline budget from 2,123 to 2,084 without adding priorities.
+
 Owner: `app.css` provides semantic theme roles and shared component styles. `modules/App.js` owns data, behavior, state and composition. The theme must stay user-selected and preserve tinted dark surfaces.
 
 ## Canonical tokens
@@ -198,3 +202,45 @@ Plan's existing context heading uses intrinsic title sizing rather than a fixed 
 The running-tab review also reproduced two summary disagreements. Live Plan Up Next now reads the canonical nextSessionCursor used by Home; explicit browsed-week previews and completed-block history keep their existing scope. Progress Sessions reads the existing weeklyRecap count/set totals used on Home, instead of summing fractional muscle credits into a workout-set count. Muscle-volume charts retain their existing contribution ledger. Neither change generates prescriptions or modifies training history.
 
 Current rendered baselines covered all five roots at 393px dark, 320px light and 900px light, plus training-empty phone states. M324 source/browser coverage now includes reordered/repeated/scheduled logs, Home/Plan/Preview parity, shared Home/Progress weekly totals, and long-name reflow at 393px, 320px with doubled text, and 900px. R53 accepts a fully contained side-by-side action or an action below a full-width title; B907 retains Profile actions, section/card customization and data preservation. Continue the ordered composition review; this slice does not certify every supporting flow or physical Android behavior.
+
+
+### M388 — shared program-switching and gym configuration styles
+
+ProgramSwitcherSheet and GymsSheet share `.wpb-selection-backdrop`, `.wpb-selection-sheet`, heading, copy and introduction roles. Each feature retains its state and transactions. Native callbacks, the shared drag/motion owner, focus/Back handling, selected/locked program policy, inventory conversion and gym normalization remain authoritative. Static styles are class owned; selection and expanded state use attributes.
+
+Keep phone bottom attachment, safe-area padding, short-window/visual-viewport ceilings and centered expanded sheets in this owner. Legacy generic sheet geometry, dialog skins, primary-action corner rules and filter-chip geometry exclude these migrated roles at zero added specificity. Shared motion and applicable native-control feedback remain in the shared owners. Do not restore the retired switcher/gym priority layers or inline styles.
+
+Normal-size rendered geometry matches the baseline across 320/393/900/1280px in rose/rosewater. Newly class-owned gym choice chips and Done can follow 200% text instead of retaining old priority font sizes. The shared backdrop is bounded by the visual viewport so the editor remains above an overlaid phone keyboard. A sheet container query moves guidance below title/Done and gives program names their own full row at narrow enlarged text sizes. Existing B831 checks search/empty states and program ownership; B846 covers staged equipment edits, cancellation, bar conversion, enlarged text and short landscape. These are browser fixtures, not physical Android certification.
+
+Budgets: 2,188 external priorities, 1,143 embedded priorities, 2,334 combined inline objects, 14 repeated priorities. This slice removes 110 priorities and 76 inline objects from M387; the complete Build 934 candidate removes 170 priorities and 92 inline objects from Build 933.
+
+
+### M389 — one history-correction sheet and exact staged evidence
+
+HistoryEditSheet lives in `modules/history-editor.js`. HistoryView uses the existing Exit portal target at its containing `.wpb`; no modal may be rendered inside a `.wpb-render-auto` history card where content visibility/containment can clip its fixed children. Shared drag, Back, focus and exit motion remain authoritative. Each opening gets a fresh React key: Exit may retain a closing child for animation, but it must never revive a canceled draft on rapid reopening. The named sheet owns one header, scroll body and persistent action footer bounded by the visual viewport; normal and enlarged text use the same token-based fields and a container-query reflow.
+
+Keep raw numeric typing until Save. The existing canonical normalizer produces the candidate; the view must refuse a candidate that drops staged sets or changes staged numeric values through rounding/clamping. Do not duplicate engine dosage/loading policy, mutate original logs or add a private persistence owner. Intentional set/lift removals remain available, while removing every lift keeps Save disabled. App's stamped setter owns revisions and Undo; the existing correction transaction owns mirror refresh.
+
+The existing B881 browser gate covers actual correction, cancellation, Undo, reload, focus, Back, keyboard bounds and stored-unit/protocol ownership. UI ownership now includes the extracted module and caps combined inline objects at 2,303; external/embedded/repeated priority budgets remain 2,188/1,143/14.
+
+
+### M392 — Settings preferences and scalable theme choices
+
+The six Settings preference groups have one shared CSS presentation and explicit accessible group names. The existing callbacks and measured selection track remain authoritative. ThemePicker uses UiChoice, a native disclosure, semantic palette roles, relative type and a text-relative grid. Only actual swatch colors remain data-driven inline. The Settings scroll pane owns its inset and anchor spacing. Retire superseded embedded theme styles and preference typography/layout overrides instead of adding priority layers.
+
+R76 must enlarge the actual document text in the expanded chooser, since forcing each element's font size in a test masks fixed CSS type. Check complete labels/targets, keyboard selection, exact saved values and reversal. Restoring experience may advance the existing program timestamp; authored content and logged history must match. Current ceilings: 2,256 inline objects, 2,173 external priorities, 1,134 embedded priorities and 14 repeated priorities.
+
+
+### M393 — Library browsing, complete details and batched delivery
+
+Only the compact Library toolbar is sticky. Search and filters scroll within the existing results owner so the same composition works in the wide list/detail pane. Find reveals/focuses search without clearing selections. Keep Compare named and discoverable, restore scroll/filter context, and never animate toolbar height in response to scrolling.
+
+LibraryView has one computed inline goal width and no static inline presentation. Use the semantic Library/detail CSS family for all list, note, history, record, variant, technique and goal surfaces. Preserve the existing shared motion, focus, palette, selected-state and adaptive-pane owners. Retire superseded component rules during migration. Current ceilings: 2,141 inline objects, 2,106 external priorities, 1,053 embedded priorities, 14 repeated priorities.
+
+Goal fields keep raw typing and accept only complete finite positive values; Save cannot infer a replacement for invalid text. Shared actions expose Cancel and explicit removal, with a visible unit label and independent exercise drafts. R54/R74/R65 cover scrolling room, actual larger text, reachable short-window actions, state/data preservation and adaptive panes. Ship related improvements as one meaningful verified batch, following the user's October 27 preference.
+
+### Cohesion 35 — Authored target transactions and Program rows (M394)
+
+Program exercise rows, grips, heading, badges, metadata and actions have class-owned presentation. Manual targets live below the exercise heading/actions, use labelled native text inputs with the appropriate keyboard, and scale with actual document text. Apply submits one validated target pair; Cancel discards raw typing. Screen controls that would save, launch or change the target context focus an unfinished editor first. The selected-week cell is the display authority; a reps-only edit must not freeze an unedited weekly set schedule. The canonical engine facade owns parsing, immutable target writes and invalid-prescription issues. Preview's existing primary action becomes Review targets when repair is required; the shared launch owner still guards direct new starts. Existing workout recovery uses persisted rows and must remain available even when the current saved program needs target repair.
+
+M394 retires 18 static inline style objects and 33 external priorities. Enforce external 2,073, embedded 1,053, repeated 14 and combined inline 2,123 in the ownership contract, including the extracted target view. Dark/light, 320–1280px, actual 200% text, short viewport actions, review/save/reload and executable week-three targets share the existing M222 browser gate. Do not alter protected Workout logging geometry as part of this migration.

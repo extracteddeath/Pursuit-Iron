@@ -143,7 +143,10 @@ function inferredLiftPriorities(request) {
 }
 const MUSCLE_SCALE = {
     chest: { minimum: 1, preferred: 1, upper: 1, direct: 0 },
-    back: { minimum: 1, preferred: 1, upper: 1, direct: 0 },
+    // Back is two regions (lats from vertical pulls, upper back from rows) under one ledger, and its common landmarks sit
+    // above chest's (MEV ~10 vs ~8, MAV ~18 vs ~16, MRV ~25 vs ~22). At 1, a strength block could not hold both regions:
+    // its back allowance went to lats and upper back fell from 10 to 3.6 sets.
+    back: { minimum: 1.15, preferred: 1.15, upper: 1.15, direct: 0 },
     quads: { minimum: 1, preferred: 1, upper: 1, direct: 0 },
     hamstrings: { minimum: .82, preferred: .88, upper: .92, direct: 0 },
     glutes: { minimum: .62, preferred: .72, upper: .8, direct: 0 },

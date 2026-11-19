@@ -1,3 +1,313 @@
+## Build 1016 — Strength transition volume, set-count notes and original machine history
+
+- Strength accumulation following hypertrophy protects weekly working-set continuity without applying a peak taper or silently inventing sets that breach approved session capacity. Extremely high source-volume blocks use an explicit bounded continuity floor.
+- Exercise Info shows the workout's actual working-set count after edits, instead of a stale three-set prescription note when four sets are scheduled.
+- Machine A/B and exercise Swap controls live beside the exercise weight increment in Exercise Info, with a full-width narrow-screen layout to avoid clipping Add Machine.
+- An athlete may explicitly associate older machine-unlabelled observations with the original physical machine, not the newly created alternative. History, Last, PR evidence and charts remain station-scoped, and old saved receipts are unchanged.
+
+## Build 1011 — Physical machine A/B progressions and gym defaults
+
+- A single logical machine exercise can now use distinct physical stations in each saved gym (Machine A/B), with its own default, label, active status and load increment.
+- Workout sets retain their actual machine identity even when switching stations mid-session; finished sets, historical performance, and prior unassigned records are preserved.
+- Machine-aware Last references, progression evidence, personal records and strength charts no longer treat two weight stacks as one comparable load scale.
+- Added web regression coverage for per-gym independence, mixed A/B sessions, historical deactivation and legacy records; refreshed offline/runtime certification.
+- The native Kotlin implementation remains separately gated by its own verified build, journal replay, end-to-end parity and UI acceptance.
+
+## Build 1010 — Verified Both/ULPPL strength and peak practice (candidate)
+
+- In eligible five-day ULPPL/PPLUL mixed-goal cycles, strength, intensification and peak stages now request two bench, two squat and one deadlift practice exposures per week; authored lift frequencies and preferences take precedence.
+- An equipment-qualified incline dumbbell/Smith secondary bench variant is preferred on Push when an adjustable bench is available; flat-only gyms do not invent incline equipment.
+- Effective block split/day counts control phase defaults, including changes from five to four training days. Previously issued workouts and static custom rosters are unchanged.
+- Added generation/regression contracts for real exercise outputs, gym restrictions, explicitly picked bench variants, other splits/goals and time budgets. Release remains a candidate until independent, release and browser checks complete.
+- Separately unresolved: long-session underfill in strength and peak, broader cycle quality and native Kotlin parity.
+
+## Build 998 — Design specification passes 50–110 (release candidate)
+
+- Consolidated Program and planning sheet chrome, semantic text roles, shared week controls and recoverable search across saved programs without modifying training prescriptions.
+- Clarified consequential saved-set versus next-workout load proposals, including truthful before/after comparisons, scope, and reversible actions.
+- Reduced Home Game Plan density by keeping executable targets visible and detailed coaching behind the existing disclosure; complex set targets remain fully inspectable.
+- Aligned remaining Workout pinned-note, Info explanation, and Gallery actions with 48px effective targets and preserved keyboard/200%-text behavior.
+- Corrected a legacy draggable-sheet priority override that could place Workout Info above the visible viewport after resizing; its dedicated viewport cap now owns height in normal, large-detent and compact-landscape modes.
+- Expanded exact-head source and seven browser-shard contracts. No engine, saved data, workout logging, automatic load selection, or PR detection changes. Release and hosted/offline verification are mandatory before publication; physical Android acceptance remains separate.
+
+## Build 989 — Program, Home and Workout Material 3 consolidation (release candidate)
+
+- Consolidated Program Save Review, History correction, training-max, Program Settings and Session dialogs on a shared keyboard/focus owner. Escape, Tab containment, return focus and destructive-confirmation cancellation work consistently across sheets.
+- Fixed a focus-loss bug when clearing the Program schedule, normalized stale day assignments, and made Progression search/results and muscle-volume meters accessible.
+- Improved responsive behavior at 320px with 200% text, modern and older WebView disclosure resizing, Program sheet keyboard viewport sizing, and Home's unique outline disclosure IDs.
+- Protected Workout navigation and set-count controls: 48px exercise rail targets, no page-level horizontal scroll, responsive input sizing, and safe integer stepping without overwriting manually typed values.
+- Corrected root typography specificity so component font scales are not suppressed by the global reset, including Plan review and Home summary labels.
+- Consolidated redundant M3 styling rules without introducing override layers: 9 adjacent duplicate declaration blocks and 3 adjacent forced-colors media blocks merged; 25 fewer `!important` occurrences than Build 988, with a smaller stylesheet; seven shadowed Exercise Detail declarations were removed from obsolete owners.
+- Added source and Chromium regressions for dialog semantics, responsive typography, Program schedule, Plan review, Home disclosures, Workout controls and accessibility. Seven browser shards and engine/release certification remain the shipping gates.
+
+## Build 988 — Workout completion layout and recovery feedback polish
+
+- Replaced 46 finished-workout inline styles with 40 M3 theme-owned CSS roles for stats, PRs, next-session preview, recovery feedback, and save/share actions.
+- Narrow-width stat cards can wrap numbers; entry names wrap instead of clipping, and feedback controls are 44px+ tap targets.
+- Recovery options expose aria-pressed; chevrons use aria-expanded state, routine save uses its disabled state, and dynamic next-session direction stays in the view.
+- No changes to training engine, progression, PR detection, storage format, or workout-completion callbacks.
+
+## Build 987 — Workout exercise-information presentation consolidation
+
+- Removed 45 inline style objects from the Workout Info sheet, giving the exercise detail a single theme-token CSS owner for stats, coaching explanation, records, trends, technique cues and setup guidance.
+- Added native dialog semantics, keyboard Tab containment, Escape dismissal and focus return to the originating Info action.
+- Reworked the sheet to fit the visual viewport and safe-area insets; kept scrolling inside it and made rest adjusters 48px targets and machine weight choices at least 44px.
+- Preserved dynamic chart geometry, rep and load calculations, active weight-step choice, notes, PR records, and existing callbacks. No engine or persistence-schema changes.
+- Added static and Chromium ownership/responsiveness verification. Source CSS size budget updated to track intentional CSS migration, with no new !important overrides.
+
+## Build 986 — Consolidated Program sheet accessibility and styling
+
+- Migrated seven Program bottom-sheet surfaces (Settings, Share, Weekly Schedule, Exercise Actions, Progression Choice, Reference, Training Maxes) to a reusable keyboard-focus owner; previously several had no containment for Tab/Escape or reliable focus restoration.
+- Kept the Program drag-gesture refs, save/apply callbacks, confirmation handling, dynamic form state and engine prescriptions with their original owners.
+- Consolidated duplicate Program Settings/Share shell and backdrop CSS, reducing stylesheet source by 106 characters with no new !important overrides. Settings height now follows the visual viewport and safe-area inset when the mobile keyboard opens.
+- Added static ownership and Chromium focus, nested disclosure, Escape and narrow-layout regression gates. The Training Maxes editor preserves the nested 1RM conversion-first Escape behavior. Engine 0.65.9 remains unchanged; no training load, workout logging, or saved-data schema changes.
+- Release metadata, service-worker precache and runtime/UI hashes updated together for the combined candidate.
+
+## Build 985 — Workout and Program header presentation consolidation
+
+- Consolidated eleven inline style objects from Workout timer, Focus/options/Finish header, save error, empty workout state and Program back/name controls into themed CSS. Logging, training state and callbacks unchanged.
+- Explicit paused and compact-state attributes avoid timer-tick style recreation; preserved Focus, renaming, save and finish actions and accessible focus states.
+- No new CSS priority overrides. The CSS size ceiling now accounts for migration from fixed React styles while the lower inline debt budget is permanent. Engine 0.65.9 unchanged.
+
+## Build 984 — Retire unreachable private CSS while preserving Material 3 roles
+
+- Remove thirteen unreachable CSS rule blocks and two orphaned selector branches, with no owners in the shipped runtime JavaScript or HTML.
+- Remove 33 unused private CSS custom properties; preserve the public solid secondary-container surface, semantic shape tokens, and radius contracts after adversarial browser verification.
+- Net stylesheet reduction of 3,039 characters (627,740 → 624,701). No replacement CSS or new !important overrides; training/UI state and inline style counts remain unchanged.
+- Keep the new B987/B988 Strength and Gallery presentation improvements from Build 983 intact. Add B990 dead-CSS regression budget, with static Chromium layout parity across 16 width/theme/forced-colors scenes.
+- Engine remains 0.65.9. No progression, PWA, storage schema, session logging, or workout navigation changes.
+
+## Build 983 — Consolidated styling and readiness
+
+- Consolidated 59 fixed inline presentation objects across Strength detail, estimated 1RM and Shared Programs into M3 token-based CSS. No new !important selectors.
+- Calculator inputs now use 16px text to prevent mobile focus zoom, while calculated plate height, load math and training state remain dynamic.
+- Gallery filters expose aria-pressed, and filter/retry/import controls preserve accessible 44/48px touch targets, offline retry and duplicate-import handling.
+- Added B987/B988 permanent ownership checks; kept engine version 0.65.9. This is one combined release for multiple styling passes.
+
+## B988 — Shared-program Gallery presentation consolidation
+
+- Moved 22 gallery inline presentation styles into theme-aware CSS, preserving filtering, retry and import logic.
+- Added aria-pressed to filter chips and 44px/48px minimum touch targets to choices and import actions.
+- Gallery now uses explicit selected, error, success and disabled CSS states without inline priority overrides.
+- Bundled with B987 to release in one combined build.
+
+## Styling readiness pass B987 — Strength detail and 1RM presentation
+
+- Consolidated fixed style declarations in estimated 1RM and lift-history strength detail panels into theme-scoped CSS, leaving only calculated and contextual values in React.
+- Increased calculator weight/reps input text to 16px to prevent mobile browser focus zoom. Preserved native numeric input selection and visible focus treatment.
+- Kept dynamic plate height, PR/plateau state, chart data, estimated 1RM formulas, and saved athlete records unchanged. Added a permanent source contract to catch regression.
+- No public deployment until the combined release checks pass.
+
+## Build 982 — Resize-aware Workout exercise navigation
+
+- Keep the active exercise chip visible through phone rotation, split-screen resizing and exercise-label reflow, not only when navigating to another exercise.
+- Use bounded rail-only scrolling and ResizeObserver with cleanup and a safe window-resize fallback; no whole-page scrollIntoView.
+- Extend the B896 production Chromium workout flow with a 393→320px viewport regression, preserving the selected exercise and screen-reader name. The B947 gate checks ownership and cleanup.
+- No engine, prescription, workout logging or saved-data changes. Engine stays 0.65.9.
+
+## Build 981 — Protected dialog keyboard containment
+
+- Consume Escape inside non-dismissible workout/session dialogs so background workout shortcuts cannot receive the same key event. Dismissible dialogs still close normally and restore trigger focus.
+- Extend the real-browser dialog fixture with a background Escape listener and preserve existing focus trapping, inert/disabled controls, small-screen geometry and reduced-motion coverage.
+- Training engine and saved data unchanged. Engine remains 0.65.9.
+
+## Build 980 — M3 Expressive cascade cleanup
+
+- Remove 38 superseded CSS declarations and rules, including duplicate tonal-role definitions, dead Plan emphasis, and earlier Home, injury, exercise-tag, workout and review layout values. Preserve the later authoritative rules and current visual hierarchy.
+- Reduce stylesheet source by 3,082 characters (622,588 → 619,506) and priority declarations by one (2,061 → 2,060). No new styling or specificity layer; the existing 1,262 inline style objects are unchanged.
+- Validate 14 representative Home/Plan/Progress/Library/Workout/program/injury presentation surfaces against the previous published stylesheet in 16 Chromium scenes: dark/light, 320–1280 px, and forced-colors enabled/disabled. Layout and role-token properties matched.
+- Add a cascade-debt contract and ratchet the historical CSS priority budgets. No changes to the training engine, saved user data, progression, timer, navigation, runtime dependencies, or program logic.
+- Engine remains 0.65.9. Physical Android IME and TalkBack testing remain separate launch gates.
+
+## Build 979 — Workout rest and set presentation consolidation
+
+- Retire seven inline-style objects from the real Workout logger: rest buttons, rest card and ring, target/load references, set heading, target reps and technique hint.
+- Centralize those theme-aware elements in CSS without additional `!important` declarations; rest status now uses declarative paused/finishing flags rather than a per-tick inline border.
+- Normalize rest-button hit targets to 48 px in focus and standard modes; preserve pause, add/reduce, restart and skip callbacks, progress rings and workout logging.
+- Extend real-browser workout regression checks for rest control geometry and keyboard/contrast ownership, and add a source-level style budget gate.
+- Engine stays 0.65.9. No change to training prescriptions, persisted sessions, PR classification or program data.
+
+## Build 978 — Workout input and exercise rail ownership
+
+- Extract the workout exercise navigation rail, working-set count editor, session notes editor, and shared numeric-field selection helper from App into one presentation-only module.
+- Preserve the original canonical exercise names for accessibility, workout set callbacks, note persistence and numeric focus behavior.
+- Update the workout rail and set-menu source ownership tests; no progression, rest timer, storage schema or logged history change.
+- Engine remains 0.65.9. Real Android TalkBack and keyboard tests remain a separate launch gate.
+
+## Build 977 — Shared chip and dialog presentation
+
+- Move 11 static inline presentation objects into theme CSS for program muscle-coverage chips, chart empty states, settings and version dialogs, and search icons.
+- Muscle-coverage chips now have at least 44px hit targets, with paired-theme Chromium verification.
+- Keep What's New scrolling bounded, support reduced motion and forced colors, and retain generation cancel/Escape controls.
+- No changes to engine 0.65.9, progression, logging, storage or history.
+
+## Build 976 — Program and workout geometry consolidation
+
+- Retire 16 static JSX layout objects across program scheduling, exercise-swap search/results, plan restore, workout trace, previous-set controls, coaching, injury and history panels.
+- Use stable single-owner CSS for 44px schedule and workout trace actions, 48px workout exit, safe search scrolling, reduced motion and forced colors.
+- Keep engine 0.65.9, workout logging, progression, history, saved plan data and callback behavior unchanged.
+- Protect this cleanup with registered integration source contract and existing seven real-browser shards.
+
+## Build 975 — Live workout and persistent update polish
+
+- Move eight minimized-workout, PWA update and offline status inline styles into shared theme CSS; preserve all workout and restart callbacks.
+- Keep phone-width dock above the tab rail with 44px Resume and Discard targets; provide clearer restart confirmation actions and visible focus treatment.
+- Assert 320px and 393px dock, offline update touch areas, layout, contrast and persistence in production Chromium.
+- No engine, progression, storage, workout event or history schema change; Engine 0.65.9.
+
+## Build 974 — Workout ordering and update-prompt verification
+
+- Newly added working sets now precede pending drop/myo extensions; already logged extensions retain their original order.
+- Expanded mobile PWA Restart visibility regression across 320px/393px, foreground checks, and Settings navigation.
+- Protected session-only set resizing, user-owned loads, workout history, and easier-day changes with additional tests.
+- Engine remains 0.65.9. Physical Android IME/TalkBack verification remains separate.
+
+## Build 973 — Program exercise and Workout set-entry panel consolidation
+
+- Retire 29 inline style objects from Program amplifier/day details, workout set options and coach guidance.
+- Theme-owned CSS maintains selected set type, accessible compact controls, long-text wrapping and reduced-motion sheet support.
+- Preserve training recommendations, active set edits, history, progression decisions and undo. Engine 0.65.9 is unchanged.
+
+## Build 972 — Workout warm-up and Program context cleanup
+
+- Consolidate 36 inline presentation objects across warm-up, skip confirmation and Program block review, save undo, priorities, coverage, continuous-cycle and upgrade notices.
+- Improve compact responsive reading and action targets while preserving the same exercise/program callbacks, logged sets, progression, PR events and history.
+- Add a regression ownership contract; training engine remains 0.65.9.
+
+## Build 971 — Workout header CSS ownership and consistent summary layout
+
+- Consolidate seven static presentation objects from the live workout header, Leave action, completion bar, progress summary, exercise-list link and planned day note into shared CSS.
+- Retain the timer's pause/resume/reset handlers, active Focus/Finish state, session progress arithmetic and button labels.
+- Keep title and summary geometry responsive, preserve the completion bar's compact height, prevent long summary labels from overflowing the header and maintain high-contrast focus indication.
+- Add 320px and wider browser checks for header progress, Leave button, exercise-list navigation, and no horizontal overflow.
+- Training engine 0.65.9, saved workouts, set entry and program cycle remain unchanged.
+
+## Build 970 — Unclutter workout notes and consolidate static note styling
+
+- Remove the redundant, full-width per-exercise session-note button from the workout header. The compact note action still opens the existing editor and retains its accessible name.
+- Add a subtle filled note indicator to the 48px action icon when an exercise note is saved.
+- Move set-context, starting-hint, pinned-note card, and pinned-note excerpt presentation from JSX into theme-aware CSS while preserving labels and behavior.
+- Extend normal and Focus phone/browser checks for a single note action, visible indicator, safe touch target, saved note text and editor access after reload.
+- Preserve persisted notes, workout progression, set rows, saved training data, and engine 0.65.9.
+
+## Build 969 — Workout action rail: accessible compact icons
+
+- Replace the scrolling text-chip action strip with 48px icon controls; provide per-action accessible names and browser tooltips.
+- Expose genuine pressed states for Warm-up and Superset, without changing their feature callbacks.
+- Remove the toolbar's repeated inline presentation rules and keep theme/geometry in shared CSS.
+- Retain horizontal scrolling only when available actions exceed the viewport; preserve normal/Focus workout, set inputs, rest and pinned note actions.
+- Extend phone/tablet browser verification for labels, real hit boxes, pressed state and adaptive overflow; engine 0.65.9 and training data are unchanged.
+
+## Build 968 — Accessible workout exercise header actions
+
+- Give the Info, History and Skip actions real 48px hit targets, preserving the compact normal and Focus workout layouts.
+- Move three repeated button presentation objects into a single shared CSS owner.
+- Keep the destructive second-tap Skip confirmation legible at its intrinsic text width, with an explicit accessible name.
+- Certify the 320px/393px phone and tablet header geometry, actual hit boxes, accessible confirmation and lack of horizontal overflow.
+- Preserve progression, saved workouts, exercise navigation, set controls and engine version 0.65.9.
+
+## Build 954 — CSS ownership consolidation
+
+- Replace 45 identical Lucide inline flex styles and seven modal overlay inline objects with shared class-owned styling.
+- Retire 12 overridden important declarations and require zero competing important-property owners.
+- Preserve the normal/Focus logger, saved weights, data models, gestures, spacing and responsive theme behavior.
+
+## Build 953 — Compact workout spacing and readiness verification
+
+- Center the exercise title beside its controls and bring the set context closer to the name.
+- Remove the extra leading toolbar margin and compact the progression/action rows while preserving 44px tool targets and horizontal access to every action.
+- Preserve Focus sizing, set-column alignment, prescription and saved-workout ownership.
+- Extend the workout browser gate to measure visible text spacing as well as control boxes.
+
+## Build 944 — Reversible, equipment-aware readiness
+
+- Rework workout check-in as a single immutable-source load adjustment, without compounded 5% or 12% reductions.
+- Preserve completed, manual, warm-up, technique-extension and observed-effort-adjusted sets.
+- Use actual gym inventory for pending working loads; never create zero or unsupported weights.
+- Keep current reps, target RIR and prescribed set counts; update session-only labels and permit readiness changes in Workout options.
+- Share accessible sheet and compact Material-based spacing; add source regression coverage and lifecycle parity.
+
+## Build 943 — Meaningful adjustments and compact reviews
+
+- Remove routine rep-only progression from Home and Preview change history. Do not offer Undo for a normal rep increase.
+- Highlight earned load changes and actual plateau-related load responses; distinguish planned set-count edits only when evidenced by a recent saved program revision (never by missed sets).
+- Keep current rep targets and planned dose when declining an upcoming load adjustment, and retain exact equipment/load guards.
+- Compact review cards, move full reasoning and per-set comparisons behind disclosure, and keep Close visible above the scrolling review body.
+- Expand regression coverage for ordinary reps, load increases, plateau responses and saved set-count changes.
+
+## Build 942 — Reliable calculators and gym loading settings
+
+- Share calculator presentation, accessible controls and modal behavior, with a fixed heading and a scrolling body.
+- Keep malformed weights/reps editable, show actual plate outcomes for empty inventories and below-bar targets, and open plate loading from a percentage in one action.
+- Convert gym racks and load ceilings together when switching units, retain bar-mass precision and the gym edit clock, and reject incomplete raw fields before saving.
+- Preserve workout values, program/history ownership and existing generation/progression policies.
+- Retire 39 net inline presentation objects; add end-to-end numeric, unit, inventory, accessibility and dismissal regressions.
+
+## Build 941 — Starting estimates, recovery dose, injury detail and gym plates
+
+- Integrate the reviewed web engine patch, removing its duplicate recovery hunk.
+- Seed otherwise blank planned lifts with labelled, equipment-rounded estimates; use corrected recent history and the current profile without replacing progression or saved live work.
+- Scale recovery depth with the recorded session dose while retaining effort and elapsed/measured recovery.
+- Record injury severity and show preference effects before explicit workout adjustments.
+- Persist per-gym plate pairs and solve only combinations the gym owns, including empty inventories.
+- Add behavioral coverage for revisions, units, zero RIR, gym limits, protected swaps/holds, recovery dose and finite plate combinations.
+
+## Build 940 / M394 — Safer Program edits and prescription integrity
+
+- Set and rep fields retain raw typing until Apply, with inline errors and Cancel. Complete target validation prevents malformed text from becoming a different rep target or a guessed progression range. Reps-only changes preserve untouched weekly set schedules.
+- Program exercise rows share styles and scalable labelled controls. Review, Start and context changes return focus to unfinished edits; system Back uses the same guarded Back action and saved-draft review.
+- Malformed saved targets lead from Preview to Program for repair and cannot start a partial new workout. Existing workouts keep their persisted set values and remain resumable while the current program needs repair.
+- Retire 18 static inline style objects and 33 external priority overrides; tighten the existing budgets. Training formulas, logged history and protected Workout/Focus geometry retain their existing owners.
+
+## Build 939 / M393 — Room to browse and cohesive Library details
+
+- Keep only a compact Library toolbar pinned. Search, muscle/equipment filters and All/Recent/Goals/Banned choices scroll with the exercises. Find brings the real search field back without clearing selections; Compare remains available in the toolbar.
+- Move list, empty-state, detail, notes, history, records, attachment, technique and goal presentation into semantic CSS. Retire 115 inline style objects and 148 priority overrides, including the old rules that flattened rows and squeezed muscle badges. Keep text scaling, rounded rows, keyboard focus and the existing adaptive list/detail pane.
+- Goal editing accepts a complete, finite positive weight. Malformed input no longer silently saves a numeric prefix or a guessed replacement. Add Cancel and explicit Remove goal, visible units, scalable controls and independent drafts per exercise.
+- Preserve all original catalog/record projections, pinned notes, bans, training prescriptions and workout recovery. Engine 0.65.9 remains unchanged.
+
+## Build 938 / M392 — Readable Settings choices and shared styling
+
+- Fix theme names remaining at 11.5px when actual root text doubles. Theme labels and group captions now scale; the grid adapts to the text size and available width.
+- Theme selection reuses UiChoice and native disclosure/keyboard behavior. Only real palette swatches retain data-driven inline paint.
+- Consolidate six preference groups, theme presentation and Settings scroll/anchor spacing into semantic CSS. Retire 28 inline style objects, 15 external priorities and nine embedded priorities; lower the existing ceilings to 2,256 / 2,173 / 1,134 respectively. Repeated priorities stay at 14.
+- Keep all original preference callbacks, training algorithms and persistence owners. Existing R76 now checks actual text scaling, theme/preference keyboard selection, persisted values, reversal and authored-content/history preservation.
+- Engine 0.65.9 is unchanged. Physical Android/IME/TalkBack acceptance remains open.
+
+## Build 937 / M391 — Even Library spacing and calmer motion
+
+- Browser screenshot review: preserve a one-line Library title with a screen-reader-accessible result count; at narrow widths, correct the existing priority flex owner so Plan's Progression label uses two rows rather than breaking mid-word.
+
+- Library header, search, filter strips and rows share spacing, typography, accessible target sizes and theme paint instead of 19 inline style objects. Search, selection, exercise detail and saved training retain their behavior.
+- Primary navigation uses shorter one-axis lead-card motion, avoiding diagonal source-linked overshoot. Reduced-motion and system Back handling remain unchanged.
+- Engine 0.65.9 and storage schema are unchanged; physical Android acceptance remains open.
+
+## Build 936 / M390 — Stable weekly loads and load-grid regression
+
+- Preserve the prior load across a week-to-week rep/RIR change when each completed straight set used it, met the new rep floor and the estimated decrease is at most 0.5 lb / 0.25 kg and 2%. The held load must remain selectable in the actual equipment inventory.
+- Preserve meaningful weight reductions, misses, mixed loads and discrete machine notches. Earned progression and logged workout evidence are unchanged.
+- Add the reported 50 lb -> 49.5 lb regression to mandatory integration contracts. Engine 0.65.9 remains in place.
+
+## Build 935 / M389 — Safe history correction and shared editor styles
+
+- Reproduce and prevent a logged-set loss: typing `92..5` and saving previously filtered a real set out of the completed workout. Retain raw typing; compare staged sets and values with canonical normalization before saving. Incomplete/malformed loads, numeric overflow, fractional or blank reps, invalid/clamped RIR and fractional minutes keep the editor open without touching saved history.
+- Move the correction form through the existing Exit portal outside virtualized/contained history rows. Its named dialog, independently scrolling body and persistent Close/Cancel/Save controls fit the visual viewport and clear an overlaid keyboard.
+- Extract the correction view into one feature module using shared actions, live theme roles and class-owned fields. Retire 31 inline style objects; tighten the combined budget to 2,303. Add no priority overrides or storage/engine schema.
+- Preserve original program/day/week/unit ownership, sub-sets and target metadata. Keep all numerical decisions with normalizeEditedHistoryEntry, all persistence/revision stamps with the existing App owners, and existing performance-mirror/Undo behavior.
+- Give each editor opening a new draft identity so reopening during the shared closing animation cannot revive canceled edits. Extend the existing history import/browser gate with four phone/tablet/short-window and normal/200% text correction journeys, actual Save/Cancel/Undo/reload, interrupted closing, explicit set/lift removal, numeric refusal, keyboard clearance, focus and real browser Back. Keep the 173-gate registry unchanged.
+- Fix unresolved shared palette roles for completed-day markers and incomplete training maxes, using the existing on-accent and warning roles.
+
+## Build 934 / M387–M388 — Shared menus, configuration styles and stable navigation
+
+- Fix two reproducible scroll/interaction races: Home's saved-program target moved 60px after automatic scrolling, and Program's metadata remained 17px tall for an extra frame. Home context now scrolls naturally below a fixed app bar; Program applies its existing header geometry before next-frame pointer positioning.
+- Consolidate Home program actions, Program day actions and the day picker into one menu renderer. Retain all original actions, selected/done/next-day facts, program transactions and Undo behavior.
+- Measure real menu rows and current anchors instead of guessed heights or stale click rectangles. Reflow after text/viewport changes, clear the live-workout dock and navigation, and keep long labels complete.
+- Focus the first action on open; preserve arrows/Home/End, reveal offscreen focused rows inside short menus, and return focus on dismissal. Tab closes the menu. Keep the existing keyboard, Back and motion owners.
+- Consolidate the program switcher and gym editor into one configuration-sheet anatomy. Static presentation uses shared classes and theme roles; existing owners retain program selection, disabled future blocks, equipment, rack limits, bar weights, staged edits and cancellation.
+- Retire 170 CSS priority overrides and 92 inline styles across the menu/navigation and configuration passes. Remove superseded screen-specific layers and a shadowed achievement width. Tighten external/embedded/inline budgets to 2,188/1,143/2,334; add no priority declarations.
+- Compare populated sheets in both themes at four widths and normal/200% text. At narrow enlarged text, place guidance below title/Done and keep program names on a full row. Preserve normal-size geometry; allow gym choices and Done to follow enlarged text rather than fixed priority fonts. Extend existing switcher search/empty-state and gym keyboard/cancel/short-window/unit-conversion journeys.
+- Keep configuration sheets above an overlaid phone keyboard through the shared backdrop visual-viewport ceiling. Extend existing navigation, menu, contrast, resize and stress journeys. Training-engine policy, saved prescriptions, history and live set ownership stay with their current owners. Physical Android/IME/TalkBack certification remains open.
+
 ## Build 933 / M386 — Safe decimal training-max editing and truthful review
 
 - Preserve decimal points and intermediate text while entering a training max. Typing 212.5 previously produced 2125, which could multiply percentage-based workout loads.

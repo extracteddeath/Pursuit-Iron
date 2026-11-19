@@ -71,9 +71,14 @@ for (const file of fs.readdirSync(path.join(root, 'verification'))) {
     const productionImports = [...text.matchAll(/(?:from\s*|import\s*)['"]\.\.\/modules\/([^'"]+\.js)['"]/g)]
         .map(match => 'modules/' + match[1]);
     const importsOutsideEngine = productionImports.some(moduleFile => !runtimeSet.has(moduleFile));
+    // Standalone exports contain canonical engine modules, not application scripts.
+    // Source-only UI tests can have no filesystem calls themselves yet import
+    // scripts/audit-ui-style-ownership.mjs (not part of this package).
+    const nonPortableImports = [...text.matchAll(/(?:from\s*|import\s*)['"](\.\.\/[^'"]+)['"]/g)]
+        .some(match => !match[1].startsWith('../modules/') && match[1] !== '../index.js');
     if (/browser|import-loader|production-source/.test(file)
         || /productionSource|puppeteer|readFileSync|\bfs\./.test(text)
-        || importsOutsideEngine) {
+        || importsOutsideEngine || nonPortableImports) {
         continue;
     }
     write('verification/' + file, text);

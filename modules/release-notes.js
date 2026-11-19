@@ -2,6 +2,64 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "953", items: [
+        "Exercise titles, set counts and lift tags sit closer together, with less space above workout actions.",
+        "Warm-up, Superset, Swap and Session note stay on one swipeable row with comfortable tap targets."
+    ] },
+    { version: "4.0.0", build: "944", items: [
+        "You can adjust workout readiness from Workout options, even after starting; changing the answer never compounds a previous load reduction.",
+        "Readiness changes only suggested working weights that are still unlogged. Your manual entries, completed sets, current reps and target effort remain untouched.",
+        "Loads follow your gym’s usable weight increments. The check-in now uses an accessible, scrollable sheet with a persistent heading."
+    ] },
+    { version: "4.0.0", build: "943", items: [
+        "Home and Preview only flag meaningful upcoming adjustments: load changes, plateau responses, and recent changes to planned set counts. Earning an extra rep is ordinary progression, not an undoable plan edit.",
+        "Keep the previous load without giving up earned rep targets. Your logged sets, planned effort, and training program remain intact.",
+        "Adjustment cards are shorter. Open Why and target details for the full rationale and per-set comparison; the review sheet keeps Close visible."
+    ] },
+    { version: "4.0.0", build: "942", items: [
+        "Calculators keep their heading and Close action reachable, follow larger text, and use the same controls as the rest of the app.",
+        "Malformed weights and fractional reps stay editable instead of becoming different numbers. Plate results explain empty inventories and targets below the bar.",
+        "Tap a training percentage to see how to load it with your gym’s plates.",
+        "Gym unit changes convert available loads and limits together. Bar weights, rack lists and plate counts are checked before Done, with Cancel preserving saved settings."
+    ] },
+    { version: "4.0.0", build: "941", items: [
+        "New lifts can show a labelled starting estimate from recent related sets or your profile. Logged progression targets and workouts in progress keep their values.",
+        "Light training no longer makes a muscle look as exhausted as a full session. Recovery still reflects effort and time since training.",
+        "Injury entries record how it felt and show the planned effect before you apply workout changes.",
+        "Each gym can save its available plate pairs. Plate calculations respect those counts, including sizes you do not own."
+    ] },
+    { version: "4.0.0", build: "940", items: [
+        "Manual set and rep edits stay local until Apply, with clear labels, validation and Cancel. Changing reps keeps an untouched weekly set schedule.",
+        "Program exercise controls reflow with larger text. Review, workout launch and system Back guide you back to unfinished target edits, and Back preserves saved-draft review.",
+        "Malformed rep ranges no longer become guessed progression targets. Preview leads back to Program to fix them before starting. Existing workouts remain resumable with their recorded values."
+    ] },
+    { version: "4.0.0", build: "939", items: [
+        "Library search and filters scroll away to leave more room for exercises. Use Find in the compact toolbar to return to search.",
+        "Library lists and exercise details share consistent styles, larger text and clearer controls.",
+        "Goal editing keeps invalid numbers unsaved, with Cancel and an explicit Remove goal action."
+    ] },
+    { version: "4.0.0", build: "938", items: [
+        "Theme names now follow larger text settings and reflow into readable choices.",
+        "Training preferences share consistent controls, spacing and named keyboard groups."
+    ] },
+    { version: "4.0.0", build: "937", items: [
+        "Exercise Library search, filter rails and lists now use a consistent shared spacing and theme system.",
+        "Tab navigation moves one lead card on a shorter, predictable horizontal axis."
+    ] },
+    { version: "4.0.0", build: "936", items: [
+        "A new training week no longer drops 50 lb to 49.5 lb merely because an estimated load landed one tiny step below completed straight sets.",
+        "Real load corrections, missed targets, mixed-load sessions and available equipment increments still control progression."
+    ] },
+    { version: "4.0.0", build: "935", items: [
+        "History corrections keep incomplete numbers in the editor instead of silently dropping logged sets. Fix the value or remove the set deliberately before saving.",
+        "The history editor now keeps its heading and actions reachable, with larger text, keyboard clearance, and consistent shared controls. Cancel and Back discard staged edits.",
+        "Completed-day marks and missing-training-max warnings use the correct theme colors."
+    ] },
+    { version: "4.0.0", build: "934", items: [
+        "Home’s greeting scrolls with the content while the title and tools stay steady. Program controls are ready to tap without an extra layout jump.",
+        "Program and day menus follow your text size, show full names, stay clear of the workout dock, and keep keyboard focus visible when scrolling.",
+        "Program switching and gym setup share consistent sheet styles. Add gym choices follow larger text, and equipment edits still apply only when you choose Done."
+    ] },
     { version: "4.0.0", build: "933", items: [
         "Training-max fields keep decimal points while you type. Apply stages your changes for the program’s save review; Cancel discards them.",
         "Save review now shows each changed lift’s training max before and after, with units. Larger text and one-rep-max conversion are easier to use."

@@ -1,5 +1,7 @@
 // Stateless shared UI. Screen state, navigation and training stay with their feature owners.
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from 'react/jsx-runtime';
+import { X } from 'lucide-react';
+import { navigateChoiceRow } from './ui-choice-navigation.js';
 
 // R61 foundations pilot. These primitives own presentation and native button semantics only;
 // navigation, saved choices, logging and scroll memory remain with their existing screen owners.
@@ -15,9 +17,49 @@ export function UiRootHeader({ title, titleClassName = "", actions, actionsClass
         ] }), children
     ] });
 }
+// Canonical surface owner: preserve each caller's existing DOM tag, aria state, and feature classes.
+export function UiCard({ as: Element = "div", className = "", tone, ...props }) {
+    // Tone is a design-system surface role, not an arbitrary screen-specific style.
+    // Keep the same native tag, props and caller class for existing card consumers.
+    return _jsx(Element, { ...props, ...(tone ? { "data-surface": tone } : {}),
+        className: `wpb-ui-card ${className}`.trim() });
+}
+// Metric anatomy is shared across destinations; each caller retains its existing
+// class names, visible value/label order, formatting, and optional context.
+// This component introduces no CSS owner or data dependency, and never changes
+// number formatting or layout geometry. The screen owns the metric data.
+export function UiMetric({
+    as: Element = "div", className = "", label, value, context = null,
+    labelFirst = false, labelClassName = "", valueClassName = "",
+    contextClassName = "", labelProps = {}, valueProps = {}, contextProps = {},
+    ...props
+}) {
+    const valueNode = _jsx("div", { ...valueProps, className: valueClassName, children: value });
+    const labelNode = _jsx("div", { ...labelProps, className: labelClassName, children: label });
+    const children = labelFirst ? [labelNode, valueNode] : [valueNode, labelNode];
+    if (context != null)
+        children.push(_jsx("div", { ...contextProps, className: contextClassName, children: context }));
+    return _jsxs(Element, { ...props, className: `wpb-ui-metric ${className}`.trim(), children });
+}
+
+
+// Shared native-form owner: gym and workout controls keep their labels and state,
+// while one component supplies the canonical editable field anatomy.
+export function UiSummary({ ...props }) {
+    return _jsx('summary', props);
+}
+
+export function UiField({ as: Element = "input", className = "", ...props }) {
+    return _jsx(Element, { ...props, className: `wpb-ui-control ${className}`.trim() });
+}
+
 export function UiAction({ variant = "secondary", className = "", ...props }) {
     // Components own static visual properties; only runtime-measured styles are forwarded.
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });
+}
+// One accessible 48px icon target for sheets, toolbars and standalone actions.
+export function UiIconAction({ "aria-label": label, variant = "icon", ...props }) {
+    return _jsx(UiAction, { variant, "aria-label": label, "data-icon-only": true, ...props });
 }
 export function UiChoice({ selected, kind = "chip", className = "", label, caption, children, ...props }) {
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-choice ${className}`, "data-choice-kind": kind, "aria-pressed": !!selected,
@@ -33,4 +75,41 @@ export function UiStatus({ className = "", children, ...props }) {
 }
 export function UiSection({ className = "", ...props }) {
     return _jsx("section", { ...props, className: `wpb-ui-section ${className}` });
+}
+
+
+// One header anatomy for Program sheets. A caller may retain its original native
+// header/div tag, heading, close action, accessibility attributes and feature classes.
+// Styling stays with the existing wpb-ui-sheet-heading CSS role.
+export function UiSheetHeading({ as: Element = "div", className = "", ...props }) {
+    const names = className.trim().split(/\s+/).filter(Boolean);
+    const classes = names.includes("wpb-ui-sheet-heading")
+        ? className : `wpb-ui-sheet-heading ${className}`.trim();
+    return _jsx(Element, { ...props, className: classes });
+}
+
+// Stateless close control for Program sheets and dialogs; each feature owns
+// its dismissal/confirmation state. Dialog chrome retains the existing paint.
+export function UiSheetClose({ className = "", "aria-label": label = "Close",
+    variant, chrome = "sheet", iconSize = 18, ...props }) {
+    const children = _jsx(X, { size: iconSize, "aria-hidden": true });
+    if (variant) return _jsx(UiIconAction, { variant, ...props,
+        "aria-label": label, className: `hit wpb-sheet-close ${className}`, children });
+    return _jsx("button", { type: "button", ...props, "aria-label": label,
+        className: `pressable hit ${chrome === "dialog" ? "" : "wpb-sheet-close "}wpb-ui-sheet-close ${className}`,
+        children });
+}
+
+
+// One labeled family of mutually exclusive choices. This uses native buttons and
+// aria-pressed (a group of toggle choices, not an ARIA tablist), so screen owners
+// only supply options and changes. The existing .wpb-segmented track owns geometry.
+export function UiSegmented({ label, options, value, onChange, className = "" }) {
+    return _jsx("div", { role: "group", "aria-label": label,
+        className: `wpb-segmented ${className}`.trim(),
+        onKeyDown: event => navigateChoiceRow(event, index => onChange(options[index][0])),
+        children: options.map(([key, text]) => _jsx(UiChoice, {
+            kind: "tab", selected: Object.is(value, key),
+            onClick: () => onChange(key), children: text
+        }, String(key))) });
 }

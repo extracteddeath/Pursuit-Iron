@@ -5,7 +5,7 @@ import { INTENT_MUSCLES } from './topology.js';
 import { publicMevInternalSafetyCeiling } from './public-mev.js';
 import { evaluateObjectiveCoachGuardrails } from './coach-regression.js';
 import { assessWeeklyRecovery } from './weekly-recovery.js';
-import { proposeRecoveryRedistributions } from './recovery-realization.js';
+import { hasRecoveryRedistribution } from './recovery-realization.js';
 import { evaluateArmCoverage } from './arm-coverage.js';
 import { evaluateFunctionalCoverage } from './functional-coverage.js';
 function equipmentEligible(ex, equipment, bodyweight) {
@@ -153,7 +153,7 @@ export function auditProgram(program, request, options) {
     }
     if (!options?.skipRecoveryRealization) {
         const recovery = assessWeeklyRecovery(program.sessions, request);
-        if (recovery.hardCollisions > 0 && proposeRecoveryRedistributions(program.sessions, request).length) {
+        if (recovery.hardCollisions > 0 && hasRecoveryRedistribution(program.sessions, request)) {
             findings.push({
                 code: 'COACH_RECOVERY_REALIZATION_AVOIDABLE', severity: 'warning',
                 message: `${recovery.hardCollisions} hard consecutive-day recovery collision${recovery.hardCollisions === 1 ? '' : 's'} remain even though dose-neutral assistance redistribution can reduce the weekly recovery objective.`

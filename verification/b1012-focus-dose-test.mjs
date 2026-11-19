@@ -40,7 +40,7 @@ for (const session of ['s60', 's90']) for (const goal of ['hypertrophy', 'both']
             // What the record says matches the plans: its baseline is the unfocused plan's dose, and "improved" means the target was met.
             // (When the displayed-time referee tightened this plan's budgets, its baseline was built under the same budgets.)
             if (untrimmed) assert.ok(Math.abs(record.unfocused[region] - base[region]) < .01, `${part}/${region}: the recorded baseline is the unfocused plan`);
-            if (record.status !== 'limited') assert.ok(after[region] + .05 >= record.target[region], `${part}/${region}: a focus reported as met is met`);
+            if (record.status !== "limited") assert.ok(after[region] + .05 >= record.target[region], `${session} ${goal} ${days}d ${part}/${region}: a focus reported as met is met (${after[region]} vs ${record.target[region]}, ${record.status}, start ${record.start})`);
         }
         if (!armed && untrimmed && record.changes.length && focusedPublicRegions({ focus: { [part]: 1 } }).length === 1
             && record.changes.every(change => change.operations.every(op => op.delta > 0))) armed = { plain, focused, region: focusedPublicRegions({ focus: { [part]: 1 } })[0] };

@@ -184,7 +184,12 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 { const before = JSON.parse(C.exportStore());
   const id = Object.keys(before.perf)[0]; const w0 = parseFloat(before.perf[id].weight);
   const wkKg = C.home().week.volume;
+  // A machine step is hardware: 5 kg becomes the 10 lb step a stack has, not 11 (main's canonicalExerciseIncrement).
+  const stepPid = before.saved[0].id, stepEx = before.saved[0].days[0].exercises[0];
+  C.setExLoadStep({ programId: stepPid, id: stepEx, value: 5 });
   const r = C.switchUnit({ to: 'lb' }); const after = JSON.parse(C.exportStore());
+  { const inc = after.saved.find((p) => p.id === stepPid)?.exLoadInc?.[stepEx];
+    ok(inc?.unit === 'lb' && inc.v === 10, 'a 5 kg machine step converts to a real 10 lb step (' + JSON.stringify(inc) + ')'); }
   const wkLb = C.home().week.volume;
   ok(!(wkKg > 0) || Math.abs(wkLb - wkKg * 2.2046226) <= 2, "this week's volume follows the new unit (" + wkKg + ' kg → ' + wkLb + ' lb)');
   ok(r.ok && after.unit === 'lb' && after.saved.every((p) => p.config.unit === 'lb'), 'switchUnit to lb relabels programs');
@@ -192,7 +197,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(JSON.stringify(after.history) === JSON.stringify(before.history), 'history untouched');
   ok(Math.abs(parseFloat(after.bodyweight) - Math.round(parseFloat(before.bodyweight) * 2.2046226 * 2) / 2) < 1e-9, 'bodyweight converted');
   C.startSession({}); ok(C.switchUnit({ to: 'kg' }).ok === false, 'switching is refused with a workout open'); C.discardSession();
-  ok(C.switchUnit({ to: 'kg' }).ok && JSON.parse(C.exportStore()).unit === 'kg', 'switch back to kg'); }
+  ok(C.switchUnit({ to: 'kg' }).ok && JSON.parse(C.exportStore()).unit === 'kg', 'switch back to kg');
+  ok(JSON.parse(C.exportStore()).saved.find((p) => p.id === stepPid)?.exLoadInc?.[stepEx]?.v === 5, 'and back to the 5 kg step');
+  C.setExLoadStep({ programId: stepPid, id: stepEx, value: 0 }); }
 
 // 14. Training cycles (App.js buildCycle / doCompleteCycleBlock / doDeleteCycle / BlockReviewView)
 { C.init({});
@@ -206,7 +213,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const d = C.cycleDetail({ id: made.cycleId });
   ok(d.blocks[0].state === 'active' && d.live && d.live.blockIdx === 0 && C.home().cycle && C.home().cycle.blockIdx === 0, 'detail and Today place the lifter in block 1');
   ok(C.nextBlock({ programId: st.cycles[0].blockIds[0] }).ok === false, 'a cycle block cannot be forked with Build next block');
-  for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(50 + 2.5 * k) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  // A whole block (four weeks of four days), each set logged as prescribed, reaches the engine's review point. Three
+  // flat 8-rep sessions only advanced while their logs read as fatigue and the engine sent the lifter to recovery.
+  for (let k = 0; k < 16; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(parseFloat(x.weight) > 0 ? x.weight : 50) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: String(parseInt(String(x.target?.r ?? x.reps ?? '').split(/[-–]/).pop(), 10) || 8) }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
   const rv = C.reviewBlock({ id: made.cycleId, index: 0 });
   ok(rv && rv.ok && typeof rv.headline === 'string' && Array.isArray(rv.lifts), 'block review summarises the logged block');
   C.startSession({}); ok(C.advanceCycle({ id: made.cycleId }).ok === false, 'advancing is refused with a workout open'); C.discardSession();
@@ -233,7 +242,8 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.undo().ok && JSON.parse(C.exportStore()).cycles.length === 1, 'undo restores the cycle');
   { const m2 = C.createCycle({ config: ccfg, templateId: 'powerbuilding' });
     const e2 = C.editCycle({ id: m2.cycleId, blocks: [{ phase: 'intensification', weeks: 3 }, { phase: 'peak', weeks: 2 }] });
-    for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(50 + 2.5 * k) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+    // A whole block logged as prescribed, as above.
+    for (let k = 0; k < 16; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(parseFloat(x.weight) > 0 ? x.weight : 50) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: String(parseInt(String(x.target?.r ?? x.reps ?? '').split(/[-–]/).pop(), 10) || 8) }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
     const a3 = C.advanceCycle({ id: m2.cycleId }); const c3 = JSON.parse(C.exportStore()).cycles.find((c) => c.id === m2.cycleId);
     ok(e2.ok && a3.ok && ['intensification', 'recovery'].includes(c3.blockMeta[c3.activeBlock].phase), 'a reshaped cycle advances into its edited next phase: ' + (a3.message || a3.error));
     const nBefore = JSON.parse(C.exportStore()).saved.length; const lv = C.leaveCycle({ id: m2.cycleId }); const sL = JSON.parse(C.exportStore());
@@ -459,6 +469,13 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   s = C.act({ type: 'readiness', label: 'Run down', factor: 0.88 });
   const w1 = Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight);
   ok(s.readinessDone && s.readinessLabel === 'Run down' && (w0 === 0 || w1 < w0), 'readiness scales loads down (' + w0 + ' -> ' + w1 + ')');
+  // Main's shared policy (modules/workout-readiness.js): "Feeling strong" puts the planned loads back, and a lighter
+  // load is one the equipment has.
+  s = C.act({ type: 'readiness', label: 'Feeling strong', factor: 1 });
+  const wBack = Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight);
+  ok(wBack === w0, 'readiness back to Feeling strong restores the planned load (' + w1 + ' -> ' + wBack + ')');
+  s = C.act({ type: 'readiness', label: 'Run down', factor: 0.88 });
+  ok(Number(s.exercises[0].sets.find((x) => !x.warm && !x.sub).weight) === w1, 'the same readiness answer gives the same load again');
   const hadWarm = s.exercises[0].hasWarm;
   s = C.act({ type: 'warmups', ei: 0 });
   ok(s.exercises[0].hasWarm === !hadWarm, 'warm-ups toggle on the first lift');
@@ -811,7 +828,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.profileCard({ share: [] }).rows.map((r) => r.id).join() === 'level', 'an empty selection keeps one row');
   const favId = card.lifts[0].id; const fc = C.profileCard({ share: ['favorites'], favorites: [favId, favId, 'nope', card.lifts[1]?.id, card.lifts[2]?.id, card.lifts[3]?.id].filter(Boolean) });
   ok(fc.favorites.length <= 3 && fc.favorites[0] === favId && fc.rows[0].lines[0].startsWith(card.lifts[0].name), 'favorites: deduped, known, up to three'); }
-// live-autoregulation.js: two observed misses ease the next pending accessory row, shown as `adjusted`
+// live-autoregulation.js (B951): two observed misses suggest a lower load for the next pending accessory row; nothing is applied
 { C.init({ store: JSON.stringify({ unit: 'kg', bodyweight: '80' }) });
   C.createProgram({ config: { name: 'B', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 2 });
   for (let n = 0; n < 4; n++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '10' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
@@ -821,9 +838,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(w[2].adjusted === null, 'nothing eased before any set');
   for (const k of [0, 1]) { C.act({ type: 'edit', ei: e.ei, si: w[k].i, field: 'reps', value: '3' }); C.act({ type: 'toggle', ei: e.ei, si: w[k].i }); C.act({ type: 'rir', ei: e.ei, si: w[k].i, rir: 0 }); }
   const a = C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub);
-  ok(a[2].adjusted === 'load' && parseFloat(a[2].weight) < parseFloat(w[2].weight), 'two misses ease the next set: ' + w[2].weight + ' → ' + a[2].weight);
+  ok(a[2].adjusted === 'suggest' && a[2].weight === w[2].weight && parseFloat(a[2].suggestedLoad) < parseFloat(w[2].weight), 'two misses suggest a lower load and leave the set as it was: ' + w[2].weight + ', try ' + a[2].suggestedLoad);
   C.act({ type: 'toggle', ei: e.ei, si: w[1].i });
-  ok(C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub)[2].adjusted === null, 'un-logging the set puts the load back'); }
+  ok(C.session().exercises[e.ei].sets.filter((x) => !x.warm && !x.sub)[2].adjusted === null, 'un-logging the set withdraws the suggestion'); }
 // B918: a program the lifter built keeps its days through Program settings; a constraint its lifts break is refused
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'Mine', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
@@ -989,8 +1006,11 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 { // Web Build 904–910: the next session's review — game plan and plan changes with undo.
   C.init({ store: JSON.stringify({ unit: 'kg' }) });
   C.createProgram({ config: { name: 'R', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'full_body', days: 3, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 3 });
+  // The top of each set's own rep range: session-plan.js only offers Undo back to a load whose logged reps were in range
+  // (it never rolls back reps the lifter earned), so reps far outside the range would leave nothing to undo.
+  const topReps = (x) => String(parseInt(String(x.target?.reps ?? '').split(/[-–]/).pop()) || 10);
   let s3 = C.startSession({}); const day = s3.dayId, pid = s3.programId;
-  s3.exercises.forEach((e) => e.sets.forEach((x) => { if (x.warm || x.sub) return; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '15' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); C.act({ type: 'rir', ei: e.ei, si: x.i, rir: 3 }); }));
+  s3.exercises.forEach((e) => e.sets.forEach((x) => { if (x.warm || x.sub) return; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: topReps(x) }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); C.act({ type: 'rir', ei: e.ei, si: x.i, rir: 3 }); }));
   C.finishSession();
   const r = C.sessionReview({ programId: pid, dayId: day, weekIndex: 2 });
   ok(r && r.gamePlan.length > 0 && r.gamePlan.every((g) => ['pr', 'technique', 'estimate', 'up', 'down', 'plan', 'trend'].includes(g.kind)) && r.changes.length > 0, 'next session review: ' + r.gamePlan.length + ' game-plan notes, ' + r.changes.length + ' plan changes');
@@ -1051,7 +1071,8 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   C.logBodyweight({ value: 80 }); const s0 = C.startSession({}), b = s0.exercises.find((e) => e.id === 'bb-bench');
   ok(b && b.estimate && Number(b.estimate.w) > 40 && Number(b.estimate.w) < 80 && b.estimate.from.kind === 'bodyweight', 'first bench starts from an estimate (' + (b && b.estimate && b.estimate.w) + ' kg)');
   ok(b.sets.filter((x) => !x.warm).every((x) => x.weight === b.estimate.w), 'the estimate fills the working sets');
-  const H = [{ unit: 'kg', date: '2026-10-01', perf: { 'bb-bench': { sets: [{ w: 100, r: 5 }] } } }];
+  // A stored session's date is epoch milliseconds, and the estimate only reads the last 90 days (starting-load.js).
+  const H = [{ id: 'h1', unit: 'kg', date: Date.now() - 20 * 86400000, perf: { 'bb-bench': { sets: [{ w: 100, r: 5 }] } } }];
   const d = E.startingEstimate('db-bench', { history: H, unit: 'kg' }), w = E.startingWorkLoad(d, 8, 2);
   ok(d.from.kind === 'related' && d.from.id === 'bb-bench' && w > 28 && w < 38, 'a dumbbell press reads off the barbell bench (' + w.toFixed(1) + ' kg per hand)');
   ok(E.startingEstimate('bb-bench', { history: H, unit: 'kg' }).from.kind === 'own' && E.startingEstimate('pullup', { history: H, unit: 'kg' }) === null, 'own history wins; bodyweight lifts get no load estimate'); }

@@ -26,8 +26,12 @@ assert.doesNotMatch(shellHistoryAdapterSource, /latestComparableShellEntry|lates
     'separate comparable/reference normalization paths must not return');
 assert.match(shellHistoryAdapterSource, /function latestShellEntries\(history, program, legacyId, day, normalizedHistory = null\)/,
     'shell latest/reference selection must accept an already-normalized history context');
-assert.match(shellHistoryAdapterSource, /analyzeShellHistoryForNextEngine\(program, history, legacyExercises, \{ normalizedHistory, unit: evaluationUnit \}\)/,
-    'one suggestion must pass the same normalized history into full engine analysis');
+assert.match(shellHistoryAdapterSource, /const normalizedHistory = normalizeHistoryEntries\(comparableHistory, program\.id\)/,
+    'machine-scoped and legacy suggestions must normalize the SAME history set used for progression');
+assert.match(shellHistoryAdapterSource, /analyzeShellHistoryForNextEngine\(program, comparableHistory, legacyExercises, \{ normalizedHistory, unit: evaluationUnit, machineScoped:!!machineScoped \}\)/,
+    'one suggestion must pass its same machine-scoped normalized history into full engine analysis');
+assert.match(shellHistoryAdapterSource, /historyForMachineRecommendation\(history,/,
+    'physical machine progression cannot borrow sets from a different stack or gym');
 assert.match(shellHistoryAdapterSource, /options\.normalizedHistory \?\? normalizeHistoryEntries\(history, program\.id\)/,
     'full history analysis must reuse supplied canonical normalization and retain standalone fallback');
 assert.match(shellHistoryAdapterSource, /semanticStartingReferenceForShell\(program, history, day, nextId, cell, \{ normalizedHistory, unit: evaluationUnit \}\)/,

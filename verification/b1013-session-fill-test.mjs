@@ -3,9 +3,15 @@
 // Every expectation is measured against the same request built with `sessionFill: false` (the plan as the
 // realizer generated it), with limits computed here from that control and the engine's own targets.
 import assert from 'node:assert/strict';
-import { EXERCISES, EX_BY_ID, GYM_PRESETS, estimateMinutes, auditProgramWeek } from '../modules/engine-api.js';
+import { EXERCISES, EX_BY_ID, GYM_PRESETS, estimateMinutes, auditProgramWeek, weeklyVolume } from '../modules/engine-api.js';
 import { generateNextProgramForShell, nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
-import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
+import { auditShellVolume, ensureMovementPatterns } from '../modules/next-engine/volume-repair.js';
+import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
+import { createTrainingSetEvents } from '../modules/next-engine/events.js';
+import { deriveMuscleLedger } from '../modules/next-engine/ledgers.js';
+import { estimateSessionMinutes } from '../modules/next-engine/realizer.js';
+import { auditProgram } from '../modules/next-engine/arbiter.js';
+import { publicRegionContribution } from '../modules/next-engine/public-mev.js';
 
 const BAND = { s40: [20, 40], s60: [40, 60], s90: [60, 90] };
 const STRENGTH = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
@@ -109,9 +115,28 @@ assert.equal(fixed.nextEngine.sessionFill.added[0].reason, 'movement_pattern');
 shown(fixed, 1).forEach(minutes => assert.ok(minutes <= 40, '4 the added lift fits the session'));
 // The same request on a barbell kit has no time for another lift beside four sets of bench: the pull takes the
 // place of the one accessory, and that is recorded.
-const swapped = build({ ...noPull, name: 'two-day strength, barbell', experience: 'advanced', equipment: ['barbell', 'bench', 'ezbar', 'pullup'] });
-assert.ok(swapped && pulling(swapped) >= 2 && absent(swapped) === 0, '4 the barbell plan pulls too');
-assert.ok(swapped.nextEngine.sessionFill.added[0].replaced, '4 the lift that made room is recorded');
+const barbell = build({ ...noPull, name: 'two-day strength, barbell', experience: 'advanced', equipment: ['barbell', 'bench', 'ezbar', 'pullup'] });
+assert.ok(barbell && pulling(barbell) >= 2 && absent(barbell) === 0, '4 the barbell plan pulls too');
+// With back dosed above chest the generator now programs that pull itself, so the case where a full day must give
+// up an accessory for it is built directly: the same plan without its pulls, its upper day filled to the limit.
+{ const defs = createExerciseMap([]), engine = JSON.parse(JSON.stringify(barbell.nextEngine.program)), request = JSON.parse(JSON.stringify(barbell.nextEngine.request));
+  const pulls = id => ['lats', 'upper_back'].some(region => publicRegionContribution(defs.get(id), region) > 0);
+  // Each pull becomes a skull crusher (the accessory the old plan had there), so the week has no pulling at all.
+  for (const session of engine.sessions) session.exercises = session.exercises.map(e => !pulls(e.exerciseId) ? e
+      : { ...e, exerciseId: 'skullcrusher', name: 'Skull Crusher', role: 'hypertrophy_isolation' });
+  const upper = engine.sessions.find(session => session.exercises.some(e => !/strength/.test(e.role)));
+  assert.ok(upper, '4 fixture has an accessory to give up');
+  for (const e of upper.exercises) if (!/strength/.test(e.role)) while (estimateSessionMinutes(upper.exercises) < upper.maxMinutes - 2 && e.sets < 6) e.sets++;
+  engine.events = createTrainingSetEvents(engine.sessions, request.customExercises);
+  engine.muscleLedger = deriveMuscleLedger(engine.events);
+  engine.sessions.forEach(session => { session.estimatedMinutes = estimateSessionMinutes(session.exercises); });
+  engine.audit = auditProgram(engine, request);
+  const shell = nextProgramToShellProgram(engine, barbell.config, EXERCISES, () => barbell.id);
+  shell.nextEngine = { ...barbell.nextEngine, ...shell.nextEngine, program: engine, request };
+  assert.ok(pulling(shell) < .5, '4 the direct fixture has no pulling: ' + pulling(shell));
+  const result = ensureMovementPatterns(shell, EXERCISES);
+  assert.ok(pulling(result.program) >= 2, '4 the full day pulls after the pass: ' + pulling(result.program));
+  assert.ok(result.changes.some(c => c.reason === 'movement_pattern' && c.replacedExercise), '4 the lift that made room is recorded: ' + JSON.stringify(result.changes)); }
 console.log(`PASS 4 two-day strength plan: pulling ${pulling(bare)} -> ${pulling(fixed)} sets (${fixed.nextEngine.sessionFill.added[0].exercise}).`);
 
 // 5. The engine source of an extended plan still projects to the cells the lifter runs: an added lift must not
@@ -128,4 +153,48 @@ for (const program of [...filled, fixed]) {
 }
 assert.ok(projected >= 3, '5 fixture armed: plans with an added lift');
 console.log(`PASS 5 ${projected} extended plans re-project to the same reps, effort and rest.`);
+// 6. The capacity ladder's last rung. Four heavy sets at four minutes' rest filled a 40-minute full-body day and
+//    the request was refused for a missing push; it now builds on the short-session strength dose, and says so.
+{ const compact = build({ name: 'two-day mixed', unit: 'kg', goal: 'both', experience: 'intermediate', days: 2, weeks: 4, session: 's40', equipment: KITS.full, split: 'full_body' });
+  assert.ok(compact, '6 the request builds');
+  assert.equal(compact.nextEngine.request.preferences.compactStrength, true, '6 the compact dose is written on the request');
+  const heavy = Object.values(compact.nextWeekPrescriptions).map(weeks => weeks[1]).filter(cell => cell.role === 'primary_strength');
+  assert.ok(heavy.length >= 2 && heavy.every(cell => cell.sets === 3), '6 primary lifts take three sets: ' + heavy.map(c => c.sets).join(','));
+  for (const week of weeksOf(compact)) shown(compact, week).forEach(minutes => assert.ok(minutes <= 40, '6 inside the 40-minute limit'));
+  const ordinary = filled.find(p => p && p.config.goal === 'both');
+  assert.ok(ordinary && ordinary.nextEngine.request.preferences.compactStrength !== true, '6 a request that builds as asked never takes the compact dose');
+  console.log('PASS 6 a refused two-day mixed plan builds on three heavy sets, recorded on its request.'); }
+
+// 7. A focus never costs the muscle it names, and a focused muscle with a day to spare gets a lift.
+{ const focusCase = (config, part) => { const plain = build(config), focusedPlan = build({ ...config, focus: { [part]: 1 } });
+      assert.ok(plain && focusedPlan, `7 ${config.name} builds with and without the focus`);
+      return { plain, focusedPlan, was: weeklyVolume(plain, 1)[part] || 0, now: weeklyVolume(focusedPlan, 1)[part] || 0 }; };
+  const mixed3 = { name: 'mixed 3d', unit: 'kg', goal: 'both', experience: 'intermediate', days: 3, weeks: 4, session: 's40', equipment: KITS.full, split: 'full_body' };
+  let raised = 0;
+  for (const part of ['shoulders', 'chest', 'lats', 'quads', 'hamstrings', 'glutes', 'biceps', 'triceps']) {
+      const r = focusCase(mixed3, part);
+      assert.ok(r.now >= r.was - 1e-6, `7 ${part}: focus ${r.now} is not below the plain plan's ${r.was}`);
+      if (r.now > r.was + .01) raised++;
+      for (const week of weeksOf(r.focusedPlan)) shown(r.focusedPlan, week).forEach(minutes => assert.ok(minutes <= 40, `7 ${part}: focus stays inside the limit`));
+  }
+  assert.ok(raised >= 5, `7 ${raised} of 8 focused muscles got more`);
+  // The fallback: a rebuild around the focus that lands below the plain plan starts from the plain roster instead.
+  // (Its first reproducer, a 3-day shoulders focus, stopped needing it when the week-set allocator stopped moving a
+  // set off a 2-set lift onto a 1-set one; this request still does.)
+  const fallback = focusCase({ ...mixed3, name: 'mixed 4d', days: 4 }, 'quads');
+  assert.equal(fallback.focusedPlan.nextEngine.focusDose.start, 'unfocused_roster', '7 the 4-day quads build starts from the plain roster (the focused roster gave quads less)');
+  assert.ok(fallback.now >= fallback.was - 1e-6, `7 fallback quads ${fallback.now} is not below the plain plan's ${fallback.was}`);
+  const lats = focusCase({ name: 'ppl 3d', unit: 'kg', goal: 'both', experience: 'beginner', days: 3, weeks: 4, session: 's60', equipment: KITS.full, split: 'ppl' }, 'lats');
+  assert.ok(lats.now >= lats.was + 1.5, `7 lats ${lats.was} -> ${lats.now}`);
+  assert.ok(lats.focusedPlan.nextEngine.sessionFill.added.some(a => a.reason === 'focus'), '7 the lats focus added a lift (one pulldown at its cap could take no more sets)');
+  console.log(`PASS 7 focus: ${raised} of 8 muscles raised on a tight 40-minute week, none lowered; lats ${lats.was} -> ${lats.now} with ${lats.focusedPlan.nextEngine.sessionFill.added.find(a => a.reason === 'focus').exercise}.`); }
+
+// 8. A ramp week that would show past the limit gives its added sets back, and no lift loses its last set.
+{ const held = build({ name: 'five short days', unit: 'kg', goal: 'hypertrophy', experience: 'beginner', days: 5, weeks: 4, session: 's20', equipment: KITS.full, split: 'ulppl' });
+  assert.ok(held?.nextEngine.displayHeld?.length, '8 fixture armed: the plan builds and records held weeks');
+  for (const week of weeksOf(held)) shown(held, week).forEach(minutes => assert.ok(minutes <= 20, `8 week ${week} shows ${minutes} on a 20-minute limit`));
+  for (const { key, week } of held.nextEngine.displayHeld) { const cell = held.nextWeekPrescriptions[key][week];
+      assert.ok(cell.sets >= 1 && !STRENGTH.has(cell.role), '8 a held lift keeps a set and is not strength work');
+  }
+  console.log(`PASS 8 ${held.nextEngine.displayHeld.length} ramp sets given back; every week inside 20 minutes.`); }
 console.log('PASS B1013 session fill.');

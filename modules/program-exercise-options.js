@@ -1,15 +1,26 @@
 // Exercise inspection and actions. ProgramView remains the only prescription writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { useState } from 'react';
-import { X, Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
-import { UiAction } from './ui-primitives.js';
-import { PART_LABEL, formatSetup } from './engine-api.js';
+import { useEffect, useRef, useState } from 'react';
+import { Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
+import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
+import { PART_LABEL, formatSetup, isMachineLike } from './engine-api.js';
 
 export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, linked,
     note, setup, onNote, onSuperset, onWhy, onInfo, onBan, onRemove, onClose, sheetDragRef }) {
     const [confirmRemove, setConfirmRemove] = useState(false);
+    const wasConfirming = useRef(false);
+    // A cancelled destructive action returns keyboard focus to its visible trigger.
+    useEffect(() => {
+        if (wasConfirming.current && !confirmRemove)
+            panelRef.current?.querySelector('[data-exercise-action="remove"]')
+                ?.focus({ preventScroll: true });
+        wasConfirming.current = confirmRemove;
+    }, [confirmRemove]);
     const hasNote = !!(note || setup);
     const close = () => { setConfirmRemove(false); onClose(); };
+    const dismiss = () => { if (confirmRemove) setConfirmRemove(false); else close(); };
+    const { attachPanel, onPanelKeyDown, panelRef } = useProgramSheetFocus(dismiss, sheetDragRef);
     const act = handler => () => { close(); handler(); };
     const action = (id, Icon, label, description, onClick, danger = false) => _jsxs(UiAction, {
         variant: 'tonal', className: 'wpb-sheet-action wpb-program-exercise-action',
@@ -22,19 +33,25 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
             ] })
         ]
     }, id);
-    return _jsx('div', { className: 'wpb-backdrop wpb-exercise-options-backdrop', role: 'dialog',
-        'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title', onClick: close,
-        children: _jsxs('section', { ref: sheetDragRef, className: 'wpb-exercise-options-sheet',
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-exercise-options-backdrop', role: 'dialog',
+        'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title',
+        onClick: event => { if (event.target === event.currentTarget) dismiss(); },
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-exercise-options-heading', children: [
+                _jsxs(UiSheetHeading, { as: 'header', className: 'wpb-ui-sheet-heading wpb-exercise-options-heading', children: [
                     _jsxs('div', { className: 'wpb-exercise-options-identity', children: [
                         _jsx('h2', { id: 'program-exercise-options-title', className: 'wpb-exercise-options-title', children: exercise.name }),
                         _jsx('p', { className: 'wpb-exercise-options-meta', children: `${PART_LABEL[exercise.part]} · ${exercise.type}${primary ? ' · key lift' : ''}` })
                     ] }),
-                    _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, 'aria-label': 'Close', onClick: close,
-                        className: 'hit wpb-sheet-close', children: _jsx(X, { size: 18 }) })
+                    _jsx(UiSheetClose, { variant: 'tonal', 'aria-label': 'Close', onClick: close })
                 ] }),
-                _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body', children: [
+                _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body wpb-ui-sheet-scroll', children: [
+                    isMachineLike(exercise.equip) && _jsxs('div',{
+                        className:'wpb-gym-guidance',role:'note',children:[
+                            _jsx('strong',{children:'Machine A/B is selected during a workout.'}),
+                            _jsx('p',{children:'For a different physical machine with its own weight stack, go to Settings → Your gyms → expand your gym → Machine A/B. Add each machine for this exact exercise and tap Done. In the workout, use the Machine A/B selector above the exercise name. The Program exercise stays the same and each physical machine keeps a separate Last and progression history.'})
+                        ]
+                    }),
                     action('note', Pin, hasNote ? 'Edit pinned note' : 'Add pinned note',
                         setup ? [formatSetup(setup), note].filter(Boolean).join(' — ') : note || "A cue you'll see every time — seat height, tempo…", act(onNote)),
                     canLink && action('superset', Layers, linked ? 'Unlink superset' : 'Superset with next',
@@ -47,7 +64,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
                             _jsx('p', { id: 'program-exercise-remove-title', children: `Remove ${exercise.name} from this day?` }),
                             _jsxs('div', { className: 'wpb-exercise-options-confirm-actions', children: [
                                 _jsx(UiAction, { variant: 'tonal', className: 'wpb-exercise-options-remove', onClick: act(onRemove), children: 'Remove' }),
-                                _jsx(UiAction, { variant: 'tonal', autoFocus: true, onClick: () => setConfirmRemove(false), children: 'Cancel' })
+                                _jsx(UiAction, { variant: 'tonal', autoFocus: true, onClick: dismiss, children: 'Cancel' })
                             ] })
                         ] }) : action('remove', Trash2, 'Remove from day', 'Take this exercise out of the workout', () => setConfirmRemove(true), true))
                 ] })

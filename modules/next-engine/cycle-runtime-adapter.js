@@ -16,7 +16,9 @@ import { analyzeShellHistoryForNextEngine, carryForwardAvoidedExercises } from '
 import { requestWithAthleteResponse } from './athlete-response.js';
 import { shellConfigToNextRequest, nextProgramToShellProgram, NextShellAdapterError, requestWithDisplayTrim, displayedBandMax } from './app-shell-adapter.js';
 import { shellSessionOvershoot } from './shell-session-clock.js';
-import { repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
+import { STRENGTH_STRUCTURES } from './config.js';
+import { buildGenerationRecoveryPlan } from './generation-recovery.js';
+import { holdWeeksToDisplayedLimit, lockedOverflowAtFloor, repairShellVolume, reconcileLockedCycleWeekOverflows, finalizeGeneratedShellVolume, captureShellBaseProgram, captureShellVolumeSnapshot, rebalanceFocusedStrengthEntry, preserveStrengthWeekContinuity, shellPlanQuality, shellPlanQualityKept } from './volume-repair.js';
 import { firstPassingCapacityProgram } from './capacity-generation.js';
 import { PUBLIC_MEV_REGIONS, PUBLIC_REGION_MUSCLE, publicMevLedger } from './public-mev.js';
 const phaseGoal = (phase) => phase === 'hypertrophy_accumulation' ? 'hypertrophy' :
@@ -36,7 +38,14 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
             const strength = ex.role === 'primary_strength' || ex.role === 'secondary_strength';
             const sourceScale = strength ? sourcePolicy.strengthVolumeMultiplier : sourcePolicy.volumeMultiplier;
             const targetScale = strength ? targetPolicy.strengthVolumeMultiplier : targetPolicy.volumeMultiplier;
+            // On hypertrophy -> strength ACCUMULATION, keep most authored
+            // working sets on the same exercise skeleton. Higher strength
+            // rest and lower reps remain independently prescribed; this is
+            // NOT the separate Peak taper. Ordinary strength-only program
+            // generation keeps its established audited phase policy.
             const ratio = sourceScale > 0 ? targetScale / sourceScale : 1;
+            const retainedRatio = previous.phase === 'hypertrophy_accumulation' &&
+                target === 'strength_accumulation' ? Math.max(.9, ratio) : ratio;
             const prescription = {
                 reps: repsForPhase(def, ex.role, targetPolicy),
                 rir: rirForPhase(ex.role, targetPolicy),
@@ -54,7 +63,7 @@ function retargetStatic(previous, request, target, blockWeeks = 6) {
             return {
                 ...ex,
                 ...(workingSetCap !== undefined ? { workingSetCap } : {}),
-                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * ratio))),
+                sets: Math.min(workingSetCap ?? Infinity, Math.max(1, Math.round(ex.sets * retainedRatio))),
                 prescription,
                 progressionStyle: progressionSelection.style,
                 progression: progressionInstruction(progressionSelection.style),
@@ -196,6 +205,37 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
         ? (baseRequest.goal.type === 'strength' ? 'strength' : 'mixed')
         : prescribedGoal;
     request.goal = { ...request.goal, type: goalType };
+    // A "Both" program's inferred NORMAL one-off S/B/D priorities are not
+    // sufficient practice for its later strength/peak blocks. An expressly
+    // selected frequency is always honored. On five-day hybrid splits, the
+    // two pressing and two squat-capable days permit a heavy + secondary
+    // exposure, with a single hinge exposure kept for fatigue management.
+    // Only propose these where the original equipment-qualified lift exists.
+    // Static cycles still preserve their authored roster; no issued workout
+    // or saved custom block is rewritten by this request.
+    const effectiveBlock = blockConfigForSpec(baseConfig, spec);
+    const fiveDayHybrid = effectiveBlock.split ??
+        request.preferences?.lockedSplit ?? request.preferences?.preferredSplit;
+    const effectiveDays = Number(effectiveBlock.days ?? request.schedule.days.length);
+    const powerbuildingPhase = ['strength_accumulation', 'intensification', 'peak']
+        .includes(spec.phase);
+    const isBothCycle = baseConfig?.goal === 'both' ||
+        (baseConfig?.goal == null && baseRequest.goal.type === 'mixed');
+    if (isBothCycle && powerbuildingPhase &&
+        effectiveDays === 5 &&
+        ['ulppl', 'pplul'].includes(fiveDayHybrid) && !spec?.priorityLift) {
+        const available = request.goal.liftPriorities ?? {};
+        const explicit = request.goal.liftFrequency ?? {};
+        const targets = { bench_press: 2, back_squat: 2, deadlift: 1 };
+        const practice = Object.fromEntries(Object.entries(targets)
+            .filter(([lift]) => available[lift] != null)
+            .map(([lift, frequency]) => [lift, explicit[lift] ?? frequency]));
+        request.goal.liftFrequency = { ...explicit, ...practice };
+        request.preferences = { ...request.preferences,
+            // Candidate ranking uses this only for an unpinned secondary
+            // bench slot on Push. Explicit athlete exercise preferences win.
+            powerbuildingInclineVolume: true };
+    }
     if (!changesWeek(spec))
         return request;
     const cfg = blockConfigForSpec(baseConfig, spec);
@@ -209,8 +249,10 @@ export function requestForBlock(baseRequest, baseConfig, spec, legacyExercises =
     if (spec.priorityLift) {
         request.goal.liftPriorities = { ...(request.goal.liftPriorities ?? {}), [spec.priorityLift]: 'primary' };
         request.goal.liftFrequency = { [spec.priorityLift]: spec.frequency };
-    } else {
-        // A previous block's frequency must not leak into an unrelated phase.
+    } else if (!Object.keys(request.goal.liftFrequency ?? {}).length) {
+        // This request is cloned from the cycle's original athlete input, not
+        // the previous phase. Retain explicit athlete lift-frequency choices;
+        // only omit an empty inferred frequency map.
         delete request.goal.liftFrequency;
     }
     return request;
@@ -227,6 +269,22 @@ function checkRequestedPractice(program, spec, request) {
 }
 const totalSets = program => program.sessions.reduce((n, session) =>
     n + session.exercises.reduce((sets, ex) => sets + (Number(ex.sets) || 0), 0), 0);
+// Strength accumulation retains productive work; it is not a peak/taper. An
+// already-large hypertrophy week may reduce fatigue, but never silently lose
+// half its working sets. Return a typed refusal when the approved session
+// duration/equipment constraints cannot safely support this continuity.
+export function strengthEntryMinimumSets(previousSets) {
+    if (!Number.isFinite(previousSets) || previousSets < 16) return 0;
+    // Moderate hypertrophy sources preserve >=70% across the strength
+    // transition. High-capacity weeks (68+ working sets) may not fit that
+    // proportion with strength-specific rest in the same approved session.
+    // Preserve >50% for 68–89 sets; truly exceptional weeks (90+ sets) may
+    // keep exactly 50% when the verified session limits cannot fit more.
+    // Peak is an explicit taper with a separate policy.
+    return previousSets >= 90 ? Math.ceil(previousSets * .5)
+        : previousSets >= 68 ? Math.floor(previousSets * .5) + 1
+        : Math.ceil(previousSets * .7);
+}
 // Split search adds a concrete split to every candidate, including the original split.
 // That is not itself a structural change. A roster-locked volume rescue is valid
 // when the executable schedule still matches and no new lift-frequency intent was
@@ -237,10 +295,107 @@ export function canRetargetStrengthEntryRoster(previous, request, spec) {
     return desiredSplit === previous?.split?.family
         && request?.schedule?.days?.length === previous.sessions.length;
 }
+// An exercise count is not a scientific training dose. Still, a >50%
+// UNREQUESTED loss of distinct movements on the SAME scheduled strength day
+// (e.g. eight upper-body exercises becoming three) demands an explicit
+// feasibility decision, not a seemingly healthy weekly set total packed
+// into three heavy lifts. Changes of split/day topology are not compared
+// slot-for-slot. Peak is a separate short taper and never uses this guard.
+// The fraction is an engineering review trigger, not a universal minimum
+// number of exercises or hypertrophy dose recommendation.
+export function unexplainedStrengthExerciseCollapse(previous, next, spec, request) {
+    if (previous?.phase !== 'hypertrophy_accumulation'
+        || spec?.phase !== 'strength_accumulation'
+        || next?.phase !== 'strength_accumulation'
+        || request?.preferences?.volumeApproach === 'minimalist'
+        || previous.split?.family !== next.split?.family
+        || previous.sessions?.length !== next.sessions?.length) return null;
+    for (let index=0; index<next.sessions.length; index++) {
+        const before=previous.sessions[index], after=next.sessions[index];
+        if (before.intent !== after.intent) continue;
+        const priorDistinct=new Set(before.exercises.map(ex=>ex.exerciseId)).size;
+        const nextDistinct=new Set(after.exercises.map(ex=>ex.exerciseId)).size;
+        if (priorDistinct >= 6 && nextDistinct < Math.ceil(priorDistinct * .5))
+            return { day:after.intent, previousExercises:priorDistinct,
+                strengthExercises:nextDistinct, sessionIndex:index };
+    }
+    return null;
+}
+/**
+ * A converted custom program becomes the immutable FIRST prior block of a
+ * refreshed cycle. The regular transition guard only sees block[0] after
+ * creation, so it missed the exact saved custom-source -> future Strength
+ * boundary. Count ACTUAL distinct working exercises, not set totals (which
+ * are audited separately). Compare named days only when their training
+ * identity is supported; changing the split can redistribute movements.
+ *
+ * The 50% threshold is an engineering "review required" boundary, NOT a
+ * physiological exercise-count prescription or an eight-lift quota.
+ */
+export function reviewConvertedStrengthExerciseCoverage(sourceSnapshot, generated, sourceDays = []) {
+    if (!Array.isArray(sourceSnapshot?.sessions) || !Array.isArray(generated?.sessions)
+        || !sourceSnapshot.sessions.length || !generated.sessions.length)
+        return { code: 'SOURCE_EXERCISE_ROSTER_UNVERIFIED' };
+    const distinct = session => new Set((session?.exercises ?? [])
+        .filter(ex => Number(ex?.sets) > 0 && typeof ex.exerciseId === 'string')
+        .map(ex => ex.exerciseId)).size;
+    const original = sourceSnapshot.sessions.map(distinct);
+    const future = generated.sessions.map(distinct);
+    const totalOriginal = original.reduce((n, c) => n + c, 0);
+    const totalFuture = future.reduce((n, c) => n + c, 0);
+    if (original.some(n => n >= 6) && totalFuture * 2 < totalOriginal)
+        return { code: 'SOURCE_EXERCISE_WEEKLY_COLLAPSE',
+            sourceExercises: totalOriginal, strengthExercises: totalFuture };
+    // Only treat a saved day as a positional counterpart if its actual
+    // authored label identifies the same kind of workout. In a custom
+    // Full Body -> generated Full Body refresh, a single 8 -> 3 day must
+    // not hide inside a healthy weekly count. A changed split is allowed
+    // to distribute exercises differently and uses the weekly check above.
+    if (sourceDays.length === sourceSnapshot.sessions.length &&
+        sourceDays.length === generated.sessions.length) {
+        const identity = label => {
+            const v = String(label || '').toLowerCase().replace(/[_-]/g, ' ');
+            if (/full\s*body/.test(v)) return 'full_body';
+            if (/\bupper\b/.test(v)) return 'upper';
+            if (/\blower\b/.test(v)) return 'lower';
+            if (/\bpush\b/.test(v)) return 'push';
+            if (/\bpull\b/.test(v)) return 'pull';
+            if (/\blegs?\b/.test(v)) return 'legs';
+            return null;
+        };
+        for (let i = 0; i < sourceDays.length; i++) {
+            const from = identity(sourceDays[i]?.label);
+            const to = identity(generated.sessions[i]?.intent);
+            if (from && from === to && original[i] >= 6 &&
+                future[i] * 2 < original[i])
+                return { code: 'SOURCE_EXERCISE_DAY_COLLAPSE',
+                    day: sourceDays[i].label, sourceExercises: original[i],
+                    strengthExercises: future[i] };
+        }
+    }
+    return null;
+}
 function protectStrengthEntry(previous, next, spec, request) {
     if (previous?.phase !== 'hypertrophy_accumulation' || spec.phase !== 'strength_accumulation')
         return next;
-    const before = totalSets(previous), floor = Math.ceil(before * .5);
+    const before = totalSets(previous), floor = strengthEntryMinimumSets(before);
+    const lostVariety = unexplainedStrengthExerciseCollapse(previous, next, spec, request);
+    if (lostVariety) {
+        // Prefer a source-preserving, fully-audited retarget when athlete
+        // constraints can fit it. Do not silently force eight lifts in a
+        // shorter or heavier session: when this fails, give a typed refusal.
+        if (canRetargetStrengthEntryRoster(previous, request, spec)) {
+            try {
+                const preserved = retargetStatic(previous, request, spec.phase, spec.weeks);
+                if (preserved.audit.result === 'pass'
+                    && totalSets(preserved) >= floor
+                    && !unexplainedStrengthExerciseCollapse(previous,preserved,spec,request))
+                    return preserved;
+            } catch { /* Return a concrete safe refusal rather than altering the workout. */ }
+        }
+        throw new NextShellAdapterError('NEXT_CYCLE_STRENGTH_EXERCISE_COLLAPSE',
+            `Strength ${lostVariety.day} would drop from ${lostVariety.previousExercises} distinct exercises to ${lostVariety.strengthExercises}, despite the same weekly split. Working-set totals alone cannot justify abandoning that much movement coverage. Keep more useful accessory work, increase allowed session time, or choose another split; deliberate volume tapering belongs in Peak.`);
+    }
     if (before < 16 || totalSets(next) >= floor) return next;
     // A converted custom roster can be more faithful than a newly generated strength skeleton.
     // Try the audited same-roster prescription before refusing an extreme volume cliff.
@@ -563,8 +718,8 @@ export function summarizeStrengthWorkWeeks(weeks) {
 // Preserve the same transition safety floor throughout strength accumulation,
 // not only at entry. This does not apply to deliberate peak/recovery tapers.
 export function findStrengthVolumeCliff(previousSets, weeks) {
-    return Number.isFinite(previousSets) && previousSets >= 16 && Array.isArray(weeks)
-        ? weeks.find(week => week.weeklySets < Math.ceil(previousSets * .5)) ?? null
+    return strengthEntryMinimumSets(previousSets)>0 && Array.isArray(weeks)
+        ? weeks.find(week => week.weeklySets < strengthEntryMinimumSets(previousSets)) ?? null
         : null;
 }
 export function scoreRealizedStrengthFinalist(candidate, previousShell, config, legacyExercises = [], priorSnapshot = null) {
@@ -685,7 +840,7 @@ function chooseOptimizedCycleBlock(spec, config, enabled, buildCandidate, realiz
         ...(realizedSelection ? { realizedSelection } : {}),
         reason: automatic
             ? realizedSelection
-                ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, then compared ${realizedSelection.evaluatedFinalists} finalists using the weakest executable work week. Prioritized strength-lift practice, muscle coverage, regional continuity, training time and the strength-entry volume floor were protected.`
+                ? `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, then compared ${realizedSelection.evaluatedFinalists} finalists using the weakest executable work week. Prioritized strength-lift practice, muscle coverage, regional continuity, training time and the strength-entry 70% weekly set-volume floor were protected.`
                 : `Compared ${candidates.length} compatible weekly structures for ${phaseLabel(spec.phase).toLowerCase()}, retained ${passing} audited plans, and ranked their initial muscle coverage, relevant lift practice and training capacity. Planned prescriptions can still change at the block transition.`
             : 'Kept the selected weekly structure and verified it against the training constraints.'
     };
@@ -808,18 +963,52 @@ export function generateNextCycleForShell(options) {
     let best = first, bestOver = cycleOvershootByWeekday(best, options.config);
     if (!bestOver || sum(bestOver) <= 0) return best;
     const firstQuality = first.blocks.map(block => shellPlanQuality(block, options.legacyExercises));
-    let trim = {}, over = bestOver;
+    let trim = {}, over = bestOver, bestTrim = {};
     for (let attempt = 0; attempt < 2 && sum(bestOver) > 0; attempt++) {
         trim = { ...trim };
-        for (const [day, minutes] of Object.entries(over)) if (minutes > 0) trim[day] = (trim[day] ?? 0) + Math.ceil(minutes);
+        let tightened = false;
+        for (const [day, minutes] of Object.entries(over)) if (minutes > 0) { trim[day] = (trim[day] ?? 0) + Math.ceil(minutes); tightened = true; }
+        // No day of the last build was over, so the same trim would rebuild the same cycle.
+        if (!tightened) break;
         let candidate;
+        // A refused budget keeps the last overshoot, so the next attempt tightens the same days further: a tighter
+        // budget can make the engine choose a shorter roster that it accepts.
         try { candidate = buildNextCycleForShell(pinned, trim); }
-        catch { break; }
+        catch { continue; }
         over = cycleOvershootByWeekday(candidate, options.config);
         if (!over) break;
         const kept = candidate.blocks.length === first.blocks.length && candidate.blocks.every((block, i) =>
             shellPlanQualityKept(firstQuality[i], shellPlanQuality(block, options.legacyExercises)));
-        if (sum(over) < sum(bestOver) && kept) { best = candidate; bestOver = over; }
+        if (sum(over) < sum(bestOver) && kept) { best = candidate; bestOver = over; bestTrim = trim; }
+    }
+    // Then the worst day alone, a little harder each time: one day is often the only one over (a legs day at 42
+    // minutes in a week whose other days run 25), and tightening every day at once can cost coverage elsewhere.
+    for (let attempt = 0; attempt < 3 && sum(bestOver) > 0; attempt++) {
+        const [day, minutes] = Object.entries(bestOver).sort((a, b) => b[1] - a[1])[0];
+        const single = { ...bestTrim, [day]: (bestTrim[day] ?? 0) + Math.ceil(minutes) + 1 + attempt * 2 };
+        let candidate;
+        try { candidate = buildNextCycleForShell(pinned, single); }
+        catch { continue; }
+        const candidateOver = cycleOvershootByWeekday(candidate, options.config);
+        if (!candidateOver) break;
+        const kept = candidate.blocks.length === first.blocks.length && candidate.blocks.every((block, i) =>
+            shellPlanQualityKept(firstQuality[i], shellPlanQuality(block, options.legacyExercises)));
+        if (sum(candidateOver) < sum(bestOver) && kept) { best = candidate; bestOver = candidateOver; bestTrim = single; }
+    }
+    if (sum(bestOver) > 0) {
+        // As for a single program: a week whose added sets carry a day past the limit gives them back, and a cycle
+        // with a block that still shows over does not fit its session length and is refused with that recovery.
+        const max = displayedBandMax(options.config);
+        const sameBand = block => !block.config?.session || block.config.session === (options.config?.session || 's60');
+        best = { ...best, blocks: best.blocks.map(block => sameBand(block) ? holdWeeksToDisplayedLimit(block, options.legacyExercises, max) : block) };
+        const named = options.config?.percentScheme || STRENGTH_STRUCTURES.has(options.config?.split);
+        const findings = named ? [] : best.blocks.filter(sameBand).flatMap(block => (shellSessionOvershoot(block, max) ?? []).map((minutes, index) => minutes > 0
+            ? { severity: 'critical', code: 'TIME_LIMIT', sessionId: block.nextEngine?.program?.sessions?.[index]?.id,
+                message: `${block.name ?? 'A block'}: a session shows ${Math.round(max + minutes)} minutes against a ${max}-minute limit.` } : null).filter(Boolean));
+        if (findings.length) {
+            let recovery; try { recovery = buildGenerationRecoveryPlan({ result: 'reject', findings }, best.blocks[0].nextEngine.request); } catch { recovery = undefined; }
+            throw new NextShellAdapterError('NEXT_ENGINE_REJECTED', 'Pursuit Engine could not fit this cycle inside its session length.', recovery);
+        }
     }
     return best;
 }
@@ -841,17 +1030,60 @@ function buildNextCycleForShell(options, displayTrim) {
     let baseRequest = requestWithDisplayTrim(shellConfigToNextRequest({ ...options.config, goal: goal === 'mixed' ? 'both' : goal }, options.banned ?? [], options.legacyExercises, seed), displayTrim);
     baseRequest.goal = { ...baseRequest.goal, type: goal };
 
+    // An existing custom program is a REAL source for the very first
+    // rebuilt future block. It is not an empty cycle starting at Strength.
+    // Preserve its exercise-variety capacity and favor its feasible movements
+    // before scoring alternative splits; do not force a number of exercises
+    // or promise that a heavy/long session always fits the previous roster.
+    const priorIsHypertrophy = options.previousShell &&
+        (options.previousPhase === 'hypertrophy_accumulation' ||
+            options.previousShell.nextEngine?.program?.phase === 'hypertrophy_accumulation');
+    const priorSourceSnapshot = priorIsHypertrophy
+        ? options.previousVolumeSnapshot ??
+            captureShellVolumeSnapshot(options.previousShell,
+                Math.max(1, Number(options.previousShell.config?.weeks ?? options.previousShell.weeks) || 1),
+                options.legacyExercises)
+        : null;
+    const sourceHasVariety = !!priorSourceSnapshot && !priorSourceSnapshot.missing &&
+        priorSourceSnapshot.sessions?.some(session =>
+            new Set(session.exercises.filter(ex=>ex.sets>0).map(ex=>ex.exerciseId)).size >= 6);
+
     // Program creation and cycle creation must share the same feasibility contract. The wizard
     // already proves buildability with capacity-aware generation; bypassing it here made valid
     // 60–90 minute Full Body cycles fail even though the equivalent single program passed.
     const entrySpec = specs[0];
     const entrySelection = chooseOptimizedCycleBlock(entrySpec, options.config, !!options.adaptTrainingSplit, candidateSpec => {
         const request = requestForBlock(baseRequest, options.config, candidateSpec, options.legacyExercises);
-        const attempt = firstPassingCapacityProgram(request, blockConfigForSpec(options.config, candidateSpec), {
+        const sourceContinuity = sourceHasVariety &&
+            candidateSpec.phase === 'strength_accumulation';
+        const exerciseMap = sourceContinuity ? createExerciseMap(request.customExercises) : null;
+        // Keep actual successful, available custom movements in preference
+        // order. The existing strength anchors, equipment bans, muscle-dose
+        // audit and session clock remain authoritative.
+        const priorPreferred = sourceContinuity ? [...new Set(
+            priorSourceSnapshot.sessions.flatMap(day => day.exercises.map(ex => ex.exerciseId))
+        )].filter(id => exerciseMap.has(id) &&
+            !(request.preferences?.avoidedExercises ?? []).includes(id)) : [];
+        const sourcedRequest = priorPreferred.length ? {
+            ...request, preferences: { ...request.preferences, preferredExercises: [
+                ...new Set([...(request.preferences?.preferredExercises ?? []), ...priorPreferred])
+            ] }
+        } : request;
+        const attempt = firstPassingCapacityProgram(sourcedRequest, blockConfigForSpec(options.config, candidateSpec), {
             phase: candidateSpec.phase, blockWeeks: candidateSpec.weeks,
-            progressionStyle: request.preferences?.progressionStyle
+            progressionStyle: sourcedRequest.preferences?.progressionStyle,
+            preservePriorExerciseVariety: sourceContinuity
         });
         checkRequestedPractice(attempt.result.program, candidateSpec, attempt.request);
+        if (sourceContinuity && attempt.result.program.audit.result === 'pass') {
+            const drop = reviewConvertedStrengthExerciseCoverage(
+                priorSourceSnapshot, attempt.result.program, options.previousShell.days);
+            if (drop)
+                throw new NextShellAdapterError('NEXT_CYCLE_CONVERTED_STRENGTH_EXERCISE_CLIFF',
+                    drop.code === 'SOURCE_EXERCISE_ROSTER_UNVERIFIED'
+                        ? 'Cannot verify the saved custom-program exercise roster. No upcoming block was changed.'
+                        : `Rebuilt strength ${drop.day ?? 'week'} would reduce distinct exercises from ${drop.sourceExercises} to ${drop.strengthExercises}. A strength block may reduce sets and use longer rests, but cannot silently discard this much established movement coverage. Change your time, split, or gym settings and rebuild again.`);
+        }
         return { next: attempt.result.program, request: attempt.request, previous: null, entryAttempt: attempt };
     }, options.previousShell ? { previousShell: options.previousShell, previousVolumeSnapshot: options.previousVolumeSnapshot, legacyExercises: options.legacyExercises } : null);
     const entryAttempt = entrySelection.entryAttempt;
@@ -901,15 +1133,17 @@ function buildNextCycleForShell(options, displayTrim) {
                 throw new NextShellAdapterError('NEXT_CYCLE_STATIC_ROSTER_CHANGED', 'Locked cycle volume repair changed the exercise roster.');
             const beforeOver = baseRepair.before.issues.filter(issue => issue.status === 'over');
             const afterOver = weeklyRepair.after.issues.filter(issue => issue.status === 'over');
-            if (afterOver.length)
+            const atFloor = afterOver.length > 0 && lockedOverflowAtFloor(weeklyRepair.after, options.legacyExercises, legacy);
+            if (afterOver.length && !atFloor)
                 throw new NextShellAdapterError('NEXT_CYCLE_STATIC_VOLUME_REJECTED', `The locked exercise skeleton could not safely fit the ${phaseLabel(spec.phase).toLowerCase()} accessory-volume ceiling.`, afterOver);
             next = legacy.nextEngine.program;
             legacy.nextEngine.lockedCycleVolumeRepair = {
-                status: baseRepair.changed || weeklyRepair.changed ? 'success' : 'unchanged',
+                status: atFloor ? 'locked_floor' : baseRepair.changed || weeklyRepair.changed ? 'success' : 'unchanged',
                 changed: baseRepair.changed || weeklyRepair.changed,
                 rosterPreserved: true,
                 beforeOver: beforeOver.map(issue => ({ region: issue.region, actual: issue.v, ceiling: issue.mrv })),
-                afterOver: []
+                // Overflow left only when every trimmable lift is at one set (lockedOverflowAtFloor).
+                afterOver: atFloor ? afterOver.map(issue => ({ region: issue.region, actual: issue.v, ceiling: issue.mrv, week: issue.week })) : []
             };
         }
         legacy = finalizeGeneratedShellVolume(legacy, options.legacyExercises);

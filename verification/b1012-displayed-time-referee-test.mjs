@@ -34,25 +34,35 @@ unrefereed.forEach((program, i) => { if (!program) return; const n = overCount(p
 assert.ok(plansBefore >= 5, `1 fixture armed: ${plansBefore} unrefereed plans show a day over the limit (need 5+)`);
 console.log(`PASS 1 control: without the referee ${plansBefore} of ${configs.length} plans show ${overBefore} day-weeks over their limit.`);
 
-// 2. With the referee every one of those plans fits on the displayed clock, in every work week.
+// 2. With the referee every plan that builds fits on the displayed clock, in every work week. The selected
+//    maximum is the one hard promise of a session length: a request that only builds over it is refused with
+//    TIME_LIMIT and the time-limit recovery, never returned over. A plan that already fit is never refused.
+const refusal = config => { try { generateNextProgramForShell({ config, legacyExercises: EXERCISES, seed: 7, makeId: () => 'b1012' }); return null; } catch (error) { return error; } };
 const refereed = configs.map(build);
 let overAfter = 0;
-// The referee never turns a plan that built into a refusal (a request the engine refuses either way is not its business).
-refereed.forEach((program, i) => { assert.equal(!!program, !!unrefereed[i], configs[i].name + ' builds exactly when it did without the referee'); if (program) overAfter += overCount(program, LIMIT[configs[i].session]); });
-// What remains is a plan with nothing left to give: every tighter build was refused by the engine or would have
-// cost protected coverage (check 4). Pinned as a ceiling that may fall and must not rise.
-const RESIDUAL_CEILING = Number(process.env.B1012_CEILING ?? 12);
-const residual = configs.filter((config, i) => refereed[i] && overCount(refereed[i], LIMIT[config.session])).map(config => config.name);
-assert.ok(overAfter <= RESIDUAL_CEILING, `2 refereed plans show ${overAfter} day-weeks over their limit (ceiling ${RESIDUAL_CEILING}): ${residual.join('; ')}`);
-assert.ok(overAfter * 5 <= overBefore, '2 the referee removes at least four fifths of the overage');
-refereed.forEach((program, i) => { if (program && unrefereed[i]) assert.ok(overCount(program, LIMIT[configs[i].session]) <= overCount(unrefereed[i], LIMIT[configs[i].session]), configs[i].name + ': never more over than before'); });
-console.log(`PASS 2 refereed: ${overAfter} of ${refereed.reduce((n, p) => n + (p ? shown(p).length : 0), 0)} day-weeks over the limit (was ${overBefore}); left: ${residual.join('; ') || 'none'}.`);
+const refused = [];
+refereed.forEach((program, i) => {
+    if (program) { overAfter += overCount(program, LIMIT[configs[i].session]); return; }
+    if (!unrefereed[i]) return; // refused either way: not the referee's business
+    assert.ok(overCount(unrefereed[i], LIMIT[configs[i].session]) > 0, configs[i].name + ': a plan that fit without the referee is never refused by it');
+    const error = refusal(configs[i]);
+    assert.deepEqual(error?.recovery?.blockingCodes, ['TIME_LIMIT'], configs[i].name + ': refused for its time limit');
+    assert.ok(error.recovery.suggestions.some(x => x.code === 'increase_time'), configs[i].name + ': the refusal says what to change');
+    refused.push(configs[i].name);
+});
+assert.equal(overAfter, 0, `2 refereed plans show ${overAfter} day-weeks over their limit`);
+// Pinned as a ceiling that may fall and must not rise: requests with nothing left to give under their limit.
+const REFUSAL_CEILING = Number(process.env.B1012_CEILING ?? 6);
+assert.ok(refused.length <= REFUSAL_CEILING, `2 ${refused.length} requests refused for their time limit (ceiling ${REFUSAL_CEILING}): ${refused.join('; ')}`);
+assert.ok(refused.length * 2 <= plansBefore, '2 most over-limit plans are fitted, not refused');
+console.log(`PASS 2 refereed: 0 of ${refereed.reduce((n, p) => n + (p ? shown(p).length : 0), 0)} day-weeks over the limit (was ${overBefore}); refused for time: ${refused.join('; ') || 'none'}.`);
 
 // 3. A plan that already fit is returned untouched: same cells, same budgets.
 let untouched = 0;
 // (The session fill reads the same displayed clock, so a plan it changed differs between the control, built with
 // no clock, and the refereed build for a reason that is not the referee: those are left to the fill's own gate.)
-const filled = program => { const fill = program.nextEngine.sessionFill; return !!(fill?.sets?.length || fill?.added?.length); };
+// The region floors (withRegionFloors) read it too and need it to be kept.
+const filled = program => { const fill = program.nextEngine.sessionFill; return !!(fill?.sets?.length || fill?.added?.length || program.nextEngine.regionFloor); };
 unrefereed.forEach((program, i) => { if (!program || overCount(program, LIMIT[configs[i].session]) || filled(program) || filled(refereed[i])) return;
     assert.deepEqual(refereed[i].nextWeekPrescriptions, program.nextWeekPrescriptions, configs[i].name + ': a fitting plan is not rebuilt');
     assert.deepEqual(refereed[i].days.map(d => d.exercises), program.days.map(d => d.exercises));
@@ -62,11 +72,12 @@ console.log(`PASS 3 ${untouched} plans that already fit are byte-for-byte what t
 
 // 4. A refit never gives up coverage the first plan had, and its tightened budgets are saved and legal.
 let refits = 0;
-unrefereed.forEach((program, i) => { if (!program || !overCount(program, LIMIT[configs[i].session])) return;
+unrefereed.forEach((program, i) => { if (!program || !refereed[i] || !overCount(program, LIMIT[configs[i].session])) return;
     const after = refereed[i], limit = LIMIT[configs[i].session];
     assert.ok(shellPlanQualityKept(shellPlanQuality(program, EXERCISES), shellPlanQuality(after, EXERCISES)), configs[i].name + ': refit kept region minimums and direct work');
     const budgets = after.nextEngine.request.schedule.days.map(day => day.maxMinutes);
-    if (overCount(after, limit) < overCount(program, limit)) assert.ok(budgets.some(m => m < limit), configs[i].name + ': the tightened budget is saved for later blocks');
+    // A plan comes under its limit by a tightened budget (saved for later blocks), a moved lift, or a held ramp week: each is recorded.
+    if (overCount(after, limit) < overCount(program, limit)) assert.ok(budgets.some(m => m < limit) || after.nextEngine.displayMoves?.length || after.nextEngine.displayHeld?.length, configs[i].name + ': how the plan was fitted is recorded');
     assert.ok(budgets.every(m => m >= 12 && m <= limit), configs[i].name + ': budgets stay between 12 and the limit');
     assert.deepEqual(after.nextEngine.baseRequest.schedule, after.nextEngine.request.schedule);
     assert.equal(after.config.session, configs[i].session, 'the lifter\'s own choice is not rewritten');

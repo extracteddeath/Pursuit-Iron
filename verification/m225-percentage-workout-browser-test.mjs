@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
 import { programToText } from '../modules/program-share-sheet.js';
-import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets, withTrainingMax, roundTo, loadStep, oneRmShare } from '../modules/engine-api.js';
+import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets, withTrainingMax, roundTo, loadStep } from '../modules/engine-api.js';
 
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
@@ -47,7 +47,7 @@ async function verifyTrainingMaxEditing(browser) {
         const initial=await state();
         const openProgram=async()=>{await page.$eval('[aria-label="Open M225 percentage editor"]',b=>b.click());await page.waitForSelector('.wpb-program');};
         await openProgram();
-        const open=async()=>{await page.$eval('[aria-label="Edit training maxes"]',b=>{b.scrollIntoView({block:'center'});b.focus();b.click();});await page.waitForSelector('.wpb-training-max-sheet',{visible:true});};
+        const open=async()=>{await page.$eval('.wpb-training-max-summary[aria-label*="Edit training maxes"]',b=>{b.scrollIntoView({block:'center'});b.focus();b.click();});await page.waitForSelector('.wpb-training-max-sheet',{visible:true});};
         const input=()=>page.$('.wpb-training-max-controls input');
         const type=async(handle,value)=>{await handle.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');if(value)await page.keyboard.type(value);else await page.keyboard.press('Backspace');};
         const click=label=>page.$$eval('.wpb-training-max-sheet button',(buttons,label)=>buttons.find(b=>b.textContent.trim()===label).click(),label);
@@ -94,12 +94,12 @@ async function verifyTrainingMaxEditing(browser) {
         await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await cdp.detach();
         await close();assert.deepEqual(await state(),initial,'Cancel discards the complete max draft');
         await open();await type(await input(),entered);await page.keyboard.press('Escape');await page.waitForSelector('.wpb-training-max-sheet',{hidden:true});
-        await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Edit training maxes');
+        await page.waitForFunction(()=>document.activeElement?.matches('.wpb-training-max-summary[aria-label*="Edit training maxes"]'));
         assert.deepEqual(await state(),initial,'Escape discards changes and restores the entry action');
         await open();await click('Use 1RM');
         await type(await page.$('.wpb-training-max-conversion input'),'12..5');
         assert.ok(await page.$$eval('.wpb-training-max-conversion button',buttons=>buttons.find(b=>b.textContent==='Use this max').disabled));
-        const rm=unit==='lb'?300.5:121.5,converted=roundTo(rm*oneRmShare(p.config.percentScheme),loadStep(ex,unit));
+        const rm=unit==='lb'?300.5:121.5,converted=roundTo(rm*.9,loadStep(ex,unit));
         await type(await page.$('.wpb-training-max-conversion input'),String(rm));
         assert.ok((await page.$eval('.wpb-training-max-conversion',el=>el.textContent)).includes(`training max ${converted} ${unit}`));
         await page.keyboard.press('Escape');await page.waitForSelector('.wpb-training-max-conversion',{hidden:true});
@@ -178,7 +178,7 @@ try {
         await page.waitForSelector('[data-testid="set-0-0"]');
         const check=await page.$('.wpb-backdrop button[data-wpb-system-back]');if(check)await check.click();
     };
-    // The 5/3/1 deload is the wave's own week 4: the template no longer adds a week 5 after the block.
+    // The 5/3/1 deload is the wave's own week 4 on this engine: the template adds no week 5 after the block.
     for (const [template,unit,week] of [['p531','lb',1],['p531','kg',1],['p531','lb',4],['gzclp','lb',1]]) {
         await open(`template=${template}&unit=${unit}&week=${week}`);
         const p=fixtures[template],d=p.days[0],ex=EX_BY_ID[d.exercises[0]],preview=percentagePlanFor(p,d,ex,0,week,unit);

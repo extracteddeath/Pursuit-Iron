@@ -11,6 +11,11 @@ const workflows = Object.fromEntries([
     release: '.github/workflows/release-integrity.yml'
 }[name])]));
 
+// Old one-time publishing workflows must not remain armed on the default branch.
+const workflowNames = fs.readdirSync(new URL('../.github/workflows/', import.meta.url));
+assert.deepEqual(workflowNames.filter(name => name.startsWith('finalize-')), [],
+    'Historical one-shot publishing workflows must be retired after certification');
+
 const packageJson = JSON.parse(read('package.json'));
 const packageLock = JSON.parse(read('package-lock.json'));
 const actionPins = Object.freeze({

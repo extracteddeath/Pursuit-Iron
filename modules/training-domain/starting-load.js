@@ -1,20 +1,19 @@
 // Starting estimate for a lift with no history of its own.
 //
-// A blank first session makes a new lifter guess, and a bad guess costs the whole first
-// exposure (too light teaches the engine nothing, too heavy is a missed or ugly set). The
-// estimate comes from, in order:
+// Optional first-use heuristic; logged performance remains the progression authority.
+// The estimate comes from, in order:
 //   1. a related lift the lifter HAS logged (same movement pattern), its best e1RM moved
-//      across implements (a dumbbell per hand carries ~0.42 of a barbell, a cable ~0.65);
+//      across implements using approximate load ratios;
 //   2. bodyweight × a per-pattern ratio for the lifter's experience.
 // It is deliberately a little light (STARTING_MARGIN) and always labelled as an estimate:
-// the first logged set calibrates the real progression.
+// actual logged sets establish the real progression.
 import { EX_BY_ID } from './catalog.js';
 import { e1rmRIR } from './programs.js';
-import { historyNumber, convertHistoryLoad, completedHistorySets, observedHistoryRIR } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, completedHistorySets, observedHistoryRIR, normalizeHistoryRevisions } from '../next-engine/history-contract.js';
 
 const STARTING_MARGIN = 0.9;
 
-// Intermediate (male) one-rep max, in barbell-equivalent load, as a multiple of bodyweight.
+// Approximate seed ratios, not strength standards or measured maximums.
 const PATTERN_BW_RATIO = {
     'horizontal-push': 1.0, 'incline-push': 0.85, 'vertical-push': 0.65,
     'horizontal-pull': 0.9, 'vertical-pull': 0.9, 'pullover': 0.4,
@@ -36,7 +35,8 @@ const SEX_SCALE = { male: 1, female: 0.72 };
 let PROFILE = { bodyweight: null, bwUnit: 'kg', sex: null, experience: null };
 // The app owns the lifter's bodyweight, sex and experience; it hands them in once per change.
 export function setLifterProfile(p) {
-    PROFILE = { bodyweight: Number(p?.bodyweight) > 0 ? Number(p.bodyweight) : null,
+    const bodyweight = historyNumber(p?.bodyweight);
+    PROFILE = { bodyweight: bodyweight > 0 && bodyweight <= 1500 ? bodyweight : null,
         bwUnit: p?.bwUnit === 'lb' ? 'lb' : 'kg', sex: p?.sex || null, experience: p?.experience || null };
 }
 
@@ -44,6 +44,7 @@ export function setLifterProfile(p) {
 // (bodyweight, assisted, bands).
 export function implementFactor(ex) {
     const eq = ex?.equip || [];
+    if (/^assisted-/.test(ex?.id || '') || eq.includes('band') || eq.includes('bands')) return null;
     const single = /^(single|one-arm)/.test(ex?.id || '') || /single-arm|one-arm/i.test(ex?.name || '');
     if (eq.includes('dumbbell') || eq.includes('kettlebell')) return 0.42;
     if (eq.some(q => q === 'barbell' || q === 'smith' || q === 'ezbar' || q === 'trapbar')) return 1;
@@ -55,8 +56,9 @@ export function implementFactor(ex) {
 }
 
 function bestRecentE1rm(history, id, unit) {
-    let best = 0, at = 0;
-    for (const h of Array.isArray(history) ? history : []) {
+    // Use the latest completed exposure, never an all-time maximum or an obsolete revision.
+    for (const h of history.slice().reverse()) {
+        let best = 0;
         const p = h?.perf?.[id];
         if (!p) continue;
         for (const s of completedHistorySets(p)) {
@@ -66,16 +68,19 @@ function bestRecentE1rm(history, id, unit) {
             const e = e1rmRIR(w, r, Number.isFinite(rir) ? rir : 0);
             if (e > best) best = e;
         }
-        const t = Date.parse(h.date) || 0;
-        if (t > at) at = t;
+        if (Number.isFinite(best) && best > 0) return { e1rm: best, at: Number(h.date) };
     }
-    return best > 0 ? { e1rm: best, at } : null;
+    return null;
 }
 
 // → { e1rm, from: { kind:'own'|'related', id, name, e1rm } | { kind:'bodyweight' } } in `unit`, or null.
 export function startingEstimate(exId, { history = [], unit = 'kg', experience = null } = {}) {
     const ex = EX_BY_ID[exId], f = implementFactor(ex);
     if (!ex || !(f > 0) || !ex.pattern) return null;
+    const now = Date.now();
+    history = normalizeHistoryRevisions(history).entries.filter(entry =>
+        ['lb','kg'].includes(String(entry.unit || unit).trim().toLowerCase())
+        && Number(entry.date) <= now && now - Number(entry.date) <= 90 * 86400000);
     // Logged before but with no suggestion here (another program, an imported history): start from its own best.
     const own = bestRecentE1rm(history, exId, unit);
     if (own) return { e1rm: own.e1rm, from: { kind: 'own', id: ex.id, name: ex.name, e1rm: Math.round(own.e1rm) } };
@@ -96,22 +101,22 @@ export function startingEstimate(exId, { history = [], unit = 'kg', experience =
     }
     const ratio = PATTERN_BW_RATIO[ex.pattern], bw = PROFILE.bodyweight;
     if (!(ratio > 0) || !(bw > 0)) return null;
-    const bwInUnit = PROFILE.bwUnit === unit ? bw : unit === 'lb' ? bw * 2.20462 : bw / 2.20462;
+    const bwInUnit = convertHistoryLoad(bw, PROFILE.bwUnit, unit);
     const xp = EXPERIENCE_SCALE[experience || PROFILE.experience] ?? EXPERIENCE_SCALE.novice;
     return { e1rm: bwInUnit * ratio * xp * (SEX_SCALE[PROFILE.sex] ?? 1) * f, from: { kind: 'bodyweight' } };
 }
 
 // Working load for `reps` at `rir`, before equipment snapping, already on the light side.
 export function startingWorkLoad(estimate, reps, rir) {
-    if (!(estimate?.e1rm > 0)) return null;
-    const r = Math.max(1, Number(reps) || 8), k = Math.max(0, Number(rir) || 2);
+    if (!(estimate?.e1rm > 0) || !Number.isFinite(estimate.e1rm)) return null;
+    const r = Math.max(1, historyNumber(reps) ?? 8), k = Math.max(0, historyNumber(rir) ?? 2);
     return estimate.e1rm * STARTING_MARGIN / (1 + (r + k) / 30);
 }
 
 export function startingEstimateText(estimate, unit) {
-    if (!estimate) return '';
-    if (estimate.from.kind === 'own') return `Estimated from your earlier ${estimate.from.name} sets (best 1RM ${estimate.from.e1rm} ${unit}) and set a little light.`;
+    if (!estimate?.from) return '';
+    if (estimate.from.kind === 'own') return `Estimated from your recent ${estimate.from.name} sets (${estimate.from.e1rm} ${unit} estimated 1RM), with a lighter starting load.`;
     return estimate.from.kind === 'related'
-        ? `Estimated from your ${estimate.from.name} (best 1RM ${estimate.from.e1rm} ${unit}) and set a little light.`
-        : 'Estimated from your bodyweight and experience and set a little light.';
+        ? `Estimated from your ${estimate.from.name} (${estimate.from.e1rm} ${unit} estimated 1RM), with a lighter starting load.`
+        : 'Approximate starting load from your bodyweight and experience.';
 }

@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useId, useState, useRef, useLayoutEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { spring, stopMotion } from './ui-motion.js';
+import { UiAction, UiCard } from './ui-primitives.js';
 
 export function MotionReveal({ open, children }) {
     const [alive, setAlive] = useState(!!open);
@@ -23,9 +24,18 @@ export function MotionReveal({ open, children }) {
                 complete: () => { if (open) el.style.height = 'auto'; else setAlive(false); } });
         };
         resize();
-        const observer = new ResizeObserver(resize);
-        if (open) observer.observe(inner);
-        return () => { observer.disconnect(); stopMotion(el, 'reveal-height'); };
+        // ResizeObserver is available on modern Android, but keep disclosure
+        // operable in constrained webviews and older browser shells.
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
+        if (open) {
+            if (observer) observer.observe(inner);
+            else window.addEventListener('resize', resize);
+        }
+        return () => {
+            observer?.disconnect();
+            if (open && !observer) window.removeEventListener('resize', resize);
+            stopMotion(el, 'reveal-height');
+        };
     }, [open, alive]);
     if (!open && !alive) return null;
     return _jsx('div', { ref: holder, className: 'wpb-motion-reveal', 'data-pi-reveal': true,
@@ -44,10 +54,10 @@ export function InfoCard({ icon: Icon, title, subtitle, open, onToggle, children
         ] }, 'copy'),
         collapsible && _jsx(ChevronDown, { size: 20, 'aria-hidden': true, className: 'wpb-chev wpb-info-card-chevron' }, 'chevron')
     ];
-    return _jsxs('section', { 'data-infocard': true, 'data-collapsible': collapsible ? '1' : '0',
+    return _jsxs(UiCard, { as: 'section', 'data-infocard': true, 'data-collapsible': collapsible ? '1' : '0',
         className: 'wpb-info-card', children: [
             collapsible
-                ? _jsx('button', { type: 'button', className: 'pressable wpb-info-card-toggle',
+                ? _jsx(UiAction, { variant: 'text', className: 'wpb-info-card-toggle',
                     onClick: onToggle, 'aria-expanded': isOpen, 'aria-controls': contentId, children: heading })
                 : _jsx('div', { className: 'wpb-infocard-static-head wpb-info-card-static-head', children: heading }),
             _jsx('div', { id: contentId, children: _jsx(MotionReveal, { open: isOpen,

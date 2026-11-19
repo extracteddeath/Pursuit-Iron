@@ -3,16 +3,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
-import { program, history, squatProgram, squatDay, squatHistory, inclineProgram, inclineHistory } from './m220-day-progression-test.mjs';
+import { program, history, squatProgram, squatDay, squatHistory, inclineProgram, inclineHistory, rearProgram, rearHistory } from './m220-day-progression-test.mjs';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const importMap = fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const snapshot = {schemaVersion:2,programId:program.id,dayId:'lower',weekIndex:1,dayExSig:'seated-calf',exIdx:0,elapsedMs:3800000,restPaused:true,restRemain:50,restMax:90,data:[{id:'seated-calf',slot:0,sets:Array.from({length:5},(_,i)=>({weight:i===2?'212.5':'210',reps:'20',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'210',reps:'12-20',rir:'2',prefillReps:'20'}}))}]};
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import RootApp,{WorkoutSession,StyleTag} from '/modules/App.js';import {installAppMotion} from '/modules/ui-motion.js';
-const params=new URL(location.href).searchParams,squat=params.has('squat'),incline=params.has('incline');
-const program=incline?${JSON.stringify(inclineProgram)}:squat?${JSON.stringify(squatProgram)}:${JSON.stringify(program)},history=incline?${JSON.stringify(inclineHistory)}:squat?${JSON.stringify(squatHistory)}:${JSON.stringify(history)},day=squat?program.days.find(d=>d.id===${JSON.stringify(squatDay.id)}):program.days[0],resume=params.has('resume');
+const params=new URL(location.href).searchParams,squat=params.has('squat'),incline=params.has('incline'),rear=params.has('rear');
+const program=rear?${JSON.stringify(rearProgram)}:incline?${JSON.stringify(inclineProgram)}:squat?${JSON.stringify(squatProgram)}:${JSON.stringify(program)},history=rear?${JSON.stringify(rearHistory)}:incline?${JSON.stringify(inclineHistory)}:squat?${JSON.stringify(squatHistory)}:${JSON.stringify(history)},day=squat?program.days.find(d=>d.id===${JSON.stringify(squatDay.id)}):program.days[0],resume=params.has('resume');
 if(params.has('custom')){program.custom=true;delete program.engineSource;}
-const owner=createRoot(document.getElementById('root'));localStorage.setItem('wpb:v1',JSON.stringify({v:13,saved:[],history:[],cycles:[],perf:{},drafts:{},tombs:{},theme:'ice',unit:'lb',unitChosen:true,experience:'intermediate',seenIntro:999,seenWhatsNew:999,installDismissedAt:Date.now(),lastBackup:Date.now()}));owner.render(React.createElement(RootApp));installAppMotion(document.getElementById('root'));window.mountProgressionWorkout=()=>{localStorage.removeItem('wpb:live');if(resume){const saved=squat?{schemaVersion:2,programId:program.id,dayId:day.id,weekIndex:1,dayExSig:day.exercises.join('|'),exIdx:0,elapsedMs:3800000,restPaused:true,restRemain:50,restMax:90,data:[{id:'back-squat',slot:0,note:'',sets:Array.from({length:4},(_,i)=>({weight:i===2?'200':'215',reps:i===0?'3':i===2?'6':'5',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'215',reps:'5-8',rir:'2',prefillReps:'5'}}))}]}:${JSON.stringify(snapshot)};if(incline){saved.programId=program.id;saved.dayId=day.id;saved.dayExSig=day.exercises.join('|');saved.data=[{id:'low-inc-bb-bench',slot:0,note:'J-hooks 7.5',sets:Array.from({length:4},(_,i)=>({weight:i===2?'197.5':'210',reps:i===0?'5':'6',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'210',reps:'6-8',rir:'2',prefillReps:i===0?'5':'6'}}))}];}localStorage.setItem('wpb:live',JSON.stringify(saved));}
+const owner=createRoot(document.getElementById('root'));localStorage.setItem('wpb:v1',JSON.stringify({v:13,saved:[],history:[],cycles:[],perf:{},drafts:{},tombs:{},theme:'ice',unit:'lb',unitChosen:true,experience:'intermediate',seenIntro:999,seenWhatsNew:999,installDismissedAt:Date.now(),lastBackup:Date.now()}));owner.render(React.createElement(RootApp));installAppMotion(document.getElementById('root'));window.mountProgressionWorkout=()=>{localStorage.removeItem('wpb:live');if(resume){const saved=squat?{schemaVersion:2,programId:program.id,dayId:day.id,weekIndex:1,dayExSig:day.exercises.join('|'),exIdx:0,elapsedMs:3800000,restPaused:true,restRemain:50,restMax:90,data:[{id:'back-squat',slot:0,note:'',sets:Array.from({length:4},(_,i)=>({weight:i===2?'200':'215',reps:i===0?'3':i===2?'6':'5',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'215',reps:'5-8',rir:'2',prefillReps:'5'}}))}]}:${JSON.stringify(snapshot)};if(incline){saved.programId=program.id;saved.dayId=day.id;saved.dayExSig=day.exercises.join('|');saved.data=[{id:'low-inc-bb-bench',slot:0,note:'J-hooks 7.5',sets:Array.from({length:4},(_,i)=>({weight:i===2?'197.5':'210',reps:i===0?'5':'6',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'210',reps:'6-8',rir:'2',prefillReps:i===0?'5':'6'}}))}];}if(rear){saved.programId=program.id;saved.dayId=day.id;saved.dayExSig=day.exercises.join('|');saved.data=[{id:'rear-fly',slot:0,sets:Array.from({length:3},(_,i)=>({weight:i===2?'55':'60',reps:'21',done:false,auto:true,valueOwner:'prescription',target:{w:i===2?'55':'60',reps:'15-25',rir:'2',prefillReps:'21'}}))}];}localStorage.setItem('wpb:live',JSON.stringify(saved));}
 owner.render(React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),React.createElement(WorkoutSession,{program,day,weekIndex:1,unit:'lb',perf:history[0].perf,history,restAutoStart:false,warmupCard:false,onExit:()=>{},onFinish:()=>{},setUnit:()=>{}})));};
 </script></body></html>`;
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.png':'image/png'};
@@ -33,6 +33,46 @@ try {
     await page.click('button[aria-label="Show previous workout values"]');
     const lastText=await page.$eval('.wpb-workout',n=>n.innerText);
     assert.match(lastText,/205×16/);assert.match(lastText,/205×12/);
+    // B1002 screenshot: a later isolation exercise must preserve the 60 lb
+    // working load across all three rows; the UI must show the matching raw LAST.
+    await open('?rear');
+    const rearWork='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
+    const rearWeights=await page.$$eval(`${rearWork} input[aria-label="weight"]`, nodes=>nodes.map(node=>node.value));
+    const rearReps=await page.$$eval(`${rearWork} input[aria-label="reps"]`, nodes=>nodes.map(node=>node.value));
+    assert.deepEqual(rearWeights,['60','60','60'],'B1002: last 60x20 cannot prefill 55x21 on the third set');
+    assert.deepEqual(rearReps,['21','21','21'],'B1002: rep-only advance remains inside planned rep range');
+    await page.click('button[aria-label="Show previous workout values"]');
+    const rearLast=await page.$$eval(rearWork, nodes=>nodes.map(node=>node.textContent));
+    assert.equal(rearLast.length,3);
+    for(const row of rearLast)assert.match(row,/60×20/,'visible LAST must match the same three history rows');
+    // Exercise a real opt-in export from the Workout menu, without writing any
+    // file or accessing the device's real clipboard in headless Chrome.
+    await page.evaluate(()=>{
+        Object.defineProperty(navigator,'clipboard',{configurable:true,value:{
+            writeText:async content=>{window.__progressionReplay=JSON.parse(content);}
+        }});
+    });
+    await page.click('button[aria-label="Workout options"]');
+    const diagnosticAction=await page.$$('button');
+    let actionFound=false;
+    for(const action of diagnosticAction) {
+        const matches=await action.evaluate(node=>node.textContent?.includes('Copy progression diagnostics'));
+        if(matches){await action.click();actionFound=true;break;}
+    }
+    assert.ok(actionFound,'Workout options must expose an explicit diagnostic export action');
+    await page.waitForFunction(()=>window.__progressionReplay?.kind==='pursuit-iron-progression-replay');
+    const replay=await page.evaluate(()=>window.__progressionReplay);
+    assert.deepEqual(replay.rows.filter(row=>row.kind==='work').map(row=>row.load),[60,60,60]);
+    assert.deepEqual(replay.rows.filter(row=>row.kind==='work').map(row=>row.trace?.source?.load),[60,60,60]);
+    assert.ok(!JSON.stringify(replay).includes('Seat on 5'),
+        'Pinned setup and free-text notes must not be included in the support export');
+    await page.screenshot({path:path.join(root,'verification/b1002-rear-fly-phone.png')});
+    await open('?rear&resume');
+    assert.deepEqual(await page.$$eval(`${rearWork} input[aria-label="weight"]`,nodes=>nodes.map(node=>node.value)),
+        ['60','60','60'],'B1002: resume repairs a stale automatic third-set 55 lb without touching manual work');
+    assert.deepEqual((await savedWorkSets()).map(row=>row.weight),['60','60','60'],
+        'Reconciled automatic loads survive persistence and no longer revive the old 55 lb');
+
     await open('?resume');
     assert.deepEqual(await values(),['205','212.5','205','205'],'untouched pending automatic loads refresh while the manual load survives');
     const resumedCalf=await savedWorkSets();
@@ -46,7 +86,9 @@ try {
         const workRows=await page.$$eval(workSelector,ns=>ns.map(n=>`[data-testid="${n.dataset.testid}"]`));
         const setWeights=await page.$$eval(`${workSelector} input[aria-label="weight"]`,ns=>ns.map(n=>n.value));
         const setReps=await page.$$eval(`${workSelector} input[aria-label="reps"]`,ns=>ns.map(n=>n.value));
-        assert.deepEqual(setWeights,['190','190','190','190']);assert.deepEqual(setReps,['5','5','5','5']);
+        assert.deepEqual(setWeights,['205','210','215','205']);assert.deepEqual(setReps,['5','5','5','5']);
+        assert.equal(await page.evaluate(() => document.querySelectorAll('[data-load-advice]').length),0,
+            'Silent fatigue advice must not render another set-by-set coaching banner');
         for(const warm of await page.$$('[data-testid^="set-0-"][data-warm="1"] button[aria-label="Mark set done"]'))await warm.click();
         const first=workRows[0];
         await page.click('button[aria-label="Show previous workout values"]');
@@ -69,11 +111,11 @@ try {
     }
     for(const variant of ['?squat&resume','?squat&resume&custom']){
         await open(variant);
-        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value)),['190','200','190'],
-            'stale automatic 215 targets refresh, while completed 215 and manually typed 200 survive');
+        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value)),['210','200','205'],
+            'Double progression retains each prior set-position load and completed/manual edits');
         assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="reps"]',ns=>ns.map(n=>n.value)),['5','6','5']);
         const resumedSquat=await savedWorkSets();
-        assert.deepEqual(resumedSquat.map(s=>s.weight),['215','190','200','190']);
+        assert.deepEqual(resumedSquat.map(s=>s.weight),['215','210','200','205']);
         assert.deepEqual(resumedSquat.map(s=>s.reps),['3','5','6','5']);
         assert.equal(resumedSquat[0].done,true,'completed squat load and reps stay persisted after collapse');
     }
@@ -81,10 +123,10 @@ try {
         await page.setViewport({width,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
         await open('?incline');
         const work='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
-        assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['190','190','190','190']);
+        assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['195','200','205','210']);
         assert.deepEqual(await page.$$eval(`${work} input[aria-label="reps"]`,ns=>ns.map(n=>n.value)),['6','6','6','6']);
-        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/190 lb/,
-            'The target summary describes the explicitly recalibrated common working load');
+        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/195–210 lb/,
+            'The target summary describes the full retained per-set load range; lower advice is separate');
         await page.click('button[aria-label="Show previous workout values"]');
         const lastRows=await page.$$eval(work,ns=>ns.map(n=>n.textContent));
         for(const [index,text] of ['195×10','200×8','205×6','210×5'].entries())
@@ -92,11 +134,11 @@ try {
         if(width===460)await page.screenshot({path:path.join(root,'verification/m338-incline-phone.png')});
         await open('?incline&resume');
         const restored=await savedWorkSets();
-        assert.deepEqual(restored.map(s=>s.weight),['210','190','197.5','190'],
-            'Resume repairs only untouched app-owned targets and preserves completed/manual loads');
+        assert.deepEqual(restored.map(s=>s.weight),['210','200','197.5','210'],
+            'Resume holds automatic double-progression loads and preserves completed/manual loads');
         assert.equal(restored[0].done,true);
         assert.deepEqual(restored.map(s=>s.reps),['5','6','6','6']);
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS M220 browser: scoped Lower history, protected resume, generated/custom incomplete squat recalibration, latest LAST/shortcut agreement and tap-to-fill.');
+    console.log('PASS M220 browser: rep-first double progression, silent fatigue advice, protected resume, honest LAST and tap-to-fill.');
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

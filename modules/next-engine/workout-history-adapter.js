@@ -1,3 +1,5 @@
+import { canonicalRepRange } from './shell-projection.js';
+import { machineIdOfSet, historyForMachineRecommendation, LEGACY_MACHINE_ID } from './machine-instances.js';
 import { historyNumber as numberOf, convertHistoryLoad as convertLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from './history-contract.js';
 import { advanceCycleState, createInitialCycleState, startPhase } from './cycles.js';
 import { evaluateWorkoutProgression } from './performance.js';
@@ -7,7 +9,7 @@ import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-res
 import { createSemanticExerciseGraph, transferExerciseStartingReference } from './semantic-exercise-graph.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
-import { availableLoadAtOrBelow, loadingInventoryInUnit, nextAvailableLoad } from './loading.js';
+import { availableLoadAtOrBelow, loadingInventoryWithExerciseSteps, nextAvailableLoad } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
@@ -45,8 +47,9 @@ function programUnit(program, unit, loggedUnit) {
 }
 function sourceSnapshot(program, unit) {
     const stored = program?.nextEngine?.request;
-    const loading = unit ? loadingInventoryInUnit(stored?.equipment?.loading, unit,
-        { nativeDefaults: !program?.config?.loadingInventory }) : stored?.equipment?.loading;
+    const loadingUnit = ['lb', 'kg'].includes(unit) ? unit : program?.config?.unit ?? stored?.equipment?.loading?.unit ?? 'lb';
+    const loading = loadingInventoryWithExerciseSteps(stored?.equipment?.loading, loadingUnit, program?.exLoadInc,
+        { nativeDefaults: !program?.config?.loadingInventory });
     const request = loading === stored?.equipment?.loading ? stored : { ...stored, equipment: { ...stored?.equipment, loading } };
     const next = program?.nextEngine?.program;
     if (!request || !next || !Array.isArray(next.sessions))
@@ -93,7 +96,7 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
     const current = getNextShellCell(program, day, slot, week);
     const saved = perf?.prescription;
     if (!current || saved?.schemaVersion !== 1 || saved.exerciseId !== exerciseId) return current;
-    const reps = rangeOf(saved.reps, null), rir = rangeOf(saved.rir, null);
+    const reps = canonicalRepRange(saved.reps), rir = rangeOf(saved.rir, null);
     if (!Number.isInteger(saved.sets) || saved.sets < 1 || saved.sets > 20
         || !reps || reps[0] <= 0 || !rir || rir[0] < 0 || rir[1] > 10
         || saved.rest == null || saved.rest === '' || !Number.isFinite(Number(saved.rest)) || Number(saved.rest) < 0)
@@ -134,7 +137,8 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit, context) 
         const fallbackWeek = Math.max(...Object.keys(program?.nextWeekPrescriptions?.[`${day.id}:${slot}`] ?? {}).map(Number).filter(Number.isFinite), 1);
         const cell = historicalShellCell(program, day, slot, week, entry.perf?.[legacyId], nextId)
             ?? historicalShellCell(program, day, slot, fallbackWeek, entry.perf?.[legacyId], nextId);
-        if (!cell)
+        const repBounds = canonicalRepRange(cell?.reps);
+        if (!cell || !repBounds)
             continue;
         const sourceEx = sourceSession.exercises.find(ex => ex.exerciseId === nextId) ?? sourceSession.exercises[slot];
         const legacy = legacyMap.get(legacyId);
@@ -149,7 +153,7 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit, context) 
             role,
             sets: Math.max(1, Math.round(Number(cell.sets) || sourceEx?.sets || 1)),
             prescription: {
-                reps: rangeOf(cell.reps, sourceEx?.prescription.reps ?? [8, 12]),
+                reps: repBounds,
                 rir: rangeOf(cell.rir, sourceEx?.prescription.rir ?? [1, 3]),
                 ...(cell.setTargets ? { setTargets: cell.setTargets.map(t => ({ ...t, weight: convertLoad(t.weight, t.unit || entry.unit, programUnit(program, unit, entry.unit)) })) } : {}),
                 restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0
@@ -182,15 +186,28 @@ function workoutFromEntry(program, entry, legacyExercises, unit, context) {
         const perf = entry.perf?.[legacyId];
         if (!ex || !perf?.sets?.length)
             return;
-        let setIndex = 0;
+        let legacyIndex = 0;
+        const physicalMachineIds = new Set(completedHistorySets(perf)
+            .map(set => machineIdOfSet(set, perf)));
+        // A machine swap is not a strength collapse. An unscoped legacy
+        // analysis must never compute a load progression from tagged A/B
+        // sets; only a caller explicitly scoped to one gym+machine may.
+        const machineEvidenceUnscoped = !context?.machineScoped &&
+            [...physicalMachineIds].some(id => id !== LEGACY_MACHINE_ID);
+        const mixedPhysicalMachines = physicalMachineIds.size > 1;
         for (const raw of completedHistorySets(perf)) {
+            // Historical logs without ordinals remain sequential; current logs
+            // preserve skipped middle sets and must never be compacted here.
+            const index = Number.isInteger(raw.workingSetIndex) && raw.workingSetIndex >= 0
+                ? raw.workingSetIndex : legacyIndex;
+            legacyIndex++;
             const reps = intOf(raw.r), load0 = numberOf(raw.w);
             const observedRir = observedHistoryRIR(raw);
             const exposure = progressionExposureContext([perf, raw]);
             performed.push({
-                ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
+                ...historyExposureContext(raw), exerciseId: ex.exerciseId, machineInstanceId: machineIdOfSet(raw, perf), setIndex: index, load: convertLoad(load0, entry.unit, targetUnit), reps,
                 badDay: exposure.badDay, interrupted: exposure.interrupted,
-                prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId),
+                prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId) || machineEvidenceUnscoped || mixedPhysicalMachines,
                 rir: observedRir, painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality,
                 advancedTechnique: ex.advancedTechnique?.type
             });
@@ -269,10 +286,16 @@ export function deriveLongitudinalExerciseEvidence(diagnoses, latestDecisions = 
 }
 
 /** Runtime bridge only: asks Pursuit Engine's own performance evaluator what the next exposure should do. */
-export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex, unit) {
+export function nextWorkoutSuggestionForShell(program, history, legacyExercises, day, slot, weekIndex, unit, machineSelection = null) {
     if (program?.engineSource !== 'pursuit-next')
         return null;
-    const normalizedHistory = normalizeHistoryEntries(history, program.id);
+    const machineScoped = machineSelection?.gymId && machineSelection?.machineInstanceId;
+    const comparableHistory = machineScoped
+        ? historyForMachineRecommendation(history,
+            String(day?.exercises?.[slot] ?? ''), machineSelection.machineInstanceId,
+            machineSelection.gymId)
+        : history;
+    const normalizedHistory = normalizeHistoryEntries(comparableHistory, program.id);
     const evaluationUnit = programUnit(program, unit, normalizedHistory.entries.at(-1)?.unit);
     const snap = sourceSnapshot(program, evaluationUnit);
     if (!snap)
@@ -290,6 +313,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     if (!nextId)
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
+    if (cell?.prescriptionInvalid) return null;
     const reps = String(cell?.reps ?? cell?.range ?? '');
     const latest = latestShellEntries(history, program, legacyId, day, normalizedHistory);
     const lastEntry = latest.comparable;
@@ -299,7 +323,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     const lastLoad = convertLoad(representativeShellLoad(last), lastEntry?.unit, evaluationUnit);
     let analysis;
     try {
-        analysis = analyzeShellHistoryForNextEngine(program, history, legacyExercises, { normalizedHistory, unit: evaluationUnit });
+        analysis = analyzeShellHistoryForNextEngine(program, comparableHistory, legacyExercises, { normalizedHistory, unit: evaluationUnit, machineScoped:!!machineScoped });
     }
     catch {
         if (last) return { unit: evaluationUnit, weight: lastLoad, dir: 'hold', reason: 'Hold the last logged load until the new engine has comparable completed-set evidence.', reps, last, lastUnit: lastEntry?.unit || evaluationUnit, action: 'initial' };
@@ -321,6 +345,8 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         if (reference && referenceLoad !== null) return { unit: evaluationUnit, weight: referenceLoad, dir: 'hold',
             reason: 'Use the other day only as a starting reference. This program day has no comparable completed history yet.',
             reps, last: reference, lastUnit: referenceEntry?.unit || evaluationUnit, action: 'initial', referenceOnly: true };
+        // Never guess a new machine's baseline from a different press stack.
+        if (machineScoped) return null;
         return semanticStartingReferenceForShell(program, history, day, nextId, cell, { normalizedHistory, unit: evaluationUnit });
     }
     const current = decision.currentLoad ?? lastLoad;
@@ -349,7 +375,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
         last, lastUnit: lastEntry?.unit || evaluationUnit,
-        action: decision.action,
+        sourceEntryId: lastEntry?.id ?? null, action: decision.action, reasonCode: decision.reasonCode,
         confidence: decision.confidence
     };
 }
@@ -380,19 +406,36 @@ export function represcribeForWeek(exerciseId, cell, lastCell, last, request, fr
     if (e1 === null)
         return null;
     const repsMid = Math.round((reps[0] + reps[1]) / 2), rirMid = rir ? (rir[0] + rir[1]) / 2 : 2;
-    // The estimate rounds to the nearer weight the equipment makes (ties go down): flooring alone lost a notch each
-    // re-set (33.8 kg on a 2.5 kg cable stack became 32.5, then the next pass's 32.1 became 30; 9.1 kg became 7.5),
-    // so a lifter on target drifted down block after block. On heavy lifts a notch is a small share of the load.
+    const inventory = request?.equipment?.loading, available = request?.equipment?.available;
+    // A new week's reps/RIR change is an estimate, not a failed exposure.
+    // Use the nearest equipment-loadable weight (ties down), rather than repeatedly
+    // flooring and slowly walking an on-target lifter down through the rack.
     const ideal = e1 / (1 + (repsMid + rirMid) / 30);
-    const inv = request?.equipment?.loading, avail = request?.equipment?.available;
-    let weight = availableLoadAtOrBelow(exerciseId, ideal, inv, avail);
-    const up = nextAvailableLoad(exerciseId, weight ?? 0, inv, avail);
-    if (up != null && up > ideal && (weight === null || up - ideal < ideal - weight))
-        weight = up;
-    if (weight === null)
+    let recommended = availableLoadAtOrBelow(exerciseId, ideal, inventory, available);
+    const above = nextAvailableLoad(exerciseId, recommended ?? 0, inventory, available);
+    if (above != null && above > ideal && (recommended === null || above - ideal < ideal - recommended))
+        recommended = above;
+    if (recommended === null)
         return null;
+    // A week-to-week rep/RIR change is not evidence of failure. Avoid a phantom
+    // 50 -> 49.5 lb "deload" when a fractional inventory step puts the estimate
+    // just below the same load every completed set already used successfully.
+    // This guard is ONLY for re-prescription: failed-set corrections, explicit
+    // deloads and earned microplate increases remain owned by progression.
+    const observed = completedHistorySets(last).map(set => ({
+        weight: convertLoad(set?.w, fromUnit, toUnit), reps: numberOf(set?.r)
+    }));
+    const sameLoad = observed.length > 0 && observed.every(set =>
+        Number.isFinite(set.weight) && set.weight > 0 && set.reps >= reps[0]
+        && Math.abs(set.weight - observed[0].weight) < 1e-6);
+    const lastLoad = sameLoad ? observed[0].weight : null;
+    const selectableLast = lastLoad === null ? null : availableLoadAtOrBelow(exerciseId, lastLoad, inventory, available);
+    const tinyDifference = lastLoad === null ? false : lastLoad > recommended
+        && lastLoad - recommended <= Math.min(toUnit === 'kg' ? 0.25 : 0.5, lastLoad * 0.02) + 1e-6;
+    const retainLast = tinyDifference && selectableLast !== null && Math.abs(selectableLast - lastLoad) < 1e-6;
+    const weight = retainLast ? lastLoad : recommended;
     const range = reps[0] === reps[1] ? String(reps[0]) : `${reps[0]}–${reps[1]}`, reserve = rir ? (rir[0] === rir[1] ? String(rir[0]) : `${rir[0]}–${rir[1]}`) : null;
-    return { weight, target: repsMid, reason: `This week's prescription changes to ${range} reps${reserve ? ` with ${reserve} in reserve` : ''}, so the load is re-set from your estimated max (about ${Math.round(e1)} ${toUnit || request?.equipment?.loading?.unit || 'lb'}) to land mid-range.` };
+    return { weight, target: repsMid, reason: `This week's prescription changes to ${range} reps${reserve ? ` with ${reserve} in reserve` : ''}, so the load is re-set from your estimated max (about ${Math.round(e1)} ${toUnit || request?.equipment?.loading?.unit || 'lb'}) to land mid-range.${retainLast ? ' The tiny estimated decrease is below a meaningful change, so keep the last successfully completed load.' : ''}` };
 }
 export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises, day, slot, weekIndex, perf, unit) {
     if (program?.engineSource !== 'pursuit-next')
@@ -430,7 +473,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         target: decision.suggestedReps,
         setTargets: decision.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
         last,
-        action: decision.action,
+        action: decision.action, reasonCode: decision.reasonCode,
         confidence: decision.confidence
     };
 }
@@ -557,7 +600,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     // One synchronous analysis owns one current catalog lookup and unit-adjusted
     // snapshot. Rebuild them on the next call so in-place/custom/history edits
     // remain fresh; no cross-call cache or second history authority is needed.
-    const context = { snap, planSnap: sourceSnapshot(program), legacyMap: legacyExerciseById(legacyExercises) };
+    const context = { snap, planSnap: sourceSnapshot(program), legacyMap: legacyExerciseById(legacyExercises), machineScoped:options.machineScoped === true };
     const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises, evaluationUnit, context) }))
         .filter(({ entry, workout }) => {
             if (workout && workout.performedSets.length) return true;
@@ -592,7 +635,10 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
         for (const ex of workout.session.exercises) {
             const sets = workout.performedSets.filter(s => s.exerciseId === ex.exerciseId);
             const progression = workout.progression.find(d => d.exerciseId === ex.exerciseId);
-            if (!sets.length)
+            // Cross-machine load trends are not an athlete-level plateau.
+            // Scoped suggestions still receive matching A/B evidence.
+            if (!sets.length || (!options.machineScoped &&
+                sets.some(s => s.machineInstanceId !== LEGACY_MACHINE_ID)))
                 continue;
             const list = exposures.get(ex.exerciseId) ?? [];
             list.push({ completedAt: workout.completedAt, sets, progression,

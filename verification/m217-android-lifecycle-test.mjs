@@ -97,6 +97,33 @@ const environment = () => {
     assert.equal(lock.releases, 1, 'a request granted in the background cannot stay held');
     stop();
 }
+// Pagehide may happen without visibilitychange (including back/forward cache).
+// A late wake lock granted after pagehide must not keep the background document awake.
+{
+    const e = environment(), stop = holdWorkoutScreenAwake(e.nav, e.doc, e.win);
+    e.win.dispatchEvent(new Event('pagehide'));
+    const late = sentinel(); e.requests[0].resolve(late); await flush();
+    assert.equal(late.releases, 1, 'pagehide releases a delayed platform grant even when visibility still reads visible');
+    e.visibility('visible');
+    assert.equal(e.requests.length, 1, 'visibility event alone cannot reacquire a pagehidden document');
+    e.win.dispatchEvent(new Event('pageshow'));
+    assert.equal(e.requests.length, 2, 'pageshow reopens wake-lock eligibility');
+    const restored = sentinel(); e.requests[1].resolve(restored); await flush();
+    assert.equal(restored.releases, 0, 'visible restored workout may hold its newly granted lock');
+    stop(); assert.equal(restored.releases, 1, 'unmount releases the restored lock');
+    e.win.dispatchEvent(new Event('pageshow'));
+    assert.equal(e.requests.length, 2, 'cleanup detaches page lifecycle listeners');
+}
+{
+    const e = environment(), stop = holdWorkoutScreenAwake(e.nav, e.doc, e.win), held = sentinel();
+    e.requests[0].resolve(held); await flush();
+    e.win.dispatchEvent(new Event('pagehide'));
+    assert.equal(held.releases, 1, 'pagehide releases an already-held lock without waiting for visibilitychange');
+    e.win.dispatchEvent(new Event('pageshow'));
+    assert.equal(e.requests.length, 2);
+    stop(); const late = sentinel(); e.requests[1].resolve(late); await flush();
+    assert.equal(late.releases, 1, 'late pageshow request is released after the workout is closed');
+}
 assert.doesNotThrow(() => holdWorkoutScreenAwake({}, new EventTarget(), new EventTarget())());
 console.log('PASS M217 screen-awake lifecycle: one request, background release, foreground/page restoration, denied requests, and release after unmount.');
 console.log('PASS exact workout-clock recovery: shared restore instant, paused invariance, running pause accounting, zero reset and legacy fallback.');

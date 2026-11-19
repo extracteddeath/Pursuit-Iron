@@ -1,5 +1,5 @@
 {
-  "baseline": "M229 Engine 0.65.1",
+  "baseline": "M344 reviewed phase-specific strength selection update (preserved M230 stage ownership)",
   "records": [
     {
       "key": "top.MUSCLE_MOVEMENTS",
@@ -29,7 +29,7 @@
     {
       "key": "top.strengthCandidate",
       "file": "modules/next-engine/realizer-ranking.js",
-      "sha256": "a69ae7c7ee19605fe0e995a5086557ad61ea938d445b58880aeb76b8e9c6fcfd"
+      "sha256": "009e69f3d5a2da6484f6a53364e94990de8c07e3c19df3e2ea7796de412cb89d"
     },
     {
       "key": "top.muscleScore",
@@ -144,7 +144,7 @@
     {
       "key": "top.strengthSetsForAllocation",
       "file": "modules/next-engine/realizer-strength.js",
-      "sha256": "0b0515d3ad4dd6ae550403865a7f2c0cf6c3f9674e691160c2f9d3d840c30923"
+      "sha256": "c6be9cabcd165fb747c2debc953d997d5c2b16b058e51467e87d572484c62081"
     },
     {
       "key": "top.realizeStrengthAnchors",

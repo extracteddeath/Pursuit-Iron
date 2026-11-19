@@ -77,6 +77,39 @@ internal object NativeMeasuredWorkoutParentCodec {
         }.toByteArray()
     }
 
+
+    /**
+     * Read only a bounded identity hint for an on-disk parent. This verifies
+     * the full envelope hash before returning either name. It is NEVER an
+     * authentication check; callers must fully replay/decode the archive,
+     * verify its expected hashed filename and recheck signed-in ownership.
+     */
+    fun storedIdentity(bytes:ByteArray):Pair<String,String> {
+        if(bytes.size !in 44..MAX_BYTES)
+            throw IOException("invalid measured archive size")
+        DataInputStream(ByteArrayInputStream(bytes)).use{envelope->
+            val length=envelope.readInt()
+            if(length !in 16..MAX_BYTES-36 || length+36!=bytes.size)
+                throw IOException("invalid measured archive envelope")
+            val body=ByteArray(length)
+            envelope.readFully(body)
+            val checksum=ByteArray(32)
+            envelope.readFully(checksum)
+            if(!MessageDigest.isEqual(checksum,
+                    MessageDigest.getInstance("SHA-256").digest(body)))
+                throw IOException("invalid measured archive checksum")
+            DataInputStream(ByteArrayInputStream(body)).use{input->
+                if(input.readInt()!=MAGIC || input.readInt()!=VERSION)
+                    throw IOException("invalid measured archive schema")
+                val owner=input.readUTF()
+                val athlete=input.readUTF()
+                if(!id.matches(owner) || !id.matches(athlete))
+                    throw IOException("invalid measured archive identity")
+                return owner to athlete
+            }
+        }
+    }
+
     fun decode(
         bytes:ByteArray,expectedOwner:String,expectedAthlete:String
     ):NativeMeasuredWorkoutStored {

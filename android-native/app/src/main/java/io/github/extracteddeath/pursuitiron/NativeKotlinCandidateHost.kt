@@ -1293,6 +1293,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return measuredParentHistoryStore.issue(signed.ownerKey,workoutId)
     }
 
+    /** Cold-disk locator only: no implicit consent, approval or issuance. */
+    fun reviewUnfinishedMeasuredWorkouts():NativeMeasuredInventoryResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredInventoryResult.Rejected(
+                NativeMeasuredInventoryRefusal.NOT_AUTHORIZED)
+        return measuredParentHistoryStore.reviewUnfinished(signed.ownerKey)
+    }
+
     fun openMeasuredWorkout(workoutId:String):NativeMeasuredWorkoutStoreResult {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeMeasuredWorkoutStoreResult.Rejected(

@@ -165,4 +165,74 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             is NativeMeasuredConsentResult.Rejected)
         assertArrayEquals(bytes,Files.readAllBytes(file))
     }
+
+    @Test fun coldInventoryResumesOnlyUnfinishedCanonicalParents() {
+        enroll()
+        val first=plan()
+        val second=first.copy(workoutId="session-2",
+            sets=first.sets.map{it.copy(workoutId="session-2")})
+        for(p in listOf(first,second)) {
+            assertTrue(approvals().confirm("owner-1",p,1,true)
+                is NativeMeasuredConsentResult.Approved)
+            assertTrue(parent().issue("owner-1",p.workoutId)
+                is NativeMeasuredWorkoutStoreResult.Durable)
+        }
+        val recorded=parent().record("owner-1","session-1",
+            MeasuredWorkoutOperation.Record("record-1",0,"set-1",
+                MeasuredSetOutcome.COMPLETED,
+                MeasuredExerciseActual("floor",
+                    listOf(MeasuredSideResult(MeasuredSide.BOTH,47)))))
+        assertTrue(recorded is NativeMeasuredWorkoutStoreResult.Durable)
+
+        // Independent instances simulate process death; no Compose state,
+        // cached program or request-supplied workout ID is needed.
+        val cold=parent().reviewUnfinished("owner-1")
+        assertTrue(cold.toString(),cold is NativeMeasuredInventoryResult.Ready)
+        val found=(cold as NativeMeasuredInventoryResult.Ready).workouts
+        assertEquals(listOf("session-1","session-2"),
+            found.map{it.workoutId})
+        assertEquals(1,found.first().recordedSets)
+        assertEquals(1,found.first().totalSets)
+        assertEquals(listOf("plank"),found.first().exerciseIds)
+
+        val committed=NativeKotlinMeasuredHistoryTransaction(
+            history,parent(),fence,identity).complete("owner-1","athlete-1",
+                "session-1",MeasuredWorkoutOperation.Finish("finish-1",1))
+        assertTrue(committed.toString(),committed is NativeMeasuredFinishResult.Committed)
+        val after=parent().reviewUnfinished("owner-1")
+        assertTrue(after.toString(),after is NativeMeasuredInventoryResult.Ready)
+        assertEquals(listOf("session-2"),
+            (after as NativeMeasuredInventoryResult.Ready).workouts.map{
+                it.workoutId})
+
+        signed=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeMeasuredInventoryRefusal.NOT_AUTHORIZED,
+            (parent().reviewUnfinished("owner-1")
+                as NativeMeasuredInventoryResult.Rejected).reason)
+    }
+
+    @Test fun coldInventoryFailsClosedOnCorruptOrMisnamedMeasuredParent() {
+        enroll()
+        assertTrue(approvals().confirm("owner-1",plan(),1,true)
+            is NativeMeasuredConsentResult.Approved)
+        assertTrue(parent().issue("owner-1","session-1")
+            is NativeMeasuredWorkoutStoreResult.Durable)
+        val file=Files.list(root).use{stream->
+            stream.filter{it.fileName.toString().startsWith("measured-parent-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val original=Files.readAllBytes(file)
+        val wrong=root.resolve("measured-parent-"+ "0".repeat(64)+".bin")
+        Files.write(wrong,original)
+        assertEquals(NativeMeasuredInventoryRefusal.CORRUPT_RECORD,
+            (parent().reviewUnfinished("owner-1")
+                as NativeMeasuredInventoryResult.Rejected).reason)
+        Files.delete(wrong)
+        original[18]=(original[18].toInt() xor 1).toByte()
+        Files.write(file,original)
+        assertEquals(NativeMeasuredInventoryRefusal.CORRUPT_RECORD,
+            (parent().reviewUnfinished("owner-1")
+                as NativeMeasuredInventoryResult.Rejected).reason)
+    }
+
 }

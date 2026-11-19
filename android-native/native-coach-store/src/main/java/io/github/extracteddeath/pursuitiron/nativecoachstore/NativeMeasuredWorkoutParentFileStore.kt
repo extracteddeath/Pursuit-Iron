@@ -68,6 +68,26 @@ sealed interface NativeMeasuredWorkoutStoreResult {
  * manifest can prepare, commit and recover the parent-level Finish as one
  * transactional operation. No measurements are yet UI-issuable.
  */
+
+/** A read-only, identity-verified locator. No approval or issuance grant. */
+data class NativeMeasuredResumeCandidate(
+    val workoutId:String,
+    val exerciseIds:List<String>,
+    val recordedSets:Int,
+    val totalSets:Int
+)
+
+enum class NativeMeasuredInventoryRefusal {
+    INVALID_OWNER, NOT_AUTHORIZED, HISTORY_NOT_READY, CORRUPT_RECORD
+}
+
+sealed interface NativeMeasuredInventoryResult {
+    data class Ready(val workouts:List<NativeMeasuredResumeCandidate>):
+        NativeMeasuredInventoryResult
+    data class Rejected(val reason:NativeMeasuredInventoryRefusal):
+        NativeMeasuredInventoryResult
+}
+
 class NativeMeasuredWorkoutParentFileStore(
     private val root:Path,
     private val fence:NativeKotlinApprovalRevisionFence,
@@ -318,6 +338,89 @@ class NativeMeasuredWorkoutParentFileStore(
             }
         }.getOrElse{NativeMeasuredWorkoutStoreResult.Rejected(
             NativeMeasuredWorkoutStoreRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+
+    /**
+     * Discover cold-restart measured parents without guessing an ID or
+     * trusting Compose SavedState. Every candidate is checksum-checked,
+     * fully replayed and matched to its physical hashed filename. All scans
+     * are read-only, owner-fenced and verified against enrolled History;
+     * malformed archives refuse the WHOLE inventory, never a partial list.
+     *
+     * This only locates already-issued journals. It cannot issue, approve,
+     * reassign or recover a pending History transaction.
+     */
+    fun reviewUnfinished(ownerKey:String):NativeMeasuredInventoryResult {
+        if(!id.matches(ownerKey))
+            return NativeMeasuredInventoryResult.Rejected(
+                NativeMeasuredInventoryRefusal.INVALID_OWNER)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val signed=active(ownerKey)
+                    ?:return@withOwnerTransaction NativeMeasuredInventoryResult.Rejected(
+                        NativeMeasuredInventoryRefusal.NOT_AUTHORIZED)
+                val ledger=(history?.open(ownerKey,signed.athleteId) as?
+                    NativeHistoryLedgerResult.Durable)?.ledger
+                    ?:return@withOwnerTransaction NativeMeasuredInventoryResult.Rejected(
+                        NativeMeasuredInventoryRefusal.HISTORY_NOT_READY)
+                if(!ledger.readyForHistoryReads ||
+                    ledger.ownerKey!=ownerKey || ledger.athleteId!=signed.athleteId)
+                    return@withOwnerTransaction NativeMeasuredInventoryResult.Rejected(
+                        NativeMeasuredInventoryRefusal.HISTORY_NOT_READY)
+                if(Files.isSymbolicLink(root))
+                    throw IOException("unsafe measured inventory directory")
+                if(!Files.exists(root))
+                    return@withOwnerTransaction NativeMeasuredInventoryResult.Ready(emptyList())
+                if(!Files.isDirectory(root))
+                    throw IOException("invalid measured inventory directory")
+                val records=Files.list(root).use{stream->
+                    stream.filter{
+                        val name=it.fileName.toString()
+                        name.startsWith("measured-parent-") && name.endsWith(".bin")
+                    }.sorted().limit(2049).toArray().map{it as Path}
+                }
+                if(records.size>2048)
+                    throw IOException("measured inventory exceeds safe scan bound")
+                val completed=ledger.completions.map{it.workoutId}.toSet()
+                val unfinished=records.mapNotNull{file->
+                    if(Files.isSymbolicLink(file) ||
+                        !Files.isRegularFile(file) ||
+                        Files.size(file) !in 44L..maxBytes.toLong())
+                        throw IOException("unreadable measured parent")
+                    val bytes=Files.readAllBytes(file)
+                    // An identity hint only determines how to verify the full
+                    // record. It does not authorize reading another athlete.
+                    val claimed=NativeMeasuredWorkoutParentCodec.storedIdentity(bytes)
+                    val decoded=NativeMeasuredWorkoutParentCodec.decode(
+                        bytes,claimed.first,claimed.second)
+                    val idOnDisk=decoded.journal.approvedPlan.workoutId
+                    if(path(decoded.ownerKey,idOnDisk)!=file)
+                        throw IOException("measured parent filename does not match plan")
+                    if(decoded.ownerKey!=ownerKey ||
+                        decoded.athleteId!=signed.athleteId)
+                        null
+                    else {
+                        val finished=decoded.journal.finishedByEventId!=null
+                        val enrolled=idOnDisk in completed
+                        if(finished!=enrolled)
+                            throw IOException("measured parent and History disagree")
+                        if(finished)null else NativeMeasuredResumeCandidate(
+                            idOnDisk,
+                            decoded.journal.approvedPlan.sets.map{it.exerciseId}.distinct(),
+                            decoded.journal.bySetKey.values.count{
+                                it.effectiveRecord!=null},
+                            decoded.journal.approvedPlan.sets.size)
+                    }
+                }
+                if(active(ownerKey)!=signed)
+                    return@withOwnerTransaction NativeMeasuredInventoryResult.Rejected(
+                        NativeMeasuredInventoryRefusal.NOT_AUTHORIZED)
+                NativeMeasuredInventoryResult.Ready(
+                    unfinished.sortedBy{it.workoutId})
+            }
+        }.getOrElse{NativeMeasuredInventoryResult.Rejected(
+            NativeMeasuredInventoryRefusal.CORRUPT_RECORD)}
     }
 
     /** No direct Finish: never claim History has recorded an orphan sidecar. */

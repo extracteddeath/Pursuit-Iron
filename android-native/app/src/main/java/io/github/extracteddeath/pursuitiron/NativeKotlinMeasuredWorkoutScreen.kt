@@ -40,8 +40,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var review by remember{mutableStateOf<NativeMeasuredConsentResult.Preview?>(null)}
     var finishDialog by remember{mutableStateOf(false)}
     var menuOpen by remember{mutableStateOf(false)}
-    val workoutId=rememberSaveable {
-        "measured-"+UUID.randomUUID().toString().replace("-","")
+    var workoutId by rememberSaveable {
+        mutableStateOf("measured-"+UUID.randomUUID().toString().replace("-",""))
     }
     suspend fun reload() {
         val read=withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
@@ -63,7 +63,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     val options=MeasuredExerciseCatalogDomain.all.filter { definition ->
         definition.loadKind==MeasuredLoadKind.UNWEIGHTED &&
             definition.kind==MeasuredExerciseKind.HOLD_SECONDS &&
-            setup?.allowBodyweight==true &&
+            setup!=null && setup.allowBodyweight &&
             definition.exerciseId !in setup.excludedExerciseIds &&
             definition.requiredFixtures.all{it in confirmed}
     }
@@ -138,7 +138,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 FilterChip(selected=setCount==number,
                                     enabled=!busy,
                                     onClick={setCount=number;review=null},
-                                    label={Text(number.toString()+" sets")})
+                                    label={Text(number.toString()+
+                                        if(number==1)" set" else " sets")})
                             }
                         }
                         Text("Verified physical setup: "+station,
@@ -197,6 +198,11 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 Button(onClick={onViewHistory(workoutId)}) {
                     Text("View completed workout")
                 }
+                OutlinedButton(onClick={
+                    workoutId="measured-"+UUID.randomUUID().toString()
+                        .replace("-","")
+                    stored=null;review=null;message=null
+                }) {Text("Create another measured workout")}
             } else {
                 Text(journal.bySetKey.values.count{
                     it.effectiveRecord!=null
@@ -294,9 +300,13 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                     "finish-"+UUID.randomUUID().toString()
                                         .replace("-",""),previous.journal.revision))
                         }
-                        if(result is NativeMeasuredFinishResult.Committed)
-                            onViewHistory(workoutId)
-                        else {
+                        if(result is NativeMeasuredFinishResult.Committed) {
+                            val completedId=workoutId
+                            workoutId="measured-"+UUID.randomUUID().toString()
+                                .replace("-","")
+                            stored=null
+                            onViewHistory(completedId)
+                        } else {
                             reload()
                             message="Finish was not verified. Your saved sets "+
                                 "have not been reported completed."

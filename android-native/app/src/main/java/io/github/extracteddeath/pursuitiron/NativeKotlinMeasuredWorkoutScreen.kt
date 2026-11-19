@@ -536,8 +536,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     PursuitWorkoutFocusHeader(
                         exerciseLabel=definition?.displayName ?:set.exerciseId,
                         setDetail="Set ${focus.selectedOrdinal} of ${focus.totalSets} · "+
-                            if(focus.selectedRecorded)"saved observation"
-                            else "not yet recorded",
+                            (if(focus.selectedRecorded)"saved observation"
+                            else "not yet recorded"),
                         focusOnNext=!showAllMeasuredSets,
                         onFocusChange={focus->showAllMeasuredSets=!focus},
                         heading="MEASURED WORKOUT",
@@ -645,7 +645,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     // running stopwatch independent across Previous/Next.
                     // The durable journal, not this saveable UI holder,
                     // remains the sole owner of recorded results.
-                    measuredEditorStates.SaveableStateProvider(
+                    if(!showAllMeasuredSets)measuredEditorStates.SaveableStateProvider(
                         "measured:$workoutId:${set.setKey}") {
                     NativeMeasuredExerciseSetEditor(
                         NativeMeasuredStoredSet(current.ownerKey,

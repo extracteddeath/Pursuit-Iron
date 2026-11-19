@@ -47,10 +47,10 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
                 if(withMeasuredLoads)mapOf(
                     "dumbbell-rack" to VerifiedLoadStock.Totals(
                         LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
-                        listOf("20","25","30").map(::java.math.BigDecimal)),
+                        listOf("20","25","30").map {java.math.BigDecimal(it)}),
                     "single-weight-plate" to VerifiedLoadStock.Totals(
                         LoadUnit.LB,LoadBasis.EXERCISE_OVERRIDE,
-                        listOf("10","20","25").map(::java.math.BigDecimal)))
+                        listOf("10","20","25").map {java.math.BigDecimal(it)}))
                 else emptyMap(),
                 setOf("pullup-bar","wall-support")+
                     (if(withBands)setOf("bands","verified-band-pushup-setup")

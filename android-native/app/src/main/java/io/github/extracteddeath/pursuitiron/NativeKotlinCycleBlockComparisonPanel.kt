@@ -215,12 +215,10 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         if(affectedStrengthDays.isNotEmpty()) {
             PursuitSectionHeading("Strength day lost working sets",
                 "Final effective Hypertrophy week → first Strength week · actual reviewed days")
-            affectedStrengthDays.forEach {loss->
-                PursuitKeyValueRow(
-                    "Training day ${loss.weekday}",
-                    "${loss.beforeWorkingSets} → ${loss.afterWorkingSets} working sets"
-                )
-            }
+            PursuitMetricStrip(affectedStrengthDays.map{loss->
+                compareWeekday(loss.weekday) to
+                    "${loss.beforeWorkingSets} → ${loss.afterWorkingSets} sets"
+            })
             Text("Another training day adding sets cannot hide this loss. "+
                 "Review an individual dose adjustment; no existing workout is changed.",
                 style=MaterialTheme.typography.bodySmall,

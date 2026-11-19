@@ -93,6 +93,9 @@ object NativeExercisePerformanceTrendDomain {
                             it.outcome==KotlinJournalSetOutcome.COMPLETED
                     }.map { Visit(it.issuedLoad,it.actual,
                         entry.evidence.source.gymId) }
+                // Typed holds, distance, carry time and band outcomes are
+                // never repetition observations or candidates for a load PR.
+                is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.filter {
                         it.exerciseId==exerciseId &&

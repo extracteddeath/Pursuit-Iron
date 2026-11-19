@@ -8254,7 +8254,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-cycle-dose-row dt{font-size:var(--pi-type-label);font-weight:600;color:var(--wpb-theme-text);overflow-wrap:anywhere;}
 #root .wpb-cycle-dose-row dd{margin:0;font-size:var(--pi-type-label);color:var(--pi-color-on-muted);text-align:right;overflow-wrap:anywhere;}
 /* Original Strength-dose decisions are optional details, not a dismissible warning or a set editor. */
-#root .wpb-strength-dose-review{min-width:0;margin-bottom:var(--pi-space-3);}
+#root .wpb-strength-dose-review{min-width:0;margin-top:var(--pi-space-3);margin-bottom:var(--pi-space-3);padding-top:var(--pi-space-2);border-top:1px solid var(--pi-color-divider);}
 #root .wpb-strength-dose-review[data-strength-dose-status="limited"]>.wpb-cycle-dose-summary{color:var(--wpb-theme-text);}
 #root .wpb-strength-dose-reason{display:block;margin-top:var(--pi-space-1);font-size:var(--pi-type-label);color:var(--pi-color-on-muted);line-height:1.45;overflow-wrap:anywhere;}
 @media(forced-colors:active){#root .wpb-strength-dose-review{border-color:CanvasText;}}

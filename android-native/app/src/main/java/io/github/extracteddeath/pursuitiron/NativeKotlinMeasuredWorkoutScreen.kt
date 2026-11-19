@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import kotlinx.coroutines.Dispatchers
@@ -437,10 +438,53 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     review?.let{candidateReview->
         AlertDialog(onDismissRequest={if(!busy)review=null},
             title={Text("Approve exact measured session?")},
-            text={Text("Confirm "+candidateReview.plan.sets.size+
-                " exact measured sets from your verified gym. The actual "+
-                "results are entered separately. No automatic PR, weight "+
-                "equivalent or program changes.")},
+            text={
+                Column(Modifier.heightIn(max=380.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    Text("Review every set from this exact source-approved "+
+                        "plan before starting. Values below are targets, "+
+                        "never automatically recorded results.",
+                        style=MaterialTheme.typography.bodySmall)
+                    candidateReview.plan.sets.forEachIndexed {index,set->
+                        val definition=MeasuredExerciseCatalogDomain.find(
+                            set.exerciseId)
+                        val amount=when(definition?.kind) {
+                            MeasuredExerciseKind.CARRY_CENTIMETERS ->
+                                BigDecimal(set.targetAmount).movePointLeft(2)
+                                    .stripTrailingZeros().toPlainString()+" meters"
+                            MeasuredExerciseKind.BANDED_REPETITIONS ->
+                                "${set.targetAmount} reps"
+                            else -> "${set.targetAmount} seconds"
+                        }
+                        Text("${index+1}. "+
+                            (definition?.displayName ?:set.exerciseId)+
+                            " · $amount",
+                            style=MaterialTheme.typography.bodyMedium)
+                        val equipment=buildList {
+                            if(set.intendedExternalLoad!=null)
+                                add(set.intendedExternalLoad.toPlainString()+" "+
+                                    set.unit+" "+
+                                    if(definition?.loadKind==
+                                        MeasuredLoadKind.VERIFIED_PER_HAND)
+                                        "per hand" else "added")
+                            if(set.bandId!=null)add("Band: "+set.bandId)
+                            if(set.sides!=setOf(MeasuredSide.BOTH))
+                                add("Sides: "+set.sides.joinToString{
+                                    it.name.lowercase()})
+                            if(set.matchedPairConfirmed)
+                                add("Matching pair confirmed")
+                            add("Station: "+set.physicalSetupId)
+                        }
+                        Text(equipment.joinToString(" · "),
+                            style=MaterialTheme.typography.labelSmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("No automatic PR, invented band weight, "+
+                        "program changes or logged performances.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+            },
             confirmButton={
                 Button(enabled=!busy,onClick={
                     review=null;busy=true;message=null

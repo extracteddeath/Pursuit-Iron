@@ -176,6 +176,12 @@ class NativeMeasuredWorkoutConsentFileStore(
                     setOf("wall-support") else emptySet())
             if(sourceSetups.isNotEmpty()) {
                 if(planSet.physicalSetupId !in sourceSetups)return false
+            } else if(definition.kind==MeasuredExerciseKind.CARRY_CENTIMETERS) {
+                // A carry happens with real held bells, not on a fictitious
+                // "floor" station. Match the same verified physical rack.
+                if(planSet.physicalSetupId!=
+                    MeasuredPhysicalStockSource.equipmentIdFor(planSet.exerciseId))
+                    return false
             } else if(planSet.physicalSetupId !in witnessed &&
                 planSet.physicalSetupId !in setOf("floor","mat-floor"))return false
             if(planSet.exerciseId in reviewed.excludedExerciseIds ||
@@ -194,22 +200,30 @@ class NativeMeasuredWorkoutConsentFileStore(
                     band.length<=5 || planSet.gymConfirmedBandIds!=setOf(band))
                     return false
             }
-            if(definition.loadKind in setOf(MeasuredLoadKind.UNWEIGHTED,
-                    MeasuredLoadKind.BANDED_BODYWEIGHT) && !reviewed.allowBodyweight)
+            if((definition.loadKind in setOf(MeasuredLoadKind.UNWEIGHTED,
+                    MeasuredLoadKind.BANDED_BODYWEIGHT) ||
+                    planSet.exerciseId=="weighted-plank") &&
+                !reviewed.allowBodyweight)
                 return false
             if(definition.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT &&
                 "bands" !in gym.availableFacilities)return false
             if(definition.loadKind in setOf(
                     MeasuredLoadKind.VERIFIED_ADDED_LOAD,
                     MeasuredLoadKind.VERIFIED_PER_HAND)) {
-                val matching=s.catalog.filter{it.exerciseId==planSet.exerciseId}
-                if(matching.size!=1)return false
-                val movement=matching.single()
-                val stock=movement.equipmentId?.let{gym.confirmedStock[it]}
-                    ?:return false
-                if(movement.expectedLoadBasis!=definition.expectedBasis ||
+                // Source the physical implement directly from THIS athlete's
+                // reviewed gym; the repetition catalog intentionally contains
+                // none of these typed measured exercises. Never forge a fake
+                // rep-catalog entry just to make a measured carry issuable.
+                val equipment=MeasuredPhysicalStockSource.equipmentIdFor(
+                    planSet.exerciseId) ?:return false
+                val stock=gym.confirmedStock[equipment] ?:return false
+                if(stock.basis!=definition.expectedBasis ||
                     stock!=planSet.physicalStock || stock.unit!=planSet.unit ||
                     gym.unit!=planSet.unit)return false
+                if(definition.kind==MeasuredExerciseKind.CARRY_CENTIMETERS &&
+                    "dumbbells" !in gym.availableFacilities)return false
+                if(planSet.exerciseId=="farmers" &&
+                    !planSet.matchedPairConfirmed)return false
             }
         }
         return MeasuredWorkoutJournalDomain.begin(plan)!=null

@@ -147,4 +147,49 @@ class StrengthSourceArmContinuityDomainTest {
             "wrist-extension" in stillDirect.preferredExerciseIds)
     }
 
+    @Test fun deloadAndPerformanceTestBridgeKeepRealArmSource() {
+        val source=cycle()
+        val deload=source.blocks.first().copy(
+            blockId="deload",label="Recovery",
+            purpose=CustomBlockPurpose.RECOVERY,weeks=1,days=emptyList())
+        val performance=deload.copy(
+            blockId="test",label="Performance test",
+            purpose=CustomBlockPurpose.PERFORMANCE_TEST)
+        val bridged=source.copy(blocks=listOf(
+            source.blocks.first(),deload,performance,source.blocks.last()))
+        assertEquals("hyper",StrengthSourceArmContinuityDomain
+            .priorHypertrophyBlockForStrength(bridged,"strength")?.blockId)
+        val evidence=StrengthSourceArmContinuityDomain.review(
+            bridged,audit(bridged),"hyper",catalog,"owner-a")
+        assertEquals(StrengthSourceArmsStatus.REVIEW_READY,evidence.status)
+        assertEquals(listOf("curl","hammer","extension"),
+            evidence.candidates.map{it.exerciseId})
+        assertEquals(listOf(2,3,2),
+            evidence.candidates.map{it.priorWorkingSets})
+    }
+
+    @Test fun otherTrainingPhasesAndMissingStrengthCannotBeSkipped() {
+        val source=cycle()
+        val recovery=source.blocks.first().copy(
+            blockId="recovery",purpose=CustomBlockPurpose.RECOVERY,
+            weeks=1,days=emptyList())
+        val intervening=source.blocks.first().copy(
+            blockId="peak-training",phase=TrainingPhase.PEAK,weeks=1)
+        val cycleWithPeak=source.copy(blocks=listOf(
+            source.blocks.first(),intervening,recovery,source.blocks.last()))
+        assertNull(StrengthSourceArmContinuityDomain
+            .priorHypertrophyBlockForStrength(cycleWithPeak,"strength"))
+        assertEquals(StrengthSourceArmsStatus.SOURCE_UNVERIFIED,
+            StrengthSourceArmContinuityDomain.review(
+                cycleWithPeak,audit(cycleWithPeak),"hyper",
+                catalog,"owner-a").status)
+        val withoutStrength=source.copy(blocks=listOf(
+            source.blocks.first(),recovery,
+            source.blocks.last().copy(phase=TrainingPhase.PEAK)))
+        assertNull(StrengthSourceArmContinuityDomain
+            .priorHypertrophyBlockForStrength(withoutStrength,"strength"))
+        assertNull(StrengthSourceArmContinuityDomain
+            .priorHypertrophyBlockForStrength(source,"not-a-block"))
+    }
+
 }

@@ -130,6 +130,55 @@ class CoachAthleteProgramGeneratorTest {
         }
     }
 
+    @Test fun realizationReauditsActualEmittedSetsInsteadOfTrustingCachedResults() {
+        val input=GeneratedAdaptiveBlockFixture.generation()
+        val generated=CoachAthleteProgramGenerator.generate(input)
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,generated.status)
+        val original=checkNotNull(generated.candidate?.catalogReview)
+        val draft=checkNotNull(original.draft)
+        val profile=checkNotNull(input.setup.reviewed)
+        val policy=checkNotNull(input.policy)
+        fun review(candidate:CatalogWeekReview)=
+            CoachGoalProgramRealizationDomain.review(
+                profile,input.phase,generated.intents,policy,candidate)
+        assertEquals(GoalRealizationStatus.DELIVERED_FOR_REVIEW,
+            review(original).status)
+        val damaged=listOf(
+            // A removed actual set with the formerly green audit left intact.
+            draft.copy(week=draft.week.copy(
+                exposures=draft.week.exposures.dropLast(1))),
+            // A forged successful audit over the original prescribed week.
+            draft.copy(audit=draft.audit.copy(daysWithoutWorkingSets=setOf(0))),
+            // The UI session removes a movement although dose still looks fine.
+            draft.copy(sessions=draft.sessions.mapIndexed {index,session ->
+                if(index==0)session.copy(orderedVisits=
+                    session.orderedVisits.dropLast(1)) else session
+            }),
+            // The displayed roster silently drops a working set; the
+            // authoritative working exposures have not been rewritten.
+            draft.copy(visits=draft.visits.mapIndexed {index,visit ->
+                if(index==0)visit.copy(sets=visit.sets-1) else visit
+            }),
+            // Session-time audit must also come from exact working rows.
+            draft.copy(week=draft.week.copy(exposures=
+                draft.week.exposures.mapIndexed {index,row ->
+                    if(index==0)row.copy(activeSeconds=row.activeSeconds+1)
+                    else row
+                }))
+        )
+        damaged.forEachIndexed {index,malformed ->
+            val result=review(original.copy(draft=malformed))
+            assertEquals("Stale candidate "+index+" was delivered: "+result.issues,
+                GoalRealizationStatus.UNRESOLVED,result.status)
+            assertTrue(result.issues.any {
+                it.kind==GoalRealizationIssueKind.UNVERIFIED_CANDIDATE &&
+                    it.field=="week.replay"
+            })
+            assertFalse(result.mayIssueWorkout)
+            assertFalse(result.maySaveProgram)
+        }
+    }
+
     @Test fun futureStrengthComposerPreservesSourceArmVisitsButNotWithoutConsent() {
         val athlete=setup()
         val strengthPolicy=policy(athlete,TrainingPhase.STRENGTH,

@@ -80,12 +80,23 @@ object StrengthExerciseMenuRecoveryDomain {
             structural.verifiedDraft!=cycle)
             return reject(StrengthMenuRecoveryStatus.SOURCE_UNVERIFIED,
                 "Exact saved-cycle structural and source revision proof is missing.")
-        val index=cycle.blocks.indexOfFirst {it.blockId==req.targetBlockId}
-        val previous=cycle.blocks.getOrNull(index-1)
-        val target=cycle.blocks.getOrNull(index)
-        val difference=CustomCycleBlockComparisonDomain.compare(
-            cycle,req.targetBlockId,sourceAudit)
-        if(previous==null || target==null ||
+        // The true baseline may be separated from Strength by a reviewed
+        // deload or performance-test block. An adjacent-block comparison
+        // would mistake the low-volume bridge for the athlete's last normal
+        // Hypertrophy week. Reuse the same verified source-boundary owner
+        // that protects generated future Strength workouts.
+        val boundary=StrengthRosterBoundaryGuardDomain.review(
+            structural,req.targetBlockId)
+        if(boundary.status==StrengthRosterBoundaryStatus.SOURCE_UNVERIFIED)
+            return reject(StrengthMenuRecoveryStatus.SOURCE_UNVERIFIED,
+                "The verified final hypertrophy and strength-entry rosters are unavailable.")
+        val priorExit=boundary.sourceExitWeek
+        val last=priorExit?.let {
+            CustomTrainingCycleDomain.week(structural,it)
+        }
+        val previous=cycle.blocks.singleOrNull{it.blockId==last?.blockId}
+        val target=cycle.blocks.singleOrNull{it.blockId==req.targetBlockId}
+        if(previous==null || target==null || last==null ||
             previous.phase!=TrainingPhase.HYPERTROPHY ||
             target.phase!=TrainingPhase.STRENGTH ||
             previous.purpose!=CustomBlockPurpose.TRAINING ||
@@ -94,15 +105,10 @@ object StrengthExerciseMenuRecoveryDomain {
             previous.days.map{it.weekday}.toSet()!=
                 target.days.map{it.weekday}.toSet() ||
             cycle.weekOverrides[target.blockId].orEmpty().isNotEmpty() ||
-            difference?.exerciseRosterUsesReviewedWeeks!=true ||
-            !difference.strengthExerciseCollapseReviewRequired)
+            boundary.status!=
+                StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW)
             return reject(StrengthMenuRecoveryStatus.NO_REVIEWABLE_SOURCE,
-                "Only verified same-split Hypertrophy exit to Strength entry collapses without target overrides are eligible.")
-        val priorExit=cycle.blocks.take(index).sumOf{it.weeks}
-        val last=CustomTrainingCycleDomain.week(structural,priorExit)
-        if(last==null || last.blockId!=previous.blockId)
-            return reject(StrengthMenuRecoveryStatus.SOURCE_UNVERIFIED,
-                "The actual final hypertrophy week cannot be recovered.")
+                "Only source-verified same-split Hypertrophy exit to Strength entry collapses without target overrides are eligible.")
         val sourceDays=last.days.associateBy{it.weekday}
         val catalog=req.catalog.associateBy{it.exerciseId}
         if(catalog.size!=req.catalog.size)
@@ -114,11 +120,9 @@ object StrengthExerciseMenuRecoveryDomain {
         // volume before an athlete can accept the proposal.
         val restored=mutableListOf<StrengthMenuRestoredExercise>()
         val futureDays=target.days.map{day->
-            val dropped=difference.strengthDayExerciseChanges
+            val dropped=boundary.affectedDays
                 .singleOrNull{it.weekday==day.weekday}
-                ?.takeIf{it.priorExerciseCount>=6 &&
-                    it.nextExerciseCount*2<it.priorExerciseCount}
-                ?.droppedExerciseIds.orEmpty()
+                ?.missingExerciseIds.orEmpty()
             val room=(input.maximumExercisesPerDay-day.slots.size)
                 .coerceAtLeast(0).coerceAtMost(input.maximumRestoredPerDay)
             val visited=mutableSetOf<String>()

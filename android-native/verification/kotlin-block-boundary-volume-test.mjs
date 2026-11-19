@@ -96,7 +96,10 @@ const plan=readFileSync(root+
   'app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt','utf8');
 
 // A real 8→3 menu needs EXERCISE continuity, not just more sets.
-assert.match(menuDomain,/strengthExerciseCollapseReviewRequired/);
+assert.match(menuDomain,/StrengthRosterBoundaryGuardDomain\.review/);
+assert.match(menuDomain,/boundary\.affectedDays/);
+assert.doesNotMatch(menuDomain,/retainedAnywhere/,
+  'A movement present on Wednesday must not hide a lost Monday exposure');
 assert.match(menuDomain,/CustomTrainingCycleDomain\.week/);
 assert.match(menuDomain,/AdaptiveCycleOptionReviewDomain\.review/);
 assert.match(menuDomain,/permissions\.adaptExercises/);
@@ -117,5 +120,19 @@ assert.match(controller,/fun acceptStrengthExerciseMenu\(/);
 assert.match(controller,/"strength-menu-recovery"/);
 assert.match(ui,/Preview source exercise recovery/);
 assert.match(ui,/Confirm and save recovered exercises/);
+assert.match(ui,/StrengthRosterBoundaryGuardDomain\.review\(it,id\)/);
+assert.match(ui,/val affectedStrengthMenus=strengthRoster\?\.affectedDays\.orEmpty\(\)/);
+assert.match(ui,/if\(strengthCoverageReviewRequired\)/);
+assert.match(ui,/if\(strengthCoverageReviewRequired &&/);
+assert.match(ui,/Intervening recovery or performance-test weeks are not/);
+for(const name of [
+  'recoveryAndTestBridgesPreserveActualHypertrophyExitForStrength'
+]) {
+  const test=readFileSync(root+
+    'kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/StrengthRosterBoundaryGuardDomainTest.kt','utf8');
+  assert.ok(test.includes(name),'Missing H→deload→Strength guard regression');
+}
+assert.ok(menuTests.includes('recoveryBridgeCannotHideEightToThreeSourceMenuLoss'),
+  'Missing source-backed H→deload→Strength exercise recovery fixture');
 assert.match(plan,/menuRecoveryReview=state\.strengthMenuRecoveryReview/);
 console.log('PASS source-audited Strength menu recovery: real draft → owner-fenced Plan preview/consent → CAS/undo; no automatic issue.');

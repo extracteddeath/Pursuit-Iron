@@ -258,6 +258,14 @@ object GeneratedAdaptiveBlockDomain {
             structure,input.targetBlockId)
         val halfDose=dose.status==
             StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW
+        val doseDetail=if(dose.affectedDays.isNotEmpty())
+            "day-specific working-set losses: "+
+                dose.affectedDays.joinToString("; ") {
+                    "day ${it.weekday}: ${it.beforeWorkingSets} to ${it.afterWorkingSets}"
+                }+" (weekly totals ${dose.hypertrophyWorkingSets} to "+
+                "${dose.strengthWorkingSets})"
+        else "weekly working sets ${dose.hypertrophyWorkingSets} to "+
+            "${dose.strengthWorkingSets}"
         if(roster.status==
             StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW)
             return GeneratedAdaptiveBlockResult(
@@ -268,9 +276,7 @@ object GeneratedAdaptiveBlockDomain {
                         "day ${it.weekday}: ${it.beforeWorkingExercises} to "+
                             "${it.afterWorkingExercises}"
                     }+
-                    (if(halfDose)" and reduces the exact previous exit "+
-                        "week's working sets from ${dose.hypertrophyWorkingSets} "+
-                        "to ${dose.strengthWorkingSets}." else ".")+
+                    (if(halfDose)"; $doseDetail." else ".")+
                     " Review missing movements and the full-cycle dose, "+
                     "recovery and equipment constraints; do not auto-remove them.",
                 strengthRosterBoundary=roster,
@@ -279,12 +285,9 @@ object GeneratedAdaptiveBlockDomain {
             return GeneratedAdaptiveBlockResult(
                 GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
                 generation,prescribed,null,
-                "Generated Strength retains the menu but reduces "+
-                    "real working sets from the final hypertrophy "+
-                    "week (${dose.hypertrophyWorkingSets}) to the "+
-                    "first Strength week (${dose.strengthWorkingSets}). "+
-                    "A source-backed full-cycle dose repair and individual "+
-                    "review are required before replacing this block.",
+                "Generated Strength retains the exercise menu but has "+
+                    "$doseDetail. A source-backed full-cycle dose repair "+
+                    "and individual review are required before replacing this block.",
                 strengthRosterBoundary=roster,
                 strengthDoseBoundary=dose)
         return GeneratedAdaptiveBlockResult(

@@ -60,6 +60,12 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var draftSourceKey by rememberSaveable(workoutId) {
         mutableStateOf("")
     }
+    // View navigation is saveable, but never used as evidence of a saved set.
+    // An invalid/restored key is resolved against the REAL issued plan.
+    var focusSetKey by rememberSaveable(workoutId) {
+        mutableStateOf<String?>(null)
+    }
+    var focusPickerOpen by remember {mutableStateOf(false)}
     suspend fun reload() {
         val read=withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
         stored=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
@@ -386,13 +392,85 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     stored=null;review=null;message=null
                 }) {Text("Create another measured workout")}
             } else {
-                Text(journal.bySetKey.values.count{
-                    it.effectiveRecord!=null
-                }.toString()+" of "+journal.approvedPlan.sets.size+
-                    " measured sets recorded",
-                    style=MaterialTheme.typography.titleMedium)
-                journal.approvedPlan.sets.forEach{set->
+                val focus=MeasuredWorkoutFocusDomain.review(
+                    journal,focusSetKey)
+                if(focus==null) {
+                    Text("Verified measured set navigation is unavailable. "+
+                        "Leave and reopen the saved workout.",
+                        color=MaterialTheme.colorScheme.error)
+                } else {
+                    val set=journal.approvedPlan.sets[focus.selectedOrdinal-1]
                     val child=journal.bySetKey.getValue(set.setKey)
+                    val definition=MeasuredExerciseCatalogDomain.find(set.exerciseId)
+                    Text("${focus.recordedSets} of ${focus.totalSets} sets saved",
+                        style=MaterialTheme.typography.titleMedium)
+                    LinearProgressIndicator(
+                        progress={focus.recordedSets.toFloat()/focus.totalSets},
+                        modifier=Modifier.fillMaxWidth())
+                    Text("Set ${focus.selectedOrdinal} of ${focus.totalSets}",
+                        style=MaterialTheme.typography.labelLarge,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(definition?.displayName ?:set.exerciseId,
+                        style=MaterialTheme.typography.titleLarge)
+                    if(focus.selectedRecorded)
+                        Text("Saved result · tap Edit saved result to correct it",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement=Arrangement.spacedBy(
+                        PursuitSpace.xs),modifier=Modifier.fillMaxWidth()) {
+                        OutlinedButton(enabled=!busy && focus.selectedOrdinal>1,
+                            modifier=Modifier.weight(1f),
+                            onClick={
+                                focusSetKey=journal.approvedPlan.sets[
+                                    focus.selectedOrdinal-2].setKey
+                            }) {Text("Previous")}
+                        OutlinedButton(enabled=!busy &&
+                            focus.selectedOrdinal<focus.totalSets,
+                            modifier=Modifier.weight(1f),
+                            onClick={
+                                focusSetKey=journal.approvedPlan.sets[
+                                    focus.selectedOrdinal].setKey
+                            }) {Text("Next")}
+                    }
+                    Box {
+                        OutlinedButton(enabled=!busy,
+                            onClick={focusPickerOpen=true},
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text("Jump to a set")
+                        }
+                        DropdownMenu(expanded=focusPickerOpen,
+                            onDismissRequest={focusPickerOpen=false}) {
+                            journal.approvedPlan.sets.forEachIndexed{
+                                index,planned->
+                                val saved=journal.bySetKey[planned.setKey]
+                                    ?.effectiveRecord!=null
+                                DropdownMenuItem(
+                                    enabled=!busy,
+                                    text={Text("${index+1}. "+
+                                        (MeasuredExerciseCatalogDomain.find(
+                                            planned.exerciseId)?.displayName
+                                            ?:planned.exerciseId)+
+                                        if(saved)" · saved" else " · pending")},
+                                    onClick={
+                                        focusSetKey=planned.setKey
+                                        focusPickerOpen=false
+                                    })
+                            }
+                        }
+                    }
+                    if(focus.nextUnrecordedKey!=null) {
+                        val next=journal.approvedPlan.sets.firstOrNull{
+                            it.setKey==focus.nextUnrecordedKey}
+                        if(next!=null)
+                            Text("Up next: "+
+                                (MeasuredExerciseCatalogDomain.find(
+                                    next.exerciseId)?.displayName
+                                    ?:next.exerciseId)+
+                                " · set "+
+                                (journal.approvedPlan.sets.indexOf(next)+1),
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     NativeMeasuredExerciseSetEditor(
                         NativeMeasuredStoredSet(current.ownerKey,
                             current.athleteId,current.approvalId,
@@ -408,9 +486,13 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                                 set.setKey,change.outcome,
                                                 change.actual,change.correctsEventId))
                                     }
-                                    if(outcome is NativeMeasuredWorkoutStoreResult.Durable)
+                                    if(outcome is NativeMeasuredWorkoutStoreResult.Durable) {
+                                        val next=MeasuredWorkoutFocusDomain
+                                            .afterDurableRecord(journal,
+                                                outcome.stored.journal,set.setKey)
                                         stored=outcome.stored
-                                    else {
+                                        if(next!=null)focusSetKey=next
+                                    } else {
                                         reload()
                                         message="Set was refused or changed. "+
                                             "The latest saved journal was reloaded."
@@ -513,8 +595,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     if(finishDialog && stored!=null)AlertDialog(
         onDismissRequest={if(!busy)finishDialog=false},
         title={Text("Finish measured workout?")},
-        text={Text("Only your saved actual seconds and set outcomes "+
-            "will enter verified History.")},
+        text={Text("Only your saved actual durations, distances, "+
+            "repetitions, physical loads, sides and set outcomes enter "+
+            "verified History. No target is logged as performed work.")},
         confirmButton={
             Button(enabled=!busy,onClick={
                 val previous=stored ?:return@Button

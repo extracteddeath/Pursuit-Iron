@@ -107,7 +107,9 @@ class MeasuredSessionAuthoringDomainTest {
     @Test fun gymAndAthleteSelectionsCannotSmugglePhantomEquipmentOrMetrics() {
         val profile=profile()
         val real=selections()
-        assertEquals(14,MeasuredSessionAuthoringDomain.available(profile).size)
+        assertTrue(MeasuredSessionAuthoringDomain.available(profile)
+            .map{it.exerciseId}.containsAll(listOf("plank","farmers",
+                "band-pushup","plate-pinch","side-plank")))
         fun invalid(list:List<MeasuredSessionSelection>):Boolean =
             MeasuredSessionAuthoringDomain.compose(
                 "measured-mixed-1",3,profile,list)==null

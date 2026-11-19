@@ -540,7 +540,8 @@ export function generateNextProgramForShell(options) {
         if (moved !== best.program) best = { ...best, program: moved, nextProgram: moved.nextEngine.program };
         // Then a week whose added sets carry a day past the limit gives them back.
         const held = holdWeeksToDisplayedLimit(best.program, options.legacyExercises, (SESSION_BANDS[options.config?.session] ?? SESSION_BANDS.s60).maxMinutes);
-        if (held !== best.program) best = { ...best, program: held };
+        // The limit wins over a focus set; the focus record then says what the finished plan gives.
+        if (held !== best.program) best = { ...best, program: withFocusRecordOf(held, options.legacyExercises) };
         // The selected maximum is the one hard promise of a session length. A plan that still shows over it has
         // nothing left to give without dropping a region under its floor, so the request does not fit: it is
         // refused like any other, with the audit's own time-limit recovery (a longer session, or another day).
@@ -574,6 +575,16 @@ function unfocusedBaseline(options, displayTrim) {
         const { focus, focusList, ...config } = options.config;
         return buildNextProgramForShell({ ...options, config, makeId: () => 'focus-baseline' }, displayTrim).program;
     } catch { return null; }
+}
+function withFocusRecordOf(program, legacyExercises) {
+    const record = program?.nextEngine?.focusDose;
+    if (!record?.target) return program;
+    const regions = captureShellVolumeSnapshot(program, 1, legacyExercises)?.regions;
+    if (!regions) return program;
+    const unresolved = Object.keys(record.target).filter(region => (regions[region] ?? 0) + .05 < record.target[region]);
+    if (!unresolved.length && record.status !== 'limited') return program;
+    return { ...program, nextEngine: { ...program.nextEngine, focusDose: { ...record, unresolved,
+        status: unresolved.length ? 'limited' : record.changes?.length ? 'improved' : 'unchanged', ...(unresolved.length ? { limitedBy: 'session_limit' } : {}) } } };
 }
 function withFocusDose(program, options, unfocused) {
     const regions = focusedPublicRegions(options.config);

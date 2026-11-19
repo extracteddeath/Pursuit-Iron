@@ -5,7 +5,13 @@
 import assert from 'node:assert/strict';
 import { EXERCISES, EX_BY_ID, GYM_PRESETS, estimateMinutes, auditProgramWeek, weeklyVolume } from '../modules/engine-api.js';
 import { generateNextProgramForShell, nextProgramToShellProgram } from '../modules/next-engine/app-shell-adapter.js';
-import { auditShellVolume } from '../modules/next-engine/volume-repair.js';
+import { auditShellVolume, ensureMovementPatterns } from '../modules/next-engine/volume-repair.js';
+import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
+import { createTrainingSetEvents } from '../modules/next-engine/events.js';
+import { deriveMuscleLedger } from '../modules/next-engine/ledgers.js';
+import { estimateSessionMinutes } from '../modules/next-engine/realizer.js';
+import { auditProgram } from '../modules/next-engine/arbiter.js';
+import { publicRegionContribution } from '../modules/next-engine/public-mev.js';
 
 const BAND = { s40: [20, 40], s60: [40, 60], s90: [60, 90] };
 const STRENGTH = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
@@ -109,9 +115,28 @@ assert.equal(fixed.nextEngine.sessionFill.added[0].reason, 'movement_pattern');
 shown(fixed, 1).forEach(minutes => assert.ok(minutes <= 40, '4 the added lift fits the session'));
 // The same request on a barbell kit has no time for another lift beside four sets of bench: the pull takes the
 // place of the one accessory, and that is recorded.
-const swapped = build({ ...noPull, name: 'two-day strength, barbell', experience: 'advanced', equipment: ['barbell', 'bench', 'ezbar', 'pullup'] });
-assert.ok(swapped && pulling(swapped) >= 2 && absent(swapped) === 0, '4 the barbell plan pulls too');
-assert.ok(swapped.nextEngine.sessionFill.added[0].replaced, '4 the lift that made room is recorded');
+const barbell = build({ ...noPull, name: 'two-day strength, barbell', experience: 'advanced', equipment: ['barbell', 'bench', 'ezbar', 'pullup'] });
+assert.ok(barbell && pulling(barbell) >= 2 && absent(barbell) === 0, '4 the barbell plan pulls too');
+// With back dosed above chest the generator now programs that pull itself, so the case where a full day must give
+// up an accessory for it is built directly: the same plan without its pulls, its upper day filled to the limit.
+{ const defs = createExerciseMap([]), engine = JSON.parse(JSON.stringify(barbell.nextEngine.program)), request = JSON.parse(JSON.stringify(barbell.nextEngine.request));
+  const pulls = id => ['lats', 'upper_back'].some(region => publicRegionContribution(defs.get(id), region) > 0);
+  // Each pull becomes a skull crusher (the accessory the old plan had there), so the week has no pulling at all.
+  for (const session of engine.sessions) session.exercises = session.exercises.map(e => !pulls(e.exerciseId) ? e
+      : { ...e, exerciseId: 'skullcrusher', name: 'Skull Crusher', role: 'hypertrophy_isolation' });
+  const upper = engine.sessions.find(session => session.exercises.some(e => !/strength/.test(e.role)));
+  assert.ok(upper, '4 fixture has an accessory to give up');
+  for (const e of upper.exercises) if (!/strength/.test(e.role)) while (estimateSessionMinutes(upper.exercises) < upper.maxMinutes - 2 && e.sets < 6) e.sets++;
+  engine.events = createTrainingSetEvents(engine.sessions, request.customExercises);
+  engine.muscleLedger = deriveMuscleLedger(engine.events);
+  engine.sessions.forEach(session => { session.estimatedMinutes = estimateSessionMinutes(session.exercises); });
+  engine.audit = auditProgram(engine, request);
+  const shell = nextProgramToShellProgram(engine, barbell.config, EXERCISES, () => barbell.id);
+  shell.nextEngine = { ...barbell.nextEngine, ...shell.nextEngine, program: engine, request };
+  assert.ok(pulling(shell) < .5, '4 the direct fixture has no pulling: ' + pulling(shell));
+  const result = ensureMovementPatterns(shell, EXERCISES);
+  assert.ok(pulling(result.program) >= 2, '4 the full day pulls after the pass: ' + pulling(result.program));
+  assert.ok(result.changes.some(c => c.reason === 'movement_pattern' && c.replacedExercise), '4 the lift that made room is recorded: ' + JSON.stringify(result.changes)); }
 console.log(`PASS 4 two-day strength plan: pulling ${pulling(bare)} -> ${pulling(fixed)} sets (${fixed.nextEngine.sessionFill.added[0].exercise}).`);
 
 // 5. The engine source of an extended plan still projects to the cells the lifter runs: an added lift must not

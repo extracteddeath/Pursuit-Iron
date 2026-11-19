@@ -213,7 +213,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const d = C.cycleDetail({ id: made.cycleId });
   ok(d.blocks[0].state === 'active' && d.live && d.live.blockIdx === 0 && C.home().cycle && C.home().cycle.blockIdx === 0, 'detail and Today place the lifter in block 1');
   ok(C.nextBlock({ programId: st.cycles[0].blockIds[0] }).ok === false, 'a cycle block cannot be forked with Build next block');
-  for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(50 + 2.5 * k) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+  // A whole block (four weeks of four days), each set logged as prescribed, reaches the engine's review point. Three
+  // flat 8-rep sessions only advanced while their logs read as fatigue and the engine sent the lifter to recovery.
+  for (let k = 0; k < 16; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(parseFloat(x.weight) > 0 ? x.weight : 50) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: String(parseInt(String(x.target?.r ?? x.reps ?? '').split(/[-–]/).pop(), 10) || 8) }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
   const rv = C.reviewBlock({ id: made.cycleId, index: 0 });
   ok(rv && rv.ok && typeof rv.headline === 'string' && Array.isArray(rv.lifts), 'block review summarises the logged block');
   C.startSession({}); ok(C.advanceCycle({ id: made.cycleId }).ok === false, 'advancing is refused with a workout open'); C.discardSession();
@@ -240,7 +242,8 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(C.undo().ok && JSON.parse(C.exportStore()).cycles.length === 1, 'undo restores the cycle');
   { const m2 = C.createCycle({ config: ccfg, templateId: 'powerbuilding' });
     const e2 = C.editCycle({ id: m2.cycleId, blocks: [{ phase: 'intensification', weeks: 3 }, { phase: 'peak', weeks: 2 }] });
-    for (let k = 0; k < 3; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(50 + 2.5 * k) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
+    // A whole block logged as prescribed, as above.
+    for (let k = 0; k < 16; k++) { C.startSession({}); for (const e of C.session().exercises) for (const x of e.sets) { if (x.warm || x.sub) continue; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: String(parseFloat(x.weight) > 0 ? x.weight : 50) }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: String(parseInt(String(x.target?.r ?? x.reps ?? '').split(/[-–]/).pop(), 10) || 8) }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); } C.finishSession(); }
     const a3 = C.advanceCycle({ id: m2.cycleId }); const c3 = JSON.parse(C.exportStore()).cycles.find((c) => c.id === m2.cycleId);
     ok(e2.ok && a3.ok && ['intensification', 'recovery'].includes(c3.blockMeta[c3.activeBlock].phase), 'a reshaped cycle advances into its edited next phase: ' + (a3.message || a3.error));
     const nBefore = JSON.parse(C.exportStore()).saved.length; const lv = C.leaveCycle({ id: m2.cycleId }); const sL = JSON.parse(C.exportStore());

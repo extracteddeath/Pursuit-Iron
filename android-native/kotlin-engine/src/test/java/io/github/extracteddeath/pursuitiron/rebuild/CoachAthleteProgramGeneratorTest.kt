@@ -82,6 +82,54 @@ class CoachAthleteProgramGeneratorTest {
         checkNotNull(s.reviewed).trainingWeekdays.associateWith {1200},
         3,1,extra)
 
+    @Test fun realizationRejectsUnverifiedOrSourceMismatchedWeeksEvenWhenDoseLooksGood() {
+        val input=GeneratedAdaptiveBlockFixture.generation()
+        val generated=CoachAthleteProgramGenerator.generate(input)
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,generated.status)
+        val original=checkNotNull(generated.candidate?.catalogReview)
+        val initial=checkNotNull(original.draft)
+        val template=checkNotNull(original.composedRequest)
+        val profile=checkNotNull(input.setup.reviewed)
+        val policy=checkNotNull(input.policy)
+        fun review(candidate:CatalogWeekReview)=
+            CoachGoalProgramRealizationDomain.review(
+                profile,input.phase,generated.intents,policy,candidate)
+        val verified=review(original)
+        assertEquals(verified.issues.toString(),
+            GoalRealizationStatus.DELIVERED_FOR_REVIEW,verified.status)
+        assertFalse(verified.mayIssueWorkout)
+
+        val wrongPhase=TrainingPhase.STRENGTH
+        val forged=listOf(
+            original.copy(status=CatalogWeekStatus.WEEK_CONSTRAINTS_UNRESOLVED),
+            original.copy(draft=initial.copy(status=ComposerStatus.CONSTRAINTS_UNRESOLVED)),
+            original.copy(composedRequest=template.copy(phase=wrongPhase)),
+            original.copy(draft=initial.copy(week=initial.week.copy(phase=wrongPhase))),
+            original.copy(draft=initial.copy(audit=initial.audit.copy(phase=wrongPhase))),
+            original.copy(composedRequest=template.copy(
+                days=template.days.mapIndexed {index,day ->
+                    if(index==0)day.copy(calendarDay=1) else day
+                })),
+            original.copy(draft=initial.copy(
+                week=initial.week.copy(windows=initial.week.windows.mapIndexed { index,window ->
+                    if(index==0)window.copy(declaredNonSetSeconds=
+                        window.declaredNonSetSeconds+60) else window
+                }))),
+            original.copy(draft=initial.copy(sessions=initial.sessions.reversed()))
+        )
+        forged.forEachIndexed { index,candidate ->
+            val result=review(candidate)
+            assertEquals("Candidate "+index+" passed source gate: "+result.issues,
+                GoalRealizationStatus.UNRESOLVED,result.status)
+            assertTrue("Missing source issue for "+index+": "+result.issues,
+                result.issues.any {
+                    it.kind==GoalRealizationIssueKind.UNVERIFIED_CANDIDATE
+                })
+            assertFalse(result.maySaveProgram)
+            assertFalse(result.mayIssueWorkout)
+        }
+    }
+
     @Test fun futureStrengthComposerPreservesSourceArmVisitsButNotWithoutConsent() {
         val athlete=setup()
         val strengthPolicy=policy(athlete,TrainingPhase.STRENGTH,

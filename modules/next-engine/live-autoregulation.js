@@ -38,6 +38,13 @@ export function reconcileRestoredLiveAdjustments(sets) {
         if (!untouched(row) || authoredIntent(row) || !row.retuneFrom || !row.liveAdjustment) return row;
         const adjustment = row.liveAdjustment;
         const topBackoff = adjustment.action === 'set_backoffs_from_top';
+        // If a later manual edit moved both load and target but the UI
+        // retained old automatic metadata, never overwrite that edit.
+        // Independent replay diagnostics will still flag its stale origin.
+        if (topBackoff && (
+            historyNumber(row.weight) !== historyNumber(adjustment.toLoad) ||
+            historyNumber(row.target?.w) !== historyNumber(adjustment.toLoad)))
+            return row;
         const count = ['reduce_pending_load', 'suggest_pending_load_reduction'].includes(adjustment.action) ? 2
             : adjustment.action === 'cap_pending_reps' || adjustment.action === 'set_backoffs_from_top' ? 1 : null;
         if (count === null) return row; // Unknown protocols are not ours to rewrite.

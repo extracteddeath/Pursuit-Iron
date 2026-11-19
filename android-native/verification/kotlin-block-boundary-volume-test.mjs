@@ -76,6 +76,26 @@ for(const name of [
 ])assert.ok(tests.includes(name),'Missing native volume regression: '+name);
 assert.ok(tests.includes('assertEquals(-16,result.boundaryWorkingSetDelta)'));
 assert.ok(tests.includes('assertEquals(37,result.lowestNextWeekRetentionPercent)'));
+// A deload is still the *adjacent* block, but the first Strength week
+// must also show its real pre-deload H baseline and direct arm continuity.
+const phaseUiTests=readFileSync(root+
+  'app/src/test/java/io/github/extracteddeath/pursuitiron/NativeStrengthPhaseBoundaryDisplayDomainTest.kt','utf8');
+for(const text of [
+  'Hypertrophy → Strength training baseline',
+  'StrengthSourceDose',
+  'hasInterveningBridge',
+  'Recovery and performance-test weeks are not used',
+  'NativeStrengthPhaseBoundaryDisplayDomain.lostDirectArmFunctions(',
+  'visibleDirectArmLosses',
+  'StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW'
+])assert.ok(
+  text==='StrengthSourceDose'?ui.includes('strengthSourceDose'):ui.includes(text),
+  'Native Plan lost true pre-deload Strength evidence: '+text);
+for(const test of [
+  'lastNormalHypertrophyWeekSurvivesARecoveryBridgeForArmLossReview',
+  'staleOrInconsistentCoachAuditCannotMakeArmLossClaims'
+])assert.ok(phaseUiTests.includes(test),
+  'Missing source-backed direct-arm Plan review JVM fixture: '+test);
 console.log('PASS native cycle boundary: final→first and weakest strength week, factual warnings, immutable workout history.');
 
 // Strength source continuity must match all five independently credited arm/

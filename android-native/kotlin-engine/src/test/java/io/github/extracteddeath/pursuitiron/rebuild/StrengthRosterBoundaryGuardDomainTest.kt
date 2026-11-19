@@ -116,4 +116,104 @@ class StrengthRosterBoundaryGuardDomainTest {
         assertEquals(StrengthRosterBoundaryStatus.SOURCE_UNVERIFIED,
             StrengthRosterBoundaryGuardDomain.review(bogus,"next").status)
     }
+
+    @Test fun sameMenuButHalfSourceWorkingSetsCannotBeSilentlyGenerated() {
+        val original=cycle(before=8,after=8)
+        val prior=original.blocks.first()
+        val inflated=original.copy(blocks=listOf(
+            prior.copy(days=prior.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(sets=listOf(set(),set()))
+                })
+            }),original.blocks.last()))
+        val review=CustomTrainingCycleDomain.review(inflated,available)
+        assertEquals(review.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,review.status)
+        assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
+            StrengthRosterBoundaryGuardDomain.review(review,"next").status)
+        val result=StrengthDoseBoundaryGuardDomain.review(review,"next")
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            result.status)
+        assertEquals(16,result.hypertrophyWorkingSets)
+        assertEquals(8,result.strengthWorkingSets)
+        assertEquals(3,result.hypertrophyExitWeek)
+        assertEquals(4,result.strengthEntryWeek)
+        assertFalse(result.mayApplyAutomatically)
+        assertFalse(result.mayChangeHistory)
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun legitimateSmallAndLessThanHalfDoseChangesStayReviewable() {
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(cycle(6,3),available),
+                "next").status)
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(cycle(8,5),available),
+                "next").status)
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(cycle(8,4),available),
+                "next").status)
+    }
+
+    @Test fun exactFinalHypertrophyAndFirstStrengthOverridesControlDose() {
+        val raw=cycle(before=8,after=8)
+        val prior=raw.blocks.first()
+        val twice=raw.copy(blocks=listOf(
+            prior.copy(days=prior.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(sets=listOf(set(),set()))
+                })
+            }),raw.blocks.last()))
+        val lastWeekOverrides=(1..8).map{n->
+            CustomWeekSlotOverride(3,0,"slot_$n",listOf(set()))
+        }
+        val trueBoundary=twice.copy(weekOverrides=mapOf(
+            "base" to lastWeekOverrides))
+        val structural=CustomTrainingCycleDomain.review(trueBoundary,available)
+        assertEquals(structural.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,structural.status)
+        val actual=StrengthDoseBoundaryGuardDomain.review(structural,"next")
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,actual.status)
+        assertEquals(8,actual.hypertrophyWorkingSets)
+        assertEquals(8,actual.strengthWorkingSets)
+        val onlyWeekOne=twice.copy(weekOverrides=mapOf("base" to
+            lastWeekOverrides.map{it.copy(weekInBlock=1)}))
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(onlyWeekOne,available),
+                "next").status)
+        // Extra warmups do not masquerade as working-set dose.
+        val warmups=cycle(before=8,after=4).copy(blocks=
+            cycle(before=8,after=4).blocks.mapIndexed{index,block->
+                if(index!=0)block else block.copy(days=block.days.map{day->
+                    day.copy(slots=day.slots.map{slot->
+                        slot.copy(sets=listOf(set())+
+                            List(4){set(DraftSetType.WARMUP)})
+                    })
+                })
+            })
+        assertEquals(8,StrengthDoseBoundaryGuardDomain.review(
+            CustomTrainingCycleDomain.review(warmups,available),
+            "next").hypertrophyWorkingSets)
+    }
+
+    @Test fun peakAndUnverifiedDoseHaveNoFalseStrengthClearance() {
+        assertEquals(StrengthDoseBoundaryStatus.NOT_COMPARABLE,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(
+                    cycle(nextPhase=TrainingPhase.PEAK),available),"next").status)
+        assertEquals(StrengthDoseBoundaryStatus.NOT_COMPARABLE,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(cycle(
+                    nextSplit=CustomSplitIdentity.Named(ComposerSplit.UPPER_LOWER)),
+                    available),"next").status)
+        assertEquals(StrengthDoseBoundaryStatus.SOURCE_UNVERIFIED,
+            StrengthDoseBoundaryGuardDomain.review(
+                CustomTrainingCycleDomain.review(cycle(),available.dropLast(1)),
+                "next").status)
+    }
+
 }

@@ -117,6 +117,21 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         source?.let{StrengthDoseBoundaryGuardDomain.review(it,id)}
     }
     val affectedStrengthDays=strengthDayDose?.affectedDays.orEmpty()
+    // Adjacent-block comparisons still show the deload as the previous
+    // block. Exercise recovery must instead use the final real hypertrophy
+    // week even when a recovery/test bridge precedes Strength.
+    val strengthRoster=remember(cycle,id,currentAudit){
+        val source=currentAudit?.takeIf {
+            it.auditedCycleRevision==cycle.revision &&
+                it.structuralReview?.verifiedDraft==cycle
+        }?.structuralReview
+        source?.let{StrengthRosterBoundaryGuardDomain.review(it,id)}
+    }
+    val affectedStrengthMenus=strengthRoster?.affectedDays.orEmpty()
+    val strengthCoverageReviewRequired=
+        comparison.strengthExerciseCollapseReviewRequired ||
+            strengthRoster?.status==
+                StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW
     val prior=comparison.prior
     val next=comparison.next
     val selectedBlock=cycle.blocks.single {it.blockId==next.blockId}
@@ -271,16 +286,31 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if(comparison.strengthExerciseCollapseReviewRequired) {
+        if(strengthCoverageReviewRequired) {
             HorizontalDivider()
             PursuitSectionHeading("Strength exercise coverage needs review",
-                if(comparison.exerciseRosterUsesReviewedWeeks)
+                if(affectedStrengthMenus.isNotEmpty() ||
+                    comparison.exerciseRosterUsesReviewedWeeks)
                     "Final hypertrophy week → first strength week · reviewed exercise rosters"
                 else "Based on saved block templates only; run the complete cycle review to verify week overrides.")
-            comparison.strengthDayExerciseChanges.filter {change->
-                change.priorExerciseCount>=6 &&
-                    change.nextExerciseCount*2<change.priorExerciseCount
-            }.forEach{change->
+            if(affectedStrengthMenus.isNotEmpty())Text(
+                "Source training week ${strengthRoster?.sourceExitWeek} → "+
+                    "Strength week ${strengthRoster?.targetEntryWeek}. "+
+                    "Intervening recovery or performance-test weeks are not "+
+                    "the athlete's normal hypertrophy baseline.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            val actualRosters=if(affectedStrengthMenus.isNotEmpty())
+                affectedStrengthMenus.map{loss->
+                    CustomBlockDayExerciseChange(loss.weekday,
+                        loss.beforeWorkingExercises,loss.afterWorkingExercises,
+                        loss.missingExerciseIds)
+                }
+                else comparison.strengthDayExerciseChanges.filter {change->
+                    change.priorExerciseCount>=6 &&
+                        change.nextExerciseCount*2<change.priorExerciseCount
+                }
+            actualRosters.forEach{change->
                 Text(compareWeekday(change.weekday)+": "+
                         "${change.priorExerciseCount} → ${change.nextExerciseCount} exercises",
                     style=MaterialTheme.typography.titleSmall,
@@ -308,7 +338,7 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if(comparison.strengthExerciseCollapseReviewRequired &&
+        if(strengthCoverageReviewRequired &&
             onRequestMenuRecovery!=null) {
             HorizontalDivider()
             PursuitSectionHeading("Restore missing Strength exercises",

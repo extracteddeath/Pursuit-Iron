@@ -28,7 +28,7 @@ class MeasuredHoldStopwatchDomainTest {
 
     @Test fun zeroSecondsCannotBeRecordedAsOneOrSavedAutomatically() {
         assertNull(MeasuredHoldStopwatchDomain.usableSeconds(
-            MeasuredHoldStopwatchDomain()))
+            MeasuredHoldStopwatchState()))
         val stopped=MeasuredHoldStopwatchDomain.stop(
             start(),20_999L,boot+20_999)
         assertNotNull(stopped)

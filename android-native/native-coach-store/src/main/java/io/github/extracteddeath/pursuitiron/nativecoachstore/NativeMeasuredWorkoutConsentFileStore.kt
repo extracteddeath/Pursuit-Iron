@@ -188,11 +188,12 @@ class NativeMeasuredWorkoutConsentFileStore(
             // and straps. Never mistake one of those for a resistance band.
             // "band-..." is an explicit physical band setup ID saved by the
             // athlete in their verified gym, not a mass-equivalent load.
-            if(definition.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT &&
-                (planSet.bandId?.startsWith("band-")!=true ||
-                    planSet.bandId.length<=5 ||
-                    planSet.gymConfirmedBandIds!=setOf(planSet.bandId)))
-                return false
+            if(definition.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT) {
+                val band=planSet.bandId
+                if(band==null || !band.startsWith("band-") ||
+                    band.length<=5 || planSet.gymConfirmedBandIds!=setOf(band))
+                    return false
+            }
             if(definition.loadKind in setOf(MeasuredLoadKind.UNWEIGHTED,
                     MeasuredLoadKind.BANDED_BODYWEIGHT) && !reviewed.allowBodyweight)
                 return false

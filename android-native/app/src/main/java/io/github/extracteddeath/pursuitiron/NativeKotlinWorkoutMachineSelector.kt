@@ -174,7 +174,12 @@ internal fun rememberNativeWorkoutMachineChoices(
         onCreate={exerciseId,label,makeDefault->
             val current=saved
             val confirmedRoster=roster
-            if(current!=null && confirmedRoster!=null && ready && !busy) {
+            // Never silently consume the Add tap when the gym read failed.
+            // An athlete may have opened Exercise Info while roster storage
+            // was unavailable; show the retry action instead of doing nothing.
+            if(current==null || confirmedRoster==null) {
+                error="Current workout machine choices or gym roster are unavailable. Refresh verification before adding a physical machine."
+            } else if(ready && !busy) {
                 busy=true
                 error=null
                 createdMachineId=null

@@ -512,6 +512,8 @@ private fun NativeKotlinCandidateTrainEntry(
     var measuredResumeId by rememberSaveable {mutableStateOf<String?>(null)}
     var measuredEntryVersion by rememberSaveable {mutableIntStateOf(0)}
     var measuredError by rememberSaveable {mutableStateOf<String?>(null)}
+    // Optional measured-workout tools must not bury the normal Train entry.
+    var showMeasuredWorkouts by rememberSaveable {mutableStateOf(false)}
     var resumableMeasured by remember(host) {
         mutableStateOf<NativeMeasuredInventoryResult?>(null)
     }
@@ -835,128 +837,6 @@ private fun NativeKotlinCandidateTrainEntry(
                 }
             }
             PursuitCard {
-                PursuitSectionHeading("Measured workouts",
-                    "Record verified holds, loaded holds, carries or banded repetitions without invented weights or PRs.")
-                when(val review=resumableMeasured) {
-                    is NativeMeasuredInventoryResult.Ready -> {
-                        if(review.workouts.isNotEmpty()) {
-                            Text("${review.workouts.size} unfinished measured sessions",
-                                style=MaterialTheme.typography.labelMedium)
-                            review.workouts.take(20).forEach {item->
-                                OutlinedButton(
-                                    enabled=!searching && !resumeChecking && !reviewingResume,
-                                    modifier=Modifier.fillMaxWidth(),
-                                    onClick={
-                                        resumeChecking=true
-                                        measuredError=null
-                                        scope.launch {
-                                            try {
-                                                val opened=withContext(Dispatchers.IO) {
-                                                    host.openMeasuredWorkout(item.workoutId)
-                                                }
-                                                if(opened is NativeMeasuredWorkoutStoreResult.Durable &&
-                                                    opened.stored.journal.finishedByEventId==null) {
-                                                    measuredResumeId=item.workoutId
-                                                    measuredOpen=true
-                                                } else {
-                                                    measuredError="The measured session is no longer verified. Refresh your saved workouts."
-                                                }
-                                            } catch(_:Exception) {
-                                                measuredError="Could not verify the saved measured session."
-                                            } finally {resumeChecking=false}
-                                        }
-                                    }) {
-                                    Column(Modifier.fillMaxWidth()) {
-                                        Text(item.exerciseIds.joinToString(" · ",limit=2,
-                                            truncated="…") {kotlinExerciseLabel(it)},
-                                            style=MaterialTheme.typography.titleSmall)
-                                        Text("${item.recordedSets} of ${item.totalSets} sets recorded",
-                                            style=MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                            }
-                            if(review.workouts.size>20)
-                                Text("Showing 20 verified sessions. Refresh after completing one.",
-                                    style=MaterialTheme.typography.bodySmall)
-                        } else Text("No unfinished measured sessions.",
-                            style=MaterialTheme.typography.bodySmall)
-                    }
-                    is NativeMeasuredInventoryResult.Rejected ->
-                        Text("Measured resume is unavailable (${review.reason.name.lowercase().replace('_',' ')}). No unverified session was opened.",
-                            color=MaterialTheme.colorScheme.error,
-                            style=MaterialTheme.typography.bodySmall)
-                    null -> if(!reviewingResume)Text(
-                        "Measured resume inventory could not be verified. Refresh to retry.",
-                        color=MaterialTheme.colorScheme.error,
-                        style=MaterialTheme.typography.bodySmall)
-                }
-                when(val confirmed=confirmedUnissuedMeasured) {
-                    is NativeMeasuredConsentInventoryResult.Ready -> {
-                        if(confirmed.confirmed.isNotEmpty()) {
-                            Text("Approved but not yet started",
-                                style=MaterialTheme.typography.titleSmall)
-                            Text("These exact measured plans were already confirmed. Starting one will recheck its saved gym and exercise source.",
-                                style=MaterialTheme.typography.bodySmall)
-                            confirmed.confirmed.take(20).forEach {item->
-                                OutlinedButton(
-                                    enabled=!searching && !resumeChecking && !reviewingResume,
-                                    modifier=Modifier.fillMaxWidth(),
-                                    onClick={
-                                        resumeChecking=true
-                                        measuredError=null
-                                        scope.launch {
-                                            try {
-                                                val issued=withContext(Dispatchers.IO) {
-                                                    host.issueMeasuredWorkout(item.workoutId)
-                                                }
-                                                if(issued is NativeMeasuredWorkoutStoreResult.Durable &&
-                                                    issued.stored.journal.finishedByEventId==null) {
-                                                    measuredResumeId=item.workoutId
-                                                    measuredOpen=true
-                                                } else measuredError=
-                                                    "Approval no longer matches your verified gym. Refresh Train to review it."
-                                            } catch(_:Exception) {
-                                                measuredError="Could not verify the previously approved session."
-                                            } finally {resumeChecking=false}
-                                        }
-                                    }) {
-                                    Column(Modifier.fillMaxWidth()) {
-                                        Text(item.exerciseIds.joinToString(" · ",limit=2,
-                                            truncated="…"){kotlinExerciseLabel(it)},
-                                            style=MaterialTheme.typography.titleSmall)
-                                        Text("${item.plannedSets} approved sets · Start & resume",
-                                            style=MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                            }
-                            if(confirmed.confirmed.size>20)
-                                Text("Showing the first 20 saved approvals.",
-                                    style=MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    is NativeMeasuredConsentInventoryResult.Rejected ->
-                        Text("Previously approved sessions could not be reviewed (${confirmed.reason.name.lowercase().replace('_',' ')}). None were issued.",
-                            color=MaterialTheme.colorScheme.error,
-                            style=MaterialTheme.typography.bodySmall)
-                    null -> if(!reviewingResume) Text(
-                        "Previously confirmed sessions could not be verified. Refresh to retry.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.error)
-                }
-                measuredError?.let {
-                    Text(it,color=MaterialTheme.colorScheme.error,
-                        style=MaterialTheme.typography.bodySmall)
-                }
-                PursuitPrimaryAction("Create measured workout",
-                    enabled=!searching && !reviewingResume && !resumeChecking,
-                    onClick={
-                        measuredResumeId=null
-                        measuredEntryVersion++
-                        measuredError=null
-                        measuredOpen=true
-                    })
-            }
-            PursuitCard {
                 Text("Your training program",style=MaterialTheme.typography.titleMedium)
                 Text("Review the next session and its exact exercises before starting.",
                     style=MaterialTheme.typography.bodySmall)
@@ -1094,6 +974,153 @@ private fun NativeKotlinCandidateTrainEntry(
                             }
                         }
                     }
+                }
+            }
+            PursuitCard {
+                PursuitSectionHeading("Measured workouts",
+                    "Timed holds, loaded holds, carries and banded repetitions keep their real measurement units.")
+                val unfinishedMeasured=(resumableMeasured as?
+                    NativeMeasuredInventoryResult.Ready)?.workouts?.size ?:0
+                val awaitingMeasured=(confirmedUnissuedMeasured as?
+                    NativeMeasuredConsentInventoryResult.Ready)?.confirmed?.size ?:0
+                if(unfinishedMeasured>0 || awaitingMeasured>0)
+                    Text("${unfinishedMeasured} unfinished · ${awaitingMeasured} approved to start",
+                        style=MaterialTheme.typography.labelMedium)
+                if(!reviewingResume &&
+                    (resumableMeasured is NativeMeasuredInventoryResult.Rejected ||
+                        confirmedUnissuedMeasured is
+                            NativeMeasuredConsentInventoryResult.Rejected))
+                    Text("Saved measured workout verification is unavailable. "+
+                        "Refresh unfinished workouts before resuming.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.error)
+                OutlinedButton(
+                    onClick={showMeasuredWorkouts=!showMeasuredWorkouts},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text(if(showMeasuredWorkouts)
+                    "Hide measured workout tools" else "Show measured workout tools")}
+                // Only this optional section is hidden. Active training,
+                // saved measured journals and owner-verified inventories
+                // are never deleted or changed by this presentation toggle.
+                if(showMeasuredWorkouts) {
+                when(val review=resumableMeasured) {
+                    is NativeMeasuredInventoryResult.Ready -> {
+                        if(review.workouts.isNotEmpty()) {
+                            Text("${review.workouts.size} unfinished measured sessions",
+                                style=MaterialTheme.typography.labelMedium)
+                            review.workouts.take(20).forEach {item->
+                                OutlinedButton(
+                                    enabled=!searching && !resumeChecking && !reviewingResume,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={
+                                        resumeChecking=true
+                                        measuredError=null
+                                        scope.launch {
+                                            try {
+                                                val opened=withContext(Dispatchers.IO) {
+                                                    host.openMeasuredWorkout(item.workoutId)
+                                                }
+                                                if(opened is NativeMeasuredWorkoutStoreResult.Durable &&
+                                                    opened.stored.journal.finishedByEventId==null) {
+                                                    measuredResumeId=item.workoutId
+                                                    measuredOpen=true
+                                                } else {
+                                                    measuredError="The measured session is no longer verified. Refresh your saved workouts."
+                                                }
+                                            } catch(_:Exception) {
+                                                measuredError="Could not verify the saved measured session."
+                                            } finally {resumeChecking=false}
+                                        }
+                                    }) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Text(item.exerciseIds.joinToString(" · ",limit=2,
+                                            truncated="…") {kotlinExerciseLabel(it)},
+                                            style=MaterialTheme.typography.titleSmall)
+                                        Text("${item.recordedSets} of ${item.totalSets} sets recorded",
+                                            style=MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                            if(review.workouts.size>20)
+                                Text("Showing 20 verified sessions. Refresh after completing one.",
+                                    style=MaterialTheme.typography.bodySmall)
+                        } else Text("No unfinished measured sessions.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    is NativeMeasuredInventoryResult.Rejected ->
+                        Text("Measured resume is unavailable (${review.reason.name.lowercase().replace('_',' ')}). No unverified session was opened.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    null -> if(!reviewingResume)Text(
+                        "Measured resume inventory could not be verified. Refresh to retry.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                when(val confirmed=confirmedUnissuedMeasured) {
+                    is NativeMeasuredConsentInventoryResult.Ready -> {
+                        if(confirmed.confirmed.isNotEmpty()) {
+                            Text("Approved but not yet started",
+                                style=MaterialTheme.typography.titleSmall)
+                            Text("These exact measured plans were already confirmed. Starting one will recheck its saved gym and exercise source.",
+                                style=MaterialTheme.typography.bodySmall)
+                            confirmed.confirmed.take(20).forEach {item->
+                                OutlinedButton(
+                                    enabled=!searching && !resumeChecking && !reviewingResume,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={
+                                        resumeChecking=true
+                                        measuredError=null
+                                        scope.launch {
+                                            try {
+                                                val issued=withContext(Dispatchers.IO) {
+                                                    host.issueMeasuredWorkout(item.workoutId)
+                                                }
+                                                if(issued is NativeMeasuredWorkoutStoreResult.Durable &&
+                                                    issued.stored.journal.finishedByEventId==null) {
+                                                    measuredResumeId=item.workoutId
+                                                    measuredOpen=true
+                                                } else measuredError=
+                                                    "Approval no longer matches your verified gym. Refresh Train to review it."
+                                            } catch(_:Exception) {
+                                                measuredError="Could not verify the previously approved session."
+                                            } finally {resumeChecking=false}
+                                        }
+                                    }) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Text(item.exerciseIds.joinToString(" · ",limit=2,
+                                            truncated="…"){kotlinExerciseLabel(it)},
+                                            style=MaterialTheme.typography.titleSmall)
+                                        Text("${item.plannedSets} approved sets · Start & resume",
+                                            style=MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                            if(confirmed.confirmed.size>20)
+                                Text("Showing the first 20 saved approvals.",
+                                    style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    is NativeMeasuredConsentInventoryResult.Rejected ->
+                        Text("Previously approved sessions could not be reviewed (${confirmed.reason.name.lowercase().replace('_',' ')}). None were issued.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    null -> if(!reviewingResume) Text(
+                        "Previously confirmed sessions could not be verified. Refresh to retry.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.error)
+                }
+                measuredError?.let {
+                    Text(it,color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                PursuitPrimaryAction("Create measured workout",
+                    enabled=!searching && !reviewingResume && !resumeChecking,
+                    onClick={
+                        measuredResumeId=null
+                        measuredEntryVersion++
+                        measuredError=null
+                        measuredOpen=true
+                    })
                 }
             }
             TextButton(onClick={showOtherWorkouts=!showOtherWorkouts}) {

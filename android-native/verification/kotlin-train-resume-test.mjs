@@ -52,6 +52,34 @@ assert.match(candidate,/kotlinExerciseLabel\(impact\.exerciseId\)/);
 assert.match(candidate,/remainingWorking of \$originalWorking working sets retained/);
 assert.match(candidate,/!available\.alreadyIssued &&\s*changedImpacts\.isNotEmpty\(\)/);
 assert.doesNotMatch(candidate,/review\.omittedExerciseIds\.joinToString/);
+// Primary training actions must come before optional hold/carry creation.
+// Verified custom and generated resume still precede both, while measured
+// recovery counts remain visible even when advanced tools are collapsed.
+const trainEntry=candidate.indexOf('} else if(selectedId == null) {');
+const customResume=candidate.indexOf('Text(if(resumableGeneratedId!=null)"Other unfinished workouts"',trainEntry);
+const primaryProgram=candidate.indexOf('Text("Your training program"',trainEntry);
+const timeChoice=candidate.indexOf('PursuitSectionHeading("Time available"',trainEntry);
+const measuredTools=candidate.indexOf('PursuitSectionHeading("Measured workouts"',trainEntry);
+const otherTools=candidate.indexOf('TextButton(onClick={showOtherWorkouts=!showOtherWorkouts})',trainEntry);
+assert.ok(trainEntry>0 && customResume>trainEntry && customResume<primaryProgram &&
+  primaryProgram<timeChoice && timeChoice<measuredTools &&
+  measuredTools<otherTools,'Main workout and its time choice must not be buried behind measured workout tools');
+assert.match(candidate,/var showMeasuredWorkouts by rememberSaveable/);
+const measuredSection=candidate.slice(measuredTools,otherTools);
+assert.match(measuredSection,/val unfinishedMeasured=/);
+assert.match(measuredSection,/val awaitingMeasured=/);
+assert.match(measuredSection,/if\(unfinishedMeasured>0 \|\| awaitingMeasured>0\)/);
+assert.match(measuredSection,/Saved measured workout verification is unavailable/);
+assert.match(measuredSection,/onClick=\{showMeasuredWorkouts=!showMeasuredWorkouts\}/);
+assert.match(measuredSection,/if\(showMeasuredWorkouts\) \{\s*when\(val review=resumableMeasured\)/);
+assert.match(measuredSection,/host\.openMeasuredWorkout\(item\.workoutId\)/);
+assert.match(measuredSection,/host\.issueMeasuredWorkout\(item\.workoutId\)/);
+assert.match(measuredSection,/PursuitPrimaryAction\("Create measured workout"/);
+const disclosure=measuredSection.slice(measuredSection.indexOf('OutlinedButton('),
+  measuredSection.indexOf('if(showMeasuredWorkouts)'));
+assert.doesNotMatch(disclosure,/host\.|selectedId=|measuredOpen=true|\.finish\(/,
+  'opening secondary tools is presentation-only, not a workout command');
+
 console.log('PASS native Train owner-scoped minimize, reverified resume, save-state retention, and complete unfinished-workout pagination');
 console.log('PASS native shorter-session impact evidence, exact counts and readable Train review');
 

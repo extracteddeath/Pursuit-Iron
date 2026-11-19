@@ -71,6 +71,14 @@ class MeasuredHoldStopwatchDomainTest {
         val missing=MeasuredHoldStopwatchState(
             startedMonotonicMs=10_000L)
         assertNull(MeasuredHoldStopwatchDomain.elapsedMs(
+            MeasuredHoldStopwatchState(startedMonotonicMs=10_000L,
+                approximateBootEpochMs=-1L),
+            11_000L,boot+11_000L))
+        assertNull(MeasuredHoldStopwatchDomain.elapsedMs(
+            MeasuredHoldStopwatchState(startedMonotonicMs=10_000L,
+                approximateBootEpochMs=Long.MAX_VALUE),
+            11_000L,boot+11_000L))
+        assertNull(MeasuredHoldStopwatchDomain.elapsedMs(
             missing,11_000L,boot+11_000L))
         val twoModes=start().copy(stoppedElapsedMs=1000L)
         assertNull(MeasuredHoldStopwatchDomain.elapsedMs(

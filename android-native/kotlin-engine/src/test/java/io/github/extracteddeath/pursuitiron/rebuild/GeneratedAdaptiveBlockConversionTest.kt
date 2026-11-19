@@ -245,4 +245,55 @@ class GeneratedAdaptiveBlockConversionTest {
         assertEquals(listOf(override),withOverride.weekOverrides[prior.blockId])
     }
 
+
+    @Test fun strengthGenerationDoesNotSilentlyReplaceEightExerciseDaysWithThree() {
+        val old=fixture.cycle()
+        val existing=old.blocks.single()
+        val extra=(4..8).map{n->
+            fixture.movements[1].copy(
+                exerciseId="accessory-$n",name="Accessory $n")
+        }
+        val hypertrophy=existing.copy(blockId="hypertrophy",
+            label="Established hypertrophy",weeks=2,
+            days=existing.days.map{day->
+                day.copy(slots=day.slots+extra.map {movement->
+                    CustomExerciseSlot("slot_"+movement.exerciseId,
+                        movement.exerciseId,ComposerRole.ACCESSORY,
+                        day.slots.first().sets,pinned=false)
+                })
+            })
+        val strength=existing.copy(blockId="strength",
+            label="Generated strength",phase=TrainingPhase.STRENGTH,
+            weeks=2,days=existing.days.map{day->
+                day.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            })
+        val cycle=old.copy(blocks=listOf(hypertrophy,strength))
+        val base=fixture.generation()
+        val strengthPolicy=checkNotNull(base.policy).copy(
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+            primaryLiftMinimumDays=mapOf("bench" to 1))
+        val generated=base.copy(
+            phase=TrainingPhase.STRENGTH,policy=strengthPolicy,
+            catalog=base.catalog+extra)
+        val prescribed=fixture.policies().map{
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        }
+        val result=GeneratedAdaptiveBlockDomain.propose(
+            GeneratedAdaptiveBlockRequest(cycle,"strength",
+                "review_strength_menu",generated,prescribed))
+        assertEquals("Generator outcome: ${result.status} "+
+            "${result.explanation} | generation=${result.generatedWeek?.status} "+
+            "${result.generatedWeek?.issues} | prescribed=${result.prescribedWeek?.status}",
+            GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,result.status)
+        assertNull(result.proposedOption)
+        assertEquals(3,result.strengthRosterBoundary?.affectedDays?.size)
+        assertTrue(result.strengthRosterBoundary?.affectedDays?.all{
+            it.beforeWorkingExercises==8 && it.afterWorkingExercises==3
+        }==true)
+        assertEquals(old.revision,cycle.revision)
+        assertFalse(result.maySaveProgram)
+        assertFalse(result.mayIssueWorkout)
+    }
+
 }

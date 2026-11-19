@@ -1140,12 +1140,9 @@ internal fun NativeKotlinCustomJournalScreen(
                                         ?.visit?.setKey==set.setKey
                                 }
                             }
-                            if(activeFocus==null)OutlinedButton(
-                                enabled=!busy && slot.supersetGroup==null &&
-                                    !hasRecordedWork,
-                                modifier=Modifier.heightIn(min=48.dp),
-                                onClick={reviewSwap(slot)}
-                            ) {Text("Swap exercise")}
+                            // Exercise replacement lives in Exercise Info.
+                            // It uses the same verified swap rules in both
+                            // Focus and All Sets instead of a duplicate card button.
                             val undoableSwap=current.receipts.asReversed()
                                 .mapNotNull {receipt->
                                     receipt.operation as?
@@ -1167,12 +1164,6 @@ internal fun NativeKotlinCustomJournalScreen(
                                         undoSwapConfirmEventId=undoableSwap.eventId
                                     }) {Text("Undo swap")}
                             }
-                            if(hasRecordedWork || slot.supersetGroup!=null)
-                                Text(if(hasRecordedWork)
-                                    "This exercise has recorded work. Its original history is protected; live swapping is only available before its first set."
-                                    else "Unlink this superset in your program before replacing a linked exercise.",
-                                    style=MaterialTheme.typography.bodySmall,
-                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,

@@ -305,7 +305,9 @@ assert.ok(
   liveWorkout.includes('host.readCustomAuthoringSource()') &&
   liveWorkout.includes('source.revision==stamp.gymCatalogSourceRevision') &&
   liveWorkout.includes('CustomExerciseAuthoringDomain.picker(') &&
-  liveWorkout.includes('Text("Swap exercise")') &&
+  liveWorkout.includes('onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)') &&
+  liveWorkout.includes('reviewSwap(slot)') &&
+  !liveWorkout.includes('Text("Swap exercise")') &&
   liveWorkout.includes('hasRecordedWork') &&
   liveWorkout.includes('fun confirmSwap(') &&
   liveWorkout.includes('host.swapIssuedCustomExercise(') &&

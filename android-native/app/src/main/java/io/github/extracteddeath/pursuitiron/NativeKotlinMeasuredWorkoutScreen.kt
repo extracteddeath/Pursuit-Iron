@@ -527,6 +527,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 } else {
                     val set=journal.approvedPlan.sets[focus.selectedOrdinal-1]
                     val child=journal.bySetKey.getValue(set.setKey)
+                    val selectedReview=MeasuredWorkoutResultReviewDomain.review(
+                        set,child)
                     val definition=MeasuredExerciseCatalogDomain.find(set.exerciseId)
                     Text("${focus.recordedSets} of ${focus.totalSets} sets saved",
                         style=MaterialTheme.typography.titleMedium)
@@ -536,16 +538,15 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     PursuitWorkoutFocusHeader(
                         exerciseLabel=definition?.displayName ?:set.exerciseId,
                         setDetail="Set ${focus.selectedOrdinal} of ${focus.totalSets} · "+
-                            (if(focus.selectedRecorded)"saved observation"
-                            else "not yet recorded"),
+                            selectedReview.statusLabel.lowercase(),
                         focusOnNext=!showAllMeasuredSets,
                         onFocusChange={focus->showAllMeasuredSets=!focus},
                         heading="MEASURED WORKOUT",
                         enabled=!busy
                     )
-                    if(focus.selectedRecorded)Text(
-                        "This set has a saved result. Review it before making "+
-                            "an explicit correction.",
+                    if(selectedReview.resolved)Text(
+                        "This set has a saved "+selectedReview.statusLabel.lowercase()+
+                            " outcome. Review before making a correction.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(showAllMeasuredSets) {
@@ -554,8 +555,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 "Review the actual saved status of every set. "+
                                     "Choosing a row never records a result.")
                             journal.approvedPlan.sets.forEachIndexed {index,planned->
-                                val saved=journal.bySetKey[planned.setKey]
-                                    ?.effectiveRecord!=null
+                                val rowReview=MeasuredWorkoutResultReviewDomain.review(
+                                    planned,journal.bySetKey[planned.setKey])
+                                val saved=rowReview.resolved
                                 val name=MeasuredExerciseCatalogDomain.find(
                                     planned.exerciseId)?.displayName
                                     ?:planned.exerciseId
@@ -564,11 +566,22 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 Text("${index+1}. $name",
                                     style=MaterialTheme.typography.titleSmall)
                                 Text(if(saved)"Result saved in native journal"
+                                    else if(rowReview.status==
+                                        MeasuredSetReviewStatus.UNVERIFIED)
+                                        "Saved result cannot be verified"
                                     else "Result not recorded",
                                     color=if(saved)
                                         MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                     style=MaterialTheme.typography.labelMedium)
+                                if(saved) {
+                                    Text(rowReview.statusLabel,
+                                        style=MaterialTheme.typography.labelMedium)
+                                    rowReview.actualSummary?.let { actual ->
+                                        Text(actual,
+                                            style=MaterialTheme.typography.bodyMedium)
+                                    }
+                                }
                                 OutlinedButton(enabled=!busy,
                                     modifier=Modifier.fillMaxWidth()
                                         .heightIn(min=48.dp),

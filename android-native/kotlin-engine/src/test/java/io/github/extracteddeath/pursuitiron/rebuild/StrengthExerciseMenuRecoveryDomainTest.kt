@@ -139,6 +139,48 @@ class StrengthExerciseMenuRecoveryDomainTest {
         assertFalse(review.mayIssueWorkout)
     }
 
+    @Test fun recoveryBridgeCannotHideEightToThreeSourceMenuLoss() {
+        val current=cycle()
+        val base=current.blocks.first()
+        val bridge=base.copy(
+            blockId="recovery-bridge",label="Deload",
+            purpose=CustomBlockPurpose.RECOVERY,weeks=1,
+            days=base.days.map{day->day.copy(slots=core())})
+        val withBridge=current.copy(blocks=listOf(
+            base,bridge,current.blocks.last()))
+        // The recovered source is the last EFFECTIVE Hypertrophy week (2),
+        // not the low-volume deload (3). Strength begins at week 4.
+        val source=CustomTrainingCycleDomain.review(
+            withBridge,catalog.map{movement->
+                CustomExerciseAvailability(movement.exerciseId,
+                    fixture.athlete().reviewed!!.gym.confirmedStock
+                        .getValue("dumbbells"),false)
+            })
+        assertEquals(source.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,source.status)
+        val boundary=StrengthRosterBoundaryGuardDomain.review(
+            source,"strength")
+        assertEquals(StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW,
+            boundary.status)
+        assertEquals(2,boundary.sourceExitWeek)
+        assertEquals(4,boundary.targetEntryWeek)
+        val review=StrengthExerciseMenuRecoveryDomain.preview(
+            request(withBridge),audit(withBridge))
+        assertEquals(review.explanation,
+            StrengthMenuRecoveryStatus.PREVIEW_ONLY,review.status)
+        assertEquals(extraIds,review.restored.map{it.exerciseId})
+        assertEquals(setOf(0),review.restored.map{it.weekday}.toSet())
+        val proposed=checkNotNull(review.proposedCycle)
+        assertEquals(8,proposed.blocks.last().days.first().slots.size)
+        assertEquals(base,proposed.blocks.first())
+        assertEquals(bridge,proposed.blocks[1])
+        assertEquals(current.blocks.last().days.first().slots,
+            withBridge.blocks.last().days.first().slots)
+        assertFalse(review.maySaveProgram)
+        assertFalse(review.mayAlterHistory)
+        assertFalse(review.mayIssueWorkout)
+    }
+
     @Test fun capacityAndConstrainedSourceNeverPretendTheyRestoredEverything() {
         val c=cycle()
         val first=StrengthExerciseMenuRecoveryDomain.preview(request(c,max=5),

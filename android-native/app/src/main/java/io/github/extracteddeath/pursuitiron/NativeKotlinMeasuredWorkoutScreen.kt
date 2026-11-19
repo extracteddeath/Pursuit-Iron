@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 
 /** A missing issued journal is a recovery state, never a new-session editor. */
 internal enum class NativeMeasuredWorkoutEntryState {
@@ -96,18 +97,26 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         lookupComplete=false
         // Failed reads and exceptions must never imply an empty or writable
         // journal; only the owner-verified durable response can reopen it.
-        val read=runCatching {
+        val read=try {
             withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
-        }.getOrNull()
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            null
+        }
         val verified=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
         stored=verified
         if(verified!=null)expectsExisting=true
         lookupComplete=true
     }
     LaunchedEffect(host,workoutId) {
-        sourceRead=runCatching {
+        sourceRead=try {
             withContext(Dispatchers.IO){host.reviewMeasuredAuthoringSource()}
-        }.getOrNull()
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            null
+        }
         reload()
     }
     BackHandler(enabled=!busy){onClose()}

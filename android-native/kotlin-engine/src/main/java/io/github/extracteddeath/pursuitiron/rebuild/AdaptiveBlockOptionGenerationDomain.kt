@@ -139,14 +139,13 @@ object AdaptiveBlockOptionGenerationDomain {
             request.alternatives.size)
         val source=request.athleteSetup.reviewed
         val allowed=source!=null && request.athleteSetup.mayReviewProgramCandidate
-        val targetIndex=request.approvedCycle.blocks.indexOfFirst{
-            it.blockId==request.targetBlockId
-        }
-        val priorBlock=request.approvedCycle.blocks.getOrNull(targetIndex-1)
-        val isHypertrophyToStrength=priorBlock?.phase==TrainingPhase.HYPERTROPHY &&
-            priorBlock.purpose==CustomBlockPurpose.TRAINING &&
-            request.approvedCycle.blocks.getOrNull(targetIndex)?.phase==
-                TrainingPhase.STRENGTH
+        // Deload and performance-test weeks must not erase the final
+        // hypertrophy source. The source-arm reviewer uses the same
+        // last-normal-training boundary as the strength dose/roster guards.
+        val priorBlock=StrengthSourceArmContinuityDomain
+            .priorHypertrophyBlockForStrength(
+                request.approvedCycle,request.targetBlockId)
+        val isHypertrophyToStrength=priorBlock!=null
         // This is the LIVE adaptive-block generator entry. Re-derive source
         // proof from the athlete's whole cycle and actual reviewed gym, not
         // from a caller-supplied "keep arms" boolean. No JS fallback.

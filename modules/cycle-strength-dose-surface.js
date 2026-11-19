@@ -2,7 +2,7 @@
 // regional-volume report. Never infer a set adjustment or re-label this as
 // current volume after manual edits or future block re-generation.
 const valid = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
-const sets = value => valid(value) ? Number(value).toFixed(1).replace(/\\.0$/, '') : '—';
+const sets = value => valid(value) ? Number(value).toFixed(1).replace(/\.0$/, '') : '—';
 const nameOf = value => String(value || '').replaceAll('_', ' ').replace(/^./, c => c.toUpperCase());
 export function describeStrengthDoseLimit(report) {
     if (!report || report.comparison !== 'last_hypertrophy_week_to_first_strength_week'

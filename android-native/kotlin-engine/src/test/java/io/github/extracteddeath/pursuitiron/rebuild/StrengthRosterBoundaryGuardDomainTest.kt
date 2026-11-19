@@ -61,6 +61,41 @@ class StrengthRosterBoundaryGuardDomainTest {
         assertFalse(result.mayApplyAutomatically)
     }
 
+    @Test fun recoveryAndTestBridgesPreserveActualHypertrophyExitForStrength() {
+        val baseline=cycle()
+        for(bridgePurpose in listOf(
+            CustomBlockPurpose.RECOVERY,
+            CustomBlockPurpose.PERFORMANCE_TEST
+        )) {
+            val bridge=baseline.blocks.first().copy(
+                blockId="bridge",label="Deload or test",
+                purpose=bridgePurpose,weeks=1,
+                days=listOf(day(2)))
+            val chained=baseline.copy(blocks=listOf(
+                baseline.blocks.first(),bridge,baseline.blocks.last()))
+            val structure=CustomTrainingCycleDomain.review(chained,available)
+            assertEquals(structure.issues.toString(),
+                CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,structure.status)
+            val roster=StrengthRosterBoundaryGuardDomain.review(structure,"next")
+            assertEquals(StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW,
+                roster.status)
+            assertEquals(3,roster.sourceExitWeek)
+            assertEquals(5,roster.targetEntryWeek)
+            assertEquals(setOf("exercise_4","exercise_5","exercise_6",
+                "exercise_7","exercise_8"),
+                roster.affectedDays.single().missingExerciseIds)
+            val dose=StrengthDoseBoundaryGuardDomain.review(structure,"next")
+            assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+                dose.status)
+            assertEquals(8,dose.hypertrophyWorkingSets)
+            assertEquals(3,dose.strengthWorkingSets)
+            assertEquals(3,dose.hypertrophyExitWeek)
+            assertEquals(5,dose.strengthEntryWeek)
+            assertFalse(roster.canIssueWorkout)
+            assertFalse(dose.mayChangeHistory)
+        }
+    }
+
     @Test fun exactHalfIsNotTheSameAsSevereEightToThreeCollapse() {
         assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
             inspect(cycle(before=6,after=3)).status)

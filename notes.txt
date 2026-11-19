@@ -1,0 +1,18 @@
+d00: logged 16 sets on 6 lifts in 252s
+d02: logged 16 sets on 6 lifts in 226s
+d04: logged 14 sets on 6 lifts in 196s
+d06: logged 12 sets on 5 lifts in 165s
+d07: logged 17 sets on 6 lifts in 202s
+d09: logged 17 sets on 6 lifts in 189s
+d11: logged 14 sets on 6 lifts in 172s
+d13: logged 12 sets on 5 lifts in 157s
+d14: logged 18 sets on 6 lifts in 210s
+d16: logged 18 sets on 6 lifts in 209s
+d18: logged 15 sets on 6 lifts in 181s
+d20: logged 13 sets on 5 lifts in 165s
+d21: logged 19 sets on 6 lifts in 220s
+d23: logged 19 sets on 6 lifts in 218s
+d25: logged 16 sets on 6 lifts in 192s
+d27: logged 14 sets on 5 lifts in 175s
+d28: logged 16 sets on 6 lifts in 205s
+end: 17 sessions over four weeks

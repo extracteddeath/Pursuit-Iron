@@ -1,0 +1,148 @@
+PASS 147/147 checks
+PASS d00: onboarding asks kg or lb
+PASS d00: a scheduled day offers a session
+PASS d00: Today is on week 1 after 0 sessions (shows Week 1 of 4)
+PASS d00: the week ring reads 0 of 4 done in week 1
+PASS d00: a logged set reports checked to accessibility services
+PASS d00: the finish page opens
+PASS d00: every working set was logged
+PASS d00: Today says done for today after saving
+PASS d01: an unscheduled day reads as a rest day
+PASS d01: Today is on week 1 after 1 sessions (shows Week 1 of 4)
+PASS d02: a scheduled day offers a session
+PASS d02: Today is on week 1 after 1 sessions (shows Week 1 of 4)
+PASS d02: the week ring reads 1 of 4 done in week 1
+PASS d02: a logged set reports checked to accessibility services
+PASS d02: the finish page opens
+PASS d02: every working set was logged
+PASS d02: Today says done for today after saving
+PASS d03: an unscheduled day reads as a rest day
+PASS d03: Today is on week 1 after 2 sessions (shows Week 1 of 4)
+PASS d04: a scheduled day offers a session
+PASS d04: Today is on week 1 after 2 sessions (shows Week 1 of 4)
+PASS d04: the week ring reads 2 of 4 done in week 1
+PASS d04: a logged set reports checked to accessibility services
+PASS d04: the finish page opens
+PASS d04: every working set was logged
+PASS d04: Today says done for today after saving
+PASS d05: an unscheduled day reads as a rest day
+PASS d05: Today is on week 1 after 3 sessions (shows Week 1 of 4)
+PASS d06: a scheduled day offers a session
+PASS d06: Today is on week 1 after 3 sessions (shows Week 1 of 4)
+PASS d06: the week ring reads 3 of 4 done in week 1
+PASS d06: a logged set reports checked to accessibility services
+PASS d06: the finish page opens
+PASS d06: every working set was logged
+PASS d06: Today says done for today after saving
+PASS d07: a scheduled day offers a session
+PASS d07: Today is on week 2 after 4 sessions (shows Week 2 of 4)
+PASS d07: the week ring reads 0 of 4 done in week 2
+PASS d07: a logged set reports checked to accessibility services
+PASS d07: the finish page opens
+PASS d07: every working set was logged
+PASS d07: Today says done for today after saving
+PASS d08: an unscheduled day reads as a rest day
+PASS d08: Today is on week 2 after 5 sessions (shows Week 2 of 4)
+PASS d09: a scheduled day offers a session
+PASS d09: Today is on week 2 after 5 sessions (shows Week 2 of 4)
+PASS d09: the week ring reads 1 of 4 done in week 2
+PASS d09: a logged set reports checked to accessibility services
+PASS d09: the finish page opens
+PASS d09: every working set was logged
+PASS d09: Today says done for today after saving
+PASS d10: an unscheduled day reads as a rest day
+PASS d10: Today is on week 2 after 6 sessions (shows Week 2 of 4)
+PASS d11: a scheduled day offers a session
+PASS d11: Today is on week 2 after 6 sessions (shows Week 2 of 4)
+PASS d11: the week ring reads 2 of 4 done in week 2
+PASS d11: a logged set reports checked to accessibility services
+PASS d11: the finish page opens
+PASS d11: every working set was logged
+PASS d11: Today says done for today after saving
+PASS d12: an unscheduled day reads as a rest day
+PASS d12: Today is on week 2 after 7 sessions (shows Week 2 of 4)
+PASS d13: a scheduled day offers a session
+PASS d13: Today is on week 2 after 7 sessions (shows Week 2 of 4)
+PASS d13: the week ring reads 3 of 4 done in week 2
+PASS d13: a logged set reports checked to accessibility services
+PASS d13: the finish page opens
+PASS d13: every working set was logged
+PASS d13: Today says done for today after saving
+PASS d14: a scheduled day offers a session
+PASS d14: Today is on week 3 after 8 sessions (shows Week 3 of 4)
+PASS d14: the week ring reads 0 of 4 done in week 3
+PASS d14: a logged set reports checked to accessibility services
+PASS d14: the finish page opens
+PASS d14: every working set was logged
+PASS d14: Today says done for today after saving
+PASS d15: an unscheduled day reads as a rest day
+PASS d15: Today is on week 3 after 9 sessions (shows Week 3 of 4)
+PASS d16: a scheduled day offers a session
+PASS d16: Today is on week 3 after 9 sessions (shows Week 3 of 4)
+PASS d16: the week ring reads 1 of 4 done in week 3
+PASS d16: a logged set reports checked to accessibility services
+PASS d16: the finish page opens
+PASS d16: every working set was logged
+PASS d16: Today says done for today after saving
+PASS d17: an unscheduled day reads as a rest day
+PASS d17: Today is on week 3 after 10 sessions (shows Week 3 of 4)
+PASS d18: a scheduled day offers a session
+PASS d18: Today is on week 3 after 10 sessions (shows Week 3 of 4)
+PASS d18: the week ring reads 2 of 4 done in week 3
+PASS d18: a logged set reports checked to accessibility services
+PASS d18: the finish page opens
+PASS d18: every working set was logged
+PASS d18: Today says done for today after saving
+PASS d19: an unscheduled day reads as a rest day
+PASS d19: Today is on week 3 after 11 sessions (shows Week 3 of 4)
+PASS d20: a scheduled day offers a session
+PASS d20: Today is on week 3 after 11 sessions (shows Week 3 of 4)
+PASS d20: the week ring reads 3 of 4 done in week 3
+PASS d20: a logged set reports checked to accessibility services
+PASS d20: the finish page opens
+PASS d20: every working set was logged
+PASS d20: Today says done for today after saving
+PASS d21: a scheduled day offers a session
+PASS d21: Today is on week 4 after 12 sessions (shows Week 4 of 4)
+PASS d21: the week ring reads 0 of 4 done in week 4
+PASS d21: a logged set reports checked to accessibility services
+PASS d21: the finish page opens
+PASS d21: every working set was logged
+PASS d21: Today says done for today after saving
+PASS d22: an unscheduled day reads as a rest day
+PASS d22: Today is on week 4 after 13 sessions (shows Week 4 of 4)
+PASS d23: a scheduled day offers a session
+PASS d23: Today is on week 4 after 13 sessions (shows Week 4 of 4)
+PASS d23: the week ring reads 1 of 4 done in week 4
+PASS d23: a logged set reports checked to accessibility services
+PASS d23: the finish page opens
+PASS d23: every working set was logged
+PASS d23: Today says done for today after saving
+PASS d24: an unscheduled day reads as a rest day
+PASS d24: Today is on week 4 after 14 sessions (shows Week 4 of 4)
+PASS d25: a scheduled day offers a session
+PASS d25: Today is on week 4 after 14 sessions (shows Week 4 of 4)
+PASS d25: the week ring reads 2 of 4 done in week 4
+PASS d25: a logged set reports checked to accessibility services
+PASS d25: the finish page opens
+PASS d25: every working set was logged
+PASS d25: Today says done for today after saving
+PASS d26: an unscheduled day reads as a rest day
+PASS d26: Today is on week 4 after 15 sessions (shows Week 4 of 4)
+PASS d27: a scheduled day offers a session
+PASS d27: Today is on week 4 after 15 sessions (shows Week 4 of 4)
+PASS d27: the week ring reads 3 of 4 done in week 4
+PASS d27: a logged set reports checked to accessibility services
+PASS d27: the finish page opens
+PASS d27: every working set was logged
+PASS d27: Today says done for today after saving
+PASS d28: a scheduled day offers a session
+PASS d28: Today is on week 1 after 16 sessions (shows Week 1 of 4)
+PASS d28: the week ring reads 0 of 4 done in week 1
+PASS d28: after the block's last week Today shows Block complete
+PASS d28: Block complete opens the block review
+PASS d28: a logged set reports checked to accessibility services
+PASS d28: the finish page opens
+PASS d28: every working set was logged
+PASS d28: Today says done for today after saving
+PASS end: 17 sessions over four weeks of Mon/Wed/Fri/Sun (got 17)

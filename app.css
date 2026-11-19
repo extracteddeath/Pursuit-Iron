@@ -5754,7 +5754,9 @@ background:var(--pi-color-card)!important;
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-heading,
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review-content{display:none;}
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-review[data-expanded="true"]>.wpb-wizard-review-content{display:block;}
-#root .wpb .wpb-wizard-review-toggle{width:100%;justify-content:space-between;text-align:left;}
+#root .wpb .wpb-wizard-review-toggle{display:flex;align-items:center;gap:var(--pi-space-2);width:100%;justify-content:space-between;text-align:left;}
+#root .wpb .wpb-wizard-review-chevron{margin-left:auto;flex-shrink:0}
+#root .wpb .wpb-wizard-review[data-expanded="true"] .wpb-wizard-review-chevron{transform:rotate(180deg)}
 @media (min-width:1120px) and (min-height:720px){
   /* Wizards use the secondary route frame; unlike the primary navigation
      shell it was fixed at phone width even in an expanded browser window. */

@@ -19,7 +19,7 @@ export function PlateCalcSheet({ unit, onClose, initialBar = 'barbell', initialW
             ] }, kind)) }),
         _jsxs('div', {className:'wpb-calculator-field',children:[
             _jsx('label', {htmlFor:'calculator-target',children:`Target weight (${unit})`}),
-            _jsx('input', {...inputProps,id:'calculator-target',placeholder:`Target weight (${unit})`,value:weight,onChange:event=>setWeight(event.target.value),
+            _jsx('input', {...inputProps,id:'calculator-target',placeholder:unit==='kg'?'e.g. 100':'e.g. 225',value:weight,onChange:event=>setWeight(event.target.value),
                 'aria-invalid':load.status==='invalid','aria-describedby':'calculator-target-help'}),
             _jsx('p', {id:'calculator-target-help',className:load.status==='invalid'?'wpb-calculator-error':'wpb-calculator-help',role:load.status==='invalid'?'alert':undefined,
                 children:load.status==='invalid'?'Enter a complete, nonnegative weight within the supported loading range.':'Include the empty bar in the total. Plates reflect your selected gym.'})

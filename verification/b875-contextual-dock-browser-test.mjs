@@ -180,8 +180,8 @@ try {
         await page.keyboard.type('190');await page.keyboard.press('Enter');await page.keyboard.press('Enter');
 
         await clickStable(`${dock} .wpb-set-dock-plates`);
-        await page.waitForSelector('.wpb-backdrop input[placeholder="Target weight (lb)"]');
-        assert.equal(await page.$eval('.wpb-backdrop input[placeholder="Target weight (lb)"]', el=>el.value), '190', 'plate action uses actual typed set, not suggested load');
+        await page.waitForSelector('.wpb-backdrop #calculator-target');
+        assert.equal(await page.$eval('.wpb-backdrop #calculator-target', el=>el.value), '190', 'plate action uses actual typed set, not suggested load');
         await page.click('.wpb-loading-calculator button[aria-label="Close Calculators"]');
         await clickStable(`${dock} button[aria-label="Log dock set"]`);
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].done===true);

@@ -167,9 +167,9 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 it.blockPurpose==CustomBlockPurpose.TRAINING
         }
         if(before==null || after==null || currentAudit?.auditedCycleRevision!=cycle.revision ||
-            currentAudit.structuralReview?.verifiedDraft!=cycle ||
+            currentAudit?.structuralReview?.verifiedDraft!=cycle ||
             before.workingSets!=strengthSourceDose?.hypertrophyWorkingSets ||
-            after.workingSets!=strengthSourceDose.strengthWorkingSets) null
+            after.workingSets!=strengthSourceDose?.strengthWorkingSets) null
         else setOf(TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
             TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
             TrainingMuscle.WRIST_EXTENSORS).filter{muscle->
@@ -254,12 +254,12 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                     nextAuditedSets.mapIndexed {index,sets->
                         "W${index+1} $sets"
                     }.joinToString(" · ") +
-                    if(hasInterveningBridge)
+                    (if(hasInterveningBridge)
                         ". The previous block is a recovery/test bridge; "+
                             "its low-volume exit is NOT the Strength retention baseline."
                     else ". Lowest week retains " +
                         (comparison.lowestNextWeekRetentionPercent?.let{"$it%"} ?: "—") +
-                        " of the previous block's exit week.",
+                        " of the previous block's exit week."),
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text(

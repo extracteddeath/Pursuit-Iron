@@ -24,7 +24,12 @@ class AdaptiveStrengthDayDoseRepairTest {
                     slots=day.slots.mapIndexed{index,slot->
                         val exact=slot.sets.single().copy(
                             activeSeconds=40,restSeconds=70)
-                        slot.copy(sets=List(amounts[index]){exact})
+                        // Review a named primary skill on Friday, outside
+                        // the affected Monday so source-pinned work is never
+                        // rewritten by the set-count repair.
+                        slot.copy(sets=List(amounts[index]){exact},
+                            pinned=strength && day.weekday==4 &&
+                                slot.exerciseId=="bench")
                     })
             }
         val base=template.copy(blockId="hypertrophy",weeks=2,days=days(false))

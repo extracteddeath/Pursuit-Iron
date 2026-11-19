@@ -696,7 +696,12 @@ export function retainStrengthEntryDose(previous, program, legacyExercises = [],
     if (!prior || prior.missing) return program;
     const { context, weekCount, targets } = guards;
     // Never less than the strength phase's own minimum: the share is on top of the floor a new plan is held to.
-    const desired = Object.fromEntries(targets.map(t => [t.region, Math.min(t.mrv, Math.max(t.mev, (prior.regions[t.region] || 0) * STRENGTH_ENTRY_RETENTION))]));
+    // Preserve the athlete's original retention objective separately. The
+    // feasible target may be scaled for a shared muscle ceiling, but a lower
+    // achievable target must NEVER masquerade as full 60% retention.
+    const requested = Object.fromEntries(targets.map(t => [t.region,
+        Math.min(t.mrv, Math.max(t.mev, (prior.regions[t.region] || 0) * STRENGTH_ENTRY_RETENTION))]));
+    const desired = { ...requested };
     const openAll = targets.map(t => t.region);
     const start = auditShellVolume(program, legacyExercises);
     if (start.missing || start.weeks.length !== weekCount) return program;
@@ -833,22 +838,51 @@ export function retainStrengthEntryDose(previous, program, legacyExercises = [],
         current = taken.candidate; before = taken.after;
         steps.push({ key: taken.key, from: taken.from, added: taken.added, region: taken.region, program: current, audit: taken.after });
     }
-    if (!steps.length) return program;
+    const doseReport = (finalProgram, after, keptSteps = []) => {
+        const round = number => Math.round(number * 10) / 10;
+        const actual = Object.fromEntries(targets.map(t => [t.region, round(after.regions[t.region] ?? 0)]));
+        const unresolved = targets.filter(t =>
+            requested[t.region] - (after.regions[t.region] ?? 0) >= .5
+            || (after.regions[t.region] ?? 0) < t.mev - EPS).map(t => t.region);
+        const capacityLimited = targets.filter(t => desired[t.region] < requested[t.region] - EPS).map(t => t.region);
+        const tally = {};
+        for (const step of keptSteps) {
+            if (step.added) continue;
+            tally[step.key] = (tally[step.key] || 0) + 1;
+            if (step.from) tally[step.from] = (tally[step.from] || 0) - 1;
+        }
+        return { ...finalProgram, nextEngine: { ...finalProgram.nextEngine, strengthEntryDose: {
+            retention: STRENGTH_ENTRY_RETENTION,
+            comparison: 'last_hypertrophy_week_to_first_strength_week',
+            status: unresolved.length ? 'limited' : 'met',
+            // 'target' retains the previously exposed feasible goal; 'requested'
+            // preserves the pre-ceiling athlete objective for truthful review.
+            target: Object.fromEntries(Object.entries(desired).map(([r, v]) => [r, round(v)])),
+            requested: Object.fromEntries(Object.entries(requested).map(([r, v]) => [r, round(v)])),
+            actual,
+            capacityLimited,
+            limits: unresolved.map(region => ({
+                region, requested: round(requested[region]), feasible: round(desired[region]),
+                actual: actual[region], reasonCode: capacityLimited.includes(region)
+                    ? 'SHARED_MUSCLE_CEILING' : 'NO_SAFE_ADDITION'
+            })),
+            sets: Object.entries(tally).filter(([, delta]) => delta).map(([key, delta]) => ({ key, delta })),
+            restored: keptSteps.filter(step => step.added).map(step => ({
+                dayId: step.key.split(':')[0], exercise: step.added, region: step.region })),
+            unresolved
+        } } };
+    };
+    // Even when no safe change fits, keep the unmet original target visible.
+    // Returning an unannotated program would make the failed repair disappear.
+    if (!steps.length) return doseReport(program, start.weeks[0]);
     // The engine audit is the expensive check (a six-day week searches day orders), so it runs on the finished plan;
     // a plan that adds a finding in any week gives back its last additions until it does not.
     let kept = steps.length;
     while (kept > 0 && regressed(steps[kept - 1].program)) kept = Math.max(0, kept - Math.max(1, Math.ceil(kept / 4)));
-    if (!kept) return program;
-    const final = steps[kept - 1], after = final.audit.weeks[0];
+    if (!kept) return doseReport(program, start.weeks[0]);
+    const final = steps[kept - 1];
     const finalProgram = steps.slice(0, kept).some(s => s.added) ? asSavedEngineSource(final.program) : final.program;
-    const tally = {};
-    for (const s of steps.slice(0, kept)) { if (s.added) continue; tally[s.key] = (tally[s.key] || 0) + 1; if (s.from) tally[s.from] = (tally[s.from] || 0) - 1; }
-    return { ...finalProgram, nextEngine: { ...finalProgram.nextEngine, strengthEntryDose: {
-        retention: STRENGTH_ENTRY_RETENTION, comparison: 'last_hypertrophy_week_to_first_strength_week',
-        target: Object.fromEntries(Object.entries(desired).map(([r, v]) => [r, Math.round(v * 10) / 10])),
-        sets: Object.entries(tally).filter(([, delta]) => delta).map(([key, delta]) => ({ key, delta })),
-        restored: steps.slice(0, kept).filter(s => s.added).map(s => ({ dayId: s.key.split(':')[0], exercise: s.added, region: s.region })),
-        unresolved: targets.filter(t => desired[t.region] - after.regions[t.region] >= .5 || after.regions[t.region] < t.mev - EPS).map(t => t.region) } } };
+    return doseReport(finalProgram, final.audit.weeks[0], steps.slice(0, kept));
 }
 
 export function rebalanceFocusedStrengthEntry(previous, program, legacyExercises = [], priorSnapshot = null) {

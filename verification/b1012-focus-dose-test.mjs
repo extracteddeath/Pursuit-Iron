@@ -65,9 +65,11 @@ for (const session of ['s60', 's90']) for (const goal of ['hypertrophy', 'both']
   assert.equal(refused.nextEngine.focusDose.status, 'limited');
   const allowed = ensureFocusedRegionDose(reset, plain, EXERCISES, [region], () => true);
   assert.ok(allowed.nextEngine.focusDose.changes.length, '5 the same plan takes focus sets when the check allows them'); }
-// The few focused plans still over are the displayed-time referee's own residual (a focused region is protected
-// from its refits); pinned as a ceiling that may fall and must not rise.
-assert.ok(overLimit <= 8, `5 focused plans over the limit on ${overLimit} day-weeks (ceiling 8); unfocused ${plainOver}`);
+// A focused muscle is never permission to exceed the chosen session maximum.
+// If a plan cannot preserve the focus within time, return a limited focus result
+// or a typed capacity refusal; never return an overlong executable workout.
+assert.equal(overLimit, 0, `5 focused plans must fit the session maximum; ${overLimit} day-weeks over (unfocused ${plainOver})`);
+assert.equal(plainOver, 0, `5 the unfocused control must also meet the session maximum; ${plainOver} day-weeks over`);
 // Priority alone left 36% of focused builds unchanged and 4% lower on this engine (measured over 360 builds before the stage).
 assert.ok(raisedByStage * 4 >= cases, `2 fixture armed: the stage itself added sets in ${raisedByStage} of ${cases} plans (need a quarter)`);
 assert.ok(more * 100 >= cases * 90, `3 a focus raised its region in ${more} of ${cases} plans (need 90%)`);

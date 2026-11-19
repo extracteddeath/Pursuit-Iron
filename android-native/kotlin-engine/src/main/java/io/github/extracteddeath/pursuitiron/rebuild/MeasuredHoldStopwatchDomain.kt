@@ -1,7 +1,5 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
-import kotlin.math.abs
-
 /**
  * A manually controlled stopwatch for SECOND-measured holds.
  * It supplies an optional draft input, NEVER a performed set or
@@ -42,8 +40,14 @@ object MeasuredHoldStopwatchDomain {
             }
         val anchor=state.approximateBootEpochMs ?:return null
         if(state.stoppedElapsedMs!=null ||
-            nowMonotonicMs<started || nowEpochMs<nowMonotonicMs ||
-            abs((nowEpochMs-nowMonotonicMs)-anchor)>MAX_BOOT_DRIFT_MS)
+            started<0 || anchor<0 ||
+            nowMonotonicMs<started || nowEpochMs<nowMonotonicMs)
+            return null
+        val boot=nowEpochMs-nowMonotonicMs
+        // Avoid signed-Long overflow on corrupted restored UI state.
+        if(boot<0 || (boot>anchor &&
+                boot-anchor>MAX_BOOT_DRIFT_MS) ||
+            (boot<anchor && anchor-boot>MAX_BOOT_DRIFT_MS))
             return null
         return (nowMonotonicMs-started).takeIf{it in 0..MAX_ELAPSED_MS}
     }

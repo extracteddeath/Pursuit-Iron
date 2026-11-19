@@ -251,7 +251,7 @@ class GeneratedAdaptiveBlockConversionTest {
         val existing=old.blocks.single()
         val extra=(4..8).map{n->
             fixture.movements[1].copy(
-                exerciseId="accessory-$n",name="Accessory $n")
+                exerciseId="accessory-$n",familyId="accessory-$n")
         }
         val hypertrophy=existing.copy(blockId="hypertrophy",
             label="Established hypertrophy",weeks=2,

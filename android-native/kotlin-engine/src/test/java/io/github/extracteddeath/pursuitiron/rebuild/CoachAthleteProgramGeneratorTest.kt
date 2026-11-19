@@ -111,7 +111,10 @@ class CoachAthleteProgramGeneratorTest {
                     if(index==0)day.copy(calendarDay=1) else day
                 })),
             original.copy(draft=initial.copy(
-                week=initial.week.copy(windows=initial.week.windows.reversed()))),
+                week=initial.week.copy(windows=initial.week.windows.mapIndexed { index,window ->
+                    if(index==0)window.copy(declaredNonSetSeconds=
+                        window.declaredNonSetSeconds+60) else window
+                }))),
             original.copy(draft=initial.copy(sessions=initial.sessions.reversed()))
         )
         forged.forEachIndexed { index,candidate ->

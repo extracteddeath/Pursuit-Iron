@@ -86,7 +86,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1018';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1019';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -11628,14 +11628,26 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         // just changed something under them mid-workout.
         if (resumedRef.current)
             return;
-        const at = program.autoTuned;
-        if (!at)
+        // Only what changed in THIS session. `autoTuned` summarises the whole program's recovery bias, so it
+        // named muscles today's lifts never train ("+volume on Traps & Forearms" over a squat day); `autoBias`
+        // records each changed slot, and today's slots are the ones this lifter is about to see.
+        if (!program.autoTuned)
             return;
+        const up = new Set(), down = new Set();
+        for (const [key, delta] of Object.entries(program.autoBias || {})) {
+            const [dayId, slot] = key.split(":");
+            if (dayId !== day.id || !delta)
+                continue;
+            const id = data.find(row => String(row.slot) === slot)?.id ?? day.exercises[Number(slot)];
+            const part = EX_BY_ID[id]?.part;
+            if (part)
+                (delta > 0 ? up : down).add(PART_LABEL[part] || part);
+        }
         const parts = [];
-        if (at.up?.length)
-            parts.push(`+volume on ${at.up.slice(0, 2).join(" & ")}`);
-        if (at.down?.length)
-            parts.push(`eased ${at.down.slice(0, 2).join(" & ")}`);
+        if (up.size)
+            parts.push(`+volume on ${[...up].slice(0, 2).join(" & ")}`);
+        if (down.size)
+            parts.push(`eased ${[...down].slice(0, 2).join(" & ")}`);
         if (parts.length)
             setSnack({ msg: `Tuned to your recovery — ${parts.join(", ")}` });
     }, []);
@@ -16451,7 +16463,9 @@ function OneRepMaxCalc({ unit }) {
     const round = (v) => Math.max(step, Math.round(v / step) * step);
     const pcts = [100, 95, 90, 85, 80, 75, 70, 65, 60];
     const reps = [1, 2, 3, 5, 8, 10, 12, 15];
-    return (_jsxs("div", { className: "wpb-rm-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-gap-8 wpb-s956-marginbottom-12", children: [_jsxs("div", { className: "wpb-s956-flex-1", children: [_jsxs("div", { className: "wpb-rm-field-label", children: ["WEIGHT (", unit, ")"] }), _jsx("input", { "aria-label": `Estimated 1RM weight (${unit})`, inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: w, onChange: e => setW(e.target.value), placeholder: "100", className: "mono wpb-rm-input" })] }), _jsxs("div", { className: "wpb-s956-flex-1", children: [_jsx("div", { className: "wpb-rm-field-label", children: "REPS" }), _jsx("input", { "aria-label": "Estimated 1RM reps", inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, value: r, onChange: e => setR(e.target.value), placeholder: "5", className: "mono wpb-rm-input" })] })] }), _jsxs("div", { className: "wpb-rm-summary", children: [_jsx("div", { className: "wpb-rm-summary-label", children: "ESTIMATED 1RM" }), _jsxs("div", { className: "mono wpb-rm-summary-value", children: [valid ? round(orm) : "—", _jsxs("span", { className: "wpb-rm-summary-unit", children: [" ", unit] })] })] }), valid && (() => {
+    return (_jsxs("div", { className: "wpb-rm-card", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-gap-8 wpb-s956-marginbottom-12", children: [_jsxs("div", { className: "wpb-s956-flex-1", children: [_jsxs("div", { className: "wpb-rm-field-label", children: ["WEIGHT (", unit, ")"] }), _jsx("input", { "aria-label": `Estimated 1RM weight (${unit})`, inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: w, onChange: e => setW(e.target.value), placeholder: unit === "kg" ? "e.g. 60" : "e.g. 135", className: "mono wpb-rm-input" })] }), _jsxs("div", { className: "wpb-s956-flex-1", children: [_jsx("div", { className: "wpb-rm-field-label", children: "REPS" }), _jsx("input", { "aria-label": "Estimated 1RM reps", inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, value: r, onChange: e => setR(e.target.value), placeholder: "5", className: "mono wpb-rm-input" })] })] }), _jsxs("div", { className: "wpb-rm-summary", children: [_jsx("div", { className: "wpb-rm-summary-label", children: "ESTIMATED 1RM" }), (valid ? _jsxs("div", { className: "mono wpb-rm-summary-value", children: [round(orm), _jsxs("span", { className: "wpb-rm-summary-unit", children: [" ", unit] })] })
+                    // An empty field used to show "— lb" beside a "100" placeholder that reads as a typed value.
+                    : _jsx("div", { className: "wpb-rm-summary-hint", role: "status", children: !(W > 0) ? "Enter a weight and reps from a recent hard set" : "Use 1\u201320 reps for a reliable estimate" }))] }), valid && (() => {
                 const { barW, plates, leftover } = platesPerSide(round(orm), "barbell", unit);
                 if (!plates.length)
                     return null;

@@ -111,9 +111,9 @@ assert.ok(highCounts.reduce((n,v)=>n+v,0)>=12,
 // custom Full Body source. When the same three Full Body days survive,
 // require each actual generated day to retain >= half the old menu.
 const sameFullBody=highStrength.nextEngine.program.sessions.length===highVariety.days.length &&
-    highStrength.nextEngine.program.sessions.every(session=>session.intent==='full_body');
+    highStrength.config.split==='full_body';
 assert.equal(sameFullBody,true,
-    'This regression deliberately uses the same Full Body day topology');
+    'This regression deliberately uses the same Full Body split and scheduled day count; engine session intents may use internal names');
 assert.ok(highCounts.every((count,index)=>count>=Math.ceil(
     new Set(highVariety.days[index].exercises).size/2)),
     'Each unchanged Full Body day must retain >= half the authored movement menu: 8→3 cannot hide in the weekly total: '+JSON.stringify(highCounts));

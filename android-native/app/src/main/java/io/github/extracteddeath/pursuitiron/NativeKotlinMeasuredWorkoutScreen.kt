@@ -30,12 +30,29 @@ internal object NativeMeasuredWorkoutEntryPolicy {
     fun resolve(
         expectsExisting:Boolean,
         lookupComplete:Boolean,
-        hasVerifiedJournal:Boolean
+        hasVerifiedJournal:Boolean,
+        verifiedNotIssued:Boolean
     ):NativeMeasuredWorkoutEntryState = when {
         !lookupComplete -> NativeMeasuredWorkoutEntryState.VERIFYING
         hasVerifiedJournal -> NativeMeasuredWorkoutEntryState.RECORDING
         expectsExisting -> NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED
-        else -> NativeMeasuredWorkoutEntryState.AUTHORING
+        verifiedNotIssued -> NativeMeasuredWorkoutEntryState.AUTHORING
+        else -> NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED
+    }
+}
+
+/** Only an explicitly verified source opens measured authoring. A failed
+ * fetch is never a perpetual spinner or implicit source approval. */
+internal enum class NativeMeasuredSourceState {
+    VERIFYING, READY, RECOVERY_REQUIRED
+}
+
+internal object NativeMeasuredSourcePolicy {
+    fun resolve(lookupComplete:Boolean,hasVerifiedSource:Boolean):
+        NativeMeasuredSourceState = when {
+        !lookupComplete -> NativeMeasuredSourceState.VERIFYING
+        hasVerifiedSource -> NativeMeasuredSourceState.READY
+        else -> NativeMeasuredSourceState.RECOVERY_REQUIRED
     }
 }
 
@@ -58,6 +75,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var busy by remember{mutableStateOf(false)}
     var sourceRead by remember(host){mutableStateOf<NativeAuthoringSourceRead?>(null)}
     var stored by remember(host){mutableStateOf<NativeMeasuredWorkoutStored?>(null)}
+    var storedLookup by remember(host){mutableStateOf<NativeMeasuredWorkoutStoreResult?>(null)}
+    var sourceLookupComplete by remember(host){mutableStateOf(false)}
     var message by rememberSaveable{mutableStateOf<String?>(null)}
     var selectedId by rememberSaveable{mutableStateOf("plank")}
     var selectedBandId by rememberSaveable{mutableStateOf("")}
@@ -93,23 +112,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         mutableStateOf<String?>(null)
     }
     var focusPickerOpen by remember {mutableStateOf(false)}
-    suspend fun reload() {
-        lookupComplete=false
-        // Failed reads and exceptions must never imply an empty or writable
-        // journal; only the owner-verified durable response can reopen it.
-        val read=try {
-            withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
-        } catch(cancelled:CancellationException) {
-            throw cancelled
-        } catch(_:Exception) {
-            null
-        }
-        val verified=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
-        stored=verified
-        if(verified!=null)expectsExisting=true
-        lookupComplete=true
-    }
-    LaunchedEffect(host,workoutId) {
+    suspend fun reloadSource() {
+        sourceLookupComplete=false
+        sourceRead=null
         sourceRead=try {
             withContext(Dispatchers.IO){host.reviewMeasuredAuthoringSource()}
         } catch(cancelled:CancellationException) {
@@ -117,12 +122,39 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         } catch(_:Exception) {
             null
         }
+        sourceLookupComplete=true
+    }
+    suspend fun reload() {
+        lookupComplete=false
+        storedLookup=null
+        // New authoring requires an EXPLICIT NOT_ISSUED receipt. A corrupt,
+        // unauthorized or unreadable store must not become a new session,
+        // even if the UI created the workout ID a moment ago.
+        val read=try {
+            withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            null
+        }
+        storedLookup=read
+        val verified=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
+        stored=verified
+        if(verified!=null)expectsExisting=true
+        lookupComplete=true
+    }
+    LaunchedEffect(host,workoutId) {
+        reloadSource()
         reload()
     }
     BackHandler(enabled=!busy){onClose()}
     val entryState=NativeMeasuredWorkoutEntryPolicy.resolve(
-        expectsExisting,lookupComplete,stored!=null)
+        expectsExisting,lookupComplete,stored!=null,
+        (storedLookup as? NativeMeasuredWorkoutStoreResult.Rejected)
+            ?.reason==NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
     val source=(sourceRead as? NativeAuthoringSourceRead.Found)?.source
+    val sourceState=NativeMeasuredSourcePolicy.resolve(
+        sourceLookupComplete,source!=null && source.setup.reviewed!=null)
     val setup=source?.setup?.reviewed
     val gym=setup?.gym
 
@@ -206,18 +238,21 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 style=MaterialTheme.typography.bodyMedium)
             LinearProgressIndicator(Modifier.fillMaxWidth())
         } else if(entryState==NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED) {
-            Text("This workout's saved journal could not be verified. "+
-                "The app will not create a replacement under its ID or "+
-                "claim that unsaved sets were recorded.",
+            Text("The measured workout store could not be verified. "+
+                "Only an explicit empty-store result allows starting a new "+
+                "session; saved or unreadable sessions are never replaced.",
                 color=MaterialTheme.colorScheme.error,
                 style=MaterialTheme.typography.bodyMedium)
             Button(enabled=!busy,modifier=Modifier.fillMaxWidth(),
                 onClick={
                     busy=true
                     scope.launch {
-                        try {reload()} finally {busy=false}
+                        try {
+                            reloadSource()
+                            reload()
+                        } finally {busy=false}
                     }
-                }){Text("Retry saved workout")}
+                }){Text("Retry saved workout storage")}
             OutlinedButton(enabled=!busy,modifier=Modifier.fillMaxWidth(),
                 onClick=onClose){Text("Return to Train")}
         } else if(entryState==NativeMeasuredWorkoutEntryState.AUTHORING) {
@@ -226,9 +261,10 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 "never guessed or converted into automatic PRs.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            when(sourceRead) {
-                null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                is NativeAuthoringSourceRead.Found -> {
+            when(sourceState) {
+                NativeMeasuredSourceState.VERIFYING ->
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                NativeMeasuredSourceState.READY -> {
                     if(options.isEmpty())Text("No measured movement is currently "+
                         "supported by your verified gym and training setup.",
                         color=MaterialTheme.colorScheme.error)
@@ -419,6 +455,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                         review=result as? NativeMeasuredConsentResult.Preview
                                         if(result is NativeMeasuredConsentResult.Rejected)
                                             message="Review refused: "+result.reason.name
+                                    } catch(cancelled:CancellationException) {
+                                        throw cancelled
                                     } catch(_:Exception) {
                                         message="Measured source review unavailable."
                                     } finally{busy=false}
@@ -440,9 +478,25 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                else -> Text("Current athlete and gym could not be verified. "+
-                    "Review your saved native setup before creating a session.",
-                    color=MaterialTheme.colorScheme.error)
+                NativeMeasuredSourceState.RECOVERY_REQUIRED -> {
+                    Text("The current athlete, gym or authoring source could "+
+                        "not be verified. No new measured workout was approved "+
+                        "and no saved session was changed.",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodyMedium)
+                    Button(enabled=!busy,onClick={
+                        busy=true
+                        scope.launch {
+                            try {reloadSource()} finally {busy=false}
+                        }
+                    },modifier=Modifier.fillMaxWidth()) {
+                        Text("Retry athlete and gym verification")
+                    }
+                    OutlinedButton(enabled=!busy,onClick=onClose,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Return to Train")
+                    }
+                }
             }
         } else {
             val current=checkNotNull(stored)
@@ -569,6 +623,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                         message="Set was refused or changed. "+
                                             "The latest saved journal was reloaded."
                                     }
+                                } catch(cancelled:CancellationException) {
+                                    throw cancelled
                                 } catch(_:Exception) {
                                     reload()
                                     message="Set update unverified; no save claimed."
@@ -658,6 +714,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 lookupComplete=true
                             } else message="Approval or issuance was refused. "+
                                 "No measured workout is reported open."
+                        } catch(cancelled:CancellationException) {
+                            throw cancelled
                         } catch(_:Exception) {
                             message="Measured issuance could not be verified."
                         } finally{busy=false}
@@ -696,6 +754,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                             message="Finish was not verified. Your saved sets "+
                                 "have not been reported completed."
                         }
+                    } catch(cancelled:CancellationException) {
+                        throw cancelled
                     } catch(_:Exception) {
                         reload()
                         message="Finish could not be verified. Retry after recovery."

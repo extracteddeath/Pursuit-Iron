@@ -30,6 +30,29 @@ assert.ok(landing.includes('if(measured || approvedMeasured)'));
 assert.ok(!landing.includes('host.issueMeasuredWorkout(') &&
   !landing.includes('host.confirmMeasuredWorkoutConsent('),
   'Cold launch must not issue or confirm a measured workout without a tap');
+// A missing measured parent is not necessarily an available new ID.
+// Native storage must EXPLICITLY return NOT_ISSUED, and the source loader
+// must terminate on failure with a retry instead of spinning forever.
+const measured=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMeasuredWorkoutScreen.kt');
+const measuredPolicyTests=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeMeasuredWorkoutEntryPolicyTest.kt');
+for(const token of [
+  'NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED',
+  'storedLookup=read',
+  'verifiedNotIssued:Boolean',
+  'NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED',
+  'NativeMeasuredSourcePolicy.resolve(',
+  'sourceLookupComplete=true',
+  'Retry saved workout storage',
+  'Retry athlete and gym verification',
+  'Return to Train'
+])assert.ok(measured.includes(token),'Measured startup must fail closed: '+token);
+assert.ok(measuredPolicyTests.includes(
+  'onlyExplicitEmptyDiskReceiptCanAuthorizeFreshAuthoring'));
+assert.ok(measuredPolicyTests.includes(
+  'authoringSourceRequiresCompletedVerifiedAthleteGymRead'));
+assert.doesNotMatch(measured,/null -> LinearProgressIndicator\(Modifier\.fillMaxWidth\(\)\)/,
+  'A failed source read must not present a never-ending loading state');
+
 const navigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationState.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 const csvExport=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinVerifiedHistoryCsvExport.kt');

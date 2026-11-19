@@ -35,6 +35,25 @@ sealed interface NativeMeasuredConsentResult {
         NativeMeasuredConsentResult
 }
 
+/** Reopenable athlete confirmation, not an issued working-set journal. */
+data class NativeMeasuredConfirmedConsent(
+    val workoutId:String,
+    val exerciseIds:List<String>,
+    val plannedSets:Int
+)
+
+enum class NativeMeasuredConsentInventoryRefusal {
+    INVALID_OWNER, NOT_AUTHORIZED, SOURCE_UNAVAILABLE, HISTORY_NOT_READY,
+    CORRUPT_RECORD
+}
+
+sealed interface NativeMeasuredConsentInventoryResult {
+    data class Ready(val confirmed:List<NativeMeasuredConfirmedConsent>):
+        NativeMeasuredConsentInventoryResult
+    data class Rejected(val reason:NativeMeasuredConsentInventoryRefusal):
+        NativeMeasuredConsentInventoryResult
+}
+
 /**
  * Independent, owner-fenced source for typed measured workouts.
  *
@@ -293,6 +312,85 @@ class NativeMeasuredWorkoutConsentFileStore(
                         record.approvalRevision),false)
             }
         }.getOrElse{reject(NativeMeasuredConsentRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+
+    /**
+     * Find athlete-confirmed sessions that survived a crash BEFORE issuance.
+     * Only the immutable zero-event consent is listed. A live source, History,
+     * equipment and absence of a competing journal must ALL still match.
+     * Issuance subsequently rechecks the exact consent under the owner lock.
+     * Scanning is read-only; malformed archives block the entire inventory.
+     */
+    fun reviewConfirmedUnissued(owner:String):NativeMeasuredConsentInventoryResult {
+        if(!id.matches(owner))
+            return NativeMeasuredConsentInventoryResult.Rejected(
+                NativeMeasuredConsentInventoryRefusal.INVALID_OWNER)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                val signed=active(owner)
+                    ?:return@withOwnerTransaction NativeMeasuredConsentInventoryResult.Rejected(
+                        NativeMeasuredConsentInventoryRefusal.NOT_AUTHORIZED)
+                val current=source(owner,signed.athleteId)
+                    ?:return@withOwnerTransaction NativeMeasuredConsentInventoryResult.Rejected(
+                        NativeMeasuredConsentInventoryRefusal.SOURCE_UNAVAILABLE)
+                val ledger=(history.open(owner,signed.athleteId) as?
+                    NativeHistoryLedgerResult.Durable)?.ledger
+                    ?:return@withOwnerTransaction NativeMeasuredConsentInventoryResult.Rejected(
+                        NativeMeasuredConsentInventoryRefusal.HISTORY_NOT_READY)
+                if(!ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeMeasuredConsentInventoryResult.Rejected(
+                        NativeMeasuredConsentInventoryRefusal.HISTORY_NOT_READY)
+                if(Files.isSymbolicLink(root))
+                    throw IOException("unsafe measured consent inventory root")
+                if(!Files.exists(root))
+                    return@withOwnerTransaction NativeMeasuredConsentInventoryResult.Ready(
+                        emptyList())
+                if(!Files.isDirectory(root))
+                    throw IOException("invalid measured consent directory")
+                val records=Files.list(root).use{stream->
+                    stream.filter{
+                        val name=it.fileName.toString()
+                        name.startsWith("measured-consent-") && name.endsWith(".bin")
+                    }.sorted().limit(2049).toArray().map{it as Path}
+                }
+                if(records.size>2048)
+                    throw IOException("too many measured consent records")
+                val outstanding=records.mapNotNull{file->
+                    if(Files.isSymbolicLink(file) || !Files.isRegularFile(file) ||
+                        Files.size(file) !in 44L..maxBytes.toLong())
+                        throw IOException("unsafe measured consent")
+                    val bytes=Files.readAllBytes(file)
+                    val hinted=NativeMeasuredWorkoutParentCodec.storedIdentity(bytes)
+                    val saved=NativeMeasuredWorkoutParentCodec.decode(
+                        bytes,hinted.first,hinted.second)
+                    val approved=saved.journal.approvedPlan
+                    if(file!=path(saved.ownerKey,approved.workoutId) ||
+                        saved.journal.revision!=0L ||
+                        saved.journal.receipts.isNotEmpty() ||
+                        saved.journal.finishedByEventId!=null ||
+                        saved.approvalRevision!=approved.gymRevision)
+                        throw IOException("invalid or misnamed measured consent")
+                    if(saved.ownerKey!=owner ||
+                        saved.athleteId!=signed.athleteId)
+                        null
+                    else if(saved.approvalRevision!=current.revision ||
+                        !validated(approved,current) ||
+                        available(owner,signed.athleteId,approved.workoutId)!=null)
+                        // Expired source or already-issued/finished session:
+                        // never present it as an eligible recovery grant.
+                        null
+                    else NativeMeasuredConfirmedConsent(approved.workoutId,
+                        approved.sets.map{it.exerciseId}.distinct(),approved.sets.size)
+                }
+                if(active(owner)!=signed)
+                    return@withOwnerTransaction NativeMeasuredConsentInventoryResult.Rejected(
+                        NativeMeasuredConsentInventoryRefusal.NOT_AUTHORIZED)
+                NativeMeasuredConsentInventoryResult.Ready(
+                    outstanding.sortedBy{it.workoutId})
+            }
+        }.getOrElse{NativeMeasuredConsentInventoryResult.Rejected(
+            NativeMeasuredConsentInventoryRefusal.CORRUPT_RECORD)}
     }
 
     /** Called only by the native measured parent issuer inside owner lock. */

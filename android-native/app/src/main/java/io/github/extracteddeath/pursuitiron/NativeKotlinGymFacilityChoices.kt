@@ -88,7 +88,14 @@ internal val kotlinGymFacilityGroups=listOf(
         "supported-neck-lateral" to "Supported lateral neck-loading setup",
         "pushup-handles" to "Push-up handles",
         "secure-doorway-anchor" to "Secure doorway exercise anchor",
-        "stability-ball" to "Stability ball"))
+        "stability-ball" to "Stability ball")),
+    KotlinGymFacilityGroup("Measured-workout fixtures",listOf(
+        "pinchable-plates" to "Pinchable plates",
+        "stable-copenhagen-support" to "Stable Copenhagen plank support",
+        "confirmed-l-sit-support" to "Stable L-sit support",
+        "secure-plank-load-placement" to "Secure weighted-plank setup",
+        "secured-hang-towel" to "Secured hanging towel",
+        "verified-band-pushup-setup" to "Verified banded push-up setup"))
 )
 
 internal fun kotlinGymFacilityLabel(id:String):String =

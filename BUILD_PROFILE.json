@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 75,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1018-rb4ea442e18edd2df",
-  "uiMilestone": "Build 1018 · Strength transition continuity and accessible Machine A/B history"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-rafbf22fb52951155",
+  "uiMilestone": "Build 1019 · Flush Plan week picker and clearer workout feedback"
 }

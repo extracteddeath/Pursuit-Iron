@@ -61,7 +61,8 @@ console.log(`PASS 2 refereed: 0 of ${refereed.reduce((n, p) => n + (p ? shown(p)
 let untouched = 0;
 // (The session fill reads the same displayed clock, so a plan it changed differs between the control, built with
 // no clock, and the refereed build for a reason that is not the referee: those are left to the fill's own gate.)
-const filled = program => { const fill = program.nextEngine.sessionFill; return !!(fill?.sets?.length || fill?.added?.length); };
+// The region floors (withRegionFloors) read it too and need it to be kept.
+const filled = program => { const fill = program.nextEngine.sessionFill; return !!(fill?.sets?.length || fill?.added?.length || program.nextEngine.regionFloor); };
 unrefereed.forEach((program, i) => { if (!program || overCount(program, LIMIT[configs[i].session]) || filled(program) || filled(refereed[i])) return;
     assert.deepEqual(refereed[i].nextWeekPrescriptions, program.nextWeekPrescriptions, configs[i].name + ': a fitting plan is not rebuilt');
     assert.deepEqual(refereed[i].days.map(d => d.exercises), program.days.map(d => d.exercises));

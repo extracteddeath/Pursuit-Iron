@@ -18,7 +18,7 @@ import { STRENGTH_STRUCTURES } from './config.js';
 import { functionalCoverageUseKeys } from './functional-coverage.js';
 import { assessWeeklyRecovery } from './weekly-recovery.js';
 import { exerciseRedundancyPenalty, exerciseSetupInefficiencyPenalty } from './exercise-selection-intelligence.js';
-import { sessionBandFor, shellSessionMinutes } from './shell-session-clock.js';
+import { sessionBandFor, shellSessionMinutes, shellSessionOvershoot } from './shell-session-clock.js';
 
 const EPS = .001;
 const STRENGTH = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
@@ -1501,7 +1501,39 @@ export function holdWeeksToDisplayedLimit(program, legacyExercises = [], maxMinu
 /** `extend`: a new plan (a standalone program or a cycle's entry block) may also take a lift on a short day.
  *  Later cycle blocks keep the roster they were given. `fill: false` returns the plan as generated (the control
  *  the fill's gate measures against). */
-export function finalizeGeneratedShellVolume(program, legacyExercises = [], { extend = false, fill = true, focus = null } = {}) {
+export function finalizeGeneratedShellVolume(program, legacyExercises = [], options = {}) {
+    const finished = finalizeGeneratedShellVolumeSets(program, legacyExercises, options);
+    return options.fill === false ? finished : withRegionFloors(finished, legacyExercises, { preserveRoster: !options.extend });
+}
+/* A new plan meets every region's minimum where it can. The engine's own audit works on whole muscles (back), and a
+   plan can pass it while a region the app reports separately (lats, rear delts) sits under its floor: 148 of 1,050
+   new plans did, lats most often at 90-120 minutes. The saved-plan repair (repairShellVolume: sets on existing lifts
+   first, then reallocation, then one compatible lift, every step against the complete engine audit) now runs when a
+   plan is finished, kept only when it leaves fewer regions short, no week gains an engine finding and no day passes
+   the displayed session limit (the repair itself watches the engine clock). Later cycle blocks keep their roster. */
+function withRegionFloors(program, legacyExercises, { preserveRoster }) {
+    if (!program?.nextEngine?.program || program.config?.percentScheme || STRENGTH_STRUCTURES.has(program.config?.split)) return program;
+    const before = auditShellVolume(program, legacyExercises);
+    const short = audit => audit.issues.filter(issue => issue.status === 'under');
+    if (before.missing || !short(before).length) return program;
+    let repaired;
+    try { repaired = repairShellVolume(program, legacyExercises, { preserveRoster }); } catch { return program; }
+    if (!repaired?.changed || repaired.after.missing) return program;
+    const deficitOf = audit => short(audit).reduce((sum, issue) => sum + issue.need, 0);
+    if (short(repaired.after).length > short(before).length || deficitOf(repaired.after) >= deficitOf(before) - EPS) return program;
+    const max = sessionBandFor(program.config).maxMinutes;
+    const shownBefore = shellSessionOvershoot(program, max), shownAfter = shellSessionOvershoot(repaired.program, max);
+    // Without the displayed clock the limit cannot be checked, so the plan is left as built.
+    if (!shownAfter || shownAfter.some((minutes, i) => minutes > Math.max(0, shownBefore?.[i] ?? 0))) return program;
+    const baseline = weeklyAuditCounts(program, legacyExercises);
+    if (weeklyAuditCounts(repaired.program, legacyExercises).some((week, wi) => regressedCounts(week, baseline[wi] ?? {}))) return program;
+    const rosterChanged = repaired.program.days.some((day, di) => day.exercises.length !== program.days[di]?.exercises.length);
+    const kept = rosterChanged ? asSavedEngineSource(repaired.program) : repaired.program;
+    return { ...kept, nextEngine: { ...kept.nextEngine, ...(program.nextEngine.sessionFill ? { sessionFill: program.nextEngine.sessionFill } : {}),
+        regionFloor: { before: short(before).map(issue => ({ region: issue.region, actual: issue.v, minimum: issue.mev })),
+            remaining: short(repaired.after).map(issue => ({ region: issue.region, actual: issue.v, minimum: issue.mev })) } } };
+}
+function finalizeGeneratedShellVolumeSets(program, legacyExercises = [], { extend = false, fill = true, focus = null } = {}) {
     if (!program?.nextEngine?.program || !program.nextEngine.request) return program;
     const finish = (start, fill, skipDayIds = null) => {
         const result = reconcileShellWeekDose(start.program, legacyExercises);

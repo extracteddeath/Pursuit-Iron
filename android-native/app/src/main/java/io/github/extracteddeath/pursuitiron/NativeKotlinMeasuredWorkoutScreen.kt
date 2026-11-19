@@ -455,6 +455,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                         review=result as? NativeMeasuredConsentResult.Preview
                                         if(result is NativeMeasuredConsentResult.Rejected)
                                             message="Review refused: "+result.reason.name
+                                    } catch(cancelled:CancellationException) {
+                                        throw cancelled
                                     } catch(_:Exception) {
                                         message="Measured source review unavailable."
                                     } finally{busy=false}
@@ -621,6 +623,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                         message="Set was refused or changed. "+
                                             "The latest saved journal was reloaded."
                                     }
+                                } catch(cancelled:CancellationException) {
+                                    throw cancelled
                                 } catch(_:Exception) {
                                     reload()
                                     message="Set update unverified; no save claimed."
@@ -710,6 +714,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 lookupComplete=true
                             } else message="Approval or issuance was refused. "+
                                 "No measured workout is reported open."
+                        } catch(cancelled:CancellationException) {
+                            throw cancelled
                         } catch(_:Exception) {
                             message="Measured issuance could not be verified."
                         } finally{busy=false}
@@ -748,6 +754,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                             message="Finish was not verified. Your saved sets "+
                                 "have not been reported completed."
                         }
+                    } catch(cancelled:CancellationException) {
+                        throw cancelled
                     } catch(_:Exception) {
                         reload()
                         message="Finish could not be verified. Retry after recovery."

@@ -37,8 +37,16 @@ export function reconcileRestoredLiveAdjustments(sets) {
     const out = sets.map((row, index) => {
         if (!untouched(row) || authoredIntent(row) || !row.retuneFrom || !row.liveAdjustment) return row;
         const adjustment = row.liveAdjustment;
+        const topBackoff = adjustment.action === 'set_backoffs_from_top';
+        // If a later manual edit moved both load and target but the UI
+        // retained old automatic metadata, never overwrite that edit.
+        // Independent replay diagnostics will still flag its stale origin.
+        if (topBackoff && (
+            historyNumber(row.weight) !== historyNumber(adjustment.toLoad) ||
+            historyNumber(row.target?.w) !== historyNumber(adjustment.toLoad)))
+            return row;
         const count = ['reduce_pending_load', 'suggest_pending_load_reduction'].includes(adjustment.action) ? 2
-            : adjustment.action === 'cap_pending_reps' ? 1 : null;
+            : adjustment.action === 'cap_pending_reps' || adjustment.action === 'set_backoffs_from_top' ? 1 : null;
         if (count === null) return row; // Unknown protocols are not ours to rewrite.
         const sources = adjustment.sourceIndices;
         const valid = adjustment.pendingIndex === index
@@ -50,8 +58,22 @@ export function reconcileRestoredLiveAdjustments(sets) {
                 return Number.isInteger(sourceIndex) && sourceIndex >= 0 && sourceIndex < index
                     && source?.done && !source.warm && !source.sub && !source.added && !authoredIntent(source)
                     && historyNumber(source.weight) > 0 && Number.isInteger(reps) && reps > 0
-                    && effort !== null && effort >= 0 && effort <= 10;
-            });
+                    // Back-off load depends on the LOGGED top-set weight,
+                    // not an RIR rating: optional RIR must not orphan a
+                    // valid explicitly selected top-set protocol on resume.
+                    && (topBackoff
+                        ? (effort === null || effort >= 0 && effort <= 10)
+                        : effort !== null && effort >= 0 && effort <= 10);
+            })
+            && (!topBackoff || (
+                sources[0] === sets.findIndex(set => set && !set.warm && !set.sub)
+                && historyNumber(sets[sources[0]]?.weight) === historyNumber(adjustment.fromLoad)
+                && historyNumber(row.weight) === historyNumber(adjustment.toLoad)
+                && historyNumber(row.target?.w) === historyNumber(adjustment.toLoad)
+                && historyNumber(adjustment.toLoad) > 0
+                && historyNumber(adjustment.toLoad) >= historyNumber(adjustment.fromLoad) * .8
+                && historyNumber(adjustment.toLoad) < historyNumber(adjustment.fromLoad)
+            ));
         if (valid) return row;
         changed = true;
         return restorePendingAdjustment(row);
@@ -64,7 +86,9 @@ export function rollbackLiveAutoregulation(sets, sourceIndex, action) {
     if (!Array.isArray(sets)) return sets;
     let changed = false;
     const result = sets.map(row => {
-        if (!untouched(row) || authoredIntent(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
+        const ours = untouched(row) || (row?.liveAdjustment?.action === 'set_backoffs_from_top' && automatic(row) && !row.done
+            && String(row.weight) === String(row.target?.w));
+        if (!ours || authoredIntent(row) || !row.liveAdjustment?.sourceIndices?.includes(sourceIndex) || !row.retuneFrom
             || action && row.liveAdjustment.action !== action) return row;
         changed = true;
         return restorePendingAdjustment(row);
@@ -169,7 +193,45 @@ function capPendingReps({ sets, sourceIndex, cell, context = {} }) {
     return { sets: result, decision };
 }
 
+/** Top set + back-offs: once the top set (the first working set) is logged, untouched or still-empty
+ * back-offs are set to about 90% of it, snapped to a buildable load. Un-logging the top set restores them;
+ * a back-off the lifter typed is never touched. This is the method's own structure, not earned progression. */
+function applyTopSetBackoffs({ sets, sourceIndex, snapLoad }) {
+    if (!Array.isArray(sets) || !Number.isInteger(sourceIndex)) return hold(sets, 'invalid_live_scope');
+    const first = sets.findIndex(row => row && !row.warm && !row.sub);
+    if (sourceIndex !== first) return hold(sets, 'not_the_top_set');
+    const baseline = rollbackLiveAutoregulation(sets, sourceIndex, 'set_backoffs_from_top');
+    const top = baseline[sourceIndex];
+    if (!top?.done || authoredIntent(top) ||
+        !Number.isInteger(historyNumber(top.reps)) ||
+        historyNumber(top.reps) < 1)
+        return hold(baseline, 'no_new_working_observation');
+    const load = historyNumber(top.weight);
+    if (!(load > 0) || typeof snapLoad !== 'function') return hold(baseline, 'unknown_loadability');
+    const next = snapLoad(load * .9);
+    if (!Number.isFinite(next) || next <= 0 || next >= load ||
+        next < load * .8) return hold(baseline, 'no_loadable_backoff');
+    const decision = { schemaVersion: 1, action: 'set_backoffs_from_top', reasonCode: 'top_set_logged', sourceIndices: [sourceIndex],
+        fromLoad: load, toLoad: next, earnedProgression: false, confidence: 'high' };
+    const sourceObservations = [observedSnapshot(baseline, sourceIndex)];
+    const empty = row => automatic(row) && !row.done && (row.weight === '' || row.weight == null);
+    let changed = false;
+    const result = baseline.map((row, index) => {
+        if (index <= sourceIndex || !row || row.warm || row.sub || authoredIntent(row) || !(untouched(row) || empty(row))) return row;
+        if (String(row.weight) === String(next)) return row;
+        changed = true;
+        const before = historyNumber(row.weight);
+        return { ...row, weight: String(next), target: { ...row.target, w: next }, autoTuned: true,
+            hint: before > 0 && next > before ? 'up' : 'down',
+            liveAdjustment: { ...decision, pendingIndex: index, sourceObservations },
+            retuneSrc: sourceIndex,
+            retuneFrom: row.retuneFrom ?? { weight: row.weight, reps: row.reps, target: row.target, recoveryLimited: row.recoveryLimited } };
+    });
+    return changed ? { sets: result, decision } : hold(baseline, 'backoffs_already_set');
+}
+
 export function applyLiveAutoregulation(args) {
+    if (args?.cell?.progressionStyle === 'top' && !args.cell.percentageProtocol) return applyTopSetBackoffs(args);
     const reduced = applyLiveLoadReduction(args);
     if (reduced.decision.action === 'suggest_pending_load_reduction') return reduced;
     return capPendingReps({ ...args, sets: reduced.sets });
@@ -177,10 +239,15 @@ export function applyLiveAutoregulation(args) {
 
 /** UI copy reports what happened, rather than promising every rating changes the next set. */
 export function liveEffortFeedback(sets, sourceIndex) {
+    const pending = sets?.slice(sourceIndex + 1).find(row => row && !row.warm && !row.sub && !row.done);
+    const adjustment = pending?.liveAdjustment;
+    if (adjustment?.action === 'set_backoffs_from_top' &&
+        adjustment.sourceIndices?.includes(sourceIndex) &&
+        pending.weight === String(adjustment.toLoad) &&
+        String(pending.target?.w) === String(adjustment.toLoad))
+        return 'Back-off weights set from top set · review before lifting';
     if (sets?.[sourceIndex]?.actualRIR == null) return 'Optional · guides suggestions';
-    const pending = sets.slice(sourceIndex + 1).find(row => row && !row.warm && !row.sub && !row.done);
     if (!pending) return 'Saved for future workouts';
-    const adjustment = pending.liveAdjustment;
     if (untouched(pending) && adjustment?.sourceIndices?.includes(sourceIndex)) {
         if (adjustment.action === 'cap_pending_reps') return 'Next set reps adjusted';
         if (adjustment.action === 'suggest_pending_load_reduction') return 'Lower load suggested · not applied';

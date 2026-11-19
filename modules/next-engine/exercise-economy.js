@@ -3,7 +3,14 @@ import { functionalCoverageBiases } from './functional-coverage.js';
 import { exerciseSelectionRelationship } from './exercise-selection-intelligence.js';
 const STRENGTH_ROLES = new Set(['primary_strength', 'secondary_strength', 'strength_support']);
 const SPECIALIZATION_PRIORITIES = new Set(['high', 'specialization', 'primary']);
+const economyTextCache = new WeakMap();
 function economyText(def) {
+    // Pure in the definition (built-ins are immutable); cached because overlap checks ask for it per pair.
+    let t = economyTextCache.get(def);
+    if (t === undefined) economyTextCache.set(def, t = economyTextRaw(def));
+    return t;
+}
+function economyTextRaw(def) {
     return `${def.id} ${def.name} ${def.legacyPattern ?? ''} ${def.legacySubregion ?? ''} ${def.legacyPart ?? ''}`.toLowerCase();
 }
 function inferredUnilateral(def) {
@@ -156,7 +163,17 @@ export function exerciseEconomyCluster(def) {
             return `${def.movementFamily}_${primaryBias(def)}_${kind}`;
     }
 }
+const semanticSlotCache = new WeakMap();
 function sameSemanticSlot(a, b) {
+    // Pure in the two definitions: built-ins are immutable and custom ones are fresh copies per catalog.
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return sameSemanticSlotRaw(a, b);
+    let row = semanticSlotCache.get(a);
+    if (!row) semanticSlotCache.set(a, row = new WeakMap());
+    let hit = row.get(b);
+    if (hit === undefined) row.set(b, hit = sameSemanticSlotRaw(a, b));
+    return hit;
+}
+function sameSemanticSlotRaw(a, b) {
     const clusterA = exerciseEconomyCluster(a), clusterB = exerciseEconomyCluster(b);
     if (clusterA && clusterA === clusterB && weightedMuscleSimilarity(a, b) >= .67)
         return true;

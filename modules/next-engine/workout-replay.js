@@ -164,6 +164,38 @@ export function auditWorkoutProgressionReplay(record) {
                 issues.push({ code:'invalid_live_load_advice',
                     workingSetIndex:row.workingSetIndex });
         }
+        // An explicitly selected top-set scheme may prescribe lighter
+        // back-offs after set one is completed. That is a programmed load,
+        // not a fatigue downgrade. Require actual top-set evidence AND a
+        // snapped, coherent per-row target; an unrelated automatic weight
+        // drop must never be laundered as a back-off.
+        let verifiedTopBackoff = false;
+        if (adjustment?.action === 'set_backoffs_from_top') {
+            const sourceIndex = adjustment.sourceIndices?.[0];
+            const source = record.rows[sourceIndex];
+            const acceptable = record.progressionStyle === 'top'
+                && adjustment.sourceIndices.length === 1
+                && source?.rowIndex === sourceIndex
+                && source.kind === 'work' && source.workingSetIndex === 0
+                && source.done && sourceIndex < row.rowIndex
+                && source.load > 0 && source.reps > 0
+                && adjustment.fromLoad === source.load
+                && adjustment.toLoad === row.load
+                && adjustment.toLoad === row.target.load
+                && adjustment.toLoad >= source.load * .8
+                && adjustment.toLoad < source.load
+                && row.retuneFrom?.load != null;
+            verifiedTopBackoff = acceptable && Array.isArray(adjustment.sourceObservations)
+                && adjustment.sourceObservations.length === 1
+                && adjustment.sourceObservations[0].load === source.load
+                && adjustment.sourceObservations[0].reps === source.reps
+                && adjustment.sourceObservations[0].actualRIR === source.actualRir
+                && adjustment.pendingIndex === row.rowIndex;
+            if (!verifiedTopBackoff) issues.push({
+                code:'invalid_top_backoff_adjustment',
+                workingSetIndex:row.workingSetIndex
+            });
+        }
         // No current engine path authorizes an automatic pending load cut.
         // Legacy adjustment labels are evidence of an action, not user consent.
         if (adjustment?.action === 'reduce_pending_load')
@@ -175,7 +207,7 @@ export function auditWorkoutProgressionReplay(record) {
         if (pending && row.target.reps != null && row.reps !== row.target.reps)
             issues.push({ code:'unexplained_pending_reps', workingSetIndex:row.workingSetIndex });
         if (row.trace && row.target.load != null && row.trace.target.load !== row.target.load
-            && row.readinessFactor == null)
+            && row.readinessFactor == null && !verifiedTopBackoff)
             issues.push({ code:'target_trace_load_mismatch', workingSetIndex:row.workingSetIndex });
         if (row.trace && record.progressionStyle === 'double'
             && ['add_reps','hold','hold_load'].includes(row.trace.evaluation.action)

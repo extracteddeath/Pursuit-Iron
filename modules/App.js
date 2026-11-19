@@ -22,6 +22,7 @@ import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
+import { CycleStrengthDoseSummary } from './cycle-strength-dose-react.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput } from './workout-session-controls.js';
 import { latestMachineSet, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
@@ -86,7 +87,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1018';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1019';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -16698,7 +16699,7 @@ async function runSelfTest(saved = [], history = [], perf = {}, options = {}) {
     const cycleRegressionCases = [
         { label: "adaptive arm-priority", adaptBetweenBlocks: true, cfg: { name: "cycle arm priority", experience: "intermediate", goal: "both", split: "full_body", days: 5, session: "s90", weeks: 4, equipment: ALL, focus: { biceps: 2, triceps: 2, forearms: 1 }, focusList: ["biceps", "triceps", "forearms"], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null, volumeApproach: "standard", noSupersets: true, noBodyweight: true } },
         { label: "adaptive minimalist arm-priority", adaptBetweenBlocks: true, cfg: { name: "cycle arm minimalist", experience: "intermediate", goal: "both", split: "ulppl", days: 5, session: "s90", weeks: 4, equipment: ALL, focus: { biceps: 1, forearms: 1 }, focusList: ["biceps", "forearms"], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null, volumeApproach: "minimalist", noSupersets: true, noBodyweight: true } },
-        { label: "locked short Strength retarget", adaptBetweenBlocks: false, cfg: { name: "cycle locked short", experience: "intermediate", goal: "both", split: "ppl", days: 5, session: "s40", weeks: 4, equipment: ALL, focus: {}, focusList: [], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null, volumeApproach: "standard", noSupersets: true, noBodyweight: false } }
+        { label: "locked short Strength retarget", adaptBetweenBlocks: false, cfg: { name: "cycle locked short", experience: "intermediate", goal: "both", split: "ppl", days: 6, session: "s40", weeks: 4, equipment: ALL, focus: {}, focusList: [], reduce: [], progression: "auto", deload: true, barbellCap: null, percentScheme: null, volumeApproach: "standard", noSupersets: true, noBodyweight: false } }
     ];
     for (const test of cycleRegressionCases) {
         try {
@@ -18073,6 +18074,7 @@ function CycleDoseTransition({ change, source = 'saved' }) {
             "Credited sets include muscle contributions from compound lifts. Changes are not the same as strength-phase target coverage; planned workouts may adapt when the block begins." })
     ] });
 }
+
 // One source of truth for saved work-week training quality. These numbers
 // describe executable prescriptions at generation time, never completed work.
 function CycleWeekOutlook({ program, week, provisional = false }) {
@@ -18151,6 +18153,7 @@ function CycleBlockPreview({ program, previousProgram = null, initialWeek = 1, i
                         _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
                 })] }, day.id))
         ] }),
+        _jsx(CycleStrengthDoseSummary, { program }),
         _jsxs("details", { className: "wpb-cycle-preview-analysis", children: [
             _jsx("summary", { className: "wpb-cycle-preview-analysis-summary", children: "Training analysis & volume" }),
             _jsxs("div", { className: "wpb-cycle-preview-analysis-body", children: [
@@ -18210,6 +18213,7 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
                         _jsx("dd", { children: doseChange ? `${doseChange.previousWeeklySets} → ${doseChange.currentWeeklySets}` : `${changes.before.sets} → ${changes.after.sets}` }),
                         _jsx("dt", { children: "Rep ranges" }), _jsx("dd", { children: `${changes.before.repRange} → ${changes.after.repRange}` })] }),
                     _jsx(CycleDoseTransition, { change: doseChange || originalDoseChange, source: doseChange ? 'saved' : 'generation' }),
+                    _jsx(CycleStrengthDoseSummary, { program: next }),
                     _jsx("p", { className: "wpb-cycle-card-note", children: "Planned targets may adapt from your completed workouts." })] }),
                 _jsxs("section", { className: "wpb-cycle-info-card wpb-cycle-schedule", "aria-label": "Cycle schedule", children: [
                     _jsx("div", { className: "wpb-cycle-card-eyebrow", children: "Your schedule" }),

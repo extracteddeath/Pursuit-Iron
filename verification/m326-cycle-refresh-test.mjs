@@ -107,6 +107,20 @@ console.log('M326 converted eight-exercise custom→strength refreshed exercise 
         generated:highCounts,split:highStrength.config.split}));
 assert.ok(highCounts.reduce((n,v)=>n+v,0)>=12,
     'An eight-exercise custom source cannot regenerate a three-exercise-per-day strength future');
+// The old weekly-total check could pass 3/5/4 after an 8/8/8
+// custom Full Body source. When the same three Full Body days survive,
+// require each actual generated day to retain >= half the old menu.
+const sameFullBody=highStrength.nextEngine.program.sessions.length===highVariety.days.length &&
+    highStrength.config.split==='full_body';
+assert.equal(sameFullBody,true,
+    'This regression deliberately uses the same Full Body split and scheduled day count; engine session intents may use internal names');
+assert.ok(highCounts.every((count,index)=>count>=Math.ceil(
+    new Set(highVariety.days[index].exercises).size/2)),
+    'Each unchanged Full Body day must retain >= half the authored movement menu: 8→3 cannot hide in the weekly total: '+JSON.stringify(highCounts));
+assert.equal(reviewConvertedStrengthExerciseCoverage(
+    authoredCycleExitSnapshot(highVariety,EXERCISES),
+    highStrength.nextEngine.program,highVariety.days),null,
+    'The actual saved custom→Strength preview must satisfy the same day-by-day exercise guard as initial cycle conversion');
 assert.ok(highStrength.days.every((day,i)=>day.exercises.every(id=>canPerform(EX_BY_ID[id]))),
     'Refreshed strength roster must remain compatible with selected equipment');
 assert.equal(JSON.stringify({highSaved,cycle,history}),highFrozen,

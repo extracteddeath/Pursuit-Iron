@@ -234,10 +234,14 @@ try{
   const liveDetailDose=originalDetailDose
     ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
   const expectedDose=liveDetailDose || originalDetailDose;
-  const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({dose:n.classList.contains('wpb-cycle-dose-detail'),open:n.open})));
-  assert.ok(disclosures.every(n=>n.dose&&!n.open),'existing top-level cycle facts stay expanded; dose is opt-in');
+  const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({
+    dose:n.classList.contains('wpb-cycle-dose-detail'),
+    strength:n.classList.contains('wpb-strength-dose-review'),open:n.open
+  })));
+  assert.ok(disclosures.every(n=>(n.dose||n.strength)&&!n.open),
+    'Top-level cycle facts stay visible; optional original-dose and Strength limits are closed until opened');
   if(expectedDose){
-    assert.equal(disclosures.length,1,'Up next shows one compact dose detail');
+    assert.equal(disclosures.filter(n=>n.dose).length,1,'Up next keeps one saved-week volume change disclosure');
     await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
     const visible=await page.$eval('.wpb-cycle-detail .wpb-cycle-dose-detail',n=>({
       open:n.open,regions:n.querySelectorAll('.wpb-cycle-dose-row').length,
@@ -249,7 +253,7 @@ try{
     assert.ok(visible.text.includes(liveDetailDose ? 'Saved prescriptions' : 'Original generation snapshot'),
       'Cycle Detail must identify live dose or explicitly disclose its historical fallback');
     await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
-  } else assert.equal(disclosures.length,0,'Older saved cycles do not invent missing regional data');
+  } else assert.equal(disclosures.filter(n=>n.dose).length,0,'Older saved cycles do not invent missing saved-week regional data');
   await page.waitForSelector('[aria-label="Next block changes"]');await page.waitForSelector('[aria-label="Cycle schedule"]');
   assert.equal(await page.$eval('.wpb-cycle-overview',n=>parseFloat(getComputedStyle(n).borderRadius)>=18),true);
   await page.screenshot({path:`/tmp/b890-cycle-detail-${width}.png`});

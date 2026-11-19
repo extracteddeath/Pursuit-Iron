@@ -143,7 +143,10 @@ function inferredLiftPriorities(request) {
 }
 const MUSCLE_SCALE = {
     chest: { minimum: 1, preferred: 1, upper: 1, direct: 0 },
-    back: { minimum: 1, preferred: 1, upper: 1, direct: 0 },
+    // Back is two regions (lats from vertical pulls, upper back from rows) under one ledger, and its common landmarks sit
+    // above chest's (MEV ~10 vs ~8, MAV ~18 vs ~16, MRV ~25 vs ~22). At 1, a strength block could not hold both regions:
+    // its back allowance went to lats and upper back fell from 10 to 3.6 sets.
+    back: { minimum: 1.15, preferred: 1.15, upper: 1.15, direct: 0 },
     quads: { minimum: 1, preferred: 1, upper: 1, direct: 0 },
     hamstrings: { minimum: .82, preferred: .88, upper: .92, direct: 0 },
     glutes: { minimum: .62, preferred: .72, upper: .8, direct: 0 },
@@ -190,7 +193,9 @@ export function normalizeRequest(request) {
         const day = token(raw.day);
         if (!VALID_DAYS.has(day))
             throw new Error(`Unsupported training day: ${raw.day ?? 'missing'}.`);
-        if (!Number.isFinite(raw.maxMinutes) || raw.maxMinutes < 20)
+        // The lifter's shortest choice is 20 minutes. A day's INTERNAL budget can sit below that once the
+        // displayed clock has refereed the plan (app-shell-adapter generateNextProgramForShell), never below 12.
+        if (!Number.isFinite(raw.maxMinutes) || raw.maxMinutes < 12)
             throw new Error('Each training day needs a valid time limit of at least 20 minutes.');
         if (raw.minMinutes !== undefined && (!Number.isFinite(raw.minMinutes) || raw.minMinutes < 0 || raw.minMinutes > raw.maxMinutes))
             throw new Error('Session minimum minutes must be a valid lower bound no greater than the session maximum.');

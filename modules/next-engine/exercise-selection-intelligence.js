@@ -207,7 +207,20 @@ export function exerciseKnowledgeNode(def) {
   return node;
 }
 
+// Built-in definitions are immutable, so a pair's relationship never changes: generating one program asks for the
+// same pairs thousands of times (ranking every split asks for them again). Cached per canonical pair, frozen.
+const relationshipCache = new WeakMap();
 export function exerciseSelectionRelationship(a, b) {
+  if (a && b && canonicalDefinitions.has(a) && canonicalDefinitions.has(b)) {
+    let row = relationshipCache.get(a);
+    if (!row) relationshipCache.set(a, row = new WeakMap());
+    let hit = row.get(b);
+    if (!hit) row.set(b, hit = Object.freeze(computeSelectionRelationship(a, b)));
+    return hit;
+  }
+  return computeSelectionRelationship(a, b);
+}
+function computeSelectionRelationship(a, b) {
   if (!a || !b) return { score: 0, nearDuplicate: false, stimulusSimilarity: 0, movementSimilarity: 0, functionalSimilarity: 0, setupAffinity: 0 };
   const na = exerciseKnowledgeNode(a);
   const nb = exerciseKnowledgeNode(b);

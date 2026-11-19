@@ -108,8 +108,10 @@ object StrengthExerciseMenuRecoveryDomain {
         if(catalog.size!=req.catalog.size)
             return reject(StrengthMenuRecoveryStatus.SOURCE_UNVERIFIED,
                 "Exercise IDs are ambiguous.")
-        val retainedAnywhere=target.days.flatMap{it.slots}
-            .map{it.exerciseId}.toSet()
+        // Restoration is DAY-SPECIFIC. A movement retained on Wednesday
+        // does not restore the lost Monday exposure. The existing exact
+        // whole-cycle reviewer must assess frequency, recovery, and weekly
+        // volume before an athlete can accept the proposal.
         val restored=mutableListOf<StrengthMenuRestoredExercise>()
         val futureDays=target.days.map{day->
             val dropped=difference.strengthDayExerciseChanges
@@ -124,7 +126,7 @@ object StrengthExerciseMenuRecoveryDomain {
             val additions=sourceDays[day.weekday]?.slots.orEmpty().filter{slot->
                 val spec=catalog[slot.exerciseId]
                 slot.exerciseId in dropped &&
-                    slot.exerciseId !in retainedAnywhere &&
+                    day.slots.none {it.exerciseId==slot.exerciseId} &&
                     visited.add(slot.exerciseId) &&
                     slot.role in setOf(ComposerRole.SECONDARY,ComposerRole.ACCESSORY) &&
                     spec!=null &&

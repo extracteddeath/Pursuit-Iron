@@ -183,20 +183,13 @@ internal fun NativeMeasuredExerciseSetEditor(
                     " · no invented resistance weight",
                     style=MaterialTheme.typography.bodySmall)
             if(previous!=null && !editing) {
-                val fact=when(previous.outcome) {
-                    MeasuredSetOutcome.SKIPPED->"Skipped"
-                    MeasuredSetOutcome.FAILED_ATTEMPT->"Failed attempt"
-                    MeasuredSetOutcome.COMPLETED->
-                        observed?.sides.orEmpty().joinToString(" · "){
-                            it.side.name.lowercase()+" "+it.amount+" "+
-                                when(definition.kind) {
-                                    MeasuredExerciseKind.HOLD_SECONDS->"sec"
-                                    MeasuredExerciseKind.CARRY_CENTIMETERS->"cm"
-                                    MeasuredExerciseKind.BANDED_REPETITIONS->"reps"
-                                }
-                        }
+                val review=MeasuredWorkoutResultReviewDomain.review(plan,journal)
+                Text("Saved: "+review.statusLabel,
+                    style=MaterialTheme.typography.bodyMedium)
+                review.actualSummary?.let { summary ->
+                    Text(summary,style=MaterialTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text("Saved: "+fact,style=MaterialTheme.typography.bodyMedium)
                 TextButton(enabled=!busy,onClick={editing=true}) {
                     Text("Edit saved result")
                 }

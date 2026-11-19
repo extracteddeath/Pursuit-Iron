@@ -60,4 +60,21 @@ const entry = (c) => { const i = c.blocks.findIndex((b, k) => k > 0 && b.nextEng
   if (mp) assert.equal(mp[1].nextEngine.strengthEntryDose, undefined, '3 a minimalist plan keeps the strength dose');
   console.log('PASS 3 idempotent; hypertrophy, unpaired and minimalist blocks untouched.'); }
 
+// 4. A new plan meets each region's minimum where it can (withRegionFloors): fewer regions short than the plan as
+//    filled, never a day past its limit, the engine audit passing, and some plans actually repaired.
+{ const { generateNextProgramForShell } = await import('../modules/next-engine/app-shell-adapter.js');
+  let repaired = 0, plans = 0, shortBefore = 0, shortAfter = 0;
+  for (const kit of [FULL, ['dumbbell', 'bench', 'pullup']]) for (const session of ['s40', 's90', 's120']) for (const days of [3, 5, 6]) for (const goal of ['hypertrophy', 'both']) for (const experience of ['beginner', 'intermediate']) {
+    let p; try { p = generateNextProgramForShell({ config: { name: 'floor', unit: 'kg', goal, experience, days, session, equipment: kit }, legacyExercises: EXERCISES, seed: 7, makeId: () => 'b1019f' }).program; } catch { continue; }
+    plans++;
+    const record = p.nextEngine.regionFloor; if (!record) continue;
+    repaired++; shortBefore += record.before.length; shortAfter += record.remaining.length;
+    assert.ok(record.remaining.length <= record.before.length, '4 fewer regions short: ' + JSON.stringify(record));
+    assert.equal(p.nextEngine.program.audit.result, 'pass', '4 engine audit');
+    const hi = SESSION_BOUNDS[session][1];
+    for (let w = 1; w <= weeksOf(p); w++) p.days.forEach(d => assert.ok(estimateMinutes(p, d, w) <= hi, `4 ${session} week ${w} inside ${hi} minutes`));
+  }
+  assert.ok(plans >= 50 && repaired >= 2, `4 ${repaired} of ${plans} plans repaired`);
+  console.log(`PASS 4 ${repaired} of ${plans} new plans had a region under its minimum: ${shortBefore} -> ${shortAfter} short regions, every day inside its limit.`); }
+
 console.log('PASS B1019 strength entry retention.');

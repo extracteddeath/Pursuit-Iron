@@ -29,7 +29,8 @@ if (rows[0].s === rows[1].s) {
     item.s.exercises.splice(item.s.exercises.indexOf(item.e), 1);
     destination.exercises.push(item.e); item.s = destination;
 }
-for (const { e } of rows.slice(0, 2)) { e.exerciseId = 'cs-db-row'; e.name = 'Chest-Supported Dumbbell Row'; e.sets = 2; }
+// One set each: with back dosed above chest (prescription MUSCLE_SCALE), two 2-set rows already reach upper-back MEV.
+for (const { e } of rows.slice(0, 2)) { e.exerciseId = 'cs-db-row'; e.name = 'Chest-Supported Dumbbell Row'; e.sets = 1; }
 engine.sessions.forEach(s => { s.estimatedMinutes = estimateSessionMinutes(s.exercises); });
 engine.events = createTrainingSetEvents(engine.sessions, built.request.customExercises);
 engine.muscleLedger = deriveMuscleLedger(engine.events); engine.audit = auditProgram(engine, built.request);

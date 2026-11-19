@@ -3,38 +3,58 @@ package io.github.extracteddeath.pursuitiron
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** No generated targets or unsaved actuals may be treated as a durable session. */
+/** Only verified owner/disk results may open any measured set editor. */
 class NativeMeasuredWorkoutEntryPolicyTest {
-    @Test fun freshSessionStartsOnlyAfterDiskLookupAndWithoutEarlierJournal() {
+    private fun resolve(
+        expected:Boolean=false,
+        complete:Boolean=true,
+        saved:Boolean=false,
+        notIssued:Boolean=false
+    )=NativeMeasuredWorkoutEntryPolicy.resolve(
+        expected,complete,saved,notIssued)
+
+    @Test fun onlyExplicitEmptyDiskReceiptCanAuthorizeFreshAuthoring() {
         assertEquals(NativeMeasuredWorkoutEntryState.VERIFYING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=false,lookupComplete=false,hasVerifiedJournal=false))
+            resolve(complete=false))
         assertEquals(NativeMeasuredWorkoutEntryState.AUTHORING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=false,lookupComplete=true,hasVerifiedJournal=false))
-        assertEquals(NativeMeasuredWorkoutEntryState.RECORDING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=false,lookupComplete=true,hasVerifiedJournal=true))
-    }
-
-    @Test fun savedSessionCannotBecomeNewEditorAfterMissingOrFailedRead() {
-        assertEquals(NativeMeasuredWorkoutEntryState.VERIFYING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=true,lookupComplete=false,hasVerifiedJournal=false))
+            resolve(notIssued=true))
+        // A failed I/O read, foreign owner, corrupt session or exception
+        // does not mean that a new workout ID is safe to issue.
         assertEquals(NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=true,lookupComplete=true,hasVerifiedJournal=false))
-        assertEquals(NativeMeasuredWorkoutEntryState.RECORDING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=true,lookupComplete=true,hasVerifiedJournal=true))
+            resolve())
+        assertEquals(NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED,
+            resolve(expected=false,complete=true,saved=false,
+                notIssued=false))
     }
 
-    @Test fun pendingReadIsNeverPermissionToRecordEvenIfOldSnapshotIsPresent() {
+    @Test fun savedSessionDoesNotBecomeBlankEditorEvenWithNotIssuedReceipt() {
         assertEquals(NativeMeasuredWorkoutEntryState.VERIFYING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=true,lookupComplete=false,hasVerifiedJournal=true))
+            resolve(expected=true,complete=false,notIssued=true))
+        assertEquals(NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED,
+            resolve(expected=true,complete=true,notIssued=true))
+        assertEquals(NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED,
+            resolve(expected=true,complete=true))
+        assertEquals(NativeMeasuredWorkoutEntryState.RECORDING,
+            resolve(expected=true,saved=true))
+    }
+
+    @Test fun durableJournalBeatsNewAuthoringAndUnverifiedCachedResult() {
+        assertEquals(NativeMeasuredWorkoutEntryState.RECORDING,
+            resolve(saved=true,notIssued=true))
         assertEquals(NativeMeasuredWorkoutEntryState.VERIFYING,
-            NativeMeasuredWorkoutEntryPolicy.resolve(
-                expectsExisting=false,lookupComplete=false,hasVerifiedJournal=true))
+            resolve(expected=true,complete=false,saved=true))
+        assertEquals(NativeMeasuredWorkoutEntryState.VERIFYING,
+            resolve(complete=false,saved=true,notIssued=true))
+    }
+
+    @Test fun authoringSourceRequiresCompletedVerifiedAthleteGymRead() {
+        assertEquals(NativeMeasuredSourceState.VERIFYING,
+            NativeMeasuredSourcePolicy.resolve(false,false))
+        assertEquals(NativeMeasuredSourceState.VERIFYING,
+            NativeMeasuredSourcePolicy.resolve(false,true))
+        assertEquals(NativeMeasuredSourceState.RECOVERY_REQUIRED,
+            NativeMeasuredSourcePolicy.resolve(true,false))
+        assertEquals(NativeMeasuredSourceState.READY,
+            NativeMeasuredSourcePolicy.resolve(true,true))
     }
 }

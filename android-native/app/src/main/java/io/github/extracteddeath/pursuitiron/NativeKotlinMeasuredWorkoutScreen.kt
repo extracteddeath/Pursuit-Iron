@@ -461,9 +461,10 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                             (definition?.displayName ?:set.exerciseId)+
                             " · $amount",
                             style=MaterialTheme.typography.bodyMedium)
+                        val approvedExternalLoad=set.intendedExternalLoad
                         val equipment=buildList {
-                            if(set.intendedExternalLoad!=null)
-                                add(set.intendedExternalLoad.toPlainString()+" "+
+                            if(approvedExternalLoad!=null)
+                                add(approvedExternalLoad.toPlainString()+" "+
                                     set.unit+" "+
                                     if(definition?.loadKind==
                                         MeasuredLoadKind.VERIFIED_PER_HAND)

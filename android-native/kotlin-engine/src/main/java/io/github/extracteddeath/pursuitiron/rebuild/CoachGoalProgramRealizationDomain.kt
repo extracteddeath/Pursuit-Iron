@@ -75,6 +75,80 @@ object CoachGoalProgramRealizationDomain {
             add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,"week.source",
                 "The composed week is not a verified, complete candidate for the athlete's exact phase, schedule and session windows.")
         }
+        // Independent source binding: a composer can satisfy its own
+        // permissive bounds while violating the athlete's ACTUAL reviewed
+        // goal/experience policy. Goal realization must never certify that.
+        val policyReview=runCatching {
+            CoachGoalProgramPolicyDomain.review(
+                athlete,phase,template.bounds,intents,policy)
+        }.getOrNull()
+        val templateBounds=template.bounds.associateBy {it.muscle}
+        val emittedBounds=draft.week.bounds.associateBy {it.muscle}
+        val sameBounds=templateBounds.size==template.bounds.size &&
+            emittedBounds.size==draft.week.bounds.size &&
+            templateBounds.keys==emittedBounds.keys &&
+            templateBounds.all { (muscle,required) ->
+                val actual=emittedBounds[muscle]
+                actual!=null &&
+                    required.mev.compareTo(actual.mev)==0 &&
+                    required.mav.compareTo(actual.mav)==0 &&
+                    required.mrv.compareTo(actual.mrv)==0 &&
+                    required.minimumDirectDays==actual.minimumDirectDays
+            }
+        val intendedByDay=template.days.mapIndexedNotNull { index,day ->
+            intents.singleOrNull{it.weekday==day.calendarDay}?.let {
+                ComposerSessionIntent(index,it.purpose,
+                    it.requiredPrimaryExerciseId)
+            }
+        }
+        val scopeMatches=policyReview?.status==
+                GoalPolicyStatus.MATCHED_FOR_REVIEW &&
+            sameBounds &&
+            template.split==athlete.split &&
+            template.maximumBarbellExercisesPerDay==
+                athlete.maxBarbellExercisesPerDay &&
+            template.allowDirectTricepsOnLower==
+                athlete.allowTricepsOnLower &&
+            intendedByDay.size==intents.size &&
+            intendedByDay.toSet()==template.sessionIntents.toSet() &&
+            template.sessionIntents.size==intendedByDay.size &&
+            template.days.all {day ->
+                day.window.preferredMinimumMinutes==
+                    athlete.preferredMinimumMinutes &&
+                    day.window.preferredMaximumMinutes==
+                    athlete.preferredMaximumMinutes &&
+                    day.window.userHardLimitMinutes==
+                    athlete.explicitHardMaximumMinutes
+            }
+        if(!scopeMatches) {
+            add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,
+                "week.policy",
+                "The emitted week does not match the athlete's currently reviewed goal, phase, schedule, training limits and muscle-dose policy.")
+        }
+        // An already-approved gym may have been replaced. Do not claim a
+        // real movement can be trained from a different gym's stock or
+        // from bodyweight when the athlete explicitly disabled it.
+        val optionById=template.exercises.associateBy {it.exerciseId}
+        val stock=athlete.gym.confirmedStock.values
+        if(draft.visits.any { visit ->
+            val option=optionById[visit.exerciseId]
+            option==null ||
+                visit.exerciseId in athlete.excludedExerciseIds ||
+                when(val equipment=option.equipment) {
+                    ComposerEquipment.Bodyweight -> !athlete.allowBodyweight
+                    is ComposerEquipment.Verified ->
+                        equipment.inventory==null ||
+                            stock.none {it==equipment.inventory} ||
+                            equipment.unit!=athlete.gym.unit ||
+                            EquipmentLoadDomain.inspect(equipment.inventory,
+                                equipment.plannedLoad,equipment.unit)
+                                .let {it !is LoadInspection.Confirmed || !it.exact}
+                }
+        }) {
+            add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,
+                "week.gym",
+                "One or more delivered movements use excluded, unavailable or unverified gym equipment.")
+        }
         // Recalculate the athlete-facing work from the actual proposed week.
         // A cached clean audit is NOT evidence after a caller edits the
         // exposures, session roster or set counts. Review stays read-only.

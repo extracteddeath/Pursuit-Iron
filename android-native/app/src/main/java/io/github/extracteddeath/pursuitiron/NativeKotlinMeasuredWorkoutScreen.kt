@@ -19,6 +19,25 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
+
+/** A missing issued journal is a recovery state, never a new-session editor. */
+internal enum class NativeMeasuredWorkoutEntryState {
+    VERIFYING, RECOVERY_REQUIRED, AUTHORING, RECORDING
+}
+
+internal object NativeMeasuredWorkoutEntryPolicy {
+    fun resolve(
+        expectsExisting:Boolean,
+        lookupComplete:Boolean,
+        hasVerifiedJournal:Boolean
+    ):NativeMeasuredWorkoutEntryState = when {
+        !lookupComplete -> NativeMeasuredWorkoutEntryState.VERIFYING
+        hasVerifiedJournal -> NativeMeasuredWorkoutEntryState.RECORDING
+        expectsExisting -> NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED
+        else -> NativeMeasuredWorkoutEntryState.AUTHORING
+    }
+}
 
 /**
  * Kotlin-only athlete-facing entry into already verified typed parent journals.
@@ -54,6 +73,12 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         mutableStateOf(resumeWorkoutId ?:
             "measured-"+UUID.randomUUID().toString().replace("-",""))
     }
+    // A verified workout cannot silently revert to new-session authoring
+    // when its disk journal is missing, unreadable or owner-unverifiable.
+    var expectsExisting by rememberSaveable(workoutId) {
+        mutableStateOf(resumeWorkoutId==workoutId)
+    }
+    var lookupComplete by remember(workoutId) {mutableStateOf(false)}
     // Draft values are saveable UI intent only. Approved sessions and
     // recorded facts live exclusively in owner-verified native files.
     var queuedDrafts by rememberSaveable(workoutId) {
@@ -69,14 +94,34 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     }
     var focusPickerOpen by remember {mutableStateOf(false)}
     suspend fun reload() {
-        val read=withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
-        stored=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
+        lookupComplete=false
+        // Failed reads and exceptions must never imply an empty or writable
+        // journal; only the owner-verified durable response can reopen it.
+        val read=try {
+            withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            null
+        }
+        val verified=(read as? NativeMeasuredWorkoutStoreResult.Durable)?.stored
+        stored=verified
+        if(verified!=null)expectsExisting=true
+        lookupComplete=true
     }
     LaunchedEffect(host,workoutId) {
-        sourceRead=withContext(Dispatchers.IO){host.reviewMeasuredAuthoringSource()}
+        sourceRead=try {
+            withContext(Dispatchers.IO){host.reviewMeasuredAuthoringSource()}
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            null
+        }
         reload()
     }
     BackHandler(enabled=!busy){onClose()}
+    val entryState=NativeMeasuredWorkoutEntryPolicy.resolve(
+        expectsExisting,lookupComplete,stored!=null)
     val source=(sourceRead as? NativeAuthoringSourceRead.Found)?.source
     val setup=source?.setup?.reviewed
     val gym=setup?.gym
@@ -156,7 +201,26 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             Text("Measured workout",style=MaterialTheme.typography.titleLarge)
             TextButton(enabled=!busy,onClick=onClose){Text("Minimize")}
         }
-        if(stored==null) {
+        if(entryState==NativeMeasuredWorkoutEntryState.VERIFYING) {
+            Text("Checking your saved workout before opening any editor.",
+                style=MaterialTheme.typography.bodyMedium)
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+        } else if(entryState==NativeMeasuredWorkoutEntryState.RECOVERY_REQUIRED) {
+            Text("This workout's saved journal could not be verified. "+
+                "The app will not create a replacement under its ID or "+
+                "claim that unsaved sets were recorded.",
+                color=MaterialTheme.colorScheme.error,
+                style=MaterialTheme.typography.bodyMedium)
+            Button(enabled=!busy,modifier=Modifier.fillMaxWidth(),
+                onClick={
+                    busy=true
+                    scope.launch {
+                        try {reload()} finally {busy=false}
+                    }
+                }){Text("Retry saved workout")}
+            OutlinedButton(enabled=!busy,modifier=Modifier.fillMaxWidth(),
+                onClick=onClose){Text("Return to Train")}
+        } else if(entryState==NativeMeasuredWorkoutEntryState.AUTHORING) {
             Text("Record real hold seconds, carry distance, or banded "+
                 "repetitions. Actual equipment and loads are verified, "+
                 "never guessed or converted into automatic PRs.",
@@ -588,9 +652,11 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 if(confirmation is NativeMeasuredConsentResult.Approved)
                                     host.issueMeasuredWorkout(workoutId) else null
                             }
-                            if(issued is NativeMeasuredWorkoutStoreResult.Durable)
+                            if(issued is NativeMeasuredWorkoutStoreResult.Durable) {
                                 stored=issued.stored
-                            else message="Approval or issuance was refused. "+
+                                expectsExisting=true
+                                lookupComplete=true
+                            } else message="Approval or issuance was refused. "+
                                 "No measured workout is reported open."
                         } catch(_:Exception) {
                             message="Measured issuance could not be verified."

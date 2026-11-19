@@ -82,6 +82,33 @@ class NativeKotlinWorkoutMachineChoiceFileStoreTest {
         }
     }
 
+    @Test fun staleMachineChoiceCanBeReopenedAndExplicitlyRetriedWithoutLosingOtherStations() {
+        // Simulates an in-workout A/B choice racing an independent saved
+        // station change. A stale rejection is never permission to pretend
+        // that the athlete chose the requested station.
+        for(custom in listOf(false,true)) {
+            val workout=if(custom)"custom-race" else "generated-race"
+            val first=saved(store().save("owner",workout,custom,"gymX",0,
+                mapOf("press" to "A","row" to "A")))
+            val otherWriter=saved(store().save("owner",workout,custom,"gymX",
+                first.revision,first.machines+("row" to "B")))
+            assertEquals(NativeWorkoutMachineChoiceResult.Rejected("STALE_REVISION"),
+                store().save("owner",workout,custom,"gymX",first.revision,
+                    first.machines+("press" to "B")))
+            // Lost/rejected acknowledgement: reopen verified disk state
+            // instead of keeping the original UI revision or replaying the
+            // athlete's attempted action automatically.
+            val reopened=saved(store().read("owner",workout,custom,"gymX"))
+            assertEquals(otherWriter,reopened)
+            assertEquals("A",reopened.machines["press"])
+            assertEquals("B",reopened.machines["row"])
+            val retried=saved(store().save("owner",workout,custom,"gymX",
+                reopened.revision,reopened.machines+("press" to "B")))
+            assertEquals(mapOf("press" to "B","row" to "B"),retried.machines)
+            assertEquals(retried,saved(store().read("owner",workout,custom,"gymX")))
+        }
+    }
+
     @Test fun emptySelectionIsDurableAndDoesNotInventMachineForLegacyWorkout() {
         assertEquals(1L,saved(store().save("owner","legacy",true,"gymX",0,
             emptyMap())).revision)

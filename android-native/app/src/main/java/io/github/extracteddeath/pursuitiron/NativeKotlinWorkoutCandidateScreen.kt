@@ -857,7 +857,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 val exerciseId=selected?.target?.exerciseId
                 if(exerciseId!=null)
                     machineChoices.onCreate(exerciseId,label,makeDefault)
-            },error=machineChoices.error,
+            },onRetry=machineChoices.onRetry,
+            retryEnabled=machineChoices.canRetry,
+            error=machineChoices.error,
             acknowledgedCreatedMachineId=machineChoices.createdMachineId,
             priorHistory=lastReferences,
             priorWorkingKeys=allSets.filter {
@@ -872,6 +874,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         machineChoices.error?.let{
             Text(it,style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)
+            OutlinedButton(onClick=machineChoices.onRetry,
+                enabled=machineChoices.canRetry && !state.busy,
+                modifier=Modifier.heightIn(min=48.dp)) {
+                Text("Retry machine verification")
+            }
         }
         activeKeys.forEach{set->
             // Obsolete non-stack physical groups are History-only. Never

@@ -150,4 +150,48 @@ assert.match(gym,/Default: \$it/);
 assert.match(gym,/val usedNames=config\?\.machines\.orEmpty\(\)/);
 assert.match(gym,/firstOrNull\{it\.lowercase\(\) !in usedNames\}/);
 assert.doesNotMatch(gym,/'B'\.code\+\(config\?\.machines\?\.size/);
+// Live gym changes and storage failures must never trap the shared picker
+// in a permanent busy state or guess that an unacknowledged selection saved.
+// A retry is an explicit READ, not an implicit replay of the rejected write.
+assert.match(picker,/val canRetry:Boolean/);
+assert.match(picker,/val onRetry:\(\)->Unit/);
+assert.match(picker,/suspend fun readVerifiedChoices\(refreshRoster:Boolean\)/);
+assert.match(picker,/host\.recoverWorkoutMachineChoices\(workoutId,custom\)/);
+assert.match(picker,/host\.readMachineRoster\(\)/);
+assert.match(picker,/if\(latestRoster==null\) \{\s*saved=null/);
+assert.match(picker,/catch\(cancelled:CancellationException\) \{\s*throw cancelled/);
+assert.ok((picker.match(/finally \{\s*busy=false/g)||[]).length>=4,
+  'initial read, manual retry, selection and creation must always unlock');
+assert.match(picker,/onRetry=\{/);
+assert.match(picker,/if\(!readVerifiedChoices\(refreshRoster=true\)\)/);
+const selectionRecovery=picker.slice(
+  picker.indexOf('onSelect={exerciseId,machineId->'),
+  picker.indexOf('onCreate={exerciseId,label,makeDefault->'));
+assert.match(selectionRecovery,/readVerifiedChoices\(refreshRoster=true\)/);
+assert.match(selectionRecovery,/saved=null/);
+assert.doesNotMatch(selectionRecovery,/onSelect\(machineId\)|recordSet\(|KotlinJournalOperation/);
+const creationRecovery=picker.slice(
+  picker.indexOf('onCreate={exerciseId,label,makeDefault->'),
+  picker.indexOf('/** Stable compact saveable per-exercise choice;'));
+assert.match(creationRecovery,/NativeWorkoutMachineCreationResult\.AddedNeedsSelection/);
+assert.match(creationRecovery,/if\(current==null \|\| confirmedRoster==null\) \{/);
+assert.match(creationRecovery,/Refresh verification before adding a physical machine/);
+assert.match(creationRecovery,/readVerifiedChoices\(refreshRoster=false\)/);
+assert.match(creationRecovery,/readVerifiedChoices\(refreshRoster=true\)/);
+assert.match(creationRecovery,/createdMachineId=result\.choice\.machines\[exerciseId\]/);
+assert.match(picker,/onRetry:\(\(\)->Unit\)\?=null/);
+assert.match(picker,/retryEnabled:Boolean=false/);
+assert.match(picker,/Refresh verified machine choices/);
+for(const screen of [generated,custom]) {
+  assert.match(screen,/onRetry=machineChoices\.onRetry/);
+  assert.match(screen,/retryEnabled=machineChoices\.canRetry/);
+  assert.match(screen,/Retry machine verification/);
+}
+const storeProof=readFileSync('android-native/native-coach-store/src/test/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinWorkoutMachineChoiceFileStoreTest.kt','utf8');
+assert.match(storeProof,/staleMachineChoiceCanBeReopenedAndExplicitlyRetriedWithoutLosingOtherStations/);
+assert.match(storeProof,/listOf\(false,true\)/);
+assert.match(storeProof,/assertEquals\(otherWriter,reopened\)/);
+assert.match(storeProof,/first\.machines\+\("press" to "B"\)/);
+assert.match(storeProof,/reopened\.machines\+\("press" to "B"\)/);
+
 console.log('PASS native Machine A/B: compact touch-safe picker, keyboard/scroll sheet, disabled inactive options, same engine CAS and isolated set/Last scope.');

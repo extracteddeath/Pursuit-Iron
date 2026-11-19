@@ -864,7 +864,9 @@ internal fun NativeKotlinCustomJournalScreen(
                         },
                         onCreate={label,makeDefault->
                             machineChoices.onCreate(slot.exerciseId,label,makeDefault)
-                        },error=machineChoices.error,
+                        },onRetry=machineChoices.onRetry,
+                        retryEnabled=machineChoices.canRetry,
+                        error=machineChoices.error,
                         acknowledgedCreatedMachineId=machineChoices.createdMachineId,
                         priorHistory=lastReferences,
                         priorWorkingKeys=slot.sets.filter {
@@ -878,6 +880,11 @@ internal fun NativeKotlinCustomJournalScreen(
                     machineChoices.error?.let{
                         Text(it,style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.error)
+                        OutlinedButton(onClick=machineChoices.onRetry,
+                            enabled=machineChoices.canRetry && !busy && !finished,
+                            modifier=Modifier.heightIn(min=48.dp)) {
+                            Text("Retry machine verification")
+                        }
                     }
 
                     // Custom program sets are leveled in THIS workout only.

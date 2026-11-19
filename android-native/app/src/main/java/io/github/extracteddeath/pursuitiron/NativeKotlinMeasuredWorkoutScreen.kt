@@ -26,6 +26,7 @@ import java.util.UUID
 @Composable
 internal fun NativeKotlinMeasuredWorkoutScreen(
     host:NativeKotlinCandidateHost,
+    resumeWorkoutId:String?,
     onClose:()->Unit,
     onViewHistory:(String)->Unit
 ) {
@@ -40,8 +41,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var review by remember{mutableStateOf<NativeMeasuredConsentResult.Preview?>(null)}
     var finishDialog by remember{mutableStateOf(false)}
     var menuOpen by remember{mutableStateOf(false)}
-    var workoutId by rememberSaveable {
-        mutableStateOf("measured-"+UUID.randomUUID().toString().replace("-",""))
+    var workoutId by rememberSaveable(resumeWorkoutId) {
+        mutableStateOf(resumeWorkoutId ?:
+            "measured-"+UUID.randomUUID().toString().replace("-",""))
     }
     suspend fun reload() {
         val read=withContext(Dispatchers.IO){host.openMeasuredWorkout(workoutId)}

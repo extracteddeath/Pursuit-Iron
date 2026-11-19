@@ -30,7 +30,8 @@ data class ReviewedWholeCycleRequest(
 enum class ReviewedWholeCycleCandidateStatus {
     READY_FOR_ATHLETE_REVIEW, MISSING_VERIFIED_PHASE,
     FULL_CYCLE_POLICY_REQUIRED, FULL_CYCLE_AUDIT_FAILED,
-    PERFORMANCE_TARGET_UNRESOLVED, PEAK_PREPARATION_REVIEW_REQUIRED
+    PERFORMANCE_TARGET_UNRESOLVED, PEAK_PREPARATION_REVIEW_REQUIRED,
+    STRENGTH_TRANSITION_REVIEW_REQUIRED
 }
 
 data class ReviewedWholeCycleCandidate(
@@ -40,7 +41,9 @@ data class ReviewedWholeCycleCandidate(
     /** Full actual measured weeks are attached when verification was possible. */
     val audit:CustomCoachAudit?,
     val proposedCycle:CustomTrainingCycle?,
-    val explanation:String
+    val explanation:String,
+    /** Read-only actual final Hypertrophy -> Strength boundary evidence. */
+    val strengthContinuity:WholeCycleStrengthContinuityReview?=null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
@@ -233,6 +236,8 @@ object CoachReviewedWholeCycleDomain {
                     unresolvedPerformanceTargets(audit,
                         request.performanceTargetExerciseIds)
                     else emptySet()
+                val strengthContinuity=WholeCycleStrengthContinuityDomain
+                    .review(audit.structuralReview)
                 val status=when {
                     audit.structuralReview?.verifiedDraft!=null &&
                         missingTargets.isNotEmpty() ->
@@ -246,6 +251,12 @@ object CoachReviewedWholeCycleDomain {
                         // taper or event-day prescription. A separate reviewed
                         // peak preparation protocol must be implemented.
                         ReviewedWholeCycleCandidateStatus.PEAK_PREPARATION_REVIEW_REQUIRED
+                    strengthContinuity.status==
+                        WholeCycleStrengthContinuityStatus.SOURCE_UNVERIFIED ->
+                        ReviewedWholeCycleCandidateStatus.FULL_CYCLE_AUDIT_FAILED
+                    strengthContinuity.status==
+                        WholeCycleStrengthContinuityStatus.REQUIRES_ATHLETE_REVIEW ->
+                        ReviewedWholeCycleCandidateStatus.STRENGTH_TRANSITION_REVIEW_REQUIRED
                     else ->ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW
                 }
                 val explanation=when(status) {
@@ -254,12 +265,17 @@ object CoachReviewedWholeCycleDomain {
                     ReviewedWholeCycleCandidateStatus.PERFORMANCE_TARGET_UNRESOLVED ->
                         "The specific test lift(s) ${missingTargets.sorted().joinToString(", ")} are not verified PRIMARY working skills in every strength and peak week. Related exercises are not replacements."
                     ReviewedWholeCycleCandidateStatus.PEAK_PREPARATION_REVIEW_REQUIRED ->
-                        "The named test lifts and weekly constraints are verified, but these starter templates lack an individualized taper, event timing and peaking protocol. This cannot be approved as competition preparation."
+                        "The named test lifts are present, but these starter templates lack an individualized taper, event timing and peaking protocol. This cannot be approved as competition preparation."+
+                            (if(strengthContinuity.status==
+                                WholeCycleStrengthContinuityStatus.REQUIRES_ATHLETE_REVIEW)
+                                " "+strengthContinuity.explanation else "")
+                    ReviewedWholeCycleCandidateStatus.STRENGTH_TRANSITION_REVIEW_REQUIRED ->
+                        strengthContinuity.explanation
                     else ->"Every projected week was audited; unresolved policy or constraints prevent approval: "+
                         audit.issues.take(3).joinToString("; "){it.explanation}
                 }
                 ReviewedWholeCycleCandidate(optionId,allocations,
-                    status,audit,proposed,explanation)
+                    status,audit,proposed,explanation,strengthContinuity)
             }
         }
         val initial=candidates.firstOrNull {

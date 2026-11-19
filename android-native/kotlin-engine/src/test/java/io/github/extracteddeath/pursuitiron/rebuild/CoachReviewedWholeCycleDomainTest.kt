@@ -96,6 +96,34 @@ class CoachReviewedWholeCycleDomainTest {
         assertFalse(result.mayApplyAutomatically)
     }
 
+    @Test fun wholeCycleReadyNeverOverridesSevereStrengthBoundaryEvidence() {
+        val input=request(goal=AthleteTrainingGoal.POWERBUILDING,
+            totalWeeks=9,continuity=CustomCoachVolumeContinuityPolicy(
+                BigDecimal.ONE,BigDecimal.ONE,
+                BigDecimal.ONE,BigDecimal.ONE))
+        val result=CoachReviewedWholeCycleDomain.propose(input)
+        assertTrue(result.candidates.isNotEmpty())
+        for(candidate in result.candidates) {
+            val boundary=candidate.strengthContinuity ?:continue
+            assertFalse(boundary.mayIssueWorkout)
+            assertFalse(boundary.mayApplyAutomatically)
+            if(candidate.status==
+                ReviewedWholeCycleCandidateStatus.READY_FOR_ATHLETE_REVIEW) {
+                assertEquals("An independent whole-cycle READY decision "+
+                    "cannot bypass the real hypertrophy-to-strength boundary.",
+                    WholeCycleStrengthContinuityStatus.CONTINUOUS,
+                    boundary.status)
+            }
+            if(boundary.status==
+                WholeCycleStrengthContinuityStatus.REQUIRES_ATHLETE_REVIEW &&
+                candidate.audit?.status==
+                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
+                assertEquals(
+                    ReviewedWholeCycleCandidateStatus.STRENGTH_TRANSITION_REVIEW_REQUIRED,
+                    candidate.status)
+        }
+    }
+
     @Test fun missingPeakAndMissingTransitionLimitsNeverBecomeImplicitApproval() {
         val withoutPeak=CoachReviewedWholeCycleDomain.propose(
             request(goal=AthleteTrainingGoal.POWERBUILDING,totalWeeks=9,

@@ -105,8 +105,10 @@ internal fun NativeMeasuredExerciseSetEditor(
         startedMonotonicMs=stopwatchStarted.takeIf{it>=0L},
         approximateBootEpochMs=stopwatchBootEpoch.takeIf{it>=0L},
         stoppedElapsedMs=stopwatchStopped.takeIf{it>=0L})
-    val stopwatchDisplay=MeasuredHoldStopwatchDomain.display(
-        stopwatch,nowMonotonic,System.currentTimeMillis())
+    val stopwatchDisplay=if(stopwatchStarted<0L && stopwatchStopped<0L)
+        "00:00.0"
+        else MeasuredHoldStopwatchDomain.display(
+            stopwatch,nowMonotonic,System.currentTimeMillis())
     val stopwatchSeconds=MeasuredHoldStopwatchDomain.usableSeconds(stopwatch)
     val quantityBySide=buildMap {
         if(MeasuredSide.BOTH in plan.sides)put(MeasuredSide.BOTH,both)

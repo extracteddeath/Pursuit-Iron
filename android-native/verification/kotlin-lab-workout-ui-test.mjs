@@ -957,6 +957,13 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   infoSheet.includes('Text("Open full exercise history")') &&
   !infoSheet.includes('controller.record('),
   'Info must be a read-only, source-backed sheet with exact planned set facts and a full History action for both workout types');
+assert.ok(!journal.includes('Text("Swap exercise")') &&
+  infoSheet.includes('Text("Swap to another exercise")') &&
+  journal.includes('onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)') &&
+  journal.includes('onInfo=upcoming?.first?.slotId?.let{slotId->') &&
+  journal.includes('reviewSwap(slot)') &&
+  journal.includes('onClick={confirmUndoSwap(swapEventId)}'),
+  'Custom workout swap belongs in Exercise Info for Focus and All Sets; duplicate card button must stay removed and swap undo must remain available');
 const customPlate=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomPlateSheet.kt');
 const verifiedPlateDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinVerifiedPlateLayoutDomain.kt');
 assert.ok(journal.includes('NativeKotlinCustomPlateSheet(host,request,') &&

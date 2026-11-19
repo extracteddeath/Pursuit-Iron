@@ -21,6 +21,7 @@ import io.github.extracteddeath.pursuitiron.rebuild.WorkoutLastReferenceResult
 import io.github.extracteddeath.pursuitiron.rebuild.WorkoutReferenceKey
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinPerformedSet
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * A screen-local projection of an owner-fenced, cold-replayable private file.
@@ -33,6 +34,8 @@ internal data class NativeWorkoutMachineChoicesUi(
     val busy:Boolean,
     val error:String?,
     val createdMachineId:String?,
+    val canRetry:Boolean,
+    val onRetry:()->Unit,
     val onSelect:(String,String)->Unit,
     val onCreate:(String,String,Boolean)->Unit
 )
@@ -56,25 +59,85 @@ internal fun rememberNativeWorkoutMachineChoices(
     var createdMachineId by remember(host,workoutId,custom) {
         mutableStateOf<String?>(null)
     }
+
+    /**
+     * A rejected/ambiguous write is NOT grounds for keeping a stale
+     * machine-choice revision. Reopen the current owner's actual workout
+     * choice and, when requested, current gym roster before offering a retry.
+     * This is a read only: never replay the rejected save automatically.
+     */
+    suspend fun readVerifiedChoices(refreshRoster:Boolean):Boolean {
+        val recovered=withContext(Dispatchers.IO) {
+            host.recoverWorkoutMachineChoices(workoutId,custom)
+        } as? NativeWorkoutMachineChoiceResult.Saved
+        if(recovered==null) {
+            saved=null
+            return false
+        }
+        if(refreshRoster) {
+            val latestRoster=withContext(Dispatchers.IO) {
+                host.readMachineRoster()
+            } as? NativeMachineRosterResult.Saved
+            if(latestRoster==null) {
+                saved=null
+                return false
+            }
+            onRosterChanged(latestRoster.snapshot)
+        }
+        saved=recovered.snapshot
+        return true
+    }
+
     LaunchedEffect(host,workoutId,custom,ready,exerciseSignature) {
         saved=null
         error=null
         createdMachineId=null
         if(!ready)return@LaunchedEffect
         busy=true
-        val recovered=withContext(Dispatchers.IO) {
-            host.recoverWorkoutMachineChoices(workoutId,custom)
+        try {
+            if(!readVerifiedChoices(refreshRoster=false))
+                error="Saved machine choices could not be verified. Retry before recording another set."
+        } catch(cancelled:CancellationException) {
+            throw cancelled
+        } catch(_:Exception) {
+            saved=null
+            error="Saved machine choices could not be read. Retry verification without losing your unsaved set entries."
+        } finally {
+            busy=false
         }
-        if(recovered is NativeWorkoutMachineChoiceResult.Saved)
-            saved=recovered.snapshot
-        else error="Machine selection could not be verified. Recorded sets are unchanged."
-        busy=false
     }
+
     val encoded=saved?.machines?.entries?.joinToString(";"){
         "${it.key}=${it.value}"
     }.orEmpty()
     return NativeWorkoutMachineChoicesUi(
-        encoded,ready && saved!=null,!ready || busy,error,createdMachineId,
+        encoded=encoded,
+        ready=ready && saved!=null,
+        busy=!ready || busy,
+        error=error,
+        createdMachineId=createdMachineId,
+        canRetry=ready && !busy,
+        onRetry={
+            if(ready && !busy) {
+                busy=true
+                error=null
+                createdMachineId=null
+                saved=null
+                scope.launch {
+                    try {
+                        if(!readVerifiedChoices(refreshRoster=true))
+                            error="The current workout machine choices or gym roster are unavailable. No station change was assumed."
+                    } catch(cancelled:CancellationException) {
+                        throw cancelled
+                    } catch(_:Exception) {
+                        saved=null
+                        error="Machine verification failed. Your set history and entered drafts were not edited."
+                    } finally {
+                        busy=false
+                    }
+                }
+            }
+        },
         onSelect={exerciseId,machineId->
             val current=saved
             if(current!=null && ready && !busy) {
@@ -82,14 +145,29 @@ internal fun rememberNativeWorkoutMachineChoices(
                 error=null
                 createdMachineId=null
                 scope.launch {
-                    val result=withContext(Dispatchers.IO){
-                        host.selectWorkoutPhysicalMachine(workoutId,custom,
-                            exerciseId,machineId,current.revision)
+                    try {
+                        val result=withContext(Dispatchers.IO) {
+                            host.selectWorkoutPhysicalMachine(workoutId,custom,
+                                exerciseId,machineId,current.revision)
+                        }
+                        if(result is NativeWorkoutMachineChoiceResult.Saved) {
+                            saved=result.snapshot
+                        } else {
+                            val refreshed=readVerifiedChoices(refreshRoster=true)
+                            error=if(refreshed)
+                                "Machine selection was not confirmed. The latest saved choice is shown; select again if needed."
+                            else "Machine selection was not confirmed and saved choices could not be reopened. Retry verification."
+                        }
+                    } catch(cancelled:CancellationException) {
+                        throw cancelled
+                    } catch(_:Exception) {
+                        // Even if a disk write succeeded before its
+                        // acknowledgement was lost, never guess its result.
+                        saved=null
+                        error="Machine selection status is unknown. Retry verification before recording another set."
+                    } finally {
+                        busy=false
                     }
-                    if(result is NativeWorkoutMachineChoiceResult.Saved)
-                        saved=result.snapshot
-                    else error="Machine selection was not saved. Reopen this workout to verify the current choice."
-                    busy=false
                 }
             }
         },
@@ -101,32 +179,48 @@ internal fun rememberNativeWorkoutMachineChoices(
                 error=null
                 createdMachineId=null
                 scope.launch {
-                    val result=withContext(Dispatchers.IO) {
-                        host.addWorkoutPhysicalMachine(workoutId,custom,
-                            exerciseId,label,makeDefault,
-                            confirmedRoster.revision,current.revision)
-                    }
-                    when(result) {
-                        is NativeWorkoutMachineCreationResult.Created -> {
-                            onRosterChanged(result.roster)
-                            saved=result.choice
-                            // Only this exact two-store confirmation may
-                            // acknowledge a newly created workout station.
-                            createdMachineId=result.choice.machines[exerciseId]
+                    try {
+                        val result=withContext(Dispatchers.IO) {
+                            host.addWorkoutPhysicalMachine(workoutId,custom,
+                                exerciseId,label,makeDefault,
+                                confirmedRoster.revision,current.revision)
                         }
-                        is NativeWorkoutMachineCreationResult.AddedNeedsSelection -> {
-                            onRosterChanged(result.roster)
-                            error=result.reason
+                        when(result) {
+                            is NativeWorkoutMachineCreationResult.Created -> {
+                                onRosterChanged(result.roster)
+                                saved=result.choice
+                                // Only the exact two-owner confirmation
+                                // acknowledges a newly selected station.
+                                createdMachineId=result.choice.machines[exerciseId]
+                            }
+                            is NativeWorkoutMachineCreationResult.AddedNeedsSelection -> {
+                                onRosterChanged(result.roster)
+                                val refreshed=readVerifiedChoices(refreshRoster=false)
+                                error=result.reason+if(refreshed)
+                                    " Review the saved station and select the new machine."
+                                else " Retry verification to select the new machine."
+                            }
+                            is NativeWorkoutMachineCreationResult.Rejected -> {
+                                val refreshed=readVerifiedChoices(refreshRoster=true)
+                                error=if(refreshed)
+                                    "Could not add that machine: ${result.reason}. Review the refreshed gym and retry."
+                                else "Could not add that machine: ${result.reason}. Retry machine verification."
+                            }
                         }
-                        is NativeWorkoutMachineCreationResult.Rejected ->
-                            error="Could not add that machine: ${result.reason}. "+
-                                "Your logged sets were not changed."
+                    } catch(cancelled:CancellationException) {
+                        throw cancelled
+                    } catch(_:Exception) {
+                        saved=null
+                        error="New machine status is unknown. Retry verification before adding or selecting another."
+                    } finally {
+                        busy=false
                     }
-                    busy=false
                 }
             }
-        })
+        }
+    )
 }
+
 
 /** Stable compact saveable per-exercise choice; IDs cannot contain separators. */
 internal fun workoutMachineChoice(encoded:String,exerciseId:String,defaultId:String?):String? =

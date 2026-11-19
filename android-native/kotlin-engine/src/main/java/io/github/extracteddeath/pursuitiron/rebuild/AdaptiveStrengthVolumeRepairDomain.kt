@@ -56,6 +56,7 @@ object AdaptiveStrengthVolumeRepairDomain {
         val slotId:String,
         val directBenefit:BigDecimal,
         val totalBenefit:BigDecimal,
+        val dayBenefit:BigDecimal,
         val daySeconds:Long
     )
 
@@ -76,9 +77,25 @@ object AdaptiveStrengthVolumeRepairDomain {
             added:Int=0,truncated:Boolean=false,weeks:Int=0
         )=AdaptiveStrengthVolumeRepairResult(status,comparison,option,
             added,truncated,reason,weeks)
-        if(!initial.sourceRepairRequired)
+        // The whole-week coach audit can be clean when a day loses half
+        // its work and another day gains exactly as many sets. Compare only
+        // the actual adjacent, same-split Hypertrophy/Strength weeks from
+        // the verified source before offering any read-only repair.
+        val dayBoundary=initial.sourceAudit.structuralReview?.let {structure->
+            StrengthDoseBoundaryGuardDomain.review(
+                structure,input.review.targetBlockId)
+        }
+        val affectedDays=dayBoundary?.affectedDays.orEmpty()
+        val hasDayDoseLoss=dayBoundary?.status==
+            StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW &&
+            affectedDays.isNotEmpty()
+        if(!initial.sourceRepairRequired && !hasDayDoseLoss)
             return response(AdaptiveStrengthVolumeRepairStatus.SOURCE_UNRESOLVED,
-                "Source defects are not limited to this future block's reviewed training-dose continuity.")
+                "No source-backed target-block dose deficit needs repair.")
+        if(initial.sourceAudit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+            !initial.sourceRepairRequired)
+            return response(AdaptiveStrengthVolumeRepairStatus.SOURCE_UNRESOLVED,
+                "The source contains unrelated unresolved coaching defects.")
         if(!input.review.permissions.adaptSetCount)
             return response(AdaptiveStrengthVolumeRepairStatus.PERMISSION_REQUIRED,
                 "Adapt working-set counts must be explicitly enabled for a coach suggestion.")
@@ -153,6 +170,20 @@ object AdaptiveStrengthVolumeRepairDomain {
         val maxSeconds=maxMinutes?.times(60L)
         var candidate=cycle
         var working=target.workingSets
+        val dayWorking=block.days.associate{day->
+            day.weekday to day.slots.sumOf{slot->
+                slot.sets.count{it.type==DraftSetType.WORKING}
+            }
+        }.toMutableMap()
+        // Use the already reviewed drop bound as a conservative per-day
+        // retention objective; also cross the exact 50% refusal boundary.
+        // Neither bound is a universal hypertrophy or strength set target.
+        val dayFloor=affectedDays.associate{loss->
+            loss.weekday to maxOf(
+                BigDecimal(loss.beforeWorkingSets/2+1),
+                BigDecimal(loss.beforeWorkingSets)
+                    .multiply(one.subtract(dropTotal)))
+        }
         val direct=target.directSets.toMutableMap()
         val credits=target.totalSetCredits.toMutableMap()
         val seconds=target.estimatedSecondsByDay.toMutableMap()
@@ -161,6 +192,9 @@ object AdaptiveStrengthVolumeRepairDomain {
             BigDecimal(working)<totalFloor ||
                 directFloor.any {(muscle,floor)->
                     direct.getValue(muscle) < floor
+                } ||
+                dayFloor.any{(weekday,floor)->
+                    BigDecimal(dayWorking[weekday] ?: 0)<floor
                 }
         }
         while(activeGaps() && added<MAX_ADDING_STEPS) {
@@ -196,12 +230,16 @@ object AdaptiveStrengthVolumeRepairDomain {
                         gain=gain.add(gap.min(credit.fractionalSet))
                     }
                 }
-                if(!excess && (gain>zero || totalGap>zero))
+                val localGap=positive((dayFloor[day.weekday] ?: zero)
+                    .subtract(BigDecimal(dayWorking[day.weekday] ?: 0)))
+                if(!excess && (gain>zero || totalGap>zero ||
+                    localGap>zero))
                     placements+=Placement(day.weekday,slot.slotId,
-                        gain,totalGap.min(one),elapsed)
+                        gain,totalGap.min(one),localGap.min(one),elapsed)
             }
             val pick=placements.sortedWith(
-                compareByDescending<Placement> {it.directBenefit}
+                compareByDescending<Placement> {it.dayBenefit}
+                    .thenByDescending {it.directBenefit}
                     .thenByDescending {it.totalBenefit}
                     .thenBy {it.daySeconds}
                     .thenBy {it.weekday}
@@ -224,6 +262,7 @@ object AdaptiveStrengthVolumeRepairDomain {
                 })
             working++
             added++
+            dayWorking[pick.weekday]=checkNotNull(dayWorking[pick.weekday])+1
             seconds[pick.weekday]=checkNotNull(seconds[pick.weekday])+
                 oneMore.activeSeconds+oneMore.restSeconds
             for(credit in move.credits) {
@@ -242,15 +281,28 @@ object AdaptiveStrengthVolumeRepairDomain {
         val proposed=AdaptiveCycleOption(input.optionId,candidate)
         val comparison=AdaptiveCycleOptionReviewDomain.review(
             input.review.copy(alternatives=listOf(proposed)))
-        val approved=comparison.evaluated.singleOrNull()?.status==
-            AdaptiveCycleOptionStatus.READY_FOR_REVIEW &&
+        val repairedStructure=comparison.evaluated.singleOrNull()
+            ?.coachingAudit?.structuralReview
+        val repairedBoundary=repairedStructure?.let{structure->
+            StrengthDoseBoundaryGuardDomain.review(
+                structure,input.review.targetBlockId)
+        }
+        val stillCollapsed=hasDayDoseLoss && repairedBoundary?.status==
+            StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW
+        val approved=!stillCollapsed &&
+            comparison.evaluated.singleOrNull()?.status==
+                AdaptiveCycleOptionStatus.READY_FOR_REVIEW &&
             comparison.recommendedOptionId==input.optionId
         if(!approved)
             return response(AdaptiveStrengthVolumeRepairStatus.NO_FEASIBLE_REPAIR,
                 "The candidate still fails the full-cycle dose, equipment, time, phase or edit-permission review.",
                 comparison,added=added)
         return response(AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
-            "Rebalanced $added exact working-set prescriptions per week across ${block.weeks} strength weeks; all unchanged blocks and training records remain untouched.",
+            "Rebalanced $added exact working-set prescriptions per week across ${block.weeks} strength weeks"+
+                (if(affectedDays.isEmpty())"." else
+                    "; repaired source-backed day(s) "+
+                        affectedDays.joinToString(","){it.weekday.toString()}+".")+
+                " All unchanged blocks and training records remain untouched.",
             comparison,proposed,added,weeks=block.weeks)
     }
 }

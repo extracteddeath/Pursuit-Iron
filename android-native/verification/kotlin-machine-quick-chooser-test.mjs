@@ -174,6 +174,8 @@ const creationRecovery=picker.slice(
   picker.indexOf('onCreate={exerciseId,label,makeDefault->'),
   picker.indexOf('/** Stable compact saveable per-exercise choice;'));
 assert.match(creationRecovery,/NativeWorkoutMachineCreationResult\.AddedNeedsSelection/);
+assert.match(creationRecovery,/if\(current==null \|\| confirmedRoster==null\) \{/);
+assert.match(creationRecovery,/Refresh verification before adding a physical machine/);
 assert.match(creationRecovery,/readVerifiedChoices\(refreshRoster=false\)/);
 assert.match(creationRecovery,/readVerifiedChoices\(refreshRoster=true\)/);
 assert.match(creationRecovery,/createdMachineId=result\.choice\.machines\[exerciseId\]/);

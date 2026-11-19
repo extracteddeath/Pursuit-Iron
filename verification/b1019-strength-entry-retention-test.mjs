@@ -18,6 +18,22 @@ const entry = (c) => { const i = c.blocks.findIndex((b, k) => k > 0 && b.nextEng
   assert.ok(record, '1 the strength block records its retained dose');
   assert.equal(record.retention, STRENGTH_ENTRY_RETENTION);
   const au = auditShellVolume(str, EXERCISES), w1 = au.weeks[0].regions;
+  assert.ok(['met', 'limited'].includes(record.status), '1 strength retention has an explicit outcome');
+  assert.deepEqual(record.actual, Object.fromEntries(Object.keys(record.requested).map(region =>
+      [region, Math.round((w1[region] ?? 0) * 10) / 10])),
+      '1 retained dose reports the actual audited first work week, not a proposed value');
+  for (const [region, asked] of Object.entries(record.requested)) {
+      assert.ok(asked + .1 >= record.target[region],
+          '1 the feasible muscle-capped target cannot exceed the original retention request');
+      assert.equal(record.capacityLimited.includes(region), record.target[region] < asked - .05,
+          '1 shared-muscle capacity loss must be listed by region: ' + region);
+      if (asked - (w1[region] ?? 0) >= .51)
+          assert.ok(record.unresolved.includes(region),
+              '1 a shortfall to ORIGINAL 60% retention remains explicitly unresolved: ' + region);
+  }
+  assert.equal(record.status, record.unresolved.length ? 'limited' : 'met');
+  assert.deepEqual(record.limits.map(x => x.region), record.unresolved,
+      '1 each unresolved region has an explanation and its original requested target');
   for (const [region, target] of Object.entries(record.target))
       assert.ok(w1[region] >= target - .5 || record.unresolved.includes(region), `1 ${region} ${w1[region]} reaches ${target} or is reported`);
   assert.ok(record.restored.length >= 1, '1 a dropped hypertrophy accessory comes back');
@@ -40,8 +56,22 @@ const entry = (c) => { const i = c.blocks.findIndex((b, k) => k > 0 && b.nextEng
     const hi = SESSION_BOUNDS[session][1];
     for (let w = 1; w <= weeksOf(str); w++) str.days.forEach(d => assert.ok(estimateMinutes(str, d, w) <= hi, `2 ${session} ${days}d week ${w} inside ${hi} minutes`));
     const rec = str.nextEngine.strengthEntryDose;
-    if (rec) { restored += rec.restored.length; raised += rec.sets.reduce((n, s) => n + s.delta, 0);
-      for (const s of rec.sets) assert.ok(!/strength/.test(str.nextWeekPrescriptions[s.key]?.[1]?.role ?? ''), '2 never a strength lift'); }
+    assert.ok(rec, '2 every comparable non-minimalist Strength transition reports dose even when no safe addition was possible');
+    assert.equal(rec.status, rec.unresolved.length ? 'limited' : 'met',
+        '2 an unmet original retention request cannot be marked complete');
+    const first = au.weeks[0].regions;
+    for (const [region, requested] of Object.entries(rec.requested)) {
+        const got = first[region] ?? 0;
+        assert.equal(rec.actual[region], Math.round(got * 10) / 10,
+            '2 actual retained region sets are audited, not inferred');
+        if (requested - got >= .51) assert.ok(rec.unresolved.includes(region),
+            '2 original 60% target was missed but not reported: ' + region);
+        assert.equal(rec.capacityLimited.includes(region),
+            rec.target[region] < requested - .05,
+            '2 shared-muscle constraint is visible even when an achievable target is lowered');
+    }
+    restored += rec.restored.length; raised += rec.sets.reduce((n, s) => n + s.delta, 0);
+    for (const set of rec.sets) assert.ok(!/strength/.test(str.nextWeekPrescriptions[set.key]?.[1]?.role ?? ''), '2 never a strength lift');
   }
   assert.ok(blocks >= 20 && (raised > 0 || restored > 0), `2 ${blocks} strength entries checked, ${raised} sets and ${restored} lifts kept`);
   console.log(`PASS 2 ${blocks} strength entries inside every ceiling and limit; ${raised} sets and ${restored} lifts kept.`); }

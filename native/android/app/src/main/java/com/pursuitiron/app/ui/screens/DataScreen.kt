@@ -125,7 +125,7 @@ fun RemindersCard(vm: AppViewModel) {
             Text("Pick the days you train.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             Text("PREVIEW", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             val next = vm.home?.o("next")
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(32.dp).clip(CircleShape).background(cs.primary))
                 Column(Modifier.weight(1f)) {
                     Row { Text("Pursuit Iron", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f)); Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant) }
@@ -155,7 +155,7 @@ fun CustomExercisesCard(vm: AppViewModel) {
             TextButton(onClick = { creating = true }) { Text("+ New") }
         }
         if (vm.customs.isEmpty()) Text("Lifts you create work everywhere: programs, swaps, suggestions and progress.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-        Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             vm.customs.forEach { x ->
                 Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(start = 14.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -201,7 +201,7 @@ fun CreateExerciseSheet(vm: AppViewModel, dayId: String?, onCreated: (String) ->
                     focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Exercise name" })
             if (taken) Text("That name is already in the library.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onTertiaryContainer,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
             cap("MAIN MUSCLE")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 parts.forEach { (id, l) -> MorphChip(l, part == id, { part = id }, height = 40.dp) }
@@ -218,7 +218,7 @@ fun CreateExerciseSheet(vm: AppViewModel, dayId: String?, onCreated: (String) ->
             }
             Text("${name.trim().ifBlank { "Your exercise" }} · ${parts.firstOrNull { it.first == part }?.second ?: part} · ${equips.first { it.first == equip }.second} · ${rep.first}–${rep.second} reps",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp))
             Button(onClick = { vm.createCustom(name.trim().replaceFirstChar { it.uppercase() }, part, type, if (equip.isEmpty()) emptyList() else listOf(equip), rep.first, rep.second, dayId) { id -> onCreated(id) }; onClose() },
                 enabled = valid, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Text(if (dayId != null) "Save and add" else "Save exercise", style = MaterialTheme.typography.titleSmall)

@@ -141,10 +141,10 @@ fun BodyBwCard(vm: AppViewModel) {
             }
         } else Text("Log a few days and your 7-day average appears here.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).clickable { draft = Math.round((draft - 0.1) * 10) / 10.0 }
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).clickable { draft = Math.round((draft - 0.1) * 10) / 10.0 }
                 .semantics { contentDescription = "Less bodyweight"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−", fontSize = 20.sp) }
             Text(f1(draft), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.Center,
-                modifier = Modifier.width(64.dp).clip(RoundedCornerShape(10.dp)).clickable { typing = true }.semantics { contentDescription = "Bodyweight to log, ${f1(draft)} $u. Tap to type" })
+                modifier = Modifier.width(64.dp).clip(RoundedCornerShape(12.dp)).clickable { typing = true }.semantics { contentDescription = "Bodyweight to log, ${f1(draft)} $u. Tap to type" })
             Box(Modifier.size(44.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { draft = Math.round((draft + 0.1) * 10) / 10.0 }
                 .semantics { contentDescription = "More bodyweight"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 20.sp) }
             Box(Modifier.weight(1f))
@@ -186,7 +186,7 @@ fun BodyMeasureCard(vm: AppViewModel) {
                 }
             }
         }
-        Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             MEASURES.forEach { k ->
                 val rows = m.list(k).filter { it.d("v") > 0 }
                 val name = k.replaceFirstChar { it.uppercase() }
@@ -194,7 +194,7 @@ fun BodyMeasureCard(vm: AppViewModel) {
                 val isOpen = open == k
                 Column(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh)) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp)).clickable(enabled = rows.size >= 2) { open = if (isOpen) null else k }
+                        Row(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).clickable(enabled = rows.size >= 2) { open = if (isOpen) null else k }
                             .semantics(mergeDescendants = true) { contentDescription = "$name trend"; stateDescription = if (isOpen) "Expanded" else "Collapsed" },
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(name, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
@@ -220,9 +220,9 @@ fun BodyMeasureCard(vm: AppViewModel) {
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 hist.reversed().take(4).forEach { h ->
-                                    Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(cs.surface).padding(vertical = 6.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(cs.surface).padding(vertical = 6.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text("${fx(h.d("v"))} $lu", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-                                        Text(md.format(Date(h.optLong("date"))), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = cs.onSurfaceVariant)
+                                        Text(md.format(Date(h.optLong("date"))), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
                                     }
                                 }
                                 repeat(4 - hist.size.coerceAtMost(4)) { Box(Modifier.weight(1f)) }

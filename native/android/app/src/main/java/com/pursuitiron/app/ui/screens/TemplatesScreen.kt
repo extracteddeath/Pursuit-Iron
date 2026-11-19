@@ -79,7 +79,7 @@ LazyRow(state = fs, modifier = Modifier.lazyFade(fs), horizontalArrangement = Ar
         items(t.strings("categories")) { c -> MorphChip(c, cat == c, { cat = if (cat == c) null else c }, height = 36.dp) }
     } }
     items.forEach { x ->
-        Surface(onClick = { vm.createFromTemplate(x.s("id")) }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(22.dp),
+        Surface(onClick = { vm.createFromTemplate(x.s("id")) }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth().semantics { role = Role.Button }) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // The design's template row: name with its category at the right, the blurb, then days · time · length
@@ -200,7 +200,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                 val tm = l.d("tm"); val step = l.d("step").takeIf { it > 0 } ?: if (u == "lb") 5.0 else 2.5
                 var v by remember(l.s("id"), mode, tm) { mutableStateOf(if (mode == "tm" && tm > 0) fmtNum(tm) else "") }
                 val set = { value: Double?, orm: Boolean -> scope.launch { vm.setTrainingMax(pid, l.s("id"), value, orm); data = vm.trainingMaxes(pid, week) }; Unit }
-                Surface(color = cs.surfaceContainerLow, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+                Surface(color = cs.surfaceContainerLow, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -241,7 +241,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                 Text(if (d.b("tiered")) "NEXT BLOCK · WHERE EACH LIFT IS" else "NEXT CYCLE · FROM YOUR AMRAP SETS",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, letterSpacing = 0.4.sp),
                     color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
-                Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     nexts.forEach { l ->
                         val n = l.o("next")!!; val delta = n.d("delta")
                         Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 12.dp)

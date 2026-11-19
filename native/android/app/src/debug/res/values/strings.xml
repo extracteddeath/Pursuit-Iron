@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dev builds of this line (the Claude build, native/) are labelled apart from the Kotlin rewrite's lab builds. -->
+<resources>
+    <string name="app_name">PI Claude</string>
+</resources>

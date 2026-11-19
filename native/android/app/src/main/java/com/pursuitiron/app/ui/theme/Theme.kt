@@ -55,11 +55,11 @@ val PiTypography = Typography(
     labelSmall = TextStyle(fontFamily = BodyFamily, fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight(800), letterSpacing = 0.4.sp).tnum(),
 )
 
-/* Radii from the design system: row 18, sheet 28, card 32, hero 36. */
+/* Radii on the M3 Expressive shape scale (4/8/12/16/20/28/32): row 20, sheet 28, card and hero 32. */
 val PiShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(18.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(20.dp),
     large = RoundedCornerShape(28.dp),
     extraLarge = RoundedCornerShape(32.dp),
 )

@@ -175,7 +175,7 @@ fun ExerciseChips(vm: AppViewModel, exs: List<JSONObject>, ei: Int, onList: () -
                     modifier = Modifier.semantics { contentDescription = "${e.s("name")}, ${work.count { it.b("done") }} of ${work.size} sets" })
             }
         }
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer).clickable(onClick = onList)
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.primaryContainer).clickable(onClick = onList)
             .semantics { contentDescription = "All exercises — reorder"; role = Role.Button }, contentAlignment = Alignment.Center) {
             Icon(PiIcons.List, null, tint = cs.onPrimaryContainer)
         }
@@ -194,10 +194,10 @@ fun ExercisesSheet(vm: AppViewModel, s: JSONObject, onAdd: () -> Unit, onClose: 
             com.pursuitiron.app.ui.common.ReorderColumn(exs, keyOf = { it.s("id") }, onMove = { f, t -> vm.act("move", "from" to f, "to" to t) }, labelOf = { it.s("name") }) { e, k, handle, lifted ->
                 val on = k == cur
                 val work = e.list("sets").filter { !it.b("warm") && !it.b("sub") && !it.b("skipped") }
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (lifted) cs.secondaryContainer else if (on) cs.primaryContainer else cs.surfaceContainer)
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (lifted) cs.secondaryContainer else if (on) cs.primaryContainer else cs.surfaceContainer)
                     .clickable { vm.act("select", "ei" to k); onClose() }.padding(start = 10.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
                     .semantics { selected = on }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(if (on) cs.primary else cs.surfaceContainerHighest), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(32.dp).clip(RoundedCornerShape(12.dp)).background(if (on) cs.primary else cs.surfaceContainerHighest), contentAlignment = Alignment.Center) {
                         Text("${k + 1}", style = MaterialTheme.typography.labelLarge, color = if (on) cs.onPrimary else cs.onSurface)
                     }
                     Column(Modifier.weight(1f)) {
@@ -269,12 +269,12 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
     Column {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(ex.s("name"), style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-                modifier = Modifier.weight(1f).padding(top = 4.dp, end = 6.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onInfo)
+                modifier = Modifier.weight(1f).padding(top = 4.dp, end = 6.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onInfo)
                     .semantics { contentDescription = "${ex.s("name")}: how to do it"; role = Role.Button })
             HeadIcon(PiIcons.Info, "How to do ${ex.s("name")}", onInfo)
             HeadIcon(PiIcons.History, "History for ${ex.s("name")}", onHistory)
             if (onSkip != null) HeadIcon(PiIcons.SkipNext, "Skip ${ex.s("name")} for today", onSkip)
-            Box(Modifier.padding(start = 2.dp).size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.secondaryContainer).clickable(onClick = onMenu)
+            Box(Modifier.padding(start = 2.dp).size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.secondaryContainer).clickable(onClick = onMenu)
                 .semantics { contentDescription = "Exercise actions"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.More, null, tint = cs.onSecondaryContainer) }
         }
         FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
@@ -328,7 +328,7 @@ fun LastNoteCard(ex: JSONObject, dayLabel: String) {
     var shown by remember(ex.s("id")) { mutableStateOf(true) }
     val cs = MaterialTheme.colorScheme
     AnimatedVisibility(shown, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.secondaryContainer).padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer).padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Note, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(18.dp))
             Column(Modifier.weight(1f)) {
@@ -349,7 +349,7 @@ fun StartingEstimateCard(s: JSONObject, ex: JSONObject, est: JSONObject) {
     val low = work?.o("target")?.s("reps")?.substringBefore('-')?.takeIf { it.isNotBlank() } ?: work?.s("reps").orEmpty()
     val rir = work?.o("target")?.s("rir")?.takeIf { it.isNotBlank() && it != "null" } ?: "2"
     val lead = if (est.o("from")?.s("kind") == "own") "No suggestion for ${ex.s("name")} in this program yet." else "First time on ${ex.s("name")}."
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp)
         .semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Starting estimate · ${est.s("w")} ${s.s("unit")}", style = MaterialTheme.typography.titleSmall)
         Text("$lead ${est.s("text")} If $low reps leave more than $rir in the tank, go heavier. Your first set fine-tunes the rest.",
@@ -390,7 +390,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, trailing: (@Compo
         return
     }
     trailing?.let { t -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { t() } }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).clickable { open = false }.semantics { contentDescription = "Close explanation"; role = Role.Button },
@@ -404,7 +404,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, trailing: (@Compo
             listOfNotNull(read?.takeIf { !it.isNull("e1rm") }?.let { "Est. 1RM ${it.s("e1rm")} ${s.s("unit")}" },
                 dec?.s("style")?.takeIf { it.isNotBlank() }?.let { it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() } },
                 read?.i("historyEntriesForThisDay")?.let { n -> if (n == 0) "First time on this day" else "From $n earlier session${if (n == 1) "" else "s"}" }).forEach { t ->
-                Text(t, style = MaterialTheme.typography.labelMedium, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(cs.surface).padding(horizontal = 10.dp, vertical = 6.dp))
+                Text(t, style = MaterialTheme.typography.labelMedium, modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(cs.surface).padding(horizontal = 10.dp, vertical = 6.dp))
             }
         }
         if (spark.size >= 2) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClick = onHistory).padding(vertical = 4.dp)
@@ -420,7 +420,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, trailing: (@Compo
 @Composable
 fun SessionTotals(s: JSONObject) {
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.widthIn(max = 780.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainer).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Row(Modifier.widthIn(max = 780.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainer).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Column(Modifier.weight(1f)) {
             Text("Working sets", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             Text("${s.i("doneSets")} / ${s.i("totalSets")}", style = MaterialTheme.typography.titleLarge)
@@ -446,7 +446,7 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifie
     val rating = x.b("done")
     val label = setLabelOf(ex, fi)
     val tag = showsTag(ex, x)
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(horizontal = 20.dp, vertical = 18.dp),
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.primaryContainer).padding(horizontal = 20.dp, vertical = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // The card sits at the top of the screen in focus mode, so it names the lift it belongs to.
         Text(ex.s("name"), style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -484,7 +484,7 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifie
                 androidx.compose.animation.fadeOut(Motion.effectsFast()) using androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.spatial() }
         }, label = "focusLog") { (rated, k) ->
         if (rated) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.primary).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.primary).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Reps left in the tank?", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     (0..4).forEach { r ->
@@ -498,11 +498,11 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifie
         } else HoldToLog(if (x.b("warm")) "warm-up" else "set") { vm.act("toggle", "ei" to ei, "si" to k) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(onClick = { onAdjust(fi) }, color = cs.surface, shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).height(44.dp)) {
+            Surface(onClick = { onAdjust(fi) }, color = cs.surface, shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f).height(44.dp)) {
                 Box(contentAlignment = Alignment.Center) { Text("Adjust", style = MaterialTheme.typography.labelLarge) }
             }
             if (!x.b("done") && !x.b("sub")) Surface(onClick = { vm.act("skipSet", "ei" to ei, "si" to fi); vm.toast("Set skipped — not counted") }, color = Color.Transparent,
-                contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, cs.onPrimaryContainer), modifier = Modifier.weight(1f).height(44.dp)) {
+                contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, cs.onPrimaryContainer), modifier = Modifier.weight(1f).height(44.dp)) {
                 Box(contentAlignment = Alignment.Center) { Text("Skip set", style = MaterialTheme.typography.labelLarge) }
             }
         }
@@ -526,16 +526,16 @@ private fun FocusBar(per: List<Double>, u: String, pl: JSONObject) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.clearAndSetSemantics { contentDescription = "Each side: " + per.joinToString(", ") { fmtNum(it) } + " $u, on the ${fmtNum(pl.optDouble("barW"))} $u ${pl.s("barLabel")}" }) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(22.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(ink.copy(alpha = 0.35f))) }
+            Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(22.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(ink.copy(alpha = 0.35f))) }
             per.forEachIndexed { k, p ->
                 Column(Modifier.chipIn(k).widthIn(min = 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) {
-                        Box(Modifier.width(12.dp).height((16 + Math.round(p / maxP * 28).toInt()).dp).clip(RoundedCornerShape(3.dp)).background(if (p >= big) cs.primary else ink.copy(alpha = 0.6f)))
+                        Box(Modifier.width(12.dp).height((16 + Math.round(p / maxP * 28).toInt()).dp).clip(RoundedCornerShape(4.dp)).background(if (p >= big) cs.primary else ink.copy(alpha = 0.6f)))
                     }
                     Text(fmtNum(p), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = ink)
                 }
             }
-            Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(56.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(ink.copy(alpha = 0.35f))) }
+            Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(56.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(ink.copy(alpha = 0.35f))) }
         }
         Text("per side · ${fmtNum(pl.optDouble("barW"))} $u ${pl.s("barLabel")}", style = MaterialTheme.typography.labelMedium, color = ink.copy(alpha = 0.8f))
     }
@@ -576,9 +576,9 @@ private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifi
     val top = work.maxByOrNull { (it.s("weight").toDoubleOrNull() ?: 0.0) * 100 + (it.s("reps").toDoubleOrNull() ?: 0.0) }
     val e1 = work.maxOfOrNull { val w = it.s("weight").toDoubleOrNull() ?: 0.0; val r = it.s("reps").toDoubleOrNull() ?: 0.0; if (w > 0 && r > 0) w * (1 + r / 30.0) else 0.0 } ?: 0.0
     val pr = work.any { it.b("pr") }
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(24.dp),
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.primaryContainer).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.popIn().size(56.dp).clip(RoundedCornerShape(18.dp)).background(cs.primary), contentAlignment = Alignment.Center) { DrawnCheck(cs.onPrimary, Modifier.size(28.dp)) }
+        Box(Modifier.popIn().size(56.dp).clip(RoundedCornerShape(20.dp)).background(cs.primary), contentAlignment = Alignment.Center) { DrawnCheck(cs.onPrimary, Modifier.size(28.dp)) }
         Text("${ex.s("short").ifBlank { ex.s("name") }} done", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
         if (pr) Text("NEW PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).prGlow(cs.primary, 16.dp).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -645,7 +645,7 @@ fun LiftDemo(name: String, part: String, pattern: String = "") {
     // Reduce motion: the demo holds its mid-rep pose instead of looping.
     val t = if (com.pursuitiron.app.ui.theme.Motion.reduced) 0.5f else tLoop
     val ink = cs.onSurface; val acc = cs.primary
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 14.dp),
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         androidx.compose.foundation.Canvas(Modifier.width(92.dp).height(74.dp).semantics { contentDescription = "Animated demo of $name" }) { drawDemo(p, t, ink, acc) }
         Column(Modifier.weight(1f)) {

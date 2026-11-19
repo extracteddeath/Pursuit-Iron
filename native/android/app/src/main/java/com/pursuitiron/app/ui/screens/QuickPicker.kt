@@ -93,7 +93,7 @@ fun QuickPickerSheet(vm: AppViewModel) {
             LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(shown, key = { it.s("id") }) { x ->
                     val id = x.s("id"); val at = picked.indexOf(id); val on = at >= 0
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (on) cs.secondaryContainer else cs.surfaceContainerLow)
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (on) cs.secondaryContainer else cs.surfaceContainerLow)
                         .clickable { if (on) picked.remove(id) else { picked.add(id); names.value = names.value + (id to x.s("name")) } }
                         .semantics(mergeDescendants = true) { role = Role.Checkbox; toggleableState = androidx.compose.ui.state.ToggleableState(on); contentDescription = (if (on) "Remove " else "Add ") + x.s("name") + if (on) ", number ${at + 1}" else "" }
                         .padding(horizontal = 14.dp, vertical = 10.dp),

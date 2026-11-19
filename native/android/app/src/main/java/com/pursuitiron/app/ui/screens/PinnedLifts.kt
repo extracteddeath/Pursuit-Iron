@@ -68,7 +68,7 @@ fun PinnedLiftsSection(vm: AppViewModel, onOpen: (String) -> Unit, onManage: () 
         }
         if (lifts.isEmpty()) {
             Box(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(24.dp))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(28.dp))
                     .clickable(role = Role.Button, onClick = onManage).padding(18.dp),
             ) {
                 Text(
@@ -135,7 +135,7 @@ fun PinsSheet(vm: AppViewModel, onClose: () -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Pinned lifts", style = MaterialTheme.typography.headlineSmall)
             Text("${lifts.size} of $max pinned. They show first on Progress, in this order.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            if (lifts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (lifts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 lifts.forEachIndexed { k, l ->
                     val name = l.s("name"); val id = l.s("id")
                     Surface(color = cs.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {

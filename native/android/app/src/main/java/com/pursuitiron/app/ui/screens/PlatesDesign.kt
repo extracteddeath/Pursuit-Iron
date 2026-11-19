@@ -97,7 +97,7 @@ fun PlatesSheet(vm: AppViewModel, onCalc: () -> Unit, onClose: () -> Unit) {
                 append(" is the heaviest you can load · smallest jump ")
                 withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)) { append(p.s("jump")) }
             }, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = cs.onPrimaryContainer,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.primaryContainer).padding(14.dp))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.primaryContainer).padding(14.dp))
             PanelCap("SMALLEST JUMP")
             val mi = p.d("minInc")
             val jumps = p.optJSONArray("jumpChoices")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONArray(it) }.map { it.optDouble(0) to it.optString(1) } } ?: emptyList()

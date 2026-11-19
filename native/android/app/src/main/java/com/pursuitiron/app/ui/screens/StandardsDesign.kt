@@ -103,7 +103,7 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 if (sc != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.primaryContainer).padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column(Modifier.size(88.dp).clip(RoundedCornerShape(30.dp, 30.dp, 30.dp, 10.dp)).background(cs.primary), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         Text("${sc.i("overall")}", style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, lineHeight = 36.sp), color = cs.onPrimary)
-                        Text("OF 100", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary.copy(alpha = 0.85f))
+                        Text("OF 100", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary.copy(alpha = 0.85f))
                     }
                     Column(Modifier.weight(1f)) {
                         Text(sc.s("level"), style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimaryContainer)
@@ -115,7 +115,7 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
                     }
                 }
                 val p = vm.profile
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Segmented(listOf("male" to "Male", "female" to "Female"), p?.s("sex", "male") ?: "male", { vm.setProfile(sex = it) })
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Age", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
@@ -150,7 +150,7 @@ fun StrengthStandardsSheet(vm: AppViewModel, onClose: () -> Unit) {
                     !x.b("ready") -> Text(if (x.s("missing") == "sex") "Pick your sex above to compare each lift against lifters like you." else "Log your bodyweight on Body to compare each lift against lifters like you.",
                         style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
                     x.list("rows").isEmpty() -> Text("Log a squat, bench, deadlift, press or row to place it.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
-                    else -> Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    else -> Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         val levels = x.optJSONArray("levels")
                         x.list("rows").forEach { r -> StdRow(r, levels) { liftId = r.s("id") } }
                     }
@@ -198,7 +198,7 @@ private fun StdRow(r: JSONObject, levels: org.json.JSONArray?, onOpen: () -> Uni
                     }
                     Box(Modifier.fillMaxWidth().height(14.dp)) {
                         th.forEachIndexed { k, t ->
-                            Text(lv(k + 1).take(3), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.sp),
+                            Text(lv(k + 1).take(3), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.sp),
                                 color = if (k + 1 == idx) cs.onSurface else cs.onSurfaceVariant, modifier = Modifier.offset(x = w * pos(t) - 14.dp).width(28.dp), textAlign = TextAlign.Center, maxLines = 1)
                         }
                     }

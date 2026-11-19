@@ -135,7 +135,7 @@ fun AuditCard(vm: AppViewModel, d: JSONObject) {
                 }
             }
         }
-        if (issues.isEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.primaryContainer).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (issues.isEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.primaryContainer).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Check, null, Modifier.size(20.dp), tint = cs.onPrimaryContainer)
             Text("Every muscle sits between MEV and MRV, even in the hardest week.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
         }

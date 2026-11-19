@@ -133,7 +133,7 @@ fun TodayScreen(vm: AppViewModel) {
         h.list("injuries").forEach { inj ->
             item { Rise {
                 val lifts = inj.strings("lifts")
-                PiCard(color = cs.tertiaryContainer, radius = 24.dp, padding = 16.dp) {
+                PiCard(color = cs.tertiaryContainer, radius = 28.dp, padding = 16.dp) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(PiIcons.Shield, null, tint = cs.onTertiaryContainer, modifier = Modifier.padding(top = 2.dp))
                         Column(Modifier.weight(1f)) {
@@ -180,9 +180,9 @@ fun TodayScreen(vm: AppViewModel) {
         if (h.o("deload") != null && h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { DeloadDueCard(vm, h) }}
 
         if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise {
-            PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.quickPickOpen = true }) {
+            PiCard(color = cs.surfaceContainer, radius = 28.dp, padding = 16.dp, onClick = { vm.quickPickOpen = true }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
                     Column(Modifier.weight(1f)) {
                         Text("Quick workout", style = MaterialTheme.typography.titleSmall)
                         Text("Pick lifts and go. Your plan stays put.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -257,7 +257,7 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
                     style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     ex.map { it.s("part") }.distinct().filter { it.isNotEmpty() }.forEach { p ->
-                        Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(10.dp)) {
+                        Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(12.dp)) {
                             Text(p.replace('_', ' ').replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
                         }
                     }
@@ -358,7 +358,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                 "Sets" to "${d.i("setsDone")}", "Volume" to (if (vol > 0) com.pursuitiron.app.ui.common.volText(vol.toDouble(), u) else "—"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 stats.forEach { (k, v) ->
-                    Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 12.dp)) {
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 12.dp)) {
                         Text(k, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
                         Text(v, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.ExtraBold))
                     }
@@ -375,10 +375,10 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             }
             if (d.s("note").isNotBlank()) Text("“${d.s("note")}”", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             d.list("lifts").forEach { l ->
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(l.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (l.b("pr")) Text("PR", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
+                        if (l.b("pr")) Text("PR", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
                             modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.primary).padding(horizontal = 8.dp, vertical = 2.dp))
                         Text(if (l.isNull("e1rm")) "Bodyweight" else "Est. 1RM ${com.pursuitiron.app.ui.common.fmtNum(l.d("e1rm"))} $u", style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
                     }
@@ -389,13 +389,13 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                             val w = x.d("w"); val lab = (if (x.b("sub")) (if (x.s("kind") == "myo") "M " else "D ") else "") + (if (w > 0) com.pursuitiron.app.ui.common.fmtNum(w) else "BW") + "×" + x.s("r") +
                                 (if (!x.b("sub") && !x.isNull("rir")) " @" + com.pursuitiron.app.ui.common.fmtNum(x.d("rir")) else "")
                             Text(lab, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = if (top) cs.onPrimaryContainer else cs.onSurface,
-                                modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (top) cs.primaryContainer else cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 6.dp))
+                                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (top) cs.primaryContainer else cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 6.dp))
                         }
                     }
                 }
             }
             val mus = d.list("muscles")
-            if (mus.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (mus.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("WORKING SETS BY MUSCLE", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
                 val mx = mus.maxOf { it.i("sets") }.coerceAtLeast(1)
                 mus.forEach { m ->
@@ -411,7 +411,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             androidx.compose.animation.AnimatedContent(sharing, label = "share") { open ->
                 if (!open) Button(onClick = { sharing = true }, modifier = Modifier.fillMaxWidth().height(54.dp)) { Icon(PiIcons.Share, null, Modifier.size(18.dp)); Text("  Share this session", style = MaterialTheme.typography.titleMedium) }
                 else Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.primaryContainer).padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(kicker.substringBefore(" · "), style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp), color = cs.onPrimaryContainer.copy(alpha = 0.8f))
                         Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineMedium.copy(fontSize = 34.sp, lineHeight = 36.sp), color = cs.onPrimaryContainer)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {

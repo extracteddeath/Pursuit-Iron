@@ -68,7 +68,7 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
                 Text(listOfNotNull(ready?.let { "Readiness $it%" }, "${x.list("exercises").size} exercises").joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             val est = x.i("estimatedMinutes"); val fits = x.b("fits")
-            Surface(color = if (fits) cs.primaryContainer else cs.tertiaryContainer, contentColor = if (fits) cs.onPrimaryContainer else cs.onTertiaryContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+            Surface(color = if (fits) cs.primaryContainer else cs.tertiaryContainer, contentColor = if (fits) cs.onPrimaryContainer else cs.onTertiaryContainer, shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.Bottom) {
@@ -96,7 +96,7 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
                         modifier = Modifier.weight(1f).height(56.dp).semantics { contentDescription = o.s("label").replace("m", " minutes") + ", " + sub; this.selected = on }) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                             Text(o.s("label"), style = MaterialTheme.typography.titleSmall)
-                            Text(sub, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+                            Text(sub, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp))
                         }
                     }
                 }
@@ -104,7 +104,7 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
             Text(if (fits) "Today only. Keeps your key lifts, warm-ups and rest; trims extra sets and lower-priority lifts first."
                 else "Your key lifts alone need about $est min. Pick a longer option or Full.",
                 style = MaterialTheme.typography.bodySmall, color = if (fits) cs.onSurfaceVariant else cs.tertiary)
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 x.list("exercises").forEachIndexed { k, e ->
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

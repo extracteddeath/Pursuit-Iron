@@ -162,7 +162,7 @@ private fun ProfileCustomizeSheet(vm: AppViewModel, onClose: () -> Unit) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Customize profile", style = MaterialTheme.typography.headlineSmall)
             Text("Reorder your profile and hide what you don't use. ${lay.visible().size} of ${lay.order.size} sections shown.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 lay.order.forEachIndexed { k, id ->
                     val name = com.pursuitiron.app.data.ProfileLayout.label(id)
                     val shown = id !in lay.hidden
@@ -372,7 +372,7 @@ private fun SettingsNav(vm: AppViewModel, onTools: () -> Unit, onOpen: (String) 
         NavRow("data", PiIcons.Shield, "Data & storage", "Import, export, banned exercises, clear or reset"),
         NavRow("help", PiIcons.Help, "Help & about", "Report a bug, privacy, the research behind it"),
     )
-    Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         rows.forEach { r ->
             Row(
                 Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { if (r.key == "tools") onTools() else onOpen(r.key) }

@@ -48,11 +48,11 @@ fun MuscleChips(primary: String, secondary: List<String>, modifier: Modifier = M
     val sec = secondary.filter { it.isNotBlank() && !it.equals(primary, true) }.distinct().take(max)
     val desc = "Muscles worked: primary $primary" + if (sec.isNotEmpty()) "; secondary " + sec.joinToString(", ") else ""
     FlowRow(modifier.semantics(mergeDescendants = true) { contentDescription = desc }, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(color = cs.primary, contentColor = cs.onPrimary, shape = RoundedCornerShape(10.dp)) {
+        Surface(color = cs.primary, contentColor = cs.onPrimary, shape = RoundedCornerShape(12.dp)) {
             Text(primary, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
         }
         sec.forEach { m ->
-            Surface(color = cs.surfaceContainerHighest, contentColor = cs.onSurface, shape = RoundedCornerShape(10.dp)) {
+            Surface(color = cs.surfaceContainerHighest, contentColor = cs.onSurface, shape = RoundedCornerShape(12.dp)) {
                 Text(m, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
             }
         }

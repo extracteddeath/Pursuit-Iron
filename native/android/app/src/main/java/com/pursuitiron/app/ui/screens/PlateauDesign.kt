@@ -114,7 +114,7 @@ fun PlateauSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onSwap: () -> 
                 Text(pl?.s("advice") ?: "Choose how to approach this exercise today.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp),
                     color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
             }
-            Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 WayOut(PiIcons.Check, "Keep the current plan", "Train it as prescribed today.") { onClose() }
                 if (!percent) WayOut(PiIcons.ChevronUp, "Build reps with double progression", "Applies to the remaining sets. Review keeping it in the program after this workout.") {
                     vm.act("progression", "ei" to ei, "style" to "double"); onClose() }

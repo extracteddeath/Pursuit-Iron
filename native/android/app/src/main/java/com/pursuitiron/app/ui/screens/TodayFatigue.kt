@@ -70,7 +70,7 @@ fun DeloadDueCard(vm: AppViewModel, h: JSONObject) {
             Text("Fatigue is outpacing recovery. A lighter week, about half the sets and 10% less load, lets progress rebound.",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp))
             val rows = d.list("rows")
-            if (rows.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (rows.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 rows.forEach { r ->
                     Row(Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(r.s("k"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.ExtraBold), color = cs.onSurface, modifier = Modifier.width(86.dp))
@@ -103,9 +103,9 @@ fun FresherDayCard(vm: AppViewModel, h: JSONObject, onOpen: () -> Unit) {
     if (h.s("lastSessionId").isNotEmpty() && vm.prefs.altKeptFor == h.s("lastSessionId")) return
     val cs = MaterialTheme.colorScheme
     val sore = alt.o("today")?.strings("recovering").orEmpty().take(3).map { it.lowercase() }
-    Surface(onClick = onOpen, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(onClick = onOpen, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.surface), contentAlignment = Alignment.Center) { Icon(PiIcons.SwapDays, null, Modifier.size(20.dp), tint = cs.primary) }
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(cs.surface), contentAlignment = Alignment.Center) { Icon(PiIcons.SwapDays, null, Modifier.size(20.dp), tint = cs.primary) }
             Column(Modifier.weight(1f)) {
                 Text("Fresher today: ${alt.s("dayLabel")} · ${alt.i("score")}%", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp))
                 Text((if (sore.isNotEmpty()) "Your ${joinNames(sore)} ${if (sore.size == 1) "is" else "are"} still recovering." else "Today’s muscles are still recovering.") + " Swap days, or go light.",
@@ -128,7 +128,7 @@ fun FresherDaySheet(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
             Text("A fresher option today", style = MaterialTheme.typography.headlineSmall)
             Text("Today’s plan trains muscles that are still recovering. ${alt.s("dayLabel")} trains different ones, so the week still adds up.",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp), color = cs.onSurfaceVariant)
-            Surface(color = cs.surfaceContainerHigh, shape = RoundedCornerShape(22.dp)) {
+            Surface(color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf(Triple(today.s("dayLabel"), "Planned · " + today.list("parts").joinToString(", ") { it.s("label").lowercase() }, today.i("score")) to cs.onTertiaryContainer,
                         Triple(alt.s("dayLabel"), alt.list("parts").joinToString(", ") { it.s("label") }.replaceFirstChar { it.uppercase() }, alt.i("score")) to cs.primary).forEach { (row, color) ->
@@ -225,16 +225,16 @@ fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
                         Text(" for today’s muscles", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp), modifier = Modifier.padding(bottom = 6.dp))
                     }
                 }
-                Surface(onClick = onClose, color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(14.dp), modifier = Modifier.size(44.dp)) {
+                Surface(onClick = onClose, color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(44.dp)) {
                     Box(contentAlignment = Alignment.Center) { Icon(PiIcons.ChevronUp, "Collapse readiness", Modifier.size(20.dp)) }
                 }
             }
-            Surface(color = cs.surface, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+            Surface(color = cs.surface, shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     BodyMap(ready, Modifier.fillMaxWidth().height(200.dp))
                     Row(Modifier.fillMaxWidth().padding(horizontal = 40.dp)) {
-                        Text("FRONT", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        Text("BACK", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text("FRONT", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text("BACK", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
             }

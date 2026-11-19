@@ -113,7 +113,7 @@ fun SettingsGroup(vm: AppViewModel, onGyms: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val st = vm.settings
     var confirmUnit by remember { mutableStateOf<String?>(null) }
-    Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         vm.gyms?.let { g ->
             val active = g.list("gyms").firstOrNull { it.s("id") == g.s("activeGymId") }
             GroupRow("Gyms", active?.let { gymMeta(it) }) {
@@ -213,11 +213,11 @@ fun SettingsRows(vm: AppViewModel, onOpen: (String) -> Unit) {
         SetRow("help", "Help & about", "Report a bug, privacy, the research behind it", PiIcons.Help, cs.surfaceContainerHighest, cs.onSurface),
     )
     Column {
-    Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         rows.forEach { r ->
             Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { onOpen(r.key) }.semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(r.bg), contentAlignment = Alignment.Center) { Icon(r.icon, null, Modifier.size(20.dp), tint = r.fg) }
+                Box(Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(r.bg), contentAlignment = Alignment.Center) { Icon(r.icon, null, Modifier.size(20.dp), tint = r.fg) }
                 Column(Modifier.weight(1f)) {
                     Text(r.title, style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
                     Text(r.sub, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
@@ -228,7 +228,7 @@ fun SettingsRows(vm: AppViewModel, onOpen: (String) -> Unit) {
     }
     if (!vm.rest.exactAllowed()) {
         val ctx = LocalContext.current
-        Column(Modifier.padding(top = 16.dp).clip(RoundedCornerShape(24.dp))) {
+        Column(Modifier.padding(top = 16.dp).clip(RoundedCornerShape(28.dp))) {
             MenuRow(PiIcons.Timer, "Rest alert on the second", "Let Pursuit Iron use exact alarms so the rest-over alert isn't late with the screen off", cs.tertiaryContainer, cs.onTertiaryContainer) {
                 if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))) }
             }
@@ -243,7 +243,7 @@ fun BannedSection(vm: AppViewModel) {
     val banned = vm.settings.list("banned")
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Banned exercises", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 8.dp).semantics { heading() })
-        Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (banned.isEmpty()) Text("None. Ban a lift from its detail sheet and it never comes back in swaps.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = cs.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(16.dp))
             banned.forEach { b ->
@@ -291,7 +291,7 @@ fun E1rmCalcCard(vm: AppViewModel) {
             Slider(rir.toFloat(), { rir = Math.round(it) }, valueRange = 0f..4f, steps = 3, colors = sliderColors, modifier = Modifier.semantics { contentDescription = "Reps in reserve" })
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(95 to "2–3", 85 to "5–6", 75 to "8–10", 65 to "12–15").forEach { (p, r) ->
-                    Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("$p%", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
                         Text(fmtNum(snap(e1 * p / 100, inc)), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
                         Text("$r reps", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
@@ -312,7 +312,7 @@ fun ComfortSheet(vm: AppViewModel, onClose: () -> Unit) {
             Text("Comfort & accessibility", style = MaterialTheme.typography.headlineSmall)
             Text("TEXT SIZE", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
             Segmented(listOf("1.0" to "Default", "1.1" to "Large", "1.2" to "Larger"), vm.prefs.zoom.toString(), { vm.prefs.changeZoom(it.toFloat()) })
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(14.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(14.dp)) {
                 Text("Bench press", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
                 Text("4 × 6–8 @2 RIR · Last 80×8", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
             }
@@ -331,7 +331,7 @@ fun ComfortSheet(vm: AppViewModel, onClose: () -> Unit) {
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.width(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                             h.pattern.forEachIndexed { k, v ->
-                                if (k % 2 == 0) Box(Modifier.width((v / 5).coerceAtLeast(3L).toInt().dp).height(14.dp).clip(RoundedCornerShape(3.dp)).background(cs.primary))
+                                if (k % 2 == 0) Box(Modifier.width((v / 5).coerceAtLeast(3L).toInt().dp).height(14.dp).clip(RoundedCornerShape(4.dp)).background(cs.primary))
                                 else Box(Modifier.width((v / 10).coerceAtLeast(2L).toInt().dp).height(2.dp))
                             }
                         }

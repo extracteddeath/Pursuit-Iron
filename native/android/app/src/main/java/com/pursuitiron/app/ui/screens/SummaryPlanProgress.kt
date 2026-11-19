@@ -100,7 +100,7 @@ fun SummaryScreen(vm: AppViewModel) {
             StatTile("Time", "${r.i("durationMin")}", "min", Modifier.weight(1f), color = cs.surface)
         }
         val prs = r.list("prs")
-        if (prs.isNotEmpty()) PiCard(Modifier.widthIn(max = 520.dp), color = cs.surface, radius = 24.dp) {
+        if (prs.isNotEmpty()) PiCard(Modifier.widthIn(max = 520.dp), color = cs.surface, radius = 28.dp) {
             Text("${prs.size} new ${if (prs.size == 1) "best" else "bests"}", style = MaterialTheme.typography.titleMedium)
             prs.forEach { p ->
                 Row { Text(p.s("name"), Modifier.weight(1f)); Text("Est. 1RM ${fmtNum(p.d("prev"))} → ${fmtNum(p.d("e1rm"))}", style = MaterialTheme.typography.labelLarge, color = cs.primary) }
@@ -289,7 +289,7 @@ fun ProgramMenuButton(vm: AppViewModel, id: String, name: String) {
 @Composable
 private fun PlanWeekChip(n: Int, deload: Boolean, selected: Boolean, current: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
-    val r by androidx.compose.animation.core.animateDpAsState(if (selected) 16.dp else 26.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "weekChip")
+    val r by androidx.compose.animation.core.animateDpAsState(if (selected) 16.dp else 28.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "weekChip")
     val tag = when { deload -> "DELOAD"; current > 0 && n < current -> "DONE"; n == current -> "NOW"; else -> "" }
     val bg = when { selected -> cs.primary; deload -> cs.tertiaryContainer; else -> cs.surfaceContainerHigh }
     val fg = when { selected -> cs.onPrimary; deload -> cs.onTertiaryContainer; else -> cs.onSurface }
@@ -297,7 +297,7 @@ private fun PlanWeekChip(n: Int, deload: Boolean, selected: Boolean, current: In
         modifier = modifier.height(52.dp).widthIn(min = 56.dp).semantics { contentDescription = "Week $n" + (if (deload) ", deload" else "") + (if (tag == "NOW") ", current" else if (tag == "DONE") ", done" else ""); this.selected = selected }) {
         Column(Modifier.padding(horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("W$n", style = MaterialTheme.typography.titleSmall)
-            if (tag.isNotEmpty()) Text(tag, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.4.sp))
+            if (tag.isNotEmpty()) Text(tag, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, letterSpacing = 0.4.sp))
         }
     }
 }

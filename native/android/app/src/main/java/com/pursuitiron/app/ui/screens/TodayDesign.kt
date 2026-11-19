@@ -156,7 +156,7 @@ fun PlanChangesBanner(r: JSONObject, onOpen: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val undone = r.i("undone")
     val src = r.optLong("sourceDate").takeIf { it > 0 }?.let { SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(Date(it)) }
-    Surface(onClick = onOpen, color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(24.dp),
+    Surface(onClick = onOpen, color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(28.dp),
         modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Review plan changes: $n change${if (n == 1) "" else "s"} to your next session" }) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface), contentAlignment = Alignment.Center) { Icon(PiIcons.Redo, null, tint = cs.primary, modifier = Modifier.size(20.dp)) }
@@ -184,7 +184,7 @@ fun PlanChangesSheet(vm: AppViewModel, review: JSONObject, onUpdated: (JSONObjec
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             if (r.list("changes").isEmpty()) Text("No changes from your last comparable workout.", color = cs.onSurfaceVariant)
             r.list("changes").forEach { c ->
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(c.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                         Text(if (c.b("undone")) "Undone" else c.s("category"), style = MaterialTheme.typography.labelMedium,
@@ -248,7 +248,7 @@ fun CheckInCard(vm: AppViewModel) {
     // Folded to one row until opened: three questions shouldn't stand between Today and the session.
     var expanded by remember { mutableStateOf(false) }
     if (!expanded && c.stored.isEmpty()) {
-        Surface(onClick = { expanded = true }, color = cs.surfaceContainerLow, shape = RoundedCornerShape(22.dp),
+        Surface(onClick = { expanded = true }, color = cs.surfaceContainerLow, shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = "How are you today? Optional check-in" }) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(cs.tertiaryContainer), contentAlignment = Alignment.Center) {
@@ -325,9 +325,9 @@ fun GamePlanCard(review: JSONObject, changes: Int) {
                 "plan" -> Triple(PiIcons.Calendar, cs.secondaryContainer, cs.onSecondaryContainer)
                 else -> Triple(PiIcons.Progress, cs.surfaceContainerHighest, cs.onSurfaceVariant)
             }
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = if (on) "Show less" else "Show more") { open = if (on) null else key },
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = if (on) "Show less" else "Show more") { open = if (on) null else key },
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(bg), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(32.dp).clip(RoundedCornerShape(12.dp)).background(bg), contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
                 }
                 Column(Modifier.weight(1f)) {

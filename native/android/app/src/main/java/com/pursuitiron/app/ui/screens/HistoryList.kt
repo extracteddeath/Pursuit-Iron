@@ -97,7 +97,7 @@ fun HistoryList(vm: AppViewModel, day: Triple<Int, Int, Int>? = null, onOpen: (S
                 Text("${if (day != null) items.size else g.i("count")} session${if ((if (day != null) items.size else g.i("count")) == 1) "" else "s"}" + (g.i("volume").takeIf { it > 0 }?.let { " · ${fmt1(it / 1000.0)} ${volUnit(u)}" } ?: ""),
                     style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             }
-            Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 shown.forEach { r -> HistoryRow(r) { onOpen(r.s("id")) } }
             }
         }

@@ -145,7 +145,7 @@ fun StrengthScoreCard(vm: AppViewModel, onOpenStandards: (() -> Unit)? = null, o
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 74.dp)) }
         }
         sc.o("next")?.let { n ->
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.secondaryContainer).padding(12.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer).padding(12.dp)) {
                 Kicker("Next milestone", color = cs.onSecondaryContainer)
                 Text("${n.s("name")} ${n.i("target")} ${n.s("unit")} for ${n.s("level")} ${n.s("pattern").lowercase()}", style = MaterialTheme.typography.titleSmall, color = cs.onSecondaryContainer)
                 Text("Now ${n.i("current")}${if (n.has("est") && n.b("est")) " (estimated)" else ""}", style = MaterialTheme.typography.bodySmall, color = cs.onSecondaryContainer)
@@ -314,8 +314,8 @@ fun CalendarCard(vm: AppViewModel, onOpen: (String) -> Unit) {
                     val selected = sel == day
                     val bg = when { selected -> cs.primary; count > 0 -> cs.primaryContainer; else -> cs.surfaceContainer }
                     val fg = when { selected -> cs.onPrimary; count > 0 -> cs.onPrimaryContainer; else -> cs.onSurfaceVariant }
-                    Box(Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(bg)
-                        .then(if (isToday && !selected) Modifier.border(1.5.dp, cs.primary, RoundedCornerShape(10.dp)) else Modifier)
+                    Box(Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(bg)
+                        .then(if (isToday && !selected) Modifier.border(1.5.dp, cs.primary, RoundedCornerShape(12.dp)) else Modifier)
                         .then(if (count > 0) Modifier.clickable { sel = if (selected) null else day } else Modifier)
                         .semantics(mergeDescendants = true) {
                             contentDescription = "$monthName $day: ${if (count == 0) "no workouts" else if (count == 1) "1 workout" else "$count workouts"}"
@@ -328,7 +328,7 @@ fun CalendarCard(vm: AppViewModel, onOpen: (String) -> Unit) {
             }
         }
         sel?.let { d -> days[d]?.let { hit ->
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainer).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainer).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("$monthName $d", style = MaterialTheme.typography.titleSmall)
                 hit.list("sessions").forEach { sx ->
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onOpen(sx.s("id")) }.padding(4.dp)) {

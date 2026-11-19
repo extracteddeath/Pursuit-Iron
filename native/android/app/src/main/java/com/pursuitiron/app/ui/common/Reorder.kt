@@ -89,7 +89,7 @@ fun <T> ReorderColumn(
                 Box(Modifier.onSizeChanged { heights[i] = it.height }.zIndex(if (lifting) 1f else 0f)
                     .graphicsLayer {
                         translationY = if (lifting) offset else slide
-                        if (lifting) { scaleX = 1.02f; scaleY = 1.02f; shadowElevation = 12.dp.toPx(); shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp); clip = false }
+                        if (lifting) { scaleX = 1.02f; scaleY = 1.02f; shadowElevation = 12.dp.toPx(); shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp); clip = false }
                     }
                     .semantics {
                         val name = labelOf(item)

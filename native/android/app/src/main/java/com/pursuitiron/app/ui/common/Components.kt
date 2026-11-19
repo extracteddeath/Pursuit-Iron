@@ -146,7 +146,7 @@ fun RowScope.Spacer1() = Box(Modifier.weight(1f))
 
 @Composable
 fun IconBubble(icon: ImageVector, bg: Color, fg: Color, size: Dp = 40.dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(14.dp)).background(bg), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(16.dp)).background(bg), contentAlignment = Alignment.Center) {
         Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(size * 0.5f))
     }
 }

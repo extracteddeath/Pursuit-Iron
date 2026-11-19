@@ -178,14 +178,14 @@ fun SetSteppers(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si: In
     val u = s.s("unit"); val assisted = ex.b("assisted")
     val h = if (vm.prefs.grip) 48.dp else 40.dp
     Row(Modifier.fillMaxWidth().padding(start = 40.dp, top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             HoldStep(PiIcons.Minus, if (assisted) "More assistance" else "Less weight", h, false) { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }
             val w = set.s("weight")
             Text(when { showsTag(ex, set) -> ex.s("loadTag"); assisted -> assistShownLive(w); else -> w.ifBlank { "—" } } + if (!showsTag(ex, set) && w.isNotBlank()) " $u" else "",
                 style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1)
             HoldStep(PiIcons.Plus, if (assisted) "Less assistance" else "More weight", h, false) { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) }
         }
-        Row(Modifier.weight(0.8f).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(0.8f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             HoldStep(PiIcons.Minus, "One rep fewer", h, false) { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }
             Text(set.s("reps").ifBlank { "—" } + if (set.s("reps").isNotBlank()) " reps" else "", style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1)

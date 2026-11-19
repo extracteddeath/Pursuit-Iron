@@ -100,12 +100,12 @@ fun TrainingPrefsCard(vm: AppViewModel) {
         cap("EFFORT SCALE")
         val mode = st.s("loadMode", "rir")
         Segmented(listOf("rir" to "Reps in reserve", "rpe" to "RPE"), mode, { vm.updateSetting("loadMode", it) })
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(if (mode == "rpe") "4 × 6–8 @ RPE 8" else "4 × 6–8 @2 RIR", style = MaterialTheme.typography.titleMedium)
             Text(if (mode == "rpe") "RPE 8 means a hard set with about 2 good reps left. After a set you tap how hard it actually was."
                 else "@2 means stop with about 2 good reps left. After a set you tap how many you actually had.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Warm-up checklist", style = MaterialTheme.typography.titleSmall)
                 Text("Show a warm-up and mobility checklist before each session", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -142,11 +142,11 @@ fun ManageDataCard(vm: AppViewModel) {
     val cap = @Composable { t: String -> Text(t, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant) }
     PiCard(radius = 28.dp) {
         Text("Data & storage", style = MaterialTheme.typography.headlineSmall)
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row { cap("ON THIS PHONE"); androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)); cap("PRIVATE") }
             val bytes = storage?.optLong("bytes") ?: 0L
-            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(cs.surfaceContainerHighest)) {
-                Box(Modifier.fillMaxWidth((bytes / (5.0 * 1024 * 1024)).toFloat().coerceIn(0.01f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(cs.primary))
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(cs.surfaceContainerHighest)) {
+                Box(Modifier.fillMaxWidth((bytes / (5.0 * 1024 * 1024)).toFloat().coerceIn(0.01f, 1f)).height(6.dp).clip(RoundedCornerShape(4.dp)).background(cs.primary))
             }
             val kb = bytes / 1024
             Text("${if (kb >= 1024) String.format(Locale.US, "%.1f MB", kb / 1024.0) else "$kb KB"} on this phone · ${st.i("sessions")} sessions · ${st.i("programs")} programs · ${vm.customs.size} custom lifts",
@@ -287,7 +287,7 @@ fun HelpCard(vm: AppViewModel) {
     // The design's Help & about: four rows, the research inline, then the version and what the app is.
     PiCard(radius = 28.dp) {
         Text("Help & about", style = MaterialTheme.typography.headlineSmall)
-        Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             MenuRow(HELP_BUG, "Report a bug", "Opens your email with the version filled in", cs.secondaryContainer, cs.onSecondaryContainer) {
                 val subject = Uri.encode("Pursuit Iron bug report (Android ${BuildConfig.VERSION_NAME}, build ${BuildConfig.VERSION_CODE})")
                 val body = Uri.encode("What happened:\n\nWhat I expected:\n\nDevice: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}\n")
@@ -303,7 +303,7 @@ fun HelpCard(vm: AppViewModel) {
         androidx.compose.animation.AnimatedVisibility(refsOpen && refs != null, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 refs.orEmpty().forEach { r ->
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(horizontal = 14.dp, vertical = 12.dp)) {
                         Text(r.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
                         Text(r.s("detail"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                     }
@@ -350,14 +350,14 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     sug.forEachIndexed { k, d ->
                         val on = d.s("dayId").isNotBlank()
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (on) cs.surface else cs.onSecondaryContainer.copy(alpha = 0.06f)).padding(vertical = 6.dp, horizontal = 2.dp),
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) cs.surface else cs.onSecondaryContainer.copy(alpha = 0.06f)).padding(vertical = 6.dp, horizontal = 2.dp),
                             horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(names[k], style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                             val head = d.s("label").substringBefore(" — ")
-                            Text(if (on) head else "Rest", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                            Text(if (on) head else "Rest", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 12.sp),
                                 color = if (on) cs.onSurface else cs.onSurfaceVariant, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             if (on && (heads[head] ?: 0) > 1 && " — " in d.s("label"))
-                                Text(d.s("label").substringAfter(" — "), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal),
+                                Text(d.s("label").substringAfter(" — "), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal),
                                     color = cs.onSurfaceVariant, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
@@ -404,7 +404,7 @@ fun SelfTestSheet(vm: AppViewModel, onClose: () -> Unit) {
                 com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column
             }
             val fails = x.i("failureCount"); val adv = x.i("advisoryCount")
-            Surface(color = if (fails == 0) cs.primaryContainer else cs.errorContainer, contentColor = if (fails == 0) cs.onPrimaryContainer else cs.onErrorContainer, shape = RoundedCornerShape(22.dp)) {
+            Surface(color = if (fails == 0) cs.primaryContainer else cs.errorContainer, contentColor = if (fails == 0) cs.onPrimaryContainer else cs.onErrorContainer, shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(if (fails == 0) "Every set checks out" else "$fails problem${if (fails == 1) "" else "s"} found", style = MaterialTheme.typography.titleMedium)
                     Text("${x.i("setsChecked")} prescribed lifts across ${x.i("programs")} program${if (x.i("programs") == 1) "" else "s"}, checked against ${x.i("historyChecked")} logged workout${if (x.i("historyChecked") == 1) "" else "s"}; " +

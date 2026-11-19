@@ -154,7 +154,7 @@ private fun PlatesTool(vm: AppViewModel, initialWeight: String, initialBar: Stri
         Box(Modifier.width(if (p >= big * 0.5) 13.dp else if (p >= big * 0.2) 10.dp else 7.dp).height((26 + kotlin.math.sqrt(p / big) * 74).dp)
             .clip(RoundedCornerShape(4.dp)).background(tones[sizes.indexOf(p).coerceIn(0, 3)]))
     }
-    Row(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(22.dp)).background(cs.surface).semantics { contentDescription = per },
+    Row(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(20.dp)).background(cs.surface).semantics { contentDescription = per },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) { plates.reversed().forEach { Disc(it) } }
         Box(Modifier.width(8.dp).height(16.dp).clip(RoundedCornerShape(2.dp)).background(cs.outline))
@@ -252,7 +252,7 @@ fun GymsSheet(vm: AppViewModel, onClose: () -> Unit) {
             }
             list.forEach { gym ->
                 val id = gym.s("id"); val eq = gym.strings("equipment").toSet(); val isOpen = open == id
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh)) {
                     Row(Modifier.fillMaxWidth().clickable { open = if (isOpen) null else id }.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = active == id, onClick = { active = id }, modifier = Modifier.semantics { contentDescription = "Train at ${gym.s("name")}" })
                         Column(Modifier.weight(1f)) {

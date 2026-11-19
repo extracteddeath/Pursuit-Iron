@@ -84,7 +84,7 @@ fun IntroScreen(vm: AppViewModel) {
     val leave = { then: () -> Unit -> vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.leaveIntro(if (askUnit) unit else null) { vm.prefs.markIntro(INTRO_VERSION); then() } }
     Column(Modifier.fillMaxSize().background(cs.surface).statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 30.dp).widthIn(max = 560.dp)) {
-            Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(cs.primary), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(cs.primary), contentAlignment = Alignment.Center) {
                 Icon(PiIcons.Plates, null, tint = cs.onPrimary)
             }
             Spacer(Modifier.height(22.dp))
@@ -100,7 +100,7 @@ fun IntroScreen(vm: AppViewModel) {
                 Triple(PiIcons.Progress, "Progress you can inspect", "Lift trends, records, volume, measurements, and cycle history stay connected to the work that created them."),
             ).forEach { (icon, title, sub) ->
                 Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(cs.surfaceContainerHigh), contentAlignment = Alignment.Center) { Icon(icon, null, tint = cs.primary, modifier = Modifier.size(19.dp)) }
+                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceContainerHigh), contentAlignment = Alignment.Center) { Icon(icon, null, tint = cs.primary, modifier = Modifier.size(19.dp)) }
                     Column(Modifier.weight(1f)) {
                         Text(title, style = MaterialTheme.typography.titleSmall)
                         Text(sub, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -261,7 +261,7 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
                 Icon(com.pursuitiron.app.ui.common.PiIcons.Check, null, Modifier.size(18.dp))
                 Text("Every muscle ${r.s("nextLabel")} trains is recovered.", style = MaterialTheme.typography.bodyMedium)
             }
-            if (rows.isNotEmpty()) androidx.compose.material3.Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(22.dp)) {
+            if (rows.isNotEmpty()) androidx.compose.material3.Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     rows.forEach { m ->
                         val v = m.i("readiness")
@@ -392,7 +392,7 @@ fun CoachCard(h: JSONObject) {
         (if (all) notes else notes.take(3)).forEach { f ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val icon = when (f.s("icon")) { "deload", "fatigue" -> PiIcons.Shield; "recal", "cal" -> PiIcons.Redo; "pr" -> PiIcons.Trophy; else -> PiIcons.Sparkle }
-                Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(cs.primary), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(16.dp), tint = cs.onPrimary) }
+                Box(Modifier.size(32.dp).clip(RoundedCornerShape(12.dp)).background(cs.primary), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(16.dp), tint = cs.onPrimary) }
                 Column(Modifier.weight(1f)) {
                     Text(f.s("title"), style = MaterialTheme.typography.titleSmall)
                     Text(f.s("text"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -411,12 +411,12 @@ fun ThisWeekList(vm: AppViewModel, h: JSONObject) {
     val cs = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("This week")
-        Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             days.forEach { d ->
                 val st = d.s("status"); val today = st == "today"; val done = st == "done"
                 Row(Modifier.fillMaxWidth().background(if (today) cs.primaryContainer else cs.surfaceContainerLow).padding(horizontal = 14.dp, vertical = 12.dp)
                     .semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(44.dp).clip(if (done) RoundedCornerShape(14.dp) else CircleShape).background(if (done || today) cs.primary else cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(44.dp).clip(if (done) RoundedCornerShape(16.dp) else CircleShape).background(if (done || today) cs.primary else cs.secondaryContainer), contentAlignment = Alignment.Center) {
                         Text(d.s("weekday").ifBlank { "D${days.indexOf(d) + 1}" }, style = MaterialTheme.typography.labelMedium, color = if (done || today) cs.onPrimary else cs.onSecondaryContainer)
                     }
                     Column(Modifier.weight(1f)) {
@@ -446,7 +446,7 @@ fun BackupBanner(vm: AppViewModel, b: JSONObject) {
     val last = b.optLong("lastBackup").takeIf { it > 0 }
     val days = last?.let { ((System.currentTimeMillis() - it) / 86_400_000L).toInt() }
     val n = b.i("sessionsSince")
-    androidx.compose.material3.Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+    androidx.compose.material3.Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(PiIcons.Download, null)
             Column(Modifier.weight(1f)) {

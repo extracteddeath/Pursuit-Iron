@@ -95,7 +95,7 @@ private fun PsField(value: String, onChange: (String) -> Unit, placeholder: Stri
     val cs = MaterialTheme.colorScheme
     BasicTextField(value, onChange, singleLine = single, textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, color = cs.onSurface), cursorBrush = SolidColor(cs.primary),
         keyboardOptions = if (numeric) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
-        modifier = modifier.heightIn(min = minHeight.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).semantics { contentDescription = desc },
+        modifier = modifier.heightIn(min = minHeight.dp).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).semantics { contentDescription = desc },
         decorationBox = { inner -> Box(Modifier.padding(horizontal = 14.dp, vertical = 13.dp)) { if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp), color = cs.onSurfaceVariant); inner() } })
 }
 
@@ -178,7 +178,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 PsNote(if (vol == "minimalist") "Fewer hard sets taken closer to failure. Faster sessions with less total volume." else "Balanced weekly volume and recovery. The best default for most lifters.")
                 PsCap("BARBELL MOVEMENTS PER SESSION")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("none" to "No limit", "1" to "1", "2" to "2", "3" to "3").forEach { (id, l) -> PsChip(l, cap == id) { cap = id } } }
-                Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     PsToggle("Deload week", if (endless) "Endless blocks deload on their own" else if (p.b("waveDeload")) "Week 4 of the wave is already a deload; this adds a second one after the block" else "Week ${weeks + 1} · reduced volume & load", deload && !endless) { if (!endless) deload = it }
                     PsToggle("Skip bodyweight exercises", "No push-ups, planks, bodyweight squats — only loaded movements", noBw) { noBw = it }
                     PsToggle("No supersets", "Every exercise gets its own rest; nothing is paired", noSs) { noSs = it }
@@ -189,7 +189,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             PsCap("DESCRIPTION")
             PsField(desc, { desc = it.take(280) }, "What this program is for", "Description", minHeight = 84, single = false)
             // Rebuild preview (B905): the engine's own rebuild, compared week by week with the program you have.
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PsCap("REBUILD PREVIEW")
                 val rv = preview?.optJSONObject("review")
                 val lines = remember(rv) { reviewLines(rv) }
@@ -232,7 +232,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             LiftProgressionInline(vm, p.s("programId"))
             if (!locked && p.s("engine") == "pursuit-next") {
                 PsCap("LAYOUT", Modifier.padding(top = 6.dp))
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.secondaryContainer)
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer)
                     .clickable { guarded { vm.rebuildNow(shuffle = true, message = "Shuffled · same muscles, sets and days") { resetDraft() } } }
                     .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -245,7 +245,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 val layouts = p.list("layouts")
                 if (layouts.isNotEmpty()) {
                     Text("Earlier layouts", style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 4.dp))
-                    Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         layouts.forEachIndexed { k, l ->
                             val date = if (l.optLong("at") > 0) DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(l.optLong("at"))) else "Earlier"
                             Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -285,7 +285,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                     Text("Start again from week 1", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold))
                 }
                 AnimatedVisibility(restartAsk, enter = Motion.expandIn, exit = Motion.shrinkOut) {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Both start the block again at week 1 and leave every workout you’ve logged where it is. Same exercises keeps the program as it stands now, including swaps. Original exercises rebuilds it as first created, discarding swaps, set changes, supersets and shuffles.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp))
                         Button(onClick = { restartAsk = false; vm.resetProgram("same") { onClose() } }, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text("Start again — same exercises", fontWeight = FontWeight.Bold) }
@@ -361,7 +361,7 @@ private fun LiftProgressionInline(vm: AppViewModel, programId: String) {
     }
     val lifts = d.list("lifts").filter { q.isBlank() || it.s("name").contains(q.trim(), ignoreCase = true) }
     if (lifts.isEmpty()) { Text("No lift matches that.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant); return }
-    Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         lifts.forEach { l ->
             val id = l.s("id"); val isOpen = open == id
             Column(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh)) {

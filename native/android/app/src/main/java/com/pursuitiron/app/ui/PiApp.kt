@@ -242,7 +242,7 @@ private fun MiniBar(vm: AppViewModel, modifier: Modifier) {
     val elapsed = com.pursuitiron.app.ui.screens.liveElapsedSec(live, vm.now)
     val cs = MaterialTheme.colorScheme
     Row(
-        modifier.padding(horizontal = 12.dp, vertical = 8.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.primaryContainer)
+        modifier.padding(horizontal = 12.dp, vertical = 8.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.primaryContainer)
             .clickable { vm.resume() }.semantics { contentDescription = "Resume workout, $done of $total sets done" }
             .padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -254,7 +254,7 @@ private fun MiniBar(vm: AppViewModel, modifier: Modifier) {
             ProgressBar(if (total > 0) done.toFloat() / total else 0f, Modifier.padding(top = 6.dp), height = 4.dp, track = cs.surface)
         }
         Text(com.pursuitiron.app.ui.common.mmss(elapsed), style = MaterialTheme.typography.titleLarge, color = cs.onPrimaryContainer)
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.primary), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(cs.primary), contentAlignment = Alignment.Center) {
             Icon(PiIcons.ChevronDown, null, tint = cs.onPrimary, modifier = Modifier.size(20.dp).then(Modifier))
         }
     }

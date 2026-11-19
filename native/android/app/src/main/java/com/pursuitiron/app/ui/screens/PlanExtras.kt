@@ -148,7 +148,7 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
                     "main" -> r.b("primary"); "upper" -> r.b("upper"); "lower" -> !r.b("upper"); else -> true
                 }
             }
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Kicker("Lift", modifier = Modifier.weight(1f))
                     shownCols.forEach { c ->
@@ -175,7 +175,7 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
                             val step = prev != null && !x.b("deload") && (x.i("sets") != prev.i("sets") || x.s("rir") != prev.s("rir") || x.s("range") != prev.s("range"))
                             val bg = when { x.b("deload") -> cs.surfaceContainerHigh; step -> cs.primaryContainer; else -> cs.surfaceContainerLow }
                             val fg = if (step) cs.onPrimaryContainer else cs.onSurface
-                            Column(Modifier.width(76.dp).clip(RoundedCornerShape(14.dp)).background(bg).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(Modifier.width(76.dp).clip(RoundedCornerShape(16.dp)).background(bg).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("${x.i("sets")} × ${x.s("range")}", style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
                                 (x.s("effort").takeIf { it.isNotBlank() }?.let { if (it.startsWith("RPE")) it else "@$it" } ?: x.s("load").takeIf { it.isNotBlank() })?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = if (step) cs.onPrimaryContainer else cs.onSurfaceVariant, maxLines = 1) }
                             }
@@ -217,7 +217,7 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
         }
         if (!open) return@PiCard
         val issues = d.list("issues")
-        if (issues.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (issues.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Volume check · all training weeks", style = MaterialTheme.typography.titleSmall)
             issues.forEach { i ->
                 val under = i.s("status") == "under"
@@ -243,7 +243,7 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
                     Text("${com.pursuitiron.app.ui.common.fmtNum(sets)} · ${r.s("zone")}", style = MaterialTheme.typography.labelMedium, color = if (tone == "warn") cs.error else cs.onSurfaceVariant)
                 }
                 val track = cs.surfaceContainerHighest; val band = cs.secondaryContainer; val tick = cs.onSecondaryContainer
-                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp))) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(4.dp))) {
                     val top = maxOf(mrv * 1.15, sets * 1.05, 1.0).toFloat()
                     fun x(v: Double) = (v.toFloat() / top).coerceIn(0f, 1f) * size.width
                     drawRect(track)
@@ -256,7 +256,7 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
         Text("Shaded: MEV to MRV at your level, the range that builds muscle. Tick: MAV. Lifts that also work a muscle count part of their sets.",
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         val verdicts = d.list("verdicts")
-        if (verdicts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (verdicts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("From your training · your response, not averages", style = MaterialTheme.typography.titleSmall)
             verdicts.forEach { v ->
                 val st = v.s("status"); val n = com.pursuitiron.app.ui.common.fmtNum(v.optDouble("planned"))
@@ -291,7 +291,7 @@ fun LiftProgressionCard(vm: AppViewModel, programId: String) {
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             d.list("groups").forEach { g ->
-                androidx.compose.material3.Surface(color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(10.dp)) {
+                androidx.compose.material3.Surface(color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(12.dp)) {
                     Text("${g.s("label")} · ${g.i("count")}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
                 }
             }
@@ -309,7 +309,7 @@ private fun LiftProgressionSheet(vm: AppViewModel, programId: String, d: JSONObj
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Lift progression", style = MaterialTheme.typography.headlineSmall)
             Text(d.s("note"), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 d.list("lifts").forEach { l ->
                     val id = l.s("id"); val isOpen = editing == id
                     Column(
@@ -323,7 +323,7 @@ private fun LiftProgressionSheet(vm: AppViewModel, programId: String, d: JSONObj
                                 Text(l.s("dayLabel"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             androidx.compose.material3.Surface(color = if (l.b("locked")) cs.primary else cs.tertiaryContainer,
-                                contentColor = if (l.b("locked")) cs.onPrimary else cs.onTertiaryContainer, shape = RoundedCornerShape(10.dp)) {
+                                contentColor = if (l.b("locked")) cs.onPrimary else cs.onTertiaryContainer, shape = RoundedCornerShape(12.dp)) {
                                 Text((if (l.b("locked")) "Locked · " else "") + l.s("label"), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
                             }
                         }
@@ -366,19 +366,19 @@ fun WhyLiftSheet(vm: AppViewModel, programId: String, dayId: String, slot: Int, 
                 "edited" -> Text("You changed this lift, so the original reasoning no longer applies.", style = MaterialTheme.typography.bodyMedium)
             }
             x.o("role")?.let { r ->
-                PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 16.dp) {
+                PiCard(color = cs.primaryContainer, radius = 20.dp, padding = 16.dp) {
                     Text(r.s("label"), style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer)
                     if (r.s("text").isNotBlank()) Text(r.s("text"), style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer)
                 }
             }
             x.o("progression")?.let { pr ->
-                PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 16.dp) {
+                PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 16.dp) {
                     Text((if (pr.b("locked")) "Your choice: " else "Progression: ") + pr.s("label"), style = MaterialTheme.typography.titleSmall)
                     pr.s("reason").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant) }
                 }
             }
             x.list("dose").forEach { ds ->
-                PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 16.dp) {
+                PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 16.dp) {
                     Text("${ds.s("subject")}: ${ds.s("outcome")}", style = MaterialTheme.typography.titleSmall)
                     Text(ds.s("why"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }

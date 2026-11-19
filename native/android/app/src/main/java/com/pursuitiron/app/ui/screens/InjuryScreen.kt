@@ -92,7 +92,7 @@ private fun InjuryRecord(x: JSONObject, onEdit: () -> Unit, onToggle: () -> Unit
     val resolved = x.optLong("resolvedAt") > 0
     val impact = when (x.s("impact")) { "skip" -> "Skip affected lifts"; "reduce" -> "Reduce affected work"; else -> "Review before training" }
     val since = x.s("onset").takeIf { it.isNotBlank() }?.let { runCatching { SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(it) }.getOrNull() }
-    PiCard(color = if (resolved) cs.surfaceContainer else cs.tertiaryContainer, radius = 22.dp, padding = 14.dp) {
+    PiCard(color = if (resolved) cs.surfaceContainer else cs.tertiaryContainer, radius = 20.dp, padding = 14.dp) {
         Text(x.s("title"), style = MaterialTheme.typography.titleSmall, color = if (resolved) cs.onSurface else cs.onTertiaryContainer)
         Text(listOfNotNull(since?.let { "Since ${DateFormat.getDateInstance(DateFormat.MEDIUM).format(it)}" }, if (resolved) "Resolved" else impact).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall, color = if (resolved) cs.onSurfaceVariant else cs.onTertiaryContainer)

@@ -1,4 +1,11 @@
-# Pursuit Iron for Android (native)
+# Pursuit Iron for Android (native) — the Claude build
+
+This line (`native/`, branches `native-app` and `native-audit-*`) is the **Claude build**: Compose UI on the shared JS
+engine. It is separate from the Kotlin rewrite (`android-native/`, `architecture/kotlin-engine-rebuild`, versions
+`0.1.0-kotlin-lab.N`). To keep the two apart, this build's version is `4.0.0-claude` (`4.0.0-claude-dev` for debug),
+its dev and benchmark builds show as **PI Claude** / **PI Claude bench** on the launcher, its CI workflow is
+**Native Android (Claude)** and its artifacts are `pursuit-iron-claude-<run>`. Release builds keep the Play name
+"Pursuit Iron" and the existing package, since they ship as an update to the current listing.
 
 A Kotlin + Jetpack Compose app in the M3 Expressive design, running the **same training engine as the web app**. The engine
 is not ported: `modules/engine-api.js` is bundled with a thin app core and runs on the phone in Android's isolated

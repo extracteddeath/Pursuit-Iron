@@ -168,7 +168,7 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(pr.s("name"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                                if (active || queued) Text(if (active) "ACTIVE" else "QUEUED", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, letterSpacing = 0.3.sp),
+                                if (active || queued) Text(if (active) "ACTIVE" else "QUEUED", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, letterSpacing = 0.3.sp),
                                     color = if (active) cs.onPrimary else cs.onTertiaryContainer, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (active) cs.primary else cs.tertiaryContainer).padding(horizontal = 8.dp, vertical = 3.dp))
                             }
                             Text(pr.s("sub"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = fg.copy(alpha = 0.8f))
@@ -177,7 +177,7 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                     }
                     if (renaming == id) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.material3.TextField(renameText, { renameText = it.take(60) }, Modifier.weight(1f), singleLine = true, label = { Text("Program name") },
-                            shape = RoundedCornerShape(14.dp), colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surface, unfocusedContainerColor = cs.surface,
+                            shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surface, unfocusedContainerColor = cs.surface,
                                 focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
                         Surface(onClick = { if (renameText.isNotBlank()) vm.renameProgram(id, renameText) { renaming = null; refresh() } }, color = cs.primary, contentColor = cs.onPrimary, shape = CircleShape, modifier = Modifier.height(44.dp)) {
                             Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Save", style = MaterialTheme.typography.labelLarge) }
@@ -226,9 +226,9 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                     }
                 }
             }
-            Surface(onClick = { onClose(); onGallery() }, color = cs.surfaceContainerLow, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+            Surface(onClick = { onClose(); onGallery() }, color = cs.surfaceContainerLow, shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Grid, null, tint = cs.primary) }
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Grid, null, tint = cs.primary) }
                     Column(Modifier.weight(1f)) {
                         Text("Browse shared programs", style = MaterialTheme.typography.titleSmall)
                         Text("Community programs, yours to edit", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -268,15 +268,15 @@ fun AddSharedProgramSheet(vm: AppViewModel, onClose: () -> Unit) {
             Text("Add a shared program", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
             Kicker("Program code")
             androidx.compose.material3.TextField(code, { code = it.uppercase().take(48) }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("PI-XXXX-XXXX-XXXX") },
-                shape = RoundedCornerShape(18.dp), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters),
+                shape = RoundedCornerShape(20.dp), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters),
                 colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh,
                     focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
             val p = pv
             if (code.isBlank()) TextButton(onClick = { vm.viewModelScope.launch { vm.galleryCodes().firstOrNull()?.let { code = it } } }) { Text("Paste a sample code") }
             else if (p != null && !p.b("ok") && p.s("error").isNotBlank()) Text("That doesn’t look like a program code. Codes look like PI-ABCD-1234-WXYZ.", style = MaterialTheme.typography.bodySmall,
-                color = cs.onTertiaryContainer, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
+                color = cs.onTertiaryContainer, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
             if (p != null && p.b("ok")) {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(p.s("name"), style = MaterialTheme.typography.titleMedium)
                     Text(p.s("meta"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     Text(p.s("equipment"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -302,7 +302,7 @@ fun ProgramDetailsSheet(vm: AppViewModel, programId: String, onSettings: () -> U
             Kicker("How this was built")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 x.list("chips").forEach { c ->
-                    Row(Modifier.clip(RoundedCornerShape(10.dp)).background(if (c.b("accent")) cs.primaryContainer else cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 6.dp),
+                    Row(Modifier.clip(RoundedCornerShape(12.dp)).background(if (c.b("accent")) cs.primaryContainer else cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(c.s("k"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                         Text(c.s("v"), style = MaterialTheme.typography.labelLarge)
@@ -352,7 +352,7 @@ fun RoutinesSection(vm: AppViewModel) {
             Text("Routines", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             Text("Off-plan sessions you saved", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
-        if (rows.isEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow)
+        if (rows.isEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow)
             .then(Modifier.padding(16.dp)), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(PiIcons.Zap, null, tint = cs.primary)
             Text(androidx.compose.ui.text.buildAnnotatedString {
@@ -361,9 +361,9 @@ fun RoutinesSection(vm: AppViewModel) {
             }, style = MaterialTheme.typography.bodyMedium)
         }
         rows.forEach { r ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(14.dp),
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
                 Column(Modifier.weight(1f)) {
                     Text(r.s("name"), style = MaterialTheme.typography.titleSmall)
                     Text("${r.i("exercises")} exercises · " + r.strings("lifts").joinToString(", "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -423,8 +423,8 @@ fun IconPickerSheet(vm: AppViewModel, key: String, onClose: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 com.pursuitiron.app.ui.common.ProgramIconStyle.shapes.forEach { (id, label) ->
                     val on = c.s("shape") == id
-                    Column(Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(18.dp)).background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh)
-                        .then(if (on) Modifier.border(2.dp, cs.primary, RoundedCornerShape(18.dp)) else Modifier)
+                    Column(Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(20.dp)).background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh)
+                        .then(if (on) Modifier.border(2.dp, cs.primary, RoundedCornerShape(20.dp)) else Modifier)
                         .clickable { save(null, null, id) }.semantics(mergeDescendants = true) { contentDescription = "$label shape" + if (on) ", selected" else ""; role = Role.Button },
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         Box(Modifier.size(22.dp).clip(com.pursuitiron.app.ui.common.ProgramIconStyle.shape(id)).background(cs.onSurfaceVariant))

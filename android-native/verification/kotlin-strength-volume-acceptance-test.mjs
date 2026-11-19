@@ -122,7 +122,7 @@ for(const name of [
 ])assert.ok(maskedDayTests.includes(name),
   'Need positive and refusal tests for hidden per-day Strength loss');
 for(const name of [
-  'generatedStrengthRepairActuallyProducesAudited24SetWeek',
+  'generatedStrengthRepairPreservesDoseAndEachPostDeloadTrainingDay',
   'strengthRepairDoesNotRecreateMusclesAbsentFromTheSavedTargetScope',
   'generatedRepairCoversEveryWeekOfAnUnchangedStrengthTemplate'
 ])assert.ok(tests.includes(name),'Missing full-cycle JVM fixture '+name);

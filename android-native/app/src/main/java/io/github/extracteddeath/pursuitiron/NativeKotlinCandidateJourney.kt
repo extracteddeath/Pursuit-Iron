@@ -179,12 +179,29 @@ internal fun NativeKotlinCandidateJourney(
                     if(generatedId!=null)
                         KotlinCandidateDestination.TRAIN
                     else {
-                        val programs=runCatching {
-                            host.listOwnedCustomCycleDrafts()
-                        }.getOrNull() as? NativeCustomDraftListResult.Ready
-                        if(programs?.drafts?.isNotEmpty()==true)
-                            KotlinCandidateDestination.PROGRAM
-                        else KotlinCandidateDestination.ONBOARD
+                        // Cold startup must also see authentic measured
+                        // parents and confirmed-but-not-yet-issued consent.
+                        // These are READ-ONLY owner-verified inventories:
+                        // never issue a measured session merely to land in
+                        // Train, or mistake a finished History for resume.
+                        val measured=(runCatching {
+                            host.reviewUnfinishedMeasuredWorkouts()
+                        }.getOrNull() as? NativeMeasuredInventoryResult.Ready)
+                            ?.workouts?.isNotEmpty()==true
+                        val approvedMeasured=(runCatching {
+                            host.reviewConfirmedUnissuedMeasuredWorkouts()
+                        }.getOrNull() as? NativeMeasuredConsentInventoryResult.Ready)
+                            ?.confirmed?.isNotEmpty()==true
+                        if(measured || approvedMeasured)
+                            KotlinCandidateDestination.TRAIN
+                        else {
+                            val programs=runCatching {
+                                host.listOwnedCustomCycleDrafts()
+                            }.getOrNull() as? NativeCustomDraftListResult.Ready
+                            if(programs?.drafts?.isNotEmpty()==true)
+                                KotlinCandidateDestination.PROGRAM
+                            else KotlinCandidateDestination.ONBOARD
+                        }
                     }
                 }
             }

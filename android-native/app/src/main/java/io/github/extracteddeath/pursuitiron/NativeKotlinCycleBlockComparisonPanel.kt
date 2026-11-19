@@ -30,6 +30,51 @@ private fun displayedDirectCredits(value:BigDecimal):String=
     value.stripTrailingZeros().toPlainString()
 private fun namedMuscle(muscle:TrainingMuscle):String=
     muscle.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}
+
+/**
+ * Read-only Plan explanation. A low-volume deload is never the historical
+ * comparison for lost direct biceps, brachialis, triceps or forearm work.
+ * Source, actual weeks and individual working-set totals must agree.
+ * Missing evidence is UNKNOWN, not proof of no arm loss.
+ */
+internal object NativeStrengthPhaseBoundaryDisplayDomain {
+    fun lostDirectArmFunctions(
+        cycle:CustomTrainingCycle,
+        audit:CustomCoachAudit?,
+        dose:StrengthDoseBoundaryReview?
+    ):Set<TrainingMuscle>? {
+        val approvedAudit=audit ?:return null
+        val boundary=dose ?:return null
+        if(approvedAudit.auditedCycleRevision!=cycle.revision ||
+            approvedAudit.structuralReview?.verifiedDraft!=cycle ||
+            boundary.status !in setOf(
+                StrengthDoseBoundaryStatus.CONTINUOUS,
+                StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW))
+            return null
+        val before=approvedAudit.weeks.singleOrNull{
+            it.absoluteWeek==boundary.hypertrophyExitWeek &&
+                it.phase==TrainingPhase.HYPERTROPHY &&
+                it.blockPurpose==CustomBlockPurpose.TRAINING
+        }
+        val after=approvedAudit.weeks.singleOrNull{
+            it.absoluteWeek==boundary.strengthEntryWeek &&
+                it.phase==TrainingPhase.STRENGTH &&
+                it.blockPurpose==CustomBlockPurpose.TRAINING
+        }
+        if(before==null || after==null ||
+            before.workingSets!=boundary.hypertrophyWorkingSets ||
+            after.workingSets!=boundary.strengthWorkingSets)return null
+        return setOf(TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
+            TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
+            TrainingMuscle.WRIST_EXTENSORS).filter { muscle ->
+            val earlier=before.directSets[muscle]
+            val later=after.directSets[muscle]
+            earlier!=null && later!=null &&
+                earlier.signum()>0 && later.signum()==0
+        }.toSet()
+    }
+}
+
 private fun auditedRange(sets:List<Int>):String=
     if(sets.minOrNull()==sets.maxOrNull())
         sets.firstOrNull()?.toString() ?: "—"
@@ -135,6 +180,26 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     val prior=comparison.prior
     val next=comparison.next
     val selectedBlock=cycle.blocks.single {it.blockId==next.blockId}
+    val strengthSourceDose=strengthDayDose?.takeIf {review ->
+        review.status in setOf(
+            StrengthDoseBoundaryStatus.CONTINUOUS,
+            StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW) &&
+            review.hypertrophyExitWeek!=null &&
+            review.strengthEntryWeek!=null &&
+            review.hypertrophyWorkingSets!=null &&
+            review.strengthWorkingSets!=null
+    }
+    val adjacentExitWeek=cycle.blocks.take(
+        cycle.blocks.indexOf(selectedBlock)).sumOf{it.weeks}
+    val hasInterveningBridge=strengthSourceDose?.hypertrophyExitWeek?.let{
+        it<adjacentExitWeek
+    }==true
+    val actualDirectArmLosses=remember(cycle,id,currentAudit,strengthSourceDose) {
+        NativeStrengthPhaseBoundaryDisplayDomain.lostDirectArmFunctions(
+            cycle,currentAudit,strengthSourceDose)
+    }
+    val visibleDirectArmLosses=actualDirectArmLosses
+        ?:comparison.strengthDirectArmLosses
     val protectedVisits=selectedBlock.days.sumOf {day ->
         day.slots.count {slot ->
             slot.pinned || slot.attachmentId!=null ||
@@ -194,8 +259,9 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         if(priorAuditedSets!=null && nextAuditedSets!=null) {
             HorizontalDivider()
             PursuitSectionHeading("Full-cycle measurements",
-                "Effective working sets include saved week overrides. Compare the " +
-                    "actual phase boundary, not the first week of both blocks.")
+                "Effective working sets include saved week overrides. These "+
+                    "are the adjacent block exit and entry. A separate Strength "+
+                    "training baseline appears below when a deload intervenes.")
             PursuitMetricStrip(listOf(
                 "Previous exit week" to (priorAuditedSets.lastOrNull()?.toString() ?: "—"),
                 "Next entry week" to (nextAuditedSets.firstOrNull()?.toString() ?: "—"),
@@ -207,9 +273,12 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                     nextAuditedSets.mapIndexed {index,sets->
                         "W${index+1} $sets"
                     }.joinToString(" · ") +
-                    ". Lowest week retains " +
-                    (comparison.lowestNextWeekRetentionPercent?.let{"$it%"} ?: "—") +
-                    " of the previous block's exit week.",
+                    (if(hasInterveningBridge)
+                        ". The previous block is a recovery/test bridge; "+
+                            "its low-volume exit is NOT the Strength retention baseline."
+                    else ". Lowest week retains " +
+                        (comparison.lowestNextWeekRetentionPercent?.let{"$it%"} ?: "—") +
+                        " of the previous block's exit week."),
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
@@ -227,6 +296,31 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if(strengthSourceDose!=null) {
+            HorizontalDivider()
+            PursuitSectionHeading("Hypertrophy → Strength training baseline",
+                "Last normal Hypertrophy training week → first Strength week, "+
+                    "including actual saved week overrides.")
+            PursuitMetricStrip(listOf(
+                "H exit · week ${strengthSourceDose.hypertrophyExitWeek}" to
+                    "${strengthSourceDose.hypertrophyWorkingSets} sets",
+                "Strength · week ${strengthSourceDose.strengthEntryWeek}" to
+                    "${strengthSourceDose.strengthWorkingSets} sets",
+                "Training dose change" to signedCount(
+                    checkNotNull(strengthSourceDose.strengthWorkingSets)-
+                        checkNotNull(strengthSourceDose.hypertrophyWorkingSets))
+            ))
+            if(hasInterveningBridge)Text(
+                "Recovery and performance-test weeks are not used as the "+
+                    "training-dose baseline. The previous-block comparison "+
+                    "above still shows the actual adjacent block.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("These numbers are observed authored working sets, not "+
+                "an automatic recommendation or clearance to change volume.",
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(affectedStrengthDays.isNotEmpty()) {
             PursuitSectionHeading("Strength day lost working sets",
                 "Final effective Hypertrophy week → first Strength week · actual reviewed days")
@@ -239,27 +333,34 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if(comparison.strengthHalfVolumeReviewRequired) {
+        if(comparison.strengthHalfVolumeReviewRequired ||
+            strengthSourceDose?.status==
+                StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW) {
             HorizontalDivider()
             Text("Strength working-set drop needs review",
                 style=MaterialTheme.typography.titleMedium,
                 color=MaterialTheme.colorScheme.error)
             Text(
-                if(comparison.strengthHalfVolumeUsesAuditedWeeks)
+                if(strengthSourceDose?.status==
+                    StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW)
+                    "The first Strength week has half or fewer of the working "+
+                        "sets in the athlete's real final Hypertrophy training "+
+                        "week, either overall or on a matched training day. "+
+                        "Recovery and test weeks cannot hide this change."
+                else if(comparison.strengthHalfVolumeUsesAuditedWeeks)
                     "At least one strength week has half or fewer of the working " +
-                        "sets in the final hypertrophy week. This is not a normal " +
-                        "strength accumulation target by default. Check your " +
+                        "sets in the final hypertrophy week. Check your " +
                         "individualized dose, session limits and recovery audit."
                 else "The authored strength block has half or fewer of the base " +
-                    "working sets. This is only a preliminary warning: obtain " +
-                    "the complete audited weekly schedule, including overrides.",
+                    "working sets. Obtain the complete audited schedule, "+
+                    "including overrides.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text("No loads, sets, training history or program approval were changed.",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        comparison.strengthDirectArmLosses?.takeIf{it.isNotEmpty()}?.let{lost->
+        visibleDirectArmLosses?.takeIf{it.isNotEmpty()}?.let{lost->
             HorizontalDivider()
             PursuitSectionHeading("Direct arm work disappeared",
                 "Audited final hypertrophy week → first Strength week")
@@ -419,6 +520,8 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         }==true
         if(next.phase==TrainingPhase.STRENGTH &&
             (comparison.strengthHalfVolumeReviewRequired ||
+                strengthSourceDose?.status==
+                    StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW ||
                 affectedStrengthDays.isNotEmpty() ||
                 sourceContinuityIssue || repairReview?.request?.blockId==next.blockId) &&
             onRequestStrengthRepair!=null) {

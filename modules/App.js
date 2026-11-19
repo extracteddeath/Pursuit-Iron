@@ -22,6 +22,7 @@ import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
+import { CycleStrengthDoseSummary } from './cycle-strength-dose-react.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, WorkoutMachineInfoActions, selectNumericInput } from './workout-session-controls.js';
 import { latestMachineSet, machineHistory, historyForMachineRecommendation, resolveMachineVariant, LEGACY_MACHINE_ID } from './next-engine/machine-instances.js';
@@ -18073,6 +18074,7 @@ function CycleDoseTransition({ change, source = 'saved' }) {
             "Credited sets include muscle contributions from compound lifts. Changes are not the same as strength-phase target coverage; planned workouts may adapt when the block begins." })
     ] });
 }
+
 // One source of truth for saved work-week training quality. These numbers
 // describe executable prescriptions at generation time, never completed work.
 function CycleWeekOutlook({ program, week, provisional = false }) {
@@ -18151,6 +18153,7 @@ function CycleBlockPreview({ program, previousProgram = null, initialWeek = 1, i
                         _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
                 })] }, day.id))
         ] }),
+        _jsx(CycleStrengthDoseSummary, { program }),
         _jsxs("details", { className: "wpb-cycle-preview-analysis", children: [
             _jsx("summary", { className: "wpb-cycle-preview-analysis-summary", children: "Training analysis & volume" }),
             _jsxs("div", { className: "wpb-cycle-preview-analysis-body", children: [
@@ -18210,6 +18213,7 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
                         _jsx("dd", { children: doseChange ? `${doseChange.previousWeeklySets} → ${doseChange.currentWeeklySets}` : `${changes.before.sets} → ${changes.after.sets}` }),
                         _jsx("dt", { children: "Rep ranges" }), _jsx("dd", { children: `${changes.before.repRange} → ${changes.after.repRange}` })] }),
                     _jsx(CycleDoseTransition, { change: doseChange || originalDoseChange, source: doseChange ? 'saved' : 'generation' }),
+                    _jsx(CycleStrengthDoseSummary, { program: next }),
                     _jsx("p", { className: "wpb-cycle-card-note", children: "Planned targets may adapt from your completed workouts." })] }),
                 _jsxs("section", { className: "wpb-cycle-info-card wpb-cycle-schedule", "aria-label": "Cycle schedule", children: [
                     _jsx("div", { className: "wpb-cycle-card-eyebrow", children: "Your schedule" }),

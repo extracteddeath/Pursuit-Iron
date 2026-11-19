@@ -5,11 +5,13 @@
   "build": 1019,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "8780b53b751601c4bb506f8b18ff1e44453e20c58e09f23491dcdb760deade09",
+  "runtimeAggregate": "728e39b77ff0b3012e35aca7d580ad50c37fec4241b43c0b95e7389cfc383bae",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
     "modules/cycle-setup-drafts.js": "d3e9e750298afd8820e2bfd543c2cebede65e4f27c136ff26fe383d202b824e9",
+    "modules/cycle-strength-dose-react.js": "f1897b03c06338fac610a13c3c2b7f5c42cd2d2c618e68381dca41005e5ec9fd",
+    "modules/cycle-strength-dose-surface.js": "1001a3f911594d55bca2b7d67c4f28bebd934bd63bf505259ba7ed12e933cdcd",
     "modules/engine-api.js": "f5ec1e86b818120507a43edb7d6eae9035b45fc1146e0904444283c3c4c6ee83",
     "modules/engine-shell.js": "73645bf4d914423074c0e90b992b58a6c57f7fbb726621d417803e906d140675",
     "modules/exercise-notes.js": "0decb389616ffdee43f5969a411597c8feef75358b9bab2ddecf353f00d8cace",
@@ -157,10 +159,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "fd91b7d7a49c5f740e39e336d053e978ae3e53676ad69b4bbfa851d30f00384e",
+    "modules/App.js": "8934100adf4d2d49639aeaccab0cc795a2ab47c9b43ca98087b70e0025c67029",
     "index.html": "c6350794e391fe8a5b62d955c8d860c4991cc79b1b1604b51c84195f562a73c7",
-    "sw.js": "51461fe2e93e39e400576c4bb2e2af73078e37fa80c75044686304977d1f8070",
-    "BUILD_PROFILE.json": "b2d4551bf3fe1a6ee2e1bd76969dfbdf83f51f82496973816b08526f32d2ab2b",
+    "sw.js": "537e4aedb0214aab676dfbe6e48a3d6bf14e1ad19b0a0481c869099481027a8a",
+    "BUILD_PROFILE.json": "3dc805b71efefdf0289a391649aea55c3484115af2db826d68ceda65938bee22",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
     "app.css": "2cbb5b79495833cd8fe876adf46a963c7566c5077524a2a0cdb8f4ff06f43ccd",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -169,6 +171,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-r2dda223b9dcb6f27",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-rab3d067e275ba71a",
   "uiMilestone": "Build 1019 · Strength transition continuity and accessible Machine A/B history"
 }

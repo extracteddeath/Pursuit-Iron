@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 75,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1021-rc7e212db0b4aab61",
-  "uiMilestone": "Build 1021 · Readable Plan status, whole program day titles, clear setup disclosure"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1022-r66fc97de1547c96a",
+  "uiMilestone": "Build 1022 · Two-column Home on wide windows, equal segments, shared cards and retired dead CSS"
 }

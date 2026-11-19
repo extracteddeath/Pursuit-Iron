@@ -41,6 +41,26 @@ object StrengthSourceArmContinuityDomain {
         TrainingMuscle.BRACHIALIS,TrainingMuscle.TRICEPS,
         TrainingMuscle.WRIST_FLEXORS,TrainingMuscle.WRIST_EXTENSORS)
 
+    /**
+     * Resolve the actual last normal training block before this Strength
+     * phase. Recovery and performance-test bridges are not replacement
+     * hypertrophy baselines; another training phase is a hard boundary.
+     * This selection is shared with the live adaptive-block generator.
+     */
+    internal fun priorHypertrophyBlockForStrength(
+        cycle:CustomTrainingCycle,
+        targetBlockId:String
+    ):CustomTrainingBlock? {
+        val index=cycle.blocks.indexOfFirst {it.blockId==targetBlockId}
+        if(index<=0)return null
+        val target=cycle.blocks[index]
+        if(target.phase!=TrainingPhase.STRENGTH ||
+            target.purpose!=CustomBlockPurpose.TRAINING)return null
+        return cycle.blocks.subList(0,index)
+            .lastOrNull {it.purpose==CustomBlockPurpose.TRAINING}
+            ?.takeIf {it.phase==TrainingPhase.HYPERTROPHY}
+    }
+
     fun review(
         cycle:CustomTrainingCycle?,
         coachAudit:CustomCoachAudit?,
@@ -61,11 +81,13 @@ object StrengthSourceArmContinuityDomain {
         if(catalog.map{it.exerciseId}.distinct().size!=catalog.size)
             return reject("The exercise inventory contains ambiguous stable identities.")
         val index=cycle.blocks.indexOfFirst{it.blockId==priorBlockId}
-        if(index<0 || index+1>=cycle.blocks.size ||
-            cycle.blocks[index].phase!=TrainingPhase.HYPERTROPHY ||
+        val nextTraining=cycle.blocks.drop(index+1).firstOrNull {
+            it.purpose==CustomBlockPurpose.TRAINING
+        }
+        if(index<0 ||
+            cycle.blocks.getOrNull(index)?.phase!=TrainingPhase.HYPERTROPHY ||
             cycle.blocks[index].purpose!=CustomBlockPurpose.TRAINING ||
-            cycle.blocks[index+1].phase!=TrainingPhase.STRENGTH ||
-            cycle.blocks[index+1].purpose!=CustomBlockPurpose.TRAINING)
+            nextTraining?.phase!=TrainingPhase.STRENGTH)
             return reject("Only the last hypertrophy training week before a real future Strength block can support this continuity review.")
         val exitWeek=cycle.blocks.take(index+1).sumOf{it.weeks}
         val prior=CustomTrainingCycleDomain.week(

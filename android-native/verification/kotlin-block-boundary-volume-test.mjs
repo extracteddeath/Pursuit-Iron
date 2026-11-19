@@ -52,7 +52,7 @@ for(const text of [
 ])assert.ok(ui.includes(text),'Missing visible native volume context: '+text);
 assert.match(ui,/comparison\.strengthHalfVolumeReviewRequired/);
 assert.match(ui,/comparison\.strengthExerciseCollapseReviewRequired/);
-assert.match(ui,/comparison\.strengthDirectArmLosses\?\.takeIf/);
+assert.match(ui,/visibleDirectArmLosses\?\.takeIf/);
 assert.match(ui,/Direct arm work disappeared/);
 assert.match(ui,/Review strength arm exercises/);
 assert.match(ui,/Indirect assistance from bench presses and rows/);

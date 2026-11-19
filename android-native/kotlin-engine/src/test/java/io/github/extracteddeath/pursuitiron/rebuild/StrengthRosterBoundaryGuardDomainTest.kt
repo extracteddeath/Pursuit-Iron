@@ -25,7 +25,7 @@ class StrengthRosterBoundaryGuardDomainTest {
         nextPhase:TrainingPhase=TrainingPhase.STRENGTH,
         nextSplit:CustomSplitIdentity=CustomSplitIdentity.Named(
             ComposerSplit.FULL_BODY),
-        overrides:Map<String,List<CustomWeekSlotOverride>>=emptyMap()
+        overrides:Map<String,List<CustomWeekSlotOverride>> = emptyMap()
     )=CustomTrainingCycle(
         "cycle-review",4,"athlete-review",AthleteTrainingGoal.POWERBUILDING,
         "Phase boundary",listOf(

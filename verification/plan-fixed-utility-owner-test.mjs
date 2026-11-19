@@ -17,7 +17,7 @@ assert.ok(css.includes('.wpb-plan-view .wpb-plan-glance{'),
   'The already established responsive metric-grid owner must remain available');
 
 assert.ok(report.appInlineStyleObjects<=uiStyleBudget.appInlineObjects,'App style debt ceiling must reflect five retired values');
-assert.equal(uiStyleBudget.appInlineObjects,801,'Budget ratchet must track actual app');
+assert.equal(uiStyleBudget.appInlineObjects,793,'Budget ratchet must track actual app');
 assert.equal(css.length,uiStyleBudget.cssCharacters,'Plan migration cannot add CSS');
 for(const cl of ['wpb-s956-display-block','wpb-s956-margintop-2','wpb-s956-overflow-hidden','wpb-s956-textoverflow-ellipsis','wpb-s956-whitespace-nowrap','wpb-s956-flexshrink-0','wpb-s956-textalign-right','wpb-type-body'])
  assert.ok(plan.includes(cl)&&css.includes('.'+cl),'Plan must reuse existing owner '+cl);

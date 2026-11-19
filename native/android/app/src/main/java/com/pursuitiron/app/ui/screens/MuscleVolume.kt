@@ -85,7 +85,7 @@ fun MuscleVolumeCard(vm: AppViewModel, programId: String, week: Int, onDetails: 
                 if (flagged > 0) " · $flagged outside their range" else " · all in range",
                 style = MaterialTheme.typography.bodySmall, color = if (flagged > 0) cs.error else cs.onSurfaceVariant)
         }
-        Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             rows.forEach { r ->
                 val key = r.s("part")
                 MuscleLine(r, key, open == key, 0.dp) { open = if (open == key) null else key }
@@ -127,7 +127,7 @@ private fun MuscleLine(r: JSONObject, key: String, expanded: Boolean, indent: Dp
             Text(r.s("label"), style = if (head) MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp) else MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
                 color = if (head) cs.onSurfaceVariant else cs.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(if (head) 100.dp else 112.dp))
             val track = cs.surfaceContainerLowest; val band = cs.secondaryContainer; val tick = cs.onSecondaryContainer
-            Canvas(Modifier.weight(1f).height(if (head) 8.dp else 10.dp).clip(RoundedCornerShape(5.dp))) {
+            Canvas(Modifier.weight(1f).height(if (head) 8.dp else 10.dp).clip(RoundedCornerShape(4.dp))) {
                 val top = maxOf(mrv * 1.15, sets * 1.05, 1.0).toFloat()
                 fun x(v: Double) = (v.toFloat() / top).coerceIn(0f, 1f) * size.width
                 drawRect(track)

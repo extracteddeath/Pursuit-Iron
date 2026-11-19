@@ -107,7 +107,7 @@ fun ProgressPhotosCard(vm: AppViewModel) {
                 row.forEach { p ->
                     if (p == null) {
                         Box(Modifier.weight(1f).aspectRatio(3f / 4f)) {
-                            Column(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(18.dp))
+                            Column(Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(20.dp))
                                 .clickable { adding = true }.semantics(mergeDescendants = true) { role = androidx.compose.ui.semantics.Role.Button },
                                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)) {
                                 Icon(PiIcons.Plus, null, tint = cs.primary)
@@ -138,7 +138,7 @@ fun ProgressPhotosCard(vm: AppViewModel) {
         val pair = picked.mapNotNull { id -> photos.firstOrNull { it.id == id } }.sortedBy { it.date }
         androidx.compose.animation.AnimatedVisibility(pair.size == 2, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {
             if (pair.size < 2) return@AnimatedVisibility
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     pair.forEach { p ->
                         Box(Modifier.weight(1f).aspectRatio(3f / 4f).clip(RoundedCornerShape(16.dp)).background(cs.surface)) {

@@ -133,7 +133,7 @@ fun IntensityCard(g: JSONObject) {
         }
         zones.forEachIndexed { k, z ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(colors[k % colors.size]))
+                Box(Modifier.size(12.dp).clip(RoundedCornerShape(4.dp)).background(colors[k % colors.size]))
                 Text(z.s("label"), style = MaterialTheme.typography.titleSmall)
                 Text("· ${z.s("sub")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
                 Text("${z.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -174,7 +174,7 @@ fun FeedbackCard(g: JSONObject) {
                         m.strings("answers").forEach { a ->
                             val (bg, fg) = when (a) { "About right" -> cs.primary to cs.onPrimary; "Too much" -> cs.tertiaryContainer to cs.onTertiaryContainer; else -> cs.secondaryContainer to cs.onSecondaryContainer }
                             Box(Modifier.weight(1f).height(26.dp).clip(RoundedCornerShape(8.dp)).background(bg), contentAlignment = Alignment.Center) {
-                                Text(a, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold), color = fg, maxLines = 1)
+                                Text(a, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold), color = fg, maxLines = 1)
                             }
                         }
                     }

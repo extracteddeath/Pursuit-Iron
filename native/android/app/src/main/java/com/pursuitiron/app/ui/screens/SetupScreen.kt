@@ -132,7 +132,7 @@ private val SUBHEAD = mapOf("approach" to "TRAINING APPROACH", "session" to "SES
 private fun WzFold(title: String, summary: String, content: @Composable () -> Unit) {
     val cs = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
-    Column(Modifier.padding(top = 10.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerLow)) {
+    Column(Modifier.padding(top = 10.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerLow)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.semantics(mergeDescendants = true) { role = Role.Button; stateDescription = if (open) "Expanded" else "Collapsed" }
             .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -236,7 +236,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
             } }
             if (why.size > 3) Text(if (allWhy) "Fewer reasons" else "${why.size - 3} more reason${if (why.size - 3 == 1) "" else "s"}",
                 style = MaterialTheme.typography.labelLarge, color = cs.primary,
-                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { allWhy = !allWhy }.semantics { role = Role.Button }.heightIn(min = 40.dp).padding(horizontal = 4.dp).wrapContentHeight())
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { allWhy = !allWhy }.semantics { role = Role.Button }.heightIn(min = 40.dp).padding(horizontal = 4.dp).wrapContentHeight())
         }
         if (hero.b("sessionMoved")) Text("Runs at ${SESS_SHORT[hero.s("session")]} min sessions; your length doesn’t fit it.", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
         // The week it lays out
@@ -246,7 +246,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
                 Column(Modifier.weight(1f).heightIn(min = 60.dp).clip(RoundedCornerShape(12.dp)).background(if (on) cs.surface else cs.onPrimaryContainer.copy(alpha = 0.06f)).padding(vertical = 6.dp, horizontal = 2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
                     Text(w.s("wd"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
-                    Text(w.s("name"), style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (on) FontWeight.Bold else FontWeight.Normal, fontSize = 10.sp, lineHeight = 12.sp),
+                    Text(w.s("name"), style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (on) FontWeight.Bold else FontWeight.Normal, fontSize = 11.sp, lineHeight = 12.sp),
                         color = if (on) cs.onSurface else cs.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
                 }
             }
@@ -261,7 +261,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg).border(if (on) 2.dp else 0.dp, if (on) cs.primary else Color.Transparent, RoundedCornerShape(20.dp))
                 .clickable { onPick(x.s("id")) }.semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on; contentDescription = "Rank ${k + 1}: ${x.s("name")}, score ${x.i("score")}. ${x.s("tagline")}. ${x.s("line")}" }
                 .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(32.dp).clip(if (k < 3) RoundedCornerShape(11.dp) else CircleShape).background(if (k == 0) cs.primary else if (k < 3) cs.primaryContainer else cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(32.dp).clip(if (k < 3) RoundedCornerShape(12.dp) else CircleShape).background(if (k == 0) cs.primary else if (k < 3) cs.primaryContainer else cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
                     Text("${k + 1}", style = MaterialTheme.typography.labelLarge, color = if (k == 0) cs.onPrimary else if (k < 3) cs.onPrimaryContainer else cs.onSurface)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -502,7 +502,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         WzOption("Training cycle", "Multiple blocks that progress from one phase to the next over time.", WZ.layers, cyc) { cyc = true }
                         // App.js "Custom split · Build your own": you pick every lift; the engine coaches it.
                         var ownOpen by remember { mutableStateOf(false) }
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).border(1.dp, cs.outlineVariant, RoundedCornerShape(18.dp)).clickable { ownOpen = true }
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).border(1.dp, cs.outlineVariant, RoundedCornerShape(20.dp)).clickable { ownOpen = true }
                             .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             Icon(com.pursuitiron.app.ui.common.PiIcons.Pencil, null, tint = cs.primary)
@@ -526,7 +526,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     }
                     "cycletype" -> CycleTemplatePicker(vm, template, { template = it }, custom, adapt, { adapt = it }, adaptSplit, { adaptSplit = it }, days)
                     "name" -> OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth().semantics { contentDescription = if (cyc) "Cycle name" else "Program name" }, singleLine = true,
-                        placeholder = { Text(if (cyc) "e.g. Summer Training Cycle" else (sd?.s("name") ?: "e.g. Summer Hypertrophy Block")) }, shape = RoundedCornerShape(18.dp),
+                        placeholder = { Text(if (cyc) "e.g. Summer Training Cycle" else (sd?.s("name") ?: "e.g. Summer Hypertrophy Block")) }, shape = RoundedCornerShape(20.dp),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp), keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words))
                     "experience" -> EXP.forEach { (id, l, s) -> WzOption(l, s, WZ.trophy, exp == id) { exp = id } }
                     "goal" -> listOf(Triple("hypertrophy", "Build muscle & size", WZ.layers), Triple("strength", "Get strong, lower reps", WZ.flame), Triple("both", "Heavy main lifts, hypertrophy accessories", WZ.zap))
@@ -597,7 +597,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         opts.list("parts").forEach { p ->
                             val id = p.s("id"); val v = focus[id] ?: 0
                             val bg by animateColorAsState(if (v > 0) cs.secondaryContainer else cs.surfaceContainerLow, Motion.effects(), label = "f")
-                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(bg).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.s("label"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold))
                                     if (id == "neck") Text("Rarely fits — most sessions have no room for direct neck work", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -610,7 +610,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     }
                     "reduce" -> opts.list("parts").filter { (focus[it.s("id")] ?: 0) == 0 }.forEach { p ->
                         val id = p.s("id"); val on = id in reduce
-                        WzCheckRow(p.s("label"), null, on, RoundedCornerShape(18.dp)) { if (on) reduce.remove(id) else reduce.add(id) }
+                        WzCheckRow(p.s("label"), null, on, RoundedCornerShape(20.dp)) { if (on) reduce.remove(id) else reduce.add(id) }
                     }
                     "progression" -> {
                         WzOption("Auto · choose per exercise", "Picks how each lift progresses and adjusts as you train", WZ.wand, progression == "auto") { progression = "auto" }
@@ -670,14 +670,14 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     Text(if (revOpen) "Hide your setup" else "Your setup · ${rows.size} settings", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
                 }
                 AnimatedVisibility(revOpen && "split" !in pg && "cycletype" !in pg, enter = Motion.expandIn, exit = Motion.shrinkOut) {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Column {
                             Text("YOUR SETUP", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp), color = cs.primary)
                             Text(if (chose && cyc) "Cycle overview" else "Program overview", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))
                             Text(if (key == "mode") "Choose a program or a multi-phase cycle to begin." else "Step ${at + 1} of ${steps.size}. Your choices update here as you go.",
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal), color = cs.onSurfaceVariant)
                         }
-                        Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             rows.forEach { (k2, v2) ->
                                 Row(Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text(k2, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
@@ -750,7 +750,7 @@ internal fun WzSeg(label: String, on: Boolean, modifier: Modifier, onClick: () -
 @Composable
 private fun WzStep(sym: String, enabled: Boolean, desc: String, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).alpha(if (enabled) 1f else 0.35f).clickable(enabled = enabled, onClick = onClick)
+    Box(Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).alpha(if (enabled) 1f else 0.35f).clickable(enabled = enabled, onClick = onClick)
         .semantics { contentDescription = desc; role = Role.Button }, contentAlignment = Alignment.Center) { Text(sym, fontSize = 20.sp) }
 }
 
@@ -804,7 +804,7 @@ private fun EquipmentStep(opts: JSONObject?, equip: Set<String>, onEquip: (Set<S
 @Composable
 fun DraftBanner(text: String, onDiscard: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.tertiaryContainer).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(text, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer, modifier = Modifier.weight(1f))
         androidx.compose.material3.OutlinedButton(onClick = onDiscard, modifier = Modifier.height(36.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
@@ -830,7 +830,7 @@ private fun BuildOwnDialog(onClose: () -> Unit, onBuild: (String, Int) -> Unit) 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     (1..6).forEach { n ->
                         val on = n == days
-                        Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(14.dp))
+                        Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(16.dp))
                             .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
                             .clickable { days = n }.semantics { role = Role.RadioButton; selected = on; contentDescription = "$n day${if (n == 1) "" else "s"} a week" },
                             contentAlignment = Alignment.Center) {

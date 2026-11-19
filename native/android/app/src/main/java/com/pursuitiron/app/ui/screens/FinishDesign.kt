@@ -130,7 +130,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 Row(Modifier.widthIn(max = 520.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Time" to (if (sec >= 3600) "${sec / 3600}:${String.format(Locale.US, "%02d", sec / 60 % 60)}:${String.format(Locale.US, "%02d", sec % 60)}" else "${sec / 60}:${String.format(Locale.US, "%02d", sec % 60)}"),
                         "Sets" to "${x.i("doneSets")}", "Volume" to "${NumberFormat.getIntegerInstance(Locale.US).format(x.i("volume"))} $u").forEach { (k, v) ->
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(vertical = 14.dp, horizontal = 8.dp).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(vertical = 14.dp, horizontal = 8.dp).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(k, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Text(v, style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.SemiBold), color = cs.onSurface, maxLines = 1)
                         }
@@ -158,7 +158,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                         }
                     }
                     x.o("mainE1rm")?.let { m ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surface).padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surface).padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp, 14.dp, 4.dp, 14.dp)).background(cs.primary), contentAlignment = Alignment.Center) { Icon(PiIcons.Progress, null, Modifier.size(22.dp), tint = cs.onPrimary) }
                             Column(Modifier.weight(1f)) {
                                 Text("${m.s("name")} · est. 1RM", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
@@ -170,13 +170,13 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                         }
                     }
                     val goals = x.list("goalsHit")
-                    if (goals.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.tertiaryContainer).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (goals.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.tertiaryContainer).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("GOAL REACHED", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onTertiaryContainer)
                         goals.forEach { g -> Text("${g.s("name")} · ${fmtNum(g.d("goal"))} $u", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold), color = cs.onTertiaryContainer) }
                         Text("Set a new one from the lift’s menu next time.", style = MaterialTheme.typography.labelMedium, color = cs.onTertiaryContainer)
                     }
                     x.s("sessionNote").takeIf { it.isNotBlank() }?.let { note ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surface).clickable { noteOpen = true }
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surface).clickable { noteOpen = true }
                             .semantics(mergeDescendants = true) { contentDescription = "Edit workout note"; role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Icon(PiIcons.Note, null, Modifier.padding(top = 2.dp).size(18.dp), tint = cs.onSurfaceVariant)
                             Text(note, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
@@ -297,7 +297,7 @@ private fun FinishHero() {
 private fun KeepCard(pc: JSONObject, keep: androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>) {
     val cs = MaterialTheme.colorScheme
     val prog = pc.list("progression"); val ex = pc.list("exercises")
-    Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surface).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surface).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(if (prog.isNotEmpty() && ex.isNotEmpty()) "KEEP THESE CHANGES IN THE PROGRAM?" else if (prog.isNotEmpty()) "YOU CHANGED HOW A LIFT PROGRESSES" else "YOU CHANGED THE WORKOUT",
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
         val rows = prog.map { Triple("p:" + it.s("id"), it.s("name"), it.s("style")) } +

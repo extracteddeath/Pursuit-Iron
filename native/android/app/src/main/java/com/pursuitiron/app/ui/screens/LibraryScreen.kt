@@ -153,7 +153,7 @@ fun LibraryScreen(vm: AppViewModel) {
             val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(x.s("group")).coerceAtLeast(0)) % 3
             val tileBg = listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]
             val tileFg = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g]
-            val tileShape = listOf(CircleShape, RoundedCornerShape(14.dp), RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp))[g]
+            val tileShape = listOf(CircleShape, RoundedCornerShape(16.dp), RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp))[g]
             // The design's grouped list: one surface split by hairline gaps, rounded only at its two ends (one column).
             val top = if (k == 0 || wide) 22.dp else 6.dp; val bottom = if (k == shown.lastIndex || wide) 22.dp else 6.dp
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.heightIn(min = 56.dp).padding(horizontal = 14.dp, vertical = 10.dp),
@@ -305,7 +305,7 @@ private fun DropChip(label: String, active: Boolean, title: String, options: Lis
     val cs = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
     Box {
-        androidx.compose.material3.Surface(onClick = { open = true }, shape = RoundedCornerShape(10.dp),
+        androidx.compose.material3.Surface(onClick = { open = true }, shape = RoundedCornerShape(12.dp),
             color = if (active) cs.secondaryContainer else Color.Transparent, contentColor = if (active) cs.onSecondaryContainer else cs.onSurface,
             border = if (active) null else androidx.compose.foundation.BorderStroke(1.dp, cs.outline),
             modifier = Modifier.height(36.dp).semantics { contentDescription = "$title: $label" }) {

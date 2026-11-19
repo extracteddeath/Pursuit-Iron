@@ -199,7 +199,7 @@ private fun ChartsTab(x: JSONObject) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1, 3, 5, 8, 10).forEachIndexed { k, r ->
                 val v = if (r == 1) bestE1 else bestE1 / (1 + r / 30.0)
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (k == 0) cs.primaryContainer else cs.surfaceContainerHigh).padding(vertical = 8.dp),
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(if (k == 0) cs.primaryContainer else cs.surfaceContainerHigh).padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     val fg = if (k == 0) cs.onPrimaryContainer else cs.onSurface
                     Text(if (r == 1) "1 rep" else "$r reps", style = MaterialTheme.typography.labelSmall, color = fg)

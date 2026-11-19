@@ -95,7 +95,7 @@ private fun RvHeading(t: String) = Text(t, style = MaterialTheme.typography.titl
 /* Segmented list: 2dp gaps on one rounded group, like the design's grouped rows. */
 @Composable
 private fun RvGroup(content: @Composable ColumnScope.() -> Unit) =
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
 
 private fun pct(v: Double) = (if (v >= 0) "+" else "−") + String.format("%.1f", abs(v)) + "%"
 // Engine ids read as words ("upper_back" → "Upper back").
@@ -228,7 +228,7 @@ private fun ColumnScope.ReviewBody(r: JSONObject) {
             }
         } }
         RvHeading("Weekly sets vs your range")
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val mx = muscles.maxOf { max(m(it, "mrv"), m(it, "avgSets")) }.coerceAtLeast(1.0) * 1.1
             muscles.forEach { v ->
                 val at = m(v, "avgSets"); val lo = m(v, "mev"); val hi = m(v, "mrv")

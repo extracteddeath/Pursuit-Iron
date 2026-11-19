@@ -203,7 +203,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
         if (!editing && c == null) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(4.dp)); return@DesignPage }
         if (!editing && c != null) Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             // The cycle's icon, as on the web's Cycle options: tap to change it.
-            Box(Modifier.clip(RoundedCornerShape(18.dp)).clickable { iconOpen = true }.semantics { role = Role.Button; contentDescription = "Change cycle icon" }) { IconTile(c.o("icon"), 56.dp) }
+            Box(Modifier.clip(RoundedCornerShape(20.dp)).clickable { iconOpen = true }.semantics { role = Role.Button; contentDescription = "Change cycle icon" }) { IconTile(c.o("icon"), 56.dp) }
             Column(Modifier.weight(1f)) {
                 Text(c.s("name"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold))
                 Text(blocks.joinToString(" → ") { it.label ?: PHASE_NAMES[it.phase].orEmpty() }, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
@@ -269,7 +269,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                 val tag = when (b.state) { "active" -> "NOW · WEEK ${(b.weeksIn + 1).coerceAtMost(b.weeks)} OF ${b.weeks}"; "done" -> "DONE · BLOCK ${k + 1}"
                     else -> if (upcomingRank == 0) "NEXT · BLOCK ${k + 1}" else "LATER · BLOCK ${k + 1}" }
                 val fg = if (now) cs.onPrimaryContainer else cs.onSurface
-                Column(Modifier.fillMaxWidth().clip(if (now) RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp) else RoundedCornerShape(24.dp))
+                Column(Modifier.fillMaxWidth().clip(if (now) RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp) else RoundedCornerShape(28.dp))
                     .background(if (now) cs.primaryContainer else cs.surfaceContainerLow).padding(16.dp)
                     .semantics(mergeDescendants = !editing) { contentDescription = "$nm block, ${b.weeks} weeks" }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(tag, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp),
@@ -334,16 +334,16 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                 }
             }
         }
-        if (editing && blocks.size < 8) Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(18.dp))
+        if (editing && blocks.size < 8) Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(20.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(20.dp))
             .clickable { val last = draft.last(); draft.add(DBlock(last.phase, 4, null, false)) }.semantics { role = Role.Button }, contentAlignment = Alignment.Center) {
             Text("+ Add a block", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = cs.primary)
         }
         if (err.isNotEmpty()) Text(err, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer,
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp))
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp))
         if (!editing && c != null) {
             if (!c.b("done")) {
                 val adapt = c.b("adapts")
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp),
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text("Adapt exercises to each phase", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold))

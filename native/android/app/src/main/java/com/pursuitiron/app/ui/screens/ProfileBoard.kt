@@ -127,7 +127,7 @@ fun PrBoardCard(vm: AppViewModel, b: JSONObject) {
             (if (all) rows else rows.take(5)).forEachIndexed { k, r ->
                 Row(Modifier.fillMaxWidth().background(cs.surface).clickable { liftId = r.s("id") }.padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(color = if (k == 0) cs.primary else cs.primaryContainer, contentColor = if (k == 0) cs.onPrimary else cs.onPrimaryContainer, shape = RoundedCornerShape(10.dp), modifier = Modifier.size(30.dp)) {
+                    Surface(color = if (k == 0) cs.primary else cs.primaryContainer, contentColor = if (k == 0) cs.onPrimary else cs.onPrimaryContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(30.dp)) {
                         Box(contentAlignment = Alignment.Center) { Text("${k + 1}", style = MaterialTheme.typography.labelLarge) }
                     }
                     Column(Modifier.weight(1f)) {
@@ -160,7 +160,7 @@ fun MuscleBalanceCard(b: JSONObject) {
             }
         }
         val ratio = bal.d("ratio")
-        if (ratio > 0) Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        if (ratio > 0) Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
             Text(
                 when {
                     ratio >= 1.4 -> "Push-heavy: ${fmtNum(ratio)} : 1 push to pull (${bal.i("push")} vs ${bal.i("pull")} sets)."

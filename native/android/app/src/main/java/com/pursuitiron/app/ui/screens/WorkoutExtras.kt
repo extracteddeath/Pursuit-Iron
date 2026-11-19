@@ -128,12 +128,12 @@ fun FinishSheet(vm: AppViewModel, onClose: () -> Unit) {
             }
             Text("${x.i("doneSets")} of ${x.i("totalSets")} sets logged", color = cs.onSurfaceVariant)
             val prs = x.list("prs")
-            if (prs.isNotEmpty()) PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 14.dp) {
+            if (prs.isNotEmpty()) PiCard(color = cs.primaryContainer, radius = 20.dp, padding = 14.dp) {
                 Text("${prs.size} estimated-1RM PR${if (prs.size == 1) "" else "s"}!", style = MaterialTheme.typography.titleSmall, color = cs.onPrimaryContainer)
                 prs.forEach { r -> Row { Text(r.s("name"), Modifier.weight(1f), color = cs.onPrimaryContainer); Text("+${fmtNum(r.d("gain"))} $u", color = cs.onPrimaryContainer) } }
             }
             x.o("mainE1rm")?.let { m ->
-                PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 14.dp) {
+                PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
                     Kicker("Estimated 1RM · ${m.s("name")}")
                     Text("${m.i("est")} $u", style = MaterialTheme.typography.headlineMedium, color = cs.primary)
                     Text("from your top set of ${fmtNum(m.d("weight"))} $u × ${m.i("reps")}" + (if (m.i("prev") > 0) " · previous best ${m.i("prev")} $u" else ""),
@@ -141,12 +141,12 @@ fun FinishSheet(vm: AppViewModel, onClose: () -> Unit) {
                 }
             }
             val goals = x.list("goalsHit")
-            if (goals.isNotEmpty()) PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 14.dp) {
+            if (goals.isNotEmpty()) PiCard(color = cs.primaryContainer, radius = 20.dp, padding = 14.dp) {
                 Text("${goals.size} goal${if (goals.size == 1) "" else "s"} reached", style = MaterialTheme.typography.titleSmall, color = cs.onPrimaryContainer)
                 goals.forEach { g -> Row { Text(g.s("name"), Modifier.weight(1f), color = cs.onPrimaryContainer); Text("${fmtNum(g.d("goal"))} $u ✓", color = cs.onPrimaryContainer) } }
             }
             val next = x.list("nextPlan")
-            if (next.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 22.dp, padding = 14.dp) {
+            if (next.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
                 Text("Next session", style = MaterialTheme.typography.titleSmall)
                 next.forEach { n ->
                     val delta = n.d("delta")
@@ -237,7 +237,7 @@ fun AddLiftSheet(vm: AppViewModel, onClose: () -> Unit) {
                 items(results.size) { k ->
                     val x = results[k]; val added = x.s("id") in have
                     Surface(onClick = { if (!added) { vm.act("addExercise", "id" to x.s("id")); vm.toast("Added ${x.s("name")}"); onClose() } },
-                        color = cs.surfaceContainerHigh, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                        color = cs.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
@@ -283,7 +283,7 @@ fun ProgressionSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: (
             Text("Applies to today's remaining sets. When you finish, you choose whether the program keeps it.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             // Each style says what it does; Auto names what it would pick for this lift right now.
             val opts = ex.o("progression").list("options").ifEmpty { s.list("progressionStyles") }
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 opts.forEach { st ->
                     val on = st.s("id") == cur
                     val ring by androidx.compose.animation.core.animateDpAsState(if (on) 6.dp else 2.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "radio")
@@ -377,7 +377,7 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
             }
             val guard = s.o("supersetGuard")
-            if (partner == null && guard != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp)
+            if (partner == null && guard != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp)
                 .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(PiIcons.Shield, null, Modifier.size(18.dp), tint = cs.onTertiaryContainer)
                 Text("${guard.s("name")} is today’s ${if (guard.b("main")) "main" else "second"} lift. Alternating it with anything costs top-set strength, so we won’t suggest a partner. You can still pair it yourself below.",
@@ -385,7 +385,7 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
             }
             val sug = if (partner == null && guard == null) s.list("supersetSuggestions") else emptyList()
             if (partner == null && guard == null && sug.isEmpty()) Text("No good partner among the lifts still to do today.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            if (sug.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (sug.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 sug.forEachIndexed { k, x ->
                     val good = x.i("score") >= 90
                     Surface(onClick = { vm.act("pairWith", "ei" to ei, "partner" to x.i("ei")); vm.toast("Superset: ${ex.s("name")} + ${x.s("name")} · rest after the pair"); onClose() },
@@ -395,7 +395,7 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                                 Text(x.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp))
                                 Text(x.s("reason") + " · ${x.i("sets")} sets. Rest after both.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
                             }
-                            Text(if (good) "GOOD PAIR" else "OKAY", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp),
+                            Text(if (good) "GOOD PAIR" else "OKAY", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp),
                                 color = if (good) cs.onPrimaryContainer else cs.onSurfaceVariant,
                                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (good) cs.primaryContainer else cs.surfaceContainerHighest).padding(horizontal = 8.dp, vertical = 3.dp))
                         }
@@ -511,7 +511,7 @@ fun AddSetSheet(vm: AppViewModel, ex: JSONObject, onClose: () -> Unit) {
                         val bg = if (t.tone) cs.tertiaryContainer else cs.secondaryContainer
                         val fg = if (t.tone) cs.onTertiaryContainer else cs.onSecondaryContainer
                         val off = t.why.isNotBlank()
-                        Column(Modifier.weight(1f).heightIn(min = 112.dp).clip(RoundedCornerShape(22.dp)).background(bg).alpha(if (off) 0.5f else 1f)
+                        Column(Modifier.weight(1f).heightIn(min = 112.dp).clip(RoundedCornerShape(20.dp)).background(bg).alpha(if (off) 0.5f else 1f)
                             .clickable { if (off) vm.toast(t.why) else { t.run(); onClose() } }
                             .semantics(mergeDescendants = true) { role = Role.Button; if (off) contentDescription = "${t.label}, unavailable: ${t.why}" }.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -526,7 +526,7 @@ fun AddSetSheet(vm: AppViewModel, ex: JSONObject, onClose: () -> Unit) {
             Text("Drop sets and myo-reps never set the next load. Warm-ups don't count toward volume.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             if (lastAdded != null) {
                 if (!confirm) TextButton(onClick = { confirm = true }) { Text("Remove the set you added…", color = cs.tertiary) }
-                else Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                else Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Remove the last set you added? Logged sets are kept.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                     TextButton(onClick = { confirm = false }) { Text("Cancel") }

@@ -106,7 +106,7 @@ fun SwapPicker(opts: List<JSONObject>?, currentName: String, onBan: (() -> Unit)
                     color = cs.onSurfaceVariant, modifier = Modifier.padding(4.dp))
                 TextButton(onClick = { q = ""; filter = "all" }) { Text("Show all alternatives") }
             }
-            else -> LazyColumn(Modifier.clip(RoundedCornerShape(22.dp)).heightIn(max = maxHeight), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            else -> LazyColumn(Modifier.clip(RoundedCornerShape(20.dp)).heightIn(max = maxHeight), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(shown, key = { it.s("id") }) { x ->
                     val badge = x.s("badge")
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { onPick(x) }
@@ -118,7 +118,7 @@ fun SwapPicker(opts: List<JSONObject>?, currentName: String, onBan: (() -> Unit)
                                 Text(x.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f, fill = false))
                                 if (badge.isNotBlank()) {
                                     val warn = x.b("warn")
-                                    Text(badge.uppercase(), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp),
+                                    Text(badge.uppercase(), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp),
                                         color = if (warn) cs.onTertiaryContainer else cs.onSecondaryContainer, maxLines = 1,
                                         modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (warn) cs.tertiaryContainer else cs.secondaryContainer).padding(horizontal = 7.dp, vertical = 3.dp))
                                 }

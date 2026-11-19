@@ -139,7 +139,7 @@ fun YouStats(board: JSONObject) {
     )
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         stats.forEach { (k, v) ->
-            Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).padding(vertical = 12.dp, horizontal = 4.dp).semantics(mergeDescendants = true) {},
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerLow).padding(vertical = 12.dp, horizontal = 4.dp).semantics(mergeDescendants = true) {},
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(v, style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp), maxLines = 1)
                 Text(k, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant, maxLines = 1)
@@ -165,7 +165,7 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
         // A kg distance needs the club named in full: "359.5 kg to 1,000" read as 1,000 kg.
         else "$cur · ${ink(c.d("remaining"))} $u to the ${c.s("next")}"
     }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.primaryContainer).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(84.dp).semantics(mergeDescendants = true) { contentDescription = "Big three total ${fmtNum(ratio)} times bodyweight" + (tier?.let { ", $it" } ?: "") }, contentAlignment = Alignment.Center) {
                 val track = cs.surface.copy(alpha = 0.6f); val ring = cs.primary
@@ -177,7 +177,7 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (ratio > 0) "${fmt1(ratio)}×" else "—", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 22.sp), color = cs.onPrimaryContainer)
-                    Text("BW", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer)
+                    Text("BW", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer)
                 }
             }
             Column(Modifier.weight(1f)) {
@@ -255,7 +255,7 @@ fun ProfScoreCard(vm: AppViewModel, onOpen: () -> Unit, onNeedBodyweight: () -> 
         }
         sc.o("next")?.let { n ->
             val lowest = sc.list("subs").minByOrNull { it.i("score") }?.s("label")
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(PiIcons.Star, null, Modifier.size(20.dp), tint = cs.primary)
                 Column(Modifier.weight(1f)) {
                     Text("${n.s("name")} ${ink(n.d("target"))} ${n.s("unit")} reaches ${n.s("level")}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp))
@@ -296,7 +296,7 @@ fun ProfBodyweightCard(vm: AppViewModel, onOpenBody: () -> Unit) {
                 }
             }
             if (bw != null) {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.secondaryContainer).clickable { vm.logBodyweight(Math.round((bw - 0.5) * 10) / 10.0) }
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.secondaryContainer).clickable { vm.logBodyweight(Math.round((bw - 0.5) * 10) / 10.0) }
                     .semantics { contentDescription = "Log bodyweight 0.5 lower"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−", fontSize = 22.sp, color = cs.onSecondaryContainer) }
                 Box(Modifier.size(44.dp).clip(CircleShape).background(cs.primary).clickable { vm.logBodyweight(Math.round((bw + 0.5) * 10) / 10.0) }
                     .semantics { contentDescription = "Log bodyweight 0.5 higher"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+", fontSize = 22.sp, color = cs.onPrimary) }
@@ -345,12 +345,12 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
         Segmented(listOf("e1rm" to "Est. 1RM", "heaviest" to "Heaviest", "reps" to "Rep PRs"), mode, { mode = it })
         AnimatedContent(mode, transitionSpec = { com.pursuitiron.app.ui.theme.Motion.peer() }, label = "prmode") { m ->
             if (m != "reps") {
-                Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     pb.list(m).forEachIndexed { k, r ->
                         Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { liftId = r.s("id") }
                             .semantics(mergeDescendants = true) { contentDescription = "${r.s("name")} record. Open lift history" }.padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(32.dp).clip(if (k < 3) RoundedCornerShape(11.dp) else CircleShape)
+                            Box(Modifier.size(32.dp).clip(if (k < 3) RoundedCornerShape(12.dp) else CircleShape)
                                 .background(when { k == 0 -> cs.primary; k < 3 -> cs.primaryContainer; else -> cs.surfaceContainerHigh }), contentAlignment = Alignment.Center) {
                                 Text("${k + 1}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
                                     color = when { k == 0 -> cs.onPrimary; k < 3 -> cs.onPrimaryContainer; else -> cs.onSurface })
@@ -373,7 +373,7 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
                             val on = l.s("id") == cur?.s("id")
                             val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "rl")
                             Box(Modifier.height(36.dp).clip(RoundedCornerShape(if (on) 12.dp else 18.dp)).background(bg)
-                                .then(if (on) Modifier else Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(18.dp)))
+                                .then(if (on) Modifier else Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(20.dp)))
                                 .clickable { repLift = l.s("id") }.semantics { selected = on; role = Role.Button }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                                 Text(l.s("short").ifBlank { l.s("name") }, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp), color = if (on) cs.onSecondaryContainer else cs.onSurfaceVariant)
                             }
@@ -384,13 +384,13 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 row.forEach { r ->
                                     val done = r.b("done")
-                                    Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(if (done) cs.primaryContainer else Color.Transparent)
-                                        .then(if (done) Modifier else Modifier.border(1.5.dp, cs.outlineVariant, RoundedCornerShape(18.dp)))
+                                    Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(if (done) cs.primaryContainer else Color.Transparent)
+                                        .then(if (done) Modifier else Modifier.border(1.5.dp, cs.outlineVariant, RoundedCornerShape(20.dp)))
                                         .semantics(mergeDescendants = true) {}.padding(vertical = 12.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         val fg = if (done) cs.onPrimaryContainer else cs.onSurface
                                         Text("${r.i("reps")} ${if (r.i("reps") == 1) "rep" else "reps"}", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = fg.copy(alpha = 0.85f))
                                         Text(ink(r.d("w")), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), color = fg)
-                                        Text(if (done) "DONE" else "PREDICTED", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
+                                        Text(if (done) "DONE" else "PREDICTED", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.8f))
                                     }
                                 }
                             }
@@ -415,7 +415,7 @@ fun ProfHeatCard(board: JSONObject, onOpen: (String) -> Unit) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("M", "", "W", "", "F", "", "S").forEach { Box(Modifier.height(18.dp), contentAlignment = Alignment.CenterStart) { Text(it, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant) } }
+                    listOf("M", "", "W", "", "F", "", "S").forEach { Box(Modifier.height(18.dp), contentAlignment = Alignment.CenterStart) { Text(it, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant) } }
                 }
                 Row(Modifier.weight(1f).semantics { contentDescription = "Training calendar, last 12 weeks: ${board.i("heatCount")} sessions" }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (wk in 0 until 12) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -424,8 +424,8 @@ fun ProfHeatCard(board: JSONObject, onOpen: (String) -> Unit) {
                             val future = c.b("future"); val today = c.b("today")
                             val bg by animateColorAsState(if (future) Color.Transparent else shade(c.i("level")), com.pursuitiron.app.ui.theme.Motion.effectsSlow(), label = "heat")
                             val id = c.s("id").takeIf { it.isNotBlank() && it != "null" }
-                            Box(Modifier.fillMaxWidth().height(18.dp).clip(RoundedCornerShape(5.dp)).background(bg)
-                                .then(when { today -> Modifier.border(2.dp, cs.onSurface, RoundedCornerShape(5.dp)); future -> Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(5.dp)); else -> Modifier })
+                            Box(Modifier.fillMaxWidth().height(18.dp).clip(RoundedCornerShape(4.dp)).background(bg)
+                                .then(when { today -> Modifier.border(2.dp, cs.onSurface, RoundedCornerShape(4.dp)); future -> Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(4.dp)); else -> Modifier })
                                 .then(if (id != null) Modifier.clickable { onOpen(id) } else Modifier)
                                 .semantics { contentDescription = fmt.format(Date(c.optLong("date"))) + when { future -> " · upcoming"; c.i("sessions") > 0 -> " · trained"; else -> " · rest" } })
                         }
@@ -435,7 +435,7 @@ fun ProfHeatCard(board: JSONObject, onOpen: (String) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${board.i("heatCount")} sessions in 12 weeks", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
                 Text("Less", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                (0..3).forEach { Box(Modifier.padding(start = 4.dp).size(12.dp).clip(RoundedCornerShape(3.dp)).background(shade(it))) }
+                (0..3).forEach { Box(Modifier.padding(start = 4.dp).size(12.dp).clip(RoundedCornerShape(4.dp)).background(shade(it))) }
                 Text(" More", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
         }
@@ -479,7 +479,7 @@ fun ProfBadges(board: JSONObject) {
                         val on = open == m.s("id"); val done = m.b("done")
                         val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "bdc")
                         val prog = com.pursuitiron.app.ui.common.ringSweep(m.d("progress").toFloat())
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(bg).clickable { open = if (on) null else m.s("id") }
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(bg).clickable { open = if (on) null else m.s("id") }
                             .semantics(mergeDescendants = true) { role = Role.Button; selected = on; contentDescription = m.s("name") + if (done) ", earned" else ", ${(m.d("progress") * 100).toInt()} percent" }
                             .padding(vertical = 8.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Box(Modifier.size(58.dp), contentAlignment = Alignment.Center) {
@@ -504,7 +504,7 @@ fun ProfBadges(board: JSONObject) {
             val x = m ?: return@AnimatedVisibility
             val done = x.b("done")
             val fg = if (done) cs.onPrimaryContainer else cs.onSurface
-            Row(Modifier.fillMaxWidth().bringIntoViewRequester(detailView).clip(RoundedCornerShape(24.dp)).background(if (done) cs.primaryContainer else cs.surfaceContainerHigh).padding(16.dp),
+            Row(Modifier.fillMaxWidth().bringIntoViewRequester(detailView).clip(RoundedCornerShape(28.dp)).background(if (done) cs.primaryContainer else cs.surfaceContainerHigh).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 BadgeShape(done, 44.dp, 14.dp, badgeIcon(x.s("id")), 26.dp)
                 Spacer(Modifier.width(6.dp))
@@ -547,7 +547,7 @@ fun ProfBalance(board: JSONObject) {
             val ratio = bal.d("ratio")
             if (ratio > 0) {
                 val heavy = ratio > 1.3
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (heavy) cs.tertiaryContainer else cs.primaryContainer).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (heavy) cs.tertiaryContainer else cs.primaryContainer).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     val fg = if (heavy) cs.onTertiaryContainer else cs.onPrimaryContainer
                     Icon(PiIcons.Scale, null, Modifier.padding(top = 1.dp).size(18.dp), tint = fg)
                     Text(if (heavy) "Push-heavy at ${fmt1(ratio)} : 1 push to pull (${bal.i("push")} vs ${bal.i("pull")} sets). Your next block could trade a press slot for a row."
@@ -617,7 +617,7 @@ fun StrengthClubCard(vm: AppViewModel) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             c.list("rows").forEach { r ->
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(cs.surface).padding(vertical = 8.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surface).padding(vertical = 8.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (r.b("has")) "${fmtNum(r.d("value"))} $u" else "—", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
                     Text(r.s("label").replace("Back squat", "Squat").replace("Bench press", "Bench"), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
                 }
@@ -639,7 +639,7 @@ fun StrengthClubCard(vm: AppViewModel) {
                 Column(Modifier.weight(1f).height(if (u == "kg") 46.dp else 34.dp).clip(RoundedCornerShape(12.dp)).background(bg).semantics { contentDescription = t.s("name") + if (on) ", cleared" else "" },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(java.text.NumberFormat.getIntegerInstance(Locale.US).format(t.i("lb")), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = if (on) cs.onPrimary else cs.onSurfaceVariant)
-                    if (u == "kg") Text("${Math.round(t.i("lb") / 2.20462)} kg", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = (if (on) cs.onPrimary else cs.onSurfaceVariant).copy(alpha = 0.8f))
+                    if (u == "kg") Text("${Math.round(t.i("lb") / 2.20462)} kg", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = (if (on) cs.onPrimary else cs.onSurfaceVariant).copy(alpha = 0.8f))
                 }
             }
         }

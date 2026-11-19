@@ -114,7 +114,7 @@ fun CycleBanner(vm: AppViewModel, cycleId: String, onOpen: () -> Unit) {
 fun CyclesList(vm: AppViewModel, onOpen: (String) -> Unit) {
     val cs = MaterialTheme.colorScheme
     val list = vm.cycles.list("cycles")
-    Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         list.forEach { c ->
             Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).clickable { onOpen(c.s("id")) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -171,7 +171,7 @@ fun CycleTemplatePicker(vm: AppViewModel, template: String, onTemplate: (String)
         val splitsAll = v.list("blockSplits"); val lifts = v.list("priorityLifts")
         custom.forEachIndexed { i, b ->
             var more by remember(i) { mutableStateOf(b.split != null || b.days != null || b.lift != null) }
-            PiCard(color = cs.surfaceContainer, radius = 22.dp, padding = 14.dp) {
+            PiCard(color = cs.surfaceContainer, radius = 20.dp, padding = 14.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Block ${i + 1}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                     IconButton(onClick = { if (b.weeks > 1) custom[i] = b.copy(weeks = b.weeks - 1) }) { Icon(PiIcons.Minus, "Fewer weeks in block ${i + 1}") }

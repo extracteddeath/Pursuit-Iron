@@ -415,7 +415,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     ex.o("estimate")?.let { est -> StartingEstimateCard(s, ex, est) } ?: WhyInline(vm, s, ex, trailing = skipWarm) { open(WSheet.History(ex.s("id"))) }
                 }
                 if (injury != null || ex.has("injuryAdjusted") && !ex.isNull("injuryAdjusted")) {
-                    Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(18.dp)) {
+                    Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(20.dp)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Icon(PiIcons.Shield, null, modifier = Modifier.size(20.dp))
@@ -430,7 +430,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 // First workout only: what the effort target means, in one line, dismissed for good.
                 if (!vm.prefs.effortTipSeen && !focus) {
                     val rpe = vm.settings.s("loadMode") == "rpe"
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.secondaryContainer).padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer).padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(if (rpe) "RPE 8 means about 2 good reps left. After each set, tap how hard it was."
                             else "@2 RIR means stop with about 2 good reps left. After each set, tap how many you had.",
@@ -564,7 +564,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
             Text(label, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
         }
     }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(bg).alpha(if (skipped) 0.55f else 1f).padding(vertical = 6.dp, horizontal = 4.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg).alpha(if (skipped) 0.55f else 1f).padding(vertical = 6.dp, horizontal = 4.dp)) {
         if (showRating) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 labelCell()
@@ -591,7 +591,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         } else Row(verticalAlignment = Alignment.CenterVertically) {
             labelCell()
             val useLast = vm.prefs.lastMode && !done && prev != null && (prev.d("w") > 0 || prev.s("r").isNotBlank())
-            Column(Modifier.width(SET_REF_W).padding(start = 8.dp).then(if (useLast) Modifier.clip(RoundedCornerShape(10.dp)).clickable {
+            Column(Modifier.width(SET_REF_W).padding(start = 8.dp).then(if (useLast) Modifier.clip(RoundedCornerShape(12.dp)).clickable {
                     if (prev.d("w") > 0) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to com.pursuitiron.app.ui.common.fmtNum(prev.d("w")))
                     if (prev.s("r").isNotBlank()) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to prev.s("r"))
                 }.semantics { contentDescription = "Last time $sub. Use it for this set"; role = Role.Button } else Modifier)) {
@@ -681,7 +681,7 @@ private fun RestCard(vm: AppViewModel, s: JSONObject, endAt: Long) {
                 com.pursuitiron.app.ui.common.RollingText(mmss(left), MaterialTheme.typography.headlineMedium)
             }
             listOf(-15 to "−15", 15 to "+15").forEach { (d, t) ->
-                Box(Modifier.height(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.onPrimary).clickable { vm.act("restAdjust", "delta" to d) }
+                Box(Modifier.height(44.dp).clip(RoundedCornerShape(16.dp)).background(cs.onPrimary).clickable { vm.act("restAdjust", "delta" to d) }
                     .padding(horizontal = 10.dp).semantics { contentDescription = if (d < 0) "15 seconds less" else "15 seconds more"; role = Role.Button },
                     contentAlignment = Alignment.Center) { Text(t, style = MaterialTheme.typography.labelLarge, color = cs.primary) }
             }
@@ -699,7 +699,7 @@ private fun Dock(vm: AppViewModel, s: JSONObject, ei: Int, exs: List<JSONObject>
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val nxt = exs.getOrNull(ei + 1)
         if (nxt != null) {
-            Row(Modifier.weight(1f).height(h).clip(RoundedCornerShape(18.dp)).background(cs.secondaryContainer).clickable { vm.act("select", "ei" to ei + 1) }
+            Row(Modifier.weight(1f).height(h).clip(RoundedCornerShape(20.dp)).background(cs.secondaryContainer).clickable { vm.act("select", "ei" to ei + 1) }
                 .semantics { contentDescription = "Next exercise: ${nxt.s("name")}"; role = Role.Button }.padding(start = 16.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -827,16 +827,16 @@ private fun EditorPlates(vm: AppViewModel, w: String, bar: String, unit: String,
             Text("${fmtNum(res.d("barWeight"))} $unit bar$note", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
         }
         Row(Modifier.height(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Box(Modifier.width(26.dp).height(10.dp).clip(RoundedCornerShape(3.dp)).background(cs.outlineVariant))
+            Box(Modifier.width(26.dp).height(10.dp).clip(RoundedCornerShape(4.dp)).background(cs.outlineVariant))
             list.forEach { p ->
                 val big = p >= bigAt
-                Box(Modifier.width(if (big) 18.dp else 14.dp).height((22 + Math.round(p / maxP * 42).toInt()).dp).clip(RoundedCornerShape(5.dp))
+                Box(Modifier.width(if (big) 18.dp else 14.dp).height((22 + Math.round(p / maxP * 42).toInt()).dp).clip(RoundedCornerShape(4.dp))
                     .background(if (big) cs.primary else cs.tertiaryContainer), contentAlignment = Alignment.Center) {
                     Text(fmtNum(p), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.ExtraBold), color = if (big) cs.onPrimary else cs.onTertiaryContainer,
                         maxLines = 1, softWrap = false, modifier = Modifier.graphicsLayer { rotationZ = -90f }.wrapContentSize(unbounded = true))
                 }
             }
-            Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(3.dp)).background(cs.outlineVariant))
+            Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(4.dp)).background(cs.outlineVariant))
         }
     }
 }
@@ -849,7 +849,7 @@ private fun Stepper(tag: String, label: String, value: String, kb: KeyboardType,
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(tag, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), color = cs.onSurfaceVariant, modifier = Modifier.width(48.dp))
-        HoldStep(PiIcons.Minus, minusLabel, 56.dp, false, shape = RoundedCornerShape(18.dp), bg = cs.secondaryContainer, fg = cs.onSecondaryContainer, onStep = onMinus)
+        HoldStep(PiIcons.Minus, minusLabel, 56.dp, false, shape = RoundedCornerShape(20.dp), bg = cs.secondaryContainer, fg = cs.onSecondaryContainer, onStep = onMinus)
         androidx.compose.foundation.text.BasicTextField(value, onText, singleLine = true,
             textStyle = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp, textAlign = TextAlign.Center, color = cs.onSurface),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
@@ -872,7 +872,7 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 Kicker("Exercise ${ei + 1} of $count")
                 Text(ex.s("name"), style = MaterialTheme.typography.headlineSmall)
             }
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 ex.optJSONObject("plateau")?.let { pl -> MenuRow(PiIcons.Trend, "Plateau options", "No PR in ${pl.i("since")} sessions on this day", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Plateau(ei)) } }
                 MenuRow(PiIcons.Swap, "Swap exercise", "Alternatives at your gym", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Swap(ei)) }
                 // B903: the working-set count for today; after saving, the finish page asks whether the program keeps it.
@@ -1032,7 +1032,7 @@ internal fun HurtSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
                     }
                     else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         hurtPlan(preview, impact).forEach { line ->
-                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp),
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.padding(top = 7.dp).size(8.dp).clip(CircleShape).background(cs.primary))
                                 Text(line, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp))
@@ -1115,7 +1115,7 @@ private fun NoteSheet(vm: AppViewModel, s: JSONObject, ei: Int, onClose: () -> U
 @Composable
 private fun ReentryBanner(r: JSONObject) {
     val cs = MaterialTheme.colorScheme
-    Surface(color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(PiIcons.Redo, null, Modifier.size(20.dp))
             Text("Re-entry session. ${r.i("sets")} working sets per lift at ${Math.round(r.d("factor") * 100)}% of the plan. Your full plan resumes next session.",

@@ -213,7 +213,7 @@ private fun ExercisePickSheet(vm: AppViewModel, onPick: (JSONObject) -> Unit, on
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search exercises") })
-            LazyColumn(Modifier.clip(RoundedCornerShape(22.dp)).heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            LazyColumn(Modifier.clip(RoundedCornerShape(20.dp)).heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(items) { x ->
                     Column(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { onPick(x) }.padding(14.dp)) {
                         Text(x.s("name"), style = MaterialTheme.typography.titleSmall)

@@ -150,7 +150,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Build your own: what to do here, and what the engine does once it's saved.
             if (e.b("buildOwn")) item(key = "own") {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.tertiaryContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.tertiaryContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Your lifts, our coaching", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
                     Text("Add the exercises you want to each day, then Save. Day options renames a day or adds another. " +
                         "From what you log, the app sets each lift's weights and reps, moves it up as you get stronger, schedules the easy week and builds your next block.",
@@ -189,7 +189,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 Row(Modifier.fillMaxWidth().semantics { contentDescription = "This week" }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     strip.forEach { c ->
                         val train = c.s("dayId").isNotBlank() && c.s("dayId") != "null"; val on = train && c.s("dayId") == dId
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(when { on -> cs.primary; train -> cs.surfaceContainerHigh; else -> androidx.compose.ui.graphics.Color.Transparent })
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(when { on -> cs.primary; train -> cs.surfaceContainerHigh; else -> androidx.compose.ui.graphics.Color.Transparent })
                             .clickable(enabled = train && !on) { dayId = c.s("dayId") }
                             .semantics(mergeDescendants = true) { contentDescription = c.s("weekday") + ": " + (if (train) c.s("label") + (if (on) ", open" else "") else "rest day") }
                             .padding(vertical = 8.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -202,9 +202,9 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             }
             days.take(di).forEach { x -> item(key = "before:" + x.s("id")) { DayCard(x, e.i("weekIndex")) { dayId = x.s("id") } } }
             item(key = "head") {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.secondaryContainer).padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.secondaryContainer).padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.surface), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(cs.surface), contentAlignment = Alignment.Center) {
                         Text(d.s("weekday").ifBlank { "D${di + 1}" }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold), color = cs.onSurface)
                     }
                     Column(Modifier.weight(1f)) {
@@ -220,7 +220,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 }
             }
             if (dayMenu) item(key = "menu") {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         DayAct(PiIcons.Pencil, "Rename") { sheet = ESheet.RenameDay(dId, d.s("label")); dayMenu = false }
                         DayAct(PiIcons.Note, if (d.s("note").isBlank()) "Add day note" else "Edit day note") { noteEdit = d.s("note"); dayMenu = false }
@@ -235,7 +235,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             }
             noteEdit?.let { cur -> item(key = "noteEdit") {
                 var v by remember(dId) { mutableStateOf(cur) }
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Day note", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
                     Text("Shown at the top of this workout: focus cues, tempo, reminders.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
                     OutlinedTextField(v, { v = it.take(240) }, Modifier.fillMaxWidth(), minLines = 3, placeholder = { Text("e.g. Slow eccentrics; leave 2 in the tank on squats.") })
@@ -246,14 +246,14 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 }
             } }
             if (d.s("note").isNotBlank() && noteEdit == null) item(key = "note") {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.primaryContainer).padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.primaryContainer).padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(PiIcons.Info, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(16.dp).padding(top = 1.dp))
                     Text(d.s("note"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
                 }
             }
             // App.js short-day note: a generated day under three lifts means the gym limits the options.
             if (exs.size in 1..2 && !e.b("buildOwn")) item(key = "short") {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.tertiaryContainer).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(PiIcons.Info, null, tint = cs.onTertiaryContainer, modifier = Modifier.size(18.dp))
                     Text("This day is a little short on exercises: your equipment limits the options. Add equipment to your gym in Settings, or add exercises below.",
                         style = MaterialTheme.typography.bodySmall, color = cs.onTertiaryContainer)
@@ -273,9 +273,9 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Drag a lift by its handle. Supersets on this day are unpaired when the order changes.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
                     com.pursuitiron.app.ui.common.ReorderColumn(exs, keyOf = { "${it.s("id")}" }, onMove = { f, t -> vm.edit("moveTo", "dayId" to dId, "from" to f, "to" to t) }, labelOf = { it.s("name") }) { x, k, handle, lifted ->
-                        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(18.dp)).background(if (lifted) cs.secondaryContainer else cs.surfaceContainerLow)
+                        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(20.dp)).background(if (lifted) cs.secondaryContainer else cs.surfaceContainerLow)
                             .padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(28.dp).clip(RoundedCornerShape(10.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(28.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
                                 Text("${k + 1}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.onSecondaryContainer)
                             }
                             Column(Modifier.weight(1f)) {
@@ -303,7 +303,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     onWhy = { why = slot }, onInfo = { info = x.s("id") }, onSwapAll = { sheet = ESheet.Swap(dId, slot) }, modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = Motion.spatial()))
             }
             item(key = "add") {
-                Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(18.dp))
+                Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(20.dp)).border(1.5.dp, cs.outlineVariant, RoundedCornerShape(20.dp))
                     .clickable { sheet = ESheet.Add(dId) }.semantics { role = Role.Button }, contentAlignment = Alignment.Center) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(PiIcons.Plus, null, tint = cs.primary, modifier = Modifier.size(18.dp))
@@ -316,7 +316,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             item(key = "setup") {
                 var setupOpen by remember(dId) { mutableStateOf(false) }
                 val f0 = d.s("focus").ifBlank { "auto" }
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { setupOpen = !setupOpen }
                         .semantics(mergeDescendants = true) { role = Role.Button; stateDescription = if (setupOpen) "Expanded" else "Collapsed" }.heightIn(min = 40.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -398,7 +398,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             Text("Reorder days", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
             Text("Drag a day by its handle. The weekly order changes; logged workouts stay in your history.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             com.pursuitiron.app.ui.common.ReorderColumn(ds, keyOf = { it.s("id") }, onMove = { f, t -> vm.edit("moveDayTo", "from" to f, "to" to t) }, labelOf = { it.s("label") }) { x, k, handle, lifted ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(18.dp)).background(if (lifted) cs.secondaryContainer else cs.surfaceContainerHigh)
+                Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(20.dp)).background(if (lifted) cs.secondaryContainer else cs.surfaceContainerHigh)
                     .padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("D${k + 1}", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp))
                     Column(Modifier.weight(1f)) {
@@ -433,7 +433,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                 Text(if (n > 0) "Save $n ${if (n == 1) "day" else "days"}" else "Save changes", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold))
                 Text("This program is part of a training cycle.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
             }
-            Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 listOf(Triple("program", "This block", "Only this block changes. The next blocks keep their own picks."),
                     Triple("cycle", "Every block", "Every block in the cycle gets these lifts. Sets and reps still follow each block’s own ramp.")).forEach { (sc, t, sub) ->
                     Column(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { scopeAsk = false; vm.saveEdits(sc) }
@@ -454,10 +454,10 @@ private fun shortDay(label: String) = label.split(" — ", " · ", " - ").first(
 private fun DayCard(x: JSONObject, week: Int, onOpen: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val exs = x.list("exercises")
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).clickable(onClick = onOpen)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).clickable(onClick = onOpen)
         .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "${x.s("weekday")} ${x.s("label")}. Open" }
         .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Text(x.s("weekday").ifBlank { "D${x.i("index") + 1}" }, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold))
         }
         Column(Modifier.weight(1f)) {
@@ -508,18 +508,18 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
     val bring = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
     LaunchedEffect(open) { if (open != null) { kotlinx.coroutines.delay(320); bring.bringIntoView() } }
     val tertiary = cs.tertiary
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow)
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow)
         .then(if (paired) Modifier.drawBehind { drawRect(tertiary, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)) } else Modifier)
         .then(Modifier.bringIntoViewRequester(bring))
         .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(28.dp).clip(RoundedCornerShape(10.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(28.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
                 Text("${slot + 1}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.onSecondaryContainer)
             }
             Column(Modifier.weight(1f)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(x.s("name"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
-                    if (x.b("primary")) Text("KEY LIFT", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.primary,
+                    if (x.b("primary")) Text("KEY LIFT", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.primary,
                         modifier = Modifier.align(Alignment.CenterVertically).border(1.dp, cs.primary, RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 2.dp))
                 }
                 val last = x.optJSONObject("last")
@@ -597,7 +597,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
             }
         }
         AnimatedVisibility(open == "prog", enter = Motion.expandIn, exit = Motion.shrinkOut) {
-            Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 e.list("styles").forEach { o ->
                     val on = o.s("id") == x.s("style")
                     Column(Modifier.fillMaxWidth().background(if (on) cs.secondaryContainer else cs.surface)
@@ -612,7 +612,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
         }
         if (pinOpen) PinNoteSheet(vm, x.s("id")) { pinOpen = false; vm.refreshEditor() }
         AnimatedVisibility(open == "more", enter = Motion.expandIn, exit = Motion.shrinkOut) {
-            Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 MoreRow(PiIcons.Pin, "Pinned note", x.s("pinSum").ifBlank { "Setup per machine and a cue you’ll see every time" }) { pinOpen = true; onToggle("more") }
                 if (slot < count - 1) MoreRow(PiIcons.Layers, if (x.b("superset")) "Split the superset" else "Superset with the next lift", "Pair with the next exercise, alternating sets") { vm.edit("superset", "dayId" to dayId, "slot" to slot); onToggle("more") }
                 MoreRow(PiIcons.Help, "Why this lift?", "See why the program selected this exercise") { onWhy(); onToggle("more") }
@@ -683,7 +683,7 @@ private fun SlotSheet(vm: AppViewModel, e: JSONObject, dayId: String, slot: Int,
                     OutlinedTextField(reps, { reps = it.take(9); vm.edit("override", "dayId" to dayId, "slot" to slot, "field" to "reps", "value" to reps) }, Modifier.weight(1f), singleLine = true, label = { Text("Reps") })
                 }
             }
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 MenuRow(PiIcons.Swap, "Swap exercise", "Every week of this program", cs.secondaryContainer, cs.onSecondaryContainer) { open(ESheet.Swap(dayId, slot)) }
                 if (slot > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "The primary lift stays primary", cs.secondaryContainer, cs.onSecondaryContainer) { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to -1); onClose() }
                 if (slot < count - 1) MenuRow(PiIcons.ChevronRight, "Move later", "The primary lift stays primary", cs.secondaryContainer, cs.onSecondaryContainer) { vm.edit("move", "dayId" to dayId, "slot" to slot, "dir" to 1); onClose() }
@@ -731,7 +731,7 @@ private fun AddExerciseSheet(vm: AppViewModel, dayId: String, onClose: () -> Uni
             val items = res.list("items")
             if (res != null && items.isEmpty()) Text("Nothing left to add for that with your equipment.", color = cs.onSurfaceVariant)
             TextButton(onClick = { creating = true }) { Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text("  Create a custom exercise") }
-            LazyColumn(Modifier.clip(RoundedCornerShape(22.dp)).heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            LazyColumn(Modifier.clip(RoundedCornerShape(20.dp)).heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(items) { x ->
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).clickable { vm.edit("add", "dayId" to dayId, "exId" to x.s("id")); vm.toast("Added ${x.s("name")}"); onClose() }.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -757,7 +757,7 @@ private fun DaySheet(vm: AppViewModel, e: JSONObject, dayId: String, open: (EShe
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp)) {
             Text(d.s("label"), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
-            Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 MenuRow(PiIcons.List, "Rename", "What this day is called", cs.secondaryContainer, cs.onSecondaryContainer) { open(ESheet.RenameDay(dayId, d.s("label"))) }
                 MenuRow(PiIcons.Plus, "Duplicate day", "Same lifts and settings, right after it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.edit("copyDay", "dayId" to dayId); onClose() }
                 if (idx > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "In the weekly order", cs.secondaryContainer, cs.onSecondaryContainer) { vm.edit("moveDay", "dayId" to dayId, "dir" to -1); onClose() }
@@ -783,7 +783,7 @@ private fun GroupHeader(len: Int, rounds: Int?, autoSets: Int, onRounds: (Int?) 
         Text(if (len >= 3) "CIRCUIT · $len LIFTS" else "SUPERSET", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
             color = cs.tertiary, modifier = Modifier.weight(1f))
         Text(if (rounds != null) "Rounds" else "Auto sets", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-        Row(Modifier.clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable(enabled = n > 1) { onRounds(n - 1) }.semantics { contentDescription = "Fewer rounds"; role = Role.Button }, contentAlignment = Alignment.Center) {
                 Text("−", style = MaterialTheme.typography.titleMedium, color = if (n > 1) cs.onSurface else cs.outline)
             }

@@ -26,7 +26,8 @@ enum class GeneratedAdaptiveBlockStatus {
     PROTECTED_CUSTOM_WORK,
     PROGRAM_UNRESOLVED,
     PRESCRIPTION_UNRESOLVED,
-    CYCLE_UNRESOLVED
+    CYCLE_UNRESOLVED,
+    STRENGTH_EXERCISE_MENU_LOSS
 }
 
 /**
@@ -52,7 +53,9 @@ data class GeneratedAdaptiveBlockResult(
     val prescribedWeek:SessionPrescriptionDraft?,
     val proposedOption:AdaptiveCycleOption?,
     val explanation:String,
-    val slotContinuity:List<GeneratedAdaptiveSlotContinuity> = emptyList()
+    val slotContinuity:List<GeneratedAdaptiveSlotContinuity> = emptyList(),
+    /** Exact source-backed exit/entry roster warning, not a coach approval. */
+    val strengthRosterBoundary:StrengthRosterBoundaryReview?=null
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -239,11 +242,34 @@ object GeneratedAdaptiveBlockDomain {
                 "The converted complete cycle failed the existing exact inventory and slot review: "+
                     structure.issues.take(3).joinToString(";") {it.kind.name},
                 generation,prescribed)
+        // A feasible generated Strength template is NOT accepted if an
+        // unchanged-split day silently goes from eight established working
+        // exercises to three. Compare the exact LAST hypertrophy week and
+        // FIRST strength week after resolving week-specific overrides.
+        // The dedicated full-cycle coach review remains authoritative for
+        // athlete-specific volume/time, and the source-backed menu recovery
+        // path can restore real exercises only with explicit athlete consent.
+        val roster=StrengthRosterBoundaryGuardDomain.review(
+            structure,input.targetBlockId)
+        if(roster.status==
+            StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW)
+            return GeneratedAdaptiveBlockResult(
+                GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,
+                generation,prescribed,null,
+                "Generated Strength loses most working exercises on "+
+                    roster.affectedDays.joinToString("; ") {
+                        "day ${it.weekday}: ${it.beforeWorkingExercises} to "+
+                            "${it.afterWorkingExercises}"
+                    }+
+                    ". Review missing movements and the full-cycle dose, "+
+                    "recovery and equipment constraints; do not auto-remove them.",
+                strengthRosterBoundary=roster)
         return GeneratedAdaptiveBlockResult(
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
             AdaptiveCycleOption(input.optionId,structure.verifiedDraft),
             "Complete candidate block; still requires full-cycle quality, permission and athlete review.",
-            Collections.unmodifiableList(identities.toList()))
+            Collections.unmodifiableList(identities.toList()),
+            roster)
     }
 }

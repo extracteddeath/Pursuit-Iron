@@ -8,7 +8,7 @@ import java.util.Collections
  */
 enum class GoalRealizationStatus { UNRESOLVED, DELIVERED_FOR_REVIEW }
 enum class GoalRealizationIssueKind {
-    NO_WEEK, DOSE_UNMET, EMPTY_OR_INVALID_SESSION, PURPOSE_MISMATCH,
+    NO_WEEK, UNVERIFIED_CANDIDATE, DOSE_UNMET, EMPTY_OR_INVALID_SESSION, PURPOSE_MISMATCH,
     AUTHORED_LIFT_MISSING, LIFT_FREQUENCY_MISSING, LIFT_FREQUENCY_UNMET,
     LIFT_NOT_PRIMARY
 }
@@ -57,6 +57,24 @@ object CoachGoalProgramRealizationDomain {
                 "No composed, equipment-verified week exists for this policy.")
             return report()
         }
+        // A numerically attractive week is not verified merely because its
+        // muscle dose happens to pass. A caller may independently inspect
+        // this realization review, so do not rely on its outer catalog owner
+        // to have enforced the same source and calendar gates first.
+        val weekdays=template.days.map {it.calendarDay}
+        if(proposed.status!=CatalogWeekStatus.VERIFIED_CATALOG_DRAFT_FOR_REVIEW ||
+            draft.status!=ComposerStatus.FEASIBLE_DRAFT_FOR_REVIEW ||
+            template.phase!=phase || draft.week.phase!=phase ||
+            draft.audit.phase!=phase ||
+            draft.week.days!=template.days.size ||
+            draft.week.windows!=template.days.map {it.window} ||
+            weekdays.size!=athlete.trainingWeekdays.size ||
+            weekdays.toSet()!=athlete.trainingWeekdays ||
+            weekdays.distinct().size!=weekdays.size ||
+            draft.sessions.map {it.dayIndex}!=template.days.indices.toList()) {
+            add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,"week.source",
+                "The composed week is not a verified, complete candidate for the athlete's exact phase, schedule and session windows.")
+        }
         for(finding in draft.audit.muscles.values)
             if(finding.gapToMev.signum()>0 ||
                 finding.excessAboveMrv.signum()>0 ||
@@ -78,7 +96,7 @@ object CoachGoalProgramRealizationDomain {
             add(GoalRealizationIssueKind.AUTHORED_LIFT_MISSING,
                 "requiredVisits","The candidate omitted authored pinned visits or required main lifts.")
 
-        val weekdays=template.days.withIndex().associate {
+        val weekdayToIndex=template.days.withIndex().associate {
             it.value.calendarDay to it.index
         }
         val intentByDay=intents.associateBy {it.weekday}
@@ -86,7 +104,7 @@ object CoachGoalProgramRealizationDomain {
             intentByDay.keys!=athlete.trainingWeekdays)
             add(GoalRealizationIssueKind.PURPOSE_MISMATCH,"weekdays",
                 "The planned session purposes do not cover every selected day exactly once.")
-        for((weekday,index) in weekdays) {
+        for((weekday,index) in weekdayToIndex) {
             val intent=intentByDay[weekday]
             val session=draft.sessions.getOrNull(index)
             if(intent==null || session?.purpose!=intent.purpose)

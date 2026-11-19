@@ -164,6 +164,31 @@ export function auditWorkoutProgressionReplay(record) {
                 issues.push({ code:'invalid_live_load_advice',
                     workingSetIndex:row.workingSetIndex });
         }
+        // An explicitly selected top-set scheme may prescribe lighter
+        // back-offs after set one is completed. That is a programmed load,
+        // not a fatigue downgrade. Require actual top-set evidence AND a
+        // snapped, coherent per-row target; an unrelated automatic weight
+        // drop must never be laundered as a back-off.
+        if (adjustment?.action === 'set_backoffs_from_top') {
+            const sourceIndex = adjustment.sourceIndices?.[0];
+            const source = record.rows[sourceIndex];
+            const acceptable = record.progressionStyle === 'top'
+                && adjustment.sourceIndices.length === 1
+                && source?.rowIndex === sourceIndex
+                && source.kind === 'work' && source.workingSetIndex === 0
+                && source.done && sourceIndex < row.rowIndex
+                && source.load > 0 && source.reps > 0
+                && adjustment.fromLoad === source.load
+                && adjustment.toLoad === row.load
+                && adjustment.toLoad === row.target.load
+                && adjustment.toLoad >= source.load * .8
+                && adjustment.toLoad < source.load
+                && row.retuneFrom?.load != null;
+            if (!acceptable) issues.push({
+                code:'invalid_top_backoff_adjustment',
+                workingSetIndex:row.workingSetIndex
+            });
+        }
         // No current engine path authorizes an automatic pending load cut.
         // Legacy adjustment labels are evidence of an action, not user consent.
         if (adjustment?.action === 'reduce_pending_load')

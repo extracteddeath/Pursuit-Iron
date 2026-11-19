@@ -819,7 +819,7 @@ private fun NativeKotlinCandidateTrainEntry(
             }
             PursuitCard {
                 PursuitSectionHeading("Measured workouts",
-                    "Log actual timed holds or verified banded push-up reps, with no invented weights or PRs.")
+                    "Record verified holds, loaded holds, carries or banded repetitions without invented weights or PRs.")
                 when(val review=resumableMeasured) {
                     is NativeMeasuredInventoryResult.Ready -> {
                         if(review.workouts.isNotEmpty()) {

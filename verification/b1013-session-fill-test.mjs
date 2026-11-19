@@ -76,7 +76,7 @@ filled.forEach((program, i) => {
         checkedLifts++;
     }
     for (const week of weeksOf(program)) shown(program, week).forEach((minutes, di) =>
-        assert.ok(minutes <= Math.max(max, shown(control, week)[di]), `${name}: day ${di + 1} week ${week} shows ${minutes} past ${max}`));
+        assert.ok(minutes <= max, `${name}: generated filled day ${di + 1} week ${week} shows ${minutes} minutes, exceeding the user's selected ${max}-minute maximum (control: ${shown(control, week)[di]})`));
     for (const added of fill.added) assert.ok(program.days.find(d => d.id === added.dayId).exercises.some(id => EX_BY_ID[id].name === added.exercise), name + ': the recorded lift is in the plan');
     const recorded = new Set(fill.added.map(a => a.exercise));
     for (const lift of Object.keys(mine)) if (!theirs[lift]) assert.ok(recorded.has(EX_BY_ID[lift.split('|')[1]].name), `${name}: ${lift} is new and not recorded`);

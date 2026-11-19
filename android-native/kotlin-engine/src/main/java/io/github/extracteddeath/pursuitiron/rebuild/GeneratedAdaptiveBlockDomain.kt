@@ -27,7 +27,8 @@ enum class GeneratedAdaptiveBlockStatus {
     PROGRAM_UNRESOLVED,
     PRESCRIPTION_UNRESOLVED,
     CYCLE_UNRESOLVED,
-    STRENGTH_EXERCISE_MENU_LOSS
+    STRENGTH_EXERCISE_MENU_LOSS,
+    STRENGTH_WORKING_DOSE_LOSS
 }
 
 /**
@@ -55,7 +56,9 @@ data class GeneratedAdaptiveBlockResult(
     val explanation:String,
     val slotContinuity:List<GeneratedAdaptiveSlotContinuity> = emptyList(),
     /** Exact source-backed exit/entry roster warning, not a coach approval. */
-    val strengthRosterBoundary:StrengthRosterBoundaryReview?=null
+    val strengthRosterBoundary:StrengthRosterBoundaryReview?=null,
+    /** Working-set totals only; not generic amplifier/warmup or dose advice. */
+    val strengthDoseBoundary:StrengthDoseBoundaryReview?=null
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -251,6 +254,10 @@ object GeneratedAdaptiveBlockDomain {
         // path can restore real exercises only with explicit athlete consent.
         val roster=StrengthRosterBoundaryGuardDomain.review(
             structure,input.targetBlockId)
+        val dose=StrengthDoseBoundaryGuardDomain.review(
+            structure,input.targetBlockId)
+        val halfDose=dose.status==
+            StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW
         if(roster.status==
             StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW)
             return GeneratedAdaptiveBlockResult(
@@ -261,15 +268,31 @@ object GeneratedAdaptiveBlockDomain {
                         "day ${it.weekday}: ${it.beforeWorkingExercises} to "+
                             "${it.afterWorkingExercises}"
                     }+
-                    ". Review missing movements and the full-cycle dose, "+
+                    (if(halfDose)" and reduces the exact previous exit "+
+                        "week's working sets from ${dose.hypertrophyWorkingSets} "+
+                        "to ${dose.strengthWorkingSets}." else ".")+
+                    " Review missing movements and the full-cycle dose, "+
                     "recovery and equipment constraints; do not auto-remove them.",
-                strengthRosterBoundary=roster)
+                strengthRosterBoundary=roster,
+                strengthDoseBoundary=dose)
+        if(halfDose)
+            return GeneratedAdaptiveBlockResult(
+                GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
+                generation,prescribed,null,
+                "Generated Strength retains the menu but reduces "+
+                    "real working sets from the final hypertrophy "+
+                    "week (${dose.hypertrophyWorkingSets}) to the "+
+                    "first Strength week (${dose.strengthWorkingSets}). "+
+                    "A source-backed full-cycle dose repair and individual "+
+                    "review are required before replacing this block.",
+                strengthRosterBoundary=roster,
+                strengthDoseBoundary=dose)
         return GeneratedAdaptiveBlockResult(
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
             AdaptiveCycleOption(input.optionId,structure.verifiedDraft),
             "Complete candidate block; still requires full-cycle quality, permission and athlete review.",
             Collections.unmodifiableList(identities.toList()),
-            roster)
+            roster,dose)
     }
 }

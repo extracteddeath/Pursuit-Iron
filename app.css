@@ -8297,7 +8297,7 @@ background:var(--pi-color-card)!important;
   border-radius:var(--pi-shape-card);
   background:var(--pi-color-card);border:1px solid var(--pi-color-divider);
 }
-#root .wpb .wpb-home-game-plan{margin:0 0 var(--pi-space-5);min-width:0}
+#root .wpb :is(.wpb-home-game-plan,.wpb-home-week,.wpb-home-recovery){margin:0 0 var(--pi-space-5);min-width:0}
 #root .wpb .wpb-game-plan-heading{min-height:32px;margin:0 0 var(--pi-space-2);font-size:var(--pi-type-section);gap:var(--pi-space-2)}
 .wpb-game-plan-count{margin-left:auto;font-size:var(--pi-type-label);color:var(--pi-color-on-muted);font-weight:700}
 #root .wpb .wpb-session-game-plan .wpb-game-plan-exercise{

@@ -31,7 +31,7 @@ const headerShared=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-wor
 for(const prop of ['width:48px','height:48px','align-items:center','justify-content:center','padding:0'])
   assert.ok(headerShared.includes(prop),'Workout header shared geometry missing '+prop);
 for(const [selector,paint] of [
-  ['#root .wpb-workout .wpb-workout-close{','display:flex;border:0;border-radius:11px'],
+  ['#root .wpb-workout .wpb-workout-close{','display:flex;border:0;border-radius:12px'],
   ['#root .wpb-workout .wpb-workout-header-action{','display:inline-flex;gap:6px;border:1px solid transparent;border-radius:12px']])
   assert.ok((css.split(selector)[1]?.split('}')[0]||'').includes(paint),
     'Workout header retains its feature-specific shape '+selector);

@@ -25,7 +25,7 @@ try{
   await page.setViewport({width,height:880,deviceScaleFactor:1,isMobile:width<600,hasTouch:true});
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.evaluateOnNewDocument(store=>{if(!localStorage.getItem('short-test-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(store));localStorage.setItem('short-test-seeded','1');}},store);
-  await page.goto(url,{waitUntil:'networkidle0'});await clickText(page,'Preview · Time available');
+  await page.goto(url,{waitUntil:'networkidle0'});await page.click('.wpb-home-preview-action');
   await page.waitForSelector('[data-testid="session-length-control"]');
   for(const label of ['45 min','30 min','20 min','Full']){await clickText(page,label);assert.equal(await page.$eval(`[aria-label="Session length"] button[aria-pressed="true"]`,n=>n.textContent),label);}
   assert.equal(await page.$$eval('[data-nextex]',ns=>ns.length),6,'Full restores full roster');

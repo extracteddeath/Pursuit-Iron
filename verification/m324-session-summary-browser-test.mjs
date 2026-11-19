@@ -70,7 +70,7 @@ try {
         assert.doesNotMatch(names, /Barbell Bench Press/);
         await page.screenshot({ path: `verification/m324-program-${width}-phone.png` });
         await page.reload({ waitUntil: 'networkidle0' });
-        await clickText(page, 'Preview · Time available');
+        await page.click('.wpb-home-preview-action');
         await page.waitForSelector('[data-nextex]');
         const previewNames = await page.$$eval('[data-nextex]', nodes => nodes.map(n => n.textContent).join(' '));
         assert.match(previewNames, /Dumbbell Bench Press/); assert.match(previewNames, /Back Squat/);

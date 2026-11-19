@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1019,
+  "build": 1020,
   "engineVersion": "0.65.10",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "6188f9a1764f596492806f889d787110479fc1ab4c255fdae7ef6d00b9f79c54",
@@ -156,18 +156,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "667607ec05fd9b4da5ae6c7e92d7e88e793fd8fbf61cf59cb46d812c090ba227",
-    "index.html": "c6350794e391fe8a5b62d955c8d860c4991cc79b1b1604b51c84195f562a73c7",
-    "sw.js": "2aabc3b43fef75bfb47a321821ef1804ef003f8f1d39ee152fbb8a7441eb6fb6",
-    "BUILD_PROFILE.json": "e28db84589e0390d0f0e39f083200e4d2cd8889495e58f77db24c3393480abae",
+    "modules/App.js": "9275177bb97b5735e714ad8ab64e339300235a75ba8a4a4228f7166a6af46300",
+    "index.html": "edf56bcfb10b8ef71d49a81ee1cd50f7961a1675f89b8b705892f7f706c01e80",
+    "sw.js": "15cd9fc801fa530d1cc59a361d6d8e8d6667eaff6bdcaf3162c82d884d817a09",
+    "BUILD_PROFILE.json": "9798fc8497a47e2dfb677b39e24efeb3d6782bfe15fbb9acc74fe610497cf9e6",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "877fdb3610ae92646b5f943a1f4182d7f0968a2063da27df4911d60b1137f285",
+    "app.css": "0380788b2871692b5923c03162624ed1568d36abc7ee1debd5d18d4ff67be670",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-rafbf22fb52951155",
-  "uiMilestone": "Build 1019 · Flush Plan week picker and clearer workout feedback"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1020-r08e96bf6f40ed175",
+  "uiMilestone": "Build 1020 · M3 shape scale, readable type floor and flatter Plan and Home surfaces"
 }

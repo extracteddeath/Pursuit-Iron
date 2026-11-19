@@ -104,7 +104,7 @@ try{
   await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('[data-game-plan-exercise="bb-bench"]');
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 6/);
   const clickText=async text=>assert.ok(await page.evaluate(text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);b?.click();return !!b;},text),text);
-  await clickText('Preview · Time available');await page.waitForSelector('.wpb-next-workout-view');
+  await page.click('.wpb-home-preview-action');await page.waitForSelector('.wpb-next-workout-view');
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 6/);
   const previewChange=await page.$('.wpb-plan-change-banner[aria-label^="Review "]');
   if(!previewChange){
@@ -214,7 +214,7 @@ try{
   await page.click('[aria-label="Keep previous load for Dumbbell Bench Press"]');
   await page.waitForSelector('[aria-label="Use recommended load for Dumbbell Bench Press"]');
   await page.keyboard.press('Escape');
-  await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Preview · Time available').click());
+  await page.evaluate(()=>document.querySelector('.wpb-home-preview-action').click());
   await page.waitForSelector('.wpb-next-workout-view');
   await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Start workout').click());
   await page.waitForSelector('.wpb-workout');

@@ -1294,6 +1294,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /** Cold-disk locator only: no implicit consent, approval or issuance. */
+    /** Find real immutable athlete-confirmed sessions not yet issued. */
+    fun reviewConfirmedUnissuedMeasuredWorkouts():
+        NativeMeasuredConsentInventoryResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredConsentInventoryResult.Rejected(
+                NativeMeasuredConsentInventoryRefusal.NOT_AUTHORIZED)
+        return measuredConsent.reviewConfirmedUnissued(signed.ownerKey)
+    }
+
     fun reviewUnfinishedMeasuredWorkouts():NativeMeasuredInventoryResult {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeMeasuredInventoryResult.Rejected(

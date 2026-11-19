@@ -50,6 +50,19 @@ assert.ok(measuredPolicyTests.includes(
   'onlyExplicitEmptyDiskReceiptCanAuthorizeFreshAuthoring'));
 assert.ok(measuredPolicyTests.includes(
   'authoringSourceRequiresCompletedVerifiedAthleteGymRead'));
+for(const text of [
+  'PursuitWorkoutFocusHeader(',
+  'var showAllMeasuredSets by rememberSaveable(workoutId)',
+  'onFocusChange={focus->showAllMeasuredSets=!focus}',
+  'PursuitSectionHeading("All measured sets"',
+  'Result saved in native journal',
+  'Result not recorded',
+  'Choosing a row never records a result.',
+  'showAllMeasuredSets=false',
+  'if(!showAllMeasuredSets)measuredEditorStates.SaveableStateProvider('
+])assert.ok(measured.includes(text),'Measured workout needs read-only M3 Focus/All Sets: '+text);
+assert.ok(measured.includes('journal.bySetKey[planned.setKey]') &&
+  measured.includes('?.effectiveRecord!=null'));
 assert.doesNotMatch(measured,/null -> LinearProgressIndicator\(Modifier\.fillMaxWidth\(\)\)/,
   'A failed source read must not present a never-ending loading state');
 

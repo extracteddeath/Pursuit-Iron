@@ -75,6 +75,28 @@ object CoachGoalProgramRealizationDomain {
             add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,"week.source",
                 "The composed week is not a verified, complete candidate for the athlete's exact phase, schedule and session windows.")
         }
+        // Recalculate the athlete-facing work from the actual proposed week.
+        // A cached clean audit is NOT evidence after a caller edits the
+        // exposures, session roster or set counts. Review stays read-only.
+        val replayedAudit=runCatching {
+            WeeklyDoseFeasibilityDomain.audit(draft.week)
+        }.getOrNull()
+        val sessionVisits=draft.sessions.flatMap {it.orderedVisits}
+        val expectedWorkingKeys=draft.visits.flatMap { visit ->
+            (0 until visit.sets).map {ordinal ->
+                visit.exerciseId+":d"+visit.dayIndex+":s"+ordinal
+            }
+        }
+        val actualWorkingKeys=draft.week.exposures.filter {
+            it.kind==ExposureSetKind.WORKING
+        }.map {it.setKey}
+        if(replayedAudit==null || replayedAudit!=draft.audit ||
+            sessionVisits.groupingBy {it}.eachCount()!=
+                draft.visits.groupingBy {it}.eachCount() ||
+            expectedWorkingKeys.sorted()!=actualWorkingKeys.sorted()) {
+            add(GoalRealizationIssueKind.UNVERIFIED_CANDIDATE,"week.replay",
+                "The actual prescribed working sets, session roster or current dose audit no longer match this reviewed candidate.")
+        }
         for(finding in draft.audit.muscles.values)
             if(finding.gapToMev.signum()>0 ||
                 finding.excessAboveMrv.signum()>0 ||

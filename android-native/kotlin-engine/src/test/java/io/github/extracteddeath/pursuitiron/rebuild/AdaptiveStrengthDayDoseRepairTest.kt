@@ -104,7 +104,7 @@ class AdaptiveStrengthDayDoseRepairTest {
             without.status)
         assertNull(without.proposedOption)
         val capped=AdaptiveStrengthVolumeRepairDomain.propose(
-            request(limit=6))
+            request(limit=3))
         assertTrue(capped.status!=
             AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW)
         assertNull(capped.proposedOption)

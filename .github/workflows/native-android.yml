@@ -1,4 +1,4 @@
-name: Native Android
+name: Native Android (Claude)
 on:
   push:
     branches: [native-app, 'native-audit-*']
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: success()
         with:
-          name: pursuit-iron-native-${{ github.run_number }}
+          name: pursuit-iron-claude-${{ github.run_number }}
           path: |
             native/android/app/build/outputs/apk/debug/*.apk
             native/android/app/build/outputs/apk/benchmark/*.apk
@@ -120,7 +120,7 @@ jobs:
           node-version: 22
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: pursuit-iron-native-${{ github.run_number }}
+          name: pursuit-iron-claude-${{ github.run_number }}
           path: out
       - name: Handoff link and APK path
         run: |

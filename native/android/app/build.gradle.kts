@@ -7,7 +7,7 @@ plugins {
 // (or -P on the command line) so the update lands on the existing listing.
 val appId = (findProperty("appId") as String?) ?: "io.github.extracteddeath.pursuitiron"
 val appVersionCode = ((findProperty("versionCode") as String?) ?: "1").toInt()
-val appVersionName = (findProperty("versionName") as String?) ?: "4.0.0-native"
+val appVersionName = (findProperty("versionName") as String?) ?: "4.0.0-claude"
 val keystorePath = System.getenv("PI_KEYSTORE_PATH")
 
 android {

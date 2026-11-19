@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredInventoryResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredConsentInventoryResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredWorkoutStoreResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
@@ -497,6 +498,9 @@ private fun NativeKotlinCandidateTrainEntry(
     var resumableMeasured by remember(host) {
         mutableStateOf<NativeMeasuredInventoryResult?>(null)
     }
+    var confirmedUnissuedMeasured by remember(host) {
+        mutableStateOf<NativeMeasuredConsentInventoryResult?>(null)
+    }
     var resumable by remember(host) {
         mutableStateOf<NativeCustomResumeReview?>(null)
     }
@@ -577,14 +581,19 @@ private fun NativeKotlinCandidateTrainEntry(
         visibleUnfinishedCount=20
         resumable=null
         resumableMeasured=null
+        confirmedUnissuedMeasured=null
         try {
             val reports=withContext(Dispatchers.IO) {
-                Pair(
+                Triple(
                     runCatching {host.reviewResumableCustomWorkouts()}.getOrNull(),
-                    runCatching {host.reviewUnfinishedMeasuredWorkouts()}.getOrNull())
+                    runCatching {host.reviewUnfinishedMeasuredWorkouts()}.getOrNull(),
+                    runCatching {
+                        host.reviewConfirmedUnissuedMeasuredWorkouts()
+                    }.getOrNull())
             }
             resumable=reports.first
             resumableMeasured=reports.second
+            confirmedUnissuedMeasured=reports.third
         } finally {
             reviewingResume=false
         }
@@ -863,6 +872,59 @@ private fun NativeKotlinCandidateTrainEntry(
                         "Measured resume inventory could not be verified. Refresh to retry.",
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
+                }
+                when(val confirmed=confirmedUnissuedMeasured) {
+                    is NativeMeasuredConsentInventoryResult.Ready -> {
+                        if(confirmed.confirmed.isNotEmpty()) {
+                            Text("Approved but not yet started",
+                                style=MaterialTheme.typography.titleSmall)
+                            Text("These exact measured plans were already confirmed. Starting one will recheck its saved gym and exercise source.",
+                                style=MaterialTheme.typography.bodySmall)
+                            confirmed.confirmed.take(20).forEach {item->
+                                OutlinedButton(
+                                    enabled=!searching && !resumeChecking && !reviewingResume,
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={
+                                        resumeChecking=true
+                                        measuredError=null
+                                        scope.launch {
+                                            try {
+                                                val issued=withContext(Dispatchers.IO) {
+                                                    host.issueMeasuredWorkout(item.workoutId)
+                                                }
+                                                if(issued is NativeMeasuredWorkoutStoreResult.Durable &&
+                                                    issued.stored.journal.finishedByEventId==null) {
+                                                    measuredResumeId=item.workoutId
+                                                    measuredOpen=true
+                                                } else measuredError=
+                                                    "Approval no longer matches your verified gym. Refresh Train to review it."
+                                            } catch(_:Exception) {
+                                                measuredError="Could not verify the previously approved session."
+                                            } finally {resumeChecking=false}
+                                        }
+                                    }) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Text(item.exerciseIds.joinToString(" · ",limit=2,
+                                            truncated="…"){kotlinExerciseLabel(it)},
+                                            style=MaterialTheme.typography.titleSmall)
+                                        Text("${item.plannedSets} approved sets · Start & resume",
+                                            style=MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                            if(confirmed.confirmed.size>20)
+                                Text("Showing the first 20 saved approvals.",
+                                    style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    is NativeMeasuredConsentInventoryResult.Rejected ->
+                        Text("Previously approved sessions could not be reviewed (${confirmed.reason.name.lowercase().replace('_',' ')}). None were issued.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    null -> if(!reviewingResume) Text(
+                        "Previously confirmed sessions could not be verified. Refresh to retry.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.error)
                 }
                 measuredError?.let {
                     Text(it,color=MaterialTheme.colorScheme.error,

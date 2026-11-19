@@ -265,7 +265,10 @@ object CoachReviewedWholeCycleDomain {
                     ReviewedWholeCycleCandidateStatus.PERFORMANCE_TARGET_UNRESOLVED ->
                         "The specific test lift(s) ${missingTargets.sorted().joinToString(", ")} are not verified PRIMARY working skills in every strength and peak week. Related exercises are not replacements."
                     ReviewedWholeCycleCandidateStatus.PEAK_PREPARATION_REVIEW_REQUIRED ->
-                        "The named test lifts and weekly constraints are verified, but these starter templates lack an individualized taper, event timing and peaking protocol. This cannot be approved as competition preparation."
+                        "The named test lifts are present, but these starter templates lack an individualized taper, event timing and peaking protocol. This cannot be approved as competition preparation."+
+                            (if(strengthContinuity.status==
+                                WholeCycleStrengthContinuityStatus.REQUIRES_ATHLETE_REVIEW)
+                                " "+strengthContinuity.explanation else "")
                     ReviewedWholeCycleCandidateStatus.STRENGTH_TRANSITION_REVIEW_REQUIRED ->
                         strengthContinuity.explanation
                     else ->"Every projected week was audited; unresolved policy or constraints prevent approval: "+

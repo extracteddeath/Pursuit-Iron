@@ -240,3 +240,88 @@ assert.equal(repairedCap[1].weight, '100');assert.equal(repairedCap[1].reps, '11
 assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a lower target in the UI');
 
 
+
+
+// B1020: a manually selected top-set method intentionally programs lighter
+// back-offs. It must survive a JSON/reload without a mandatory RIR, retain
+// source fingerprints, and never hide a different automatic weight drop.
+{
+    const topCell = { ...cell, progressionStyle: 'top' };
+    const fresh = () => ({ ...pending(), weight: '200', reps: '5',
+        target: { ...pending().target, w: 200, reps: [3, 6], rir: 2, prefillReps: '5' } });
+    const topRows = [{ ...fresh(), done: true, actualRIR: null }, fresh(), fresh()];
+    const start = structuredClone(topRows);
+    const args = { sets: topRows, sourceIndex: 0, cell: topCell, snapLoad };
+    const changed = applyLiveAutoregulation(args);
+    assert.equal(changed.decision.action, 'set_backoffs_from_top');
+    assert.equal(changed.decision.earnedProgression, false);
+    assert.deepEqual(topRows, start, 'never mutate the actual logged set');
+    assert.deepEqual(changed.sets.slice(1).map(row => row.weight), ['180', '180']);
+    assert.deepEqual(changed.sets.slice(1).map(row => row.target.w), [180, 180]);
+    assert.deepEqual(changed.sets.slice(1).map(row => row.liveAdjustment.pendingIndex), [1, 2],
+        'each adjusted row carries its own pending ordinal');
+    assert.deepEqual(changed.sets[1].liveAdjustment.sourceObservations,
+        [{ index: 0, load: 200, reps: 5, actualRIR: null }]);
+    assert.match(liveEffortFeedback(changed.sets, 0), /Back-off weights set/);
+    assert.deepEqual(rollbackLiveAutoregulation(changed.sets, 0, 'set_backoffs_from_top'), topRows);
+    assert.deepEqual(applyLiveAutoregulation({ ...args, sets: changed.sets }).sets, changed.sets,
+        're-evaluating the same completed top set does not compound an adjustment');
+    const stored = JSON.parse(JSON.stringify(changed.sets));
+    assert.deepEqual(reconcileRestoredLiveAdjustments(stored), stored,
+        'a legitimate back-off survives an offline reload even with no RIR');
+    for (const violation of ['unlogged', 'reps', 'load', 'effort', 'missingSnapshot', 'wrongTarget']) {
+        const tampered = structuredClone(stored);
+        if (violation === 'unlogged') tampered[0].done = false;
+        if (violation === 'reps') tampered[0].reps = '4';
+        if (violation === 'load') tampered[0].weight = '195';
+        if (violation === 'effort') tampered[0].actualRIR = 3;
+        if (violation === 'missingSnapshot') delete tampered[1].liveAdjustment.sourceObservations;
+        if (violation === 'wrongTarget') tampered[2].target.w = 175;
+        const fixed = reconcileRestoredLiveAdjustments(tampered);
+        const affected = violation === 'missingSnapshot' ? [1]
+            : violation === 'wrongTarget' ? [2] : [1, 2];
+        for (const index of affected) {
+            assert.equal(fixed[index].weight, '200', violation + ': clear the unauthorized back-off');
+            assert.equal(fixed[index].liveAdjustment, undefined);
+        }
+        assert.deepEqual(reconcileRestoredLiveAdjustments(fixed), fixed,
+            violation + ': recovery does not keep rewriting its own repair');
+    }
+    const manuallyChanged = structuredClone(stored);
+    manuallyChanged[1] = { ...manuallyChanged[1], auto: false, valueOwner: 'user',
+        weight: '175', target: { ...manuallyChanged[1].target, w: 175 } };
+    assert.deepEqual(reconcileRestoredLiveAdjustments(manuallyChanged), manuallyChanged,
+        'lifter-entered back-off weights have priority over automatic targets');
+    const manualBefore = topRows.map((row, index) => index === 1
+        ? { ...row, auto: false, valueOwner: 'user', weight: '175',
+            target: { ...row.target, w: 175 } } : row);
+    const manualResult = applyLiveAutoregulation({ ...args, sets: manualBefore });
+    assert.equal(manualResult.sets[1].weight, '175');
+    assert.equal(manualResult.sets[2].weight, '180');
+    assert.deepEqual(applyLiveAutoregulation({ ...args, sets: topRows.map((row, index) =>
+        index === 0 ? { ...row, done: false } : row) }).sets[1], topRows[1],
+        'no completed top set means no new back-off');
+    assert.deepEqual(applyLiveAutoregulation({ ...args, snapLoad: () => 100 }).sets, topRows,
+        'a coarse stock that only offers 50% of top load must not claim a 90% back-off');
+    assert.deepEqual(applyLiveAutoregulation({ ...args, cell: {
+        ...topCell, percentageProtocol: { id: '531' } } }).sets, topRows,
+        'percentage waves retain their authored loads');
+    const topReplay = rows => captureWorkoutProgressionReplay({
+        program, day: program.days[0], row: { id: ex.id, slot: 0, sets: rows },
+        suggestion: null, cell: topCell, history: [], weekIndex: 1, unit: 'lb',
+        readiness: { factor: 1 }
+    });
+    assert.deepEqual(auditWorkoutProgressionReplay(topReplay(stored)), [],
+        'independent replay certifies the marked top-set back-off with matching evidence');
+    const falseDrop = structuredClone(stored);
+    falseDrop[1].weight = '165';
+    assert.ok(auditWorkoutProgressionReplay(topReplay(falseDrop)).some(
+        issue => issue.code === 'invalid_top_backoff_adjustment'),
+        'a disguised automatic load drop remains a replay violation');
+    const noProof = structuredClone(stored);
+    delete noProof[2].liveAdjustment.sourceObservations;
+    assert.ok(auditWorkoutProgressionReplay(topReplay(noProof)).some(
+        issue => issue.code === 'stale_or_unverifiable_live_adjustment'),
+        'a back-off lacking a source fingerprint cannot pass replay verification');
+}
+console.log('PASS B1020 top-set back-offs: visible, loadable, source-verified, restart-safe, manual edits protected and auditable.');

@@ -7,6 +7,31 @@ const read=p=>fs.readFileSync(p,'utf8');
 const journal=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 
+// Mixed measured sessions must use ONE reviewed immutable parent plan,
+// separate true seconds/distance/reps, stable keys and authenticated issuance.
+// Saved Compose drafts are athlete intent, never permission to issue a set.
+const measured=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMeasuredWorkoutScreen.kt');
+const measuredBuilder=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MeasuredSessionAuthoringDomain.kt');
+assert.ok(measured.includes('rememberSaveable(workoutId)') &&
+  measured.includes('MeasuredSessionAuthoringDomain.restoreDraft(it)') &&
+  measured.includes('MeasuredSessionAuthoringDomain.saveDraft(current)') &&
+  measured.includes('MeasuredSessionAuthoringDomain.compose(') &&
+  measured.includes('sourceKey==draftSourceKey') &&
+  measured.includes('Add exercise to session') &&
+  measured.includes('Remove last') &&
+  measured.includes('Clear draft') &&
+  measured.includes('queuedCandidate') &&
+  measured.includes('host.previewMeasuredWorkoutConsent(') &&
+  measured.includes('host.confirmMeasuredWorkoutConsent('));
+assert.ok(measuredBuilder.includes('MeasuredWorkoutJournalDomain.begin(it)') &&
+  measuredBuilder.includes('sourceRevision') &&
+  measuredBuilder.includes('set-$index') &&
+  measuredBuilder.includes('EquipmentLoadDomain.inspect(') &&
+  measuredBuilder.includes('MeasuredPhysicalStockSource.equipmentIdFor(') &&
+  measuredBuilder.includes('it in verifiedBandIds') &&
+  !measuredBuilder.includes('DraftSetLoad.ExplicitBodyweight'),
+  'Mixed measured sessions must retain native typed measurements and exact verified equipment, not fabricate rep loads');
+
 const bandGym=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinGymSourceCandidateScreen.kt');
 const bandStock=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPhysicalStockDraft.kt');
 const bandRule=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/RatedResistanceBandDomain.kt');

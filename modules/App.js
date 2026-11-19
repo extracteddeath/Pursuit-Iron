@@ -18081,7 +18081,7 @@ function CycleDoseTransition({ change, source = 'saved' }) {
 function CycleStrengthDoseSummary({ program }) {
     const report = describeStrengthDoseLimit(program?.nextEngine?.strengthEntryDose);
     if (!report) return null;
-    return _jsxs("details", { className: "wpb-cycle-dose-detail wpb-strength-dose-review",
+    return _jsxs("details", { className: "wpb-strength-dose-review",
         "data-strength-dose-status": report.status, children: [
         _jsx("summary", { className: "wpb-cycle-dose-summary", children: report.heading }),
         _jsx("p", { className: "wpb-cycle-dose-caption", children: report.explanation }),
@@ -18166,7 +18166,6 @@ function CycleBlockPreview({ program, previousProgram = null, initialWeek = 1, i
             _jsx("strong", { children: SPLITS[program.config?.split]?.name || String(program.config?.split || "Training split").replaceAll('_', ' ') }),
             _jsx("span", { children: `${program.days.length} training days per week` })
         ] }),
-        _jsx(CycleStrengthDoseSummary, { program }),
         _jsxs("section", { className: "wpb-cycle-preview-workouts", "aria-label": `Week ${week} workout prescriptions`, children: [
             _jsx("h3", { className: "wpb-cycle-preview-workouts-title", children: week > weeksOf(program) ? "Recovery week workouts" : `Week ${week} workouts` }),
             program.days.map((day, index) => _jsxs("details", { open: initialDayId ? day.id === initialDayId : index === 0, className: "wpb-cycle-preview-day", children: [
@@ -18177,6 +18176,7 @@ function CycleBlockPreview({ program, previousProgram = null, initialWeek = 1, i
                         _jsx("div", { className: "wpb-cycle-preview-target", children: cell.missing ? cell.note : `${cell.sets} sets · ${cell.reps} reps · ${cell.rir} RIR` })] }, slot);
                 })] }, day.id))
         ] }),
+        _jsx(CycleStrengthDoseSummary, { program }),
         _jsxs("details", { className: "wpb-cycle-preview-analysis", children: [
             _jsx("summary", { className: "wpb-cycle-preview-analysis-summary", children: "Training analysis & volume" }),
             _jsxs("div", { className: "wpb-cycle-preview-analysis-body", children: [

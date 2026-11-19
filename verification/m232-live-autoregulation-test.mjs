@@ -289,6 +289,11 @@ assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a
     changedTarget[2].target.w = 175;
     assert.deepEqual(reconcileRestoredLiveAdjustments(changedTarget), changedTarget,
         'a changed target is not silently overwritten during recovery');
+    const staleAutoOwner = structuredClone(stored);
+    staleAutoOwner[2] = { ...staleAutoOwner[2], weight: '175',
+        target: { ...staleAutoOwner[2].target, w: 175 } };
+    assert.deepEqual(reconcileRestoredLiveAdjustments(staleAutoOwner), staleAutoOwner,
+        'a later hand-changed load and target stay untouched even if automatic metadata was not cleared');
     const manuallyChanged = structuredClone(stored);
     manuallyChanged[1] = { ...manuallyChanged[1], auto: false, valueOwner: 'user',
         weight: '175', target: { ...manuallyChanged[1].target, w: 175 } };

@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredInventoryResult
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeMeasuredWorkoutStoreResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomDraftListResult
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeApprovalWriteResult

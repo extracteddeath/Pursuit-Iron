@@ -21,6 +21,10 @@ assert.ok(measured.includes('rememberSaveable(workoutId)') &&
   measured.includes('Remove last') &&
   measured.includes('Clear draft') &&
   measured.includes('queuedCandidate') &&
+  measured.includes('Review every set from this exact source-approved') &&
+  measured.includes('candidateReview.plan.sets.forEachIndexed') &&
+  measured.includes('set.intendedExternalLoad.toPlainString()') &&
+  measured.includes('Matching pair confirmed') &&
   measured.includes('host.previewMeasuredWorkoutConsent(') &&
   measured.includes('host.confirmMeasuredWorkoutConsent('));
 assert.ok(measuredBuilder.includes('MeasuredWorkoutJournalDomain.begin(it)') &&

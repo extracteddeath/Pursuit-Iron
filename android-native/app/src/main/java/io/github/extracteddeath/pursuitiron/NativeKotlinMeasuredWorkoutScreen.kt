@@ -19,9 +19,9 @@ import java.util.UUID
 
 /**
  * Kotlin-only athlete-facing entry into already verified typed parent journals.
- * Phase one intentionally admits UNWEIGHTED timed holds only. Carries, loaded
- * holds and bands must get their own exact physical stock/set-up editors, not
- * an invented 0-lb rep target or an auto-approved machine.
+ * Timed holds and explicitly source-verified banded push-up repetitions
+ * are independently measured. Carries and loaded holds still require
+ * exact physical stock and setup authoring, never a 0-lb rep placeholder.
  */
 @Composable
 internal fun NativeKotlinMeasuredWorkoutScreen(
@@ -36,6 +36,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var stored by remember(host){mutableStateOf<NativeMeasuredWorkoutStored?>(null)}
     var message by rememberSaveable{mutableStateOf<String?>(null)}
     var selectedId by rememberSaveable{mutableStateOf("plank")}
+    var selectedBandId by rememberSaveable{mutableStateOf("")}
     var target by rememberSaveable{mutableStateOf("30")}
     var setCount by rememberSaveable{mutableIntStateOf(2)}
     var review by remember{mutableStateOf<NativeMeasuredConsentResult.Preview?>(null)}
@@ -62,14 +63,24 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     val confirmed=fixtures+
         (if("pullup-bar" in fixtures)setOf("pull-up-bar") else emptySet())+
         (if("wall-support" in fixtures)setOf("stable-wall") else emptySet())
+    // Only IDs explicitly saved as band-* attachments in the current gym
+    // are physical resistance bands. Rope and cable handle attachments
+    // never become a band just because the gym has a band facility.
+    val verifiedBands=gym?.availableAttachments.orEmpty()
+        .filter{it.startsWith("band-") && it.length>5}.sorted()
     val options=MeasuredExerciseCatalogDomain.all.filter { definition ->
-        definition.loadKind==MeasuredLoadKind.UNWEIGHTED &&
-            definition.kind==MeasuredExerciseKind.HOLD_SECONDS &&
-            setup!=null && setup.allowBodyweight &&
+        setup!=null && setup.allowBodyweight &&
             definition.exerciseId !in setup.excludedExerciseIds &&
-            definition.requiredFixtures.all{it in confirmed}
+            definition.requiredFixtures.all{it in confirmed} &&
+            (definition.loadKind==MeasuredLoadKind.UNWEIGHTED &&
+                definition.kind==MeasuredExerciseKind.HOLD_SECONDS ||
+                definition.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT &&
+                definition.kind==MeasuredExerciseKind.BANDED_REPETITIONS &&
+                "bands" in fixtures && verifiedBands.isNotEmpty())
     }
     val definition=options.firstOrNull{it.exerciseId==selectedId}
+    val banded=definition?.loadKind==MeasuredLoadKind.BANDED_BODYWEIGHT
+    val verifiedBand=selectedBandId.takeIf{banded && it in verifiedBands}
     val quantity=target.toIntOrNull()
     val station=definition?.requiredFixtures?.firstOrNull()?.let {
         when {
@@ -84,13 +95,19 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             setOf(MeasuredSide.LEFT,MeasuredSide.RIGHT)
         else -> emptySet()
     }
+    val amountValid=quantity!=null && quantity in
+        (if(banded)1..100 else 1..3600)
     val candidate=if(definition!=null && source!=null && gym!=null &&
-        quantity!=null && quantity in 1..3600 && setCount in 1..4)
+        amountValid && quantity!=null && setCount in 1..4 &&
+        (!banded || verifiedBand!=null))
         MeasuredWorkoutPlan(workoutId,gym.gymId,source.revision,
             (1..setCount).map { number ->
                 MeasuredExerciseSetPlan(workoutId,"set-"+number,
                     definition.exerciseId,gym.gymId,source.revision,
-                    station,quantity,sides,definition.requiredFixtures)
+                    station,quantity,sides,definition.requiredFixtures,
+                    bandId=verifiedBand,
+                    gymConfirmedBandIds=if(verifiedBand!=null)
+                        setOf(verifiedBand) else emptySet())
             })
         else null
 
@@ -103,14 +120,15 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             TextButton(enabled=!busy,onClick=onClose){Text("Minimize")}
         }
         if(stored==null) {
-            Text("Timed holds use real seconds, with left and right sides where "+
-                "required. No repetitions, loads or PRs are invented.",
+            Text("Timed holds record actual seconds. Verified banded push-ups "+
+                "record repetitions with the selected real band, never "+
+                "an invented resistance weight or automatic PR.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             when(sourceRead) {
                 null -> LinearProgressIndicator(Modifier.fillMaxWidth())
                 is NativeAuthoringSourceRead.Found -> {
-                    if(options.isEmpty())Text("No timed hold is currently "+
+                    if(options.isEmpty())Text("No measured movement is currently "+
                         "supported by your verified gym and training setup.",
                         color=MaterialTheme.colorScheme.error)
                     else {
@@ -124,6 +142,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                     DropdownMenuItem(text={Text(choice.displayName)},
                                         onClick={
                                             selectedId=choice.exerciseId
+                                            target=if(choice.kind==
+                                                MeasuredExerciseKind.BANDED_REPETITIONS)
+                                                "10" else "30"
                                             review=null;message=null;menuOpen=false
                                         })
                                 }
@@ -131,7 +152,8 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         }
                         OutlinedTextField(value=target,onValueChange={
                             target=it;review=null},
-                            label={Text("Target seconds per set")},
+                            label={Text(if(banded)"Target repetitions per set"
+                                else "Target seconds per set")},
                             enabled=!busy,modifier=Modifier.fillMaxWidth(),
                             singleLine=true,keyboardOptions=KeyboardOptions(
                                 keyboardType=KeyboardType.Number))
@@ -147,6 +169,27 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         Text("Verified physical setup: "+station,
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(banded) {
+                            Text("Select the exact resistance band saved in your gym. "+
+                                "Band resistance is not converted to pounds.",
+                                style=MaterialTheme.typography.bodySmall)
+                            verifiedBands.forEach{bandId->
+                                FilterChip(selected=selectedBandId==bandId,
+                                    enabled=!busy,
+                                    onClick={
+                                        selectedBandId=bandId
+                                        review=null;message=null
+                                    },label={Text(bandId.removePrefix("band-")
+                                        .replace('-',' '))})
+                            }
+                        } else if("bands" in fixtures &&
+                            "verified-band-pushup-setup" in confirmed &&
+                            verifiedBands.isEmpty()) {
+                            Text("To log banded push-ups, save a distinct "+
+                                "band-* ID in the gym's available attachments.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         Button(enabled=!busy && candidate!=null,
                             modifier=Modifier.fillMaxWidth(),onClick={
                                 val proposal=candidate ?:return@Button
@@ -184,8 +227,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 } finally{busy=false}
                             }
                         }) {Text("Resume an already-approved session")}
-                    Text("Loaded holds, carries and bands need their verified "+
-                        "equipment-specific editor and are not yet selectable here.",
+                    Text("Loaded holds and carries still require their own "+
+                        "verified equipment-specific authoring, and are not "+
+                        "selectable here.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -260,8 +304,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         AlertDialog(onDismissRequest={if(!busy)review=null},
             title={Text("Approve exact measured session?")},
             text={Text("Confirm "+candidateReview.plan.sets.size+
-                " real timed sets from your verified gym. The actual "+
-                "results are entered separately. No PR or program changes.")},
+                " exact measured sets from your verified gym. The actual "+
+                "results are entered separately. No automatic PR, weight "+
+                "equivalent or program changes.")},
             confirmButton={
                 Button(enabled=!busy,onClick={
                     review=null;busy=true;message=null

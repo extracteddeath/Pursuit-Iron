@@ -33,7 +33,7 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         root,fence,identity,sources,history,composer,custom)
     private fun parent()=NativeMeasuredWorkoutParentFileStore(
         root,fence,identity,approvals(),history,composer,custom)
-    private fun source(version:Long=1):NativeCustomAuthoringSnapshot {
+    private fun source(version:Long=1,withBands:Boolean=false):NativeCustomAuthoringSnapshot {
         val setup=CoachAthleteSetupDomain.review(AthleteSetupDraft(
             profileRevision="profile-1",athleteProfileId="athlete-1",
             goal=AthleteTrainingGoal.HYPERTROPHY,
@@ -43,7 +43,10 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
             hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
             gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
-                setOf("pullup-bar","wall-support"),emptySet()),
+                setOf("pullup-bar","wall-support")+
+                    (if(withBands)setOf("bands","verified-band-pushup-setup")
+                        else emptySet()),
+                if(withBands)setOf("band-blue","rope-attachment") else emptySet()),
             allowBodyweight=true,allowSupersets=false,
             allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
             focusedMuscles=emptySet(),reducedMuscles=emptySet(),
@@ -288,6 +291,82 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         assertEquals(NativeMeasuredWorkoutStoreRefusal.APPROVAL_UNAVAILABLE,
             (parent().issue("owner-1","session-1")
                 as NativeMeasuredWorkoutStoreResult.Rejected).reason)
+    }
+
+
+    /** One more of the 14 web-measured models is now genuinely source-issued. */
+    @Test fun verifiedBandedPushupPreservesRealRepsWithoutFakeMassOrRepPr() {
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            sources.publish("owner-1",0,source(withBands=true)))
+        assertTrue(history.enroll("owner-1","athlete-1"){o,a->
+            signed==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val set=MeasuredExerciseSetPlan("band-session","set-1",
+            "band-pushup","gym-1",1,"verified-band-pushup-setup",12,
+            setOf(MeasuredSide.BOTH),setOf("verified-band-pushup-setup"),
+            bandId="band-blue",gymConfirmedBandIds=setOf("band-blue"))
+        val p=MeasuredWorkoutPlan("band-session","gym-1",1,listOf(set))
+        assertTrue(approvals().preview("owner-1",p,1)
+            is NativeMeasuredConsentResult.Preview)
+        assertTrue(approvals().confirm("owner-1",p,1,true)
+            is NativeMeasuredConsentResult.Approved)
+        assertTrue(parent().issue("owner-1",p.workoutId)
+            is NativeMeasuredWorkoutStoreResult.Durable)
+        val actual=MeasuredExerciseActual("verified-band-pushup-setup",
+            listOf(MeasuredSideResult(MeasuredSide.BOTH,14)),
+            bandId="band-blue")
+        val recorded=parent().record("owner-1",p.workoutId,
+            MeasuredWorkoutOperation.Record("band-record",0,"set-1",
+                MeasuredSetOutcome.COMPLETED,actual))
+        assertTrue(recorded.toString(),
+            recorded is NativeMeasuredWorkoutStoreResult.Durable)
+        val wrongMass=parent().record("owner-1",p.workoutId,
+            MeasuredWorkoutOperation.Record("wrong-mass",1,"set-1",
+                MeasuredSetOutcome.COMPLETED,actual.copy(
+                    actualExternalLoad=java.math.BigDecimal("20"),
+                    unit=LoadUnit.LB),correctsEventId="band-record"))
+        assertTrue(wrongMass is NativeMeasuredWorkoutStoreResult.Rejected)
+        val committed=NativeKotlinMeasuredHistoryTransaction(
+            history,parent(),fence,identity).complete("owner-1","athlete-1",
+                p.workoutId,MeasuredWorkoutOperation.Finish("band-finish",1))
+        assertTrue(committed.toString(),committed is NativeMeasuredFinishResult.Committed)
+        val reread=NativeKotlinMeasuredHistoryReadCoordinator(
+            history,parent(),fence,identity).read("owner-1","athlete-1")
+        assertTrue(reread is NativeMeasuredHistoryReadResult.Review)
+        val saved=(reread as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured.single().stored.journal
+        val recordedActual=(saved.bySetKey.getValue("set-1")
+            .effectiveRecord?.operation as MeasuredJournalOperation.Record).actual
+        assertEquals(actual,recordedActual)
+        assertNull(recordedActual?.actualExternalLoad)
+        assertEquals("band-blue",recordedActual?.bandId)
+        assertEquals(14,recordedActual?.sides?.single()?.amount)
+    }
+
+    @Test fun ordinaryAttachmentCannotMasqueradeAsConfirmedResistanceBand() {
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            sources.publish("owner-1",0,source(withBands=true)))
+        assertTrue(history.enroll("owner-1","athlete-1"){o,a->
+            signed==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val candidate=MeasuredExerciseSetPlan("band-source","set-1",
+            "band-pushup","gym-1",1,"verified-band-pushup-setup",10,
+            setOf(MeasuredSide.BOTH),setOf("verified-band-pushup-setup"),
+            bandId="band-blue",gymConfirmedBandIds=setOf("band-blue"))
+        val p=MeasuredWorkoutPlan("band-source","gym-1",1,listOf(candidate))
+        val notABand=p.copy(sets=listOf(candidate.copy(
+            bandId="rope-attachment",
+            gymConfirmedBandIds=setOf("rope-attachment"))))
+        val forgedExtra=p.copy(sets=listOf(candidate.copy(
+            gymConfirmedBandIds=setOf("band-blue","rope-attachment"))))
+        val missingBand=p.copy(sets=listOf(candidate.copy(
+            gymConfirmedBandIds=emptySet())))
+        for(bad in listOf(notABand,forgedExtra,missingBand))
+            assertEquals(NativeMeasuredConsentRefusal.UNVERIFIED_GYM_OR_EXERCISE,
+                (approvals().preview("owner-1",bad,1)
+                    as NativeMeasuredConsentResult.Rejected).reason)
+        assertTrue(approvals().preview("owner-1",p,1)
+            is NativeMeasuredConsentResult.Preview)
     }
 
 }

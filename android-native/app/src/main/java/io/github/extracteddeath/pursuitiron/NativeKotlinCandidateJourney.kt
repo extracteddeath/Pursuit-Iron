@@ -818,8 +818,8 @@ private fun NativeKotlinCandidateTrainEntry(
                 }
             }
             PursuitCard {
-                PursuitSectionHeading("Timed holds",
-                    "Record verified duration and left/right outcomes without inventing rep PRs.")
+                PursuitSectionHeading("Measured workouts",
+                    "Log actual timed holds or verified banded push-up reps, with no invented weights or PRs.")
                 when(val review=resumableMeasured) {
                     is NativeMeasuredInventoryResult.Ready -> {
                         if(review.workouts.isNotEmpty()) {
@@ -930,7 +930,7 @@ private fun NativeKotlinCandidateTrainEntry(
                     Text(it,color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
                 }
-                PursuitPrimaryAction("Create measured hold workout",
+                PursuitPrimaryAction("Create measured workout",
                     enabled=!searching && !reviewingResume && !resumeChecking,
                     onClick={
                         measuredResumeId=null

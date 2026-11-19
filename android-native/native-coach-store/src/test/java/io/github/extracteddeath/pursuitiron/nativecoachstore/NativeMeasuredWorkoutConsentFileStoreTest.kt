@@ -544,4 +544,63 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
             as NativeMeasuredInventoryResult.Ready).workouts.isEmpty())
     }
 
+
+    @Test fun measuredFocusReopensFirstPendingSetAndDoesNotInventCompletion() {
+        enroll()
+        val initial=plan()
+        val one=initial.sets.single()
+        val three=initial.copy(workoutId="focus-three",
+            sets=(1..3).map{number->
+                one.copy(workoutId="focus-three",setKey="set-$number")
+            })
+        assertTrue(approvals().confirm("owner-1",three,1,true)
+            is NativeMeasuredConsentResult.Approved)
+        assertTrue(parent().issue("owner-1","focus-three")
+            is NativeMeasuredWorkoutStoreResult.Durable)
+        val skipped=parent().record("owner-1","focus-three",
+            MeasuredWorkoutOperation.Record("skip-second",0,
+                "set-2",MeasuredSetOutcome.SKIPPED,null))
+        assertTrue(skipped is NativeMeasuredWorkoutStoreResult.Durable)
+        val cold=parent().open("owner-1","focus-three")
+            as NativeMeasuredWorkoutStoreResult.Durable
+        assertEquals("set-1",MeasuredWorkoutFocusDomain.review(
+            cold.stored.journal,null)?.selectedSetKey)
+        assertEquals("set-2",MeasuredWorkoutFocusDomain.review(
+            cold.stored.journal,"set-2")?.selectedSetKey)
+        val actual=MeasuredExerciseActual("floor",
+            listOf(MeasuredSideResult(MeasuredSide.BOTH,42)))
+        val first=parent().record("owner-1","focus-three",
+            MeasuredWorkoutOperation.Record("record-first",1,
+                "set-1",MeasuredSetOutcome.COMPLETED,actual))
+        assertTrue(first is NativeMeasuredWorkoutStoreResult.Durable)
+        val after=(first as NativeMeasuredWorkoutStoreResult.Durable)
+            .stored.journal
+        assertEquals("set-3",MeasuredWorkoutFocusDomain.afterDurableRecord(
+            cold.stored.journal,after,"set-1"))
+        assertFalse(after.canProposeFinish)
+        assertEquals(1,MeasuredWorkoutFocusDomain.review(after,null)
+            ?.remainingSets)
+        val premature=NativeKotlinMeasuredHistoryTransaction(
+            history,parent(),fence,identity).complete("owner-1","athlete-1",
+                "focus-three",MeasuredWorkoutOperation.Finish("too-early",2))
+        assertTrue(premature is NativeMeasuredFinishResult.Rejected)
+        val third=parent().record("owner-1","focus-three",
+            MeasuredWorkoutOperation.Record("record-third",2,
+                "set-3",MeasuredSetOutcome.COMPLETED,actual))
+        assertTrue(third is NativeMeasuredWorkoutStoreResult.Durable)
+        val finished=NativeKotlinMeasuredHistoryTransaction(
+            history,parent(),fence,identity).complete("owner-1","athlete-1",
+                "focus-three",MeasuredWorkoutOperation.Finish("finish-three",3))
+        assertTrue(finished.toString(),
+            finished is NativeMeasuredFinishResult.Committed)
+        val historyRead=NativeKotlinMeasuredHistoryReadCoordinator(
+            history,parent(),fence,identity).read("owner-1","athlete-1")
+        assertTrue(historyRead is NativeMeasuredHistoryReadResult.Review)
+        val saved=(historyRead as NativeMeasuredHistoryReadResult.Review)
+            .history.verifiedMeasured.single().stored.journal
+        assertEquals("finish-three",saved.finishedByEventId)
+        assertEquals(3,saved.bySetKey.values.count{
+            it.effectiveRecord!=null})
+    }
+
 }

@@ -54,6 +54,9 @@ internal object NativeKotlinWorkoutRecapDomain {
             is NativeKotlinMixedHistoryCompletion.Custom ->
                 KotlinHistoryPerformanceSummaryDomain.fromCustom(
                     completion.evidence.visits)
+            // This recap computes ordinary working-set repetition stats.
+            // Measured holds/carries are rendered by typed History instead.
+            is NativeKotlinMixedHistoryCompletion.Measured -> return null
         }
         val rows=when(completion) {
             is NativeKotlinMixedHistoryCompletion.Composer ->
@@ -61,6 +64,7 @@ internal object NativeKotlinWorkoutRecapDomain {
                     NativeKotlinRecapVisit(
                         it.exerciseId,it.type,false,it.outcome)
                 }
+            is NativeKotlinMixedHistoryCompletion.Measured -> return null
             is NativeKotlinMixedHistoryCompletion.Custom ->
                 completion.evidence.visits.map {
                     NativeKotlinRecapVisit(

@@ -270,6 +270,8 @@ internal fun NativeKotlinWorkoutMachineSelector(
     enabled:Boolean,
     onSelect:(String)->Unit,
     onCreate:((String,Boolean)->Unit)?=null,
+    onRetry:(()->Unit)?=null,
+    retryEnabled:Boolean=false,
     error:String?=null,
     acknowledgedCreatedMachineId:String?=null,
     priorHistory:WorkoutLastReferenceResult?=null,
@@ -367,6 +369,12 @@ internal fun NativeKotlinWorkoutMachineSelector(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             error?.let {Text(it,style=MaterialTheme.typography.bodyMedium,
                 color=MaterialTheme.colorScheme.error)}
+            if(error!=null && onRetry!=null)
+                OutlinedButton(
+                    onClick=onRetry,
+                    enabled=retryEnabled,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                ) {Text("Refresh verified machine choices")}
             if(selected!=null && !selected.active)Text(
                 "The previously selected machine is inactive. Select an active "+
                     "machine before recording another set.",

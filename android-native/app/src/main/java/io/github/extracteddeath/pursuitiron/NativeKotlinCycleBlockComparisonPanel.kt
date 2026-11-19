@@ -30,6 +30,49 @@ private fun displayedDirectCredits(value:BigDecimal):String=
     value.stripTrailingZeros().toPlainString()
 private fun namedMuscle(muscle:TrainingMuscle):String=
     muscle.name.lowercase().replace('_',' ').replaceFirstChar{it.uppercase()}
+
+/**
+ * Read-only Plan explanation. A low-volume deload is never the historical
+ * comparison for lost direct biceps, brachialis, triceps or forearm work.
+ * Source, actual weeks and individual working-set totals must agree.
+ * Missing evidence is UNKNOWN, not proof of no arm loss.
+ */
+internal object NativeStrengthPhaseBoundaryDisplayDomain {
+    fun lostDirectArmFunctions(
+        cycle:CustomTrainingCycle,
+        audit:CustomCoachAudit?,
+        dose:StrengthDoseBoundaryReview?
+    ):Set<TrainingMuscle>? {
+        if(audit?.auditedCycleRevision!=cycle.revision ||
+            audit.structuralReview?.verifiedDraft!=cycle ||
+            dose?.status !in setOf(
+                StrengthDoseBoundaryStatus.CONTINUOUS,
+                StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW))
+            return null
+        val before=audit.weeks.singleOrNull{
+            it.absoluteWeek==dose.hypertrophyExitWeek &&
+                it.phase==TrainingPhase.HYPERTROPHY &&
+                it.blockPurpose==CustomBlockPurpose.TRAINING
+        }
+        val after=audit.weeks.singleOrNull{
+            it.absoluteWeek==dose.strengthEntryWeek &&
+                it.phase==TrainingPhase.STRENGTH &&
+                it.blockPurpose==CustomBlockPurpose.TRAINING
+        }
+        if(before==null || after==null ||
+            before.workingSets!=dose.hypertrophyWorkingSets ||
+            after.workingSets!=dose.strengthWorkingSets)return null
+        return setOf(TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
+            TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
+            TrainingMuscle.WRIST_EXTENSORS).filter { muscle ->
+            val earlier=before.directSets[muscle]
+            val later=after.directSets[muscle]
+            earlier!=null && later!=null &&
+                earlier.signum()>0 && later.signum()==0
+        }.toSet()
+    }
+}
+
 private fun auditedRange(sets:List<Int>):String=
     if(sets.minOrNull()==sets.maxOrNull())
         sets.firstOrNull()?.toString() ?: "—"
@@ -149,35 +192,9 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     val hasInterveningBridge=strengthSourceDose?.hypertrophyExitWeek?.let{
         it<adjacentExitWeek
     }==true
-    // Arm discontinuity is derived from the same EXACT source Hypertrophy
-    // exit and Strength entry week as the verified roster/dose guard.
-    // Looking at an adjacent deload week would hide lost direct arm work.
-    val actualDirectArmLosses=remember(
-        cycle,id,currentAudit,strengthSourceDose) {
-        val exit=strengthSourceDose?.hypertrophyExitWeek
-        val entry=strengthSourceDose?.strengthEntryWeek
-        val before=currentAudit?.weeks?.singleOrNull{
-            it.absoluteWeek==exit &&
-                it.phase==TrainingPhase.HYPERTROPHY &&
-                it.blockPurpose==CustomBlockPurpose.TRAINING
-        }
-        val after=currentAudit?.weeks?.singleOrNull{
-            it.absoluteWeek==entry &&
-                it.phase==TrainingPhase.STRENGTH &&
-                it.blockPurpose==CustomBlockPurpose.TRAINING
-        }
-        if(before==null || after==null || currentAudit?.auditedCycleRevision!=cycle.revision ||
-            currentAudit?.structuralReview?.verifiedDraft!=cycle ||
-            before.workingSets!=strengthSourceDose?.hypertrophyWorkingSets ||
-            after.workingSets!=strengthSourceDose?.strengthWorkingSets) null
-        else setOf(TrainingMuscle.BICEPS,TrainingMuscle.BRACHIALIS,
-            TrainingMuscle.TRICEPS,TrainingMuscle.WRIST_FLEXORS,
-            TrainingMuscle.WRIST_EXTENSORS).filter{muscle->
-            val earlier=before.directSets[muscle]
-            val later=after.directSets[muscle]
-            earlier!=null && later!=null &&
-                earlier.signum()>0 && later.signum()==0
-        }.toSet()
+    val actualDirectArmLosses=remember(cycle,id,currentAudit,strengthSourceDose) {
+        NativeStrengthPhaseBoundaryDisplayDomain.lostDirectArmFunctions(
+            cycle,currentAudit,strengthSourceDose)
     }
     val visibleDirectArmLosses=actualDirectArmLosses
         ?:comparison.strengthDirectArmLosses

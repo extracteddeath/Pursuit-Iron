@@ -269,17 +269,15 @@ assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a
     const stored = JSON.parse(JSON.stringify(changed.sets));
     assert.deepEqual(reconcileRestoredLiveAdjustments(stored), stored,
         'a legitimate back-off survives an offline reload even with no RIR');
-    for (const violation of ['unlogged', 'reps', 'load', 'effort', 'missingSnapshot', 'wrongTarget']) {
+    for (const violation of ['unlogged', 'reps', 'load', 'effort', 'missingSnapshot']) {
         const tampered = structuredClone(stored);
         if (violation === 'unlogged') tampered[0].done = false;
         if (violation === 'reps') tampered[0].reps = '4';
         if (violation === 'load') tampered[0].weight = '195';
         if (violation === 'effort') tampered[0].actualRIR = 3;
         if (violation === 'missingSnapshot') delete tampered[1].liveAdjustment.sourceObservations;
-        if (violation === 'wrongTarget') tampered[2].target.w = 175;
         const fixed = reconcileRestoredLiveAdjustments(tampered);
-        const affected = violation === 'missingSnapshot' ? [1]
-            : violation === 'wrongTarget' ? [2] : [1, 2];
+        const affected = violation === 'missingSnapshot' ? [1] : [1, 2];
         for (const index of affected) {
             assert.equal(fixed[index].weight, '200', violation + ': clear the unauthorized back-off');
             assert.equal(fixed[index].liveAdjustment, undefined);
@@ -287,6 +285,10 @@ assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a
         assert.deepEqual(reconcileRestoredLiveAdjustments(fixed), fixed,
             violation + ': recovery does not keep rewriting its own repair');
     }
+    const changedTarget = structuredClone(stored);
+    changedTarget[2].target.w = 175;
+    assert.deepEqual(reconcileRestoredLiveAdjustments(changedTarget), changedTarget,
+        'a changed target is not silently overwritten during recovery');
     const manuallyChanged = structuredClone(stored);
     manuallyChanged[1] = { ...manuallyChanged[1], auto: false, valueOwner: 'user',
         weight: '175', target: { ...manuallyChanged[1].target, w: 175 } };

@@ -111,8 +111,8 @@ console.log(`PASS 4 ${refits} refits kept coverage, saved a legal budget and lef
   setShellSessionClock(clockFor);
   for (const block of run()) { blocks++; over += overCount(block, 40); }
   assert.ok(blocks >= 10, '6 fixture armed: cycle blocks were built');
-  // A cycle rebuild is expensive, so it gets two joint attempts and no day-by-day pass; the ceiling may fall, not rise.
+  // A generated cycle that cannot fit must refuse the requested capacity; over-limit blocks are not a valid result.
   assert.ok(overControl >= 10, '6 fixture armed: unrefereed cycles show days over the limit');
-  assert.ok(over <= 14 && over * 3 <= overControl * 2, `6 cycle blocks over the limit: ${over} (control ${overControl})`);
+  assert.equal(over, 0, `6 generated cycle blocks must not exceed the selected 40-minute maximum: ${over} over-limit day-weeks (control ${overControl})`);
   console.log(`PASS 6 cycles: ${over} day-weeks over across ${blocks} blocks (control without the referee: ${overControl}).`); }
 console.log('PASS B1012 displayed-time referee.');

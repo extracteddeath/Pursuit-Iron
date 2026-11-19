@@ -24,6 +24,9 @@ internal object NativeExerciseFavorites {
                     entry.evidence.sets.map {it.exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.map {it.exerciseId}
+                // Favorites feed repetition-based exercise history/charts.
+                // Typed holds and carries belong to the measured History UI.
+                is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
             }
         }.filter(validId::matches).distinct().sortedBy(::kotlinExerciseLabel)
 

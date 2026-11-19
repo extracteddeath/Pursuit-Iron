@@ -61,6 +61,9 @@ private fun exerciseHistoryRows(
                     set.type,false,set.outcome,set.issuedLoad,
                     set.issuedReps,set.issuedRir,set.actual)
             }
+        // Rep-based history sheets must never relabel seconds, centimeters
+        // or qualitative band observations as working-set repetitions.
+        is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
         is NativeKotlinMixedHistoryCompletion.Custom ->
             completed.evidence.visits.filter {
                 it.exerciseId==exerciseId

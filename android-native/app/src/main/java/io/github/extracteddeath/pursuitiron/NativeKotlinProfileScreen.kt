@@ -45,6 +45,9 @@ private fun verifiedWorkingCount(timeline:NativeKotlinMixedHistoryTimeline):Int 
                 KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)
             is NativeKotlinMixedHistoryCompletion.Custom ->
                 KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)
+            // Profile's working-set counter is repetition-only; the typed
+            // measurements have their own truthful completion counts.
+            is NativeKotlinMixedHistoryCompletion.Measured -> return@sumOf 0
         }
         summary.completedWorkingSets
     }

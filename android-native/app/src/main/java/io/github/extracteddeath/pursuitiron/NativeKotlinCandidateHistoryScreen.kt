@@ -139,8 +139,28 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     entry.evidence.sets.map{it.exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Measured ->
+                    entry.stored.journal.approvedPlan.sets.map{it.exerciseId}
             }
         }.distinct().sortedBy(::kotlinExerciseLabel)
+    }
+    // A timed hold/distance result must not open a repetition-based
+    // exercise-history or Strength Standards chart.
+    val measuredOnlyExercises=remember(verified) {
+        val typed=verified?.completions.orEmpty()
+            .filterIsInstance<NativeKotlinMixedHistoryCompletion.Measured>()
+            .flatMap{it.stored.journal.approvedPlan.sets.map{p->p.exerciseId}}
+            .toSet()
+        val rep=verified?.completions.orEmpty().flatMap{entry->
+            when(entry) {
+                is NativeKotlinMixedHistoryCompletion.Composer ->
+                    entry.evidence.sets.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Custom ->
+                    entry.evidence.visits.map{it.exerciseId}
+                is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
+            }
+        }.toSet()
+        typed-rep
     }
     val filteredMovements=remember(searchableMovements,exerciseSearch) {
         val query=exerciseSearch.trim()
@@ -164,6 +184,9 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     entry.evidence.sets.any{it.exerciseId in filteredMovements}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     entry.evidence.visits.any{it.exerciseId in filteredMovements}
+                is NativeKotlinMixedHistoryCompletion.Measured ->
+                    entry.stored.journal.approvedPlan.sets.any{
+                        it.exerciseId in filteredMovements}
             }
         }
     }
@@ -322,7 +345,13 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                     .horizontalScroll(rememberScrollState()),
                                     horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                                     filteredMovements.take(visibleExerciseCount).forEach{exercise->
-                                        Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                                        if(exercise in measuredOnlyExercises) {
+                                            FilterChip(
+                                                selected=exerciseSearch==exercise,
+                                                onClick={exerciseSearch=exercise},
+                                                label={Text("Measured · ${kotlinExerciseLabel(exercise)}")}
+                                            )
+                                        } else Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
                                             OutlinedButton(onClick={historyExerciseId=exercise}) {
                                                 Text(kotlinExerciseLabel(exercise))
                                             }
@@ -384,26 +413,55 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         if(entry.manifest.completedAtEpochMillis!=null)Text("Session ${entry.manifest.completionOrder}",
                             style=MaterialTheme.typography.labelSmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(if(entry is NativeKotlinMixedHistoryCompletion.Custom)"Custom program" else "Generated program",
-                            style=MaterialTheme.typography.bodySmall)
-                        // These are effective, correction-aware facts from the
-                        // verified owner history—not a cached PR or estimate.
-                        val performance=when(entry) {
-                            is NativeKotlinMixedHistoryCompletion.Composer ->
-                                KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)
-                            is NativeKotlinMixedHistoryCompletion.Custom ->
-                                KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)
+                        Text(when(entry) {
+                            is NativeKotlinMixedHistoryCompletion.Custom -> "Custom program"
+                            is NativeKotlinMixedHistoryCompletion.Composer -> "Generated program"
+                            is NativeKotlinMixedHistoryCompletion.Measured -> "Measured workout"
+                        },style=MaterialTheme.typography.bodySmall)
+                        // A held second or carried centimeter is not a
+                        // Composer repetition and must never count as a PR.
+                        if(entry is NativeKotlinMixedHistoryCompletion.Measured) {
+                            val journal=entry.stored.journal
+                            val results=journal.bySetKey.values.mapNotNull{
+                                it.effectiveRecord?.operation as?
+                                    MeasuredJournalOperation.Record}
+                            val completed=results.count{
+                                it.outcome==MeasuredSetOutcome.COMPLETED}
+                            val skipped=results.count{
+                                it.outcome==MeasuredSetOutcome.SKIPPED}
+                            val failed=results.count{
+                                it.outcome==MeasuredSetOutcome.FAILED_ATTEMPT}
+                            Text("$completed of ${journal.approvedPlan.sets.size} measured sets completed",
+                                style=MaterialTheme.typography.titleSmall)
+                            if(skipped>0 || failed>0)Text(
+                                "$skipped skipped · $failed failed attempts",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Measurements retain their actual seconds, distance, sides and equipment. No rep PRs are inferred.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            // These are effective, correction-aware facts from
+                            // the verified owner history, not estimated PRs.
+                            val performance=when(entry) {
+                                is NativeKotlinMixedHistoryCompletion.Composer ->
+                                    KotlinHistoryPerformanceSummaryDomain.fromComposer(entry.evidence.sets)
+                                is NativeKotlinMixedHistoryCompletion.Custom ->
+                                    KotlinHistoryPerformanceSummaryDomain.fromCustom(entry.evidence.visits)
+                                is NativeKotlinMixedHistoryCompletion.Measured ->
+                                    error("Handled by typed branch")
+                            }
+                            Text("${performance.completedWorkingSets} of ${performance.workingSets} working sets completed",
+                                style=MaterialTheme.typography.titleSmall)
+                            if(performance.skippedWorkingSets>0 || performance.failedWorkingSets>0)
+                                Text("${performance.skippedWorkingSets} skipped · ${performance.failedWorkingSets} failed attempts",
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style=MaterialTheme.typography.bodySmall)
+                            NativeKotlinPerformanceEvidenceLines(performance)
+                            if(performance.followUpVisits>0)
+                                Text("Amplifier follow-ups: ${performance.completedFollowUpVisits} of ${performance.followUpVisits} completed (not counted as main sets)",
+                                    style=MaterialTheme.typography.bodySmall)
                         }
-                        Text("${performance.completedWorkingSets} of ${performance.workingSets} working sets completed",
-                            style=MaterialTheme.typography.titleSmall)
-                        if(performance.skippedWorkingSets>0 || performance.failedWorkingSets>0)
-                            Text("${performance.skippedWorkingSets} skipped · ${performance.failedWorkingSets} failed attempts",
-                                color=MaterialTheme.colorScheme.onSurfaceVariant,
-                                style=MaterialTheme.typography.bodySmall)
-                        NativeKotlinPerformanceEvidenceLines(performance)
-                        if(performance.followUpVisits>0)
-                            Text("Amplifier follow-ups: ${performance.completedFollowUpVisits} of ${performance.followUpVisits} completed (not counted as main sets)",
-                                style=MaterialTheme.typography.bodySmall)
                         // Generated exercise selection is only a navigation
                         // hint. Coach still intersects with the CURRENT
                         // approved program; custom training stays in its
@@ -416,6 +474,8 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 entry.evidence.sets.map{it.exerciseId}
                             is NativeKotlinMixedHistoryCompletion.Custom ->
                                 entry.evidence.visits.map{it.exerciseId}
+                            is NativeKotlinMixedHistoryCompletion.Measured ->
+                                emptyList()
                         }.distinct()
                         if(allMovements.isNotEmpty()) {
                             PursuitSectionHeading("Exercise history",
@@ -451,12 +511,19 @@ internal fun NativeKotlinCandidateHistoryScreen(
                                 }
                             }
                         }
-                        TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide sets" else "View targets, notes and actuals")}
+                        TextButton(onClick={expanded=!expanded}){
+                            Text(if(expanded)"Hide sets"
+                                else if(entry is NativeKotlinMixedHistoryCompletion.Measured)
+                                    "View recorded measurements"
+                                else "View targets, notes and actuals")
+                        }
                         if(expanded)when(entry) {
                             is NativeKotlinMixedHistoryCompletion.Custom ->
                                 NativeKotlinCustomHistoryNote(host,entry)
                             is NativeKotlinMixedHistoryCompletion.Composer ->
                                 NativeKotlinGeneratedHistoryNote(host,entry)
+                            is NativeKotlinMixedHistoryCompletion.Measured ->
+                                NativeKotlinMeasuredHistoryRows(entry)
                         }
                         if(expanded)when(entry) {
                             is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEach {set->
@@ -466,6 +533,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                             is NativeKotlinMixedHistoryCompletion.Custom ->
                                 NativeKotlinSavedCustomHistoryTechniqueLedger(
                                     host,entry,onChanged={reload()})
+                            is NativeKotlinMixedHistoryCompletion.Measured -> Unit
                         }
                     }
                 }
@@ -915,5 +983,66 @@ private fun NativeKotlinSavedCustomHistoryVisitRow(
         }
         error?.let { Text(it,color=MaterialTheme.colorScheme.error,
             style=MaterialTheme.typography.bodySmall) }
+    }
+}
+
+/** Source-exact Material 3 presentation for typed measured results. */
+@Composable
+private fun NativeKotlinMeasuredHistoryRows(
+    entry:NativeKotlinMixedHistoryCompletion.Measured
+) {
+    val journal=entry.stored.journal
+    PursuitSectionHeading("Recorded measurements",
+        "Each side and its original physical setup are preserved. These are not loaded-rep personal records.")
+    journal.approvedPlan.sets.forEach{plan->
+        val definition=MeasuredExerciseCatalogDomain.find(plan.exerciseId)
+        val receipt=journal.bySetKey[plan.setKey]?.effectiveRecord
+            ?.operation as? MeasuredJournalOperation.Record
+        val unit=when(definition?.kind) {
+            MeasuredExerciseKind.HOLD_SECONDS -> "sec"
+            MeasuredExerciseKind.CARRY_CENTIMETERS -> "cm"
+            MeasuredExerciseKind.BANDED_REPETITIONS -> "reps"
+            null -> "units"
+        }
+        Column(Modifier.fillMaxWidth().padding(vertical=PursuitSpace.xs),
+            verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+            Text((definition?.displayName?:kotlinExerciseLabel(plan.exerciseId))+
+                " · Target ${plan.targetAmount} $unit",
+                style=MaterialTheme.typography.labelLarge)
+            Text(when(receipt?.outcome) {
+                MeasuredSetOutcome.COMPLETED -> "Completed"
+                MeasuredSetOutcome.FAILED_ATTEMPT -> "Failed attempt"
+                MeasuredSetOutcome.SKIPPED -> "Skipped"
+                null -> "No verified result"
+            },style=MaterialTheme.typography.labelMedium,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            receipt?.actual?.let{actual->
+                actual.sides.sortedBy{it.side.ordinal}.forEach{side->
+                    val sideLabel=when(side.side) {
+                        MeasuredSide.BOTH -> "Result"
+                        MeasuredSide.LEFT -> "Left"
+                        MeasuredSide.RIGHT -> "Right"
+                    }
+                    Text("$sideLabel · ${side.amount} $unit",
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                actual.actualExternalLoad?.let{load->
+                    Text("External load · ${load.stripTrailingZeros().toPlainString()} ${actual.unit?.name.orEmpty()}",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                actual.elapsedSeconds?.let{elapsed->
+                    Text("Carry duration · ${elapsed}s",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+            }
+            plan.bandId?.let{band->
+                Text("Verified band · $band",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+            Text("Physical setup · ${plan.physicalSetupId}",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        HorizontalDivider()
     }
 }

@@ -58,13 +58,20 @@ object NativeKotlinVerifiedHistoryCsvExport {
         var expectedOrder=1L
         var rows=0
         val dated=history.completions.any{it.manifest.completedAtEpochMillis!=null}
+        val measured=history.completions.any{
+            it is NativeKotlinMixedHistoryCompletion.Measured}
+        val measuredColumns=listOf("measurement_kind","measurement_unit",
+            "measured_sides","physical_setup_id","band_id",
+            "target_measurement","actual_carry_seconds")
         val staged=history.completions.filterIsInstance<
             NativeKotlinMixedHistoryCompletion.Custom>().any {completion ->
             completion.evidence.visits.any{it.stage>1}
         }
         val header=columns+(if(staged)listOf("amplifier_stage") else emptyList())+
-            (if(dated)listOf("completed_at_utc") else emptyList())
-        val format=if(staged)"pursuit-iron-history-v3"
+            (if(dated)listOf("completed_at_utc") else emptyList())+
+            (if(measured)measuredColumns else emptyList())
+        val format=if(measured)"pursuit-iron-history-v4"
+            else if(staged)"pursuit-iron-history-v3"
             else if(dated)"pursuit-iron-history-v2" else VERSION
         val csv=StringBuilder(header.joinToString(","){cell(it)}).append('\n')
 
@@ -94,8 +101,52 @@ object NativeKotlinVerifiedHistoryCsvExport {
                     else "") else emptyList())+
                 (if(dated)listOf(completedAtEpochMillis?.let{
                     java.time.Instant.ofEpochMilli(it).toString()}.orEmpty())
-                else emptyList())
+                else emptyList())+
+                (if(measured)List(measuredColumns.size){""} else emptyList())
             csv.append(values.joinToString(","){cell(it)}).append('\n')
+            rows++
+            return csv.length<=MAX_CHARS
+        }
+
+        fun addMeasured(
+            completion:NativeKotlinMixedHistoryCompletion.Measured,
+            plan:MeasuredExerciseSetPlan,
+            actual:MeasuredJournalOperation.Record,
+            definition:MeasuredExerciseDefinition
+        ):Boolean {
+            if(rows>=MAX_ROWS)return false
+            val outcome=actual.outcome
+            val observed=actual.actual
+            val unit=when(definition.kind) {
+                MeasuredExerciseKind.HOLD_SECONDS -> "SECONDS"
+                MeasuredExerciseKind.CARRY_CENTIMETERS -> "CENTIMETERS"
+                MeasuredExerciseKind.BANDED_REPETITIONS -> "REPETITIONS"
+            }
+            val fields=listOf(
+                format,completion.manifest.completionOrder.toString(),
+                "MEASURED",completion.manifest.workoutId,
+                completion.stored.journal.approvedPlan.gymId,
+                plan.exerciseId,"",plan.setKey,"MEASUREMENT","WORKING",
+                outcome.name,number(plan.intendedExternalLoad),
+                plan.unit?.name.orEmpty(),
+                definition.expectedBasis?.name.orEmpty(),"","","",
+                number(observed?.actualExternalLoad),observed?.unit?.name.orEmpty(),
+                "","","",""
+            )
+            val details=listOf(definition.kind.name,unit,
+                observed?.sides?.sortedBy{it.side.ordinal}
+                    ?.joinToString("|"){"${it.side.name}:${it.amount}"}.orEmpty(),
+                plan.physicalSetupId,plan.bandId.orEmpty(),
+                plan.targetAmount.toString(),
+                observed?.elapsedSeconds?.toString().orEmpty())
+            val full=fields+
+                (if(staged)listOf("") else emptyList())+
+                (if(dated)listOf(completion.manifest.completedAtEpochMillis?.let{
+                    java.time.Instant.ofEpochMilli(it).toString()}.orEmpty())
+                    else emptyList())+
+                details
+            if(full.size!=header.size)return false
+            csv.append(full.joinToString(","){cell(it)}).append('\n')
             rows++
             return csv.length<=MAX_CHARS
         }
@@ -106,6 +157,25 @@ object NativeKotlinVerifiedHistoryCsvExport {
                 !ids.add(manifest.workoutId))
                 return NativeKotlinHistoryCsvResult.InvalidHistory
             when(completion) {
+                is NativeKotlinMixedHistoryCompletion.Measured -> {
+                    val stored=completion.stored
+                    if(stored.athleteId!=history.athleteId ||
+                        stored.journal.approvedPlan.workoutId!=manifest.workoutId ||
+                        stored.journal.finishedByEventId!=manifest.finishEventId ||
+                        stored.journal.revision!=manifest.originalJournalRevision)
+                        return NativeKotlinHistoryCsvResult.InvalidHistory
+                    for(plan in stored.journal.approvedPlan.sets) {
+                        val definition=MeasuredExerciseCatalogDomain.find(
+                            plan.exerciseId)
+                            ?:return NativeKotlinHistoryCsvResult.InvalidHistory
+                        val effective=stored.journal.bySetKey[plan.setKey]
+                            ?.effectiveRecord?.operation
+                            as? MeasuredJournalOperation.Record
+                            ?:return NativeKotlinHistoryCsvResult.InvalidHistory
+                        if(!addMeasured(completion,plan,effective,definition))
+                            return NativeKotlinHistoryCsvResult.TooLarge
+                    }
+                }
                 is NativeKotlinMixedHistoryCompletion.Composer -> {
                     val fact=completion.evidence
                     if(fact.workoutId!=manifest.workoutId ||

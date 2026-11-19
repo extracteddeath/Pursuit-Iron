@@ -38,6 +38,8 @@ internal fun verifiedStrengthTrend(
                     it.type==DraftSetType.WORKING &&
                     it.outcome==KotlinJournalSetOutcome.COMPLETED
             }.map{it.issuedLoad to it.actual}
+        // No typed measured outcome is a verified rep-based 1RM sample.
+        is NativeKotlinMixedHistoryCompletion.Measured -> emptyList()
         is NativeKotlinMixedHistoryCompletion.Custom ->
             entry.evidence.visits.filter{
                 it.exerciseId==exerciseId &&

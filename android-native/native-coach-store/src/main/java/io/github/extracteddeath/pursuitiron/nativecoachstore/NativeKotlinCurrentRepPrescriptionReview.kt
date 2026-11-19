@@ -66,12 +66,20 @@ object NativeKotlinCurrentRepPrescriptionDomain {
                     completion.evidence.sets.any {it.exerciseId==exerciseId}
                 is NativeKotlinMixedHistoryCompletion.Custom ->
                     completion.evidence.visits.any {it.exerciseId==exerciseId}
+                // A newer physical hold/carry cannot be mistaken for an
+                // absent rep visit, or skipped to cherry-pick old reps.
+                is NativeKotlinMixedHistoryCompletion.Measured ->
+                    completion.stored.journal.approvedPlan.sets.any {
+                        it.exerciseId==exerciseId
+                    }
             }
         }
         val mostRecent=appearances.lastOrNull()
             ?:return reject(NativeCurrentRepPrescriptionRefusal.NO_RECORDED_EXERCISE)
         if(mostRecent is NativeKotlinMixedHistoryCompletion.Custom)
             return reject(NativeCurrentRepPrescriptionRefusal.CUSTOM_WORKOUT_IS_LATEST)
+        if(mostRecent is NativeKotlinMixedHistoryCompletion.Measured)
+            return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val staged=KotlinWorkoutSnapshotDomain.stage(
             KotlinWorkoutSnapshotRequest(
                 source,source,approval.grant,approval.program,approval.policies))
@@ -96,6 +104,8 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val suffix=appearances.dropWhile {it!==last}
         if(suffix.any {it is NativeKotlinMixedHistoryCompletion.Custom})
             return reject(NativeCurrentRepPrescriptionRefusal.CUSTOM_WORKOUT_IS_LATEST)
+        if(suffix.any {it is NativeKotlinMixedHistoryCompletion.Measured})
+            return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         if(suffix.any {
             it is NativeKotlinMixedHistoryCompletion.Composer &&
                 it.evidence.source!=source

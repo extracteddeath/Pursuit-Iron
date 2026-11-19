@@ -141,6 +141,20 @@ object NativeKotlinMixedHistoryFactsDomain {
         for (completion in timeline.completions) {
             val manifest = completion.manifest
             val visits = when (completion) {
+                // Exact timed/distance/band outcomes belong to their typed
+                // history view. They MUST NOT produce rep PR, 1RM,
+                // Strength Standards, Last loaded-set or machine comparisons.
+                is NativeKotlinMixedHistoryCompletion.Measured -> {
+                    if(completion.stored.athleteId!=timeline.athleteId ||
+                        completion.stored.journal.approvedPlan.workoutId!=
+                            manifest.workoutId ||
+                        completion.stored.journal.revision!=
+                            manifest.originalJournalRevision ||
+                        completion.stored.journal.finishedByEventId!=
+                            manifest.finishEventId)
+                        return reject(NativeMixedFactsRefusal.MANIFEST_MISMATCH)
+                    emptyList()
+                }
                 is NativeKotlinMixedHistoryCompletion.Composer -> {
                     if (completion.evidence.source.athleteId != timeline.athleteId)
                         return reject(NativeMixedFactsRefusal.CROSS_ATHLETE)
@@ -171,6 +185,8 @@ object NativeKotlinMixedHistoryFactsDomain {
                 }
             }
             val issuedGymId=when(completion) {
+                is NativeKotlinMixedHistoryCompletion.Measured ->
+                    completion.stored.journal.approvedPlan.gymId
                 is NativeKotlinMixedHistoryCompletion.Composer ->
                     completion.evidence.source.gymId
                 is NativeKotlinMixedHistoryCompletion.Custom -> completion.gymId

@@ -135,9 +135,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
         NativeKotlinCustomHistoryCorrectionTransaction(
             historyStore,customIssuedStore,customSavedCorrections,
             revisionFence,localAthlete)
+    // Read verified typed History from the ONE shared native ledger. Until
+    // an actual athlete-approved measured program/issue source is integrated,
+    // NO app-side issuance grant exists: never construct one from the UI.
+    private val measuredParentHistoryStore=NativeMeasuredWorkoutParentFileStore(
+        root,revisionFence,localAthlete,
+        NativeMeasuredApprovedWorkoutSource{_,_,_->null},historyStore)
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
-        approvalStore,localAthlete,revisionFence,customSavedCorrections)
+        approvalStore,localAthlete,revisionFence,customSavedCorrections,
+        measuredParentHistoryStore)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
     private val resumableCustomWorkouts=NativeKotlinCustomResumeReview(

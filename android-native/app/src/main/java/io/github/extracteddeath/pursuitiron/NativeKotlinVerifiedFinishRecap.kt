@@ -57,6 +57,9 @@ internal fun NativeKotlinVerifiedFinishRecap(
                 val matchingKind=when(selected) {
                     is NativeKotlinMixedHistoryCompletion.Composer -> !isCustom
                     is NativeKotlinMixedHistoryCompletion.Custom -> isCustom
+                    // A generated/custom set recap is not a timed or
+                    // distance-measured workout recap.
+                    is NativeKotlinMixedHistoryCompletion.Measured -> false
                     null -> false
                 }
                 if(ownerBefore==null || ownerBefore!=ownerAfter ||

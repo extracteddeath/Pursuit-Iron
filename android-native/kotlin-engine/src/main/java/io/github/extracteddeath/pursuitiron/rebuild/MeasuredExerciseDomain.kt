@@ -89,6 +89,19 @@ object MeasuredExerciseCatalogDomain {
     fun find(exerciseId:String):MeasuredExerciseDefinition?=byId[exerciseId]
 }
 
+/**
+ * Exact physical equipment source for measured external mass. This only
+ * names real, separately saved gym stock. A generic catalog exercise or
+ * a similarly named machine is NEVER proof of a load or two matching bells.
+ */
+object MeasuredPhysicalStockSource {
+    fun equipmentIdFor(exerciseId:String):String?=when(exerciseId) {
+        "farmers","suitcase-carry" -> "dumbbell-rack"
+        "plate-pinch","weighted-plank" -> "single-weight-plate"
+        else -> null
+    }
+}
+
 data class MeasuredExerciseSetPlan(
     val workoutId:String,
     val setKey:String,
@@ -202,7 +215,7 @@ object MeasuredExerciseDomain {
                     MeasurementRefusal.UNVERIFIED_STOCK)
                 if(plan.bandId!=null || stock.basis!=definition.expectedBasis ||
                     (plan.matchedPairConfirmed &&
-                        definition.loadKind!=MeasuredLoadKind.VERIFIED_PER_HAND) ||
+                        plan.exerciseId!="farmers") ||
                     (plan.exerciseId=="farmers" && !plan.matchedPairConfirmed) ||
                     !numericMass(amount))
                     return MeasurementPlanResult.Rejected(

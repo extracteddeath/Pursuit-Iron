@@ -216,4 +216,57 @@ class StrengthRosterBoundaryGuardDomainTest {
                 "next").status)
     }
 
+
+    @Test fun daySpecificHalfDoseCannotHideBehindUnchangedWeeklyTotal() {
+        val original=cycle(before=8,after=8)
+        fun withDose(weekday:Int,setsPerExercise:Int,
+            purpose:ComposerSessionPurpose):CustomTrainingDay {
+            val session=day(8,weekday)
+            return session.copy(purpose=purpose,
+                slots=session.slots.map{slot->
+                    slot.copy(sets=List(setsPerExercise){set()})
+                })
+        }
+        val hypertrophy=original.blocks.first().copy(days=listOf(
+            withDose(0,2,ComposerSessionPurpose.HYPERTROPHY),
+            withDose(2,1,ComposerSessionPurpose.HYPERTROPHY)))
+        val strength=original.blocks.last().copy(days=listOf(
+            withDose(0,1,ComposerSessionPurpose.STRENGTH_SKILL),
+            withDose(2,2,ComposerSessionPurpose.STRENGTH_SKILL)))
+        val authored=original.copy(blocks=listOf(hypertrophy,strength))
+        val structure=CustomTrainingCycleDomain.review(authored,available)
+        assertEquals(structure.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,structure.status)
+        val roster=StrengthRosterBoundaryGuardDomain.review(structure,"next")
+        assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,roster.status)
+        val evidence=StrengthDoseBoundaryGuardDomain.review(structure,"next")
+        // Monday's 16 -> 8 is not excused by Wednesday's 8 -> 16.
+        assertEquals(24,evidence.hypertrophyWorkingSets)
+        assertEquals(24,evidence.strengthWorkingSets)
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            evidence.status)
+        assertEquals(listOf(StrengthDayDoseLoss(0,16,8)),
+            evidence.affectedDays)
+        assertFalse(evidence.mayApplyAutomatically)
+        assertFalse(evidence.mayIssueWorkout)
+        assertThrows(UnsupportedOperationException::class.java) {
+            (evidence.affectedDays as MutableList<StrengthDayDoseLoss>).clear()
+        }
+        // The true authored input has not been edited to make it pass.
+        assertEquals(4L,authored.revision)
+        assertEquals(2,authored.blocks.first().days.size)
+    }
+
+    @Test fun legitimatePerDayDoseChangesDoNotAcquireFakeLossEvidence() {
+        val source=CustomTrainingCycleDomain.review(cycle(before=8,after=5),
+            available)
+        val safe=StrengthDoseBoundaryGuardDomain.review(source,"next")
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,safe.status)
+        assertTrue(safe.affectedDays.isEmpty())
+        val tapered=StrengthDoseBoundaryGuardDomain.review(
+            CustomTrainingCycleDomain.review(
+                cycle(nextPhase=TrainingPhase.PEAK),available),"next")
+        assertEquals(StrengthDoseBoundaryStatus.NOT_COMPARABLE,tapered.status)
+        assertTrue(tapered.affectedDays.isEmpty())
+    }
 }

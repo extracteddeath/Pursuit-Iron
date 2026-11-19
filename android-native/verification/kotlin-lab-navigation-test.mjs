@@ -12,6 +12,24 @@ const debug=read('android-native/app/src/debug/AndroidManifest.xml');
 const release=read('android-native/app/src/release/AndroidManifest.xml');
 const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
+// Never send an athlete with an actually saved unfinished or confirmed
+// measured session back to onboarding on process death. Landing is a
+// read-only UI decision, not a consent or issuance action.
+const coldStart=journey.indexOf('LaunchedEffect(host) {');
+assert.ok(coldStart>0);
+const coldEnd=journey.indexOf('LaunchedEffect(destination) {',coldStart);
+assert.ok(coldEnd>coldStart);
+const landing=journey.slice(coldStart,coldEnd);
+assert.ok(landing.includes('host.reviewResumableCustomWorkouts()'));
+assert.ok(landing.includes('currentUnfinishedGeneratedWorkoutId(host)'));
+assert.ok(landing.includes('host.reviewUnfinishedMeasuredWorkouts()'));
+assert.ok(landing.includes('host.reviewConfirmedUnissuedMeasuredWorkouts()'));
+assert.ok(landing.includes('NativeMeasuredInventoryResult.Ready'));
+assert.ok(landing.includes('NativeMeasuredConsentInventoryResult.Ready'));
+assert.ok(landing.includes('if(measured || approvedMeasured)'));
+assert.ok(!landing.includes('host.issueMeasuredWorkout(') &&
+  !landing.includes('host.confirmMeasuredWorkoutConsent('),
+  'Cold launch must not issue or confirm a measured workout without a tap');
 const navigation=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinNavigationState.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
 const csvExport=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinVerifiedHistoryCsvExport.kt');

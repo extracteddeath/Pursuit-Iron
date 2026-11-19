@@ -249,11 +249,11 @@ class NativeMeasuredWorkoutConsentFileStoreTest {
         val pending=approvals().reviewConfirmedUnissued("owner-1")
         assertTrue(pending.toString(),
             pending is NativeMeasuredConsentInventoryResult.Ready)
-        assertEquals(listOf("session-1"),
-            (pending as NativeMeasuredConsentInventoryResult.Ready)
-                .confirmed.map{it.workoutId})
-        assertEquals(1,pending.confirmed.single().plannedSets)
-        assertEquals(listOf("plank"),pending.confirmed.single().exerciseIds)
+        val savedApprovals=(pending as NativeMeasuredConsentInventoryResult.Ready)
+            .confirmed
+        assertEquals(listOf("session-1"),savedApprovals.map{it.workoutId})
+        assertEquals(1,savedApprovals.single().plannedSets)
+        assertEquals(listOf("plank"),savedApprovals.single().exerciseIds)
         assertTrue(parent().open("owner-1","session-1")
             is NativeMeasuredWorkoutStoreResult.Rejected)
         assertTrue(parent().issue("owner-1","session-1")

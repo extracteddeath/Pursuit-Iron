@@ -45,6 +45,24 @@ assert.ok(measuredFocus.includes('after.revision!=before.revision+1') &&
   measuredFocus.includes('before.bySetKey[setKey]?.effectiveRecord!=null') &&
   measuredFocus.includes('after.bySetKey[it.setKey]?.effectiveRecord==null'));
 
+// A running manual stopwatch is an optional, monotonic draft aid.
+ // No duration is ever issued or recorded by the clock itself.
+const holdStopwatch=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MeasuredHoldStopwatchDomain.kt');
+const measuredSetEditor=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeMeasuredExerciseSetEditor.kt');
+assert.ok(measured.includes('rememberSaveableStateHolder()') &&
+  measured.includes('measuredEditorStates.SaveableStateProvider(') &&
+  measured.includes('measured:$workoutId:') &&
+  measuredSetEditor.includes('MeasuredHoldStopwatchDomain.start(') &&
+  measuredSetEditor.includes('MeasuredHoldStopwatchDomain.stop(') &&
+  measuredSetEditor.includes('MeasuredHoldStopwatchDomain.usableSeconds(stopwatch)') &&
+  measuredSetEditor.includes('Use ${stopwatchSeconds}s for ') &&
+  measuredSetEditor.includes('SystemClock.elapsedRealtime()') &&
+  measuredSetEditor.includes('Record set') &&
+  holdStopwatch.includes('MAX_BOOT_DRIFT_MS') &&
+  holdStopwatch.includes('elapsed/1000L') &&
+  !holdStopwatch.includes('MeasuredWorkoutOperation.Record'),
+  'Stopwatch may only copy real measured seconds into independent saveable per-set drafts; it cannot log outcomes');
+
 assert.ok(measuredBuilder.includes('MeasuredWorkoutJournalDomain.begin(it)') &&
   measuredBuilder.includes('sourceRevision') &&
   measuredBuilder.includes('set-$index') &&

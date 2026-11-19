@@ -4967,7 +4967,7 @@ background:var(--pi-color-card)!important;
 .wpb-plan-empty-body>svg,.wpb-plan-empty-body>p{color:var(--pi-color-on-muted);}
 
 #root .wpb .wpb-tabbar{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,7ch),1fr));
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8ch),1fr));
   font-size:var(--pi-type-navigation);flex-shrink:0;gap:0;
 }
 

@@ -158,16 +158,16 @@
   "uiFiles": {
     "modules/App.js": "667607ec05fd9b4da5ae6c7e92d7e88e793fd8fbf61cf59cb46d812c090ba227",
     "index.html": "c6350794e391fe8a5b62d955c8d860c4991cc79b1b1604b51c84195f562a73c7",
-    "sw.js": "24354d0acf8917128ba0f36a9785cb54774c8078363bba244789912a26772d51",
-    "BUILD_PROFILE.json": "e4672e08eca89d56af303bce5f046f8409a7ad5bbd8d127cfe8ef9f1da8ed7c0",
+    "sw.js": "2aabc3b43fef75bfb47a321821ef1804ef003f8f1d39ee152fbb8a7441eb6fb6",
+    "BUILD_PROFILE.json": "e28db84589e0390d0f0e39f083200e4d2cd8889495e58f77db24c3393480abae",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "bc9fd7199c62829fc8325e083951870174631718feab666076a40feb48fad7cf",
+    "app.css": "877fdb3610ae92646b5f943a1f4182d7f0968a2063da27df4911d60b1137f285",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-ra1fd54061d371f7d",
-  "uiMilestone": "Build 1019 · Phone-width navigation, flush Plan week picker and clearer workout feedback"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-rafbf22fb52951155",
+  "uiMilestone": "Build 1019 · Flush Plan week picker and clearer workout feedback"
 }

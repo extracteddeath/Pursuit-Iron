@@ -158,18 +158,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "9b6af4df922c500e8edea32d6a038e13141e2ee4ae0e051c8ff2593d8069c0d5",
+    "modules/App.js": "785507851fc52a3a975a52a841f143c092ebeda62e23c8f282e532f4a9eeac74",
     "index.html": "c6350794e391fe8a5b62d955c8d860c4991cc79b1b1604b51c84195f562a73c7",
-    "sw.js": "00bc210f8ee6aa7b1e5bb5a747060f1f8ac90d9b640f2089a0d0029c07e654fc",
-    "BUILD_PROFILE.json": "8baa781efe7f6ed34a3763ee3d4817a54fe75adca3039428c39038b8ae8dc15e",
+    "sw.js": "3b7632b8ac75a8db367498e3662b22ac30f3df108fcc91741fae4ce236676a25",
+    "BUILD_PROFILE.json": "219971139393bbe24a944b4963c72271cfc5578374dd67dbe2924b69bb208195",
     "CHANGELOG.md": "b2652caa581ef510ddbf292f8422749da1a1616e8c07b2de372922a2782a2539",
-    "app.css": "44524318e317caf2462a3f3db5b5f244f01ab736275007f21a0e0055de5ef194",
+    "app.css": "2cbb5b79495833cd8fe876adf46a963c7566c5077524a2a0cdb8f4ff06f43ccd",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-re7a38f4239c0d89b",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1019-r00b98e6ea260c54c",
   "uiMilestone": "Build 1019 · Strength transition continuity and accessible Machine A/B history"
 }

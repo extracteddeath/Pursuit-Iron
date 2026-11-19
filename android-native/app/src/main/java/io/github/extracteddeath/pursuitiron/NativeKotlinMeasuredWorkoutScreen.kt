@@ -112,6 +112,12 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         mutableStateOf<String?>(null)
     }
     var focusPickerOpen by remember {mutableStateOf(false)}
+    // Browsing an entire measured session is presentation-only. Each set
+    // remains keyed to its owner-verified journal and independent unsaved
+    // editor; returning to Focus never invents a saved observation.
+    var showAllMeasuredSets by rememberSaveable(workoutId) {
+        mutableStateOf(false)
+    }
     suspend fun reloadSource() {
         sourceLookupComplete=false
         sourceRead=null
@@ -527,54 +533,98 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     LinearProgressIndicator(
                         progress={focus.recordedSets.toFloat()/focus.totalSets},
                         modifier=Modifier.fillMaxWidth())
-                    Text("Set ${focus.selectedOrdinal} of ${focus.totalSets}",
-                        style=MaterialTheme.typography.labelLarge,
+                    PursuitWorkoutFocusHeader(
+                        exerciseLabel=definition?.displayName ?:set.exerciseId,
+                        setDetail="Set ${focus.selectedOrdinal} of ${focus.totalSets} · "+
+                            if(focus.selectedRecorded)"saved observation"
+                            else "not yet recorded",
+                        focusOnNext=!showAllMeasuredSets,
+                        onFocusChange={focus->showAllMeasuredSets=!focus},
+                        heading="MEASURED WORKOUT",
+                        enabled=!busy
+                    )
+                    if(focus.selectedRecorded)Text(
+                        "This set has a saved result. Review it before making "+
+                            "an explicit correction.",
+                        style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(definition?.displayName ?:set.exerciseId,
-                        style=MaterialTheme.typography.titleLarge)
-                    if(focus.selectedRecorded)
-                        Text("Saved result · tap Edit saved result to correct it",
-                            style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement=Arrangement.spacedBy(
-                        PursuitSpace.xs),modifier=Modifier.fillMaxWidth()) {
-                        OutlinedButton(enabled=!busy && focus.selectedOrdinal>1,
-                            modifier=Modifier.weight(1f),
-                            onClick={
-                                focusSetKey=journal.approvedPlan.sets[
-                                    focus.selectedOrdinal-2].setKey
-                            }) {Text("Previous")}
-                        OutlinedButton(enabled=!busy &&
-                            focus.selectedOrdinal<focus.totalSets,
-                            modifier=Modifier.weight(1f),
-                            onClick={
-                                focusSetKey=journal.approvedPlan.sets[
-                                    focus.selectedOrdinal].setKey
-                            }) {Text("Next")}
-                    }
-                    Box {
-                        OutlinedButton(enabled=!busy,
-                            onClick={focusPickerOpen=true},
-                            modifier=Modifier.fillMaxWidth()) {
-                            Text("Jump to a set")
-                        }
-                        DropdownMenu(expanded=focusPickerOpen,
-                            onDismissRequest={focusPickerOpen=false}) {
-                            journal.approvedPlan.sets.forEachIndexed{
-                                index,planned->
+                    if(showAllMeasuredSets) {
+                        PursuitCard {
+                            PursuitSectionHeading("All measured sets",
+                                "Review the actual saved status of every set. "+
+                                    "Choosing a row never records a result.")
+                            journal.approvedPlan.sets.forEachIndexed {index,planned->
                                 val saved=journal.bySetKey[planned.setKey]
                                     ?.effectiveRecord!=null
-                                DropdownMenuItem(
-                                    enabled=!busy,
-                                    text={Text("${index+1}. "+
-                                        (MeasuredExerciseCatalogDomain.find(
-                                            planned.exerciseId)?.displayName
-                                            ?:planned.exerciseId)+
-                                        if(saved)" · saved" else " · pending")},
+                                val name=MeasuredExerciseCatalogDomain.find(
+                                    planned.exerciseId)?.displayName
+                                    ?:planned.exerciseId
+                                val selected=set.setKey==planned.setKey
+                                if(index>0)HorizontalDivider()
+                                Text("${index+1}. $name",
+                                    style=MaterialTheme.typography.titleSmall)
+                                Text(if(saved)"Result saved in native journal"
+                                    else "Result not recorded",
+                                    color=if(saved)
+                                        MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style=MaterialTheme.typography.labelMedium)
+                                OutlinedButton(enabled=!busy,
+                                    modifier=Modifier.fillMaxWidth()
+                                        .heightIn(min=48.dp),
                                     onClick={
                                         focusSetKey=planned.setKey
-                                        focusPickerOpen=false
+                                        showAllMeasuredSets=false
+                                    }) {
+                                    Text(when {
+                                        selected -> "Focus selected set"
+                                        saved -> "Review saved set"
+                                        else -> "Record this set"
                                     })
+                                }
+                            }
+                        }
+                    } else {
+                        Row(horizontalArrangement=Arrangement.spacedBy(
+                            PursuitSpace.xs),modifier=Modifier.fillMaxWidth()) {
+                            OutlinedButton(enabled=!busy && focus.selectedOrdinal>1,
+                                modifier=Modifier.weight(1f).heightIn(min=48.dp),
+                                onClick={
+                                    focusSetKey=journal.approvedPlan.sets[
+                                        focus.selectedOrdinal-2].setKey
+                                }) {Text("Previous")}
+                            OutlinedButton(enabled=!busy &&
+                                focus.selectedOrdinal<focus.totalSets,
+                                modifier=Modifier.weight(1f).heightIn(min=48.dp),
+                                onClick={
+                                    focusSetKey=journal.approvedPlan.sets[
+                                        focus.selectedOrdinal].setKey
+                                }) {Text("Next")}
+                        }
+                        Box {
+                            OutlinedButton(enabled=!busy,
+                                onClick={focusPickerOpen=true},
+                                modifier=Modifier.fillMaxWidth()) {
+                                Text("Jump to a set")
+                            }
+                            DropdownMenu(expanded=focusPickerOpen,
+                                onDismissRequest={focusPickerOpen=false}) {
+                                journal.approvedPlan.sets.forEachIndexed{
+                                    index,planned->
+                                    val saved=journal.bySetKey[planned.setKey]
+                                        ?.effectiveRecord!=null
+                                    DropdownMenuItem(
+                                        enabled=!busy,
+                                        text={Text("${index+1}. "+
+                                            (MeasuredExerciseCatalogDomain.find(
+                                                planned.exerciseId)?.displayName
+                                                ?:planned.exerciseId)+
+                                            if(saved)" · saved" else " · pending")},
+                                        onClick={
+                                            focusSetKey=planned.setKey
+                                            focusPickerOpen=false
+                                        })
+                                }
                             }
                         }
                     }

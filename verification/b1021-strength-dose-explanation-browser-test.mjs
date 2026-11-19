@@ -81,8 +81,12 @@ try{
         await page.evaluate(program=>window.renderStrengthDose(program),{...fixture,nextEngine:{...fixture.nextEngine,strengthEntryDose:met}});
         await page.waitForFunction(()=>document.querySelector('.wpb-strength-dose-review')?.dataset.strengthDoseStatus==='met');
         assert.match(await page.$eval('.wpb-strength-dose-review summary',node=>node.textContent),/planned goal covered/);
-        await page.evaluate(program=>window.renderStrengthDose(program),fixture);
-        await page.waitForFunction(()=>!document.querySelector('.wpb-strength-dose-review'));
+        const withoutReport={...fixture,nextEngine:{...fixture.nextEngine,strengthEntryDose:undefined}};
+        await page.evaluate(program=>window.renderStrengthDose(program),withoutReport);
+        await page.waitForFunction(()=>!document.querySelector('.wpb-strength-dose-review'),
+            {timeout:5000});
+        assert.ok(await page.$('.wpb-cycle-preview-exercise'),
+            'An imported/legacy block without a retained-dose report still shows its real workouts');
         assert.deepEqual(errors,[],`No browser exceptions at ${width}px`);
         await page.close();
     }

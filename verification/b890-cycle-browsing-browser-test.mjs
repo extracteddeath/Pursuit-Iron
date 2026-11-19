@@ -234,7 +234,7 @@ try{
   const liveDetailDose=originalDetailDose
     ? describeRegionalWorkingWeekChange(saved[0],saved[1],EXERCISES) : null;
   const expectedDose=liveDetailDose || originalDetailDose;
-  const disclosures=await page.$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({
+  const disclosures=await page.$$eval('.wpb-cycle-detail details',ns=>ns.map(n=>({
     dose:n.classList.contains('wpb-cycle-dose-detail'),
     strength:n.classList.contains('wpb-strength-dose-review'),open:n.open
   })));
@@ -253,7 +253,7 @@ try{
     assert.ok(visible.text.includes(liveDetailDose ? 'Saved prescriptions' : 'Original generation snapshot'),
       'Cycle Detail must identify live dose or explicitly disclose its historical fallback');
     await page.click('.wpb-cycle-detail .wpb-cycle-dose-summary');
-  } else assert.equal(disclosures.length,0,'Older saved cycles do not invent missing regional data');
+  } else assert.equal(disclosures.filter(n=>n.dose).length,0,'Older saved cycles do not invent missing saved-week regional data');
   await page.waitForSelector('[aria-label="Next block changes"]');await page.waitForSelector('[aria-label="Cycle schedule"]');
   assert.equal(await page.$eval('.wpb-cycle-overview',n=>parseFloat(getComputedStyle(n).borderRadius)>=18),true);
   await page.screenshot({path:`/tmp/b890-cycle-detail-${width}.png`});

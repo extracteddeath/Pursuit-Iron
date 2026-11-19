@@ -135,12 +135,18 @@ internal class NativeKotlinCandidateHost(context:Context) {
         NativeKotlinCustomHistoryCorrectionTransaction(
             historyStore,customIssuedStore,customSavedCorrections,
             revisionFence,localAthlete)
-    // Read verified typed History from the ONE shared native ledger. Until
-    // an actual athlete-approved measured program/issue source is integrated,
-    // NO app-side issuance grant exists: never construct one from the UI.
+    // Durable athlete-confirmed, source-and-gym-fenced typed session consent.
+    // Unlike a UI 'approved' flag, every new issuance rereads the immutable
+    // owner-backed source, History and both other physical journal namespaces.
+    private val measuredConsent=NativeMeasuredWorkoutConsentFileStore(
+        root,revisionFence,localAthlete,authoringSourceStore,
+        historyStore,journalStore,customIssuedStore)
     private val measuredParentHistoryStore=NativeMeasuredWorkoutParentFileStore(
-        root,revisionFence,localAthlete,
-        NativeMeasuredApprovedWorkoutSource{_,_,_->null},historyStore)
+        root,revisionFence,localAthlete,measuredConsent,historyStore,
+        journalStore,customIssuedStore)
+    private val measuredHistoryTransactions=NativeKotlinMeasuredHistoryTransaction(
+        historyStore,measuredParentHistoryStore,revisionFence,localAthlete,
+        NativeHistoryCompletionClock.System)
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
         approvalStore,localAthlete,revisionFence,customSavedCorrections,
@@ -1248,6 +1254,70 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
 
+
+    /** Typed workout creation is a two-step explicit preview/confirm action.
+     * No raw legacy practical-reps conversion or user-created source grant. */
+    fun previewMeasuredWorkoutConsent(
+        plan:MeasuredWorkoutPlan,expectedSourceRevision:Long
+    ):NativeMeasuredConsentResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredConsentResult.Rejected(
+                NativeMeasuredConsentRefusal.NOT_AUTHORIZED)
+        return measuredConsent.preview(signed.ownerKey,plan,expectedSourceRevision)
+    }
+
+    fun confirmMeasuredWorkoutConsent(
+        plan:MeasuredWorkoutPlan,expectedSourceRevision:Long,
+        athleteConfirmed:Boolean
+    ):NativeMeasuredConsentResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredConsentResult.Rejected(
+                NativeMeasuredConsentRefusal.NOT_AUTHORIZED)
+        return measuredConsent.confirm(signed.ownerKey,plan,
+            expectedSourceRevision,athleteConfirmed)
+    }
+
+    fun issueMeasuredWorkout(workoutId:String):NativeMeasuredWorkoutStoreResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredWorkoutStoreResult.Rejected(
+                NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+        return measuredParentHistoryStore.issue(signed.ownerKey,workoutId)
+    }
+
+    fun openMeasuredWorkout(workoutId:String):NativeMeasuredWorkoutStoreResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredWorkoutStoreResult.Rejected(
+                NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+        return measuredParentHistoryStore.open(signed.ownerKey,workoutId)
+    }
+
+    fun recordMeasuredWorkoutSet(
+        workoutId:String,operation:MeasuredWorkoutOperation.Record
+    ):NativeMeasuredWorkoutStoreResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredWorkoutStoreResult.Rejected(
+                NativeMeasuredWorkoutStoreRefusal.NOT_AUTHORIZED)
+        return measuredParentHistoryStore.record(
+            signed.ownerKey,workoutId,operation)
+    }
+
+    fun finishMeasuredWorkout(
+        workoutId:String,operation:MeasuredWorkoutOperation.Finish
+    ):NativeMeasuredFinishResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredFinishResult.Rejected(
+                NativeMeasuredFinishRefusal.NOT_AUTHORIZED)
+        return measuredHistoryTransactions.complete(
+            signed.ownerKey,signed.athleteId,workoutId,operation)
+    }
+
+    fun recoverPendingMeasuredHistory():NativeMeasuredFinishResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeMeasuredFinishResult.Rejected(
+                NativeMeasuredFinishRefusal.NOT_AUTHORIZED)
+        return measuredHistoryTransactions.recover(
+            signed.ownerKey,signed.athleteId)
+    }
 
     fun reviewVerifiedKotlinHistory():NativeKotlinMixedHistoryReadResult {
         val owner=localAthlete.signedInIdentity()

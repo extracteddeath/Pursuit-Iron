@@ -280,6 +280,10 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     ledger.ledger.completions.any{it.workoutId==workoutId})
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                // The shared namespace also belongs to typed measured sets.
+                if(NativeMeasuredWorkoutIdClaim.claimed(root,ownerKey,workoutId))
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
                 // An ID cannot be claimed both by custom and composer journals.
                 val other=composerJournals.openStored(ownerKey,workoutId) {
                     owner, source -> owner==ownerKey &&
@@ -534,6 +538,9 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 ledger.ledger.completions.any{it.workoutId==workoutId})
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.HISTORY_NOT_READY)
+            if(NativeMeasuredWorkoutIdClaim.claimed(root,ownerKey,workoutId))
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
             val other=composerJournals.openStored(ownerKey,workoutId){
                 owner,source->owner==ownerKey &&
                     source.athleteId==current.athleteId

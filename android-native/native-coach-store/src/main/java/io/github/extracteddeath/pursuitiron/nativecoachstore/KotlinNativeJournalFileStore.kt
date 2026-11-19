@@ -682,6 +682,12 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.ISSUE_CONFLICT)
         }
+        // A typed measured workout owns this ID as strongly as an ordinary
+        // issued journal. Never write a competing Composer record.
+        if(NativeMeasuredWorkoutIdClaim.claimed(
+                privateDirectory,ownerKey,identity.workoutId))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.ISSUE_CONFLICT)
         val initial=KotlinWorkoutJournalDomain.begin(snapshot,identity)
         val envelope=SavedReceipts(ownerKey,
             NativeJournalBinary.snapshotHash(snapshot),snapshot,identity,

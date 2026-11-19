@@ -73,9 +73,13 @@ class NativeMeasuredWorkoutParentFileStore(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
     private val approvals:NativeMeasuredApprovedWorkoutSource,
+    // New issuance must not claim an already-issued Composer/custom workout.
+    // Existing isolated measured-store tests may omit both dependencies.
     // Optional only for isolated pre-integration store tests. Production
     // issuance must provide this exact shared, enrolled History authority.
-    private val history:NativeKotlinHistoryManifestFileStore?=null
+    private val history:NativeKotlinHistoryManifestFileStore?=null,
+    private val composer:KotlinNativeJournalFileStore?=null,
+    private val custom:NativeKotlinCustomWorkoutJournalFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val maxBytes=NativeMeasuredWorkoutParentCodec.MAX_BYTES
@@ -93,12 +97,8 @@ class NativeMeasuredWorkoutParentFileStore(
             ledger.completions.none{it.workoutId==workout}
     }
 
-    private fun path(owner:String,workout:String):Path {
-        val bytes=(owner+"\u0000"+workout).toByteArray(Charsets.UTF_8)
-        val hash=MessageDigest.getInstance("SHA-256").digest(bytes)
-            .joinToString(""){"%02x".format(it.toInt() and 255)}
-        return root.resolve("measured-parent-$hash.bin")
-    }
+    private fun path(owner:String,workout:String):Path =
+        NativeMeasuredWorkoutIdClaim.path(root,owner,workout)
 
     private fun fromDisk(
         owner:String,athlete:String,workout:String
@@ -184,6 +184,17 @@ class NativeMeasuredWorkoutParentFileStore(
                 if(prior !is NativeMeasuredWorkoutStoreResult.Rejected ||
                     prior.reason!=NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
                     return@withOwnerTransaction prior
+                val ordinary=composer?.openStored(ownerKey,workoutId){o,source->
+                    o==ownerKey && source.athleteId==athlete.athleteId}
+                if(composer!=null && (ordinary !is NativeJournalFileResult.Rejected ||
+                        ordinary.reason!=NativeJournalFileRefusal.NOT_ISSUED))
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.APPROVAL_UNAVAILABLE)
+                val customRead=custom?.open(ownerKey,workoutId)
+                if(custom!=null && (customRead !is NativeCustomJournalResult.Rejected ||
+                        customRead.reason!=NativeCustomJournalRefusal.NOT_ISSUED))
+                    return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(
+                        NativeMeasuredWorkoutStoreRefusal.APPROVAL_UNAVAILABLE)
                 val consent=approvals.currentApprovedWorkout(ownerKey,
                     athlete.athleteId,workoutId)
                     ?:return@withOwnerTransaction NativeMeasuredWorkoutStoreResult.Rejected(

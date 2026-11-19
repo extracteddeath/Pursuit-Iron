@@ -38,12 +38,14 @@ assert.equal(unknown.details[0].reason,'Constraint not specified','unknown code 
 // Existing muscle change and saved-week summaries remain separate.
 const app=fs.readFileSync(new URL('../modules/App.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../app.css',import.meta.url),'utf8');
-assert.match(app,/import \{ describeStrengthDoseLimit \} from '\.\/cycle-strength-dose-surface\.js';/);
-assert.match(app,/function CycleStrengthDoseSummary\(\{ program \}\)/);
+const component=fs.readFileSync(new URL('../modules/cycle-strength-dose-react.js',import.meta.url),'utf8');
+assert.match(app,/import \{ CycleStrengthDoseSummary \} from '\.\/cycle-strength-dose-react\.js';/);
+assert.match(component,/export function CycleStrengthDoseSummary\(\{ program \}\)/);
+assert.match(component,/describeStrengthDoseLimit\(program\?\.nextEngine\?\.strengthEntryDose\)/);
 assert.match(app,/_jsx\(CycleStrengthDoseSummary, \{ program \}\)/);
 assert.match(app,/_jsx\(CycleStrengthDoseSummary, \{ program: next \}\)/);
-assert.match(app,/data-strength-dose-status/);
+assert.match(component,/data-strength-dose-status/);
 assert.match(css,/\.wpb-cycle-week-outlook-detail\{/);
 assert.match(css,/\.wpb-cycle-dose-caption\{/);
-assert.match(app,/Original generated first-week estimate|report\.caveat/);
+assert.match(component,/report\.caveat/);
 console.log('PASS B1021 original-vs-feasible Strength retention explanation, route ownership and accessible read-only disclosure.');

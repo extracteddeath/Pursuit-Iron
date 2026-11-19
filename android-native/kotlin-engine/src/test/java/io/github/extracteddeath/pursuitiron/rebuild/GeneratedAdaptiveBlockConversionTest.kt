@@ -301,4 +301,50 @@ class GeneratedAdaptiveBlockConversionTest {
         assertFalse(result.mayIssueWorkout)
     }
 
+
+    @Test fun generatedStrengthCannotCutWorkingSetsInHalfWhileKeepingSameExercises() {
+        val original=fixture.cycle()
+        val existing=original.blocks.single()
+        val hypertrophy=existing.copy(blockId="hypertrophy",
+            label="Prior high-volume block",weeks=2,
+            days=existing.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(sets=List(8){slot.sets.single()})
+                })
+            })
+        val strength=existing.copy(blockId="strength",weeks=2,
+            phase=TrainingPhase.STRENGTH,
+            days=existing.days.map{
+                it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            })
+        val cycle=original.copy(blocks=listOf(hypertrophy,strength))
+        val base=fixture.generation()
+        val policy=checkNotNull(base.policy).copy(
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+            primaryLiftMinimumDays=mapOf("bench" to 1))
+        val program=base.copy(phase=TrainingPhase.STRENGTH,policy=policy)
+        val prescriptions=fixture.policies().map{
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        }
+        val result=GeneratedAdaptiveBlockDomain.propose(
+            GeneratedAdaptiveBlockRequest(cycle,"strength",
+                "review_str_half_dose",program,prescriptions))
+        assertEquals("Received ${result.status}: ${result.explanation}; "+
+            "generated=${result.generatedWeek?.status} "+
+            "prescribed=${result.prescribedWeek?.status}",
+            GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,result.status)
+        assertNull(result.proposedOption)
+        assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
+            result.strengthRosterBoundary?.status)
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            result.strengthDoseBoundary?.status)
+        assertEquals(72,result.strengthDoseBoundary?.hypertrophyWorkingSets)
+        assertTrue((result.strengthDoseBoundary?.strengthWorkingSets ?:Int.MAX_VALUE)
+            *2<=72)
+        assertEquals(4L,cycle.revision)
+        assertFalse(result.mayIssueWorkout)
+        assertFalse(result.maySaveProgram)
+    }
+
 }

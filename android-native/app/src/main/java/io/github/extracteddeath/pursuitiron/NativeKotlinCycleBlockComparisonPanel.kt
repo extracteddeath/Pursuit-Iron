@@ -107,6 +107,16 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
     val comparison=remember(cycle,id,currentAudit){
         CustomCycleBlockComparisonDomain.compare(cycle,id,currentAudit)
     } ?:return
+    // Only a matching, verified source audit can expose the exact resolved
+    // final-Hypertrophy/first-Strength day dose (including overrides).
+    val strengthDayDose=remember(cycle,id,currentAudit){
+        val source=currentAudit?.takeIf {
+            it.auditedCycleRevision==cycle.revision &&
+                it.structuralReview?.verifiedDraft==cycle
+        }?.structuralReview
+        source?.let{StrengthDoseBoundaryGuardDomain.review(it,id)}
+    }
+    val affectedStrengthDays=strengthDayDose?.affectedDays.orEmpty()
     val prior=comparison.prior
     val next=comparison.next
     val selectedBlock=cycle.blocks.single {it.blockId==next.blockId}
@@ -199,6 +209,18 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
             Text("Exact block-entry volume is not audited. Run the " +
                 "full-cycle review before approving strength or peak; " +
                 "base working sets exclude week overrides.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(affectedStrengthDays.isNotEmpty()) {
+            PursuitSectionHeading("Strength day lost working sets",
+                "Final effective Hypertrophy week → first Strength week · actual reviewed days")
+            PursuitMetricStrip(affectedStrengthDays.map{loss->
+                compareWeekday(loss.weekday) to
+                    "${loss.beforeWorkingSets} → ${loss.afterWorkingSets} sets"
+            })
+            Text("Another training day adding sets cannot hide this loss. "+
+                "Review an individual dose adjustment; no existing workout is changed.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -367,6 +389,7 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         }==true
         if(next.phase==TrainingPhase.STRENGTH &&
             (comparison.strengthHalfVolumeReviewRequired ||
+                affectedStrengthDays.isNotEmpty() ||
                 sourceContinuityIssue || repairReview?.request?.blockId==next.blockId) &&
             onRequestStrengthRepair!=null) {
             HorizontalDivider()

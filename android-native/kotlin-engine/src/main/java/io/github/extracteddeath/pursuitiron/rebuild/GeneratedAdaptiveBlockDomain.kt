@@ -20,7 +20,10 @@ data class GeneratedAdaptiveBlockRequest(
     val prescriptions:List<ExercisePrescriptionPolicy>,
     /** Athlete opted into exercise adaptation; a candidate source restore
      * remains unsigned until separate full-cycle and athlete review. */
-    val allowSourceMenuRecovery:Boolean=false
+    val allowSourceMenuRecovery:Boolean=false,
+    /** The athlete must separately opt into changing working set counts.
+     * Generated Strength sets may only grow within authored phase ceilings. */
+    val allowSourceDoseRecovery:Boolean=false
 )
 
 enum class GeneratedAdaptiveBlockStatus {
@@ -64,7 +67,8 @@ data class GeneratedAdaptiveBlockResult(
     val strengthDoseBoundary:StrengthDoseBoundaryReview?=null,
     /** Evidence of exact, previously authored source visits restored to an
      * UNSIGNED candidate, not new athlete results or permission to issue. */
-    val restoredSourceExercises:List<StrengthMenuRestoredExercise> = emptyList()
+    val restoredSourceExercises:List<StrengthMenuRestoredExercise> = emptyList(),
+    val addedStrengthWorkingSets:List<GeneratedStrengthDoseAddedSet> = emptyList()
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -351,8 +355,32 @@ object GeneratedAdaptiveBlockDomain {
         }
         val roster=StrengthRosterBoundaryGuardDomain.review(
             reviewedStructure,input.targetBlockId)
-        val dose=StrengthDoseBoundaryGuardDomain.review(
+        var dose=StrengthDoseBoundaryGuardDomain.review(
             reviewedStructure,input.targetBlockId)
+        var addedStrengthSets:List<GeneratedStrengthDoseAddedSet> =
+            emptyList()
+        if(input.allowSourceDoseRecovery &&
+            source.phase==TrainingPhase.STRENGTH &&
+            roster.status==StrengthRosterBoundaryStatus.CONTINUOUS &&
+            dose.status==
+                StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW) {
+            val reviewedAthlete=checkNotNull(input.program.setup.reviewed)
+            val policy=checkNotNull(input.program.policy)
+            val limit=listOfNotNull(reviewedAthlete.preferredMaximumMinutes,
+                reviewedAthlete.explicitHardMaximumMinutes).minOrNull()
+            val trial=GeneratedStrengthDoseRecoveryDomain.preview(
+                reviewedStructure,input.targetBlockId,input.program.choices,
+                input.program.catalog,policy.selectedBounds,
+                catalog.map{it.availability},
+                input.program.nonSetSecondsByWeekday,limit,
+                restoredSourceExercises.map{it.proposedSlotId}.toSet())
+            if(trial.structure?.verifiedDraft!=null) {
+                reviewedStructure=trial.structure
+                dose=StrengthDoseBoundaryGuardDomain.review(
+                    reviewedStructure,input.targetBlockId)
+                addedStrengthSets=trial.added
+            }
+        }
         val halfDose=dose.status==
             StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW
         val doseDetail=if(dose.affectedDays.isNotEmpty())
@@ -391,10 +419,8 @@ object GeneratedAdaptiveBlockDomain {
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
             AdaptiveCycleOption(input.optionId,reviewedStructure.verifiedDraft!!),
-            if(restoredSourceExercises.isEmpty())
-                "Complete candidate block; still requires full-cycle quality, permission and athlete review."
-            else "Preserved ${restoredSourceExercises.size} actual source-backed Strength accessories on their original weekdays. Full-cycle dose, time, fatigue, stock, permissions and athlete review remain mandatory.",
+            "Complete generated candidate; recovered ${restoredSourceExercises.size} source exercise visits and ${addedStrengthSets.size} verified Strength working sets. Full-cycle dose, time, fatigue, stock, permissions and athlete review remain mandatory.",
             Collections.unmodifiableList(identities.toList()),
-            roster,dose,restoredSourceExercises)
+            roster,dose,restoredSourceExercises,addedStrengthSets)
     }
 }

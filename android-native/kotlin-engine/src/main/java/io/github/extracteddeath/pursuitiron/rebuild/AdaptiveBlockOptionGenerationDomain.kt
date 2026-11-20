@@ -237,7 +237,8 @@ object AdaptiveBlockOptionGenerationDomain {
                         request.targetBlockId,option.optionId,
                         generatedInput,option.prescriptions,
                         allowSourceMenuRecovery=request.permissions.adaptExercises &&
-                            generatedInput.selectFromOfferedCatalog))
+                            generatedInput.selectFromOfferedCatalog,
+                        allowSourceDoseRecovery=request.permissions.adaptSetCount))
             if(generated?.status==GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW) {
                 candidates+=checkNotNull(generated.proposedOption)
                 if(context!=null)prospective[option.optionId]=context

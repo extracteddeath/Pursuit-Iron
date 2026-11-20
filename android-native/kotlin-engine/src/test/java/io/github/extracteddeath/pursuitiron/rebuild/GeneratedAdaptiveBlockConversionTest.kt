@@ -435,6 +435,16 @@ class GeneratedAdaptiveBlockConversionTest {
         assertEquals(4L,cycle.revision)
         assertFalse(result.mayIssueWorkout)
         assertFalse(result.maySaveProgram)
+        // Even with Adapt Sets enabled, authored Strength ceilings of four
+        // sets per visit cannot honestly bridge a 72 -> <=36 source collapse.
+        val capped=GeneratedAdaptiveBlockDomain.propose(
+            GeneratedAdaptiveBlockRequest(cycle,"strength",
+                "review_str_half_dose_capped",program,prescriptions,
+                allowSourceDoseRecovery=true))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
+            capped.status)
+        assertNull(capped.proposedOption)
+        assertTrue(capped.addedStrengthWorkingSets.isEmpty())
     }
 
 }

@@ -19,7 +19,9 @@ class GeneratedStrengthDoseRecoveryDomainTest {
             days=base.days.map{day->
                 day.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
                     slots=day.slots.map{slot ->
-                        slot.copy(sets=List(2){slot.sets.single()})
+                        slot.copy(sets=List(2){slot.sets.single().copy(
+                            reps=RepBand(3,5),targetRir=1,
+                            restSeconds=180)})
                     })
             })
         return original.copy(blocks=listOf(hyper,strength))
@@ -38,7 +40,7 @@ class GeneratedStrengthDoseRecoveryDomainTest {
 
     private fun request(
         structure:CustomCycleReview=review(),
-        choices:List<CatalogExerciseChoice>=fixture.generation().choices,
+        choices:List<CatalogExerciseChoice> = fixture.generation().choices,
         maxMinutes:Int=60,
         excluded:Set<String> =emptySet(),
         dose:List<DeclaredMuscleDoseBounds> =
@@ -85,7 +87,12 @@ class GeneratedStrengthDoseRecoveryDomainTest {
             .all{slot ->
                 val prior=oldSlots.getValue(slot.slotId)
                 slot.sets.size in 2..4 &&
-                    slot.sets.all{it==prior.sets.single()} &&
+                    slot.sets.all{
+                        it==prior.sets.single() &&
+                            it.reps==RepBand(3,5) &&
+                            it.targetRir==1 &&
+                            it.restSeconds==180
+                    } &&
                     slot.exerciseId==prior.exerciseId &&
                     slot.role==prior.role
             })

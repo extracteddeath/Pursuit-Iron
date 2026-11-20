@@ -96,6 +96,22 @@ class CustomWorkoutHistoryEvidenceDomainTest {
         assertEquals(CustomWorkoutVisitPart.MAIN,facts.single().part)
     }
 
+    @Test fun realFinishedSkippedMainSetCannotCompleteAnIssuedTrainingWeek() {
+        val skipped=accept(draft(),record("skipped-main",0,main,
+            KotlinJournalSetOutcome.SKIPPED,null))
+        val finished=accept(skipped,
+            CustomWorkoutJournalOperation.Finish("finished-skipped",1))
+        val projected=CustomWorkoutHistoryEvidenceDomain.project(finished)
+            as CustomHistoryEvidenceResult.Candidate
+        assertEquals(KotlinJournalSetOutcome.SKIPPED,
+            projected.evidence.visits.single().outcome)
+        assertFalse(projected.evidence.allIssuedMainWorkingSetsCompleted)
+        assertFalse(projected.evidence.copy(
+            shortSessionLimitMinutes=25,
+            shortSessionOmittedSetKeys=emptyList()
+        ).allIssuedMainWorkingSetsCompleted)
+    }
+
     @Test fun forgedMachineIdInColdReplayedReceiptCannotBecomeProgressionHistory() {
         val start=draft()
         val first=accept(start,record("machine-main",0,main,

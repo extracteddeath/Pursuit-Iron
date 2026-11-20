@@ -315,7 +315,7 @@ for(const fragment of [
   'onReturnToNextUnfinished={'
 ])assert.ok(generatedFocus.includes(fragment),
   'Generated Focus/All must be accurate, accessible and recovery aware: '+fragment);
-assert.equal((generatedFocus.match(/NativeKotlinWorkoutFocusNavigation\\(/g)||[]).length,1,
+assert.equal(generatedFocus.split('NativeKotlinWorkoutFocusNavigation(').length-1,1,
   'Generated Focus must show exactly one source-typed Previous/Next navigator');
 assert.ok(!generatedFocus.includes('Text("Jump to next unlogged")') &&
   !generatedFocus.includes('val nextUnlogged=presentation.firstUnresolvedSetKey'),

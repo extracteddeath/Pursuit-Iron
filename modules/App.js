@@ -2189,9 +2189,9 @@ function StyleTag({ theme } = {}) {
          open, so this ceiling automatically prevents a sheet from disappearing behind the IME. */
       .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
         border-radius:18px 18px 0 0!important;}
-      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:min(calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px),100%)!important;}
       .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:min(68dvh,540px)!important;}
-      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:min(calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px),100%)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
       .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
@@ -2269,7 +2269,7 @@ function StyleTag({ theme } = {}) {
          text, landscape, or a split-screen window that assumption fails and the bottom action can
          become unreachable. Cap to the *visual* viewport and let the dialog itself scroll. */
       .wpb :is(.wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))){
-        max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px)!important;
+        max-height:min(calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px),100%)!important;
         overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:12px;
       }
 
@@ -2301,7 +2301,7 @@ function StyleTag({ theme } = {}) {
         .wpb-onboarding-footer{padding-top:7px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;}
         .wpb-wizard-heading{margin-bottom:10px!important;}
 
-        .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(.wpb-exinfo-sheet){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px)!important;}
+        .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(.wpb-exinfo-sheet){max-height:min(calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px),100%)!important;}
       }
 
       @media(max-height:420px) and (orientation:landscape){

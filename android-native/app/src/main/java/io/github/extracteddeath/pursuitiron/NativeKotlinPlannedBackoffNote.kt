@@ -23,7 +23,7 @@ internal object NativeKotlinPlannedBackoffNote {
                 it.target.type==DraftSetType.WORKING
         }.sortedBy{it.target.ordinal}
         if(working.size<2 ||
-            working.map{it.target.ordinal}.distinct().size!=working.size ||
+            working.map{it.target.ordinal}!=(0 until working.size).toList() ||
             working.last().target.setKey!=selected.setKey)
             return null
         val before=working.dropLast(1).map{

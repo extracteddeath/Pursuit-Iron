@@ -3,6 +3,9 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 import io.github.extracteddeath.pursuitiron.rebuild.CustomTrainingCycle
 import io.github.extracteddeath.pursuitiron.rebuild.CustomSplitIdentity
 import io.github.extracteddeath.pursuitiron.rebuild.ComposerSplit
+import io.github.extracteddeath.pursuitiron.rebuild.KotlinHistoryCompletionTime
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * A completed historical workout is authenticated by the mixed history
@@ -14,12 +17,16 @@ internal data class NativeVerifiedCustomBlockCompletion(
     val absoluteWeek:Int,val weekday:Int,
     /** Historical Finish is not proof all prescribed working sets happened.
      * Derived only from owner-reopened, independently replayed custom History. */
-    val allIssuedMainWorkingSetsCompleted:Boolean
+    val allIssuedMainWorkingSetsCompleted:Boolean,
+    /** Exact optional native owner-manifest Finish timestamp, never a
+     * locally invented completion or a persisted cycle activation date. */
+    val completedAtEpochMillis:Long?=null
 )
 
 enum class NativeFutureActivationRefusal {
     NOT_AUTHORIZED, NO_ACCEPTED_FUTURE_CONTEXT, STALE_SOURCE_OR_DRAFT,
     NOT_A_FUTURE_BLOCK, INCOMPLETE_HISTORY, CONFLICTING_HISTORY,
+    CALENDAR_UNVERIFIED, CALENDAR_CONFLICT,
     TARGET_BLOCK_ALREADY_STARTED, OUTSTANDING_CUSTOM_WORKOUTS,
     OUTSTANDING_COMPOSER_WORKOUTS, COMPOSER_INVENTORY_UNAVAILABLE,
     WORKOUT_INVENTORY_UNAVAILABLE, STORAGE_UNAVAILABLE
@@ -68,7 +75,10 @@ internal object NativeFutureBlockBoundaryDomain {
         cycle:CustomTrainingCycle,
         targetBlockId:String,
         completions:List<NativeVerifiedCustomBlockCompletion>,
-        manifestRevision:Long
+        manifestRevision:Long,
+        /** The athlete's reviewed local calendar zone. Not an activation
+         * timestamp and not a fallback to UTC when this is missing. */
+        timezoneId:String
     ):NativeFutureActivationReview {
         val index=cycle.blocks.indexOfFirst{it.blockId==targetBlockId}
         if(index<=0 || cycle.blocks.any{it.weeks<=0} ||
@@ -108,6 +118,34 @@ internal object NativeFutureBlockBoundaryDomain {
             })
             return NativeFutureActivationReview.Rejected(
                 NativeFutureActivationRefusal.INCOMPLETE_HISTORY)
+
+        // A receipt's authored (absoluteWeek, weekday) is one immutable
+        // program identity; a Finish timestamp is a distinct observation.
+        // Compare them for every preceding session. Derive one CONSISTENT
+        // candidate Monday across weeks, but never claim that inferred
+        // Monday is an independently saved activation or signoff record.
+        // Legacy undated records must not silently unlock the next block.
+        val zone=runCatching{ZoneId.of(timezoneId)}.getOrNull()
+            ?:return NativeFutureActivationReview.Rejected(
+                NativeFutureActivationRefusal.CALENDAR_UNVERIFIED)
+        if(own.any{
+            it.completedAtEpochMillis==null ||
+                !KotlinHistoryCompletionTime.valid(it.completedAtEpochMillis)
+        })return NativeFutureActivationReview.Rejected(
+            NativeFutureActivationRefusal.CALENDAR_UNVERIFIED)
+        val inferredStartMondays=own.map{visit->
+            val localDate=Instant.ofEpochMilli(
+                checkNotNull(visit.completedAtEpochMillis))
+                .atZone(zone).toLocalDate()
+            if(localDate.dayOfWeek.value-1!=visit.weekday)
+                return NativeFutureActivationReview.Rejected(
+                    NativeFutureActivationRefusal.CALENDAR_CONFLICT)
+            val weekMonday=localDate.minusDays(visit.weekday.toLong())
+            weekMonday.minusWeeks(visit.absoluteWeek.toLong()-1L)
+        }
+        if(inferredStartMondays.distinct().size!=1)
+            return NativeFutureActivationReview.Rejected(
+                NativeFutureActivationRefusal.CALENDAR_CONFLICT)
         return NativeFutureActivationReview.BoundaryReviewed(
             cycle.cycleId,targetBlockId,firstWeek,firstWeek-1,
             completed.size,manifestRevision)
@@ -194,7 +232,8 @@ class NativeKotlinFutureBlockActivationPreflight(
                     sessions+=NativeVerifiedCustomBlockCompletion(
                         snap.stamp.cycleId,snap.blockId,
                         snap.absoluteWeek,snap.weekday,
-                        completion.evidence.allIssuedMainWorkingSetsCompleted)
+                        completion.evidence.allIssuedMainWorkingSetsCompleted,
+                        completion.manifest.completedAtEpochMillis)
                 }
                 // A completed-history boundary alone is insufficient:
                 // enumerate every durable prepared AND issued custom file.
@@ -230,7 +269,8 @@ class NativeKotlinFutureBlockActivationPreflight(
                     return@withOwnerTransaction NativeFutureActivationReview.Rejected(
                         NativeFutureActivationRefusal.NOT_AUTHORIZED)
                 NativeFutureBlockBoundaryDomain.check(
-                    draft,blockId,sessions,full.timeline.manifestRevision)
+                    draft,blockId,sessions,full.timeline.manifestRevision,
+                    reviewed.timezoneId)
             }
         }.getOrElse{
             NativeFutureActivationReview.Rejected(

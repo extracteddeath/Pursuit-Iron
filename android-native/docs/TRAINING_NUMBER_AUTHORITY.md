@@ -554,3 +554,38 @@ the genuine skipped or failed workout. This does not infer activation **dates**,
 give permission to edit issued workout numbers or authorize automatic phase
 promotion. The independent clock/activation-epoch and goal-driven optimizer
 work remain open under #783 and #786.
+
+### Native future-block calendar corroboration (owner Finish receipts)
+
+Future custom-block activation now cross-checks the complete set of
+independently reopened, owner-manifest **Finish timestamps** against the
+original issued `absoluteWeek` and Monday=0 `weekday` on each
+authenticated custom workout. Only after every expected prior-block
+session and its issued MAIN working sets are accounted for does this
+read-only boundary check:
+
+- Require a valid IANA timezone from the accepted prospective athlete
+  context and a present, valid Finish timestamp for **every** prior-block
+  completion. Undated legacy receipts return `CALENDAR_UNVERIFIED`.
+- Convert each timestamp to the athlete's local day and refuse a receipt
+  whose local **Finish** weekday differs from its original scheduled
+  weekday (`CALENDAR_CONFLICT`). No UTC-day guessing or retrospective
+  remapping across split changes is allowed.
+- Independently calculate the candidate first-week Monday implied by
+  each original absolute-week number, and require all completed prior
+  weeks to agree. A logged week 1 cannot masquerade as week 2 simply
+  because the athlete finished it later.
+- Preserve the existing complete custom receipt replay, exact
+  block/week/day roster, skipped/failed/shortened guards and separate
+  outstanding-workout inventory checks. No additional training number
+  policy or device-clock fallback is introduced.
+
+**Important:** This verifies *observed calendar consistency*, NOT an
+independently persisted athlete-approved program activation timestamp.
+A long-delayed Finish after midnight may be valid athletic work yet
+fail the conservative boundary; its historical record remains intact.
+A future owner-transactionally persisted, versioned activation/start
+calendar, reliable scheduled-session identity, and exact consent
+revalidation are still required to authorize automated goal-driven
+week or phase changes. This checker grants no workout issuance or
+automatic load, set, rep, exercise or phase edits.

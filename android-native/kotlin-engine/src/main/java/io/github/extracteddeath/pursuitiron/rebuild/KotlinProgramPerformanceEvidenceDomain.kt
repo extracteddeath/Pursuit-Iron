@@ -123,12 +123,12 @@ object KotlinProgramPerformanceEvidenceDomain {
         if(workouts.values.any{w->
             val facts=byWorkout[w.workoutId].orEmpty()
             facts.any{it.dayIndex!=w.dayIndex} ||
-                facts.count{it.outcome==KotlinJournalSetOutcome.COMPLETED}
-                    !=w.completedWorkingSets ||
-                facts.count{it.outcome==KotlinJournalSetOutcome.SKIPPED}
-                    !=w.skippedWorkingSets ||
-                facts.count{it.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT}
-                    !=w.failedWorkingSets ||
+                facts.count{it.outcome==KotlinJournalSetOutcome.COMPLETED}!=
+                    w.completedWorkingSets ||
+                facts.count{it.outcome==KotlinJournalSetOutcome.SKIPPED}!=
+                    w.skippedWorkingSets ||
+                facts.count{it.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT}!=
+                    w.failedWorkingSets ||
                 facts.map{it.setKey}.distinct().size!=facts.size
         })return denied(KotlinProgramPerformanceRefusal.UNVERIFIED_SOURCE_FACT)
 
@@ -191,11 +191,10 @@ object KotlinProgramPerformanceEvidenceDomain {
                         it.key.purpose==key.purpose &&
                         it.key.exerciseId==key.exerciseId &&
                         it.key.physicalMachineId==null &&
-                        it.visit.completionOrder >=recent.first().completionOrder &&
                         // No upper bound: a later unknown-machine visit
                         // may have been this very station. Do not resurrect
                         // older A facts after an ambiguous latest session.
-                        true
+                        it.visit.completionOrder>=recent.first().completionOrder
                 } -> KotlinProgramPerformanceGate.AMBIGUOUS_INTERVENING_MACHINE
                 // A newer visit with this SAME day/physical station but
                 // a different load basis is a new epoch. The previous

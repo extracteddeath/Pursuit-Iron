@@ -405,6 +405,60 @@ class GeneratedAdaptiveBlockConversionTest {
                 now.role==old.role &&
                 now.role in setOf(ComposerRole.SECONDARY,ComposerRole.ACCESSORY)
         })
+        val numbers=checkNotNull(result.upstreamNumberTrace)
+        val restoredKeys=result.restoredSourceExercises.map{
+            it.weekday to it.proposedSlotId
+        }.toSet()
+        assertEquals(result.restoredSourceExercises.sumOf{record->
+            target.days.single{it.weekday==record.weekday}.slots
+                .single{it.slotId==record.proposedSlotId}.sets.size
+        },numbers.sets.count{
+            it.origin==GeneratedSetNumberOrigin.VERIFIED_SOURCE_MENU_RESTORATION
+        })
+        assertEquals(restoredKeys,numbers.sets.filter{
+            it.origin==GeneratedSetNumberOrigin.VERIFIED_SOURCE_MENU_RESTORATION
+        }.map{it.weekday to it.slotId}.toSet())
+        assertEquals(2,checkNotNull(numbers.phaseBoundary).sourceExitWeek)
+        assertEquals(3,checkNotNull(numbers.phaseBoundary).destinationEntryWeek)
+        assertEquals(TrainingPhase.HYPERTROPHY,
+            checkNotNull(numbers.phaseBoundary).sourcePhase)
+
+        // Exact old-slot identity is NOT enough. A source-restored exercise
+        // with silently changed reps or set count must lose its lineage.
+        val restored=result.restoredSourceExercises.first()
+        val originalDay=target.days.single{it.weekday==restored.weekday}
+        val originalSlot=originalDay.slots.single{
+            it.slotId==restored.proposedSlotId
+        }
+        val alteredSlot=originalSlot.copy(sets=originalSlot.sets.mapIndexed{
+            index,set->if(index==0)set.copy(reps=RepBand(6,8)) else set
+        })
+        val changed=candidate.copy(blocks=candidate.blocks.map{block->
+            if(block.blockId!="strength")block
+            else block.copy(days=block.days.map{day->
+                if(day.weekday!=restored.weekday)day
+                else day.copy(slots=day.slots.map{slot->
+                    if(slot.slotId==restored.proposedSlotId)alteredSlot else slot
+                })
+            })
+        })
+        val available=CustomExerciseAuthoringDomain.picker(
+            fixture.athlete(),program.catalog).map{it.availability}
+        val inspected=CustomTrainingCycleDomain.review(changed,available)
+        assertEquals(inspected.issues.toString(),
+            CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,inspected.status)
+        assertNull(GeneratedUpstreamNumberTraceDomain.review(
+            proposed,inspected,checkNotNull(result.generatedWeek),
+            checkNotNull(result.prescribedWeek),result.slotContinuity,
+            result.restoredSourceExercises,result.addedStrengthWorkingSets))
+        val forged=result.restoredSourceExercises.map{
+            if(it==restored)it.copy(sourceSlotId="other-source-slot") else it
+        }
+        assertNull(GeneratedUpstreamNumberTraceDomain.review(
+            proposed,CustomTrainingCycleDomain.review(candidate,available),
+            checkNotNull(result.generatedWeek),
+            checkNotNull(result.prescribedWeek),result.slotContinuity,
+            forged,result.addedStrengthWorkingSets))
         assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
             result.strengthRosterBoundary?.status)
         assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,

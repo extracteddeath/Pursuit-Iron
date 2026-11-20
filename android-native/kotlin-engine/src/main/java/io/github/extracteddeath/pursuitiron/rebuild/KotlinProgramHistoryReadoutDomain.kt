@@ -69,7 +69,12 @@ data class KotlinProgramHistoricalWorkout(
     val correctionRevision:Long,
     val completedWorkingSets:Int,
     val skippedWorkingSets:Int,
-    val failedWorkingSets:Int
+    val failedWorkingSets:Int,
+    /** Actual issued session intent; never infer phase from a rep band. */
+    val purpose:ComposerSessionPurpose=ComposerSessionPurpose.UNSPECIFIED,
+    /** An athlete-selected shortened session is historical work, but not a
+     * complete unmodified prescription suitable for a load trend. */
+    val shortenedForTime:Boolean=false
 )
 
 /**
@@ -178,6 +183,10 @@ object KotlinProgramHistoryReadoutDomain {
                 }.toSet()
                 val reviewed=reviewByExercise[exerciseId]
                 val sourceLoads=exerciseSets.map{it.issuedLoad}
+                val requiresMachine=sourceLoads.any{
+                    ReviewedFutureWeekProgressionDomain.requiresPhysicalMachineIdentity(
+                        (it as? DraftSetLoad.Verified)?.basis)
+                }
                 val uniformSource=sourceLoads.firstOrNull()?.let{first->
                     sourceLoads.all{load->
                         when {
@@ -193,7 +202,7 @@ object KotlinProgramHistoryReadoutDomain {
                 when {
                     machineIds.size>1 ->
                         KotlinHistoryComparisonGuard.MIXED_PHYSICAL_MACHINES
-                    null in machineIds ->
+                    requiresMachine && null in machineIds ->
                         KotlinHistoryComparisonGuard.MACHINE_UNKNOWN
                     reviewed?.progressionGate!=
                         KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
@@ -227,7 +236,8 @@ object KotlinProgramHistoryReadoutDomain {
                 correction?.correctionRevision ?:0L,
                 working.count{it.outcome==KotlinJournalSetOutcome.COMPLETED},
                 working.count{it.outcome==KotlinJournalSetOutcome.SKIPPED},
-                working.count{it.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT})
+                working.count{it.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT},
+                journal.snapshot.purpose,evidence.prescriptionEditedForTime)
         }
         val immutableWorkouts=Collections.unmodifiableList(workouts.toList())
         val immutableSets=Collections.unmodifiableList(sets.toList())

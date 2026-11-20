@@ -57,7 +57,10 @@ data class NativeKotlinProgramHistoryReview(
     val ownerManifestRevision:Long,
     val ownerHistoryFingerprint:String,
     /** Complete-manifest ordinal, not lexical workout ID/date guessing. */
-    val completionOrderByWorkout:Map<String,Long>
+    val completionOrderByWorkout:Map<String,Long>,
+    /** Reconciled, conservative per-day/per-purpose/per-machine actual
+     * performance: never a generated prescription or change entitlement. */
+    val performance:KotlinProgramPerformanceReport
 ) {
     val canApplyProgramAdaptation:Boolean get()=false
     val canChangeIssuedTargets:Boolean get()=false
@@ -67,6 +70,7 @@ enum class NativeKotlinProgramHistoryRefusal {
     INVALID_REQUEST,
     OWNER_HISTORY_UNAVAILABLE,
     INVALID_PROGRAM_EVIDENCE,
+    INVALID_PERFORMANCE_EVIDENCE,
     STORAGE_UNAVAILABLE
 }
 
@@ -76,7 +80,8 @@ sealed interface NativeKotlinProgramHistoryReadResult {
     data class Rejected(
         val reason:NativeKotlinProgramHistoryRefusal,
         val ownerHistoryReason:NativeKotlinHistoryReadRefusal?=null,
-        val programEvidenceReason:KotlinProgramHistoryReadoutRefusal?=null
+        val programEvidenceReason:KotlinProgramHistoryReadoutRefusal?=null,
+        val performanceReason:KotlinProgramPerformanceRefusal?=null
     ):NativeKotlinProgramHistoryReadResult
 }
 
@@ -183,14 +188,26 @@ class NativeKotlinGlobalHistoryReadCoordinator(
                                 for(workout in selected)
                                     ordinals[workout.journal.snapshot.workoutId]=
                                         workout.completionOrder
-                                NativeKotlinProgramHistoryReadResult.Review(
-                                    NativeKotlinProgramHistoryReview(
-                                        projected.ledger,
-                                        verified.index.manifestRevision,
-                                        verified.index.contentFingerprint,
-                                        Collections.unmodifiableMap(ordinals)
-                                    )
-                                )
+                                val ordered=Collections.unmodifiableMap(
+                                    ordinals)
+                                val trends=KotlinProgramPerformanceEvidenceDomain
+                                    .review(projected.ledger,ordered)
+                                when(trends) {
+                                    is KotlinProgramPerformanceResult.Rejected ->
+                                        NativeKotlinProgramHistoryReadResult.Rejected(
+                                            NativeKotlinProgramHistoryRefusal
+                                                .INVALID_PERFORMANCE_EVIDENCE,
+                                            performanceReason=trends.reason)
+                                    is KotlinProgramPerformanceResult.Reviewed ->
+                                        NativeKotlinProgramHistoryReadResult.Review(
+                                            NativeKotlinProgramHistoryReview(
+                                                projected.ledger,
+                                                verified.index.manifestRevision,
+                                                verified.index.contentFingerprint,
+                                                ordered,trends.report
+                                            )
+                                        )
+                                }
                             }
                         }
                     }

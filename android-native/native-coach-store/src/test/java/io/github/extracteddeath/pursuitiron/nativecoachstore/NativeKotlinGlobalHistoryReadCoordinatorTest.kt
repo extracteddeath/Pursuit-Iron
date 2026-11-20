@@ -205,6 +205,11 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
         assertEquals(64,evidence.ownerHistoryFingerprint.length)
         assertFalse(evidence.canApplyProgramAdaptation)
         assertFalse(evidence.canChangeIssuedTargets)
+        assertEquals(evidence.ledger.exactReplayDigest,
+            evidence.performance.sourceReplayDigest)
+        assertEquals(KotlinProgramPerformanceGate.NEEDS_THREE_MATCHED_VISITS,
+            evidence.performance.threads.single().recentGate)
+        assertFalse(evidence.performance.canApplyToProgram)
         assertFalse(evidence.ledger.canAuthorizeProgression)
         assertEquals(evidence, (reader.readProgramHistory(
             "owner-1","athlete-1",source,setOf(0))
@@ -292,5 +297,55 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
             ownerHistoryReason=NativeKotlinHistoryReadRefusal.MANIFEST_CHANGED),
             service(changed).readProgramHistory(
                 "owner-1","athlete-1",source,setOf(0)))
+    }
+
+    @Test fun threeOwnerStoredSameMachineSessionsOnlyOfferRepRangeReview() {
+        val sessions=listOf(
+            completed(1,200,machine="press-A"),
+            completed(2,200,machine="press-A"),
+            completed(3,200,machine="press-A"))
+        val manifest=manifest(*sessions.toTypedArray()).copy(
+            completions=manifest(*sessions.toTypedArray()).completions.map{
+                it.copy(savedCorrectionRevision=0)
+            })
+        val view=service(FakeManifest(manifest)).readProgramHistory(
+            "owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review
+        val report=view.evidence.performance
+        assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            report.threads.single().recentGate)
+        assertEquals(listOf("workout-1","workout-2","workout-3"),
+            report.threads.single().evaluatedWorkoutIds)
+        assertEquals(2,report.threads.single().visits.last().workingSets)
+        assertEquals(2,report.threads.single().visits.last().targetRir.first())
+        assertEquals(2,report.threads.single().visits.last().reportedRir.first())
+        assertFalse(report.canApplyToProgram)
+        assertFalse(view.evidence.canApplyProgramAdaptation)
+    }
+
+    @Test fun ownerStoredAmbiguousMachineVisitInvalidatesOlderATrend() {
+        val sessions=listOf(
+            completed(1,200,machine="press-A"),
+            completed(2,200,machine="press-A"),
+            completed(3,200,machine="press-A"),
+            completed(4,200,machine=null))
+        val original=manifest(*sessions.toTypedArray())
+        val accurate=original.copy(completions=original.completions.map{
+            it.copy(savedCorrectionRevision=0)
+        })
+        val view=service(FakeManifest(accurate)).readProgramHistory(
+            "owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review
+        val a=view.evidence.performance.threads.single{
+            it.key.physicalMachineId=="press-A"
+        }
+        assertEquals(KotlinProgramPerformanceGate.AMBIGUOUS_INTERVENING_MACHINE,
+            a.recentGate)
+        assertEquals(listOf("workout-1","workout-2","workout-3"),
+            a.evaluatedWorkoutIds)
+        assertEquals(KotlinProgramPerformanceGate.NEEDS_THREE_MATCHED_VISITS,
+            view.evidence.performance.threads.single{
+                it.key.physicalMachineId==null
+            }.recentGate)
     }
 }

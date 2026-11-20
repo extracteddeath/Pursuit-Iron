@@ -175,7 +175,11 @@ object CoachAthleteExerciseSelectionDomain {
             return result(AthleteSelectionStatus.INPUT_UNRESOLVED)
         }
         val source=input.sourceStrengthArms
-        val candidateSourceIds=source?.candidates?.map{it.exerciseId}.orEmpty()
+        // A single movement may have verified direct credits for separate
+        // arm functions (e.g. biceps AND brachialis). Keep one physical
+        // exercise choice per stable ID, not one duplicate offer per muscle.
+        val candidateSourceIds=source?.candidates
+            ?.map{it.exerciseId}?.distinct().orEmpty()
         if(source!=null) {
             // A saved direct curl, extension or wrist movement receiving
             // sufficient INDIRECT volume from other lifts is not grounds
@@ -188,8 +192,9 @@ object CoachAthleteExerciseSelectionDomain {
                 source.sourceCycleRevision>0 &&
                 source.cycleId?.isNotBlank()==true &&
                 candidateSourceIds.isNotEmpty() &&
-                candidateSourceIds.distinct().size==candidateSourceIds.size &&
                 source.candidates.size<=5 &&
+                source.candidates.map{it.directMuscle}.distinct().size==
+                    source.candidates.size &&
                 source.candidates.all{candidate->
                     candidate.priorWorkingSets>0 &&
                     candidate.directMuscle in setOf(

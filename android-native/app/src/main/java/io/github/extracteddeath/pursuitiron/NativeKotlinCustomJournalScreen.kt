@@ -1886,8 +1886,10 @@ private fun NativeKotlinCustomVisitEditor(
             // A historical "Last" shortcut is never a valid source for a
             // same-load activation mini-set, even if both weights happen to
             // match. Preserve athlete edits through the normal fields.
-            if(saved==null &&
-                followUpEntryLoad !is AmplifierFollowUpEntryLoad.RecordedActivation)
+            // "Last session" is context, never an input source for any
+            // amplifier. Its authored stage or saved activation owns the
+            // default. Only ordinary main working sets expose Apply Last.
+            if(saved==null && part==CustomWorkoutVisitPart.MAIN)
                 PursuitUseLastCompletedSet(
                 mode=referenceMode,
                 history=physicalMachineLastReferences(lastReferences,machineInstanceId),

@@ -51,7 +51,12 @@ class GeneratedPeakPhaseProgramTest {
                     mav=fixture.n("2"),mrv=fixture.n("6"))
             else bound
         }
+        // Authoritative phase/purpose timing must reach the *composer*
+        // before it chooses set counts. A post-composition rest change
+        // cannot masquerade as a verified 40-60 minute Peak workout.
         return base.copy(phase=TrainingPhase.PEAK,
+            visitTimings=CoachSessionPrescriptionDomain
+                .timingsForPolicies(prescriptions()),
             policy=old.copy(phase=TrainingPhase.PEAK,
                 baselineBounds=phaseBounds,selectedBounds=phaseBounds,
                 minimumPurposeDays=mapOf(

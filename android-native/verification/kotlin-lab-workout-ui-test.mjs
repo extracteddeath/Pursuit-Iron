@@ -1641,3 +1641,30 @@ assert.ok(
   numberTests.includes('generatedAndCustomColdHistoryContainsCorrectionsNotPhantomNumbers'),
   'Kotlin generated, custom and entry parsing must share one numeric acceptance and History contract'
 );
+
+
+// ONE recorded-set -> working-evidence bridge now supplies generated History,
+// both live journal adapters, custom next-session rep review and custom
+// future-load candidate review. No adapter can silently invent actual RIR,
+// re-label skipped/failed work or promote a different performed load.
+const unifiedWorkingEvidence=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkingSetEvidenceDomain.kt');
+const unifiedWorkingEvidenceTests=read('android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkingSetEvidenceDomainTest.kt');
+const unifiedLiveCoach=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinJournalLiveSetCoachDomain.kt');
+const unifiedLiveCoachTests=read('android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinJournalLiveSetCoachDomainTest.kt');
+const unifiedHistory=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutHistoryEvidenceDomain.kt');
+const unifiedCustomFuture=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomNextWorkoutCoachingDomain.kt');
+assert.ok(
+  unifiedWorkingEvidence.includes('KotlinSetNumberAuthorityDomain.review(') &&
+  unifiedWorkingEvidence.includes('fun review(') &&
+  unifiedWorkingEvidence.includes('KotlinSetLoadRelation') &&
+  unifiedWorkingEvidence.includes('performed?.actualRir') &&
+  unifiedLiveCoach.includes('KotlinWorkingSetEvidenceDomain.review(') &&
+  unifiedLiveCoach.includes('LiveSetCoachUnavailable.UNVERIFIED_RECORDED_EVIDENCE') &&
+  unifiedHistory.includes('KotlinWorkingSetEvidenceDomain.review(') &&
+  unifiedHistory.includes('KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE') &&
+  unifiedCustomFuture.split('KotlinWorkingSetEvidenceDomain.review(').length===3 &&
+  !unifiedCustomFuture.includes('WorkingSetFact(') &&
+  unifiedWorkingEvidenceTests.includes('invalidObservationsNeverCrossTheSharedFutureEvidenceBoundary') &&
+  unifiedLiveCoachTests.includes('forgedInvalidNumericReceiptCannotBeUsedForLiveLoadAdvice'),
+  'History, live and future coaching must derive each saved working-set number from the same authority'
+);

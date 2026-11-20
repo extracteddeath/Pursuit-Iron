@@ -27,6 +27,9 @@ enum class GeneratedHistoryEvidenceState {
 
 data class GeneratedSetNumberLineage(
     val weekday:Int,
+    /** Composer's stable 0-based scheduled-day index; never inferred from
+     * weekday or lost for protected/restored athlete prescriptions. */
+    val dayIndex:Int,
     val slotId:String,
     val exerciseId:String,
     val role:ComposerRole,
@@ -199,7 +202,12 @@ object GeneratedUpstreamNumberTraceDomain {
         val numbered=mutableListOf<GeneratedSetNumberLineage>()
         for(day in block.days.sortedBy{it.weekday}) {
             val prescribedDay=sessions[day.weekday] ?:return null
-            if(day.purpose!=prescribedDay.purpose)return null
+            val actualDayIndex=composed.days.indexOfFirst{
+                it.calendarDay==day.weekday
+            }
+            if(actualDayIndex !in composed.days.indices ||
+                prescribedDay.dayIndex!=actualDayIndex ||
+                day.purpose!=prescribedDay.purpose)return null
             val sourceDay=sourceByDay[day.weekday]
             for(slot in day.slots) {
                 val key=day.weekday to slot.slotId
@@ -299,7 +307,8 @@ object GeneratedUpstreamNumberTraceDomain {
                         else ->GeneratedSetNumberOrigin.EXERCISE_PHASE_POLICY
                     }
                     numbered+=GeneratedSetNumberLineage(
-                        day.weekday,slot.slotId,slot.exerciseId,slot.role,
+                        day.weekday,actualDayIndex,slot.slotId,
+                        slot.exerciseId,slot.role,
                         day.purpose,index+1,set.type,set.load,set.reps,
                         set.targetRir,set.activeSeconds,set.restSeconds,
                         origin,lineage.priorSlotId,
@@ -403,14 +412,14 @@ object GeneratedUpstreamNumberTraceDomain {
         }
         val facts=Collections.unmodifiableList(numbered.toList())
         val signature=digest(listOf(
-            "GENERATED_UPSTREAM_V1",source.toString(),
+            "GENERATED_UPSTREAM_V2",source.toString(),
             request.program.toString(),request.prescriptions.toString(),
             candidate.toString(),facts.toString(),transition.toString(),
             plannedDose.toString(),
             history?.exactReplayDigest ?: "NO_REPLAYED_HISTORY"
         ).joinToString("\n"))
         return GeneratedUpstreamNumberTrace(
-            1,athlete.athleteProfileId,athlete.profileRevision,
+            2,athlete.athleteProfileId,athlete.profileRevision,
             source.cycleId,source.revision,candidate.revision,
             request.targetBlockId,block.phase,athlete.goal,
             signature,facts,transition,plannedDose,

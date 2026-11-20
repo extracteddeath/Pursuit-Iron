@@ -8,28 +8,6 @@ const journal=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 
 
-// A Finish dialog is consent to one exact durable workout, not permission
-// to finalize whatever corrected journal is current by the time it is tapped.
-const finishPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeFinishReviewPolicy.kt');
-const finishController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt');
-const finishRegression=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeFinishReviewPolicyTest.kt');
-assert.ok(finishPolicy.includes('reviewed.workoutId==workoutId') &&
-  finishPolicy.includes('reviewed.revision==currentRevision') &&
-  finishController.includes('fun finish(reviewedRevision:Long)') &&
-  finishController.includes('journal.revision!=reviewedRevision') &&
-  finishController.includes('UUID.randomUUID(),reviewedRevision') &&
-  generatedFocus.includes('controller.finish(reviewed.revision)') &&
-  journal.includes('CustomWorkoutJournalOperation.Finish(') &&
-  journal.includes('reviewed.revision))') &&
-  measured.includes('MeasuredWorkoutOperation.Finish(') &&
-  measured.includes('reviewed.revision))') &&
-  !measured.includes('finishDialog=true') &&
-  !generatedFocus.includes('showFinishConfirm=true') &&
-  !journal.includes('finishConfirm=true') &&
-  finishRegression.includes('acceptsOnlyTheExactReviewedWorkoutRevision') &&
-  finishRegression.includes('aNewReviewIsRequiredAfterAnySavedRevisionChange'),
-  'All native Finish routes must reject stale reviewed revisions, never silently re-consent');
-
 // Mixed measured sessions must use ONE reviewed immutable parent plan,
 // separate true seconds/distance/reps, stable keys and authenticated issuance.
 // Saved Compose drafts are athlete intent, never permission to issue a set.
@@ -327,6 +305,28 @@ assert.ok(customDock>0 &&
   !journal.includes('Text("Review Finish")') &&
   journal.includes('Recover interrupted Finish'),
   'Custom Finish must wait for all main/amplifier visits and retain explicit interrupted-commit recovery');
+// A Finish dialog is consent to one exact durable workout, not permission
+// to finalize whatever corrected journal is current by the time it is tapped.
+const finishPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeFinishReviewPolicy.kt');
+const finishController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt');
+const finishRegression=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeFinishReviewPolicyTest.kt');
+assert.ok(finishPolicy.includes('reviewed.workoutId==workoutId') &&
+  finishPolicy.includes('reviewed.revision==currentRevision') &&
+  finishController.includes('fun finish(reviewedRevision:Long)') &&
+  finishController.includes('journal.revision!=reviewedRevision') &&
+  finishController.includes('UUID.randomUUID(),reviewedRevision') &&
+  generatedFocus.includes('controller.finish(reviewed.revision)') &&
+  journal.includes('CustomWorkoutJournalOperation.Finish(') &&
+  journal.includes('reviewed.revision))') &&
+  measured.includes('MeasuredWorkoutOperation.Finish(') &&
+  measured.includes('reviewed.revision))') &&
+  !measured.includes('finishDialog=true') &&
+  !generatedFocus.includes('showFinishConfirm=true') &&
+  !journal.includes('finishConfirm=true') &&
+  finishRegression.includes('acceptsOnlyTheExactReviewedWorkoutRevision') &&
+  finishRegression.includes('aNewReviewIsRequiredAfterAnySavedRevisionChange'),
+  'All native Finish routes must reject stale reviewed revisions, never silently re-consent');
+
 const concernGuide=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMovementConcernDialog.kt');
 for(const [screen,label] of [[generatedFocus,'generated'],[journal,'custom']]) {
   for(const required of [

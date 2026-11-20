@@ -19,6 +19,22 @@ sealed interface KotlinSetEntryResult {
     data class Rejected(val reason:KotlinSetEntryRefusal):KotlinSetEntryResult
 }
 object KotlinWorkoutEntryDomain {
+    /**
+     * The parser determines field-specific errors; acceptance of a parsed
+     * performed set is ALWAYS checked by the same engine-owned policy as
+     * generated/custom journals and cold replay.
+     */
+    private fun accepted(
+        load:DraftSetLoad,
+        performed:KotlinPerformedSet,
+        failed:Boolean
+    ):KotlinSetEntryResult =
+        if(KotlinSetNumberAuthorityDomain.valid(load,
+                if(failed)KotlinJournalSetOutcome.FAILED_ATTEMPT
+                else KotlinJournalSetOutcome.COMPLETED,performed))
+            KotlinSetEntryResult.Accepted(performed)
+        else KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT)
+
     private val weightFormat=Regex("^(?:0|[1-9][0-9]{0,5})(?:\\.[0-9]{1,3})?$")
     private val maxWeight=BigDecimal("100000")
     private val numeric=Regex("^[0-9]{1,3}$")
@@ -60,8 +76,7 @@ object KotlinWorkoutEntryDomain {
         }
         return when(val planned=load) {
             DraftSetLoad.ExplicitBodyweight ->
-                KotlinSetEntryResult.Accepted(KotlinPerformedSet(
-                    null,null,reps,rir))
+                accepted(load,KotlinPerformedSet(null,null,reps,rir),failed)
             is DraftSetLoad.Verified -> {
                 val text=weightText.trim()
                 if(text.isEmpty())
@@ -73,8 +88,7 @@ object KotlinWorkoutEntryDomain {
                         KotlinSetEntryRefusal.INVALID_WEIGHT)
                 if(amount<BigDecimal.ZERO || amount>maxWeight)
                     return KotlinSetEntryResult.Rejected(KotlinSetEntryRefusal.INVALID_WEIGHT)
-                KotlinSetEntryResult.Accepted(KotlinPerformedSet(
-                    amount,planned.unit,reps,rir))
+                accepted(load,KotlinPerformedSet(amount,planned.unit,reps,rir),failed)
             }
         }
     }

@@ -199,5 +199,17 @@ class GeneratedUpstreamNumberTraceDomainTest {
         assertEquals(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
             mismatched.status)
         assertNull(mismatched.proposedOption)
+        val wrongGym=GeneratedAdaptiveBlockDomain.propose(
+            ordinary.copy(historyReadoutRequest=historical.copy(
+                expectedSource=issuedSource.copy(gymId="another-gym"))))
+        assertEquals(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
+            wrongGym.status)
+        assertNull(wrongGym.proposedOption)
+        val future=GeneratedAdaptiveBlockDomain.propose(
+            ordinary.copy(historyReadoutRequest=historical.copy(
+                expectedSource=issuedSource.copy(programRevision=99L))))
+        assertEquals(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
+            future.status)
+        assertNull(future.proposedOption)
     }
 }

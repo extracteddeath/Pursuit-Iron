@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { weekStrip, recapShareText } from '../modules/home-week.js';
-import { weeklyRecap, EX_BY_ID, secondaryOf } from '../modules/engine-api.js';
+import { weeklyRecap, EX_BY_ID, secondaryOf, sessionPrescriptionRows } from '../modules/engine-api.js';
+import { encodeShareCode, decodeShareCode, isShareCode } from '../modules/program-code.js';
 import { painAction, painMatches } from '../modules/pain-check.js';
 import { adjustInjuredExercises } from '../modules/workout-context.js';
 import { routineList, routineWhen } from '../modules/routine-picker.js';
@@ -76,4 +77,38 @@ assert.equal(routineWhen(0), 'Not trained yet'); assert.equal(routineWhen(now - 
 assert.ok(app.includes('onStartRoutine: p => p.days?.[0] && startSession(p.days[0], 1, p)'), 'A routine starts as its own saved program');
 assert.ok(app.includes('onClick: routines.length && onStartRoutine ? () => setRoutinePick(true) : onQuick'), 'Freestyle opens the routine sheet only when routines exist');
 assert.ok(app.includes('routinePick && createPortal(_jsx(RoutinePickerSheet'), 'The sheet escapes Home\'s stacking context');
-console.log('PASS prototype features: week strip, streak, 7-day recap, share text, pain check and routines');
+
+// Share codes carry the program itself and round-trip exactly, compressed or not.
+const lifts = ['bb-bench', 'ohp', 'lat-raise', 'inc-curl', 'back-squat'];
+const shared = { id: 'x', name: 'Big Five', custom: true, weeks: 6,
+  config: { goal: 'strength', experience: 'advanced', progression: 'double', weeks: 6, session: 's90', deload: true },
+  days: [1, 2, 3].map(i => ({ id: 'd' + i, label: 'Day ' + i, primaryIndex: 1, exercises: lifts })),
+  overrides: { 'd1:0': { sets: 5, reps: '3-5', rir: '1', rest: 240 } }, ss: { 'd1:2': true } };
+const cells = p => p.days.map(d => sessionPrescriptionRows(p, d, 1).map(x => [x.id, x.cell.sets, x.cell.range, x.cell.rir, x.cell.rest]));
+for (const compress of [true, false]) {
+  const { code, skipped } = await encodeShareCode(shared, 1, { compress });
+  assert.ok(isShareCode(code) && skipped === 0);
+  const back = await decodeShareCode('  ' + code.slice(0, 30) + '\n' + code.slice(30) + ' ');
+  assert.ok(back.ok, back.reason);
+  assert.deepEqual(cells(back.program), cells(shared), 'Every set, rep range, effort and rest survives (compress=' + compress + ')');
+  assert.equal(back.program.custom, true); assert.equal(back.program.weeks, 6);
+  assert.equal(back.program.config.goal, 'strength'); assert.equal(back.program.config.session, 's90'); assert.equal(back.program.config.deload, true);
+  assert.equal(back.program.days[0].primaryIndex, 1);
+  assert.deepEqual(Object.keys(back.program.ss), [back.program.days[0].id + ':2'], 'Supersets keep their pairing');
+  assert.notEqual(back.program.id, shared.id, 'An import is a new program');
+  assert.match((await decodeShareCode(code.slice(0, -1) + (code.at(-1) === 'a' ? 'b' : 'a'))).reason, /typo/);
+  assert.match((await decodeShareCode(code.slice(0, code.length - 12) + code.slice(-5))).reason, /typo/, 'A truncated paste is refused');
+}
+const short = (await encodeShareCode(shared, 1)).code;
+assert.ok(short.length < 400, 'Compressed codes stay short enough to text: ' + short.length);
+// The sender's own custom exercises can't travel; the count is reported, never silently dropped.
+EX_BY_ID['custom-zz'] = { id: 'custom-zz', name: 'Mine', part: 'chest', custom: true };
+const withCustom = { ...shared, days: [{ id: 'd1', label: 'A', primaryIndex: 0, exercises: ['custom-zz', 'bb-bench'] }], overrides: {}, ss: {} };
+const partial = await encodeShareCode(withCustom, 1);
+delete EX_BY_ID['custom-zz'];
+assert.equal(partial.skipped, 1);
+assert.deepEqual((await decodeShareCode(partial.code)).program.days[0].exercises, ['bb-bench']);
+assert.match((await decodeShareCode('PI-6RP4-C60F')).reason, /PI2-/);
+assert.ok(app.includes('encodeShareCode(program, weekIndex).then('), 'The share sheet mints a PI2 code for the week on screen');
+assert.ok(app.includes('if (isShareCode(text)) {') && app.includes('setSaved(prev => [...prev, r.program]);'), 'Pasting a code adds the program');
+console.log('PASS prototype features: week strip, streak, 7-day recap, share text, pain check, routines and share codes');

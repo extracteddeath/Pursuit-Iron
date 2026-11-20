@@ -84,7 +84,7 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
                     _jsxs(UiAction, { disabled: pending, onClick: () => copy(shareCode, 'code'), 'aria-label': 'Copy program code',
                         children: [_jsx(feedback?.kind === 'code' && feedback.state === 'copied' ? Check : Copy, { size: 16 }),
                             feedback?.kind === 'code' && feedback.state === 'copied' ? 'Code copied' : 'Copy program code'] }),
-                    _jsx('p', { children: 'Paste the code into Settings → Add a shared program to recreate the supported program.' }),
+                    _jsx('p', { children: 'Anyone can paste it into Settings → Add a shared program for an editable copy of this week’s plan.' }),
                     _jsxs(UiAction, { onClick: submit, children: [_jsx(Layers, { size: 16 }), 'Submit to the gallery'] }),
                     _jsx('p', { children: 'Opens a submission draft on GitHub for maintainer review.' })
                 ] }),

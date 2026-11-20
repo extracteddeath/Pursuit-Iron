@@ -243,6 +243,7 @@ export const browserShards = Object.freeze({
     'integration': Object.freeze([
         'b1012-exercise-variant-browse-browser-test.mjs',
         'home-entry-hierarchy-browser-test.mjs',
+        'prototype-features-browser-test.mjs',
         'b911-chart-favorites-polish-browser-test.mjs',
         'b907-profile-polish-browser-test.mjs',
         'b905-prototype-transfer-browser-test.mjs',

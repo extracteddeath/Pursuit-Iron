@@ -1590,6 +1590,134 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         temp.root.toPath(),fence,identity,sources,drafts,futureStore(),
         fixture.approvals,fixture.handoff,onIntent,onSource)
 
+    private fun activatedBlockCalendar(
+        fixture:ActivationFixture,
+        at:Long=java.time.Instant.parse("2026-11-20T17:00:00Z")
+            .toEpochMilli()
+    )=NativeKotlinActivatedBlockCalendarFileStore(
+        temp.root.toPath(),fence,identity,activationTransaction(fixture),
+        sources,drafts,NativeHistoryCompletionClock{at})
+
+    @Test fun approvedBlockCalendarIsDurableAndNeverGrantsWorkoutOrPhase() {
+        val fixture=activationFixture()
+        val calendar=activatedBlockCalendar(fixture)
+        val monday=LocalDate.parse("2026-11-23")
+        assertEquals(NativeActivatedBlockCalendarRead.Missing,
+            calendar.read("owner-1","cycle-1","build"))
+        assertEquals(NativeActivatedBlockCalendarPreview.Rejected(
+            NativeActivatedBlockCalendarRefusal.NO_APPLIED_ACTIVATION),
+            calendar.preview("owner-1","cycle-1","build",monday))
+        assertTrue(activationTransaction(fixture).commit("owner-1")
+            is NativeFutureCommitReview.Applied)
+        val shown=calendar.preview("owner-1","cycle-1","build",monday)
+        assertTrue(shown.toString(),
+            shown is NativeActivatedBlockCalendarPreview.Ready)
+        val offer=shown as NativeActivatedBlockCalendarPreview.Ready
+        assertEquals("build",offer.proposed.blockId)
+        assertEquals(4,offer.proposed.firstAbsoluteWeek)
+        assertEquals(setOf(0,1,2,4),offer.proposed.scheduledWeekdays)
+        assertEquals(2L,offer.proposed.sourceRevision)
+        assertEquals(3L,offer.proposed.draftRevision)
+        assertEquals("America/New_York",offer.proposed.timezoneId)
+        assertEquals(NativeActivatedBlockCalendarWrite.Rejected(
+            NativeActivatedBlockCalendarRefusal.CONFIRMATION_REQUIRED),
+            calendar.confirm("owner-1","cycle-1","build",monday,
+                offer.fingerprint,false))
+        assertEquals(NativeActivatedBlockCalendarWrite.Rejected(
+            NativeActivatedBlockCalendarRefusal.PREVIEW_CHANGED),
+            calendar.confirm("owner-1","cycle-1","build",monday,
+                "0".repeat(64),true))
+        val written=calendar.confirm("owner-1","cycle-1","build",monday,
+            offer.fingerprint,true)
+        assertTrue(written.toString(),
+            written is NativeActivatedBlockCalendarWrite.Committed)
+        val accepted=(written as NativeActivatedBlockCalendarWrite.Committed)
+            .calendar
+        assertFalse(written.replayed)
+        assertEquals(monday,accepted.firstWeekMonday)
+        assertFalse(accepted.canIssueWorkout)
+        assertFalse(accepted.canChangeProgram)
+        assertFalse(accepted.canInferPriorBlockActivation)
+        assertFalse(accepted.canClaimAdherence)
+        val cold=activatedBlockCalendar(fixture)
+        assertEquals(NativeActivatedBlockCalendarRead.Found(accepted),
+            cold.read("owner-1","cycle-1","build"))
+        assertEquals(NativeActivatedBlockCalendarWrite.Committed(accepted,true),
+            cold.confirm("owner-1","cycle-1","build",monday,
+                offer.fingerprint,true))
+        assertEquals(NativeActivatedBlockCalendarPreview.Rejected(
+            NativeActivatedBlockCalendarRefusal.ALREADY_APPROVED_DIFFERENT_DATE),
+            cold.preview("owner-1","cycle-1","build",
+                monday.plusWeeks(1)))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
+    @Test fun approvedCalendarRefusesPastWrongDayAndMissingDeviceClock() {
+        val fixture=activationFixture()
+        assertTrue(activationTransaction(fixture).commit("owner-1")
+            is NativeFutureCommitReview.Applied)
+        val monday=LocalDate.parse("2026-11-23")
+        val calendar=activatedBlockCalendar(fixture)
+        val invalid=listOf(
+            LocalDate.parse("2026-11-24"),
+            LocalDate.parse("2026-11-09"),
+            LocalDate.parse("2027-04-05"))
+        invalid.forEach{date->
+            assertEquals(date.toString(),
+                NativeActivatedBlockCalendarPreview.Rejected(
+                    NativeActivatedBlockCalendarRefusal.INVALID_LOCAL_MONDAY),
+                calendar.preview("owner-1","cycle-1","build",date))
+        }
+        val clockless=NativeKotlinActivatedBlockCalendarFileStore(
+            temp.root.toPath(),fence,identity,activationTransaction(fixture),
+            sources,drafts,NativeHistoryCompletionClock.Undated)
+        assertEquals(NativeActivatedBlockCalendarPreview.Rejected(
+            NativeActivatedBlockCalendarRefusal.CALENDAR_UNAVAILABLE),
+            clockless.preview("owner-1","cycle-1","build",monday))
+        assertEquals(NativeActivatedBlockCalendarRead.Missing,
+            calendar.read("owner-1","cycle-1","build"))
+    }
+
+    @Test fun approvedCalendarRejectsCorruptionForeignOwnerAndStaleDraft() {
+        val fixture=activationFixture()
+        assertTrue(activationTransaction(fixture).commit("owner-1")
+            is NativeFutureCommitReview.Applied)
+        val monday=LocalDate.parse("2026-11-23")
+        val calendar=activatedBlockCalendar(fixture)
+        val ready=calendar.preview("owner-1","cycle-1","build",monday)
+            as NativeActivatedBlockCalendarPreview.Ready
+        assertTrue(calendar.confirm("owner-1","cycle-1","build",
+            monday,ready.fingerprint,true)
+            is NativeActivatedBlockCalendarWrite.Committed)
+        val saved=Files.list(temp.root.toPath()).use{stream->
+            stream.filter{it.fileName.toString().startsWith(
+                "activated-block-calendar-") && it.fileName.toString()
+                .endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val bytes=Files.readAllBytes(saved)
+        Files.write(saved,bytes.copyOf().also{
+            it[it.lastIndex]=(it.last().toInt() xor 1).toByte()
+        })
+        assertEquals(NativeActivatedBlockCalendarRead.Rejected(
+            NativeActivatedBlockCalendarRefusal.CORRUPT_RECORD),
+            calendar.read("owner-1","cycle-1","build"))
+        Files.write(saved,bytes)
+        assertTrue(calendar.read("owner-1","cycle-1","build")
+            is NativeActivatedBlockCalendarRead.Found)
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeActivatedBlockCalendarRead.Rejected(
+            NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED),
+            calendar.read("owner-1","cycle-1","build"))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeCustomDraftWriteResult.Committed(4),
+            drafts.save("owner-1","cycle-1",3,
+                futureCycle().copy(revision=4,title="New phase program")))
+        assertEquals(NativeActivatedBlockCalendarRead.Rejected(
+            NativeActivatedBlockCalendarRefusal.STALE_SOURCE_OR_DRAFT),
+            calendar.read("owner-1","cycle-1","build"))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
     @Test fun activatedCycleAuditsOriginalCompletedScheduleAndNewFuturePolicy() {
         val fixture=activationFixture()
         val transaction=activationTransaction(fixture)

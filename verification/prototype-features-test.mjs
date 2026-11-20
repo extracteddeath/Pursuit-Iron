@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { weekStrip, recapShareText } from '../modules/home-week.js';
-import { weeklyRecap } from '../modules/engine-api.js';
+import { weeklyRecap, EX_BY_ID, secondaryOf } from '../modules/engine-api.js';
+import { painAction, painMatches } from '../modules/pain-check.js';
+import { adjustInjuredExercises } from '../modules/workout-context.js';
 
 // Features carried over from the M3 prototype: the Home week strip and the rolling 7-day recap.
 const D = 86400000;
@@ -42,4 +44,23 @@ assert.equal(rec.unit, 'lb');
 const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
 assert.ok(app.includes("import { HomeWeekStrip, HomeRecapCard as WeeklyRecapCard } from './home-week.js';"));
 assert.ok(!app.includes('function WeeklyRecapCard('), 'One weekly card owner');
-console.log('PASS prototype features: week strip, streak, 7-day recap and share text');
+
+// Pain check: severity picks the action and the region picks the lifts.
+assert.equal(painAction('twinge'), 'monitor'); assert.equal(painAction('sore'), 'reduce'); assert.equal(painAction('sharp'), 'skip');
+const lookup = id => EX_BY_ID[id] ? { ex: EX_BY_ID[id], secondary: secondaryOf(EX_BY_ID[id]) } : null;
+const rows = ['back-squat', 'bb-bench', 'ohp', 'lat-raise'].map(id => ({ id, sets: [{ warm: true, done: true }, { done: true }, { done: false }, { done: false }, { done: false }] }));
+const knee = painMatches('knee', rows, lookup).map(m => m.id);
+assert.ok(knee.includes('back-squat') && !knee.includes('ohp') && !knee.includes('lat-raise'), 'Knee pain matches squats only: ' + knee);
+const shoulder = painMatches('shoulder', rows, lookup);
+assert.ok(shoulder.some(m => m.id === 'ohp') && shoulder.some(m => m.id === 'lat-raise') && !shoulder.some(m => m.id === 'back-squat'));
+assert.deepEqual(shoulder.find(m => m.id === 'ohp'), { id: 'ohp', name: EX_BY_ID.ohp.name, logged: 1, pending: 3 }, 'Warm-ups are not counted');
+const halved = adjustInjuredExercises(rows, ['ohp'], 'Shoulder', 'reduce').find(r => r.id === 'ohp');
+assert.equal(halved.sets.filter(x => !x.done).length, 2, 'Sore keeps half the pending sets, rounded up');
+assert.equal(halved.injuryAdjusted, 'Shoulder', 'The banner names the area the lifter chose');
+const painApp = app.slice(app.indexOf('const applyPain = '), app.indexOf('const removeExerciseFromSession'));
+assert.ok(painApp.includes('action === "monitor" || !ids.length ? data') && painApp.includes('setInjuryReports(prev => [...prev, { part, region, level, action'),
+  'A twinge is recorded without changing the workout; every check joins the session injury reports');
+assert.ok(painApp.includes('undo: () => { setData(originals)'), 'Every pain change offers undo');
+assert.ok(app.includes('{ k: "pain", label: "Pain check", icon: Activity, on: () => setPainOpen(true) }'), 'Pain check sits in the exercise tool row');
+assert.ok(app.includes('e.injuryAdjusted && _jsxs("div", { className: "wpb-pain-banner"'), 'Adjusted lifts show a protection banner with Swap');
+console.log('PASS prototype features: week strip, streak, 7-day recap, share text and pain check');

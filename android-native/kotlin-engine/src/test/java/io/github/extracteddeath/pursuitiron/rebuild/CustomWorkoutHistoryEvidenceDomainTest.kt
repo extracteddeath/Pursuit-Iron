@@ -72,6 +72,8 @@ class CustomWorkoutHistoryEvidenceDomainTest {
         assertEquals(1,grouped.size)
         assertEquals("Drop set · 1 drop · 15 lb × 6",grouped.single().techniqueCaption)
         assertEquals(facts.visits,grouped.flatMap{listOf(it.main)+it.followUps})
+        assertTrue("The performed main working set is distinct from the drop",
+            facts.allIssuedMainWorkingSetsCompleted)
         assertFalse(facts.canPublishGlobalHistory)
         assertFalse(facts.canApplyProgression)
     }
@@ -84,7 +86,10 @@ class CustomWorkoutHistoryEvidenceDomainTest {
             CustomWorkoutJournalOperation.Finish("finish",1))
         val result=CustomWorkoutHistoryEvidenceDomain.project(finished)
         assertTrue(result is CustomHistoryEvidenceResult.Candidate)
-        val facts=(result as CustomHistoryEvidenceResult.Candidate).evidence.visits
+        val evidence=(result as CustomHistoryEvidenceResult.Candidate).evidence
+        assertFalse("Finish is not full working-set completion",
+            evidence.allIssuedMainWorkingSetsCompleted)
+        val facts=evidence.visits
         assertEquals(1,facts.size)
         assertEquals(KotlinJournalSetOutcome.FAILED_ATTEMPT,
             facts.single().outcome)
@@ -132,6 +137,15 @@ class CustomWorkoutHistoryEvidenceDomainTest {
             KotlinJournalSetOutcome.SKIPPED,null))
         val complete=accept(after,
             CustomWorkoutJournalOperation.Finish("finish",2))
+        val withOptionalSkipped=CustomWorkoutHistoryEvidenceDomain.project(complete)
+            as CustomHistoryEvidenceResult.Candidate
+        assertTrue("An optional follow-up isn't another mandatory working set",
+            withOptionalSkipped.evidence.allIssuedMainWorkingSetsCompleted)
+        assertFalse("Short-session omissions cannot be called complete",
+            withOptionalSkipped.evidence.copy(
+                shortSessionLimitMinutes=20,
+                shortSessionOmittedSetKeys=listOf(mainKey)
+            ).allIssuedMainWorkingSetsCompleted)
         assertEquals(CustomHistoryEvidenceResult.Rejected(
             CustomHistoryEvidenceRefusal.UNVERIFIED_JOURNAL),
             CustomWorkoutHistoryEvidenceDomain.project(
@@ -161,7 +175,10 @@ class CustomWorkoutHistoryEvidenceDomainTest {
             "myo-finished",session.revision))
         val candidate=CustomWorkoutHistoryEvidenceDomain.project(session)
         assertTrue(candidate.toString(),candidate is CustomHistoryEvidenceResult.Candidate)
-        val facts=(candidate as CustomHistoryEvidenceResult.Candidate).evidence.visits
+        val evidence=(candidate as CustomHistoryEvidenceResult.Candidate).evidence
+        assertTrue("Three logged mini-sets must not replace or multiply the main",
+            evidence.allIssuedMainWorkingSetsCompleted)
+        val facts=evidence.visits
         assertEquals(4,facts.size)
         assertEquals(listOf(1,1,2,3),facts.map{it.stage})
         assertEquals(listOf(17,5,4,3),facts.map{it.actual?.reps})

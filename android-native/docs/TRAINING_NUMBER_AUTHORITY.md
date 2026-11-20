@@ -393,3 +393,35 @@ performance report with reviewed goal, full scheduled-week adherence,
 machine/day continuity, athlete adaptation scope and locks. Custom
 journals retain their separate authenticated history path until a
 lossless parity adapter is reviewed. Keep #786 and #783 open.
+
+## Owner-verified History to future generated training cells (read-only)
+
+The generated upstream-number trace v2 records BOTH calendar weekday and
+the 0-based program-day index for every proposed set, including protected
+athlete-authored work and restored source exercises. Those are distinct
+identities: e.g., an Upper-day bench cannot borrow Push-day performance just
+because the exercise ID happens to match.
+
+`NativeKotlinGlobalHistoryReadCoordinator.readGeneratedFutureHistory` is the
+native read-only bridge: first reopen the **complete** durable owner History
+manifest with every saved correction under its owner fence, then generate the
+regular future block from the reviewed athlete source **without trusting an
+externally supplied history replay**. The single
+`KotlinProgramPerformanceEvidenceDomain` remains the history decision
+authority. The `KotlinFutureProgramPerformanceLinkDomain` only associates its
+already-classified threads with exact future cell identity: program day,
+weekday, purpose, role, exercise, physical Machine A/B instance, load unit
+and basis. The future authored working-set count, per-set rep bands, target
+RIR and actual source-equivalent issued loads must agree with the latest
+matched prescription. Advanced follow-up protocols remain separate stages
+and cannot gain ordinary straight-set rep-ceiling credit.
+
+A mismatched station, stale source revision, different load, changed
+prescription, unreported effort, newer correction, or incompatible weekday
+holds the association. No synthetic training observation, target, RIR, load,
+stage or compliance date is created. The owner manifest revision, content
+fingerprint and exact replay/trace digests are included for explanation and
+future revalidation; this read result is **not a durable authorization token**.
+It never changes issued workouts, grants automatic cycle edits, measures full
+scheduled-week adherence, or promotes Strength/Peak. Full progression and
+continuous goal-driven adaptation remain gated by #786 and #783.

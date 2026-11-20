@@ -32,6 +32,25 @@ data class CustomWorkoutHistoricalEvidence(
 ) {
     val prescriptionEditedForTime:Boolean
         get()=shortSessionOmittedSetKeys.isNotEmpty()
+    /**
+     * A finished journal may still contain SKIPPED/FAILED working sets.
+     * Native future-block activation must count only actual completed
+     * original MAIN working sets from owner-replayed History, never a
+     * Finish event, amplifier mini-set, or reduced-time substitute alone.
+     * This is a historical observation, not athlete adherence or consent.
+     */
+    val allIssuedMainWorkingSetsCompleted:Boolean get() {
+        val mains=visits.filter{
+            it.part==CustomWorkoutVisitPart.MAIN &&
+                it.setType==DraftSetType.WORKING
+        }
+        return shortSessionLimitMinutes==null &&
+            !prescriptionEditedForTime && mains.isNotEmpty() &&
+            mains.all{
+                it.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                    it.actual!=null
+            }
+    }
     /** No derived PRs or progression until these facts join the global index. */
     val canPublishGlobalHistory: Boolean get()=false
     val canApplyProgression: Boolean get()=false

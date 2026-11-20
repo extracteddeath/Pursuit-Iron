@@ -42,7 +42,7 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
                 KotlinStoredWorkoutIdentity("stored-$n","w-$n",source,1))
             for((index,target) in targets.withIndex()) {
                 val reps=if(n==3 && finalReportedReps!=null)
-                    finalReportedReps else target.targetReps.maximum
+                    finalReportedReps else target.reps.maximum
                 val fact=KotlinPerformedSet(fixture.n(issuedWeight),LoadUnit.LB,
                     reps,2,null)
                 journal=(KotlinWorkoutJournalDomain.reduce(journal,

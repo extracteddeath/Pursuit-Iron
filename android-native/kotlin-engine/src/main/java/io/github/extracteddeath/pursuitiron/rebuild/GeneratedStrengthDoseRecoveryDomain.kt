@@ -105,7 +105,7 @@ object GeneratedStrengthDoseRecoveryDomain {
         val currentTotal={dayCount.values.sum()}
         val missing={currentTotal()<weeklyFloor ||
             dayFloors.any{(day,floor)->(dayCount[day] ?:0)<floor}}
-        var candidate=original
+        var candidate:CustomTrainingCycle=checkNotNull(original)
         val added=mutableListOf<GeneratedStrengthDoseAddedSet>()
         while(missing() && added.size<MAX_EXTRA_SETS) {
             val now=checkNotNull(candidate.blocks.singleOrNull{

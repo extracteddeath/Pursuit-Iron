@@ -140,4 +140,64 @@ class GeneratedUpstreamNumberTraceDomainTest {
             checkNotNull(outcome.prescribedWeek),outcome.slotContinuity,
             outcome.restoredSourceExercises,outcome.addedStrengthWorkingSets))
     }
+
+    @Test fun realGeneratedProgramMayInspectFinishedReceiptsButNeverClaimStorageAttestation() {
+        val ordinary=fixture.request()
+        val initial=GeneratedAdaptiveBlockDomain.propose(ordinary)
+        assertEquals(GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
+            initial.status)
+        val issuedSource=KotlinTrainingSourceRevision(
+            "athlete-1",4,"cycle-1",4,"gym-1",3,"catalog-5","rules-1")
+        val target=KotlinWorkoutTarget(
+            "bench",ComposerRole.PRIMARY,ComposerSessionPurpose.HYPERTROPHY,
+            "bench:s0",DraftSetType.WORKING,0,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                fixture.n("25")),RepBand(8,12),2,60,120)
+        val snapshot=KotlinStagedWorkout(issuedSource,"grant-1",
+            "actual-workout-1",0,0,
+            ComposerSessionPurpose.HYPERTROPHY,45,listOf(target))
+        var journal=KotlinWorkoutJournalDomain.begin(snapshot,
+            KotlinStoredWorkoutIdentity("stored-1",snapshot.workoutId,
+                issuedSource,1))
+        journal=(KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.RecordSet("actual-1",0,"bench:s0",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(fixture.n("25"),LoadUnit.LB,9,null,
+                    "machine-A"))
+        ) as KotlinJournalDecision.Proposed).state
+        journal=(KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.Finish("finished-1",journal.revision))
+            as KotlinJournalDecision.Proposed).state
+        val historical=KotlinProgramHistoryReadoutRequest(
+            "athlete-1","cycle-1",issuedSource,setOf(0,2,4),
+            listOf(journal))
+        val withHistory=GeneratedAdaptiveBlockDomain.propose(
+            ordinary.copy(historyReadoutRequest=historical))
+        assertEquals(withHistory.explanation,
+            GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
+            withHistory.status)
+        assertEquals(initial.proposedOption,withHistory.proposedOption)
+        assertEquals(initial.prescribedWeek,withHistory.prescribedWeek)
+        val observed=checkNotNull(withHistory.upstreamNumberTrace)
+        assertEquals(GeneratedHistoryEvidenceState.REPLAY_VERIFIED_NOT_STORE_ATTESTED,
+            observed.historyEvidence)
+        assertEquals(1,checkNotNull(observed.replayedHistory).workingSets.size)
+        assertNull(checkNotNull(observed.replayedHistory)
+            .workingSets.single().reportedRir)
+        assertEquals(initial.upstreamNumberTrace?.sets,observed.sets)
+        assertNotEquals(initial.upstreamNumberTrace?.exactRequestDigest,
+            observed.exactRequestDigest)
+        assertFalse(observed.replayedHistory!!.canAuthorizeProgression)
+        assertEquals(withHistory.upstreamNumberTrace,
+            GeneratedAdaptiveBlockDomain.propose(
+                ordinary.copy(historyReadoutRequest=historical))
+                .upstreamNumberTrace)
+
+        val mismatched=GeneratedAdaptiveBlockDomain.propose(
+            ordinary.copy(historyReadoutRequest=historical.copy(
+                cycleId="unrelated-cycle")))
+        assertEquals(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
+            mismatched.status)
+        assertNull(mismatched.proposedOption)
+    }
 }

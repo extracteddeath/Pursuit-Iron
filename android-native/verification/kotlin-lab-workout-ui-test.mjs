@@ -134,7 +134,7 @@ assert.match(snapshotCodec,/if\(version>=5\)writeInt\(amp.followUpRounds\)/);
 assert.match(restPauseProtocol,/fun continueRestPause\(/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
 assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);
-assert.match(journal,/follower\?\.kind==CustomAmplifierKind.REST_PAUSE/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(it,stageOrdinal\)/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopTitle/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopDescription/);
@@ -150,7 +150,7 @@ assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueCluster
 assert.match(restPauseProtocol,/fun continueCluster\(/);
 assert.match(restPauseProtocol,/amp.followUpRounds in 2\.\.5 && amp.followUpReps in 1\.\.4/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.CLUSTER/);
-assert.match(journal,/follower\?\.kind==CustomAmplifierKind.CLUSTER/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
 assert.match(journal,/CustomAmplifierKind.CLUSTER\)/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(/);
 

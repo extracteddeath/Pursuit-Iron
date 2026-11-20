@@ -308,3 +308,37 @@ lost-acknowledgment retry does not rewrite the original. V1 encoding with
 non-null machine IDs now fails closed rather than silently dropping them.
 Tests cover cold restart, set load/target-RIR distinction, and V1-to-V2
 upgrade with unknown historical machine identity retained as unknown.
+
+
+## Owner-replayed performance threads for future program decisions
+
+`KotlinProgramPerformanceEvidenceDomain` is a read-only view over the
+**existing authoritative** effective workout/correction ledger. It is
+constructed by `NativeKotlinGlobalHistoryReadCoordinator` inside the
+same complete-manifest owner fence, using the native store's actual
+completion ordinals rather than ordering records by workout IDs. Each
+performance thread is scoped to an exact historical program-source
+revision, weekday, session purpose, exercise, physical machine, load
+unit and load basis. The latest three relevant exposures are checked,
+including *failed, skipped or time-shortened* workouts.
+
+The only favorable signal is
+`REP_CEILING_FOR_REVIEW_ONLY`: three completed and comparable exposures
+with unchanged prescription/working load all met their issued rep
+ceiling while reporting **actual** effort at or above the corresponding
+target RIR. If effort is unreported, if one set fails or is skipped,
+if the prescription changes, or if a newer ambiguous machine visit
+could belong to that thread, the favorable signal is suppressed.
+Distinct explicitly identified A/B stations and weekdays have
+independent histories, without borrowing one another's capacity.
+A free-weight load basis does not require a physical machine tag;
+machine/Smith/cable/assistance loads do.
+
+This is an *observational programming input*, not a second system that
+adjusts reps, sets, loads, volume or phase. It does not infer training
+dates, recovery state, athlete effort or permissions. All returned
+objects explicitly prohibit changing an accepted plan or issued
+workout. Later goal-driven adaptation must use the same authentic
+source, reviewed constraints and permission gates, then independently
+re-audit the entire future candidate and its numeric lineage before
+the athlete can accept it. This by itself does not close #786 or #783.

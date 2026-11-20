@@ -86,7 +86,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1023';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1024';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -224,11 +224,17 @@ const TOK = (p) => {
     const accentDim = p.accent + "22", dangerDim = p.danger + "1E", warnDim = p.warm + "1E";
     const warn = _ink(p.warm, onDim(warnDim), INK_AA);
     const danger = _ink(p.danger, onDim(dangerDim), INK_AA);
+    /* The M3 container roles app.css mixes from this palette (--pi-m3e-surface-container-*, primary
+       container): light themes tint the background with 5-23% accent, dark ones with 3-10% text or
+       accent. Secondary text and accent ink sit on them too, so they clear AA there as well. */
+    const bgRgb = _hx2rgb(p.bg), light = _rgbLum(bgRgb) >= .5;
+    const containers = (light ? ["0D", "17", "24", "3B", "45"].map(a => p.accent + a) : ["08", "0D", "14"].map(a => p.cream + a).concat(p.accent + "1A", p.accent + "38")).map(c => _blend(c, bgRgb));
+    const ON_CONTAINER = INK_AA + .1; // CSS color-mix rounds differently from _blend; keep a hair of margin
     return {
         feature, bg: p.bg, bg2: p.bgTint, card: p.surface, cardHi: p.surface2,
         border: p.border, borderSoft: p.borderSoft,
-        text: p.cream, muted: _ink(p.muted, surf, INK_SECONDARY), faint: _ink(p.mutedSoft, surf, INK_AA),
-        accent: p.accent, accentInk: _ink(p.accentInk || p.accent, onDim(accentDim), INK_AA), accentDim, accentText: p.onAccent,
+        text: p.cream, muted: _ink(_ink(p.muted, surf, INK_SECONDARY), containers, ON_CONTAINER), faint: _ink(_ink(p.mutedSoft, surf, INK_AA), containers, ON_CONTAINER),
+        accent: p.accent, accentInk: _ink(_ink(p.accentInk || p.accent, onDim(accentDim), INK_AA), containers, ON_CONTAINER), accentDim, accentText: p.onAccent,
         danger, dangerDim, dangerText: _onFill(danger),
         warn, warnDim, warnText: _onFill(warn)
     };
@@ -14601,7 +14607,7 @@ function StrengthScoreTrend({ data }) {
                         }),
                     _jsx("span", {
                         className: "wpb-profile-trend-ink",
-                        style: { "--pi-profile-trend-ink": lineColor },
+                        style: { "--pi-profile-trend-ink": catInk(lineColor) },
                         children: STD_LEVELS[curLvl]
                     }),
                     _jsxs("span", {

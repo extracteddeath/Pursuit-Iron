@@ -62,7 +62,9 @@ object KotlinFutureProgramPerformanceLinkDomain {
         request:GeneratedAdaptiveBlockRequest,
         future:GeneratedAdaptiveBlockResult,
         ledger:KotlinProgramHistoryReadout,
-        performance:KotlinProgramPerformanceReport
+        performance:KotlinProgramPerformanceReport,
+        /** Owner-manifest completion order, never guessed from workout IDs. */
+        completionOrderByWorkout:Map<String,Long>
     ):KotlinFuturePerformanceLinkResult {
         fun reject(reason:KotlinFuturePerformanceLinkRefusal)=
             KotlinFuturePerformanceLinkResult.Rejected(reason)
@@ -105,11 +107,22 @@ object KotlinFutureProgramPerformanceLinkDomain {
             ledger.source.programRevision!=trace.sourceCycleRevision ||
             ledger.source.gymId!=athlete.gym.gymId)
             return reject(KotlinFuturePerformanceLinkRefusal.SOURCE_EPOCH_MISMATCH)
-        if(performance.schemaVersion!=2 ||
+        // A digest is not an authentication token. Re-run the ONE
+        // historical performance authority on the source ledger and exact
+        // owner completion ordinals. Never trust caller-provided "favorable"
+        // thread gates, last visits or a copied matching digest.
+        val independentlyReviewed=runCatching {
+            KotlinProgramPerformanceEvidenceDomain.review(
+                ledger,completionOrderByWorkout)
+        }.getOrNull()
+        val canonical=(independentlyReviewed as?
+            KotlinProgramPerformanceResult.Reviewed)?.report
+            ?:return reject(
+                KotlinFuturePerformanceLinkRefusal.INVALID_HISTORY_EVIDENCE)
+        if(performance!=canonical ||
+            performance.schemaVersion!=2 ||
             performance.sourceReplayDigest!=ledger.exactReplayDigest ||
-            ledger.exactReplayDigest.length!=64 ||
-            performance.threads.map{it.key}.distinct().size!=
-                performance.threads.size)
+            ledger.exactReplayDigest.length!=64)
             return reject(KotlinFuturePerformanceLinkRefusal.INVALID_HISTORY_EVIDENCE)
 
         val bySlot=trace.sets.groupBy{it.weekday to it.slotId}

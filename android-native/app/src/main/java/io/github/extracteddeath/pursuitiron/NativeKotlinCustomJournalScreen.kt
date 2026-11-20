@@ -1303,18 +1303,17 @@ internal fun NativeKotlinCustomJournalScreen(
                 }
                 }
                 if(!verifiedFinishedInHistory)PursuitCard {
-                    Text("Finish workout",
-                        style=MaterialTheme.typography.titleMedium)
-                    Text(if(current.canProposeFinish)
-                        "Every set and amplifier follow-up has a recorded outcome. Finish to save this workout in History."
-                    else "Log or skip the remaining sets and amplifier follow-ups before finishing.",
-                        style=MaterialTheme.typography.bodySmall)
-                    Button(
-                        enabled=!busy&&current.canProposeFinish&&!finished,
-                        onClick={finishConfirm=true}) {
-                        Text("Review Finish")}
-                    if(!verifiedFinishedInHistory)
-                        OutlinedButton(enabled=!busy,onClick={
+                    // The ordinary Finish action is docked beside the rest
+                    // area only after all durable required visits resolve.
+                    // Interrupted historical Finish recovery remains separate
+                    // and never reissues an already-completed workout.
+                    Text("Interrupted Finish recovery",
+                        style=MaterialTheme.typography.titleSmall)
+                    Text("Use only if the app closed before saving or confirming "+
+                        "the finished session. Your logged sets are preserved.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(enabled=!busy,onClick={
                             busy=true
                             scope.launch{
                                 val result=withContext(Dispatchers.IO){
@@ -1356,6 +1355,23 @@ internal fun NativeKotlinCustomJournalScreen(
             NativeKotlinWorkoutRestTimer(workoutId,
                 KotlinWorkoutRestDomain.inspect(current,nextVisit),enabled=!busy,
                 athleteId=current.originalSnapshot.stamp.athleteId)
+        }
+    // Same predictable fixed bottom placement as the generated workout.
+    // The dynamic follow-up inventory (including staged myo-reps, drop sets,
+    // and partials) must actually be resolved before this action appears.
+    // A visible button is NOT a durable Finish event or a History receipt.
+    if(current?.canProposeFinish==true &&
+        current.finishedByEventId==null && !finished &&
+        !verifiedFinishedInHistory)
+        Column(Modifier.widthIn(max=920.dp).fillMaxWidth()
+            .align(Alignment.CenterHorizontally)
+            .padding(horizontal=16.dp,vertical=8.dp)) {
+            PursuitCard(highlighted=true) {
+                Text("All working sets and amplifier visits are resolved",
+                    style=MaterialTheme.typography.titleMedium)
+                PursuitPrimaryAction("Review and finish",
+                    enabled=!busy) {finishConfirm=true}
+            }
         }
     }
     swapSlotId?.let {slotId ->

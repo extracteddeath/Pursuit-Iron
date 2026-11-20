@@ -363,3 +363,33 @@ is a stale **review snapshot**, not a durable eligibility token; future
 program adoption must re-read the owner manifest, saved corrections,
 consent and source revisions atomically before accepting any proposal.
 These tests do not enable automatic programming.
+
+## Historical calendar weekday and role — single Kotlin performance authority
+
+The native program-history replay now carries both the **actual issued
+calendar weekday** and the **program day index**, as well as the original
+issued exercise role and session purpose for every recorded working set.
+The replay's schema/digest is version 2 so a stale version 1 observation
+cannot masquerade as a complete weekday/role record. The native owner
+still authenticates its complete stored manifest and correction receipts
+before returning the factual ledger.
+
+This information flows through the **existing**
+`KotlinProgramPerformanceEvidenceDomain` — *not* a second rep/set/fatigue
+decision engine. Its three-visit same-machine/same-purpose evidence threads
+now also separate actual weekdays and issued exercise roles, with
+`CHANGED_WEEKDAY_OR_ROLE_AFTER_LAST_MATCHED_VISIT` preventing stale
+performance from an older schedule/role after a newer exposure.
+Corrupt records whose set weekday or purpose contradicts the issued
+workout fail closed. A missing station cannot conceal an otherwise
+skipped, shortened, failed or incompatible training session; untagged
+free-weight exercises remain distinguished from machine-stack lifts.
+
+This is a necessary upstream numerical provenance boundary. It **does
+not** derive new rep bands, set counts, exercise selections or block
+transitions, and grants no program edit, issued workout change or phase
+promotion. The next future-only policy must consume the same owner-verified
+performance report with reviewed goal, full scheduled-week adherence,
+machine/day continuity, athlete adaptation scope and locks. Custom
+journals retain their separate authenticated history path until a
+lossless parity adapter is reviewed. Keep #786 and #783 open.

@@ -68,7 +68,10 @@ data class GeneratedAdaptiveBlockResult(
     /** Evidence of exact, previously authored source visits restored to an
      * UNSIGNED candidate, not new athlete results or permission to issue. */
     val restoredSourceExercises:List<StrengthMenuRestoredExercise> = emptyList(),
-    val addedStrengthWorkingSets:List<GeneratedStrengthDoseAddedSet> = emptyList()
+    val addedStrengthWorkingSets:List<GeneratedStrengthDoseAddedSet> = emptyList(),
+    /** Strength exit -> Peak entry measurements only; a taper remains a
+     * phase-specific athlete/coach decision, never an automatic set quota. */
+    val peakTaperBoundary:PeakTaperBoundaryReview?=null
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -421,6 +424,10 @@ object GeneratedAdaptiveBlockDomain {
             AdaptiveCycleOption(input.optionId,reviewedStructure.verifiedDraft!!),
             "Complete generated candidate; recovered ${restoredSourceExercises.size} source exercise visits and ${addedStrengthSets.size} verified Strength working sets. Full-cycle dose, time, fatigue, stock, permissions and athlete review remain mandatory.",
             Collections.unmodifiableList(identities.toList()),
-            roster,dose,restoredSourceExercises,addedStrengthSets)
+            roster,dose,restoredSourceExercises,addedStrengthSets,
+            if(source.phase==TrainingPhase.PEAK)
+                PeakTaperBoundaryDomain.review(
+                    reviewedStructure,input.targetBlockId)
+            else null)
     }
 }

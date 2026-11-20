@@ -528,3 +528,29 @@ approved source schedule or a written, versioned program activation date.
 Until the native owner can attest the correct current/previous block calendar,
 no split change may silently borrow old training volume, frequency, or
 compliance toward automatic future program evolution.
+
+### Native custom phase-boundary historical completion proof
+
+A durable custom workout `Finish` event means the athlete resolved its
+required visit records; it does **not** imply all originally issued working
+sets were actually completed. Skipped sets, failed attempts and valid early
+stops are factual completed journal **sessions**, not complete prescribed
+working-set exposures.
+
+Future-block activation preflight now uses the existing independently replayed
+`CustomWorkoutHistoricalEvidence` to determine whether **every issued MAIN
+working set** in each prior-block session has a completed actual. A selected
+shorter-session mode or omitted original sets is not full-prescription
+completion. Optional myo-rep, drop-set and rest-pause follow-up visits remain
+distinct recorded stages and cannot substitute for MAIN work; a safely stopped
+optional stage does not invent another required normal set.
+
+The source-authenticated absolute program week, block and weekday must still
+match the exact prior-block schedule, without missing or duplicate sessions.
+If a journal is finished but prescribed MAIN work is incomplete, the future
+activation boundary returns `INCOMPLETE_HISTORY` instead of a favorable
+phase-transition review. History is preserved and an athlete can still view
+the genuine skipped or failed workout. This does not infer activation **dates**,
+give permission to edit issued workout numbers or authorize automatic phase
+promotion. The independent clock/activation-epoch and goal-driven optimizer
+work remain open under #783 and #786.

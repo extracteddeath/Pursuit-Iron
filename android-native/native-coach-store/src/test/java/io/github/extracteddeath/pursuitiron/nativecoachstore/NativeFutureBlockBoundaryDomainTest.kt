@@ -22,8 +22,9 @@ class NativeFutureBlockBoundaryDomainTest {
                     day,"Build $day",ComposerSessionPurpose.STRENGTH_SKILL,
                     emptyList())})
         ))
-    private fun done(block:String,week:Int,day:Int,cycleId:String="cycle-1")=
-        NativeVerifiedCustomBlockCompletion(cycleId,block,week,day)
+    private fun done(block:String,week:Int,day:Int,cycleId:String="cycle-1",
+        allMainComplete:Boolean=true)=NativeVerifiedCustomBlockCompletion(
+            cycleId,block,week,day,allMainComplete)
     private fun earlier()=(1..2).flatMap{week->
         listOf(0,2,4).map{day->done("base",week,day)}
     }
@@ -55,6 +56,27 @@ class NativeFutureBlockBoundaryDomainTest {
             NativeFutureBlockBoundaryDomain.check(
                 cycle(),"build",emptyList(),7))
     }
+    @Test fun finishedButSkippedFailedOrReducedWorkCannotCompletePriorBlock() {
+        val full=earlier()
+        val skipped=full.mapIndexed{index,receipt->
+            if(index==2)receipt.copy(allIssuedMainWorkingSetsCompleted=false)
+            else receipt
+        }
+        assertEquals(NativeFutureActivationReview.Rejected(
+            NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
+            NativeFutureBlockBoundaryDomain.check(cycle(),"build",skipped,7))
+        val failedLast=full.dropLast(1)+done("base",2,4,
+            allMainComplete=false)
+        assertEquals(NativeFutureActivationReview.Rejected(
+            NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
+            NativeFutureBlockBoundaryDomain.check(
+                cycle(),"build",failedLast,7))
+        assertEquals(NativeFutureActivationReview.BoundaryReviewed(
+            "cycle-1","build",3,2,6,7),
+            NativeFutureBlockBoundaryDomain.check(
+                cycle(),"build",full,7))
+    }
+
     @Test fun anyAlreadyCompletedFutureWorkoutBlocksRetroactiveActivation() {
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.TARGET_BLOCK_ALREADY_STARTED),

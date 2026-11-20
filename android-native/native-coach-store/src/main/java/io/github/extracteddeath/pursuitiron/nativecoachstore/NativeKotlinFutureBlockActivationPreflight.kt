@@ -11,7 +11,10 @@ import io.github.extracteddeath.pursuitiron.rebuild.ComposerSplit
  */
 internal data class NativeVerifiedCustomBlockCompletion(
     val cycleId:String,val blockId:String,
-    val absoluteWeek:Int,val weekday:Int
+    val absoluteWeek:Int,val weekday:Int,
+    /** Historical Finish is not proof all prescribed working sets happened.
+     * Derived only from owner-reopened, independently replayed custom History. */
+    val allIssuedMainWorkingSetsCompleted:Boolean
 )
 
 enum class NativeFutureActivationRefusal {
@@ -97,7 +100,12 @@ internal object NativeFutureBlockBoundaryDomain {
             completed.distinct().size!=completed.size)
             return NativeFutureActivationReview.Rejected(
                 NativeFutureActivationRefusal.CONFLICTING_HISTORY)
-        if(!completed.toSet().containsAll(expected))
+        if(!completed.toSet().containsAll(expected) ||
+            own.any{completion->
+                Triple(completion.absoluteWeek,completion.blockId,
+                    completion.weekday) in expected &&
+                    !completion.allIssuedMainWorkingSetsCompleted
+            })
             return NativeFutureActivationReview.Rejected(
                 NativeFutureActivationRefusal.INCOMPLETE_HISTORY)
         return NativeFutureActivationReview.BoundaryReviewed(
@@ -178,9 +186,15 @@ class NativeKotlinFutureBlockActivationPreflight(
                         snap.stamp.cycleRevision!=completion.evidence.cycleRevision)
                         return@withOwnerTransaction NativeFutureActivationReview.Rejected(
                             NativeFutureActivationRefusal.CONFLICTING_HISTORY)
+                    if(completion.evidence.workoutId!=journal.workoutId ||
+                        completion.evidence.athleteId!=owner.athleteId ||
+                        completion.evidence.journalRevision!=journal.revision)
+                        return@withOwnerTransaction NativeFutureActivationReview.Rejected(
+                            NativeFutureActivationRefusal.CONFLICTING_HISTORY)
                     sessions+=NativeVerifiedCustomBlockCompletion(
                         snap.stamp.cycleId,snap.blockId,
-                        snap.absoluteWeek,snap.weekday)
+                        snap.absoluteWeek,snap.weekday,
+                        completion.evidence.allIssuedMainWorkingSetsCompleted)
                 }
                 // A completed-history boundary alone is insufficient:
                 // enumerate every durable prepared AND issued custom file.

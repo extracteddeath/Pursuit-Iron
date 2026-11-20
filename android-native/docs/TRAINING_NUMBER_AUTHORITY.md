@@ -425,3 +425,22 @@ future revalidation; this read result is **not a durable authorization token**.
 It never changes issued workouts, grants automatic cycle edits, measures full
 scheduled-week adherence, or promotes Strength/Peak. Full progression and
 continuous goal-driven adaptation remain gated by #786 and #783.
+
+### Canonical historical report replay at the future-number boundary
+
+A report carrying a matching `sourceReplayDigest` is **not** authenticated
+proof of its own conclusions. The future-number link must independently run
+`KotlinProgramPerformanceEvidenceDomain.review` on the effective journal
+ledger and the exact owner-manifest `completionOrderByWorkout`, then compare
+the complete canonical result (every key, visit, gate and order) against the
+supplied report. Forged favorable rep-ceiling gates, invented workout IDs,
+duplicate or shuffled completion orders fail closed. The native coordinator
+provides this order only after private journal/correction and manifest review.
+The public pure Kotlin function is a **consistency review**, not independent
+proof of private storage ownership.
+
+There are still no native-attested completion dates or unambiguous training
+week identifiers in these history projections; a sequence of three successful
+visits is NOT proof that the full scheduled week was completed. Consequently
+it must not independently authorize weekly adherence, muscle-volume,
+set-count, rep-band or phase automation.

@@ -54,7 +54,11 @@ internal object NativeKotlinPlannedBackoffNote {
         slotSets:List<CustomWorkoutSetSnapshot>,
         selected:CustomWorkoutSetSnapshot
     ):String? {
-        if(selected.prescription.type!=DraftSetType.WORKING)return null
+        if(selected.prescription.type!=DraftSetType.WORKING ||
+            slotSets.lastOrNull()!=selected ||
+            slotSets.any{it.slotId!=selected.slotId} ||
+            slotSets.map{it.setKey}.distinct().size!=slotSets.size)
+            return null
         val working=slotSets.filter{
             it.prescription.type==DraftSetType.WORKING
         }

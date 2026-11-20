@@ -233,7 +233,7 @@ assert.ok(!customTechniqueExcerpt.includes('Surface(color=MaterialTheme.colorSch
   'Native amp no longer requires permanent large preview card');
 
 assert.match(journal,/Each performed stage is logged separately/);
-assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}"'),
+assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}:activation:"+'),
   "stage identity must survive Focus/All and cold resume");
 
 for(const phrase of [
@@ -264,7 +264,7 @@ for(const phrase of [
   'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
   '"main:${set.setKey}:station:"',
-  '"follow:${set.setKey}:stage:${followKey.stage}"',
+  '"follow:${set.setKey}:stage:${followKey.stage}:activation:"+',
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);

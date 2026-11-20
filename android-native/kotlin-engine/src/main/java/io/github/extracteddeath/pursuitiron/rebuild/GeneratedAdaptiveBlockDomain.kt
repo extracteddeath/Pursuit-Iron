@@ -362,13 +362,23 @@ object GeneratedAdaptiveBlockDomain {
                 })
                 val inspected=CustomTrainingCycleDomain.review(recovered,
                     catalog.map{it.availability})
+                // A restored exercise roster can still carry a real
+                // half-dose deficit. If the athlete separately enabled
+                // Adapt Sets, stage that verified but UNSIGNED interim
+                // roster so the ordinary dose recovery can evaluate it.
+                // Never accept unverified or incomparable dose sources.
+                // Without both permissions, retain the original refusal.
+                val restoredRoster=StrengthRosterBoundaryGuardDomain.review(
+                    inspected,input.targetBlockId)
+                val restoredDose=StrengthDoseBoundaryGuardDomain.review(
+                    inspected,input.targetBlockId)
+                val mayStageDose=restoredDose.status==
+                    StrengthDoseBoundaryStatus.CONTINUOUS ||
+                    (input.allowSourceDoseRecovery && restoredDose.status==
+                        StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW)
                 if(inspected.verifiedDraft!=null &&
-                    StrengthRosterBoundaryGuardDomain.review(inspected,
-                        input.targetBlockId).status==
-                            StrengthRosterBoundaryStatus.CONTINUOUS &&
-                    StrengthDoseBoundaryGuardDomain.review(inspected,
-                        input.targetBlockId).status==
-                            StrengthDoseBoundaryStatus.CONTINUOUS) {
+                    restoredRoster.status==StrengthRosterBoundaryStatus.CONTINUOUS &&
+                    mayStageDose) {
                     reviewedStructure=inspected
                     restoredSourceExercises=Collections.unmodifiableList(
                         restored.toList())

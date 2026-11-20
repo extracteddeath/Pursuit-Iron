@@ -470,4 +470,74 @@ class GeneratedAdaptiveBlockConversionTest {
         assertTrue(capped.addedStrengthWorkingSets.isEmpty())
     }
 
+
+    @Test fun menuRecoveryCanStageForSeparatelyConsentedDoseRepairButNeverIgnoreHalfDose() {
+        val original=fixture.cycle()
+        val baseBlock=original.blocks.single()
+        val accessories=(4..8).map{n->
+            fixture.movements[1].copy(
+                exerciseId="paired-repair-$n",familyId="paired-repair-$n",
+                role=ComposerRole.ACCESSORY,pattern=ComposerPattern.ISOLATION)
+        }
+        // Adversarial 8-exercise source: the three retained movements had
+        // ten working sets each, so restoring the five one-set accessories
+        // ALONE cannot cross the 50%-loss boundary. Neither recovery toggle
+        // can silently authorize an incomplete combined candidate.
+        val hyper=baseBlock.copy(blockId="hypertrophy",weeks=2,
+            days=baseBlock.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(sets=List(10){slot.sets.single()})
+                }+accessories.map{movement->
+                    CustomExerciseSlot("old_"+movement.exerciseId,
+                        movement.exerciseId,ComposerRole.ACCESSORY,
+                        day.slots.first().sets.take(1),pinned=false)
+                })
+            })
+        val strength=baseBlock.copy(blockId="strength",weeks=2,
+            phase=TrainingPhase.STRENGTH,
+            days=baseBlock.days.map{it.copy(
+                purpose=ComposerSessionPurpose.STRENGTH_SKILL)})
+        val cycle=original.copy(blocks=listOf(hyper,strength))
+        val base=fixture.generation()
+        val policy=checkNotNull(base.policy).copy(
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+            primaryLiftMinimumDays=mapOf("bench" to 1))
+        val program=base.copy(phase=TrainingPhase.STRENGTH,policy=policy,
+            catalog=base.catalog+accessories,
+            selectFromOfferedCatalog=true,
+            maximumExercisesPerDay=8)
+        val prescriptions=fixture.policies().map{
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        }
+        val request=GeneratedAdaptiveBlockRequest(cycle,"strength",
+            "dual_recovery_fenced",program,prescriptions,
+            allowSourceMenuRecovery=true,allowSourceDoseRecovery=true)
+        val both=GeneratedAdaptiveBlockDomain.propose(request)
+        assertEquals("Combined decision: ${both.status} ${both.explanation}",
+            GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
+            both.status)
+        assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
+            both.strengthRosterBoundary?.status)
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            both.strengthDoseBoundary?.status)
+        assertEquals(105,both.strengthDoseBoundary?.hypertrophyWorkingSets)
+        assertNull(both.proposedOption)
+        assertTrue(both.addedStrengthWorkingSets.isEmpty())
+        val menuOnly=GeneratedAdaptiveBlockDomain.propose(
+            request.copy(allowSourceDoseRecovery=false))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,
+            menuOnly.status)
+        val doseOnly=GeneratedAdaptiveBlockDomain.propose(
+            request.copy(allowSourceMenuRecovery=false))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,
+            doseOnly.status)
+        assertNull(menuOnly.proposedOption)
+        assertNull(doseOnly.proposedOption)
+        assertEquals(original,fixture.cycle())
+        assertEquals(4L,cycle.revision)
+        assertFalse(both.mayIssueWorkout)
+        assertFalse(both.maySaveProgram)
+    }
+
 }

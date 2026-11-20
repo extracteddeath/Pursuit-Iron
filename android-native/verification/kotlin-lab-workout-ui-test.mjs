@@ -271,14 +271,14 @@ const generatedFocus=read('android-native/app/src/main/java/io/github/extractedd
 const generatedDock=generatedFocus.indexOf('if(presentation?.canFinish==true');
 const customDock=journal.indexOf('if(current?.canProposeFinish==true');
 assert.ok(generatedDock>0 &&
-  generatedFocus.indexOf('NativeKotlinWorkoutRestTimer(',generatedDock-600)>0 &&
+  generatedFocus.lastIndexOf('NativeKotlinWorkoutRestTimer(',generatedDock)>0 &&
   generatedFocus.includes('journal?.finishedByEventId==null)') &&
   generatedFocus.slice(generatedDock).includes('showFinishConfirm=true') &&
   generatedFocus.slice(0,generatedDock).includes('controller.finish()') &&
   generatedFocus.split('PursuitPrimaryAction("Review and finish"').length===2,
   'Generated Finish must be a single guarded bottom action after rest, never a scroll card or auto-finish');
 assert.ok(customDock>0 &&
-  journal.indexOf('NativeKotlinWorkoutRestTimer(',customDock-700)>0 &&
+  journal.lastIndexOf('NativeKotlinWorkoutRestTimer(',customDock)>0 &&
   journal.slice(customDock,customDock+300).includes('current.finishedByEventId==null') &&
   journal.slice(customDock).includes('finishConfirm=true') &&
   journal.includes('CustomWorkoutVisitFocusDomain.progress(current)') &&

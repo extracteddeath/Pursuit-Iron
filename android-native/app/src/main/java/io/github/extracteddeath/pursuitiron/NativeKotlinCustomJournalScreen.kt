@@ -1193,6 +1193,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 amplifierSummary=CustomAmplifierSetSummaryDomain.review(current,set),
+                                plannedLoadNote=NativeKotlinPlannedBackoffNote.fromCustomSlot(
+                                    slot.sets,set),
                                 existing=observed,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                 saving=busy,saveError=error,
                                 machineInstanceId=mainMachineId,
@@ -1751,7 +1753,8 @@ private fun NativeKotlinCustomVisitEditor(
     stageOrdinal:Int=1,
     stageTotal:Int=1,
     activationPerformed:KotlinPerformedSet?=null,
-    amplifierSummary:CustomAmplifierSetSummary?=null
+    amplifierSummary:CustomAmplifierSetSummary?=null,
+    plannedLoadNote:String?=null
 ) {
     val prescription=set.prescription
     val follower=prescription.amplifier
@@ -1959,6 +1962,10 @@ private fun NativeKotlinCustomVisitEditor(
             AdvancedAmplifierProtocolDomain.stageLabel(it,stageOrdinal)
         } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
+        if(part==CustomWorkoutVisitPart.MAIN)plannedLoadNote?.let {note->
+            Text(note,style=MaterialTheme.typography.labelMedium,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         // Every optional technique is discoverable at the ACTUAL working
         // set before it is performed, remains attached after completion,
         // and reflects journaled stage receipts instead of invented work.
@@ -2068,6 +2075,10 @@ private fun NativeKotlinCustomVisitEditor(
             Text("Saved values change only after you confirm the correction.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(part==CustomWorkoutVisitPart.MAIN)plannedLoadNote?.let {note->
+                Text(note,style=MaterialTheme.typography.labelMedium,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             saveError?.let {Text(it,color=MaterialTheme.colorScheme.error,
                 style=MaterialTheme.typography.bodySmall)}
             val referenceReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)

@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron
 
+import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSetSnapshot
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetLoad
 import io.github.extracteddeath.pursuitiron.rebuild.DraftSetType
 import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutSetPresentation
@@ -42,5 +43,46 @@ internal object NativeKotlinPlannedBackoffNote {
         return "Planned last-set back-off · set ${working.size} of ${working.size}: "+
             "$firstLoad → $finalLoad ${last.unit.name.lowercase()}. "+
             "Authored before this workout; not an automatic weight drop."
+    }
+
+    /**
+     * A custom athlete-authored slot is not the generated LAST_SET_BACKOFF
+     * scheme. Say only what the signed original slot actually prescribes.
+     * Never compare to another slot/exercise, a logged actual or a follow-up.
+     */
+    fun fromCustomSlot(
+        slotSets:List<CustomWorkoutSetSnapshot>,
+        selected:CustomWorkoutSetSnapshot
+    ):String? {
+        if(selected.prescription.type!=DraftSetType.WORKING ||
+            slotSets.lastOrNull()!=selected ||
+            slotSets.any{it.slotId!=selected.slotId} ||
+            slotSets.map{it.setKey}.distinct().size!=slotSets.size)
+            return null
+        val working=slotSets.filter{
+            it.prescription.type==DraftSetType.WORKING
+        }
+        if(working.size<2 || working.last()!=selected ||
+            working.map{it.ordinalInSlot}!=
+                (working.first().ordinalInSlot until
+                    working.first().ordinalInSlot+working.size).toList())
+            return null
+        val earlier=working.dropLast(1).map{
+            it.prescription.load as? DraftSetLoad.Verified ?:return null
+        }
+        val final=selected.prescription.load as? DraftSetLoad.Verified
+            ?:return null
+        val base=earlier.first()
+        if(earlier.any{
+            it.unit!=base.unit || it.basis!=base.basis ||
+                it.value.compareTo(base.value)!=0
+        } || final.unit!=base.unit || final.basis!=base.basis ||
+            final.value.signum()<0 || final.value>=base.value)
+            return null
+        val original=base.value.stripTrailingZeros().toPlainString()
+        val lighter=final.value.stripTrailingZeros().toPlainString()
+        return "Authored lighter final set · set ${working.size} of ${working.size}: "+
+            "$original → $lighter ${final.unit.name.lowercase()}. "+
+            "Your original target was written before logging; actual weight stays separate."
     }
 }

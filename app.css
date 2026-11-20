@@ -10202,3 +10202,20 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-pain-banner>svg{flex:none;color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-pain-banner>p{flex:1;min-width:0;margin:0}
 #root .wpb .wpb-pain-banner>button{flex:none;min-height:48px;padding:0 16px;border:0;border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);font-weight:700}
+#root .wpb .wpb-routine-backdrop{z-index:90}
+#root .wpb .wpb-routine-panel{max-width:40rem;--pi-ui-sheet-radius:28px}
+#root .wpb .wpb-routine-panel:focus{outline:none}
+#root .wpb .wpb-routine-heading{padding:16px 18px 4px}
+#root .wpb .wpb-routine-body{display:grid;gap:var(--pi-space-2);padding:8px 18px calc(env(safe-area-inset-bottom) + 20px)}
+#root .wpb .wpb-routine-empty{width:100%;gap:8px}
+#root .wpb .wpb-routine-section{margin:var(--pi-space-3) 0 0;font-size:var(--pi-type-support);font-weight:700;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-routine-list{display:grid;gap:var(--pi-space-2);margin:0;padding:0;list-style:none}
+#root .wpb .wpb-routine-item{display:flex;align-items:center;gap:4px;border-radius:var(--pi-shape-card);background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border)}
+#root .wpb .wpb-routine-start{display:flex;flex:1;align-items:center;gap:var(--pi-space-3);min-width:0;min-height:64px;padding:12px 8px 12px 16px;border:0;background:none;color:inherit;text-align:left}
+#root .wpb .wpb-routine-copy{display:grid;flex:1;gap:2px;min-width:0}
+#root .wpb .wpb-routine-copy strong{font-size:var(--pi-type-body)}
+#root .wpb .wpb-routine-lifts{display:-webkit-box;overflow:hidden;font-size:var(--pi-type-support);color:var(--wpb-theme-text);-webkit-box-orient:vertical;-webkit-line-clamp:2}
+#root .wpb .wpb-routine-when{font-size:var(--pi-type-caption);color:var(--pi-color-on-muted)}
+#root .wpb .wpb-routine-play{display:grid;flex:none;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+#root .wpb .wpb-routine-remove{flex:none;width:48px;height:48px;margin-right:4px;border:0;border-radius:50%;background:none;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-routine-hint{margin:var(--pi-space-2) 0 0;font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}

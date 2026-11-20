@@ -4,6 +4,7 @@ import { weekStrip, recapShareText } from '../modules/home-week.js';
 import { weeklyRecap, EX_BY_ID, secondaryOf } from '../modules/engine-api.js';
 import { painAction, painMatches } from '../modules/pain-check.js';
 import { adjustInjuredExercises } from '../modules/workout-context.js';
+import { routineList, routineWhen } from '../modules/routine-picker.js';
 
 // Features carried over from the M3 prototype: the Home week strip and the rolling 7-day recap.
 const D = 86400000;
@@ -63,4 +64,16 @@ assert.ok(painApp.includes('action === "monitor" || !ids.length ? data') && pain
 assert.ok(painApp.includes('undo: () => { setData(originals)'), 'Every pain change offers undo');
 assert.ok(app.includes('{ k: "pain", label: "Pain check", icon: Activity, on: () => setPainOpen(true) }'), 'Pain check sits in the exercise tool row');
 assert.ok(app.includes('e.injuryAdjusted && _jsxs("div", { className: "wpb-pain-banner"'), 'Adjusted lifts show a protection banner with Swap');
-console.log('PASS prototype features: week strip, streak, 7-day recap, share text and pain check');
+
+// Routines: saved freestyle workouts, most recently trained first, one tap to start.
+const quick = (id, ex, createdAt) => ({ id, name: id, quick: true, createdAt, days: [{ id: 'd', exercises: ex }] });
+const list = routineList([quick('a', ['bb-bench', 'not-an-exercise'], 1), { id: 'p', days: [{ exercises: ['ohp'] }] }, quick('b', ['ohp'], 2), quick('empty', [], 3)],
+  [{ programId: 'a', date: 50 }, { programId: 'a', date: 70 }]);
+assert.deepEqual(list.map(r => r.id), ['a', 'b'], 'Only quick programs with lifts, last trained first');
+assert.deepEqual(list[0].lifts, [EX_BY_ID['bb-bench'].name], 'Unknown ids are dropped from the lift list');
+assert.equal(list[0].lastAt, 70);
+assert.equal(routineWhen(0), 'Not trained yet'); assert.equal(routineWhen(now - 2.5 * D, now), 'Trained 2 days ago'); assert.equal(routineWhen(now - D, now), 'Trained yesterday');
+assert.ok(app.includes('onStartRoutine: p => p.days?.[0] && startSession(p.days[0], 1, p)'), 'A routine starts as its own saved program');
+assert.ok(app.includes('onClick: routines.length && onStartRoutine ? () => setRoutinePick(true) : onQuick'), 'Freestyle opens the routine sheet only when routines exist');
+assert.ok(app.includes('routinePick && createPortal(_jsx(RoutinePickerSheet'), 'The sheet escapes Home\'s stacking context');
+console.log('PASS prototype features: week strip, streak, 7-day recap, share text, pain check and routines');

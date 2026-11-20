@@ -322,8 +322,8 @@ object GeneratedUpstreamNumberTraceDomain {
             composerDays.size!=block.days.size ||
             composerDays.map{it.calendarDay}.toSet()!=
                 block.days.map{it.weekday}.toSet() ||
-            composed.week.phase!=block.phase ||
-            composed.week.bounds!=request.program.policy?.selectedBounds)
+            prescribed.composer.week.phase!=block.phase ||
+            prescribed.composer.week.bounds!=request.program.policy?.selectedBounds)
             return null
         val exposures=mutableListOf<PlannedWorkingExposure>()
         for((dayIndex,composerDay) in composerDays.withIndex()) {
@@ -355,7 +355,7 @@ object GeneratedUpstreamNumberTraceDomain {
             }
         }
         val plannedDose=runCatching{
-            WeeklyDoseFeasibilityDomain.audit(composed.week.copy(
+            WeeklyDoseFeasibilityDomain.audit(prescribed.composer.week.copy(
                 exposures=Collections.unmodifiableList(exposures.toList())))
         }.getOrNull() ?:return null
         // A simple unchanged week must match the original audited

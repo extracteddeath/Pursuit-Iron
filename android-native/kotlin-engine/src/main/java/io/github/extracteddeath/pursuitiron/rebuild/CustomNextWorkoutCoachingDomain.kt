@@ -529,17 +529,18 @@ object CustomNextWorkoutCoachingDomain {
                 return result(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
                     ids,latest.evidence.workoutId,
                     explanation="This set scheme needs a consistent verified implement or explicit unloaded bodyweight identity and compatible rep ranges for the shared next-session review.")
-            val observations=oldSets.mapIndexed{ordinal,set->
+            val projected=oldSets.mapIndexed{ordinal,set->
                 val receipt=facts.single{it.setKey==set.setKey}
-                val actual=receipt.actual
-                WorkingSetFact(ordinal,when(receipt.outcome) {
-                    KotlinJournalSetOutcome.COMPLETED->SetOutcome.COMPLETED
-                    KotlinJournalSetOutcome.SKIPPED->SetOutcome.SKIPPED
-                    KotlinJournalSetOutcome.FAILED_ATTEMPT->SetOutcome.FAILED_ATTEMPT
-                },actual?.load,actual?.reps,actual?.actualRir,
-                    (set.prescription.load as? DraftSetLoad.Verified)?.value,
-                    set.prescription.targetRir)
+                (KotlinWorkingSetEvidenceDomain.review(
+                    ordinal,set.prescription.load,set.prescription.targetRir,
+                    receipt.outcome,receipt.actual
+                ) as? KotlinWorkingSetEvidenceReview.Accepted)?.evidence?.fact
             }
+            if(projected.any{it==null})
+                return result(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+                    ids,latest.evidence.workoutId,
+                    explanation="A working-set receipt could not be projected through the shared verified numerical policy.")
+            val observations=projected.filterNotNull()
             runCatching {
                 val goals=nextSets.map{it.prescription.targetRir}
                 if(unloaded)
@@ -689,14 +690,14 @@ object CustomNextWorkoutCoachingDomain {
                         straight.first().unit,bands.first(),authored.size,
                         authored.mapIndexed{index,set->
                             val receipt=records.single{it.setKey==set.setKey}
-                            val actual=receipt.actual
-                            WorkingSetFact(index,when(receipt.outcome) {
-                                KotlinJournalSetOutcome.COMPLETED -> SetOutcome.COMPLETED
-                                KotlinJournalSetOutcome.SKIPPED -> SetOutcome.SKIPPED
-                                KotlinJournalSetOutcome.FAILED_ATTEMPT -> SetOutcome.FAILED_ATTEMPT
-                            },actual?.load,actual?.reps,actual?.actualRir,
-                                (set.prescription.load as DraftSetLoad.Verified).value,
-                                set.prescription.targetRir)
+                            // Each compared session passed matchingReceipts;
+                            // the shared evidence authority is the only
+                            // remaining bridge to progression facts.
+                            (KotlinWorkingSetEvidenceDomain.review(
+                                index,set.prescription.load,
+                                set.prescription.targetRir,
+                                receipt.outcome,receipt.actual
+                            ) as KotlinWorkingSetEvidenceReview.Accepted).evidence.fact
                         },trainingDayId="${request.next.stamp.cycleId}:${request.next.weekday}:${target.slotId}")
                     val assisted=straight.first().basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT
                     val assistedReview=if(assisted &&

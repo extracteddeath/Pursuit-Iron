@@ -44,6 +44,7 @@ enum class KotlinProgramPerformanceGate {
     NEEDS_THREE_MATCHED_VISITS,
     AMBIGUOUS_INTERVENING_MACHINE,
     CHANGED_LOAD_BASIS_AFTER_LAST_MATCHED_VISIT,
+    CHANGED_WEEKDAY_OR_ROLE_AFTER_LAST_MATCHED_VISIT,
     INCOMPARABLE_RECENT_VISIT,
     PRESCRIPTION_CHANGED,
     ACTUAL_EFFORT_UNKNOWN,
@@ -195,6 +196,19 @@ object KotlinProgramPerformanceEvidenceDomain {
             val gate=when {
                 recent.size<MIN_EXPOSURES_FOR_REVIEW ->
                     KotlinProgramPerformanceGate.NEEDS_THREE_MATCHED_VISITS
+                // A newer issued workout carrying the same nominal split
+                // index/movement but a different weekday or exercise role
+                // makes this older trend stale. Do not resurrect it after a
+                // split reorganization.
+                observed.any{
+                    it.key.dayIndex==key.dayIndex &&
+                        it.key.purpose==key.purpose &&
+                        it.key.exerciseId==key.exerciseId &&
+                        (it.key.calendarDay!=key.calendarDay ||
+                            it.key.role!=key.role) &&
+                        it.visit.completionOrder>visits.last().completionOrder
+                } -> KotlinProgramPerformanceGate
+                    .CHANGED_WEEKDAY_OR_ROLE_AFTER_LAST_MATCHED_VISIT
                 // An intervening visit with UNKNOWN station identity could
                 // belong to this station. Explicit B does not contaminate A.
                 key.physicalMachineId!=null && observed.any{

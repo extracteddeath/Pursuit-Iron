@@ -67,6 +67,10 @@ data class GeneratedUpstreamNumberTrace(
     val exactRequestDigest:String,
     val sets:List<GeneratedSetNumberLineage>,
     val phaseBoundary:GeneratedPhaseNumberBoundary?,
+    /** Re-audited against the exact FINAL proposed cycle, including
+     * source-restored exercises and authorized extra Strength sets. Planned
+     * muscle stimulus is not a recorded athlete performance observation. */
+    val plannedWeekDose:WeeklyDoseFeasibilityReport,
     val historyEvidence:GeneratedHistoryEvidenceState
 ) {
     val mayIssueWorkout:Boolean get()=false
@@ -308,17 +312,67 @@ object GeneratedUpstreamNumberTraceDomain {
                 block.days.sumOf{it.slots.size}
             )
         }
+        // Reconstruct the actual final proposed sets rather than borrowing
+        // the generator's earlier dose/time audit, which preceded optional
+        // source restorations and Strength set-count repair. The same existing
+        // WeeklyDoseFeasibilityDomain remains the only muscle-credit owner.
+        val catalog=request.program.catalog.associateBy{it.exerciseId}
+        val composerDays=composed.days
+        if(catalog.size!=request.program.catalog.size ||
+            composerDays.size!=block.days.size ||
+            composerDays.map{it.calendarDay}.toSet()!=
+                block.days.map{it.weekday}.toSet() ||
+            composed.week.phase!=block.phase ||
+            composed.week.bounds!=request.program.policy?.selectedBounds)
+            return null
+        val exposures=mutableListOf<PlannedWorkingExposure>()
+        for((dayIndex,composerDay) in composerDays.withIndex()) {
+            val targetDay=block.days.singleOrNull{
+                it.weekday==composerDay.calendarDay
+            } ?:return null
+            val lastSlot=targetDay.slots.lastOrNull() ?:return null
+            for(slot in targetDay.slots) {
+                val exercise=catalog[slot.exerciseId] ?:return null
+                if(exercise.creditStatus!=
+                    CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
+                    exercise.creditReviewReference.isNullOrBlank() ||
+                    exercise.credits.isEmpty())return null
+                for((ordinal,set) in slot.sets.withIndex()) {
+                    val lastInSession=slot.slotId==lastSlot.slotId &&
+                        ordinal==slot.sets.lastIndex
+                    exposures+=PlannedWorkingExposure(
+                        "d${dayIndex}:${slot.slotId}:"+
+                            "${set.type.name.lowercase()}:${ordinal}",
+                        dayIndex,
+                        if(set.type==DraftSetType.WARMUP)
+                            ExposureSetKind.WARMUP
+                        else ExposureSetKind.WORKING,
+                        if(set.type==DraftSetType.WARMUP)emptyList()
+                        else exercise.credits,
+                        set.activeSeconds,
+                        if(lastInSession)0 else set.restSeconds)
+                }
+            }
+        }
+        val plannedDose=runCatching{
+            WeeklyDoseFeasibilityDomain.audit(composed.week.copy(
+                exposures=Collections.unmodifiableList(exposures.toList())))
+        }.getOrNull() ?:return null
+        // A simple unchanged week must match the original audited
+        // prescription; restoration or protected edits legitimately change
+        // the final delivered weekly plan and are traced above separately.
         val facts=Collections.unmodifiableList(numbered.toList())
         val signature=digest(listOf(
             "GENERATED_UPSTREAM_V1",source.toString(),
             request.program.toString(),request.prescriptions.toString(),
-            candidate.toString(),facts.toString(),transition.toString()
+            candidate.toString(),facts.toString(),transition.toString(),
+            plannedDose.toString()
         ).joinToString("\n"))
         return GeneratedUpstreamNumberTrace(
             1,athlete.athleteProfileId,athlete.profileRevision,
             source.cycleId,source.revision,candidate.revision,
             request.targetBlockId,block.phase,athlete.goal,
-            signature,facts,transition,
+            signature,facts,transition,plannedDose,
             GeneratedHistoryEvidenceState.NOT_CONSUMED)
     }
 }

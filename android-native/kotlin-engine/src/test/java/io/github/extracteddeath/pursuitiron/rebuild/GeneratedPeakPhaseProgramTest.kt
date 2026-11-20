@@ -27,7 +27,7 @@ class GeneratedPeakPhaseProgramTest {
             purpose=CustomBlockPurpose.RECOVERY,
             days=strength.days.map{day ->
                 day.copy(slots=day.slots.map{slot->
-                    slot.copy(sets=listOf(slot.sets.single().copy(
+                    slot.copy(sets=listOf(slot.sets.first().copy(
                         reps=RepBand(5,8))))
                 })
             })

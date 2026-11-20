@@ -508,3 +508,23 @@ activation epoch, authorized calendar/week provenance, complete multi-block
 coaching audit, controls for protected/manual work, and explicit athlete
 scope are still separate gates for the continuous plan (#783). Engine
 numerical release/parity evidence (#786) is likewise not complete.
+
+### Historical week versus future training-day calendar changes
+
+A new adaptive split may legitimately replace a previously issued calendar
+day (e.g., Mon/Wed/Fri to Mon/Thu/Fri). The owner-sourced original Wednesday
+receipt and its dated actual remain true; it cannot become Thursday by
+remapping its 0-based program-day index. The observed-week reviewer now
+preserves original dated sessions but records the exact incompatible workout
+IDs and marks `SOURCE_SCHEDULE_INCOMPATIBLE` instead of rejecting that
+otherwise valid history or declaring the new week complete. All week-day
+completion credits are withheld for that source epoch, even if other days
+appear complete; three old rep-ceiling visits cannot generate a new-calendar
+corroboration signal. An actually invalid issued weekday/index remains an
+input refusal, not a legitimate schedule migration.
+
+This is strictly an observational boundary, not a substitute for a verified
+approved source schedule or a written, versioned program activation date.
+Until the native owner can attest the correct current/previous block calendar,
+no split change may silently borrow old training volume, frequency, or
+compliance toward automatic future program evolution.

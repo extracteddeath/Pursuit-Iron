@@ -141,6 +141,50 @@ class KotlinObservedScheduleWeekDomainTest {
             .matchesScheduledWeekday)
     }
 
+    @Test fun futureDayChangePreservesActualDatesWithoutBorrowingOldSchedule() {
+        val historical=ledger(listOf(0,2,4))
+        val dates=mapOf("workout-1" to millis("2026-11-16"),
+            "workout-2" to millis("2026-11-18"),
+            "workout-3" to millis("2026-11-20"))
+        val ordinals=mapOf("workout-1" to 1L,
+            "workout-2" to 2L,"workout-3" to 3L)
+        // The athlete's reviewed FUTURE week uses Thursday, not the
+        // previous Wednesday. Do not reject authenticated historical
+        // completions or pretend that old Wednesday was future Thursday.
+        val result=KotlinObservedScheduleWeekDomain.review(
+            historical,dates,ordinals,setOf(0,3,4),zone)
+            as KotlinObservedWeekResult.Reviewed
+        val observed=result.evidence
+        assertFalse(observed.sourceScheduleCompatible)
+        assertEquals(listOf("workout-2"),
+            observed.incompatibleSourceWorkoutIds)
+        assertEquals(setOf(0,3,4),observed.scheduledWeekdays)
+        val week=observed.weeks.single()
+        assertEquals(KotlinObservedWeekCoverage.SOURCE_SCHEDULE_INCOMPATIBLE,
+            week.coverage)
+        assertTrue(week.fullyRecordedWeekdays.isEmpty())
+        assertEquals(LocalDate.of(2026,11,18),
+            week.sessions.single{it.workoutId=="workout-2"}.localCompletionDate)
+        assertTrue(observed.undatedWorkoutIds.isEmpty())
+        assertFalse(observed.canAssumeMissedWeeks)
+        assertFalse(observed.canApproveVolumeAdaptation)
+        assertFalse(observed.canPromotePhase)
+    }
+
+    @Test fun malformedIssuedDayIndexIsStillRejectedNotTreatedAsScheduleChange() {
+        val historical=ledger(listOf(0,2,4)).copy(
+            workouts=ledger(listOf(0,2,4)).workouts.mapIndexed{i,w->
+                if(i==1)w.copy(dayIndex=8) else w
+            })
+        assertEquals(KotlinObservedWeekResult.Rejected(
+            KotlinObservedWeekRefusal.INVALID_SOURCE_OR_SCHEDULE),
+            KotlinObservedScheduleWeekDomain.review(
+                historical,historical.workouts.associate{it.workoutId to null},
+                historical.workouts.mapIndexed{i,w->
+                    w.workoutId to (i+1).toLong()
+                }.toMap(),weekdays,zone))
+    }
+
     @Test fun incompleteTimestampsOrOrderingAreNotAcceptableInputs() {
         val original=ledger(listOf(0,2,4))
         val orders=mapOf("workout-1" to 1L,

@@ -114,7 +114,8 @@ object KotlinContinuousPlanEvidenceDomain {
                 it.coverage==KotlinObservedWeekCoverage
                     .FULL_SCHEDULE_OBSERVED_FOR_REVIEW_ONLY
             } && !observed.hasConflictingCompletionOrder &&
-                observed.undatedWorkoutIds.isEmpty()
+                observed.undatedWorkoutIds.isEmpty() &&
+                observed.sourceScheduleCompatible
             val chronology=full && weeks.sorted().zipWithNext().all{(a,b)->
                 ChronoUnit.DAYS.between(a,b)==7L
             } && weeks.maxOrNull()==latestMonday

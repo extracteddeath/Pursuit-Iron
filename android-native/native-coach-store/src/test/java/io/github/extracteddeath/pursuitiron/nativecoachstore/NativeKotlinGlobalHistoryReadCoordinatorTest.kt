@@ -650,6 +650,22 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
         assertFalse(output.observedWeeks.weeks.single().canProveProgramAdherence)
         assertFalse(output.observedWeeks.canApproveVolumeAdaptation)
         assertFalse(output.canApplyAutomatically)
+        // Source epoch still records Wed=2. Reviewing a future Mon/Thu/Fri
+        // split must preserve the owner-verified Wednesday completion but
+        // cannot pretend it fulfilled Thursday or a complete new week.
+        val changedSchedule=KotlinObservedScheduleWeekDomain.review(
+            output.ownerHistory.ledger,
+            output.ownerHistory.completionAtMillisByWorkout,
+            output.ownerHistory.completionOrderByWorkout,
+            setOf(0,3,4),"America/New_York")
+            as KotlinObservedWeekResult.Reviewed
+        assertEquals(listOf("workout-2"),
+            changedSchedule.evidence.incompatibleSourceWorkoutIds)
+        assertEquals(KotlinObservedWeekCoverage.SOURCE_SCHEDULE_INCOMPATIBLE,
+            changedSchedule.evidence.weeks.single().coverage)
+        assertTrue(changedSchedule.evidence.weeks.single()
+            .fullyRecordedWeekdays.isEmpty())
+        assertFalse(changedSchedule.evidence.canApproveVolumeAdaptation)
         assertTrue("One completed week is not a three-week training trend",
             output.evolutionEvidence.cells.none{
                 it.state==KotlinContinuousPlanEvidenceState

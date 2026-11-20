@@ -18,7 +18,10 @@ import java.util.Collections
 enum class KotlinObservedWeekCoverage {
     FULL_SCHEDULE_OBSERVED_FOR_REVIEW_ONLY,
     PARTIAL_OR_INCOMPARABLE_FOR_REVIEW_ONLY,
-    CHRONOLOGY_UNVERIFIED
+    CHRONOLOGY_UNVERIFIED,
+    /** Source-issued day indices disagree with the FUTURE selected calendar.
+     * Keep factual visits visible, never relabel old Wednesday as Thursday. */
+    SOURCE_SCHEDULE_INCOMPATIBLE
 }
 
 data class KotlinObservedScheduledSession(
@@ -49,8 +52,14 @@ data class KotlinObservedScheduleWeeks(
     val scheduledWeekdays:Set<Int>,
     val weeks:List<KotlinObservedScheduleWeek>,
     val undatedWorkoutIds:List<String>,
-    val hasConflictingCompletionOrder:Boolean
+    val hasConflictingCompletionOrder:Boolean,
+    /** Complete set of original workout IDs with day-index/weekday mismatch.
+     * These may have been valid under a prior split; they are not missing
+     * receipts or evidence of missed future workouts. */
+    val incompatibleSourceWorkoutIds:List<String> =emptyList()
 ) {
+    val sourceScheduleCompatible:Boolean
+        get()=incompatibleSourceWorkoutIds.isEmpty()
     val canApproveVolumeAdaptation:Boolean get()=false
     val canPromotePhase:Boolean get()=false
     val canAssumeMissedWeeks:Boolean get()=false
@@ -86,8 +95,7 @@ object KotlinObservedScheduleWeekDomain {
             byWorkout.size!=ledger.workouts.size ||
             expected.size !in 3..6 || expected.any{it !in 0..6} ||
             ledger.workouts.any{
-                it.dayIndex !in expected.indices ||
-                    expected[it.dayIndex]!=it.calendarDay
+                it.dayIndex !in 0..6 || it.calendarDay !in 0..6
             })
             return refused(KotlinObservedWeekRefusal.INVALID_SOURCE_OR_SCHEDULE)
         if(completedAtMillisByWorkout.keys!=byWorkout.keys ||
@@ -105,6 +113,13 @@ object KotlinObservedScheduleWeekDomain {
         val ordered=ledger.workouts.sortedBy{
             completionOrderByWorkout.getValue(it.workoutId)
         }
+        // A future split/schedule can differ from the exact issued source
+        // while all signed historical receipts remain perfectly valid.
+        // Keep their dates and loads but prohibit complete-week inferences.
+        val mismatched=Collections.unmodifiableList(ordered.filter{
+            it.dayIndex !in expected.indices ||
+                expected[it.dayIndex]!=it.calendarDay
+        }.map{it.workoutId})
         var lastKnownTime:Long?=null
         var contradictoryOrder=false
         val sessions=mutableListOf<KotlinObservedScheduledSession>()
@@ -143,12 +158,15 @@ object KotlinObservedScheduleWeekDomain {
         val weeks=grouped.entries.sortedBy{it.key}.map{(monday,visits)->
             val byDay=visits.groupBy{it.issuedWeekday}
             val duplicates=byDay.filterValues{it.size>1}.keys
-            val complete=byDay.filter{(weekday,dayVisits)->
-                weekday in expected && dayVisits.size==1 &&
-                    dayVisits.single().fullIssuedWorkRecorded &&
-                    dayVisits.single().matchesScheduledWeekday
-            }.keys
+            val complete=if(mismatched.isNotEmpty())emptySet()
+                else byDay.filter{(weekday,dayVisits)->
+                    weekday in expected && dayVisits.size==1 &&
+                        dayVisits.single().fullIssuedWorkRecorded &&
+                        dayVisits.single().matchesScheduledWeekday
+                }.keys
             val coverage=when {
+                mismatched.isNotEmpty() ->
+                    KotlinObservedWeekCoverage.SOURCE_SCHEDULE_INCOMPATIBLE
                 incompleteChronology ->
                     KotlinObservedWeekCoverage.CHRONOLOGY_UNVERIFIED
                 complete.size==expected.size &&
@@ -169,6 +187,6 @@ object KotlinObservedScheduleWeekDomain {
                 ledger.exactReplayDigest,timezoneId,
                 Collections.unmodifiableSet(expected.toSet()),
                 Collections.unmodifiableList(weeks),undated,
-                contradictoryOrder))
+                contradictoryOrder,mismatched))
     }
 }

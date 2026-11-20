@@ -60,18 +60,21 @@ sealed interface NativeSavedCorrectionInventoryResult {
     data object Rejected : NativeSavedCorrectionInventoryResult
 }
 
-private data class SavedCorrectionEnvelope(
+/** Internal codec fixtures allow explicit v1/v2 cold-read compatibility tests. */
+internal data class SavedCorrectionEnvelope(
     val ownerKey: String,
     val workoutId: String,
     val originalFingerprint: String,
     val revision: Long,
-    val receipts: List<KotlinSavedSetCorrectionReceipt>
+    val receipts: List<KotlinSavedSetCorrectionReceipt>,
+    val formatVersion:Int=1
 )
 
 /** Checksummed, length-limited binary envelope. A checksum is NOT authentication. */
-private object SavedCorrectionBinary {
+internal object SavedCorrectionBinary {
     private const val MAGIC = 0x50494331 // PIC1
-    private const val VERSION = 1
+    private const val LEGACY_VERSION = 1
+    const val CURRENT_VERSION = 2
     private const val MAX_BYTES = 256_000
     private const val MAX_RECEIPTS = 512
 
@@ -96,7 +99,10 @@ private object SavedCorrectionBinary {
      * The original journal is always independently opened and replay-verified
      * using the existing native store before computing this fingerprint.
      */
-    fun originalFingerprint(journal: KotlinWorkoutJournalState): String {
+    fun originalFingerprint(
+        journal:KotlinWorkoutJournalState,version:Int=LEGACY_VERSION
+    ):String {
+        require(version in LEGACY_VERSION..CURRENT_VERSION)
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             val issued = KotlinIssuedSnapshotCodec.encode(journal.snapshot)
@@ -160,6 +166,9 @@ private object SavedCorrectionBinary {
                             val actualRir = actual.actualRir
                             out.writeBoolean(actualRir != null)
                             if (actualRir != null) out.writeInt(actualRir)
+                            // Preserve v1 original-fingerprint bytes; v2
+                            // additionally binds physical machine identity.
+                            if(version>=2)out.optional(actual.machineInstanceId)
                         }
                     }
                 }
@@ -170,10 +179,11 @@ private object SavedCorrectionBinary {
 
     fun encode(envelope: SavedCorrectionEnvelope): ByteArray {
         require(envelope.receipts.size <= MAX_RECEIPTS)
+        require(envelope.formatVersion in LEGACY_VERSION..CURRENT_VERSION)
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             out.writeInt(MAGIC)
-            out.writeInt(VERSION)
+            out.writeInt(envelope.formatVersion)
             out.writeUTF(envelope.ownerKey)
             out.writeUTF(envelope.workoutId)
             out.writeUTF(envelope.originalFingerprint)
@@ -196,6 +206,12 @@ private object SavedCorrectionBinary {
                     val actualRir = actual.actualRir
                     out.writeBoolean(actualRir != null)
                     if (actualRir != null) out.writeInt(actualRir)
+                    if(envelope.formatVersion>=2) {
+                        val machine=actual.machineInstanceId
+                        require(machine==null ||
+                            KotlinMachineAlternativesDomain.validInstanceId(machine))
+                        out.optional(machine)
+                    }
                 }
             }
         }
@@ -223,7 +239,9 @@ private object SavedCorrectionBinary {
             if (!MessageDigest.isEqual(digest(payload), expected))
                 throw IOException("correction checksum mismatch")
             DataInputStream(ByteArrayInputStream(payload)).use { input ->
-                if (input.readInt() != MAGIC || input.readInt() != VERSION)
+                val magic=input.readInt()
+                val version=input.readInt()
+                if(magic!=MAGIC || version !in LEGACY_VERSION..CURRENT_VERSION)
                     throw IOException("unsupported correction format")
                 val ownerKey = input.readUTF()
                 val workoutId = input.readUTF()
@@ -251,7 +269,11 @@ private object SavedCorrectionBinary {
                         }
                         val reps = input.readInt()
                         val rir = if (input.readBoolean()) input.readInt() else null
-                        KotlinPerformedSet(load, unit, reps, rir)
+                        val machine=if(version>=2)input.optional() else null
+                        if(machine!=null &&
+                            !KotlinMachineAlternativesDomain.validInstanceId(machine))
+                            throw IOException("invalid saved machine instance")
+                        KotlinPerformedSet(load,unit,reps,rir,machine)
                     } else null
                     receipts.add(KotlinSavedSetCorrectionReceipt(applied,
                         KotlinSavedSetCorrection(eventId, expectedRevision, key,
@@ -259,7 +281,7 @@ private object SavedCorrectionBinary {
                 }
                 if (input.available() != 0) throw IOException("trailing correction data")
                 return SavedCorrectionEnvelope(
-                    ownerKey, workoutId, fingerprint, revision, receipts)
+                    ownerKey,workoutId,fingerprint,revision,receipts,version)
             }
         }
     }
@@ -343,7 +365,8 @@ class KotlinNativeSavedCorrectionFileStore(
             NativeSavedCorrectionRefusal.CORRUPT_OR_CONFLICTING_FILE)
 
         if (saved.ownerKey != owner || saved.workoutId != workoutId ||
-            saved.originalFingerprint != SavedCorrectionBinary.originalFingerprint(journal))
+            saved.originalFingerprint != SavedCorrectionBinary.originalFingerprint(
+                journal,saved.formatVersion))
             return NativeSavedCorrectionFileResult.Rejected(
                 NativeSavedCorrectionRefusal.CORRUPT_OR_CONFLICTING_FILE)
 
@@ -442,8 +465,10 @@ class KotlinNativeSavedCorrectionFileStore(
                     val envelope = SavedCorrectionEnvelope(
                         ownerKey, workoutId,
                         SavedCorrectionBinary.originalFingerprint(
-                            existing.state.originalFinishedJournal),
-                        next.state.correctionRevision, next.state.receipts)
+                            existing.state.originalFinishedJournal,
+                            SavedCorrectionBinary.CURRENT_VERSION),
+                        next.state.correctionRevision,next.state.receipts,
+                        SavedCorrectionBinary.CURRENT_VERSION)
                     atomicReplace(file, SavedCorrectionBinary.encode(envelope))
                 }
                 NativeSavedCorrectionFileResult.Durable(next.state, next.replayed)

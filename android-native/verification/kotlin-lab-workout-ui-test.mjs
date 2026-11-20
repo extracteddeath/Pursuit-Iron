@@ -1555,3 +1555,20 @@ assert.doesNotMatch(measuredEditor,/onRecord\(.*KotlinPerformedSet/);
 assert.match(measuredEntry,/unit==MeasuredEntryUnit\.FEET && !exact/);
 assert.match(measuredEntry,/rounding/);
 assert.match(measuredEntry,/MeasuredExerciseDomain\.validActual\(plan,outcome,actual\)/);
+
+// An issued last-set reduction is labeled as planned, never confused with
+// an unapproved fatigue downstep or a user's different performed weight.
+const plannedLoadNote=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlannedBackoffNote.kt');
+const plannedLoadNoteTest=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeKotlinPlannedBackoffNoteTest.kt');
+assert.ok(
+  plannedLoadNote.includes('it.target.exerciseId==selected.exerciseId') &&
+  plannedLoadNote.includes('selected.type!=DraftSetType.WORKING') &&
+  plannedLoadNote.includes('last.value>=base.value') &&
+  plannedLoadNote.includes('Planned last-set back-off') &&
+  plannedLoadNote.includes('not an automatic weight drop') &&
+  generatedFocus.includes('plannedBackoffNote=NativeKotlinPlannedBackoffNote.fromIssuedTargets(') &&
+  generatedFocus.includes('plannedBackoffNote?.let { note ->') &&
+  plannedLoadNoteTest.includes('labelsOnlyTheAuthoredLowerFinalWorkingSet') &&
+  plannedLoadNoteTest.includes('straightAndMixedOrUnverifiedLoadsCannotBeLabeledAsBackoff'),
+  'Generated Train must distinguish verified authored final-set back-offs from actuals and unapproved load drops'
+);

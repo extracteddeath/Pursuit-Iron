@@ -967,6 +967,8 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         it.target.type==set.target.type}.indexOf(set)+1,
                     setCount=allSets.count{it.target.exerciseId==set.target.exerciseId &&
                         it.target.type==set.target.type},
+                    plannedBackoffNote=NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+                        allSets,set.target),
                     showExerciseHeading=showAll || presentation.finished,
                     onHistory={historyExerciseId=set.target.exerciseId},
                     onInfo={
@@ -1343,6 +1345,7 @@ private fun NativeKotlinSetCard(
     onCurrentDraftChanged:(String,String)->Unit,
     position:Int,
     setCount:Int,
+    plannedBackoffNote:String?,
     showExerciseHeading:Boolean,
     onHistory:()->Unit,
     onInfo:()->Unit,
@@ -1490,6 +1493,10 @@ private fun NativeKotlinSetCard(
         PursuitWorkoutSetReference(referenceMode,target.load,target.reps,target.targetRir,
             physicalMachineLastReferences(lastReferences,machineInstanceId),
             WorkoutReferenceKey(target.setKey))
+        plannedBackoffNote?.let { note ->
+            Text(note,style=MaterialTheme.typography.labelMedium,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(set.isResolved) {
             Text(nativeSavedSetCaption("Saved",set.outcome,existing,
                 target.exerciseId,issuedGymId,machineRoster),

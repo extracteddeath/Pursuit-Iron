@@ -253,6 +253,13 @@ object KotlinProgramPerformanceEvidenceDomain {
                     KotlinProgramPerformanceGate.INCOMPARABLE_RECENT_VISIT
                 recent.any{it.workingSets!=recent.first().workingSets ||
                     it.issuedRepBands!=recent.first().issuedRepBands ||
+                    // Different explicitly prescribed effort is a different
+                    // training exposure, even at the same weight/rep cap.
+                    // Preserve UNKNOWN target RIR for the distinct
+                    // ACTUAL_EFFORT_UNKNOWN gate below.
+                    (it.targetRir.all{rir->rir!=null} &&
+                        recent.first().targetRir.all{rir->rir!=null} &&
+                        it.targetRir!=recent.first().targetRir) ||
                     it.issuedLoads.size!=recent.first().issuedLoads.size ||
                     it.issuedLoads.zip(recent.first().issuedLoads)
                         .any{(a,b)->!KotlinSetNumberAuthorityDomain.sameIssuedTarget(a,b)}

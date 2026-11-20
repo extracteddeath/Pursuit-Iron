@@ -479,3 +479,32 @@ The observed-week result and all future-number links are **read-only**.
 They cannot update issued workouts, approve a cycle, claim missed weeks or
 automatically apply higher/lower loads or sets. The user-selected automatic
 scope and full program-cycle audit remain separate release gates.
+
+### Cross-week evidence for future goal-driven coaching reviews
+
+`KotlinContinuousPlanEvidenceDomain` now pairs the **existing** canonical
+per-exercise `REP_CEILING_REVIEW_ONLY` thread with the **existing** local
+Finish-date observations. Three reported rep ceilings on the same day cannot
+be misread as three full training weeks.
+
+An exploratory rep-range coaching review signal can appear only when the
+three exact matched workout IDs fall on **three different consecutive
+Monday-based weeks**, every week has exactly one complete unshortened
+workout on every selected training weekday, the records match each issued
+weekday and day index, chronology is intact, and there is no newer partial
+observed week superseding the sequence. A missing date, incomplete week,
+duplicate day, stale sequence, intervening gap, contradictory clock, changed
+machine, exercise or prescribed load keeps the signal guarded. No new
+exercise, rep/weight/set amount, RIR or scientific fatigue conclusion is
+inferred from these observations.
+
+The summary is linked only inside the native owner-history coordinator,
+which first reopens the complete private journal/correction manifest and
+recomputes historical performance under the existing Kotlin authority.
+The pure summary is **not an owner attestation** on its own and
+`EXPLORATORY_REVIEW_ONLY_ACTIVATION_REQUIRED` is deliberately not an
+approval to change the athlete's saved future program. The source program
+activation epoch, authorized calendar/week provenance, complete multi-block
+coaching audit, controls for protected/manual work, and explicit athlete
+scope are still separate gates for the continuous plan (#783). Engine
+numerical release/parity evidence (#786) is likewise not complete.

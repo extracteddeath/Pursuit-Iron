@@ -17,9 +17,10 @@ class KotlinProgramHistoryReadoutDomainTest {
         60,120)
 
     private fun started(workoutId:String,src:KotlinTrainingSourceRevision=source,
-        day:Int=0,load:DraftSetLoad=issued):KotlinWorkoutJournalState {
+        day:Int=0,load:DraftSetLoad=issued,
+        calendarDay:Int=0):KotlinWorkoutJournalState {
         val snapshot=KotlinStagedWorkout(
-            src,"grant-1",workoutId,0,day,
+            src,"grant-1",workoutId,calendarDay,day,
             ComposerSessionPurpose.HYPERTROPHY,45,
             listOf(target(0,load),target(1,load)))
         return KotlinWorkoutJournalDomain.begin(snapshot,
@@ -68,6 +69,11 @@ class KotlinProgramHistoryReadoutDomainTest {
         val second=accept(request(listOf(a,b)))
         assertEquals(first,second)
         assertEquals(64,first.exactReplayDigest.length)
+        assertEquals(2,first.schemaVersion)
+        assertTrue(first.workingSets.all{
+            it.calendarDay==0 && it.role==ComposerRole.PRIMARY &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        })
         assertEquals(listOf("workout-A","workout-B"),
             first.workouts.map{it.workoutId})
         assertEquals(4,first.workingSets.size)
@@ -122,6 +128,44 @@ class KotlinProgramHistoryReadoutDomainTest {
         val smithReadout=accept(request(listOf(smithDone)))
         assertEquals(setOf(KotlinHistoryComparisonGuard.MACHINE_UNKNOWN),
             smithReadout.workingSets.map{it.comparisonGuard}.toSet())
+    }
+
+    @Test fun calendarWeekdayAndProgramDayIndexRemainIndependentOriginalFacts() {
+        var journal=started("weekday-two",day=0,calendarDay=2)
+        journal=record(journal,"bench:s0","weekday-0",10,2,"press-A")
+        journal=record(journal,"bench:s1","weekday-1",9,2,"press-A")
+        journal=(KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.Finish("weekday-finish",journal.revision))
+            as KotlinJournalDecision.Proposed).state
+        val ledger=accept(request(listOf(journal)))
+        assertEquals(0,ledger.workouts.single().dayIndex)
+        assertEquals(2,ledger.workouts.single().calendarDay)
+        assertTrue(ledger.workingSets.all{
+            it.dayIndex==0 && it.calendarDay==2
+        })
+        val incorrect=ledger.copy(workingSets=
+            ledger.workingSets.mapIndexed{index,fact->
+                if(index==0)fact.copy(calendarDay=0) else fact
+            })
+        assertEquals(KotlinProgramPerformanceResult.Rejected(
+            KotlinProgramPerformanceRefusal.UNVERIFIED_SOURCE_FACT),
+            KotlinProgramPerformanceEvidenceDomain.review(
+                incorrect,mapOf("weekday-two" to 1L)))
+    }
+
+    @Test fun invalidSkippedMachineReceiptDoesNotBecomeMachineUnknown() {
+        val smith=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("25"))
+        var journal=started("missed-smith",load=smith)
+        journal=record(journal,"bench:s0","missed-0",10,null,null,
+            KotlinJournalSetOutcome.SKIPPED)
+        journal=record(journal,"bench:s1","missed-1",10,2,null)
+        journal=(KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.Finish("missed-finish",journal.revision))
+            as KotlinJournalDecision.Proposed).state
+        val ledger=accept(request(listOf(journal)))
+        assertEquals(setOf(KotlinHistoryComparisonGuard.INELIGIBLE_SESSION),
+            ledger.workingSets.map{it.comparisonGuard}.toSet())
     }
 
     @Test fun savedCorrectionReplacesOnlyEffectiveActualNotOldIssuedTarget() {

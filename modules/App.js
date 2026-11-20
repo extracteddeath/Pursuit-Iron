@@ -19051,7 +19051,11 @@ function App() {
     const [progressFocus, setProgressFocus] = useState(null); // section to scroll to when opening the progress tab ("strength" | null)
     const [settingsFocus, setSettingsFocus] = useState(null); // deep-link into Settings ("export" opens the backup sheet — used by Home's backup nudge)
     useEffect(() => { if (!appToast)
-        return; const t = setTimeout(() => setAppToast(null), appToast.undo ? 8000 : 5000); return () => clearTimeout(t); }, [appToast]); // undo toasts linger — they're the only recovery window for a destructive action
+        return; const t = setTimeout(() => setAppToast(null), appToast.undo ? 8000 : 5000); return () => clearTimeout(t); }, [appToast]);
+    // An app-level Undo belongs to the screen where the action happened. Carried into a workout it floats
+    // over the set rows, where a tap meant for logging could silently revert a program switch.
+    useEffect(() => { if (view === "session")
+        setAppToast(t => (t?.undo ? null : t)); }, [view]); // undo toasts linger — they're the only recovery window for a destructive action
     // Horizontal scrollers (carousels, the volume-across-the-block table, chip rows…) now use
     // touch-action:pan-x, so the browser scrolls them natively with proper flick momentum, while a
     // vertical drag is handed to the page. No JS gesture handling needed — that earlier approach drove

@@ -9005,7 +9005,7 @@ background:var(--pi-color-card)!important;
 .wpb .wpb-program-commit-actions>.wpb-ui-action{display:inline-flex;align-items:center;justify-content:center;gap:var(--pi-space-2);min-width:0;white-space:normal;overflow-wrap:anywhere;}
 .wpb-program-meta-collapse{overflow:hidden;will-change:height,opacity,transform;}
 .wpb-program-meta-line{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-1);padding-top:2px;font-size:var(--pi-type-support);color:var(--pi-color-on-muted);}
-.wpb-program-actions{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-2);margin-top:var(--pi-space-3);--pi-control-padding-inline:var(--pi-space-1);}
+.wpb-program-actions{display:flex;align-items:center;flex-wrap:wrap;gap:var(--pi-space-1);margin-top:var(--pi-space-3);--pi-control-padding-inline:var(--pi-space-1);}
 .wpb-program-actions-spacer{flex:1 1 auto;}
 .wpb-program-day-picker{position:relative;flex-shrink:0;min-width:0;}
 .wpb-program-actions [aria-expanded="true"]>.wpb-program-day-chevron{transform:rotate(180deg);}
@@ -9868,6 +9868,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-workout .wpb-workout-timer-value{font-weight:600;color:var(--wpb-theme-text);white-space:nowrap}
 #root .wpb-workout .wpb-workout-timer[data-paused="true"] .wpb-workout-timer-value{color:var(--wpb-theme-accent-ink)}
 #root .wpb-workout .wpb-workout-header-action{display:inline-flex;gap:6px;border:1px solid transparent;border-radius:12px}
+@media(max-width:350px){#root .wpb-workout :has(>.wpb-workout-close){gap:2px}#root .wpb-workout .wpb-workout-timer{gap:2px}}
 #root .wpb-workout .wpb-workout-header-action[data-focus="1"]{background:var(--wpb-theme-accent);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
 #root .wpb-workout .wpb-workout-actions>.wpb-workout-finish{width:auto;padding:0 14px;font-weight:700;font-size:16px;background:var(--wpb-theme-accent);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
 #root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]{width:48px;padding:0;gap:0}

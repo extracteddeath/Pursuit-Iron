@@ -351,18 +351,36 @@ class GeneratedAdaptiveBlockConversionTest {
         val target=candidate.blocks.last()
         assertEquals(3,target.days.size)
         assertTrue(target.days.all{it.slots.size==8})
-        assertEquals(15,result.restoredSourceExercises.size)
+        // No fixed assumed "five accessories per day": the actual
+        // composer may also omit secondary movements on some weekdays.
+        // Compare against the real blocked generator, not a guessed count.
+        val disallowed=GeneratedAdaptiveBlockDomain.propose(
+            proposed.copy(allowSourceMenuRecovery=false))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,
+            disallowed.status)
+        assertNull(disallowed.proposedOption)
+        assertTrue(disallowed.restoredSourceExercises.isEmpty())
+        val actualMissing=checkNotNull(disallowed.strengthRosterBoundary)
+            .affectedDays.flatMap{loss ->
+                loss.missingExerciseIds.map{loss.weekday to it}
+            }.toSet()
+        assertEquals(actualMissing.size,result.restoredSourceExercises.size)
+        assertEquals(actualMissing,result.restoredSourceExercises.map{
+            it.weekday to it.exerciseId
+        }.toSet())
         assertEquals(setOf(0,2,4),
             result.restoredSourceExercises.map{it.weekday}.toSet())
-        assertEquals(extras.map{it.exerciseId}.toSet(),
-            result.restoredSourceExercises.map{it.exerciseId}.toSet())
-        assertTrue(result.restoredSourceExercises.all{record->
+        assertTrue(extras.map{it.exerciseId}.all{exerciseId ->
+            result.restoredSourceExercises.any{it.exerciseId==exerciseId}
+        })
+        assertTrue(result.restoredSourceExercises.all{record ->
             val old=hyper.days.single{it.weekday==record.weekday}
                 .slots.single{it.slotId==record.sourceSlotId}
             val now=target.days.single{it.weekday==record.weekday}
                 .slots.single{it.slotId==record.proposedSlotId}
             now.sets==old.sets && now.exerciseId==old.exerciseId &&
-                now.role==ComposerRole.ACCESSORY
+                now.role==old.role &&
+                now.role in setOf(ComposerRole.SECONDARY,ComposerRole.ACCESSORY)
         })
         assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
             result.strengthRosterBoundary?.status)
@@ -372,14 +390,6 @@ class GeneratedAdaptiveBlockConversionTest {
         assertEquals(3,cycle.blocks.last().days.first().slots.size)
         assertFalse(result.maySaveProgram)
         assertFalse(result.mayIssueWorkout)
-        // No athlete adaptation permission means the same generated
-        // 8-to-3 offer remains refused, never silently edited.
-        val disallowed=GeneratedAdaptiveBlockDomain.propose(
-            proposed.copy(allowSourceMenuRecovery=false))
-        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,
-            disallowed.status)
-        assertNull(disallowed.proposedOption)
-        assertTrue(disallowed.restoredSourceExercises.isEmpty())
     }
 
     @Test fun generatedStrengthCannotCutWorkingSetsInHalfWhileKeepingSameExercises() {

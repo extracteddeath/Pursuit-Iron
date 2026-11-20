@@ -132,6 +132,30 @@ class GeneratedPeakPhaseProgramTest {
             it.exerciseId=="bench" && it.peakDays>=1
         })
         assertTrue(taper.lostMainLiftIds.isEmpty())
+        val numeric=checkNotNull(candidate.upstreamNumberTrace)
+        val boundary=checkNotNull(numeric.phaseBoundary)
+        assertEquals(TrainingPhase.STRENGTH,boundary.sourcePhase)
+        assertEquals(TrainingPhase.PEAK,boundary.destinationPhase)
+        assertEquals(2,boundary.sourceExitWeek)
+        assertEquals(4,boundary.destinationEntryWeek)
+        assertEquals(27,boundary.sourceWorkingSets)
+        assertEquals(taper.peakWorkingSets,boundary.destinationWorkingSets)
+        assertTrue(numeric.sets.isNotEmpty())
+        assertTrue(numeric.sets.filter{
+            it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+        }.all{
+            it.reps==RepBand(1,3) && it.targetRir==1 &&
+            it.restSeconds==180 &&
+            it.origin==GeneratedSetNumberOrigin.EXERCISE_PHASE_POLICY
+        })
+        assertTrue(numeric.sets.filter{
+            it.purpose==ComposerSessionPurpose.GENERAL_PREPARATION
+        }.all{
+            it.reps==RepBand(6,8) && it.targetRir==2 &&
+            it.restSeconds==90
+        })
+        assertEquals(GeneratedHistoryEvidenceState.NOT_CONSUMED,
+            numeric.historyEvidence)
         assertEquals(sourceText,source.toString())
         assertFalse(candidate.maySaveProgram)
         assertFalse(candidate.mayIssueWorkout)

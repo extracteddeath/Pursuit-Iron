@@ -58,5 +58,10 @@ class NativeKotlinPlannedBackoffNoteTest {
         val duplicate=listOf(target(0),target(0,"195"))
         assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
             duplicate.map(::p),duplicate.last()))
+        // A shorter issued workout can retain source set ordinals with gaps.
+        // Do not misstate the source fourth set as a new second set.
+        val omittedMiddle=listOf(target(0),target(3,"195"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
+            omittedMiddle.map(::p),omittedMiddle.last()))
     }
 }

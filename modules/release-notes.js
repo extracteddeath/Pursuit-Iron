@@ -2,6 +2,13 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "1026", items: [
+        "Home opens with your week: Monday to Sunday at a glance, scheduled days marked, and a weekly streak.",
+        "The Last 7 days card compares sessions with your plan and shows time trained, your best set and your most-trained muscle. Share recap sends it to a friend.",
+        "Something hurt? Pain check on any exercise asks where and how bad, shows today’s plan, and halves or skips the lifts that load that area. Undo restores the workout.",
+        "Freestyle can start from a routine you saved after an earlier freestyle workout, in one tap.",
+        "Program share codes work again. Share program gives a PI2 code; paste it into Settings → Add a shared program for an editable copy."
+    ] },
     { version: "4.0.0", build: "953", items: [
         "Exercise titles, set counts and lift tags sit closer together, with less space above workout actions.",
         "Warm-up, Superset, Swap and Session note stay on one swipeable row with comfortable tap targets."

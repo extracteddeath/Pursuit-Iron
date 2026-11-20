@@ -14,7 +14,9 @@ import java.util.Collections
  */
 data class KotlinProgramPerformanceKey(
     val dayIndex:Int,
+    val calendarDay:Int,
     val purpose:ComposerSessionPurpose,
+    val role:ComposerRole,
     val exerciseId:String,
     val physicalMachineId:String?,
     val loadUnit:LoadUnit?,
@@ -25,6 +27,7 @@ data class KotlinProgramPerformanceVisit(
     val workoutId:String,
     val completionOrder:Long,
     val dayIndex:Int,
+    val calendarDay:Int,
     val workingSets:Int,
     val completedSets:Int,
     val historicalComparable:Boolean,
@@ -106,14 +109,15 @@ object KotlinProgramPerformanceEvidenceDomain {
         fun denied(reason:KotlinProgramPerformanceRefusal)=
             KotlinProgramPerformanceResult.Rejected(reason)
         val workouts=ledger.workouts.associateBy{it.workoutId}
-        if(ledger.schemaVersion!=1 || ledger.exactReplayDigest.length!=64 ||
+        if(ledger.schemaVersion!=2 || ledger.exactReplayDigest.length!=64 ||
             workouts.size!=ledger.workouts.size ||
             completionOrderByWorkout.keys!=workouts.keys ||
             completionOrderByWorkout.values.any{it<=0L} ||
             completionOrderByWorkout.values.toSet().size!=workouts.size ||
             ledger.workouts.any{
                 it.purpose==ComposerSessionPurpose.UNSPECIFIED ||
-                it.dayIndex !in 0..6
+                it.dayIndex !in 0..6 ||
+                it.calendarDay !in 0..6
             })
             return denied(KotlinProgramPerformanceRefusal.INVALID_REPLAY_OR_ORDER)
 
@@ -122,7 +126,11 @@ object KotlinProgramPerformanceEvidenceDomain {
             return denied(KotlinProgramPerformanceRefusal.UNVERIFIED_SOURCE_FACT)
         if(workouts.values.any{w->
             val facts=byWorkout[w.workoutId].orEmpty()
-            facts.any{it.dayIndex!=w.dayIndex} ||
+            facts.any{
+                it.dayIndex!=w.dayIndex ||
+                it.calendarDay!=w.calendarDay ||
+                it.purpose!=w.purpose
+            } ||
                 facts.count{it.outcome==KotlinJournalSetOutcome.COMPLETED}!=
                     w.completedWorkingSets ||
                 facts.count{it.outcome==KotlinJournalSetOutcome.SKIPPED}!=
@@ -142,7 +150,8 @@ object KotlinProgramPerformanceEvidenceDomain {
             for((exerciseId,unordered) in sets.groupBy{it.exerciseId}) {
                 val facts=unordered.sortedWith(compareBy(
                     {it.workingOrdinal},{it.setKey}))
-                if(facts.map{it.workingOrdinal}.distinct().size!=facts.size)
+                if(facts.map{it.workingOrdinal}.distinct().size!=facts.size ||
+                    facts.map{it.role}.distinct().size!=1)
                     return denied(KotlinProgramPerformanceRefusal.UNVERIFIED_SOURCE_FACT)
                 val machines=facts.map{it.physicalMachineId}.toSet()
                 val machine=machines.singleOrNull()
@@ -152,12 +161,13 @@ object KotlinProgramPerformanceEvidenceDomain {
                     }
                 }.toSet()
                 val first=types.singleOrNull()
-                val key=KotlinProgramPerformanceKey(w.dayIndex,w.purpose,
-                    exerciseId,machine,first?.first,first?.second)
+                val key=KotlinProgramPerformanceKey(w.dayIndex,w.calendarDay,
+                    w.purpose,facts.first().role,exerciseId,
+                    machine,first?.first,first?.second)
                 observed+=VisitWithKey(key,KotlinProgramPerformanceVisit(
                     w.workoutId,
                     checkNotNull(completionOrderByWorkout[w.workoutId]),
-                    w.dayIndex,facts.size,
+                    w.dayIndex,w.calendarDay,facts.size,
                     facts.count{it.outcome==KotlinJournalSetOutcome.COMPLETED},
                     !w.shortenedForTime && facts.isNotEmpty() &&
                         facts.all{
@@ -174,7 +184,8 @@ object KotlinProgramPerformanceEvidenceDomain {
         }
         val byKey=observed.groupBy{it.key}
         val threads=byKey.entries.sortedWith(compareBy(
-            {it.key.dayIndex},{it.key.purpose.name},
+            {it.key.calendarDay},{it.key.dayIndex},
+            {it.key.purpose.name},{it.key.role.name},
             {it.key.exerciseId},{it.key.physicalMachineId ?: ""},
             {it.key.loadUnit?.name ?: ""},{it.key.loadBasis?.name ?: ""}
         )).map{(key,parts)->
@@ -188,7 +199,9 @@ object KotlinProgramPerformanceEvidenceDomain {
                 // belong to this station. Explicit B does not contaminate A.
                 key.physicalMachineId!=null && observed.any{
                     it.key.dayIndex==key.dayIndex &&
+                        it.key.calendarDay==key.calendarDay &&
                         it.key.purpose==key.purpose &&
+                        it.key.role==key.role &&
                         it.key.exerciseId==key.exerciseId &&
                         it.key.physicalMachineId==null &&
                         // No upper bound: a later unknown-machine visit
@@ -201,7 +214,9 @@ object KotlinProgramPerformanceEvidenceDomain {
                 // thread cannot remain a stale eligible recommendation.
                 observed.any{
                     it.key.dayIndex==key.dayIndex &&
+                        it.key.calendarDay==key.calendarDay &&
                         it.key.purpose==key.purpose &&
+                        it.key.role==key.role &&
                         it.key.exerciseId==key.exerciseId &&
                         it.key.physicalMachineId==key.physicalMachineId &&
                         (it.key.loadUnit!=key.loadUnit ||
@@ -232,7 +247,7 @@ object KotlinProgramPerformanceEvidenceDomain {
                 gate,Collections.unmodifiableList(recent.map{it.workoutId}))
         }
         return KotlinProgramPerformanceResult.Reviewed(
-            KotlinProgramPerformanceReport(1,ledger.exactReplayDigest,
+            KotlinProgramPerformanceReport(2,ledger.exactReplayDigest,
                 Collections.unmodifiableList(threads)))
     }
 }

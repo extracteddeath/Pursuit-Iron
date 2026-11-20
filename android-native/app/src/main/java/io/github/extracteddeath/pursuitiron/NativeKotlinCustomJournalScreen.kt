@@ -1990,7 +1990,8 @@ private fun NativeKotlinCustomVisitEditor(
                     (origin.performed.load?.stripTrailingZeros()
                         ?.toPlainString() ?: "bodyweight")+
                     (origin.performed.unit?.let{" ${it.name.lowercase()}"} ?: "")+
-                    ". Changing the weight ends the same-load sequence.",
+                    ". Your issued target remains unchanged. "+
+                    "Changing the weight ends the same-load sequence.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             AmplifierFollowUpEntryLoad.ActivationUnavailable ->
@@ -2059,13 +2060,6 @@ private fun NativeKotlinCustomVisitEditor(
                     }
                     Text(protocol.techniqueCue,
                         style=MaterialTheme.typography.bodySmall)
-                    if(sameLoadActivation!=null)Text(
-                        "Weight starts from the logged activation set ("+
-                            sameLoadActivation+" "+
-                            verified?.unit?.name?.lowercase().orEmpty()+
-                            "). Your issued target remains unchanged.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         (follower.followUpActiveSeconds?.let{
                             "$it s planned follow-up work"

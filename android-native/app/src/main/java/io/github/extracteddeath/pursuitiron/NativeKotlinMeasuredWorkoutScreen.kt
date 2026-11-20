@@ -87,11 +87,14 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var target by rememberSaveable{mutableStateOf("30")}
     var setCount by rememberSaveable{mutableIntStateOf(2)}
     var review by remember{mutableStateOf<NativeMeasuredConsentResult.Preview?>(null)}
-    var finishDialog by remember{mutableStateOf(false)}
     var menuOpen by remember{mutableStateOf(false)}
     var workoutId by rememberSaveable(resumeWorkoutId) {
         mutableStateOf(resumeWorkoutId ?:
             "measured-"+UUID.randomUUID().toString().replace("-",""))
+    }
+    // A review is deliberately not saved through process recreation.
+    var finishReview by remember(workoutId) {
+        mutableStateOf<NativeFinishReviewToken?>(null)
     }
     // A verified workout cannot silently revert to new-session authoring
     // when its disk journal is missing, unreadable or owner-unverifiable.
@@ -730,7 +733,11 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 Text("All measured sets have saved outcomes",
                     style=MaterialTheme.typography.titleMedium)
                 PursuitPrimaryAction("Review and finish",
-                    enabled=!busy) {finishDialog=true}
+                    enabled=!busy) {
+                    finishReview=stored?.let {
+                        NativeFinishReviewToken(workoutId,it.journal.revision)
+                    }
+                }
             }
         }
     }
@@ -813,23 +820,39 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 TextButton(enabled=!busy,onClick={review=null}){Text("Cancel")}
             })
     }
-    if(finishDialog && stored!=null)AlertDialog(
-        onDismissRequest={if(!busy)finishDialog=false},
+    finishReview?.let {reviewed->
+        val canCommit=NativeFinishReviewPolicy.canCommit(
+            reviewed,workoutId,stored?.journal?.revision,
+            entryState==NativeMeasuredWorkoutEntryState.RECORDING &&
+                stored?.journal?.canProposeFinish==true &&
+                stored?.journal?.finishedByEventId==null &&
+                MeasuredWorkoutFocusDomain.review(
+                    stored?.journal ?: return@let,focusSetKey)!=null)
+        AlertDialog(
+        onDismissRequest={if(!busy)finishReview=null},
         title={Text("Finish measured workout?")},
-        text={Text("Only your saved actual durations, distances, "+
-            "repetitions, physical loads, sides and set outcomes enter "+
-            "verified History. No target is logged as performed work.")},
+        text={Text(if(canCommit)
+            "Only your saved actual durations, distances, repetitions, physical loads, sides and set outcomes enter verified History. No target is logged as performed work."
+            else "Your saved measured workout changed or needs recovery. Close this review and check the current sets before finishing.")},
         confirmButton={
-            Button(enabled=!busy,onClick={
+            Button(enabled=!busy && canCommit,onClick={
                 val previous=stored ?:return@Button
-                finishDialog=false;busy=true;message=null
+                if(!NativeFinishReviewPolicy.canCommit(
+                    reviewed,workoutId,previous.journal.revision,
+                    entryState==NativeMeasuredWorkoutEntryState.RECORDING &&
+                        previous.journal.canProposeFinish &&
+                        previous.journal.finishedByEventId==null &&
+                        MeasuredWorkoutFocusDomain.review(
+                            previous.journal,focusSetKey)!=null))
+                    return@Button
+                finishReview=null;busy=true;message=null
                 scope.launch {
                     try {
                         val result=withContext(Dispatchers.IO) {
                             host.finishMeasuredWorkout(workoutId,
                                 MeasuredWorkoutOperation.Finish(
                                     "finish-"+UUID.randomUUID().toString()
-                                        .replace("-",""),previous.journal.revision))
+                                        .replace("-",""),reviewed.revision))
                         }
                         if(result is NativeMeasuredFinishResult.Committed) {
                             val completedId=workoutId
@@ -851,8 +874,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 }
             }) {Text("Finish & save")}
         },dismissButton={
-            TextButton(enabled=!busy,onClick={finishDialog=false}) {
+            TextButton(enabled=!busy,onClick={finishReview=null}) {
                 Text("Keep logging")
             }
         })
+    }
 }

@@ -935,6 +935,14 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')+
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutInfoPresentation.kt');
+const infoPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeWorkoutInfoActionPolicy.kt');
+const betaBuild=read('android-native/app/build.gradle.kts');
+assert.ok(betaBuild.includes('"**/NativeWorkoutInfoActionPolicy.kt"') &&
+  infoPolicy.includes('mayRequestSkipRemaining=active && hasRemainingSets') &&
+  infoPolicy.includes('!hasRecordedWork && !linkedSuperset') &&
+  composer.includes('NativeWorkoutInfoActionPolicy.review(') &&
+  journal.includes('NativeWorkoutInfoActionPolicy.review('),
+  'Both native workout routes must compile the same source-gated skip/undo presentation policy');
 assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   sharedFocus.includes('contentDescription="Exercise details"') &&
   sharedFocus.includes('val stacked=maxWidth<520.dp ||') &&

@@ -589,3 +589,43 @@ calendar, reliable scheduled-session identity, and exact consent
 revalidation are still required to authorize automated goal-driven
 week or phase changes. This checker grants no workout issuance or
 automatic load, set, rep, exercise or phase edits.
+
+### Immutable approved start Monday for an already activated future block
+
+`NativeKotlinActivatedBlockCalendarFileStore` now supports a separate
+private, owner-fenced, one-time **athlete-confirmed block calendar**. This is
+not an inferred activation epoch, and it is not yet a UI/issuance gate.
+
+- A calendar preview only exists after the existing write-ahead
+  future-activation transaction has successfully applied the source CAS.
+  It reopens the exact *currently active* source and saved authored cycle,
+  checks the target block's position/phase and scheduled weekdays, and
+  binds source/draft SHA-256 content digests, both revisions, athlete/owner,
+  IANA timezone, absolute first-week number and selected local Monday.
+- The athlete must confirm the exact preview fingerprint. The transaction
+  captures its own valid system/approved clock observation. An invalid,
+  missing or unknown clock refuses acceptance. Start Monday must be a true
+  local Monday in the current or next twelve training weeks, not an
+  arbitrary backdated week, and old phase sessions are **never** given
+  newly inferred dates.
+- The accepted record is written once using a checksum-checked, versioned
+  binary and atomic rename under the same native owner transaction fence
+  as the source and custom journals. Confirming the identical record can
+  replay idempotently; attempting a different Monday refuses replacement.
+  Cold reads re-verify the currently applied activation, saved source and
+  draft digests, revision, timezone and exact scheduled days. A changed
+  program or owner refuses current-calendar status; corruption refuses.
+- The preview, accepted record and cold read cannot issue a workout, remove
+  the future handoff barrier, change training loads/rep ranges/set counts,
+  claim adherence or infer an original cycle's historical activation.
+  An approved **block** start Monday is not proof when earlier cycle blocks
+  originally began. The independent full-cycle coaching signoff, workout
+  issuance, schedule/missed-session policy and every future numerical
+  change remain separate, explicit gates.
+
+The native UI has not yet exposed this confirmation flow or linked it into
+workout issuance and the full backup inventory. It is a hardened durable
+authority primitive, **not completion of goal-driven autopilot**. Backup and
+restoration integration, migrations, first-block activation, source-consistent
+week replay, time-zone travel handling and real-device testing remain
+required before using the anchor for any automatic program decision.

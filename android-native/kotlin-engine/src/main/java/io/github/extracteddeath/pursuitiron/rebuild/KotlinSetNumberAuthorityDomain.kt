@@ -60,6 +60,17 @@ object KotlinSetNumberAuthorityDomain {
     private val maxLoad=BigDecimal("100000")
     private val zero=BigDecimal.ZERO
 
+    /** One scale-independent identity rule for TWO immutable issued targets.
+     * Never use physical numeric equality as machine A/B equivalence: the
+     * equipment instance is a separate exact history identity key. */
+    fun sameIssuedTarget(a:DraftSetLoad,b:DraftSetLoad):Boolean =
+        when {
+            a is DraftSetLoad.Verified && b is DraftSetLoad.Verified ->
+                a.unit==b.unit && a.basis==b.basis &&
+                    a.value.compareTo(b.value)==0
+            else ->a==b
+        }
+
     fun review(
         issuedLoad:DraftSetLoad,
         outcome:KotlinJournalSetOutcome?,

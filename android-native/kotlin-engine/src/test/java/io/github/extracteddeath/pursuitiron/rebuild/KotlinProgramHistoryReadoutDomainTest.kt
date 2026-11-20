@@ -11,17 +11,17 @@ class KotlinProgramHistoryReadoutDomainTest {
     private val issued=DraftSetLoad.Verified(
         LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,n("25"))
 
-    private fun target(index:Int)=KotlinWorkoutTarget(
+    private fun target(index:Int,load:DraftSetLoad=issued)=KotlinWorkoutTarget(
         "bench",ComposerRole.PRIMARY,ComposerSessionPurpose.HYPERTROPHY,
-        "bench:s$index",DraftSetType.WORKING,index,issued,RepBand(8,12),2,
+        "bench:s$index",DraftSetType.WORKING,index,load,RepBand(8,12),2,
         60,120)
 
     private fun started(workoutId:String,src:KotlinTrainingSourceRevision=source,
-        day:Int=0):KotlinWorkoutJournalState {
+        day:Int=0,load:DraftSetLoad=issued):KotlinWorkoutJournalState {
         val snapshot=KotlinStagedWorkout(
             src,"grant-1",workoutId,0,day,
             ComposerSessionPurpose.HYPERTROPHY,45,
-            listOf(target(0),target(1)))
+            listOf(target(0,load),target(1,load)))
         return KotlinWorkoutJournalDomain.begin(snapshot,
             KotlinStoredWorkoutIdentity(
                 "stored-"+workoutId,workoutId,src,1))
@@ -103,8 +103,25 @@ class KotlinProgramHistoryReadoutDomainTest {
             KotlinJournalOperation.Finish("legacy-finish",legacy.revision))
             as KotlinJournalDecision.Proposed).state
         val unknown=accept(request(listOf(done)))
-        assertEquals(setOf(KotlinHistoryComparisonGuard.MACHINE_UNKNOWN),
+        // Dumbbells are a physical inventory/load basis, not a machine
+        // instance. Null station IDs are expected on genuine free weights.
+        assertEquals(setOf(KotlinHistoryComparisonGuard.COMPARABLE_REVIEW_ONLY),
             unknown.workingSets.map{it.comparisonGuard}.toSet())
+        assertEquals(ComposerSessionPurpose.HYPERTROPHY,
+            unknown.workouts.single().purpose)
+        assertFalse(unknown.workouts.single().shortenedForTime)
+
+        val smith=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("25"))
+        var machine=started("smith-legacy",load=smith)
+        machine=record(machine,"bench:s0","smith-0",10,null,null)
+        machine=record(machine,"bench:s1","smith-1",10,null,null)
+        val smithDone=(KotlinWorkoutJournalDomain.reduce(machine,
+            KotlinJournalOperation.Finish("smith-finish",machine.revision))
+            as KotlinJournalDecision.Proposed).state
+        val smithReadout=accept(request(listOf(smithDone)))
+        assertEquals(setOf(KotlinHistoryComparisonGuard.MACHINE_UNKNOWN),
+            smithReadout.workingSets.map{it.comparisonGuard}.toSet())
     }
 
     @Test fun savedCorrectionReplacesOnlyEffectiveActualNotOldIssuedTarget() {

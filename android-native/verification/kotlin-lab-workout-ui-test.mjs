@@ -1611,7 +1611,7 @@ assert.ok(
   journal.includes('activationReceiptRevision=observed?.appliedRevision') &&
   journal.includes('if(saved==null && part==CustomWorkoutVisitPart.MAIN)') &&
   journal.includes('ActivationUnavailable -> ""') &&
-  !journal.includes('val sameLoadActivation=if(') &&
+  !journal.includes('sameLoadActivation') &&
   amplifierLoadTests.includes('everyMyoStagePrefillsFromLastLoggedActivationNotFirstSetOrIssuedWeight') &&
   amplifierLoadTests.includes('incompatibleActivationAndMachineNeverFallbackToEarlierSet') &&
   amplifierLoadTests.includes('activationLoadResolutionIsOneSourceAcrossSingleAndStagedProtocols'),

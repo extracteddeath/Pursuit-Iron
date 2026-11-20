@@ -153,6 +153,18 @@ class KotlinProgramHistoryReadoutDomainTest {
                 listOf(valid,valid))))
         assertEquals(
             KotlinProgramHistoryReadoutResult.Rejected(
+                KotlinProgramHistoryReadoutRefusal.INVALID_SCOPE),
+            KotlinProgramHistoryReadoutDomain.review(
+                request(listOf(valid)).copy(
+                    expectedSource=source.copy(programId="other-cycle"))))
+        assertEquals(
+            KotlinProgramHistoryReadoutResult.Rejected(
+                KotlinProgramHistoryReadoutRefusal.INVALID_SCOPE),
+            KotlinProgramHistoryReadoutDomain.review(
+                request(listOf(valid)).copy(
+                    expectedSource=source.copy(athleteId="another-athlete"))))
+        assertEquals(
+            KotlinProgramHistoryReadoutResult.Rejected(
                 KotlinProgramHistoryReadoutRefusal.INVALID_REPLAY_OR_CORRECTION),
             KotlinProgramHistoryReadoutDomain.review(request(
                 listOf(valid.copy(finishedByEventId="forged")))))

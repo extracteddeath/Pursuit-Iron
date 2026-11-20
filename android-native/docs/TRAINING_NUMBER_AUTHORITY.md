@@ -101,3 +101,23 @@ saved activation) must be kept as a reproducible negative fixture.
 
 The full UI, real Android device accessibility/restore tests and independent
 web-to-Kotlin comparisons remain beta release gates. No APK until full UI.
+
+## Current implementation checkpoints: numerical acceptance (partial)
+
+The first hard consolidation is `KotlinSetNumberAuthorityDomain`, called
+from the generated journal, custom journal, and shared numeric entry parser.
+It defines one exact acceptance matrix for completed/skipped/failed work,
+weight unit/range/precision, machine-ID syntax and nullable reported RIR;
+the same inspected fact distinguishes an issued-load match from a different
+athlete-performed load without changing the issued target. JUnit replays
+both real journal formats through correction and factual History projection;
+source contracts fail if a caller forks the policy.
+
+This is **not yet the full numerical lineage audit**. Remaining work must
+trace all source-backed rep/set/weight decisions through program generation,
+custom authoring, block transitions and shortening, Leveling/Last shortcuts,
+all five amplifier protocols, per-physical-machine and per-training-day
+longitudinal coaching, proposed next-session numbers, and any future
+automatic cycle optimizer. The later milestone should make a numerical
+decision trace reproducible from committed receipts and approved policy
+versions, and exercise that trace in paired random and adversarial simulations.

@@ -170,3 +170,41 @@ step, with **no permission to issue, save or edit a workout**.
 This is not yet a full shared program/cycle issuance engine: upstream
 rep-range, volume, phase, Leveling, rep-forecast and longitudinal evidence
 policies still require cross-route provenance and parity testing.
+
+## Upstream generated-program numerical reconciliation (partial)
+
+`GeneratedUpstreamNumberTraceDomain` now runs at the final reviewed
+`GeneratedAdaptiveBlockDomain.propose` handoff. A source/inventory-valid
+candidate is refused if **any** generated exercise, weekday, slot, working or
+warmup set, rep band, target RIR, load basis, active time or rest time cannot
+be accounted for by precisely one of:
+
+- the purpose/day-specific authored exercise prescription;
+- an exactly preserved protected athlete-authored source slot;
+- a source-reviewed and independently opted-in Strength menu restoration;
+- a separately permitted Strength working-dose repair repeating exactly the
+  already authored Strength set, within the existing full-cycle guards.
+
+The immutable ledger records the actual proposed number and its source class,
+set ordinal, day/slot/exercise/phase, prior slot lineage and author day scope.
+It also records the final resolved preceding *training* week versus the
+candidate week's working-set and exercise-visit counts, skipping deload/test
+bridges. A SHA-256 digest covers the exact input request, source revision,
+exercise policies, resulting cycle and observed set facts for byte-sensitive
+replay. This is **not** a new progression algorithm or permission to issue.
+Adversarial JUnit cases reject plausible but unauthored rep edits, silent
+extra sets and stale source revisions, and assert separate Heavy vs General
+Peak rep/RIR/rest and Strength-to-Peak numbers.
+
+**Important evidence boundary:** this generator currently receives an
+approved *program* and verified equipment, not authenticated actual workout
+receipts. The ledger explicitly says `NOT_CONSUMED` for training-performance
+history: a preceding programmed 27-set Strength week cannot be represented as
+27 *completed* sets. Before whole-program automatic optimization or a claim
+that every numerical decision can be reproduced from athlete settings **and
+verified training history**, the next engine pass must bind versioned,
+machine/day-comparable completed-session evidence, actual adherence and
+performance to program construction and replay. Custom-program authoring,
+independent history corrections and every amplifier protocol also remain
+release-gate #786 scope. This trace is an additional *review gate*, not an
+automatic plan change, an APK or device certification.

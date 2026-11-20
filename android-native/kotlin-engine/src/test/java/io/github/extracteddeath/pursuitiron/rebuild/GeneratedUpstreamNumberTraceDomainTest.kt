@@ -120,6 +120,60 @@ class GeneratedUpstreamNumberTraceDomainTest {
             valid.restoredSourceExercises,valid.addedStrengthWorkingSets))
     }
 
+    @Test fun staleProgramOrPolicyCannotBorrowAnotherRequestsNumericalTrace() {
+        val original=fixture.request()
+        val issued=GeneratedAdaptiveBlockDomain.propose(original)
+        assertEquals(GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
+            issued.status)
+        val candidate=checkNotNull(issued.proposedOption).proposedCycle
+        val reviewed=CustomTrainingCycleDomain.review(candidate,
+            CustomExerciseAuthoringDomain.picker(
+                fixture.athlete(),fixture.movements).map{it.availability})
+        assertEquals(CustomCycleReviewStatus.READY_FOR_COACH_REVIEW,
+            reviewed.status)
+        fun trace(request:GeneratedAdaptiveBlockRequest)=
+            GeneratedUpstreamNumberTraceDomain.review(request,reviewed,
+                checkNotNull(issued.generatedWeek),
+                checkNotNull(issued.prescribedWeek),
+                issued.slotContinuity,issued.restoredSourceExercises,
+                issued.addedStrengthWorkingSets)
+        assertEquals(issued.upstreamNumberTrace,trace(original))
+
+        // The rep-band author changed, but the submitted generated week
+        // still describes the old policy. Merely recomputing a new digest
+        // for the stale result would be false numerical provenance.
+        val newReps=original.copy(prescriptions=
+            original.prescriptions.map {p->
+                if(p.exerciseId=="bench")p.copy(workingReps=RepBand(6,10))
+                else p
+            })
+        assertNull("Stale exercise-specific rep prescriptions must fail",
+            trace(newReps))
+        val newRir=original.copy(prescriptions=
+            original.prescriptions.map {p->
+                if(p.exerciseId=="bench")p.copy(targetRir=1)
+                else p
+            })
+        assertNull("Stale target RIR must fail",trace(newRir))
+        val newRest=original.copy(prescriptions=
+            original.prescriptions.map {p->
+                if(p.exerciseId=="bench")p.copy(restSecondsPerSet=75)
+                else p
+            })
+        assertNull("Stale authored rest/duration must fail",trace(newRest))
+
+        // Physical stock and athlete-selected working loads belong to
+        // program construction, not merely the post-hoc set label.
+        val changedChoice=original.copy(program=original.program.copy(
+            choices=original.program.choices.map {choice->
+                if(choice.exerciseId=="bench")
+                    choice.copy(selectedLoad=fixture.n("30"))
+                else choice
+            }))
+        assertNull("A new load choice cannot reuse the old generation",
+            trace(changedChoice))
+    }
+
     @Test fun sourceRevisionChangesCannotPassAnOldNumericalTrace() {
         val request=fixture.request()
         val outcome=GeneratedAdaptiveBlockDomain.propose(request)

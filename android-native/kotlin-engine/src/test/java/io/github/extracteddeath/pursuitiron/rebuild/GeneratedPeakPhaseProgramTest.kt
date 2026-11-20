@@ -51,12 +51,10 @@ class GeneratedPeakPhaseProgramTest {
                     mav=fixture.n("2"),mrv=fixture.n("6"))
             else bound
         }
-        // Authoritative phase/purpose timing must reach the *composer*
-        // before it chooses set counts. A post-composition rest change
-        // cannot masquerade as a verified 40-60 minute Peak workout.
+        // The actual generated-block converter derives time from the
+        // later phase-specific prescriptions. Callers cannot rely on the
+        // generic offer's slower/faster set timings or smuggle a conflict.
         return base.copy(phase=TrainingPhase.PEAK,
-            visitTimings=CoachSessionPrescriptionDomain
-                .timingsForPolicies(prescriptions()),
             policy=old.copy(phase=TrainingPhase.PEAK,
                 baselineBounds=phaseBounds,selectedBounds=phaseBounds,
                 minimumPurposeDays=mapOf(
@@ -159,5 +157,20 @@ class GeneratedPeakPhaseProgramTest {
             missing.status)
         assertNull(missing.proposedOption)
         assertFalse(missing.mayIssueWorkout)
+
+        val declaredDifferent=peakProgram().copy(
+            visitTimings=CoachSessionPrescriptionDomain
+                .timingsForPolicies(prescriptions()).map {
+                    if(it.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                        it.copy(restSeconds=it.restSeconds+30)
+                    else it
+                })
+        val conflict=GeneratedAdaptiveBlockDomain.propose(
+            GeneratedAdaptiveBlockRequest(source,"peak",
+                "mismatched_rest_seconds",declaredDifferent,
+                prescriptions()))
+        assertEquals(GeneratedAdaptiveBlockStatus.PRESCRIPTION_UNRESOLVED,
+            conflict.status)
+        assertNull(conflict.proposedOption)
     }
 }

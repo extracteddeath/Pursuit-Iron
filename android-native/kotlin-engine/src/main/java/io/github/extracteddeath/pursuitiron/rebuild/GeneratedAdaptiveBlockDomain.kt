@@ -132,7 +132,26 @@ object GeneratedAdaptiveBlockDomain {
             return refuse(GeneratedAdaptiveBlockStatus.PROTECTED_CUSTOM_WORK,
                 "Week-specific custom prescriptions require a separate lossless migration.")
 
-        val generation=CoachAthleteProgramGenerator.generate(input.program)
+        // The generated week must be composed using the actual authored
+        // purpose/day-specific active, rest and warmup timings, not generic
+        // offer timings that can fit while the eventual Peak/Strength
+        // prescription no longer fits the athlete's session range.
+        //
+        // An explicitly supplied timing projection must be exactly the
+        // prescription projection. Do not silently overwrite a conflicting
+        // saved prospective timing or forge a shorter session.
+        val authoredTimings=CoachSessionPrescriptionDomain.timingsForPolicies(
+            input.prescriptions)
+        if(input.prescriptions.size>128 ||
+            input.prescriptions.map {
+                Triple(it.exerciseId,it.purpose,it.dayIndex)
+            }.distinct().size!=input.prescriptions.size ||
+            (input.program.visitTimings.isNotEmpty() &&
+                input.program.visitTimings.toSet()!=authoredTimings.toSet()))
+            return refuse(GeneratedAdaptiveBlockStatus.PRESCRIPTION_UNRESOLVED,
+                "The selected program timing and the exact authored purpose-specific prescriptions disagree or duplicate an exercise visit.")
+        val timedProgram=input.program.copy(visitTimings=authoredTimings)
+        val generation=CoachAthleteProgramGenerator.generate(timedProgram)
         val selected=generation.candidate?.catalogReview
         val original=selected?.draft
         val composed=selected?.composedRequest

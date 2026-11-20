@@ -185,6 +185,15 @@ be accounted for by precisely one of:
 - a separately permitted Strength working-dose repair repeating exactly the
   already authored Strength set, within the existing full-cycle guards.
 
+The restored-Strength branch additionally proves the source slot's exact
+working-set values (rep band, load, RIR, rest and active time), role,
+machine/attachment constraints and exercise identity against the last resolved
+Hypertrophy TRAINING week. Merely carrying the source slot ID is not sufficient.
+A modified prior block or an unexpected source slot is refused, including
+when its resulting numerical value is otherwise valid. Strength recovery
+never uses the deload as a prescription baseline or an athlete performance
+record.
+
 The immutable ledger records the actual proposed number and its source class,
 set ordinal, day/slot/exercise/phase, prior slot lineage and author day scope.
 It also records the final resolved preceding *training* week versus the

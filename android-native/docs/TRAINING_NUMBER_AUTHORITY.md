@@ -260,3 +260,32 @@ from this bridge. The next production boundary must authenticate the storage
 transaction and source revision before a versioned, permission-scoped future
 program optimizer may consume these observations. This does not close #786
 or #783, does not prove end-to-end parity or replace real-device acceptance.
+
+
+## Native storage-owner history bridge for program review (read only)
+
+The production Android host exposes `reviewNativeProgramHistory` through
+`NativeKotlinGlobalHistoryReadCoordinator.readProgramHistory`. It uses
+the **same** owner-locked, full-manifest history reconstruction that powers
+native History, and verifies every retained completion and saved correction
+*before* selecting the exact issued-program source epoch (athlete, program
+revision, gym, catalog and coaching rules). A corrupt or absent workout in
+an unselected epoch still blocks the entire review; it cannot be hidden by a
+caller-supplied list or a filtered UI screen.
+
+The output includes factual per-set replay (prescription vs logged actual,
+nullable actual RIR, effective corrected receipt, physical machine and
+training day), the immutable global History content fingerprint and
+manifest revision, plus real native completion ordinals. Workouts from
+different program/gym/source epochs are never silently averaged together.
+This preserves a verifiable ordering reference even though the underlying
+replay ledger intentionally does not guess training chronology from lexical
+workout IDs.
+
+This is a **read-only** authenticated evidence boundary, not a signed
+permission to edit the athlete's program. It grants neither adaptation
+nor changes to issued workouts. The next numerical authority step is to
+make the program authoring pathway itself consume the verified source
+evidence with explicit athlete-selected adaptation scope, fatigue/lock
+preferences and independently tested rep/set/phase policy. No change to
+the current program or an APK release is authorized by this bridge alone.

@@ -17,7 +17,10 @@ data class GeneratedAdaptiveBlockRequest(
     val targetBlockId:String,
     val optionId:String,
     val program:AthleteProgramGenerationRequest,
-    val prescriptions:List<ExercisePrescriptionPolicy>
+    val prescriptions:List<ExercisePrescriptionPolicy>,
+    /** Athlete opted into exercise adaptation; a candidate source restore
+     * remains unsigned until separate full-cycle and athlete review. */
+    val allowSourceMenuRecovery:Boolean=false
 )
 
 enum class GeneratedAdaptiveBlockStatus {
@@ -58,7 +61,10 @@ data class GeneratedAdaptiveBlockResult(
     /** Exact source-backed exit/entry roster warning, not a coach approval. */
     val strengthRosterBoundary:StrengthRosterBoundaryReview?=null,
     /** Working-set totals only; not generic amplifier/warmup or dose advice. */
-    val strengthDoseBoundary:StrengthDoseBoundaryReview?=null
+    val strengthDoseBoundary:StrengthDoseBoundaryReview?=null,
+    /** Evidence of exact, previously authored source visits restored to an
+     * UNSIGNED candidate, not new athlete results or permission to issue. */
+    val restoredSourceExercises:List<StrengthMenuRestoredExercise> = emptyList()
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -245,17 +251,108 @@ object GeneratedAdaptiveBlockDomain {
                 "The converted complete cycle failed the existing exact inventory and slot review: "+
                     structure.issues.take(3).joinToString(";") {it.kind.name},
                 generation,prescribed)
-        // A feasible generated Strength template is NOT accepted if an
-        // unchanged-split day silently goes from eight established working
-        // exercises to three. Compare the exact LAST hypertrophy week and
-        // FIRST strength week after resolving week-specific overrides.
-        // The dedicated full-cycle coach review remains authoritative for
-        // athlete-specific volume/time, and the source-backed menu recovery
-        // path can restore real exercises only with explicit athlete consent.
+        // Refuse an 8 -> 3 Strength-day collapse unless the athlete has
+        // explicitly allowed exercise adaptation and every lost source visit
+        // is recoverable without inventing a new load, set, movement or gym.
+        // The original source is the final RESOLVED Hypertrophy week, even
+        // across recovery and performance-test bridge blocks.
+        var reviewedStructure=structure
+        var restoredSourceExercises:List<StrengthMenuRestoredExercise> =
+            emptyList()
+        val initialRoster=StrengthRosterBoundaryGuardDomain.review(
+            structure,input.targetBlockId)
+        if(input.allowSourceMenuRecovery &&
+            input.program.selectFromOfferedCatalog &&
+            source.phase==TrainingPhase.STRENGTH &&
+            initialRoster.status==
+                StrengthRosterBoundaryStatus.MATERIAL_EXERCISE_LOSS_REQUIRES_REVIEW) {
+            val exit=initialRoster.sourceExitWeek?.let {
+                CustomTrainingCycleDomain.week(structure,it)
+            }
+            val sourceDays=exit?.days?.associateBy{it.weekday}.orEmpty()
+            val targetBlock=proposed.blocks.single{it.blockId==input.targetBlockId}
+            val specs=input.program.catalog.associateBy{it.exerciseId}
+            val restored=mutableListOf<StrengthMenuRestoredExercise>()
+            val newDays=targetBlock.days.map{day ->
+                val missing=initialRoster.affectedDays
+                    .singleOrNull{it.weekday==day.weekday}
+                    ?.missingExerciseIds.orEmpty()
+                val room=(input.program.maximumExercisesPerDay-day.slots.size)
+                    .coerceAtLeast(0)
+                val usedIds=day.slots.map{it.slotId}.toMutableSet()
+                val additions=sourceDays[day.weekday]?.slots.orEmpty()
+                    .filter{old ->
+                        val spec=specs[old.exerciseId]
+                        old.exerciseId in missing &&
+                            day.slots.none{it.exerciseId==old.exerciseId} &&
+                            old.role in setOf(ComposerRole.SECONDARY,
+                                ComposerRole.ACCESSORY) &&
+                            spec!=null && spec.role==old.role &&
+                            spec.creditStatus==
+                                CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL &&
+                            !spec.creditReviewReference.isNullOrBlank() &&
+                            !old.pinned && old.coachNote.isBlank() &&
+                            old.supersetGroup==null &&
+                            old.machineInstanceId==null &&
+                            old.sets.isNotEmpty() &&
+                            old.sets.all{set->
+                                set.type==DraftSetType.WORKING &&
+                                    set.amplifier==null}
+                    }.distinctBy{it.exerciseId}.take(room)
+                    .map{old ->
+                        val seed=listOf(proposed.cycleId,
+                            proposed.revision.toString(),targetBlock.blockId,
+                            day.weekday.toString(),old.slotId,
+                            old.exerciseId).joinToString("|")
+                        val suffix=MessageDigest.getInstance("SHA-256")
+                            .digest(seed.toByteArray(Charsets.UTF_8))
+                            .take(12).joinToString("") {
+                                (it.toInt() and 255).toString(16).padStart(2,'0')
+                            }
+                        var id="coach_source_d"+day.weekday+"_"+suffix
+                        var ordinal=1
+                        while(id in usedIds) {
+                            id="coach_source_d"+day.weekday+"_"+suffix+
+                                "_"+ordinal++
+                        }
+                        usedIds+=id
+                        restored+=StrengthMenuRestoredExercise(day.weekday,
+                            old.slotId,id,old.exerciseId,old.sets.size)
+                        old.copy(slotId=id,pinned=false)
+                    }
+                day.copy(slots=Collections.unmodifiableList(day.slots+additions))
+            }
+            // Partial restoration cannot conceal an 8 -> 3 defect by
+            // raising it to five: require EVERY lost same-day source ID.
+            val complete=initialRoster.affectedDays.all{loss ->
+                restored.filter{it.weekday==loss.weekday}
+                    .map{it.exerciseId}.toSet()==loss.missingExerciseIds
+            }
+            if(complete && restored.isNotEmpty()) {
+                val recovered=proposed.copy(blocks=proposed.blocks.map{block ->
+                    if(block.blockId==targetBlock.blockId)
+                        block.copy(days=Collections.unmodifiableList(newDays))
+                    else block
+                })
+                val inspected=CustomTrainingCycleDomain.review(recovered,
+                    catalog.map{it.availability})
+                if(inspected.verifiedDraft!=null &&
+                    StrengthRosterBoundaryGuardDomain.review(inspected,
+                        input.targetBlockId).status==
+                            StrengthRosterBoundaryStatus.CONTINUOUS &&
+                    StrengthDoseBoundaryGuardDomain.review(inspected,
+                        input.targetBlockId).status==
+                            StrengthDoseBoundaryStatus.CONTINUOUS) {
+                    reviewedStructure=inspected
+                    restoredSourceExercises=Collections.unmodifiableList(
+                        restored.toList())
+                }
+            }
+        }
         val roster=StrengthRosterBoundaryGuardDomain.review(
-            structure,input.targetBlockId)
+            reviewedStructure,input.targetBlockId)
         val dose=StrengthDoseBoundaryGuardDomain.review(
-            structure,input.targetBlockId)
+            reviewedStructure,input.targetBlockId)
         val halfDose=dose.status==
             StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW
         val doseDetail=if(dose.affectedDays.isNotEmpty())
@@ -293,9 +390,11 @@ object GeneratedAdaptiveBlockDomain {
         return GeneratedAdaptiveBlockResult(
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
-            AdaptiveCycleOption(input.optionId,structure.verifiedDraft),
-            "Complete candidate block; still requires full-cycle quality, permission and athlete review.",
+            AdaptiveCycleOption(input.optionId,reviewedStructure.verifiedDraft!!),
+            if(restoredSourceExercises.isEmpty())
+                "Complete candidate block; still requires full-cycle quality, permission and athlete review."
+            else "Preserved ${restoredSourceExercises.size} actual source-backed Strength accessories on their original weekdays. Full-cycle dose, time, fatigue, stock, permissions and athlete review remain mandatory.",
             Collections.unmodifiableList(identities.toList()),
-            roster,dose)
+            roster,dose,restoredSourceExercises)
     }
 }

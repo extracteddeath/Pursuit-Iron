@@ -64,4 +64,58 @@ class NativeKotlinPlannedBackoffNoteTest {
         assertNull(NativeKotlinPlannedBackoffNote.fromIssuedTargets(
             omittedMiddle.map(::p),omittedMiddle.last()))
     }
+
+    private fun custom(
+        index:Int,weight:String="215",type:DraftSetType=DraftSetType.WORKING,
+        slot:String="press-slot",basis:LoadBasis=LoadBasis.SMITH_TOTAL
+    )=CustomWorkoutSetSnapshot(
+        "$slot:set$index",slot,index+1,
+        CustomAuthoredSet(type,
+            DraftSetLoad.Verified(LoadUnit.LB,basis,BigDecimal(weight)),
+            RepBand(5,8),2,60,120)
+    )
+    @Test fun customLastSetReductionIsExplicitWithoutChangingTargets() {
+        val before=(0..2).map{custom(it)}
+        val last=custom(3,"195")
+        val slot=before+last
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(slot,before[0]))
+        val note=NativeKotlinPlannedBackoffNote.fromCustomSlot(slot,last)
+        assertNotNull(note)
+        assertTrue(note!!.contains("Authored lighter final set"))
+        assertTrue(note.contains("set 4 of 4"))
+        assertTrue(note.contains("215 → 195 lb"))
+        assertEquals(BigDecimal("195"),
+            (last.prescription.load as DraftSetLoad.Verified).value)
+    }
+    @Test fun customLabelRejectsStraightMixedAndMismatchedPhysicalLoads() {
+        val straight=(0..3).map{custom(it)}
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            straight,straight.last()))
+        val mixed=listOf(custom(0),custom(1,"210"),custom(2,"195"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            mixed,mixed.last()))
+        val unlike=listOf(custom(0),custom(1,"195",
+            basis=LoadBasis.EXERCISE_OVERRIDE))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            unlike,unlike.last()))
+        val switched=listOf(custom(0),custom(1,"195",slot="different"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            switched,switched.last()))
+    }
+    @Test fun customLabelRejectsWarmupsOmittedOrdinalsAndDuplicateReceipts() {
+        val warmup=custom(0,"95",DraftSetType.WARMUP)
+        val main=custom(1)
+        val final=custom(2,"195")
+        assertNotNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(warmup,main,final),final))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(warmup,main,final),warmup))
+        val gap=listOf(custom(0),custom(3,"195"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(gap,gap.last()))
+        val duplicate=listOf(custom(0),custom(0,"195"))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            duplicate,duplicate.last()))
+        assertNull(NativeKotlinPlannedBackoffNote.fromCustomSlot(
+            listOf(main,final,warmup),final))
+    }
 }

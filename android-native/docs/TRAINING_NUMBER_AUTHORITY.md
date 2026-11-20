@@ -439,8 +439,12 @@ provides this order only after private journal/correction and manifest review.
 The public pure Kotlin function is a **consistency review**, not independent
 proof of private storage ownership.
 
-There are still no native-attested completion dates or unambiguous training
-week identifiers in these history projections; a sequence of three successful
-visits is NOT proof that the full scheduled week was completed. Consequently
-it must not independently authorize weekly adherence, muscle-volume,
-set-count, rep-band or phase automation.
+The durable global-history manifest supports an **optional** native
+`completedAtEpochMillis` Finish observation, but the current future-program
+history projection does not retain that timestamp or a verified schedule-week
+identifier. In particular, older undated receipts and three successively
+completed visits are NOT proof that a full scheduled week was completed.
+A future date-aware projection must preserve owner source, local timezone,
+and every missing or conflicting date before it can even report observational
+calendar coverage. It cannot independently authorize weekly adherence,
+muscle-volume, set-count, rep-band or phase automation.

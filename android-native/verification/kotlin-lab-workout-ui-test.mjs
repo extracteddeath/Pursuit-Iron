@@ -1617,3 +1617,27 @@ assert.ok(
   amplifierLoadTests.includes('activationLoadResolutionIsOneSourceAcrossSingleAndStagedProtocols'),
   'Follow-up load provenance: logged activation vs authored drop vs unverified, with no Last shortcut'
 );
+
+
+// Numeric trust boundary: generated journal, custom journal, and editor
+// parser MUST use the same Kotlin authority for actual external load,
+// precise decimal range, reps, RIR, outcomes and machine-instance syntax.
+// A source-level gate supplements the real JUnit replay and history matrix.
+const numberAuthority=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinSetNumberAuthorityDomain.kt');
+const numberGenerated=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutJournalDomain.kt');
+const numberCustom=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutJournalDomain.kt');
+const numberEditor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutEntryDomain.kt');
+const numberTests=read('android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinSetNumberAuthorityDomainTest.kt');
+assert.ok(
+  numberAuthority.includes('object KotlinSetNumberAuthorityDomain') &&
+  numberAuthority.includes('KotlinSetLoadRelation.COMPLETED_DIFFERENT_ACTUAL') &&
+  numberAuthority.includes('load.compareTo(issuedLoad.value)==0') &&
+  numberAuthority.includes('KotlinMachineAlternativesDomain.validInstanceId') &&
+  numberAuthority.includes('performed.actualRir !in 0..10') &&
+  numberGenerated.includes('KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)') &&
+  numberCustom.includes('KotlinSetNumberAuthorityDomain.valid(target,outcome,performed)') &&
+  numberEditor.includes('KotlinSetNumberAuthorityDomain.valid(load,') &&
+  numberTests.includes('generatedCustomAndParserAcceptExactlyTheSameActualNumberMatrix') &&
+  numberTests.includes('generatedAndCustomColdHistoryContainsCorrectionsNotPhantomNumbers'),
+  'Kotlin generated, custom and entry parsing must share one numeric acceptance and History contract'
+);

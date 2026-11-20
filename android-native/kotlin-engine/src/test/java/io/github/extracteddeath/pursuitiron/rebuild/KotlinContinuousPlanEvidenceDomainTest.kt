@@ -102,6 +102,10 @@ class KotlinContinuousPlanEvidenceDomainTest {
             .OBSERVED_WEEKS_NOT_COMPLETE,
             review(observation=weeks(
                 (0..2).map{week(it)},reversedClock=true)).state)
+        assertEquals("Even apparently complete old weeks cannot validate a new split",
+            KotlinContinuousPlanEvidenceState.OBSERVED_WEEKS_NOT_COMPLETE,
+            review(observation=weeks().copy(
+                incompatibleSourceWorkoutIds=listOf("visit-1-2"))).state)
     }
 
     @Test fun missingInterveningWeekAndNewerPartialWeekHoldOldEvidence() {

@@ -448,3 +448,34 @@ A future date-aware projection must preserve owner source, local timezone,
 and every missing or conflicting date before it can even report observational
 calendar coverage. It cannot independently authorize weekly adherence,
 muscle-volume, set-count, rep-band or phase automation.
+
+### Observed local training weeks from native Finish receipts (read-only)
+
+The owner history coordinator now preserves the original **optional** Finish
+timestamp for every selected source-epoch workout, alongside its complete
+manifest completion ordinal. `KotlinObservedScheduleWeekDomain` projects
+dated observations in the athlete's reviewed IANA timezone, with
+Monday=0 through Sunday=6, preserving the exact issued training day.
+
+- A calendar week can be labeled `FULL_SCHEDULE_OBSERVED_FOR_REVIEW_ONLY`
+  only when there is exactly one fully recorded unshortened issued workout
+  on **each** selected weekday and its dated local completion weekday agrees
+  with the issued weekday.
+- Skipped/failed/shortened work, duplicate visits on one weekday, a
+  mismatched local completion day or missing weekday produce only partial
+  observations. Earlier undated receipts or contradictory completion-clock
+  ordering downgrade the dated week to `CHRONOLOGY_UNVERIFIED`; they are
+  never assigned a fabricated date or silently dropped.
+- A completed session may span midnight, and device clocks or manifest
+  recording may disagree with its scheduled day. Such records are retained
+  but not counted toward exact-day observational coverage.
+- Absence of a recorded workout does not, by itself, prove a scheduled week
+  existed, was activated, or was skipped. The owner still needs verified
+  program activation/week boundaries, clock attestation and policy review
+  before full schedule adherence or automatic muscle-volume/frequency/
+  rep-range/phase evolution can be authorized.
+
+The observed-week result and all future-number links are **read-only**.
+They cannot update issued workouts, approve a cycle, claim missed weeks or
+automatically apply higher/lower loads or sets. The user-selected automatic
+scope and full program-cycle audit remain separate release gates.

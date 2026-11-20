@@ -2,6 +2,8 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.ZoneId
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -19,7 +21,8 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
 
     private fun completed(
         id:Int,load:Int=200,machine:String?=null,
-        issuedSource:KotlinTrainingSourceRevision=source
+        issuedSource:KotlinTrainingSourceRevision=source,
+        weekday:Int=0,dayIndex:Int=0
     ):KotlinWorkoutJournalState {
         val workout = "workout-$id"
         val targets = (0..1).map { ordinal ->
@@ -30,7 +33,8 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
                 RepBand(5, 8), 2, 60, 90)
         }
         val snapshot = KotlinStagedWorkout(issuedSource, "grant-$id", workout,
-            0, 0, ComposerSessionPurpose.HYPERTROPHY, 40, targets)
+            weekday, dayIndex, ComposerSessionPurpose.HYPERTROPHY,
+            40, targets)
         val identity = KotlinStoredWorkoutIdentity(
             "stored-$id", workout, issuedSource, 1)
         val writer = journal()
@@ -594,11 +598,66 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
         assertFalse(review.canChangeIssuedWorkout)
         assertFalse(review.canApplyAutomatically)
         assertFalse(review.linked.canIssueWorkout)
+        assertEquals(listOf("workout-1","workout-2","workout-3"),
+            review.observedWeeks.undatedWorkoutIds)
+        assertTrue(review.observedWeeks.weeks.isEmpty())
+        assertFalse(review.observedWeeks.canApproveVolumeAdaptation)
         assertEquals(NativeKotlinGeneratedFutureHistoryResult.Rejected(
             NativeKotlinGeneratedFutureHistoryRefusal.INVALID_REQUEST),
             reader.readGeneratedFutureHistory("owner-1","athlete-1",
                 source.copy(programRevision=2),setOf(0),request))
     }
 
+
+
+    @Test fun ownerDatedFullScheduledWeekIsVisibleButNeverAuthorizesAdaptation() {
+        val dated=listOf(
+            completed(1,200,machine="press-A",weekday=0,dayIndex=0),
+            completed(2,200,machine="press-A",weekday=2,dayIndex=1),
+            completed(3,200,machine="press-A",weekday=4,dayIndex=2))
+        val base=manifest(*dated.toTypedArray())
+        val zone=ZoneId.of("America/New_York")
+        val days=listOf("2026-11-16","2026-11-18","2026-11-20")
+        val datedManifest=base.copy(completions=base.completions.mapIndexed{
+            index,entry->entry.copy(savedCorrectionRevision=0,
+                completedAtEpochMillis=LocalDate.parse(days[index])
+                    .atTime(12,0).atZone(zone).toInstant().toEpochMilli())
+        })
+        val review=service(FakeManifest(datedManifest))
+            .readGeneratedFutureHistory("owner-1","athlete-1",source,
+                setOf(0,1,2),nextFutureRequest())
+        assertTrue(review.toString(),
+            review is NativeKotlinGeneratedFutureHistoryResult.Review)
+        val output=(review as NativeKotlinGeneratedFutureHistoryResult.Review)
+            .evidence
+        assertEquals(3,output.ownerHistory.completionAtMillisByWorkout.size)
+        assertTrue(output.observedWeeks.undatedWorkoutIds.isEmpty())
+        assertEquals(KotlinObservedWeekCoverage
+            .FULL_SCHEDULE_OBSERVED_FOR_REVIEW_ONLY,
+            output.observedWeeks.weeks.single().coverage)
+        assertEquals(setOf(0,2,4),
+            output.observedWeeks.weeks.single().fullyRecordedWeekdays)
+        assertEquals(LocalDate.of(2026,11,16),
+            output.observedWeeks.weeks.single().monday)
+        assertFalse(output.observedWeeks.weeks.single().canProveProgramAdherence)
+        assertFalse(output.observedWeeks.canApproveVolumeAdaptation)
+        assertFalse(output.canApplyAutomatically)
+
+        // A changed manifest is a new immutable owner snapshot; a previous
+        // observed full week cannot legitimize undated or later-corrected data.
+        val undated=datedManifest.copy(
+            revision=datedManifest.revision+1,
+            completions=datedManifest.completions.mapIndexed{i,entry->
+                if(i==1)entry.copy(completedAtEpochMillis=null) else entry
+            })
+        val downgraded=service(FakeManifest(undated))
+            .readGeneratedFutureHistory("owner-1","athlete-1",source,
+                setOf(0,1,2),nextFutureRequest())
+            as NativeKotlinGeneratedFutureHistoryResult.Review
+        assertEquals(KotlinObservedWeekCoverage.CHRONOLOGY_UNVERIFIED,
+            downgraded.evidence.observedWeeks.weeks.single().coverage)
+        assertEquals(listOf("workout-2"),
+            downgraded.evidence.observedWeeks.undatedWorkoutIds)
+    }
 
 }

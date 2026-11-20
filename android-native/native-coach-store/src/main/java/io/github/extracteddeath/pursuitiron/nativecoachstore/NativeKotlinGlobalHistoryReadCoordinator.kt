@@ -58,6 +58,9 @@ data class NativeKotlinProgramHistoryReview(
     val ownerHistoryFingerprint:String,
     /** Complete-manifest ordinal, not lexical workout ID/date guessing. */
     val completionOrderByWorkout:Map<String,Long>,
+    /** Exact optional Finish times from the same owner-verified manifest.
+     * Null is preserved, not guessed from the workout ID or ordinal. */
+    val completionAtMillisByWorkout:Map<String,Long?>,
     /** Reconciled, conservative per-day/per-purpose/per-machine actual
      * performance: never a generated prescription or change entitlement. */
     val performance:KotlinProgramPerformanceReport
@@ -95,7 +98,9 @@ sealed interface NativeKotlinProgramHistoryReadResult {
 data class NativeKotlinGeneratedFutureHistoryReview(
     val generated:GeneratedAdaptiveBlockResult,
     val ownerHistory:NativeKotlinProgramHistoryReview,
-    val linked:KotlinFuturePerformanceLink
+    val linked:KotlinFuturePerformanceLink,
+    /** Dated observations, NOT a compliance score or autopilot trigger. */
+    val observedWeeks:KotlinObservedScheduleWeeks
 ) {
     val canApplyAutomatically:Boolean get()=false
     val canChangeIssuedWorkout:Boolean get()=false
@@ -104,7 +109,7 @@ data class NativeKotlinGeneratedFutureHistoryReview(
 
 enum class NativeKotlinGeneratedFutureHistoryRefusal {
     INVALID_REQUEST, OWNER_HISTORY_UNAVAILABLE, GENERATION_UNRESOLVED,
-    SOURCE_OR_CELL_MISMATCH, STORAGE_UNAVAILABLE
+    SOURCE_OR_CELL_MISMATCH, WEEK_OBSERVATION_UNRESOLVED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeKotlinGeneratedFutureHistoryResult {
     data class Review(val evidence:NativeKotlinGeneratedFutureHistoryReview):
@@ -112,7 +117,8 @@ sealed interface NativeKotlinGeneratedFutureHistoryResult {
     data class Rejected(
         val reason:NativeKotlinGeneratedFutureHistoryRefusal,
         val historyReason:NativeKotlinProgramHistoryRefusal?=null,
-        val linkReason:KotlinFuturePerformanceLinkRefusal?=null
+        val linkReason:KotlinFuturePerformanceLinkRefusal?=null,
+        val weekReason:KotlinObservedWeekRefusal?=null
     ):NativeKotlinGeneratedFutureHistoryResult
 }
 
@@ -221,6 +227,11 @@ class NativeKotlinGlobalHistoryReadCoordinator(
                                         workout.completionOrder
                                 val ordered=Collections.unmodifiableMap(
                                     ordinals)
+                                val times=verified.sourceRead.manifest.associate{
+                                    it.workoutId to it.completedAtEpochMillis
+                                }
+                                val completionTimes=Collections.unmodifiableMap(
+                                    ordered.keys.associateWith{times[it]})
                                 val trends=KotlinProgramPerformanceEvidenceDomain
                                     .review(projected.ledger,ordered)
                                 when(trends) {
@@ -235,7 +246,8 @@ class NativeKotlinGlobalHistoryReadCoordinator(
                                                 projected.ledger,
                                                 verified.index.manifestRevision,
                                                 verified.index.contentFingerprint,
-                                                ordered,trends.report
+                                                ordered,completionTimes,
+                                                trends.report
                                             )
                                         )
                                 }
@@ -297,10 +309,24 @@ class NativeKotlinGlobalHistoryReadCoordinator(
                 NativeKotlinGeneratedFutureHistoryResult.Rejected(
                     NativeKotlinGeneratedFutureHistoryRefusal.SOURCE_OR_CELL_MISMATCH,
                     linkReason=link.reason)
-            is KotlinFuturePerformanceLinkResult.Reviewed ->
-                NativeKotlinGeneratedFutureHistoryResult.Review(
-                    NativeKotlinGeneratedFutureHistoryReview(
-                        generated,owner.evidence,link.link))
+            is KotlinFuturePerformanceLinkResult.Reviewed -> {
+                when(val observed=KotlinObservedScheduleWeekDomain.review(
+                    owner.evidence.ledger,
+                    owner.evidence.completionAtMillisByWorkout,
+                    owner.evidence.completionOrderByWorkout,
+                    athlete.trainingWeekdays,athlete.timezoneId)) {
+                    is KotlinObservedWeekResult.Rejected ->
+                        NativeKotlinGeneratedFutureHistoryResult.Rejected(
+                            NativeKotlinGeneratedFutureHistoryRefusal
+                                .WEEK_OBSERVATION_UNRESOLVED,
+                            weekReason=observed.reason)
+                    is KotlinObservedWeekResult.Reviewed ->
+                        NativeKotlinGeneratedFutureHistoryResult.Review(
+                            NativeKotlinGeneratedFutureHistoryReview(
+                                generated,owner.evidence,link.link,
+                                observed.evidence))
+                }
+            }
         }
     }
 

@@ -990,13 +990,6 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.error)
         }
-        if(presentation.canFinish)PursuitCard(highlighted=true) {
-            Text("All sets have a saved outcome",
-                style=MaterialTheme.typography.titleMedium)
-            PursuitPrimaryAction("Review and finish",enabled=!state.busy){
-                showFinishConfirm=true
-            }
-        }
         if(presentation.finished)PursuitCard(highlighted=true) {
             Text("Workout completion is saved",
                 style=MaterialTheme.typography.titleMedium)
@@ -1054,6 +1047,23 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 KotlinWorkoutRestDomain.inspect(journal,selected?.target?.setKey),
                 enabled=!state.busy,
                 athleteId=journal.snapshot.source.athleteId)
+        }
+    // When all actuals/skips/failures are durably resolved, replace the
+    // bottom rest bar with ONE accessible Finish action. Keeping it outside
+    // the scroller means a long session never buries completion below dozens
+    // of saved exercises. Confirmation and owner-fenced History still own
+    // the actual Finish write; this dock cannot save automatically.
+    if(presentation?.canFinish==true && presentation.finished==false &&
+        journal?.finishedByEventId==null)
+        Column(Modifier.widthIn(max=920.dp).fillMaxWidth()
+            .align(Alignment.CenterHorizontally)
+            .padding(horizontal=16.dp,vertical=8.dp)) {
+            PursuitCard(highlighted=true) {
+                Text("All prescribed sets have a saved outcome",
+                    style=MaterialTheme.typography.titleMedium)
+                PursuitPrimaryAction("Review and finish",
+                    enabled=!state.busy) {showFinishConfirm=true}
+            }
         }
     }
 

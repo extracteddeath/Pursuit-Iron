@@ -314,6 +314,9 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
         val report=view.evidence.performance
         assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
             report.threads.single().recentGate)
+        assertEquals(2,report.schemaVersion)
+        assertEquals(0,report.threads.single().key.calendarDay)
+        assertEquals(ComposerRole.PRIMARY,report.threads.single().key.role)
         assertEquals(listOf("workout-1","workout-2","workout-3"),
             report.threads.single().evaluatedWorkoutIds)
         assertEquals(2,report.threads.single().visits.last().workingSets)

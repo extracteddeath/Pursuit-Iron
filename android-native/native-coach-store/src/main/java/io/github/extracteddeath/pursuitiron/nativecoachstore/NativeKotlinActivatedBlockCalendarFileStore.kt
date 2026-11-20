@@ -336,21 +336,18 @@ class NativeKotlinActivatedBlockCalendarFileStore(
             return NativeActivatedBlockCalendarPreview.Rejected(
                 NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
         return runCatching{fence.withOwnerTransaction(ownerKey) {
-            val owner=active(ownerKey) ?:return@withOwnerTransaction
-                NativeActivatedBlockCalendarPreview.Rejected(
+            val owner=active(ownerKey) ?:return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                     NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
             val current=source(ownerKey,cycleId,blockId)
                 ?:return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                     NativeActivatedBlockCalendarRefusal.NO_APPLIED_ACTIVATION)
-            val now=clock.observe()?:return@withOwnerTransaction
-                NativeActivatedBlockCalendarPreview.Rejected(
+            val now=clock.observe()?:return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                     NativeActivatedBlockCalendarRefusal.CALENDAR_UNAVAILABLE)
             if(!localMondayAllowed(firstWeekMonday,current.timezoneId,now))
                 return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                     NativeActivatedBlockCalendarRefusal.INVALID_LOCAL_MONDAY)
             val old=try{decode(path(ownerKey,cycleId,blockId))}
-                catch(_:Exception){return@withOwnerTransaction
-                    NativeActivatedBlockCalendarPreview.Rejected(
+                catch(_:Exception){return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                         NativeActivatedBlockCalendarRefusal.CORRUPT_RECORD)}
             if(old!=null && !sameSource(old,current))
                 return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
@@ -358,8 +355,7 @@ class NativeKotlinActivatedBlockCalendarFileStore(
             if(old!=null && old.firstWeekMonday!=firstWeekMonday)
                 return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                     NativeActivatedBlockCalendarRefusal.ALREADY_APPROVED_DIFFERENT_DATE)
-            if(active(ownerKey)!=owner)return@withOwnerTransaction
-                NativeActivatedBlockCalendarPreview.Rejected(
+            if(active(ownerKey)!=owner)return@withOwnerTransaction NativeActivatedBlockCalendarPreview.Rejected(
                     NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
             val record=old?:bind(current,firstWeekMonday,now)
             NativeActivatedBlockCalendarPreview.Ready(
@@ -408,12 +404,10 @@ class NativeKotlinActivatedBlockCalendarFileStore(
             return NativeActivatedBlockCalendarRead.Rejected(
                 NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
         return runCatching{fence.withOwnerTransaction(ownerKey) {
-            val who=active(ownerKey)?:return@withOwnerTransaction
-                NativeActivatedBlockCalendarRead.Rejected(
+            val who=active(ownerKey)?:return@withOwnerTransaction NativeActivatedBlockCalendarRead.Rejected(
                     NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
             val saved=try{decode(path(ownerKey,cycleId,blockId))}
-                catch(_:Exception){return@withOwnerTransaction
-                    NativeActivatedBlockCalendarRead.Rejected(
+                catch(_:Exception){return@withOwnerTransaction NativeActivatedBlockCalendarRead.Rejected(
                         NativeActivatedBlockCalendarRefusal.CORRUPT_RECORD)}
                 ?:return@withOwnerTransaction NativeActivatedBlockCalendarRead.Missing
             if(saved.ownerKey!=who.ownerKey ||

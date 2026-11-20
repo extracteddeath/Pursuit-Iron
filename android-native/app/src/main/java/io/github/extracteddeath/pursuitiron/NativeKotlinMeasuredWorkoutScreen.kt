@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -231,7 +232,11 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     val station=singleCandidate?.sets?.firstOrNull()?.physicalSetupId
         ?:definition?.requiredFixtures?.firstOrNull() ?: "floor"
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+    // Split content from the fixed action area. A measured athlete with
+    // dozens of saved holds/carries should not hunt for Finish in the
+    // scrollable set history. This is presentation only, not a new writer.
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
         .padding(PursuitSpace.md),
         verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
         Row(Modifier.fillMaxWidth(),
@@ -696,9 +701,6 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                         })
                     }
                 }
-                Button(enabled=!busy && journal.canProposeFinish,
-                    modifier=Modifier.fillMaxWidth(),
-                    onClick={finishDialog=true}) {Text("Finish workout")}
                 Text("Finish is saved in the same verified native History "+
                     "ledger as generated and custom workouts.",
                     style=MaterialTheme.typography.bodySmall,
@@ -708,6 +710,29 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         message?.let{Text(it,color=MaterialTheme.colorScheme.error,
             style=MaterialTheme.typography.bodySmall)}
+    }
+    // The owner-verifiable issued journal, not a local counter, is the
+    // sole source of Finish eligibility. The visible selected set must also
+    // belong to that exact issued plan; recovery/authoring states have no
+    // active completion action. Confirmation still invokes the existing
+    // measured History transaction with an exact journal revision.
+    if(entryState==NativeMeasuredWorkoutEntryState.RECORDING &&
+        stored?.journal?.let{measured->
+            measured.canProposeFinish &&
+                measured.finishedByEventId==null &&
+                MeasuredWorkoutFocusDomain.review(
+                    measured,focusSetKey)!=null
+        }==true)
+        Column(Modifier.fillMaxWidth().widthIn(max=920.dp)
+            .align(Alignment.CenterHorizontally)
+            .padding(horizontal=PursuitSpace.md,vertical=PursuitSpace.xs)) {
+            PursuitCard(highlighted=true) {
+                Text("All measured sets have saved outcomes",
+                    style=MaterialTheme.typography.titleMedium)
+                PursuitPrimaryAction("Review and finish",
+                    enabled=!busy) {finishDialog=true}
+            }
+        }
     }
     review?.let{candidateReview->
         AlertDialog(onDismissRequest={if(!busy)review=null},

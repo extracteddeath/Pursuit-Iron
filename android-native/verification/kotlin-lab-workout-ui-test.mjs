@@ -11,6 +11,23 @@ const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pu
 // separate true seconds/distance/reps, stable keys and authenticated issuance.
 // Saved Compose drafts are athlete intent, never permission to issue a set.
 const measured=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMeasuredWorkoutScreen.kt');
+// Measured holds/carries/banded repetitions are a third issued native
+// workout route. Its Finish must be available without scrolling past a
+// potentially long list, yet cannot exist during recovery/authoring, after
+// completion, or for a foreign/unresolved selected set.
+const measuredDock=measured.indexOf(
+  'if(entryState==NativeMeasuredWorkoutEntryState.RECORDING &&');
+assert.ok(measuredDock>0 &&
+  measured.includes('Column(Modifier.weight(1f).verticalScroll(') &&
+  measured.slice(measuredDock).includes('measured.canProposeFinish') &&
+  measured.slice(measuredDock).includes('measured.finishedByEventId==null') &&
+  measured.slice(measuredDock).includes('MeasuredWorkoutFocusDomain.review(') &&
+  measured.slice(measuredDock).includes('finishDialog=true') &&
+  measured.slice(measuredDock).includes('host.finishMeasuredWorkout(workoutId,') &&
+  measured.slice(measuredDock).includes('previous.journal.revision') &&
+  measured.split('PursuitPrimaryAction("Review and finish"').length===2 &&
+  !measured.includes('Text("Finish workout")'),
+  'Measured Finish must use one fixed, owner-verified bottom action and the unchanged revision-checked transaction');
 const measuredBuilder=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/MeasuredSessionAuthoringDomain.kt');
 assert.ok(measured.includes('rememberSaveable(workoutId)') &&
   measured.includes('MeasuredSessionAuthoringDomain.restoreDraft(it)') &&

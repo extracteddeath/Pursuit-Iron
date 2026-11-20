@@ -1589,3 +1589,27 @@ assert.ok(customLighterNoteSource.includes('fun fromCustomSlot(') &&
   customLighterNoteTests.includes('customLabelRejectsWarmupsOmittedOrdinalsAndDuplicateReceipts'),
   'Custom Train must label exact source-authored lighter final sets, never an inferred load drop'
 );
+
+
+// A same-load technique inherits the ACTUALLY LOGGED activation set it is
+// attached to; never the first prescribed work row or a prior session Last
+// shortcut. The Kotlin engine owns the typed policy, while corrections get
+// distinct private draft identities tied to the activation receipt revision.
+const amplifierLoadDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/AdvancedAmplifierProtocolDomain.kt');
+const amplifierLoadTests=read('android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/AdvancedAmplifierProtocolDomainTest.kt');
+assert.ok(
+  amplifierLoadDomain.includes('sealed interface AmplifierFollowUpEntryLoad') &&
+  amplifierLoadDomain.includes('fun resolveFollowUpEntryLoad(') &&
+  amplifierLoadDomain.includes('actual.machineInstanceId!=selectedMachineId') &&
+  amplifierLoadDomain.includes('AmplifierFollowUpEntryLoad.RecordedActivation(actual)') &&
+  journal.includes('AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(') &&
+  journal.includes('activationPerformed=main?.performed') &&
+  journal.includes('activationReceiptRevision=observed?.appliedRevision') &&
+  journal.includes('if(saved==null && part==CustomWorkoutVisitPart.MAIN)') &&
+  journal.includes('ActivationUnavailable -> ""') &&
+  !journal.includes('val sameLoadActivation=if(') &&
+  amplifierLoadTests.includes('everyMyoStagePrefillsFromLastLoggedActivationNotFirstSetOrIssuedWeight') &&
+  amplifierLoadTests.includes('incompatibleActivationAndMachineNeverFallbackToEarlierSet') &&
+  amplifierLoadTests.includes('activationLoadResolutionIsOneSourceAcrossSingleAndStagedProtocols'),
+  'Follow-up load provenance: logged activation vs authored drop vs unverified, with no Last shortcut'
+);

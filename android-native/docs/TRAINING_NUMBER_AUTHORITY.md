@@ -229,3 +229,34 @@ performance to program construction and replay. Custom-program authoring,
 independent history corrections and every amplifier protocol also remain
 release-gate #786 scope. This trace is an additional *review gate*, not an
 automatic plan change, an APK or device certification.
+
+
+## Finished-workout replay inputs at the upstream generation boundary (partial)
+
+`KotlinProgramHistoryReadoutDomain` now accepts only exact-source finished
+Kotlin journals, plus the effective saved-correction state for a matching
+journal. Every workout is replay-verified through the existing historical
+projection and shared numeric acceptance policy before a factual observation
+is admitted. It rejects unfinished/corrupt journals, mismatched source
+revisions, duplicate workout identities, unanchored corrections and
+out-of-scope program day indices. Observations preserve the original issued
+load, rep band and RIR target separately from the performed weight, reps,
+nullable actual RIR, physical machine ID, effective set event and corrected
+predecessor. It never merges distinct physical machines into one comparable
+session; unknown machine identity cannot earn machine-specific progression.
+No recorded date/chronology is guessed from workout ID or input ordering.
+
+The generated-block request can optionally supply this read-only actuals
+ledger. The existing upstream numerical trace validates matching athlete
+and cycle identities, stores its exact deterministic replay digest and
+attaches it to the output without changing the source cycle, generated sets,
+phase or approved workout. Without it, the earlier no-history behavior is
+unchanged. With it, the status is explicitly
+`REPLAY_VERIFIED_NOT_STORE_ATTESTED`: a replayed reducer/projection is NOT
+cryptographic or owner-fenced proof of a durable native storage write. The
+history is **not yet consumed to choose** exercise patterns, frequency,
+rep ranges, loads, working sets or phase; no such adaptation is authorized
+from this bridge. The next production boundary must authenticate the storage
+transaction and source revision before a versioned, permission-scoped future
+program optimizer may consume these observations. This does not close #786
+or #783, does not prove end-to-end parity or replace real-device acceptance.

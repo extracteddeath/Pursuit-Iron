@@ -41,7 +41,7 @@ assert.ok(css.includes('max-height:min(90dvh,calc(var(--visual-h'),'Sheet must a
 // 90dvh visual-viewport owner, including compact-landscape and detent modes.
 assert.equal((app.match(/:not\(:is\(\.wpb-program-share-panel,\.wpb-exercise-options-sheet,\.wpb-exinfo-sheet\)\)\{max-height:/g)||[]).length,4,
  'Generic sheet caps exclude Info in phone, tablet and both detent selectors');
-assert.ok(app.includes(':not(.wpb-exinfo-sheet){max-height:calc(var(--visual-h'),
+assert.ok(app.includes(':not(.wpb-exinfo-sheet){max-height:min(calc(var(--visual-h'),
  'Compact landscape also leaves Info viewport sizing to its scoped CSS owner');
 assert.ok((app.match(/style: \{/g)||[]).length<=1101,'Fixed Workout info CSS must not return to inline style');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority overrides added');

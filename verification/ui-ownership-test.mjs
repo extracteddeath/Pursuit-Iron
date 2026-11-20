@@ -390,7 +390,7 @@ assert.ok(programReference.includes("variant: 'tonal', 'data-icon-only': true, c
 
 /* Design-spec passes 31–33: common viewport and Program action dock ownership. */
 const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
-assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');
+assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)),100%)'),'One Program panel viewport formula remains');
 for(const [cls,vh,gap] of [
     ['wpb-program-settings-panel','88dvh','32px'],
     ['wpb-program-share-panel','92dvh','32px'],

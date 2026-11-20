@@ -171,35 +171,12 @@ object CustomWorkoutJournalDomain {
     }
 
     /** Shared physical/effort validation for active and saved custom observations. */
+    /** Same policy as generated and saved-history observations, not a fork. */
     internal fun actualValid(
         target:DraftSetLoad,
         outcome:KotlinJournalSetOutcome,
         performed:KotlinPerformedSet?
-    ):Boolean {
-        if(outcome==KotlinJournalSetOutcome.SKIPPED)return performed==null
-        val actual=performed ?:return false
-        // Match the same physical machine-ID syntax enforced by the
-        // generated Kotlin workout journal. Legacy null is still valid,
-        // but blank, overlong, or forged IDs cannot become durable custom
-        // receipts or be replayed as A/B progression evidence.
-        if(actual.machineInstanceId!=null &&
-            !KotlinMachineAlternativesDomain.validInstanceId(
-                actual.machineInstanceId))return false
-        if(actual.actualRir!=null && actual.actualRir !in 0..10)return false
-        if(outcome==KotlinJournalSetOutcome.COMPLETED &&
-            actual.reps !in 1..100)return false
-        if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT &&
-            (actual.reps!=0 || actual.actualRir!=null))return false
-        return when(target) {
-            DraftSetLoad.ExplicitBodyweight ->
-                actual.load==null && actual.unit==null
-            is DraftSetLoad.Verified ->
-                actual.load!=null && actual.unit==target.unit &&
-                    actual.load>=BigDecimal.ZERO &&
-                    actual.load<=maxWeight &&
-                    actual.load.stripTrailingZeros().scale()<=3
-        }
-    }
+    ):Boolean=KotlinSetNumberAuthorityDomain.valid(target,outcome,performed)
 
     fun reduce(
         prior:CustomWorkoutJournalDraft,

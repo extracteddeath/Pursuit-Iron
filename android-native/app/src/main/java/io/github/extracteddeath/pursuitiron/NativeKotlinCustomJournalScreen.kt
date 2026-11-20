@@ -127,7 +127,10 @@ internal fun NativeKotlinCustomJournalScreen(
     var error by remember(host,workoutId){mutableStateOf<String?>(null)}
     var noteError by remember(host,workoutId){mutableStateOf<String?>(null)}
     var finished by remember(host,workoutId){mutableStateOf(false)}
-    var finishConfirm by remember(host,workoutId){mutableStateOf(false)}
+    // Finish consent is scoped to the precise journal revision on review.
+    var finishReview by remember(host,workoutId){
+        mutableStateOf<NativeFinishReviewToken?>(null)
+    }
     // An explicit current-visit action only. It never authorizes a stored
     // skip, and cannot move to another visit while a confirmation is open.
     var pendingQuickSkip by remember(workoutId) {
@@ -1370,7 +1373,11 @@ internal fun NativeKotlinCustomJournalScreen(
                 Text("All working sets and amplifier visits are resolved",
                     style=MaterialTheme.typography.titleMedium)
                 PursuitPrimaryAction("Review and finish",
-                    enabled=!busy) {finishConfirm=true}
+                    enabled=!busy) {
+                    finishReview=journal?.let {
+                        NativeFinishReviewToken(workoutId,it.revision)
+                    }
+                }
             }
         }
     }
@@ -1661,14 +1668,28 @@ internal fun NativeKotlinCustomJournalScreen(
         )
     }
     val selected=journal
-    if(finishConfirm&&selected!=null) {
-        AlertDialog(onDismissRequest={if(!busy)finishConfirm=false},
+    val reviewed=finishReview
+    if(reviewed!=null) {
+        val canCommit=NativeFinishReviewPolicy.canCommit(
+            reviewed,workoutId,selected?.revision,
+            selected?.canProposeFinish==true &&
+                selected.finishedByEventId==null && !finished &&
+                !verifiedFinishedInHistory)
+        AlertDialog(onDismissRequest={if(!busy)finishReview=null},
             title={Text("Finish and save this workout?")},
-            text={Text("Save the recorded results for this workout to History. You can review and correct saved sets there.")},
+            text={Text(if(canCommit)
+                "Save the recorded results for this workout to History. You can review and correct saved sets there."
+                else "Your saved workout changed or needs recovery. Close this review and check the current sets before finishing.")},
             confirmButton={
-                Button(enabled=!busy&&selected.canProposeFinish,
+                Button(enabled=!busy && canCommit,
                     onClick={
-                        finishConfirm=false
+                        if(!NativeFinishReviewPolicy.canCommit(
+                            reviewed,workoutId,journal?.revision,
+                            journal?.canProposeFinish==true &&
+                                journal?.finishedByEventId==null &&
+                                !finished && !verifiedFinishedInHistory))
+                            return@Button
+                        finishReview=null
                         busy=true
                         scope.launch {
                             val result=withContext(Dispatchers.IO){
@@ -1676,7 +1697,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     host.finishIssuedCustomWorkout(workoutId,
                                         CustomWorkoutJournalOperation.Finish(
                                             "custom-finish-"+UUID.randomUUID(),
-                                            selected.revision))
+                                            reviewed.revision))
                                 }.getOrNull()
                             }
                             finished=result is NativeCustomFinishResult.Committed
@@ -1698,7 +1719,7 @@ internal fun NativeKotlinCustomJournalScreen(
                         }
                     }){Text("Commit native Finish")}
             },dismissButton={
-                TextButton(enabled=!busy,onClick={finishConfirm=false}) {
+                TextButton(enabled=!busy,onClick={finishReview=null}) {
                     Text("Keep training")}
             })
     }

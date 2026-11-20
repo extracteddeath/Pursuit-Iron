@@ -365,6 +365,29 @@ class GeneratedAdaptiveBlockConversionTest {
                 loss.missingExerciseIds.map{loss.weekday to it}
             }.toSet()
         assertEquals(actualMissing.size,result.restoredSourceExercises.size)
+        // Recovery must not publish a shorter continuity ledger than the
+        // actual reviewed eight-exercise days. Every added Strength slot
+        // carries an explicit SOURCE reference but a distinct new slot ID.
+        val cycleSlots=target.days.flatMap { day ->
+            day.slots.map { slot -> day.weekday to slot.slotId }
+        }
+        val continuityKeys=result.slotContinuity.map {
+            it.weekday to it.proposedSlotId
+        }
+        assertEquals(cycleSlots.size,result.slotContinuity.size)
+        assertEquals(cycleSlots.toSet(),continuityKeys.toSet())
+        result.restoredSourceExercises.forEach { restored ->
+            val evidence=result.slotContinuity.single {
+                it.weekday==restored.weekday &&
+                    it.proposedSlotId==restored.proposedSlotId
+            }
+            assertEquals(restored.exerciseId,evidence.exerciseId)
+            assertEquals(restored.sourceSlotId,evidence.priorSlotId)
+            assertEquals(
+                GeneratedAdaptiveSlotRelationship.NEW_DAY_OR_EXERCISE,
+                evidence.relationship)
+            assertNotEquals(evidence.priorSlotId,evidence.proposedSlotId)
+        }
         assertEquals(actualMissing,result.restoredSourceExercises.map{
             it.weekday to it.exerciseId
         }.toSet())

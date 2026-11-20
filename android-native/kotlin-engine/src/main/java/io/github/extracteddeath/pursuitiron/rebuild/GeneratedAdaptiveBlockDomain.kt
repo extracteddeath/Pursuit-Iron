@@ -437,12 +437,37 @@ object GeneratedAdaptiveBlockDomain {
                     "and individual review are required before replacing this block.",
                 strengthRosterBoundary=roster,
                 strengthDoseBoundary=dose)
+        // The saved Strength menu may include source-backed accessories
+        // restored after generation. They are part of the proposed cycle,
+        // so every restored visit needs the same one-to-one provenance as
+        // generated visits. Its new Strength slot ID must never masquerade
+        // as an old Hypertrophy workout/history identity.
+        val fullContinuity=identities+restoredSourceExercises.map { restored ->
+            GeneratedAdaptiveSlotContinuity(
+                restored.weekday,restored.exerciseId,restored.sourceSlotId,
+                restored.proposedSlotId,
+                GeneratedAdaptiveSlotRelationship.NEW_DAY_OR_EXERCISE)
+        }
+        val accepted=checkNotNull(reviewedStructure.verifiedDraft)
+        val expectedSlots=accepted.blocks.single {
+            it.blockId==input.targetBlockId
+        }.days.flatMap { day ->
+            day.slots.map { day.weekday to it.slotId }
+        }
+        val reportedSlots=fullContinuity.map {
+            it.weekday to it.proposedSlotId
+        }
+        if(reportedSlots.size!=expectedSlots.size ||
+            reportedSlots.toSet()!=expectedSlots.toSet())
+            return refuse(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
+                "The proposed block has incomplete slot continuity evidence.",
+                generation,prescribed)
         return GeneratedAdaptiveBlockResult(
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
             AdaptiveCycleOption(input.optionId,reviewedStructure.verifiedDraft!!),
             "Complete generated candidate; recovered ${restoredSourceExercises.size} source exercise visits and ${addedStrengthSets.size} verified Strength working sets. Full-cycle dose, time, fatigue, stock, permissions and athlete review remain mandatory.",
-            Collections.unmodifiableList(identities.toList()),
+            Collections.unmodifiableList(fullContinuity),
             roster,dose,restoredSourceExercises,addedStrengthSets,
             if(source.phase==TrainingPhase.PEAK)
                 PeakTaperBoundaryDomain.review(

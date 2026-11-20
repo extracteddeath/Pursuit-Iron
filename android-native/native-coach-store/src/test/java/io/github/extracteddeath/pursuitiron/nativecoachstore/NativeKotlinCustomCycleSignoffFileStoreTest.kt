@@ -2,6 +2,8 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.ZoneId
 import java.nio.file.Files
 import org.junit.Assert.*
 import org.junit.Rule
@@ -1103,7 +1105,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
      * the real fully verified custom + Composer + history preflight.
      */
     /** Full, disk-verified historical boundary: nine real custom Finish commits. */
-    private fun persistNineHistoricalBaseWorkouts(actualRir:Int?=2) {
+    private fun persistNineHistoricalBaseWorkouts(
+        actualRir:Int?=2,recordedCalendar:Boolean=false
+    ) {
         val root=temp.root.toPath()
         val ledger=NativeKotlinHistoryManifestFileStore(root)
         assertTrue(ledger.enroll("owner-1","athlete-1"){o,a->
@@ -1116,8 +1120,6 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val issued=NativeKotlinCustomWorkoutJournalFileStore(
             root,fence,identity,prepared,preflight,ledger,
             KotlinNativeJournalFileStore(root))
-        val transaction=NativeKotlinCustomHistoryTransaction(
-            ledger,issued,fence,identity)
         for(week in 1..3)for(day in listOf(0,2,4)) {
             val workoutId="real-base-w$week-d$day"
             assertTrue(prepared.prepare("owner-1",workoutId,"cycle-1",
@@ -1135,6 +1137,19 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                         if(weightedFixture)LoadUnit.LB else null,12,actualRir)))
             assertTrue(recorded.toString(),
                 recorded is NativeCustomJournalResult.Durable)
+            // Only the real future-activation recovery fixture provides
+            // a deterministic test clock. The production Finish intent
+            // stores this time under the same owner fence. Never rewrite
+            // the private history manifest after the transaction commits.
+            val clock=if(recordedCalendar)NativeHistoryCompletionClock {
+                LocalDate.of(2026,11,2)
+                    .plusWeeks(week.toLong()-1L)
+                    .plusDays(day.toLong())
+                    .atTime(12,0).atZone(ZoneId.of("America/New_York"))
+                    .toInstant().toEpochMilli()
+            } else NativeHistoryCompletionClock.Undated
+            val transaction=NativeKotlinCustomHistoryTransaction(
+                ledger,issued,fence,identity,clock)
             val finish=transaction.complete("owner-1","athlete-1",
                 workoutId,CustomWorkoutJournalOperation.Finish(
                     "finish-w$week-d$day",1))
@@ -1145,11 +1160,17 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             as NativeHistoryLedgerResult.Durable).ledger.completions
         assertEquals(9,entries.size)
         assertEquals((1L..9L).toList(),entries.map{it.completionOrder})
+        if(recordedCalendar)assertEquals(9,
+            entries.count{it.completedAtEpochMillis!=null})
+        else assertTrue(entries.all{it.completedAtEpochMillis==null})
     }
 
-    private fun readyFutureForSecondConsent(realPriorHistory:Boolean=false) {
+    private fun readyFutureForSecondConsent(
+        realPriorHistory:Boolean=false,datedPriorHistory:Boolean=false
+    ) {
         initializeFutureBaseline();approveFutureBaseline()
-        if(realPriorHistory)persistNineHistoricalBaseWorkouts()
+        if(realPriorHistory)persistNineHistoricalBaseWorkouts(
+            recordedCalendar=datedPriorHistory)
         assertEquals(NativeAdaptivePermissionWrite.Committed(2),
             permissionStore.confirm("owner-1","cycle-1",1,
                 setOf(CustomCycleChangeKind.SPLIT,
@@ -4539,7 +4560,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             futureStore(),drafts,sources,permissionStore)
     }
     private fun futureRecoveryRoundTrip(revoked:Boolean) {
-        readyFutureForSecondConsent(realPriorHistory=true);recoveryOwnerFile()
+        readyFutureForSecondConsent(
+            realPriorHistory=true,datedPriorHistory=true)
+        recoveryOwnerFile()
         val checkpoint=productionRecoveryCheckpoint()
         val original=acceptedFutureForRecovery(checkpoint)
         assertEquals(10L,original.historyManifestRevision)

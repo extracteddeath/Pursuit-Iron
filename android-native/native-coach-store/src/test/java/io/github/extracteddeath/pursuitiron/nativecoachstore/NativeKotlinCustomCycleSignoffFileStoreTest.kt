@@ -4559,6 +4559,20 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         return NativeKotlinFutureActivationApprovalFileStore(root,fence,identity,boundary,
             futureStore(),drafts,sources,permissionStore)
     }
+    @Test fun ownerCommittedUndatedPriorWorkoutsCannotEarnFutureApproval() {
+        readyFutureForSecondConsent(realPriorHistory=true)
+        val checkpoint=productionRecoveryCheckpoint()
+        assertEquals(NativeFutureApprovalPreview.Rejected(
+            NativeFutureApprovalRefusal.NOT_READY),
+            checkpoint.preview("owner-1","cycle-1","build"))
+        assertEquals(NativeFutureApprovalWrite.Rejected(
+            NativeFutureApprovalRefusal.NOT_READY),
+            checkpoint.confirm("owner-1","cycle-1","build",0,
+                "a".repeat(64),true))
+        assertEquals(NativeFutureApprovalRead.Missing,
+            checkpoint.read("owner-1","cycle-1","build"))
+    }
+
     private fun futureRecoveryRoundTrip(revoked:Boolean) {
         readyFutureForSecondConsent(
             realPriorHistory=true,datedPriorHistory=true)

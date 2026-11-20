@@ -11,7 +11,7 @@ import java.math.BigDecimal
 enum class LiveSetCoachUnavailable {
     FINISHED, UNKNOWN_OR_COMPLETED_SET, WARMUP_OR_FIRST_WORKING_SET,
     UNVERIFIED_OR_MIXED_SET_SCHEME, PHYSICAL_MACHINE_HISTORY_MISMATCH,
-    ASSISTANCE_DISABLED
+    UNVERIFIED_RECORDED_EVIDENCE, ASSISTANCE_DISABLED
 }
 sealed interface LiveSetCoachResult {
     data class Unavailable(val reason:LiveSetCoachUnavailable):LiveSetCoachResult
@@ -122,17 +122,16 @@ object KotlinJournalLiveSetCoachDomain {
 
         // Include later logged sets. Their presence must prevent a stale
         // out-of-order recommendation, for BOTH workout formats.
-        val observed=ordered.mapIndexedNotNull{ordinal,target->
-            val result=target.outcome ?:return@mapIndexedNotNull null
-            val outcome=when(result){
-                KotlinJournalSetOutcome.COMPLETED->SetOutcome.COMPLETED
-                KotlinJournalSetOutcome.SKIPPED->SetOutcome.SKIPPED
-                KotlinJournalSetOutcome.FAILED_ATTEMPT->SetOutcome.FAILED_ATTEMPT
-            }
-            WorkingSetFact(ordinal,outcome,target.performed?.load,
-                target.performed?.reps,target.performed?.actualRir,
-                (target.issuedLoad as DraftSetLoad.Verified).value,
-                target.issuedRir)
+        val observed=ArrayList<WorkingSetFact>()
+        for((ordinal,target) in ordered.withIndex()) {
+            val outcome=target.outcome ?:continue
+            val reviewed=KotlinWorkingSetEvidenceDomain.review(
+                ordinal,target.issuedLoad,target.issuedRir,
+                outcome,target.performed)
+            val fact=(reviewed as? KotlinWorkingSetEvidenceReview.Accepted)
+                ?.evidence?.fact
+                ?:return unavailable(LiveSetCoachUnavailable.UNVERIFIED_RECORDED_EVIDENCE)
+            observed.add(fact)
         }
         val coaching=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
             next.reps,ordered.size,observed,index,nextLoad.value,

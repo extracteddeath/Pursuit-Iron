@@ -550,4 +550,32 @@ class KotlinJournalLiveSetCoachDomainTest {
         }
     }
 
+
+    @Test fun forgedInvalidNumericReceiptCannotBeUsedForLiveLoadAdvice() {
+        val saved=record(started(),"bench:s0",2,0,"215")
+        val key="bench:s0"
+        val genuine=checkNotNull(saved.effectiveSets[key])
+        val operation=genuine.operation as KotlinJournalOperation.RecordSet
+        // This object is an adversarial denormalized, untrusted read, NOT a
+        // receipt accepted by the native journal reducer. The live coach
+        // must fail closed even if the caller accidentally presents it.
+        val forged=genuine.copy(operation=operation.copy(
+            performed=checkNotNull(operation.performed).copy(
+                actualRir=12)))
+        val untrusted=saved.copy(effectiveSets=saved.effectiveSets+
+            (key to forged))
+        assertEquals(LiveSetCoachResult.Unavailable(
+            LiveSetCoachUnavailable.UNVERIFIED_RECORDED_EVIDENCE),
+            look(untrusted,"bench:s1"))
+        // A legitimate near-failure set still can OFFER a reviewed option,
+        // not overwrite the issued second working load.
+        val verified=look(saved,"bench:s1") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
+            verified.coaching.direction)
+        assertEquals(n("215"),verified.coaching.issuedTargetUnchanged)
+        assertEquals(listOf(n("215"),n("215"),n("215"),n("215")),
+            untrusted.snapshot.targets.map{
+                (it.load as DraftSetLoad.Verified).value
+            })
+    }
 }

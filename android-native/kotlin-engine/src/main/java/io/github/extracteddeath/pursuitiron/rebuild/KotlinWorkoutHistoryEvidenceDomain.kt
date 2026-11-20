@@ -35,7 +35,8 @@ enum class KotlinHistoryProgressionGate {
     DUPLICATE_OR_GAPPED_ORDINALS,
     UNWEIGHTED_BODYWEIGHT,
     MIXED_LOAD_BASIS,
-    MIXED_REP_BANDS
+    MIXED_REP_BANDS,
+    UNVERIFIED_RECORDED_EVIDENCE
 }
 
 data class KotlinExerciseHistoryEvidence(
@@ -137,6 +138,12 @@ object KotlinWorkoutHistoryEvidenceDomain {
                 }.distinct().size != 1 -> KotlinHistoryProgressionGate.MIXED_LOAD_BASIS
                 working.map { it.issuedReps }.distinct().size != 1 ->
                     KotlinHistoryProgressionGate.MIXED_REP_BANDS
+                working.any { set ->
+                    KotlinWorkingSetEvidenceDomain.review(
+                        set.originalOrdinal,set.issuedLoad,set.issuedRir,
+                        set.outcome,set.actual
+                    ) !is KotlinWorkingSetEvidenceReview.Accepted
+                } -> KotlinHistoryProgressionGate.UNVERIFIED_RECORDED_EVIDENCE
                 else -> KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW
             }
             val workout = if (gate == KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW) {
@@ -146,17 +153,12 @@ object KotlinWorkoutHistoryEvidenceDomain {
                     journal.snapshot.workoutId, exerciseId, unit,
                     ordered.first().issuedReps, ordered.size,
                     Collections.unmodifiableList(ordered.map { fact ->
-                        val issued = fact.issuedLoad as DraftSetLoad.Verified
-                        WorkingSetFact(
-                            fact.originalOrdinal,
-                            when (fact.outcome) {
-                                KotlinJournalSetOutcome.COMPLETED -> SetOutcome.COMPLETED
-                                KotlinJournalSetOutcome.SKIPPED -> SetOutcome.SKIPPED
-                                KotlinJournalSetOutcome.FAILED_ATTEMPT -> SetOutcome.FAILED_ATTEMPT
-                            },
-                            fact.actual?.load, fact.actual?.reps, fact.actual?.actualRir,
-                            issued.value, fact.issuedRir
-                        )
+                        // The COMPARABLE_FOR_REVIEW gate already validated
+                        // each receipt through the common numerical authority.
+                        (KotlinWorkingSetEvidenceDomain.review(
+                            fact.originalOrdinal,fact.issuedLoad,fact.issuedRir,
+                            fact.outcome,fact.actual
+                        ) as KotlinWorkingSetEvidenceReview.Accepted).evidence.fact
                     }),
                     // Distinguish days across an authored split or program
                     // revision; this never changes signed historical facts.

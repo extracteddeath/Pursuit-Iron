@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import java.util.Collections
 
 /**
  * This interface must read a COMPLETE, authenticated owner-controlled
@@ -43,6 +44,43 @@ sealed interface NativeKotlinHistoryReadResult {
 }
 
 /**
+ * Native owner-fenced, complete-manifest read for a SINGLE immutable
+ * issued-program source epoch. Records are only accepted from the same
+ * private journal/correction files used by History; the caller cannot pass
+ * replacement workout objects, event summaries, or a partial UI list.
+ *
+ * This is evidence for a FUTURE planning review, not an automatic consent
+ * grant or permission to modify accepted programs or issued workouts.
+ */
+data class NativeKotlinProgramHistoryReview(
+    val ledger:KotlinProgramHistoryReadout,
+    val ownerManifestRevision:Long,
+    val ownerHistoryFingerprint:String,
+    /** Complete-manifest ordinal, not lexical workout ID/date guessing. */
+    val completionOrderByWorkout:Map<String,Long>
+) {
+    val canApplyProgramAdaptation:Boolean get()=false
+    val canChangeIssuedTargets:Boolean get()=false
+}
+
+enum class NativeKotlinProgramHistoryRefusal {
+    INVALID_REQUEST,
+    OWNER_HISTORY_UNAVAILABLE,
+    INVALID_PROGRAM_EVIDENCE,
+    STORAGE_UNAVAILABLE
+}
+
+sealed interface NativeKotlinProgramHistoryReadResult {
+    data class Review(val evidence:NativeKotlinProgramHistoryReview):
+        NativeKotlinProgramHistoryReadResult
+    data class Rejected(
+        val reason:NativeKotlinProgramHistoryRefusal,
+        val ownerHistoryReason:NativeKotlinHistoryReadRefusal?=null,
+        val programEvidenceReason:KotlinProgramHistoryReadoutRefusal?=null
+    ):NativeKotlinProgramHistoryReadResult
+}
+
+/**
  * Owner-scoped snapshot *read*, built from real private journal/correction
  * files rather than UI-provided completed sets. Calls BOTH stores under
  * the same account revision fence as workout issuance / source mutations.
@@ -74,11 +112,102 @@ class NativeKotlinGlobalHistoryReadCoordinator(
         }
     }
 
+    private sealed interface VerifiedFencedHistory {
+        data class Ready(
+            val index:KotlinGlobalHistoryIndex,
+            val sourceRead:KotlinGlobalHistoryRead
+        ):VerifiedFencedHistory
+        data class Rejected(val reason:NativeKotlinHistoryReadResult.Rejected):
+            VerifiedFencedHistory
+    }
+
+    /**
+     * Both the existing global history UI and future-program evidence must
+     * consume this ONE coherent owner-locked read. Never rely on an already
+     * assembled Last/PR index as the only source of set observations.
+     */
     private fun readFenced(
+        ownerKey:String,athleteId:String
+    ):NativeKotlinHistoryReadResult = when(
+        val verified=readVerifiedFenced(ownerKey,athleteId)
+    ) {
+        is VerifiedFencedHistory.Ready ->
+            NativeKotlinHistoryReadResult.Review(verified.index)
+        is VerifiedFencedHistory.Rejected -> verified.reason
+    }
+
+    /**
+     * Source epoch is selected only AFTER validating the COMPLETE native
+     * manifest against every durable workout and correction. Mixed program
+     * revisions, gyms and catalog/rules versions are never pooled.
+     */
+    fun readProgramHistory(
+        ownerKey:String,
+        athleteId:String,
+        expectedSource:KotlinTrainingSourceRevision,
+        allowedDayIndices:Set<Int>
+    ):NativeKotlinProgramHistoryReadResult {
+        if(!id.matches(ownerKey) || !id.matches(athleteId) ||
+            expectedSource.athleteId!=athleteId ||
+            !id.matches(expectedSource.programId) ||
+            allowedDayIndices.isEmpty() ||
+            allowedDayIndices.any{it !in 0..6})
+            return NativeKotlinProgramHistoryReadResult.Rejected(
+                NativeKotlinProgramHistoryRefusal.INVALID_REQUEST)
+        return runCatching {
+            ownerFence.withOwnerTransaction(ownerKey) {
+                when(val verified=readVerifiedFenced(ownerKey,athleteId)) {
+                    is VerifiedFencedHistory.Rejected ->
+                        NativeKotlinProgramHistoryReadResult.Rejected(
+                            NativeKotlinProgramHistoryRefusal.OWNER_HISTORY_UNAVAILABLE,
+                            ownerHistoryReason=verified.reason.reason)
+                    is VerifiedFencedHistory.Ready -> {
+                        val selected=verified.sourceRead.completedWorkouts.filter{
+                            it.journal.snapshot.source==expectedSource
+                        }
+                        val projected=KotlinProgramHistoryReadoutDomain.review(
+                            KotlinProgramHistoryReadoutRequest(
+                                athleteId,expectedSource.programId,expectedSource,
+                                allowedDayIndices,
+                                selected.map{it.journal},
+                                selected.mapNotNull{it.savedCorrections}
+                            )
+                        )
+                        when(projected) {
+                            is KotlinProgramHistoryReadoutResult.Rejected ->
+                                NativeKotlinProgramHistoryReadResult.Rejected(
+                                    NativeKotlinProgramHistoryRefusal.INVALID_PROGRAM_EVIDENCE,
+                                    programEvidenceReason=projected.reason)
+                            is KotlinProgramHistoryReadoutResult.Candidate -> {
+                                val ordinals=linkedMapOf<String,Long>()
+                                for(workout in selected)
+                                    ordinals[workout.journal.snapshot.workoutId]=
+                                        workout.completionOrder
+                                NativeKotlinProgramHistoryReadResult.Review(
+                                    NativeKotlinProgramHistoryReview(
+                                        projected.ledger,
+                                        verified.index.manifestRevision,
+                                        verified.index.contentFingerprint,
+                                        Collections.unmodifiableMap(ordinals)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }.getOrElse{
+            NativeKotlinProgramHistoryReadResult.Rejected(
+                NativeKotlinProgramHistoryRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    private fun readVerifiedFenced(
         ownerKey: String, athleteId: String
-    ): NativeKotlinHistoryReadResult {
-        fun denied(reason: NativeKotlinHistoryReadRefusal) =
-            NativeKotlinHistoryReadResult.Rejected(reason)
+    ): VerifiedFencedHistory {
+        fun denied(reason:NativeKotlinHistoryReadRefusal)=
+            VerifiedFencedHistory.Rejected(
+                NativeKotlinHistoryReadResult.Rejected(reason))
 
         val manifest = runCatching {
             manifestAuthority.currentHistoryManifest(ownerKey, athleteId)
@@ -113,24 +242,24 @@ class NativeKotlinGlobalHistoryReadCoordinator(
             ))
         }
 
-        // The manifest owner must participate in this fence for the
-        // re-read to guarantee a coherent snapshot.
+        // The complete manifest owner MUST participate in this fence.
         val refreshed = runCatching {
             manifestAuthority.currentHistoryManifest(ownerKey, athleteId)
         }.getOrNull()
         if (refreshed != frozen)
             return denied(NativeKotlinHistoryReadRefusal.MANIFEST_CHANGED)
-        val result = KotlinGlobalHistoryIndexDomain.project(
-            KotlinGlobalHistoryRead(
-                athleteId, frozen.revision, frozen.revision,
-                frozen.completions, recovered
-            )
+        val complete=KotlinGlobalHistoryRead(
+            athleteId, frozen.revision, frozen.revision,
+            frozen.completions, recovered
         )
+        val result = KotlinGlobalHistoryIndexDomain.project(complete)
         if (result !is KotlinGlobalHistoryResult.Candidate) {
-            val reason = (result as KotlinGlobalHistoryResult.Rejected).reason
-            return NativeKotlinHistoryReadResult.Rejected(
-                NativeKotlinHistoryReadRefusal.GLOBAL_HISTORY_REJECTED, reason)
+            val reason=(result as KotlinGlobalHistoryResult.Rejected).reason
+            return VerifiedFencedHistory.Rejected(
+                NativeKotlinHistoryReadResult.Rejected(
+                    NativeKotlinHistoryReadRefusal.GLOBAL_HISTORY_REJECTED,
+                    reason))
         }
-        return NativeKotlinHistoryReadResult.Review(result.index)
+        return VerifiedFencedHistory.Ready(result.index,complete)
     }
 }

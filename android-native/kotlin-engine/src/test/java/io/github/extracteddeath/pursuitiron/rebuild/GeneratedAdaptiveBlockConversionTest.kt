@@ -398,7 +398,7 @@ class GeneratedAdaptiveBlockConversionTest {
         val hyper=existing.copy(blockId="hypertrophy",weeks=2,
             days=existing.days.map{day ->
                 day.copy(slots=day.slots.map{slot ->
-                    slot.copy(sets=List(5){slot.sets.single()})
+                    slot.copy(sets=List(6){slot.sets.single()})
                 })
             })
         val strength=existing.copy(blockId="strength",
@@ -408,22 +408,37 @@ class GeneratedAdaptiveBlockConversionTest {
             })
         val cycle=original.copy(blocks=listOf(hyper,strength))
         val base=fixture.generation()
+        // Keep source-backed volume high but use a legitimate 40-60m
+        // Strength prescription with shorter authored set/rest durations.
+        // The phase-authorized MAV is low; its MRV still permits a fully
+        // reviewed source-boundary recovery without invented load changes.
+        val strengthBounds=checkNotNull(base.policy).selectedBounds.map{
+            if(it.mev>fixture.n("0"))
+                it.copy(mav=fixture.n("2"))
+            else it
+        }
         val policy=checkNotNull(base.policy).copy(
             phase=TrainingPhase.STRENGTH,
+            baselineBounds=strengthBounds,selectedBounds=strengthBounds,
             minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
             primaryLiftMinimumDays=mapOf("bench" to 1))
         val program=base.copy(phase=TrainingPhase.STRENGTH,
             policy=policy,
-            nonSetSecondsByWeekday=mapOf(0 to 1200,2 to 1200,4 to 1200))
+            choices=base.choices.map{
+                it.copy(activeSecondsPerSet=45,restSecondsPerSet=60)
+            })
         val prescriptions=fixture.policies().map{
-            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                activeSecondsPerSet=45,restSecondsPerSet=60)
         }
         val requested=GeneratedAdaptiveBlockRequest(cycle,"strength",
             "review_str_rebalanced",program,prescriptions,
             allowSourceDoseRecovery=true)
         val unpermitted=GeneratedAdaptiveBlockDomain.propose(
             requested.copy(allowSourceDoseRecovery=false))
-        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
+        assertEquals("Blocked: ${unpermitted.status} "+
+            "${unpermitted.explanation}; generation=${unpermitted.generatedWeek?.issues}",
+            GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
             unpermitted.status)
         assertNull(unpermitted.proposedOption)
         assertTrue(unpermitted.addedStrengthWorkingSets.isEmpty())
@@ -456,7 +471,7 @@ class GeneratedAdaptiveBlockConversionTest {
             val sets=day.slots.sumOf {slot ->
                 slot.sets.count{it.type==DraftSetType.WORKING}
             }
-            sets>15/2 && day.slots.all{slot ->
+            sets>18/2 && day.slots.all{slot ->
                 slot.sets.size<=4 &&
                     slot.sets.all{set ->
                         val original=referenceById.getValue(slot.exerciseId)

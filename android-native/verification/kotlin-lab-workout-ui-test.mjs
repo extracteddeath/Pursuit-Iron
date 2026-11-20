@@ -182,8 +182,8 @@ assert.match(journal,/if\(position==setCount\)"Last working set"/);
 assert.match(inlineTechnique,/CustomWorkoutExecutionDomain.followUpVisits\(journal,set\)/);
 assert.match(inlineTechnique,/journal.effectiveVisits\[key\]/);
 assert.match(inlineTechnique,/CustomAmplifierKind.DROP_SET/);
-assert.match(journal,/sameLoadActivation/);
-assert.match(journal,/follower\?\.kind==CustomAmplifierKind.LENGTHENED_PARTIALS/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
+assert.match(journal,/AmplifierFollowUpEntryLoad\.RecordedActivation/);
 assert.match(partialHistory,/Lengthened partials · partial reps/);
 assert.match(partialHistory,/final-set partial extension/);
 
@@ -499,13 +499,16 @@ assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') 
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
 assert.ok(journal.includes('activationPerformed=main?.performed') &&
-  journal.includes('val sameLoadActivation=if(') &&
-  journal.includes('activationPerformed?.machineInstanceId==machineInstanceId') &&
-  journal.includes('sameLoadActivation ?:') &&
+  journal.includes('AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(') &&
+  journal.includes('activationReceiptRevision=observed?.appliedRevision') &&
+  journal.includes('val startingLoad=when(followUpEntryLoad)') &&
+  journal.includes('AmplifierFollowUpEntryLoad.RecordedActivation') &&
+  journal.includes('AmplifierFollowUpEntryLoad.ActivationUnavailable -> ""') &&
   journal.includes('Your issued target remains unchanged.'),
-  'Myo mini-set prefill must use observed same-machine activation without editing prescription');
+  'Myo mini-set prefill must be activation-owned, correction-scoped and separate from the issued prescription');
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
-  journal.includes('set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,') &&
+  journal.includes('set.setKey,visitDraftIdentity,machineInstanceId,target,expectedReps,') &&
+  journal.includes('":activation:"+(activationReceiptRevision?.toString() ?: "none")') &&
   localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('if(committed)store.discard(identity)'),
@@ -1220,7 +1223,8 @@ assert.match(lastPicker,/heightIn\(min=48\.dp\)/);
 assert.match(composer,/if\(!set\.isResolved\) PursuitUseLastCompletedSet\(/);
 assert.match(composer,/key=WorkoutReferenceKey\(target\.setKey\)/);
 assert.match(composer,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
-assert.match(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
+assert.match(journal,/if\(saved==null && part==CustomWorkoutVisitPart\.MAIN\)/);
+assert.doesNotMatch(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
 assert.match(journal,/part==CustomWorkoutVisitPart\.FOLLOW_UP\)/);
 assert.match(journal,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
 const lastHelper=lastPicker.slice(

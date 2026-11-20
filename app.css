@@ -10145,3 +10145,31 @@ background:var(--pi-color-card)!important;
 @media(max-width:359px){#root .wpb .wpb-template-featured{flex-basis:190px;max-width:78vw}#root .wpb .wpb-template-card.wpb-ui-card{padding:var(--pi-space-2)}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-template-sheet{animation:none}}
 @media(forced-colors:active){#root .wpb .wpb-template-card,#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice,.wpb-template-search){border-color:CanvasText}#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice)[aria-pressed="true"]{background:Highlight;color:HighlightText}}
+#root .wpb .wpb-home-content>.wpb-home-strip{grid-column:1/-1}
+#root .wpb .wpb-home-strip{margin:0 0 var(--pi-space-5);padding:var(--pi-space-3) var(--pi-space-4);min-width:0}
+#root .wpb .wpb-home-strip-title{margin:0 0 var(--pi-space-2);font-size:var(--pi-type-support);font-weight:700;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-strip-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--pi-space-1);margin:0;padding:0;list-style:none}
+#root .wpb .wpb-home-strip-day{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+#root .wpb .wpb-home-strip-weekday{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-strip-date{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--pi-color-control);color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:600;font-variant-numeric:tabular-nums}
+#root .wpb .wpb-home-strip-day[data-future=true] .wpb-home-strip-date{background:none;box-shadow:inset 0 0 0 1px var(--pi-color-divider)}
+#root .wpb .wpb-home-strip-day[data-trained=true] .wpb-home-strip-date{background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent)}
+#root .wpb .wpb-home-strip-day[data-today=true] .wpb-home-strip-date{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb .wpb-home-strip-mark{width:6px;height:6px;border-radius:50%}
+#root .wpb .wpb-home-strip-day[data-scheduled=true]:not([data-trained=true]) .wpb-home-strip-mark{background:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-home-strip-day[data-scheduled=true][data-future=false][data-today=false]:not([data-trained=true]) .wpb-home-strip-mark{background:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-strip-streak{display:flex;align-items:center;gap:6px;margin:var(--pi-space-3) 0 0;font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-strip-streak>svg{flex:none;color:var(--pi-color-warning)}
+#root .wpb .wpb-home-strip-streak[data-at-risk=true]{color:var(--pi-color-warning)}
+#root .wpb .wpb-home-recap-head{display:flex;align-items:center;gap:6px;font-size:var(--pi-type-support);font-weight:600;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-recap-head>svg{flex:none;color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-home-recap-meta{margin:0 0 var(--pi-space-3);font-size:var(--pi-type-support);color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-recap-title{margin:var(--pi-space-1) 0 var(--pi-space-1);font-size:var(--pi-type-heading);font-weight:700;line-height:1.2}
+#root .wpb .wpb-home-recap-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--pi-space-2);margin:0}
+#root .wpb .wpb-home-recap-stat{display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-end;gap:4px;min-width:0;padding:10px 4px;border-radius:var(--pi-radius-md);background:var(--pi-color-control);text-align:center}
+#root .wpb .wpb-home-recap-stat dt{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-recap-stat dd{margin:0;font-size:var(--pi-type-body);font-weight:700;line-height:1.2;color:var(--pi-color-on-control);overflow-wrap:anywhere}
+#root .wpb .wpb-home-recap-delta{display:block;font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-color-warning)}
+#root .wpb .wpb-home-recap-delta[data-up=true]{color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-home-recap-lines{display:grid;gap:4px;margin:var(--pi-space-3) 0;font-size:var(--pi-type-support);line-height:1.45;color:var(--pi-color-on-muted)}
+#root .wpb .wpb-home-recap-share{width:100%;gap:6px}

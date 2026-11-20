@@ -1535,7 +1535,21 @@ function weeklyRecap(history, unit) {
     const prior = liftBests(history, prUnit, h => h.date <= now - wk);
     const current = liftBests(history, prUnit, h => h.date > now - wk);
     const prs = Object.entries(current).filter(([id, best]) => prior[id] && best.e1rm > prior[id].e1rm + 1e-9).length;
-    return { count: thisW.length, sets: sets(thisW), vol: Math.round(vol(thisW)), prevCount: prevW.length, prevSets: sets(prevW), prevVol: Math.round(vol(prevW)), topMuscle, prs };
+    // Time actually trained (finished sessions carry durationMin) and the window's strongest working
+    // set by estimated 1RM, in the recap's unit. Same row source and conversion as liftBests.
+    const minutes = Math.round(thisW.reduce((sum, h) => sum + (Number(h.durationMin) > 0 ? Number(h.durationMin) : 0), 0));
+    let best = null;
+    thisW.forEach(h => Object.entries(h.perf || {}).forEach(([id, p]) => {
+        const ex = EX_BY_ID[id];
+        if (!ex || !p?.sets) return;
+        setsOf(p).filter(isWorkSet).forEach(row => {
+            const w = convertHistoryLoad(historyNumber(row.w), h.unit || prUnit, prUnit), r = historyNumber(row.r);
+            if (!(w > 0 && r > 0)) return;
+            const est = e1rm(w, r);
+            if (!best || est > best.e1rm) best = { id, name: ex.name, w, r, rir: Number.isFinite(Number(row.rir)) ? Number(row.rir) : null, e1rm: est };
+        });
+    }));
+    return { count: thisW.length, sets: sets(thisW), vol: Math.round(vol(thisW)), prevCount: prevW.length, prevSets: sets(prevW), prevVol: Math.round(vol(prevW)), topMuscle, prs, minutes, best, unit: prUnit };
 }
 
 const __weeklyVolMemo = new WeakMap();

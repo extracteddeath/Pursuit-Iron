@@ -82,6 +82,7 @@ export const contractGroups = Object.freeze({
         'b1016-strength-notes-machine-history-test.mjs',
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
+        'prototype-features-test.mjs',
         'home-utility-owner-test.mjs',
         'home-template-owner-test.mjs',
         'plan-fixed-utility-owner-test.mjs',

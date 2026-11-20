@@ -342,3 +342,24 @@ workout. Later goal-driven adaptation must use the same authentic
 source, reviewed constraints and permission gates, then independently
 re-audit the entire future candidate and its numeric lineage before
 the athlete can accept it. This by itself does not close #786 or #783.
+
+
+### Effective saved corrections invalidate prior performance signals
+
+Cold-open native owner-history regression now checks **three** distinct
+persisted correction scenarios after three previously qualifying
+same-day/same-machine workouts. If a finished workout's saved record is
+corrected to fewer reps at near failure, its old favorable repeated-rep
+ceiling signal must disappear on the next authenticated read. If a
+correction changes one working set to Machine B, the source Machine A
+session becomes noncomparable and must not falsely qualify. A corrected
+actual RIR of `null` remains UNKNOWN even when the originally issued
+target RIR was 2; the favorable signal is withheld.
+
+The original immutable issued prescription, saved correction predecessor
+receipt, effective event ID, physical machine, and History content
+fingerprint remain independently auditable. An older favorable readout
+is a stale **review snapshot**, not a durable eligibility token; future
+program adoption must re-read the owner manifest, saved corrections,
+consent and source revisions atomically before accepting any proposal.
+These tests do not enable automatic programming.

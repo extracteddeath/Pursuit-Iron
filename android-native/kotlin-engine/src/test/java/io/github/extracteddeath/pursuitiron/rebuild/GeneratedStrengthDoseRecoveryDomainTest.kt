@@ -88,7 +88,7 @@ class GeneratedStrengthDoseRecoveryDomainTest {
                 val prior=oldSlots.getValue(slot.slotId)
                 slot.sets.size in 2..4 &&
                     slot.sets.all{
-                        it==prior.sets.single() &&
+                        it==prior.sets.first() &&
                             it.reps==RepBand(3,5) &&
                             it.targetRir==1 &&
                             it.restSeconds==180

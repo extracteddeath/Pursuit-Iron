@@ -605,7 +605,8 @@ const saveAndFinish=controller.slice(
   controller.indexOf('fun record('),
   controller.indexOf('fun clear()'));
 assert.ok(saveAndFinish.includes('if(prior.busy || journal.finishedByEventId!=null ||') &&
-  saveAndFinish.includes('if(prior.busy || !journal.canProposeFinish)return') &&
+  saveAndFinish.includes('if(prior.busy || !journal.canProposeFinish ||') &&
+  saveAndFinish.includes('journal.revision!=reviewedRevision)return') &&
   saveAndFinish.includes('if(!closed.get() &&'),
   'No set, Finish or late coaching update may bypass busy, closed or journal revision gates');
 const reset=controller.slice(controller.indexOf('fun clear()'),controller.indexOf('override fun close()'));

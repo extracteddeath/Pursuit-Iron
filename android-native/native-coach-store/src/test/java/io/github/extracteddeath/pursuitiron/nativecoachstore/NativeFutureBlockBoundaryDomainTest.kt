@@ -34,7 +34,7 @@ class NativeFutureBlockBoundaryDomainTest {
         completedAtEpochMillis:Long?=at(week,day)
     )=NativeVerifiedCustomBlockCompletion(
             cycleId,block,week,day,allMainComplete,completedAtEpochMillis)
-    private fun checked(
+    private fun boundaryReview(
         cycle:CustomTrainingCycle,
         targetBlockId:String,
         completions:List<NativeVerifiedCustomBlockCompletion>,
@@ -45,7 +45,7 @@ class NativeFutureBlockBoundaryDomainTest {
         listOf(0,2,4).map{day->done("base",week,day)}
     }
     @Test fun completePriorBlockAllowsReviewButNeverAuthorizesActivation() {
-        val checked=checked(
+        val checked=boundaryReview(
             cycle(),"build",earlier(),7)
         assertEquals(NativeFutureActivationReview.BoundaryReviewed(
             "cycle-1","build",3,2,6,7),checked)
@@ -57,19 +57,19 @@ class NativeFutureBlockBoundaryDomainTest {
     @Test fun firstBlockIsNeverProspectiveActivationTarget() {
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.NOT_A_FUTURE_BLOCK),
-            checked(cycle(),"base",earlier(),7))
+            boundaryReview(cycle(),"base",earlier(),7))
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.NOT_A_FUTURE_BLOCK),
-            checked(cycle(),"unknown",earlier(),7))
+            boundaryReview(cycle(),"unknown",earlier(),7))
     }
     @Test fun incompletePriorSessionsDoNotClaimTrainingBoundary() {
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
-            checked(
+            boundaryReview(
                 cycle(),"build",earlier().dropLast(1),7))
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
-            checked(
+            boundaryReview(
                 cycle(),"build",emptyList(),7))
     }
     @Test fun finishedButSkippedFailedOrReducedWorkCannotCompletePriorBlock() {
@@ -80,49 +80,49 @@ class NativeFutureBlockBoundaryDomainTest {
         }
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
-            checked(cycle(),"build",skipped,7))
+            boundaryReview(cycle(),"build",skipped,7))
         val failedLast=full.dropLast(1)+done("base",2,4,
             allMainComplete=false)
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
-            checked(
+            boundaryReview(
                 cycle(),"build",failedLast,7))
         assertEquals(NativeFutureActivationReview.BoundaryReviewed(
             "cycle-1","build",3,2,6,7),
-            checked(
+            boundaryReview(
                 cycle(),"build",full,7))
     }
 
     @Test fun anyAlreadyCompletedFutureWorkoutBlocksRetroactiveActivation() {
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.TARGET_BLOCK_ALREADY_STARTED),
-            checked(
+            boundaryReview(
                 cycle(),"build",earlier()+done("build",3,0),7))
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.TARGET_BLOCK_ALREADY_STARTED),
-            checked(
+            boundaryReview(
                 cycle(),"build",earlier()+done("build",5,4),7))
     }
     @Test fun mismatchedBlockOrDuplicateCompletionCannotFillGap() {
         val wrong=earlier().dropLast(1)+done("build",2,4)
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.CONFLICTING_HISTORY),
-            checked(
+            boundaryReview(
                 cycle(),"build",wrong,7))
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.CONFLICTING_HISTORY),
-            checked(
+            boundaryReview(
                 cycle(),"build",earlier()+earlier().first(),7))
     }
     @Test fun unrelatedCycleCannotAdvanceTheSelectedCustomCycle() {
         val unrelated=earlier().map{it.copy(cycleId="another-cycle")}
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.INCOMPLETE_HISTORY),
-            checked(
+            boundaryReview(
                 cycle(),"build",unrelated,7))
         assertEquals(NativeFutureActivationReview.BoundaryReviewed(
             "cycle-1","build",3,2,6,7),
-            checked(
+            boundaryReview(
                 cycle(),"build",earlier()+unrelated,7))
     }
 
@@ -132,7 +132,7 @@ class NativeFutureBlockBoundaryDomainTest {
         }
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.CALENDAR_UNVERIFIED),
-            checked(cycle(),"build",incomplete,7))
+            boundaryReview(cycle(),"build",incomplete,7))
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.CALENDAR_UNVERIFIED),
             NativeFutureBlockBoundaryDomain.check(
@@ -146,7 +146,7 @@ class NativeFutureBlockBoundaryDomainTest {
         }
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.CALENDAR_CONFLICT),
-            checked(cycle(),"build",changedWeekday,7))
+            boundaryReview(cycle(),"build",changedWeekday,7))
 
         // A stored absolute-week-1 session cannot become week 2 merely
         // because an actual Monday finish occurred one week later.
@@ -156,7 +156,7 @@ class NativeFutureBlockBoundaryDomainTest {
         }
         assertEquals(NativeFutureActivationReview.Rejected(
             NativeFutureActivationRefusal.CALENDAR_CONFLICT),
-            checked(cycle(),"build",shiftedWeek,7))
+            boundaryReview(cycle(),"build",shiftedWeek,7))
         val crossMidnight=earlier().mapIndexed{index,visit->
             if(index==0)visit.copy(completedAtEpochMillis=
                 java.time.Instant.parse("2026-11-02T00:30:00Z")
@@ -165,7 +165,7 @@ class NativeFutureBlockBoundaryDomainTest {
         assertEquals("UTC Monday is still Sunday in the athlete timezone",
             NativeFutureActivationReview.Rejected(
                 NativeFutureActivationRefusal.CALENDAR_CONFLICT),
-            checked(cycle(),"build",crossMidnight,7))
+            boundaryReview(cycle(),"build",crossMidnight,7))
     }
 
     @Test fun daylightSavingChangesDoNotAlterMondayWeekIdentity() {
@@ -179,7 +179,7 @@ class NativeFutureBlockBoundaryDomainTest {
         }
         assertEquals(NativeFutureActivationReview.BoundaryReviewed(
             "cycle-1","build",3,2,6,7),
-            checked(cycle(),"build",march,7))
+            boundaryReview(cycle(),"build",march,7))
     }
 
     @Test fun realFreeformSplitRetainsAthleteAuthoredWeekdays() {

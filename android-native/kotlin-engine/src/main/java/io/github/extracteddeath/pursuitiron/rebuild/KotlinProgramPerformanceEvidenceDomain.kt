@@ -108,14 +108,6 @@ object KotlinProgramPerformanceEvidenceDomain {
             KotlinSetLoadRelation.COMPLETED_AS_ISSUED
     }
 
-    private fun equalLoad(a:DraftSetLoad,b:DraftSetLoad):Boolean =
-        when {
-            a is DraftSetLoad.Verified && b is DraftSetLoad.Verified ->
-                a.unit==b.unit && a.basis==b.basis &&
-                    a.value.compareTo(b.value)==0
-            else ->a==b
-        }
-
     /**
      * An old successful set cannot erase a skipped/latest hard set. Compare
      * the latest THREE visits in original durable completion order, not
@@ -263,7 +255,7 @@ object KotlinProgramPerformanceEvidenceDomain {
                     it.issuedRepBands!=recent.first().issuedRepBands ||
                     it.issuedLoads.size!=recent.first().issuedLoads.size ||
                     it.issuedLoads.zip(recent.first().issuedLoads)
-                        .any{(a,b)->!equalLoad(a,b)}
+                        .any{(a,b)->!KotlinSetNumberAuthorityDomain.sameIssuedTarget(a,b)}
                 } -> KotlinProgramPerformanceGate.PRESCRIPTION_CHANGED
                 recent.any{v->v.targetRir.any{it==null} ||
                     v.reportedRir.any{it==null} ||

@@ -122,6 +122,9 @@ val stageKotlinBetaSources=tasks.register<StageKotlinBetaSources>(
             "**/PursuitIronApplication.kt",
             "**/AppPrivateKotlinLocalAthlete.kt",
             "**/NativeKotlin*.kt",
+            // Shared immutable Finish-review fence is required by every
+            // staged native workout route. No engine or History writer.
+            "**/NativeFinishReviewPolicy.kt",
             // Explicitly admit the typed measurement set editor alongside
             // its now source-verified native Train screen.
             "**/NativeMeasuredExerciseSetEditor.kt",

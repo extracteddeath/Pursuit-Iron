@@ -2,7 +2,7 @@
 // into a routine saved from an earlier freestyle session (saved programs flagged `quick`).
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { Play, Plus, Trash2 } from 'lucide-react';
-import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
+import { UiAction, UiIconAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { EX_BY_ID } from './engine-api.js';
 
@@ -39,7 +39,7 @@ export function RoutinePickerSheet({ routines, onStartEmpty, onStart, onRemove, 
                 _jsxs(UiAction, { variant: 'tonal', className: 'wpb-routine-empty', onClick: onStartEmpty, children: [_jsx(Plus, { size: 18, 'aria-hidden': true }), 'Empty workout'] }),
                 _jsx('h3', { className: 'wpb-routine-section', children: 'Your routines' }),
                 _jsx('ul', { className: 'wpb-routine-list', children: routines.map(r => _jsxs('li', { className: 'wpb-routine-item', children: [
-                    _jsxs('button', { type: 'button', className: 'pressable wpb-routine-start', onClick: () => onStart(r.program), 'aria-label': `Start ${r.name}`, children: [
+                    _jsxs(UiAction, { variant: 'row', className: 'wpb-routine-start', onClick: () => onStart(r.program), 'aria-label': `Start ${r.name}`, children: [
                         _jsxs('span', { className: 'wpb-routine-copy', children: [
                             _jsx('strong', { children: r.name }),
                             _jsx('span', { className: 'wpb-routine-lifts', children: r.lifts.join(' · ') }),
@@ -47,7 +47,7 @@ export function RoutinePickerSheet({ routines, onStartEmpty, onStart, onRemove, 
                         ] }),
                         _jsx('span', { className: 'wpb-routine-play', 'aria-hidden': true, children: _jsx(Play, { size: 18 }) })
                     ] }),
-                    onRemove && _jsx('button', { type: 'button', className: 'pressable hit wpb-routine-remove', onClick: () => onRemove(r.program), 'aria-label': `Remove ${r.name}`, children: _jsx(Trash2, { size: 16, 'aria-hidden': true }) })
+                    onRemove && _jsx(UiIconAction, { className: 'wpb-routine-remove', onClick: () => onRemove(r.program), 'aria-label': `Remove ${r.name}`, children: _jsx(Trash2, { size: 16, 'aria-hidden': true }) })
                 ] }, r.id)) }),
                 _jsx('p', { className: 'wpb-routine-hint', children: 'Finish a freestyle workout with “Save as routine” to add one here.' })
             ] })

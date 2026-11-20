@@ -78,7 +78,10 @@ const b1010SharedRules=css.slice(b1010Start,b1011Start);
 const b1012Start=css.indexOf('/* B1012 — one token-owned template discovery/selection family');
 assert.ok(b1012Start>b1011Start,'B1012 Home template owner must follow B1011 Settings');
 const b1011SettingsRules=css.slice(b1011Start,b1012Start);
-const b1012TemplateRules=css.slice(b1012Start);
+const b1026Start=css.indexOf('/* B1026 — prototype features: week strip, 7-day recap, pain check, routines */');
+assert.ok(b1026Start>b1012Start,'B1026 prototype-feature owner follows the B1012 template owner');
+const b1012TemplateRules=css.slice(b1012Start,b1026Start);
+assert.ok(css.slice(b1026Start).length<=uiStyleBudget.b1026CssCharacters,'B1026 prototype-feature owner must remain bounded');
 assert.ok(b1012TemplateRules.length<=uiStyleBudget.b1012CssCharacters,'B1012 Home template owner must not grow');
 assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Settings owner must remain bounded');
 for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run','wpb-settings-import-sheet'])
@@ -99,7 +102,7 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').replace(css.slice(b1026Start),'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
 assert.ok((app.match(/style: \{/g)||[]).length<=874,
   'Do not restore inline Workout geometry to replace deleted CSS');
@@ -109,7 +112,7 @@ assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
 // B1016 adds a real accessible machine-history owner and actual-set explanation
 // while keeping all new geometry in the shared external stylesheet. Retain a
 // measured +2k bound; further uncontrolled App/CSS growth still fails.
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').length<=2661430,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').replace(b1011SettingsRules,'').replace(b1012TemplateRules,'').replace(css.slice(b1026Start),'').length<=2661430,
   'Combined App and stylesheet may grow at most 2k for the reviewed Machine A/B Exercise Info feature; no restored inline-style debt');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -283,7 +286,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-text-700",
-    6,
+    5, // B1026: the weekly recap card that used one moved to modules/home-week.js
     "style: { color: C.text, fontWeight: 700 }"
   ],
   [

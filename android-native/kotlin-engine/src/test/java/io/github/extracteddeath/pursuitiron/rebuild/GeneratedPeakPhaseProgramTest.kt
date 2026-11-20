@@ -162,7 +162,7 @@ class GeneratedPeakPhaseProgramTest {
             visitTimings=CoachSessionPrescriptionDomain
                 .timingsForPolicies(prescriptions()).map {
                     if(it.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
-                        it.copy(restSeconds=it.restSeconds+30)
+                        it.copy(restSecondsPerSet=it.restSecondsPerSet+30)
                     else it
                 })
         val conflict=GeneratedAdaptiveBlockDomain.propose(

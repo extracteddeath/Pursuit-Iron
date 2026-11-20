@@ -221,4 +221,102 @@ class AdvancedAmplifierProtocolDomainTest {
         assertEquals("Drop set · follow-up",policy.stageLabel(legacy,1))
     }
 
+
+    @Test fun everyMyoStagePrefillsFromLastLoggedActivationNotFirstSetOrIssuedWeight() {
+        val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            java.math.BigDecimal("215"))
+        // Earlier working sets could be 200, 205 or 210; the technique
+        // attaches to the last working set, which the athlete performed
+        // at 195 despite a different issued target of 215.
+        val lastActual=KotlinPerformedSet(java.math.BigDecimal("195.0"),
+            LoadUnit.LB,15,1,"machine-b")
+        val myo=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+            4,20,followUpRounds=5)
+        for(stage in 1..5) {
+            val decision=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                myo,issued,lastActual,"machine-b",stage)
+            assertTrue(decision is AmplifierFollowUpEntryLoad.RecordedActivation)
+            assertEquals(0,(decision as
+                AmplifierFollowUpEntryLoad.RecordedActivation)
+                .performed.load!!.compareTo(java.math.BigDecimal("195")))
+            assertEquals(lastActual,decision.performed)
+            assertEquals(issued,AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                myo,issued,stage))
+        }
+        // Neither the first set nor the scripted target is an actual fact.
+        assertNotEquals(java.math.BigDecimal("200"),
+            lastActual.load)
+        assertNotEquals((issued as DraftSetLoad.Verified).value,
+            lastActual.load)
+    }
+
+    @Test fun activationLoadResolutionIsOneSourceAcrossSingleAndStagedProtocols() {
+        val issued=DraftSetLoad.Verified(LoadUnit.KG,LoadBasis.DUMBBELL_PER_HAND,
+            java.math.BigDecimal("25"))
+        val logged=KotlinPerformedSet(java.math.BigDecimal("22"),
+            LoadUnit.KG,14,1)
+        val methods=listOf(CustomAmplifierKind.MYO_REPS,
+            CustomAmplifierKind.REST_PAUSE,CustomAmplifierKind.CLUSTER,
+            CustomAmplifierKind.LENGTHENED_PARTIALS)
+        methods.forEach {kind->
+            for(rounds in listOf(1,4)) {
+                val amp=CustomSetAmplifier(kind,4,20,
+                    followUpRounds=rounds)
+                val result=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                    amp,issued,logged,null,1)
+                assertEquals(kind.name,AmplifierFollowUpEntryLoad.RecordedActivation(
+                    logged),result)
+            }
+        }
+    }
+
+    @Test fun incompatibleActivationAndMachineNeverFallbackToEarlierSet() {
+        val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            java.math.BigDecimal("185"))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+            4,20,followUpRounds=4)
+        val valid=KotlinPerformedSet(java.math.BigDecimal("175"),
+            LoadUnit.LB,13,1,"station-a")
+        val unavailable=AmplifierFollowUpEntryLoad.ActivationUnavailable
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,issued,null,"station-a",1))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,issued,valid,"station-b",1))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,issued,valid.copy(unit=LoadUnit.KG),"station-a",1))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,issued,valid.copy(reps=0),"station-a",1))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,issued,valid.copy(load=null),"station-a",1))
+    }
+
+    @Test fun explicitLegacyAndDropLoadsRemainAuthoredWhileBodyweightFollowsActual() {
+        val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            java.math.BigDecimal("185"))
+        val logged=KotlinPerformedSet(java.math.BigDecimal("175"),
+            LoadUnit.LB,15,1)
+        val reduced=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            java.math.BigDecimal("145"))
+        val drop=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,
+            8,10,followUpLoad=reduced)
+        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(reduced),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                drop,issued,logged,null,1))
+        val legacy=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+            4,20,followUpLoad=reduced,followUpRounds=1)
+        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(reduced),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                legacy,issued,logged,null,1))
+        val bodyweight=KotlinPerformedSet(null,null,15,1)
+        assertEquals(AmplifierFollowUpEntryLoad.RecordedActivation(bodyweight),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+                    4,20,followUpRounds=3),
+                DraftSetLoad.ExplicitBodyweight,bodyweight,null,2))
+    }
 }

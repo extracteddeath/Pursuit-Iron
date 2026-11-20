@@ -602,6 +602,14 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
             review.observedWeeks.undatedWorkoutIds)
         assertTrue(review.observedWeeks.weeks.isEmpty())
         assertFalse(review.observedWeeks.canApproveVolumeAdaptation)
+        assertEquals(review.linked.cells.size,
+            review.evolutionEvidence.cells.size)
+        assertTrue(review.evolutionEvidence.cells.none{
+            it.state==KotlinContinuousPlanEvidenceState
+                .EXPLORATORY_REVIEW_ONLY_ACTIVATION_REQUIRED
+        })
+        assertFalse(review.evolutionEvidence.mayApplyAutomatically)
+        assertFalse(review.evolutionEvidence.mayAssumeProgramAdherence)
         assertEquals(NativeKotlinGeneratedFutureHistoryResult.Rejected(
             NativeKotlinGeneratedFutureHistoryRefusal.INVALID_REQUEST),
             reader.readGeneratedFutureHistory("owner-1","athlete-1",
@@ -642,6 +650,13 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
         assertFalse(output.observedWeeks.weeks.single().canProveProgramAdherence)
         assertFalse(output.observedWeeks.canApproveVolumeAdaptation)
         assertFalse(output.canApplyAutomatically)
+        assertTrue("One completed week is not a three-week training trend",
+            output.evolutionEvidence.cells.none{
+                it.state==KotlinContinuousPlanEvidenceState
+                    .EXPLORATORY_REVIEW_ONLY_ACTIVATION_REQUIRED
+            })
+        assertFalse(output.evolutionEvidence.mayApplyAutomatically)
+        assertFalse(output.evolutionEvidence.mayRecommendPhasePromotion)
 
         // A changed manifest is a new immutable owner snapshot; a previous
         // observed full week cannot legitimize undated or later-corrected data.
@@ -658,6 +673,10 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
             downgraded.evidence.observedWeeks.weeks.single().coverage)
         assertEquals(listOf("workout-2"),
             downgraded.evidence.observedWeeks.undatedWorkoutIds)
+        assertTrue(downgraded.evidence.evolutionEvidence.cells.none{
+            it.state==KotlinContinuousPlanEvidenceState
+                .EXPLORATORY_REVIEW_ONLY_ACTIVATION_REQUIRED
+        })
     }
 
 }

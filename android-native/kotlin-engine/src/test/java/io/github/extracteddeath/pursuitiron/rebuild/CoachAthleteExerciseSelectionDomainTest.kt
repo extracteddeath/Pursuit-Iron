@@ -75,6 +75,54 @@ class CoachAthleteExerciseSelectionDomainTest {
         AthleteExerciseSelectionRequest(s,policy(s),catalog,offered,
             setOf(ComposerFocus.FULL_BODY),patterns,max)
 
+    @Test fun oneSourceExerciseCanPreserveTwoDirectArmFunctionsWithoutTwoVisits() {
+        val setup=athlete()
+        val dual=movement("curl",TrainingMuscle.BICEPS,
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY).copy(
+            credits=listOf(
+                DeclaredMuscleCredit(TrainingMuscle.BICEPS,
+                    MuscleCreditRole.DIRECT,n("1")),
+                DeclaredMuscleCredit(TrainingMuscle.BRACHIALIS,
+                    MuscleCreditRole.DIRECT,n("1"))))
+        val evidence=StrengthSourceArmReview(
+            StrengthSourceArmsStatus.REVIEW_READY,"source-cycle",
+            "athlete3",7,"hyper",listOf(
+                StrengthSourceArmCandidate("curl",TrainingMuscle.BICEPS,3),
+                StrengthSourceArmCandidate("curl",TrainingMuscle.BRACHIALIS,3)),
+            "Verified two independently credited direct muscle functions")
+        val proposed=request(setup,
+            offered=listOf(choose("press",required=1),choose("back"),
+                choose("curl",visits=2)),patterns=1).copy(
+            policy=policy(setup).copy(phase=TrainingPhase.STRENGTH),
+            catalog=catalog+dual,sourceStrengthArms=evidence)
+        val reviewed=CoachAthleteExerciseSelectionDomain.review(proposed)
+        assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,reviewed.status)
+        assertEquals(1,reviewed.choices.count{it.exerciseId=="curl"})
+        val curl=reviewed.choices.single{it.exerciseId=="curl"}
+        assertEquals(1,curl.requiredVisits)
+        assertEquals(2,curl.minimumSetsPerVisit)
+        assertEquals(n("25"),curl.selectedLoad)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.mayOverwriteCustomProgram)
+        // A forged source reporting two different exercises for the SAME
+        // direct muscle does not create duplicate muscle evidence.
+        val repeatedMuscle=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(sourceStrengthArms=evidence.copy(
+                candidates=listOf(
+                    StrengthSourceArmCandidate("curl",TrainingMuscle.BICEPS,3),
+                    StrengthSourceArmCandidate("curl",TrainingMuscle.BICEPS,3)))))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,
+            repeatedMuscle.status)
+        assertTrue(repeatedMuscle.issues.any{
+            it.kind==AthleteSelectionProblem.SOURCE_ARM_CONTINUITY_UNVERIFIED})
+        val changedCredit=CoachAthleteExerciseSelectionDomain.review(
+            proposed.copy(catalog=catalog+dual.copy(
+                credits=listOf(DeclaredMuscleCredit(
+                    TrainingMuscle.BICEPS,MuscleCreditRole.DIRECT,n("1"))))))
+        assertEquals(AthleteSelectionStatus.INPUT_UNRESOLVED,
+            changedCredit.status)
+    }
+
     @Test fun strengthShortlistPreservesActualSourceArmVisitsNotIndirectCredits() {
         val setup=athlete()
         val source=StrengthSourceArmReview(StrengthSourceArmsStatus.REVIEW_READY,

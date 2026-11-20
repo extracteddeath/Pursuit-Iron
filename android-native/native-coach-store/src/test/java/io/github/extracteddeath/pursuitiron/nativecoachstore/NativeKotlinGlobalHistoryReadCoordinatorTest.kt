@@ -348,4 +348,130 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
                 it.key.physicalMachineId==null
             }.recentGate)
     }
+
+    @Test fun savedNearFailureCorrectionRevokesPreviouslyFavorableProgramEvidence() {
+        val sessions=listOf(
+            completed(1,200,machine="press-A"),
+            completed(2,200,machine="press-A"),
+            completed(3,200,machine="press-A"))
+        val correctedManifest=manifest(*sessions.toTypedArray())
+        val pristineManifest=correctedManifest.copy(
+            completions=correctedManifest.completions.map{
+                it.copy(savedCorrectionRevision=0)
+            })
+        val before=(service(FakeManifest(pristineManifest))
+            .readProgramHistory("owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence
+        assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            before.performance.threads.single().recentGate)
+        assertEquals(0L,before.ledger.workouts.last().correctionRevision)
+
+        // The old favorable read is a *snapshot*, not a future coaching
+        // entitlement. An append-only saved actual must revoke that signal
+        // when the SAME private history is reopened under the owner fence.
+        val edit=KotlinSavedSetCorrection(
+            "saved-near-failure",0,"set-3-1","receipt-3-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n(200),LoadUnit.LB,6,0,"press-A"))
+        val committed=corrections().appendStored(
+            "owner-1","workout-3",edit,{_,_->true})
+        assertTrue(committed.toString(),
+            committed is NativeSavedCorrectionFileResult.Durable)
+        val after=(service(FakeManifest(correctedManifest))
+            .readProgramHistory("owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence
+        assertEquals(1L,after.ledger.workouts.last().correctionRevision)
+        assertNotEquals(before.ownerHistoryFingerprint,
+            after.ownerHistoryFingerprint)
+        assertNotEquals(before.ledger.exactReplayDigest,
+            after.ledger.exactReplayDigest)
+        val changed=after.ledger.workingSets.single{
+            it.workoutId=="workout-3" && it.setKey=="set-3-1"
+        }
+        assertEquals("saved-near-failure",changed.effectiveEventId)
+        assertEquals("receipt-3-1",changed.correctsEventId)
+        assertEquals(6,changed.performedReps)
+        assertEquals(0,changed.reportedRir)
+        assertEquals(2,changed.targetRir)
+        assertEquals(8,changed.issuedReps.maximum)
+        assertEquals("press-A",changed.physicalMachineId)
+        assertNotEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            after.performance.threads.single().recentGate)
+        assertEquals(6,after.performance.threads.single()
+            .visits.last().performedReps.last())
+        assertEquals(0,after.performance.threads.single()
+            .visits.last().reportedRir.last())
+        assertFalse(after.performance.canApplyToProgram)
+        assertFalse(after.canApplyProgramAdaptation)
+    }
+
+    @Test fun savedMachineSwitchCannotReuseAnotherStationsCompletedCapacity() {
+        val sessions=listOf(
+            completed(1,200,machine="press-A"),
+            completed(2,200,machine="press-A"),
+            completed(3,200,machine="press-A"))
+        val correctedManifest=manifest(*sessions.toTypedArray())
+        val initial=correctedManifest.copy(
+            completions=correctedManifest.completions.map{
+                it.copy(savedCorrectionRevision=0)
+            })
+        val old=(service(FakeManifest(initial))
+            .readProgramHistory("owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence
+        assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            old.performance.threads.single().recentGate)
+
+        // Second completed working set was actually on another Smith
+        // station. Machine-tagged correction receipts are durable in V2.
+        val edit=KotlinSavedSetCorrection(
+            "saved-switch",0,"set-3-1","receipt-3-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n(200),LoadUnit.LB,8,2,"press-B"))
+        assertTrue(corrections().appendStored("owner-1","workout-3",
+            edit,{_,_->true}) is NativeSavedCorrectionFileResult.Durable)
+        val after=(service(FakeManifest(correctedManifest))
+            .readProgramHistory("owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence
+        val switched=after.ledger.workingSets.single{
+            it.workoutId=="workout-3" && it.setKey=="set-3-1"
+        }
+        assertEquals("press-B",switched.physicalMachineId)
+        assertEquals("saved-switch",switched.effectiveEventId)
+        assertEquals(KotlinHistoryComparisonGuard.MIXED_PHYSICAL_MACHINES,
+            switched.comparisonGuard)
+        assertTrue(after.performance.threads.none{
+            it.recentGate==KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY
+        })
+        assertEquals(KotlinProgramPerformanceGate.NEEDS_THREE_MATCHED_VISITS,
+            after.performance.threads.single{
+                it.key.physicalMachineId=="press-A"
+            }.recentGate)
+        assertFalse(after.canChangeIssuedTargets)
+        assertFalse(after.performance.canIssueWorkout)
+    }
+
+    @Test fun correctedUnknownActualRirIsNeverFilledFromTargetRir() {
+        val sessions=listOf(
+            completed(1,200,machine="press-A"),
+            completed(2,200,machine="press-A"),
+            completed(3,200,machine="press-A"))
+        val current=manifest(*sessions.toTypedArray())
+        assertTrue(corrections().appendStored("owner-1","workout-3",
+            KotlinSavedSetCorrection(
+                "saved-unknown-rir",0,"set-3-1","receipt-3-1",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n(200),LoadUnit.LB,8,null,"press-A")),
+            {_,_->true}) is NativeSavedCorrectionFileResult.Durable)
+        val reviewed=(service(FakeManifest(current))
+            .readProgramHistory("owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence
+        val corrected=reviewed.ledger.workingSets.single{
+            it.workoutId=="workout-3" && it.setKey=="set-3-1"
+        }
+        assertNull(corrected.reportedRir)
+        assertEquals(2,corrected.targetRir)
+        assertEquals(KotlinProgramPerformanceGate.ACTUAL_EFFORT_UNKNOWN,
+            reviewed.performance.threads.single().recentGate)
+        assertFalse(reviewed.performance.canApplyToProgram)
+    }
 }

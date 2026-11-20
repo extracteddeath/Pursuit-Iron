@@ -289,3 +289,22 @@ make the program authoring pathway itself consume the verified source
 evidence with explicit athlete-selected adaptation scope, fatigue/lock
 preferences and independently tested rep/set/phase policy. No change to
 the current program or an APK release is authorized by this bridge alone.
+
+
+### Native saved-correction machine provenance (codec v2)
+
+The authenticated-history regression exposed an actual persisted-correction
+gap: the earlier saved-history correction codec stored loads, reps and RIR
+but **discarded physical machine IDs**. The corrected private codec writes
+version 2 with each effective saved set's physical-machine identity and
+also includes original journal receipt machine IDs in the source
+fingerprint. A correction on press Machine A must not turn into an
+unknown or shared-machine observation after an offline restart.
+
+Existing version-1 files are still read with their exact old fingerprint
+and without inventing machine IDs they never stored. Only a separately
+committed new edit upgrades the file to version 2; a read or exact
+lost-acknowledgment retry does not rewrite the original. V1 encoding with
+non-null machine IDs now fails closed rather than silently dropping them.
+Tests cover cold restart, set load/target-RIR distinction, and V1-to-V2
+upgrade with unknown historical machine identity retained as unknown.

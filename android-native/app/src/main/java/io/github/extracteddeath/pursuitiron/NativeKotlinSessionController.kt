@@ -329,13 +329,15 @@ internal class NativeKotlinSessionController(
         },recoverOnReject=true)
     }
 
-    fun finish() {
+    /** Never authorize an unreviewed journal revision after Finish opens. */
+    fun finish(reviewedRevision:Long) {
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
         val journal=prior.journal ?:return
-        if(prior.busy || !journal.canProposeFinish)return
+        if(prior.busy || !journal.canProposeFinish ||
+            journal.revision!=reviewedRevision)return
         val operation=KotlinJournalOperation.Finish(
-            "finish-"+UUID.randomUUID(),journal.revision)
+            "finish-"+UUID.randomUUID(),reviewedRevision)
         run(workoutId,{host.recordWorkoutOperation(workoutId,operation)},
             recoverOnReject=true)
     }

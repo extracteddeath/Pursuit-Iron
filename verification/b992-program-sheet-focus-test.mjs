@@ -25,7 +25,7 @@ assert.ok(css.includes('.wpb-ui-sheet-panel{box-sizing:border-box;display:flex;f
     settings.includes('wpb-ui-sheet-panel wpb-program-settings-panel') &&
     share.includes('wpb-ui-sheet-panel wpb-program-share-panel'),
     'Settings and Share reuse shared panel sizing');
-assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))') &&
+assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)),100%)') &&
     css.includes('.wpb-program-settings-panel{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}') &&
     css.includes('.wpb-program-share-panel{--pi-ui-sheet-max-vh:92dvh;--pi-ui-sheet-top-gap:32px}'),
     'Settings and Share retain their distinct keyboard-safe height bounds');

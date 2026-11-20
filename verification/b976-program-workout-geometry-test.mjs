@@ -36,7 +36,7 @@ const baseStyle = name => {
 };
 assert.ok(baseStyle('session-exit').includes('min-height:48px'),
   'Session exit must have a real 48px touch area');
-assert.ok(baseStyle('schedule-trigger').includes('min-height:44px'),
+assert.ok(baseStyle('schedule-trigger').includes('min-height:48px'),
   'Schedule editor must have a usable action area');
 assert.ok(baseStyle('swap-results').includes('min-height:0;overflow-y:auto'),
   'Exercise search scroll must not be trapped beneath the keyboard');

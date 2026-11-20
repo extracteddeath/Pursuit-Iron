@@ -10,7 +10,7 @@ Owner: `app.css` provides semantic theme roles and shared component styles. `mod
 
 - **Theme paint:** `--pi-color-canvas`, `--pi-color-card`, `--pi-color-control`, `--pi-color-inset`, `--pi-color-feature`, `--pi-color-divider`, `--pi-color-on-control`, `--pi-color-on-muted`, `--pi-color-active`, `--pi-color-on-active`. Do not invent screen-specific hex colors.
 - **Space:** `--pi-space-0/1/2/3/4/5/6/8/10` = 0/4/8/12/16/20/24/32/40 px. Layout gaps use the scale. Independent child margins should be removed gradually in favor of owner-controlled parent `gap`.
-- **Type:** `--pi-type-caption/label/support/body/control/section/heading` = 11/12/13/15/16/16/22 CSS px (using rem). `--pi-weight-action` sets reusable action emphasis. Text scaling and readable lengths override fixed pixel typography.
+- **Type:** `--pi-type-caption/label/support/body/control/section/heading` = 11/12/14/16/16/16/22 CSS px (using rem) — the M3 type scale (label small/medium, body medium/large, title medium, title large). `--pi-weight-action` sets reusable action emphasis. Text scaling and readable lengths override fixed pixel typography.
 - **Shapes:** `--pi-shape-action` for controls, `--pi-shape-card` for cards, `--pi-shape-feature` for intentional hero exceptions; `--pi-radius-control` is a legacy alias until all consumers migrate.
 - **Elevation:** `--pi-shadow-card` (currently none) and `--pi-shadow-overlay`, used only when elevation communicates layering. Avoid arbitrary per-screen shadows.
 - **Control dimensions:** `--pi-control-min` is 48px, `--pi-primary-min` 52px; `--pi-control-padding-inline` and `--pi-field-label-gap` belong to shared controls. Don't shrink essential touch targets for visual density.

@@ -310,6 +310,7 @@ assert.ok(customDock>0 &&
 const finishPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeFinishReviewPolicy.kt');
 const finishController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt');
 const finishRegression=read('android-native/app/src/test/java/io/github/extracteddeath/pursuitiron/NativeFinishReviewPolicyTest.kt');
+const finishBetaGradle=read('android-native/app/build.gradle.kts');
 assert.ok(finishPolicy.includes('reviewed.workoutId==workoutId') &&
   finishPolicy.includes('reviewed.revision==currentRevision') &&
   finishController.includes('fun finish(reviewedRevision:Long)') &&
@@ -324,7 +325,8 @@ assert.ok(finishPolicy.includes('reviewed.workoutId==workoutId') &&
   !generatedFocus.includes('showFinishConfirm=true') &&
   !journal.includes('finishConfirm=true') &&
   finishRegression.includes('acceptsOnlyTheExactReviewedWorkoutRevision') &&
-  finishRegression.includes('aNewReviewIsRequiredAfterAnySavedRevisionChange'),
+  finishRegression.includes('aNewReviewIsRequiredAfterAnySavedRevisionChange') &&
+  finishBetaGradle.includes('"**/NativeFinishReviewPolicy.kt"'),
   'All native Finish routes must reject stale reviewed revisions, never silently re-consent');
 
 const concernGuide=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinMovementConcernDialog.kt');

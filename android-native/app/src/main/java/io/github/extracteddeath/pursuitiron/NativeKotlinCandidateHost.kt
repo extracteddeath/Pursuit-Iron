@@ -3572,6 +3572,36 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Owner-authenticated, read-only program-construction evidence for one
+     * EXACT issued source epoch. The complete saved History manifest and
+     * effective correction files are independently checked under the same
+     * native revision fence as `reviewNativeHistory`.
+     *
+     * This does NOT select new rep ranges, increase load, advance phase or
+     * grant automatic program mutation; separate user scope and a reviewed
+     * planning policy remain required.
+     */
+    fun reviewNativeProgramHistory(
+        expectedSource:KotlinTrainingSourceRevision,
+        allowedDayIndices:Set<Int>
+    ):NativeKotlinProgramHistoryReadResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeKotlinProgramHistoryReadResult.Rejected(
+                NativeKotlinProgramHistoryRefusal.OWNER_HISTORY_UNAVAILABLE,
+                ownerHistoryReason=NativeKotlinHistoryReadRefusal.NOT_AUTHORIZED)
+        val authority=NativeKotlinHistoryManifestFileAuthority(historyStore) {
+                ownerKey,athleteId ->
+            val current=localAthlete.signedInIdentity()
+            current!=null && current.ownerKey==ownerKey &&
+                current.athleteId==athleteId
+        }
+        return NativeKotlinGlobalHistoryReadCoordinator(
+            journalStore,correctionStore,approvalStore,authority,revisionFence
+        ).readProgramHistory(owner.ownerKey,owner.athleteId,
+            expectedSource,allowedDayIndices)
+    }
+
+    /**
      * Source-only saved-history edit. Never bypasses global manifest
      * preparation/finalization or assumes target RIR is performed RIR.
      */

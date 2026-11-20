@@ -17,7 +17,10 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
     private fun corrections() = KotlinNativeSavedCorrectionFileStore(root, journal())
     private fun fence() = NativeKotlinApprovalRevisionFence(root)
 
-    private fun completed(id: Int, load: Int = 200): KotlinWorkoutJournalState {
+    private fun completed(
+        id:Int,load:Int=200,machine:String?=null,
+        issuedSource:KotlinTrainingSourceRevision=source
+    ):KotlinWorkoutJournalState {
         val workout = "workout-$id"
         val targets = (0..1).map { ordinal ->
             KotlinWorkoutTarget("bench", ComposerRole.PRIMARY,
@@ -26,9 +29,10 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
                 DraftSetLoad.Verified(LoadUnit.LB, LoadBasis.SMITH_TOTAL, n(200)),
                 RepBand(5, 8), 2, 60, 90)
         }
-        val snapshot = KotlinStagedWorkout(source, "grant-$id", workout,
+        val snapshot = KotlinStagedWorkout(issuedSource, "grant-$id", workout,
             0, 0, ComposerSessionPurpose.HYPERTROPHY, 40, targets)
-        val identity = KotlinStoredWorkoutIdentity("stored-$id", workout, source, 1)
+        val identity = KotlinStoredWorkoutIdentity(
+            "stored-$id", workout, issuedSource, 1)
         val writer = journal()
         assertTrue(writer.issue("owner-1", snapshot, identity)
             is NativeJournalFileResult.Durable)
@@ -38,7 +42,7 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
                 KotlinJournalOperation.RecordSet(
                     "receipt-$id-$revision", revision, target.setKey,
                     KotlinJournalSetOutcome.COMPLETED,
-                    KotlinPerformedSet(n(load), LoadUnit.LB, 8, 2)
+                    KotlinPerformedSet(n(load),LoadUnit.LB,8,2,machine)
                 ), { _, _ -> true })
             assertTrue(recorded.toString(), recorded is NativeJournalFileResult.Durable)
             revision += 1
@@ -172,5 +176,121 @@ class NativeKotlinGlobalHistoryReadCoordinatorTest {
         assertEquals(NativeKotlinHistoryReadResult.Rejected(
             NativeKotlinHistoryReadRefusal.INVALID_REQUEST),
             service(authority).read("../owner", "athlete-1"))
+    }
+
+    @Test fun nativeProgramReadVerifiesEntireOwnerManifestBeforeEpochSelection() {
+        val old=completed(1,200,machine="press-A")
+        val newer=source.copy(programRevision=4)
+        val newerWorkout=completed(2,205,machine="press-B",
+            issuedSource=newer)
+        val existing=manifest(old,newerWorkout).copy(
+            completions=manifest(old,newerWorkout).completions.map{
+                it.copy(savedCorrectionRevision=0)
+            })
+        val reader=service(FakeManifest(existing))
+        val first=reader.readProgramHistory(
+            "owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review
+        val evidence=first.evidence
+        assertEquals(listOf("workout-1"),
+            evidence.ledger.workouts.map{it.workoutId})
+        assertEquals(2,evidence.ledger.workingSets.size)
+        assertEquals(setOf("press-A"),
+            evidence.ledger.workingSets.map{it.physicalMachineId}.toSet())
+        assertEquals(setOf(KotlinHistoryComparisonGuard.COMPARABLE_REVIEW_ONLY),
+            evidence.ledger.workingSets.map{it.comparisonGuard}.toSet())
+        assertEquals(mapOf("workout-1" to 1L),
+            evidence.completionOrderByWorkout)
+        assertEquals(2L,evidence.ownerManifestRevision)
+        assertEquals(64,evidence.ownerHistoryFingerprint.length)
+        assertFalse(evidence.canApplyProgramAdaptation)
+        assertFalse(evidence.canChangeIssuedTargets)
+        assertFalse(evidence.ledger.canAuthorizeProgression)
+        assertEquals(evidence, (reader.readProgramHistory(
+            "owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence)
+        val second=(reader.readProgramHistory(
+            "owner-1","athlete-1",newer,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review).evidence
+        assertEquals(listOf("workout-2"),
+            second.ledger.workouts.map{it.workoutId})
+        assertEquals(setOf("press-B"),
+            second.ledger.workingSets.map{it.physicalMachineId}.toSet())
+        assertEquals(mapOf("workout-2" to 2L),
+            second.completionOrderByWorkout)
+        assertEquals(evidence.ownerHistoryFingerprint,
+            second.ownerHistoryFingerprint)
+
+        // Selecting just the older program epoch must NOT allow an
+        // invalid unselected newer completion to disappear silently.
+        val corrupt=existing.copy(completions=existing.completions.mapIndexed{
+            i,entry->if(i==0)entry else entry.copy(
+                storedReceiptId="different-stored-id")
+        })
+        val rejected=service(FakeManifest(corrupt)).readProgramHistory(
+            "owner-1","athlete-1",source,setOf(0))
+        assertEquals(NativeKotlinProgramHistoryReadResult.Rejected(
+            NativeKotlinProgramHistoryRefusal.OWNER_HISTORY_UNAVAILABLE,
+            ownerHistoryReason=NativeKotlinHistoryReadRefusal.GLOBAL_HISTORY_REJECTED),
+            rejected)
+    }
+
+    @Test fun nativeProgramReadConsumesDurableSavedCorrectionsAndOriginalIssue() {
+        val old=completed(1,200,machine="press-A")
+        val correction=KotlinSavedSetCorrection(
+            "saved-fix",0,"set-1-1","receipt-1-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n(195),LoadUnit.LB,6,null,"press-A"))
+        val written=corrections().appendStored("owner-1","workout-1",
+            correction,{_,_->true})
+        assertTrue(written.toString(),
+            written is NativeSavedCorrectionFileResult.Durable)
+        val view=service(FakeManifest(manifest(old))).readProgramHistory(
+            "owner-1","athlete-1",source,setOf(0))
+            as NativeKotlinProgramHistoryReadResult.Review
+        val after=view.evidence.ledger.workingSets.last()
+        assertEquals("saved-fix",after.effectiveEventId)
+        assertEquals("receipt-1-1",after.correctsEventId)
+        assertEquals(n(195),after.performedLoad)
+        assertEquals(6,after.performedReps)
+        assertNull(after.reportedRir)
+        assertEquals(2,after.targetRir)
+        assertEquals(n(200),
+            (after.issuedLoad as DraftSetLoad.Verified).value)
+        assertEquals(KotlinHistoryComparisonGuard.COMPARABLE_REVIEW_ONLY,
+            after.comparisonGuard)
+        assertEquals(1L,view.evidence.ledger.workouts.single().correctionRevision)
+        assertFalse(view.evidence.ledger.canAuthorizeProgression)
+    }
+
+    @Test fun nativeProgramReadRefusesUnownedStaleOrOutOfScopeEvidence() {
+        val old=completed(1)
+        val valid=manifest(old).copy(completions=manifest(old).completions.map{
+            it.copy(savedCorrectionRevision=0)
+        })
+        val reader=service(FakeManifest(valid))
+        assertEquals(NativeKotlinProgramHistoryReadResult.Rejected(
+            NativeKotlinProgramHistoryRefusal.INVALID_REQUEST),
+            reader.readProgramHistory("owner-1","athlete-1",
+                source.copy(athleteId="different"),setOf(0)))
+        assertEquals(NativeKotlinProgramHistoryReadResult.Rejected(
+            NativeKotlinProgramHistoryRefusal.INVALID_PROGRAM_EVIDENCE,
+            programEvidenceReason=
+                KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET),
+            reader.readProgramHistory("owner-1","athlete-1",source,setOf(2)))
+        val revoked=service(FakeManifest(valid),FakeAccess(false))
+        assertEquals(NativeKotlinProgramHistoryReadResult.Rejected(
+            NativeKotlinProgramHistoryRefusal.OWNER_HISTORY_UNAVAILABLE,
+            ownerHistoryReason=NativeKotlinHistoryReadRefusal.MISSING_OR_INVALID_WORKOUT),
+            revoked.readProgramHistory("owner-1","athlete-1",source,setOf(0)))
+        val changed=FakeManifest(valid)
+        changed.mutateOnFirstRead={
+            changed.snapshot=valid.copy(revision=valid.revision+1)
+        }
+        assertEquals(NativeKotlinProgramHistoryReadResult.Rejected(
+            NativeKotlinProgramHistoryRefusal.OWNER_HISTORY_UNAVAILABLE,
+            ownerHistoryReason=NativeKotlinHistoryReadRefusal.MANIFEST_CHANGED),
+            service(changed).readProgramHistory(
+                "owner-1","athlete-1",source,setOf(0)))
     }
 }

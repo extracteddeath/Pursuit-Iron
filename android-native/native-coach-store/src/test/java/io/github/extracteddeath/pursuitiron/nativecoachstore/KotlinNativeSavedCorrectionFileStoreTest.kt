@@ -268,4 +268,84 @@ class KotlinNativeSavedCorrectionFileStoreTest {
             "owner-1", "workout-1", scaled, allow)).replayed)
     }
 
+
+    @Test fun correctedMachineIdentitySurvivesPrivateDiskAndRestart() {
+        val writer=journal()
+        durableJournal(writer.issue("owner-1",snapshot,identity))
+        for(ordinal in 0..1) {
+            val journal=writer.appendStored("owner-1","workout-1",
+                KotlinJournalOperation.RecordSet("event-$ordinal",
+                    ordinal.toLong(),"set-$ordinal",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(n("200"),LoadUnit.LB,8,2,"press-A")),
+                allow)
+            assertTrue(journal.toString(),journal is NativeJournalFileResult.Durable)
+        }
+        durableJournal(writer.appendStored("owner-1","workout-1",
+            KotlinJournalOperation.Finish("finish-1",2),allow))
+        val saved=stored(corrections().appendStored("owner-1","workout-1",
+            correction().copy(actual=KotlinPerformedSet(
+                n("195"),LoadUnit.LB,6,null,"press-A")),allow))
+        assertFalse(saved.replayed)
+        assertEquals(2,SavedCorrectionBinary.decode(
+            Files.readAllBytes(correctionFile())).formatVersion)
+        val fresh=opened(corrections().openStored("owner-1","workout-1",allow))
+        val performed=fresh.state.effectiveCorrections.getValue("set-1")
+            .correction.actual
+        assertEquals("press-A",performed?.machineInstanceId)
+        assertEquals(n("195"),performed?.load)
+        assertNull(performed?.actualRir)
+        val history=(KotlinWorkoutHistoryEvidenceDomain.projectSaved(
+            fresh.state) as KotlinHistoryProjectionResult.Candidate).evidence
+        assertEquals(setOf("press-A"),history.exerciseReviews.single()
+            .workingSets.map{it.actual?.machineInstanceId}.toSet())
+        assertEquals(n("200"),(history.sets.last().issuedLoad
+            as DraftSetLoad.Verified).value)
+        assertEquals(2,history.sets.last().issuedRir)
+        assertEquals("event-1",history.sets.last().correctsEventId)
+    }
+
+    @Test fun genuineLegacyV1CorrectionBytesRemainReadableUntilExplicitEdit() {
+        val original=issueAndFinish()
+        val old=correction()
+        // First create the private filename with a legitimate write,
+        // then install an actual V1 envelope using the original V1 fingerprint.
+        stored(corrections().appendStored("owner-1","workout-1",old,allow))
+        val legacy=SavedCorrectionEnvelope(
+            "owner-1","workout-1",
+            SavedCorrectionBinary.originalFingerprint(original,1),
+            1L,listOf(KotlinSavedSetCorrectionReceipt(1L,old)),1)
+        val legacyBytes=SavedCorrectionBinary.encode(legacy)
+        val file=correctionFile()
+        Files.write(file,legacyBytes)
+        val fresh=opened(corrections().openStored(
+            "owner-1","workout-1",allow))
+        assertEquals(old,fresh.state.receipts.single().correction)
+        assertEquals(1,SavedCorrectionBinary.decode(
+            Files.readAllBytes(file)).formatVersion)
+        assertArrayEquals(legacyBytes,Files.readAllBytes(file))
+        val retry=stored(corrections().appendStored(
+            "owner-1","workout-1",old,allow))
+        assertTrue(retry.replayed)
+        assertArrayEquals(legacyBytes,Files.readAllBytes(file))
+
+        // Appending a distinct new correction is a deliberate migration.
+        // The V1 observation still has UNKNOWN physical machine; it must
+        // never be retroactively assigned a station when V2 appears.
+        val edit=correction(event="edit-next",expectedRevision=1,
+            previous="edit-1",reps=5).copy(
+                actual=KotlinPerformedSet(n("200"),LoadUnit.LB,5,1,"press-B"))
+        stored(corrections().appendStored("owner-1","workout-1",edit,allow))
+        val upgraded=SavedCorrectionBinary.decode(Files.readAllBytes(file))
+        assertEquals(2,upgraded.formatVersion)
+        assertNull(upgraded.receipts.first().correction.actual?.machineInstanceId)
+        assertEquals("press-B",
+            upgraded.receipts.last().correction.actual?.machineInstanceId)
+        val again=opened(corrections().openStored(
+            "owner-1","workout-1",allow))
+        assertEquals("press-B",again.state.effectiveCorrections.getValue(
+            "set-1").correction.actual?.machineInstanceId)
+        assertEquals(2L,again.state.correctionRevision)
+        assertEquals(1L,original.storedIdentity.storedRevision)
+    }
 }

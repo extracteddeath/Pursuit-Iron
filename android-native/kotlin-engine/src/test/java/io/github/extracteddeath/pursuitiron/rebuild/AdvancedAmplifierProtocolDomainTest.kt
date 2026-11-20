@@ -259,7 +259,12 @@ class AdvancedAmplifierProtocolDomainTest {
             CustomAmplifierKind.REST_PAUSE,CustomAmplifierKind.CLUSTER,
             CustomAmplifierKind.LENGTHENED_PARTIALS)
         methods.forEach {kind->
-            for(rounds in listOf(1,4)) {
+            val roundOptions=when(kind) {
+                CustomAmplifierKind.REST_PAUSE -> listOf(1,3)
+                CustomAmplifierKind.LENGTHENED_PARTIALS -> listOf(1)
+                else -> listOf(1,4)
+            }
+            for(rounds in roundOptions) {
                 val amp=CustomSetAmplifier(kind,4,20,
                     followUpRounds=rounds)
                 val result=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(

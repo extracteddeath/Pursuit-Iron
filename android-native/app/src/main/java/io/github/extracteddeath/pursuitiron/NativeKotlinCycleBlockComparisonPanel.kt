@@ -161,6 +161,19 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
         }?.structuralReview
         source?.let{StrengthDoseBoundaryGuardDomain.review(it,id)}
     }
+    // Display the last REAL Strength training week beside Peak, never a
+    // deload/test bridge or unaudited base template. The taper can be
+    // intentional; loss of named primary practice deserves separate review.
+    val peakTaper=remember(cycle,id,currentAudit) {
+        val source=currentAudit?.takeIf {
+            it.auditedCycleRevision==cycle.revision &&
+                it.structuralReview?.verifiedDraft==cycle
+        }?.structuralReview
+        source?.let {PeakTaperBoundaryDomain.review(it,id)}
+    }
+    val reviewedPeak=peakTaper?.takeIf {
+        it.status==PeakTaperBoundaryStatus.MEASURED_FOR_REVIEW
+    }
     val affectedStrengthDays=strengthDayDose?.affectedDays.orEmpty()
     // Adjacent-block comparisons still show the deload as the previous
     // block. Exercise recovery must instead use the final real hypertrophy
@@ -295,6 +308,67 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                 "base working sets exclude week overrides.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(selectedBlock.phase==TrainingPhase.PEAK && reviewedPeak!=null) {
+            HorizontalDivider()
+            PursuitSectionHeading("Strength → Peak training comparison",
+                "Last actual Strength week → first Peak week, including saved "+
+                    "week overrides. A taper may reduce sets and accessories.")
+            PursuitMetricStrip(listOf(
+                "Strength · W${reviewedPeak.strengthExitWeek}" to
+                    "${reviewedPeak.strengthWorkingSets} sets",
+                "Peak · W${reviewedPeak.peakEntryWeek}" to
+                    "${reviewedPeak.peakWorkingSets} sets",
+                "Exercise visits" to
+                    "${reviewedPeak.strengthExerciseVisits} → "+
+                    "${reviewedPeak.peakExerciseVisits}"
+            ))
+            if(reviewedPeak.splitChanged)Text(
+                "The Peak split is different. Weekday exercise counts are "+
+                    "not matched training-day comparisons.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            val missing=reviewedPeak.lostMainLiftIds
+            if(missing.isNotEmpty()) {
+                Text("Main lift practice omitted from Peak",
+                    style=MaterialTheme.typography.titleSmall,
+                    color=MaterialTheme.colorScheme.error)
+                Text(missing.sorted().joinToString{
+                    kotlinExerciseLabel(it)
+                }+" had working primary visits in Strength but none in "+
+                    "the first Peak week. Confirm this is a deliberate "+
+                    "change in your athlete-specific Peak policy.",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+            if(reviewedPeak.primaryPractice.isNotEmpty()) {
+                Text("Main lift training days per week",
+                    style=MaterialTheme.typography.titleSmall)
+                reviewedPeak.primaryPractice.forEach {entry ->
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm),
+                        verticalAlignment=Alignment.CenterVertically) {
+                        Text(kotlinExerciseLabel(entry.exerciseId),
+                            modifier=Modifier.weight(1f),
+                            style=MaterialTheme.typography.bodyMedium)
+                        Text("${entry.strengthDays} → ${entry.peakDays}",
+                            style=MaterialTheme.typography.labelLarge,
+                            color=if(entry.absentFromPeak)
+                                MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+            Text("A reduction in working sets is not automatically a "+
+                "programming failure or a safe taper. The full phase "+
+                "dose, main-lift frequency, equipment and recovery "+
+                "policies still require review. This comparison cannot "+
+                "change saved sets, loads, or history.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(missing.isNotEmpty())OutlinedButton(
+                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                enabled=enabled,onClick={onEditBlock(next.blockId)}
+            ) {Text("Inspect Peak main lifts")}
         }
         if(strengthSourceDose!=null) {
             HorizontalDivider()

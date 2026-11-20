@@ -13,7 +13,7 @@ class GeneratedUpstreamNumberTraceDomainTest {
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,first.status)
         val trace=checkNotNull(first.upstreamNumberTrace)
         val candidate=checkNotNull(first.proposedOption).proposedCycle
-        assertEquals(1,trace.schemaVersion)
+        assertEquals(2,trace.schemaVersion)
         assertEquals(request.currentCycle.revision,trace.sourceCycleRevision)
         assertEquals(candidate.revision,trace.candidateCycleRevision)
         assertEquals(64,trace.exactRequestDigest.length)
@@ -33,6 +33,15 @@ class GeneratedUpstreamNumberTraceDomainTest {
                 it.indirectWorkingSets
         })
         assertTrue(trace.sets.isNotEmpty())
+        val scheduled=checkNotNull(first.generatedWeek?.candidate?.catalogReview
+            ?.composedRequest).days
+        assertTrue(trace.sets.all{set->
+            set.dayIndex in scheduled.indices &&
+                scheduled[set.dayIndex].calendarDay==set.weekday
+        })
+        // Same movement across three scheduled days must retain the actual
+        // source-specific index instead of flattening all days into index 0.
+        assertEquals(setOf(0,1,2),trace.sets.map{it.dayIndex}.toSet())
         assertEquals(candidate.blocks.single().days.sumOf{day->
             day.slots.sumOf{it.sets.size}
         },trace.sets.size)
@@ -73,6 +82,10 @@ class GeneratedUpstreamNumberTraceDomainTest {
         }
         assertEquals(pinned.sets.size,traced.size)
         assertEquals(140,traced.single().restSeconds)
+        val composerDays=checkNotNull(result.generatedWeek?.candidate
+            ?.catalogReview?.composedRequest).days
+        assertEquals(composerDays.indexOfFirst{
+            it.calendarDay==day.weekday},traced.single().dayIndex)
         assertNull(traced.single().policyDayIndex)
         assertEquals(GeneratedSetNumberOrigin.PROTECTED_ATHLETE_PRESCRIPTION,
             traced.single().origin)

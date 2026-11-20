@@ -38,7 +38,7 @@ class KotlinContinuousPlanEvidenceDomainTest {
 
     private fun weeks(
         all:List<KotlinObservedScheduleWeek> =
-            (0..2).map(::week),
+            (0..2).map{week(it)},
         undated:List<String> =emptyList(),
         reversedClock:Boolean=false
     )=KotlinObservedScheduleWeeks(digest,"America/New_York",
@@ -97,11 +97,11 @@ class KotlinContinuousPlanEvidenceDomainTest {
         assertEquals(KotlinContinuousPlanEvidenceState
             .OBSERVED_WEEKS_NOT_COMPLETE,
             review(observation=weeks(
-                (0..2).map(::week),undated=listOf("older-undated"))).state)
+                (0..2).map{week(it)},undated=listOf("older-undated"))).state)
         assertEquals(KotlinContinuousPlanEvidenceState
             .OBSERVED_WEEKS_NOT_COMPLETE,
             review(observation=weeks(
-                (0..2).map(::week),reversedClock=true)).state)
+                (0..2).map{week(it)},reversedClock=true)).state)
     }
 
     @Test fun missingInterveningWeekAndNewerPartialWeekHoldOldEvidence() {
@@ -114,7 +114,7 @@ class KotlinContinuousPlanEvidenceDomainTest {
             .PARTIAL_OR_INCOMPARABLE_FOR_REVIEW_ONLY)
         assertEquals(KotlinContinuousPlanEvidenceState
             .NONCONSECUTIVE_OR_STALE_WEEKS,
-            review(observation=weeks((0..2).map(::week)+later)).state)
+            review(observation=weeks((0..2).map{week(it)}+later)).state)
     }
 
     @Test fun changedDayIncompleteHistoryOrUnfavorableGateCannotBePromoted() {

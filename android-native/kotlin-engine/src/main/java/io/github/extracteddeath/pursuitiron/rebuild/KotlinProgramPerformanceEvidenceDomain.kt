@@ -40,6 +40,7 @@ data class KotlinProgramPerformanceVisit(
 enum class KotlinProgramPerformanceGate {
     NEEDS_THREE_MATCHED_VISITS,
     AMBIGUOUS_INTERVENING_MACHINE,
+    CHANGED_LOAD_BASIS_AFTER_LAST_MATCHED_VISIT,
     INCOMPARABLE_RECENT_VISIT,
     PRESCRIPTION_CHANGED,
     ACTUAL_EFFORT_UNKNOWN,
@@ -191,8 +192,24 @@ object KotlinProgramPerformanceEvidenceDomain {
                         it.key.exerciseId==key.exerciseId &&
                         it.key.physicalMachineId==null &&
                         it.visit.completionOrder >=recent.first().completionOrder &&
-                        it.visit.completionOrder <=recent.last().completionOrder
+                        // No upper bound: a later unknown-machine visit
+                        // may have been this very station. Do not resurrect
+                        // older A facts after an ambiguous latest session.
+                        true
                 } -> KotlinProgramPerformanceGate.AMBIGUOUS_INTERVENING_MACHINE
+                // A newer visit with this SAME day/physical station but
+                // a different load basis is a new epoch. The previous
+                // thread cannot remain a stale eligible recommendation.
+                observed.any{
+                    it.key.dayIndex==key.dayIndex &&
+                        it.key.purpose==key.purpose &&
+                        it.key.exerciseId==key.exerciseId &&
+                        it.key.physicalMachineId==key.physicalMachineId &&
+                        (it.key.loadUnit!=key.loadUnit ||
+                            it.key.loadBasis!=key.loadBasis) &&
+                        it.visit.completionOrder>visits.last().completionOrder
+                } -> KotlinProgramPerformanceGate
+                    .CHANGED_LOAD_BASIS_AFTER_LAST_MATCHED_VISIT
                 recent.any{!it.historicalComparable} ->
                     KotlinProgramPerformanceGate.INCOMPARABLE_RECENT_VISIT
                 recent.any{it.workingSets!=recent.first().workingSets ||

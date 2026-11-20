@@ -19,7 +19,8 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         val shortened:Boolean=false,
         val loadBasis:LoadBasis=LoadBasis.SMITH_TOTAL,
         val calendarDay:Int=0,
-        val role:ComposerRole=ComposerRole.PRIMARY
+        val role:ComposerRole=ComposerRole.PRIMARY,
+        val actualLoad:String?=null
     )
 
     private fun facts(items:List<Visit>):Pair<KotlinProgramHistoryReadout,Map<String,Long>> {
@@ -39,7 +40,7 @@ class KotlinProgramPerformanceEvidenceDomainTest {
                     DraftSetLoad.Verified(LoadUnit.LB,v.loadBasis,n(v.load)),
                     RepBand(8,12),v.targetRir,v.outcome,
                     if(v.outcome==KotlinJournalSetOutcome.COMPLETED)
-                        n(v.load) else null,
+                        n(v.actualLoad ?: v.load) else null,
                     if(v.outcome==KotlinJournalSetOutcome.COMPLETED)
                         LoadUnit.LB else null,
                     if(v.outcome==KotlinJournalSetOutcome.COMPLETED)
@@ -115,6 +116,31 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         assertEquals(KotlinProgramPerformanceGate.ACTUAL_EFFORT_UNKNOWN,
             report(base+Visit("w3",3,targetRir=null))
                 .threads.single().recentGate)
+    }
+
+    @Test fun repCeilingAtDifferentActualLoadCannotCertifyIssuedWeightCapacity() {
+        val allLower=report(listOf(
+            Visit("w1",1,actualLoad="90"),
+            Visit("w2",2,actualLoad="90"),
+            Visit("w3",3,actualLoad="90")))
+        assertEquals(KotlinProgramPerformanceGate.INCOMPARABLE_RECENT_VISIT,
+            allLower.threads.single().recentGate)
+        assertFalse(allLower.threads.single().canChangeRepRange)
+        assertFalse(allLower.canApplyToProgram)
+
+        val latestLower=report(listOf(a("w1",1),a("w2",2),
+            Visit("w3",3,actualLoad="90")))
+        assertEquals(KotlinProgramPerformanceGate.INCOMPARABLE_RECENT_VISIT,
+            latestLower.threads.single().recentGate)
+        assertEquals(listOf("w1","w2","w3"),
+            latestLower.threads.single().evaluatedWorkoutIds)
+
+        // The ONE numeric authority compares BigDecimal loads without
+        // inventing a change from equivalent number formatting.
+        val sameValue=report(listOf(a("w1",1),a("w2",2),
+            Visit("w3",3,actualLoad="100.0")))
+        assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            sameValue.threads.single().recentGate)
     }
 
     @Test fun machineBAndDifferentWeekdayCannotBeBorrowedForA() {

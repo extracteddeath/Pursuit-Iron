@@ -90,6 +90,24 @@ sealed interface KotlinProgramPerformanceResult {
 object KotlinProgramPerformanceEvidenceDomain {
     private const val MIN_EXPOSURES_FOR_REVIEW=3
 
+    /**
+     * One actual is not an earned rep ceiling at the *issued* weight when
+     * the athlete used a lighter (or heavier) load. Reuse the SAME recorded
+     * set-number authority as the journals; never compare weights using a
+     * separate shortcut or mistake a coach prefill for a performed set.
+     */
+    private fun completedAtIssuedLoad(fact:KotlinProgramHistoricalWorkingSet):Boolean {
+        if(fact.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+            fact.performedReps==null) return false
+        val reviewed=KotlinSetNumberAuthorityDomain.review(
+            fact.issuedLoad,fact.outcome,KotlinPerformedSet(
+                fact.performedLoad,fact.performedUnit,fact.performedReps,
+                fact.reportedRir,fact.physicalMachineId
+            ))
+        return (reviewed as? KotlinSetNumberReview.Accepted)?.fact?.relation==
+            KotlinSetLoadRelation.COMPLETED_AS_ISSUED
+    }
+
     private fun equalLoad(a:DraftSetLoad,b:DraftSetLoad):Boolean =
         when {
             a is DraftSetLoad.Verified && b is DraftSetLoad.Verified ->
@@ -171,6 +189,7 @@ object KotlinProgramPerformanceEvidenceDomain {
                     w.dayIndex,w.calendarDay,facts.size,
                     facts.count{it.outcome==KotlinJournalSetOutcome.COMPLETED},
                     !w.shortenedForTime && facts.isNotEmpty() &&
+                        facts.all{completedAtIssuedLoad(it)} &&
                         facts.all{
                             it.comparisonGuard==
                                 KotlinHistoryComparisonGuard.COMPARABLE_REVIEW_ONLY

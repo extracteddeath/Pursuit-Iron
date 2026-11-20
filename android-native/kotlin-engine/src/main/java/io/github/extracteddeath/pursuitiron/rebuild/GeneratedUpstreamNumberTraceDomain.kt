@@ -110,6 +110,28 @@ object GeneratedUpstreamNumberTraceDomain {
         val candidate=reviewedCycle.verifiedDraft ?:return null
         val composed=generation.candidate?.catalogReview?.composedRequest
             ?:return null
+        // This public reviewer can be invoked independently of propose().
+        // A previously valid generated week must never receive a fresh
+        // numerical lineage merely because its caller supplied NEW athlete
+        // stock, load choices, calendar constraints, rep ranges or RIR rules.
+        // Re-run the same existing generator and prescription authorities:
+        // do not invent a second per-set comparator for the source policy.
+        val timings=CoachSessionPrescriptionDomain.timingsForPolicies(
+            request.prescriptions)
+        if(request.program.visitTimings.isNotEmpty() &&
+            request.program.visitTimings.toSet()!=timings.toSet())
+            return null
+        val replayedGeneration=runCatching {
+            CoachAthleteProgramGenerator.generate(
+                request.program.copy(visitTimings=timings))
+        }.getOrNull() ?:return null
+        if(replayedGeneration!=generation)return null
+        val replayedPrescription=runCatching {
+            CoachSessionPrescriptionDomain.draft(composed,
+                request.prescriptions)
+        }.getOrNull() ?:return null
+        if(replayedPrescription!=prescribed)return null
+
         val source=request.currentCycle
         if(reviewedCycle.status!=CustomCycleReviewStatus.READY_FOR_COACH_REVIEW ||
             prescribed.status!=PrescriptionDraftStatus.COMPLETE_FOR_REVIEW ||

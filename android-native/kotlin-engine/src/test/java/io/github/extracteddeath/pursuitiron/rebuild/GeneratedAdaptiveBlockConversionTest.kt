@@ -392,6 +392,89 @@ class GeneratedAdaptiveBlockConversionTest {
         assertFalse(result.mayIssueWorkout)
     }
 
+    @Test fun optedInStrengthGenerationRepairsRealWorkingSetHalfDoseUsingStrengthTargets() {
+        val original=fixture.cycle()
+        val existing=original.blocks.single()
+        val hyper=existing.copy(blockId="hypertrophy",weeks=2,
+            days=existing.days.map{day ->
+                day.copy(slots=day.slots.map{slot ->
+                    slot.copy(sets=List(5){slot.sets.single()})
+                })
+            })
+        val strength=existing.copy(blockId="strength",
+            phase=TrainingPhase.STRENGTH,weeks=2,
+            days=existing.days.map {
+                it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            })
+        val cycle=original.copy(blocks=listOf(hyper,strength))
+        val base=fixture.generation()
+        val policy=checkNotNull(base.policy).copy(
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+            primaryLiftMinimumDays=mapOf("bench" to 1))
+        val program=base.copy(phase=TrainingPhase.STRENGTH,
+            policy=policy,
+            nonSetSecondsByWeekday=mapOf(0 to 1200,2 to 1200,4 to 1200))
+        val prescriptions=fixture.policies().map{
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        }
+        val requested=GeneratedAdaptiveBlockRequest(cycle,"strength",
+            "review_str_rebalanced",program,prescriptions,
+            allowSourceDoseRecovery=true)
+        val unpermitted=GeneratedAdaptiveBlockDomain.propose(
+            requested.copy(allowSourceDoseRecovery=false))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
+            unpermitted.status)
+        assertNull(unpermitted.proposedOption)
+        assertTrue(unpermitted.addedStrengthWorkingSets.isEmpty())
+        val result=GeneratedAdaptiveBlockDomain.propose(requested)
+        assertEquals("Received ${result.status}: ${result.explanation}; "+
+            "generated=${result.generatedWeek?.status}; "+
+            "prescribed=${result.prescribedWeek?.status}",
+            GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,result.status)
+        val proposal=checkNotNull(result.proposedOption).proposedCycle
+        val target=proposal.blocks.last()
+        val before=checkNotNull(unpermitted.strengthDoseBoundary)
+        val after=checkNotNull(result.strengthDoseBoundary)
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,after.status)
+        assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
+            result.strengthRosterBoundary?.status)
+        assertEquals(before.hypertrophyWorkingSets,
+            after.hypertrophyWorkingSets)
+        assertTrue(checkNotNull(after.strengthWorkingSets)>
+            checkNotNull(before.hypertrophyWorkingSets)/2)
+        assertEquals(result.addedStrengthWorkingSets.size,
+            checkNotNull(after.strengthWorkingSets)-
+                checkNotNull(before.strengthWorkingSets))
+        assertTrue(result.addedStrengthWorkingSets.isNotEmpty())
+        val baseline=unpermitted.prescribedWeek?.sessions.orEmpty()
+        assertTrue(baseline.isNotEmpty())
+        val referenceById=baseline.flatMap{it.exercises}.associateBy{
+            it.exerciseId
+        }
+        assertTrue(target.days.all {day ->
+            val sets=day.slots.sumOf {slot ->
+                slot.sets.count{it.type==DraftSetType.WORKING}
+            }
+            sets>15/2 && day.slots.all{slot ->
+                slot.sets.size<=4 &&
+                    slot.sets.all{set ->
+                        val original=referenceById.getValue(slot.exerciseId)
+                            .sets.first()
+                        set.reps==original.targetReps &&
+                            set.targetRir==original.targetRir &&
+                            set.load==original.load &&
+                            set.activeSeconds==original.activeSeconds &&
+                            set.restSeconds==original.restSeconds
+                    }
+            }
+        })
+        assertEquals(4L,cycle.revision)
+        assertEquals(strength,cycle.blocks.last())
+        assertFalse(result.maySaveProgram)
+        assertFalse(result.mayIssueWorkout)
+    }
+
     @Test fun generatedStrengthCannotCutWorkingSetsInHalfWhileKeepingSameExercises() {
         val original=fixture.cycle()
         val existing=original.blocks.single()
@@ -435,6 +518,16 @@ class GeneratedAdaptiveBlockConversionTest {
         assertEquals(4L,cycle.revision)
         assertFalse(result.mayIssueWorkout)
         assertFalse(result.maySaveProgram)
+        // Even with Adapt Sets enabled, authored Strength ceilings of four
+        // sets per visit cannot honestly bridge a 72 -> <=36 source collapse.
+        val capped=GeneratedAdaptiveBlockDomain.propose(
+            GeneratedAdaptiveBlockRequest(cycle,"strength",
+                "review_str_half_dose_capped",program,prescriptions,
+                allowSourceDoseRecovery=true))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_WORKING_DOSE_LOSS,
+            capped.status)
+        assertNull(capped.proposedOption)
+        assertTrue(capped.addedStrengthWorkingSets.isEmpty())
     }
 
 }

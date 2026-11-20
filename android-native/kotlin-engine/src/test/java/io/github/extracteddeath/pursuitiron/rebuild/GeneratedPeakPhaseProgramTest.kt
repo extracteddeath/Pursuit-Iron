@@ -156,6 +156,14 @@ class GeneratedPeakPhaseProgramTest {
         })
         assertEquals(GeneratedHistoryEvidenceState.NOT_CONSUMED,
             numeric.historyEvidence)
+        assertEquals(TrainingPhase.PEAK,numeric.plannedWeekDose.phase)
+        assertEquals(checkNotNull(candidate.prescribedWeek?.finalAudit).muscles,
+            numeric.plannedWeekDose.muscles)
+        assertEquals(checkNotNull(candidate.prescribedWeek?.finalAudit).sessions,
+            numeric.plannedWeekDose.sessions)
+        assertTrue(numeric.plannedWeekDose.sessions.all {
+            it.declaredSeconds>0 && it.roundedMinutes>0
+        })
         assertEquals(sourceText,source.toString())
         assertFalse(candidate.maySaveProgram)
         assertFalse(candidate.mayIssueWorkout)

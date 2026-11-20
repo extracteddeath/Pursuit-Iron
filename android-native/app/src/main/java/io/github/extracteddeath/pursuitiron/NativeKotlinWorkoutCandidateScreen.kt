@@ -203,7 +203,10 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         onDispose{view.keepScreenOn=previous}
     }
 
-    var showFinishConfirm by rememberSaveable(workoutId){mutableStateOf(false)}
+    // A stale/recreated screen cannot revive consent to a different journal.
+    var finishReview by remember(workoutId) {
+        mutableStateOf<NativeFinishReviewToken?>(null)
+    }
     var showSessionNote by rememberSaveable(workoutId){mutableStateOf(false)}
     var pinnedExerciseId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var pendingSkip by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
@@ -391,17 +394,29 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             it.machineScope==expectedCoachMachineScope
     }
 
-    if(showFinishConfirm && presentation?.canFinish==true) {
-        AlertDialog(onDismissRequest={showFinishConfirm=false},
+    finishReview?.let {reviewed->
+        val eligible=presentation?.canFinish==true &&
+            presentation.finished==false && journal?.finishedByEventId==null
+        val canCommit=NativeFinishReviewPolicy.canCommit(
+            reviewed,workoutId,journal?.revision,eligible)
+        AlertDialog(onDismissRequest={finishReview=null},
             title={Text("Finish this workout?")},
-            text={Text("All prescribed sets have an outcome. Finishing saves a permanent event; it will not change target weights or automatically create another workout.")},
+            text={Text(if(canCommit)
+                "All prescribed sets have an outcome. Finishing saves a permanent event; it will not change target weights or automatically create another workout."
+                else "Your saved workout changed or needs recovery. Close this review and check the current sets before finishing.")},
             confirmButton={
                 Button(onClick={
-                    showFinishConfirm=false
-                    controller.finish()
-                },enabled=!state.busy){Text("Finish workout")}
+                    if(NativeFinishReviewPolicy.canCommit(
+                        reviewed,workoutId,journal?.revision,
+                        presentation?.canFinish==true &&
+                            presentation.finished==false &&
+                            journal?.finishedByEventId==null)) {
+                        finishReview=null
+                        controller.finish(reviewed.revision)
+                    }
+                },enabled=!state.busy && canCommit){Text("Finish workout")}
             },
-            dismissButton={TextButton(onClick={showFinishConfirm=false}){
+            dismissButton={TextButton(onClick={finishReview=null}){
                 Text("Review sets")
             }})
     }
@@ -1062,7 +1077,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                 Text("All prescribed sets have a saved outcome",
                     style=MaterialTheme.typography.titleMedium)
                 PursuitPrimaryAction("Review and finish",
-                    enabled=!state.busy) {showFinishConfirm=true}
+                    enabled=!state.busy) {
+                    finishReview=journal?.let {
+                        NativeFinishReviewToken(workoutId,it.revision)
+                    }
+                }
             }
         }
     }

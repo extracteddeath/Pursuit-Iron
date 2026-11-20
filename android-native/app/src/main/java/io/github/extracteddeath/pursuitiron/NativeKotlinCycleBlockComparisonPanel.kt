@@ -328,6 +328,27 @@ internal fun NativeKotlinCycleBlockComparisonPanel(
                     "not matched training-day comparisons.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(reviewedPeak.dayChanges.isNotEmpty()) {
+                Text("Working exercises and sets by day",
+                    style=MaterialTheme.typography.titleSmall)
+                reviewedPeak.dayChanges.forEach {change ->
+                    Row(Modifier.fillMaxWidth(),
+                        verticalAlignment=Alignment.CenterVertically,
+                        horizontalArrangement=
+                            Arrangement.spacedBy(PursuitSpace.sm)) {
+                        Text(compareWeekday(change.weekday),
+                            style=MaterialTheme.typography.bodyMedium,
+                            modifier=Modifier.weight(1f))
+                        Text(
+                            "${change.strengthExercises ?: "—"} → "+
+                                "${change.peakExercises ?: "—"} exercises · "+
+                                "${change.strengthWorkingSets ?: "—"} → "+
+                                "${change.peakWorkingSets ?: "—"} sets",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             val missing=reviewedPeak.lostMainLiftIds
             if(missing.isNotEmpty()) {
                 Text("Main lift practice omitted from Peak",

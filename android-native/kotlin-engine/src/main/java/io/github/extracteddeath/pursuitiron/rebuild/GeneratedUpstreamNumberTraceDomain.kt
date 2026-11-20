@@ -126,7 +126,34 @@ object GeneratedUpstreamNumberTraceDomain {
             val day=composed.days.getOrNull(session.dayIndex) ?:return null
             if(sessions.put(day.calendarDay,session)!=null)return null
         }
+        // Everything outside the target block remains the original,
+        // source-approved cycle, not an arbitrary rewritten "previous"
+        // program used to justify a restoration or a phase comparison.
+        if(candidate.blocks.size!=source.blocks.size ||
+            candidate.blocks.zip(source.blocks).any{(next,prior)->
+                next.blockId!=prior.blockId ||
+                    (next.blockId!=request.targetBlockId && next!=prior)
+            } ||
+            candidate.weekOverrides!=source.weekOverrides ||
+            candidate.authorNote!=source.authorNote)return null
         val sourceByDay=before.days.associateBy{it.weekday}
+        // Source-restored Strength exercises come from the LAST resolved
+        // real Hypertrophy TRAINING week, not the unsigned target template
+        // or the adjacent deload/recovery week.
+        val exitDays=if(restored.isNotEmpty()) {
+            if(!request.allowSourceMenuRecovery ||
+                block.phase!=TrainingPhase.STRENGTH ||
+                restored.map{it.weekday to it.sourceSlotId}.distinct().size
+                    !=restored.size)return null
+            val boundary=StrengthRosterBoundaryGuardDomain.review(
+                reviewedCycle,request.targetBlockId)
+            val exitWeek=boundary.sourceExitWeek ?:return null
+            val exit=CustomTrainingCycleDomain.week(reviewedCycle,exitWeek)
+                ?:return null
+            if(exit.phase!=TrainingPhase.HYPERTROPHY ||
+                exit.purpose!=CustomBlockPurpose.TRAINING)return null
+            exit.days.associateBy{it.weekday}
+        } else emptyMap()
         val continuityBySlot=continuity.groupBy{it.weekday to it.proposedSlotId}
         val restoredBySlot=restored.groupBy{it.weekday to it.proposedSlotId}
         val addedBySlot=doseAdded.groupBy{it.weekday to it.slotId}
@@ -181,14 +208,34 @@ object GeneratedUpstreamNumberTraceDomain {
                             old!=slot)return null
                     }
                     restore!=null -> {
+                        val historical=exitDays[day.weekday]?.slots
+                            ?.singleOrNull{it.slotId==restore.sourceSlotId}
+                            ?:return null
+                        // Slot ID continuity alone proves nothing about
+                        // the numerical prescription. This is an exact
+                        // set-for-set, machine/attachment/role comparison
+                        // to the authentic resolved source exposure.
                         if(extras.isNotEmpty() ||
+                            prescribedExercise!=null ||
                             restore.exerciseId!=slot.exerciseId ||
                             restore.sourceSlotId==slot.slotId ||
                             restore.proposedSlotId!=slot.slotId ||
                             lineage.priorSlotId!=restore.sourceSlotId ||
                             lineage.relationship!=
                                 GeneratedAdaptiveSlotRelationship.NEW_DAY_OR_EXERCISE ||
-                            newSets.any{it.type!=DraftSetType.WORKING})
+                            historical.role !in setOf(
+                                ComposerRole.SECONDARY,ComposerRole.ACCESSORY) ||
+                            historical.pinned ||
+                            historical.coachNote.isNotBlank() ||
+                            historical.attachmentId!=null ||
+                            historical.supersetGroup!=null ||
+                            historical.machineInstanceId!=null ||
+                            historical.sets.any{
+                                it.type!=DraftSetType.WORKING ||
+                                    it.amplifier!=null
+                            } ||
+                            slot!=historical.copy(
+                                slotId=slot.slotId,pinned=false))
                             return null
                     }
                     else -> {

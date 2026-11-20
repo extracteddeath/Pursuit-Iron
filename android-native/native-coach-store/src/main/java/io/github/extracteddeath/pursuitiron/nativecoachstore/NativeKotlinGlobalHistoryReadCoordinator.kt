@@ -86,6 +86,37 @@ sealed interface NativeKotlinProgramHistoryReadResult {
 }
 
 /**
+ * Read-only bridge to the actual generated future block. The complete native
+ * manifest was reopened under the owner transaction FIRST, then the regular
+ * generator and existing historical performance authority were used. This
+ * is a snapshot for a later independent athlete-coaching review: no approval,
+ * workout issuance or source-revision lock persists beyond this call.
+ */
+data class NativeKotlinGeneratedFutureHistoryReview(
+    val generated:GeneratedAdaptiveBlockResult,
+    val ownerHistory:NativeKotlinProgramHistoryReview,
+    val linked:KotlinFuturePerformanceLink
+) {
+    val canApplyAutomatically:Boolean get()=false
+    val canChangeIssuedWorkout:Boolean get()=false
+    val canPromotePhase:Boolean get()=false
+}
+
+enum class NativeKotlinGeneratedFutureHistoryRefusal {
+    INVALID_REQUEST, OWNER_HISTORY_UNAVAILABLE, GENERATION_UNRESOLVED,
+    SOURCE_OR_CELL_MISMATCH, STORAGE_UNAVAILABLE
+}
+sealed interface NativeKotlinGeneratedFutureHistoryResult {
+    data class Review(val evidence:NativeKotlinGeneratedFutureHistoryReview):
+        NativeKotlinGeneratedFutureHistoryResult
+    data class Rejected(
+        val reason:NativeKotlinGeneratedFutureHistoryRefusal,
+        val historyReason:NativeKotlinProgramHistoryRefusal?=null,
+        val linkReason:KotlinFuturePerformanceLinkRefusal?=null
+    ):NativeKotlinGeneratedFutureHistoryResult
+}
+
+/**
  * Owner-scoped snapshot *read*, built from real private journal/correction
  * files rather than UI-provided completed sets. Calls BOTH stores under
  * the same account revision fence as workout issuance / source mutations.
@@ -216,6 +247,59 @@ class NativeKotlinGlobalHistoryReadCoordinator(
         }.getOrElse{
             NativeKotlinProgramHistoryReadResult.Rejected(
                 NativeKotlinProgramHistoryRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Future-only association of one generated candidate's exact numbered
+     * cells with owner-attested history. Do not feed a caller-replayed
+     * journal into the generator; the owner-coherent History remains sole
+     * source of athlete observations. History is a read-only snapshot and
+     * must be revalidated at eventual program acceptance.
+     */
+    fun readGeneratedFutureHistory(
+        ownerKey:String,athleteId:String,
+        expectedSource:KotlinTrainingSourceRevision,
+        allowedDayIndices:Set<Int>,
+        input:GeneratedAdaptiveBlockRequest
+    ):NativeKotlinGeneratedFutureHistoryResult {
+        val athlete=input.program.setup.reviewed
+        if(!id.matches(ownerKey) || !id.matches(athleteId) ||
+            athlete==null || athlete.athleteProfileId!=athleteId ||
+            input.currentCycle.athleteId!=athleteId ||
+            input.currentCycle.cycleId!=expectedSource.programId ||
+            input.currentCycle.revision!=expectedSource.programRevision ||
+            expectedSource.athleteId!=athleteId ||
+            expectedSource.gymId!=athlete.gym.gymId)
+            return NativeKotlinGeneratedFutureHistoryResult.Rejected(
+                NativeKotlinGeneratedFutureHistoryRefusal.INVALID_REQUEST)
+        val owner=readProgramHistory(ownerKey,athleteId,expectedSource,
+            allowedDayIndices)
+        if(owner !is NativeKotlinProgramHistoryReadResult.Review)
+            return NativeKotlinGeneratedFutureHistoryResult.Rejected(
+                NativeKotlinGeneratedFutureHistoryRefusal.OWNER_HISTORY_UNAVAILABLE,
+                historyReason=(owner as NativeKotlinProgramHistoryReadResult.Rejected).reason)
+        // This exact user-facing source snapshot has no untrusted replay
+        // attached. Any later accepted change needs a fresh owner read.
+        val trustedInput=input.copy(historyReadoutRequest=null)
+        val generated=runCatching {
+            GeneratedAdaptiveBlockDomain.propose(trustedInput)
+        }.getOrNull()
+        if(generated==null ||
+            generated.status!=GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW)
+            return NativeKotlinGeneratedFutureHistoryResult.Rejected(
+                NativeKotlinGeneratedFutureHistoryRefusal.GENERATION_UNRESOLVED)
+        return when(val link=KotlinFutureProgramPerformanceLinkDomain.review(
+            trustedInput,generated,owner.evidence.ledger,
+            owner.evidence.performance)) {
+            is KotlinFuturePerformanceLinkResult.Rejected ->
+                NativeKotlinGeneratedFutureHistoryResult.Rejected(
+                    NativeKotlinGeneratedFutureHistoryRefusal.SOURCE_OR_CELL_MISMATCH,
+                    linkReason=link.reason)
+            is KotlinFuturePerformanceLinkResult.Reviewed ->
+                NativeKotlinGeneratedFutureHistoryResult.Review(
+                    NativeKotlinGeneratedFutureHistoryReview(
+                        generated,owner.evidence,link.link))
         }
     }
 

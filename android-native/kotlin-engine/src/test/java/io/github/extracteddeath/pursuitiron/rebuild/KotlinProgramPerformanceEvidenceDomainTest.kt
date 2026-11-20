@@ -113,6 +113,15 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         assertEquals(KotlinProgramPerformanceGate.PRESCRIPTION_CHANGED,
             report(base+Visit("w3",3,load="105"))
                 .threads.single().recentGate)
+        assertEquals("A newly reduced goal RIR cannot borrow prior easier effort",
+            KotlinProgramPerformanceGate.PRESCRIPTION_CHANGED,
+            report(base+Visit("w3",3,targetRir=1,reportedRir=2))
+                .threads.single().recentGate)
+        assertEquals("Reverting RIR does not erase an intervening different goal",
+            KotlinProgramPerformanceGate.PRESCRIPTION_CHANGED,
+            report(listOf(a("w1",1),
+                Visit("w2",2,targetRir=1,reportedRir=2),
+                a("w3",3))).threads.single().recentGate)
         assertEquals(KotlinProgramPerformanceGate.ACTUAL_EFFORT_UNKNOWN,
             report(base+Visit("w3",3,targetRir=null))
                 .threads.single().recentGate)

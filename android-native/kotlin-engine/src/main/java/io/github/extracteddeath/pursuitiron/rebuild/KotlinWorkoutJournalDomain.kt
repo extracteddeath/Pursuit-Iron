@@ -128,31 +128,12 @@ object KotlinWorkoutJournalDomain {
             it=='\u0000' || (it.code<32 && it!='\n' && it!='\r' && it!='\t')
         }
 
+    /** All generated actuals use the same Kotlin policy as custom journals. */
     internal fun validPerformed(
         target: KotlinWorkoutTarget,
         outcome: KotlinJournalSetOutcome,
         performed: KotlinPerformedSet?
-    ): Boolean {
-        if(outcome==KotlinJournalSetOutcome.SKIPPED)return performed==null
-        val actual=performed ?:return false
-        if(actual.actualRir!=null && actual.actualRir !in 0..10)return false
-        if(actual.machineInstanceId!=null &&
-            !KotlinMachineAlternativesDomain.validInstanceId(actual.machineInstanceId))return false
-        if(outcome==KotlinJournalSetOutcome.COMPLETED &&
-            actual.reps !in 1..100)return false
-        if(outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT &&
-            (actual.reps!=0 || actual.actualRir!=null))return false
-        return when(val load=target.load) {
-            DraftSetLoad.ExplicitBodyweight ->
-                actual.load==null && actual.unit==null
-            is DraftSetLoad.Verified -> {
-                val value=actual.load
-                value!=null && actual.unit==load.unit &&
-                    value>=zero && value<=max &&
-                    value.stripTrailingZeros().scale()<=3
-            }
-        }
-    }
+    ): Boolean = KotlinSetNumberAuthorityDomain.valid(target.load,outcome,performed)
 
     /**
      * Reconstructs a reducer state ONLY from the storage-owner's committed

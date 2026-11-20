@@ -113,6 +113,8 @@ object KotlinProgramHistoryReadoutDomain {
         fun refuse(reason:KotlinProgramHistoryReadoutRefusal)=
             KotlinProgramHistoryReadoutResult.Rejected(reason)
         if(!id.matches(input.athleteId) || !id.matches(input.cycleId) ||
+            input.expectedSource.athleteId!=input.athleteId ||
+            input.expectedSource.programId!=input.cycleId ||
             input.allowedDayIndices.isEmpty() ||
             input.allowedDayIndices.any{it !in 0..6})
             return refuse(KotlinProgramHistoryReadoutRefusal.INVALID_SCOPE)

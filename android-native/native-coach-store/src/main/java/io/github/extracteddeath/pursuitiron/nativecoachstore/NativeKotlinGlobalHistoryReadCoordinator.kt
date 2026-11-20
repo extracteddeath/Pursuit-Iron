@@ -100,7 +100,9 @@ data class NativeKotlinGeneratedFutureHistoryReview(
     val ownerHistory:NativeKotlinProgramHistoryReview,
     val linked:KotlinFuturePerformanceLink,
     /** Dated observations, NOT a compliance score or autopilot trigger. */
-    val observedWeeks:KotlinObservedScheduleWeeks
+    val observedWeeks:KotlinObservedScheduleWeeks,
+    /** Conservative read-only repeated-performance corroboration. */
+    val evolutionEvidence:KotlinContinuousPlanEvidenceSummary
 ) {
     val canApplyAutomatically:Boolean get()=false
     val canChangeIssuedWorkout:Boolean get()=false
@@ -109,7 +111,8 @@ data class NativeKotlinGeneratedFutureHistoryReview(
 
 enum class NativeKotlinGeneratedFutureHistoryRefusal {
     INVALID_REQUEST, OWNER_HISTORY_UNAVAILABLE, GENERATION_UNRESOLVED,
-    SOURCE_OR_CELL_MISMATCH, WEEK_OBSERVATION_UNRESOLVED, STORAGE_UNAVAILABLE
+    SOURCE_OR_CELL_MISMATCH, WEEK_OBSERVATION_UNRESOLVED,
+    CONTINUOUS_REVIEW_UNRESOLVED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeKotlinGeneratedFutureHistoryResult {
     data class Review(val evidence:NativeKotlinGeneratedFutureHistoryReview):
@@ -118,7 +121,8 @@ sealed interface NativeKotlinGeneratedFutureHistoryResult {
         val reason:NativeKotlinGeneratedFutureHistoryRefusal,
         val historyReason:NativeKotlinProgramHistoryRefusal?=null,
         val linkReason:KotlinFuturePerformanceLinkRefusal?=null,
-        val weekReason:KotlinObservedWeekRefusal?=null
+        val weekReason:KotlinObservedWeekRefusal?=null,
+        val evolutionReason:KotlinContinuousPlanEvidenceRefusal?=null
     ):NativeKotlinGeneratedFutureHistoryResult
 }
 
@@ -321,10 +325,20 @@ class NativeKotlinGlobalHistoryReadCoordinator(
                                 .WEEK_OBSERVATION_UNRESOLVED,
                             weekReason=observed.reason)
                     is KotlinObservedWeekResult.Reviewed ->
-                        NativeKotlinGeneratedFutureHistoryResult.Review(
-                            NativeKotlinGeneratedFutureHistoryReview(
-                                generated,owner.evidence,link.link,
-                                observed.evidence))
+                        when(val correlated=
+                            KotlinContinuousPlanEvidenceDomain.review(
+                                link.link,observed.evidence)) {
+                            is KotlinContinuousPlanEvidenceResult.Rejected ->
+                                NativeKotlinGeneratedFutureHistoryResult.Rejected(
+                                    NativeKotlinGeneratedFutureHistoryRefusal
+                                        .CONTINUOUS_REVIEW_UNRESOLVED,
+                                    evolutionReason=correlated.reason)
+                            is KotlinContinuousPlanEvidenceResult.Reviewed ->
+                                NativeKotlinGeneratedFutureHistoryResult.Review(
+                                    NativeKotlinGeneratedFutureHistoryReview(
+                                        generated,owner.evidence,link.link,
+                                        observed.evidence,correlated.summary))
+                        }
                 }
             }
         }

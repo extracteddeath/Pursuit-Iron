@@ -978,91 +978,17 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     })
             }
         }
-        if(!showAll && selected!=null) {
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
-                verticalAlignment=Alignment.CenterVertically
-            ) {
-                val index=allSets.indexOfFirst{it.target.setKey==selected.target.setKey}
-                OutlinedButton(
-                    onClick={selectedKey=allSets[index-1].target.setKey},
-                    enabled=index>0,modifier=Modifier.heightIn(min=48.dp)
-                ) {Text("Previous set")}
-                OutlinedButton(
-                    onClick={selectedKey=allSets[index+1].target.setKey},
-                    enabled=index in 0 until allSets.lastIndex,
-                    modifier=Modifier.heightIn(min=48.dp)
-                ) {Text("Next set")}
-                val nextUnlogged=presentation.firstUnresolvedSetKey
-                if(nextUnlogged!=null && nextUnlogged!=selected.target.setKey) {
-                    TextButton(
-                        onClick={selectedKey=nextUnlogged},
-                        enabled=!state.busy,
-                        modifier=Modifier.heightIn(min=48.dp)
-                    ) {Text("Jump to next unlogged")}
-                }
-            }
-        }
-
-        // Prioritize the actual set and one-tap reference first. A live
-        // exercise swap remains available below it, never hidden or applied
-        // automatically while the current set is being logged.
-        val chosenExerciseId=selected?.target?.exerciseId
-        if(chosenExerciseId!=null && journal!=null && !presentation.finished){
-            val touched=journal.snapshot.targets.filter{
-                it.exerciseId==chosenExerciseId
-            }.any{it.setKey in journal.effectiveSets}
-            val swapReceipt=journal.receipts.asReversed()
-                .mapNotNull{
-                    it.operation as? KotlinJournalOperation.SwapExercise
-                }.firstOrNull{event->
-                    event.replacementTargets.firstOrNull()?.exerciseId==
-                        chosenExerciseId &&
-                    journal.receipts.none{receipt->
-                        (receipt.operation as? KotlinJournalOperation.UndoSwap)
-                            ?.swapEventId==event.eventId
-                    }
-                }
-            if(showAll || touched || swapReceipt!=null || swapError!=null)PursuitCard {
-                Text("Exercise options",
-                    style=MaterialTheme.typography.titleMedium)
-                val remaining=WorkoutRemainingExerciseDomain.generated(journal,chosenExerciseId)
-                if(remaining!=null && remaining.entries.isNotEmpty()) {
-                    OutlinedButton(onClick={
-                        pendingExerciseSkip=NativeExerciseSkipRequest(chosenExerciseId,journal.revision)
-                    },enabled=!state.busy,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-                        Text("Skip remaining exercise")
-                    }
-                }
-                Text("Swap only this workout. The future program, "+
-                    "other saved sets and past weights stay unchanged.",
-                    style=MaterialTheme.typography.bodySmall)
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    if(showAll || touched)OutlinedButton(onClick={reviewSwap(chosenExerciseId)},
-                        enabled=!state.busy && !swapLoading && !touched,
-                        modifier=Modifier.weight(1f)) {
-                        Text(if(swapLoading)"Reviewing…" else "Swap exercise")
-                    }
-                    if(swapReceipt!=null)
-                        OutlinedButton(onClick={
-                            undoConfirm=swapReceipt.eventId
-                        },enabled=!state.busy && !touched,
-                            modifier=Modifier.weight(1f)){
-                            Text("Undo swap")
-                        }
-                }
-                if(touched)
-                    Text("This exercise has logged sets. Replacement is "+
-                        "locked to protect its recorded history.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                swapError?.let {
-                    Text(it,style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.error)
-                }
-            }
+        // The one source-typed Focus navigator above the set owns Previous,
+        // Next and Jump to unfinished. Avoid a second competing nav row
+        // below the editor, especially on narrow phones.
+        // Equipment, workout-only swap, undo and skip-the-remaining-sets
+        // are all explicit Exercise Info actions from Focus AND All Sets.
+        // Do not put a second full-width swap card beneath the set editor.
+        swapError?.let {message->
+            Text("Exercise replacement not available: "+message+
+                " Open Exercise Info to review another option.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.error)
         }
         if(presentation.canFinish)PursuitCard(highlighted=true) {
             Text("All sets have a saved outcome",
@@ -1203,6 +1129,29 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                     it.setKey in journal?.effectiveSets.orEmpty()
                 }
             )
+            val infoRemaining=journal?.let {
+                WorkoutRemainingExerciseDomain.generated(it,exerciseId)
+            }
+            val infoTouched=targets.any{
+                it.setKey in journal?.effectiveSets.orEmpty()
+            }
+            val infoUndo=journal?.receipts.orEmpty().asReversed()
+                .mapNotNull{it.operation as? KotlinJournalOperation.SwapExercise}
+                .firstOrNull{event->
+                    event.replacementTargets.firstOrNull()?.exerciseId==
+                        exerciseId &&
+                    journal?.receipts.orEmpty().none{receipt->
+                        (receipt.operation as? KotlinJournalOperation.UndoSwap)
+                            ?.swapEventId==event.eventId
+                    }
+                }
+            val infoActions=NativeWorkoutInfoActionPolicy.review(
+                active=presentation?.finished==false &&
+                    journal?.finishedByEventId==null &&
+                    !state.busy && !swapLoading,
+                hasRemainingSets=infoRemaining?.entries?.isNotEmpty()==true,
+                hasActiveSwap=infoUndo!=null,
+                hasRecordedWork=infoTouched)
             NativeKotlinWorkoutExerciseInfoSheet(
                 exerciseId=exerciseId,
                 sourceDescription="Issued generated workout · "+
@@ -1226,6 +1175,21 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         infoExerciseId=null
                         reviewSwap(exerciseId)
                     }) else null,
+                onSkipRemainingExercise=if(!infoWarmupsOnly &&
+                    infoActions.mayRequestSkipRemaining)journal?.revision?.let{revision->
+                    ({
+                        infoExerciseId=null
+                        pendingExerciseSkip=NativeExerciseSkipRequest(
+                            exerciseId,revision)
+                    })
+                }else null,
+                onUndoWorkoutSwap=if(!infoWarmupsOnly &&
+                    infoActions.mayRequestUndoSwap)infoUndo?.let{event->
+                    ({
+                        infoExerciseId=null
+                        undoConfirm=event.eventId
+                    })
+                }else null,
                 unavailableReason=if(!infoWarmupsOnly &&
                     presentation?.finished==false)infoOptions.reason else null,
                 outcomes=journal?.effectiveSets.orEmpty().mapNotNull { (key,receipt)->

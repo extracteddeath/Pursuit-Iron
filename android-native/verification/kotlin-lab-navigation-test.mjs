@@ -348,7 +348,14 @@ assert.ok(
   liveWorkout.includes('fun confirmSwap(') &&
   liveWorkout.includes('host.swapIssuedCustomExercise(') &&
   liveWorkout.includes('host.undoIssuedCustomExerciseSwap(') &&
-  liveWorkout.includes('Text("Undo swap")') &&
+  // The single, owner-verified Exercise Info sheet now owns the action.
+  // It merely opens the existing confirmed journal undo dialog.
+  liveWorkout.includes('onUndoWorkoutSwap=if(!infoWarmupsOnly &&') &&
+  liveWorkout.includes('infoActions.mayRequestUndoSwap') &&
+  liveWorkout.includes('undoSwapConfirmEventId=swap.eventId') &&
+  liveWorkout.includes('onClick={confirmUndoSwap(swapEventId)}') &&
+  read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')
+    .includes('Text("Undo workout-only exercise swap")') &&
   liveWorkout.includes('Undo workout swap?') &&
   liveWorkout.includes('This workout only · no program change') &&
   liveWorkout.includes('workoutOnlySwap=true') &&

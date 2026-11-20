@@ -1117,15 +1117,9 @@ internal fun NativeKotlinCustomJournalScreen(
                         val partners=current.snapshot.slots.filter {
                             slot.supersetGroup!=null && it.supersetGroup==slot.supersetGroup
                         }
-                        if(activeFocus==null && !finished) {
-                            val remaining=WorkoutRemainingExerciseDomain.custom(current,slot.slotId)
-                            if(remaining!=null && remaining.entries.isNotEmpty())
-                                OutlinedButton(enabled=!busy,onClick={
-                                    pendingExerciseSkip=NativeExerciseSkipRequest(slot.slotId,current.revision)
-                                },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
-                                    Text("Skip remaining exercise")
-                                }
-                        }
+                        // Skip the remainder of a movement from Exercise Info.
+                        // The existing owner/revision-checked confirmation
+                        // dialog is still the only route that writes skips.
                         if(activeFocus==null && partners.size in 2..3)Text(
                             "Superset · "+partners.joinToString(" · "){kotlinExerciseLabel(it.exerciseId)}+
                                 ". Alternate working sets; warm up each movement first.",
@@ -1140,38 +1134,9 @@ internal fun NativeKotlinCustomJournalScreen(
                             externalOpen=pinnedSlotId==slot.slotId,
                             onExternalDismiss={pinnedSlotId=null}
                         )
-                        if(!finished && current.finishedByEventId==null) {
-                            val hasRecordedWork=slot.sets.any{set ->
-                                current.receipts.any{receipt ->
-                                    (receipt.operation as? CustomWorkoutJournalOperation.Record)
-                                        ?.visit?.setKey==set.setKey
-                                }
-                            }
-                            // Exercise replacement lives in Exercise Info.
-                            // It uses the same verified swap rules in both
-                            // Focus and All Sets instead of a duplicate card button.
-                            val undoableSwap=current.receipts.asReversed()
-                                .mapNotNull {receipt->
-                                    receipt.operation as?
-                                        CustomWorkoutJournalOperation.Swap
-                                }.firstOrNull {swap->
-                                    swap.replacement.slotId==slot.slotId &&
-                                        current.receipts.none{receipt->
-                                            (receipt.operation as?
-                                                CustomWorkoutJournalOperation.UndoSwap)
-                                                ?.swapEventId==swap.eventId
-                                        }
-                                }
-                            if(undoableSwap!=null && !hasRecordedWork &&
-                                slot.supersetGroup==null) {
-                                OutlinedButton(
-                                    enabled=!busy,
-                                    modifier=Modifier.heightIn(min=48.dp),
-                                    onClick={
-                                        undoSwapConfirmEventId=undoableSwap.eventId
-                                    }) {Text("Undo swap")}
-                            }
-                        }
+                        // Workout-only swap and its undo now live with the
+                        // verified equipment choices inside Exercise Info,
+                        // rather than taking up a second training-card row.
                         if(slot.coachNote.isNotBlank())
                             Text(slot.coachNote,
                                 style=MaterialTheme.typography.bodySmall)
@@ -1492,6 +1457,27 @@ internal fun NativeKotlinCustomJournalScreen(
                     hasRecordedExerciseWork=infoRecorded,
                     linkedSuperset=slot.supersetGroup!=null
                 )
+                val infoRemaining=journal?.let {
+                    WorkoutRemainingExerciseDomain.custom(it,slot.slotId)
+                }
+                val infoUndo=journal?.receipts.orEmpty().asReversed()
+                    .mapNotNull{it.operation as?
+                        CustomWorkoutJournalOperation.Swap}
+                    .firstOrNull{swap->
+                        swap.replacement.slotId==slot.slotId &&
+                            journal?.receipts.orEmpty().none{receipt->
+                                (receipt.operation as?
+                                    CustomWorkoutJournalOperation.UndoSwap)
+                                    ?.swapEventId==swap.eventId
+                            }
+                    }
+                val infoActions=NativeWorkoutInfoActionPolicy.review(
+                    active=!busy && !finished &&
+                        journal?.finishedByEventId==null,
+                    hasRemainingSets=infoRemaining?.entries?.isNotEmpty()==true,
+                    hasActiveSwap=infoUndo!=null,
+                    hasRecordedWork=infoRecorded,
+                    linkedSuperset=slot.supersetGroup!=null)
                 NativeKotlinWorkoutExerciseInfoSheet(
                     exerciseId=slot.exerciseId,
                     sourceDescription="Issued custom workout · "+
@@ -1515,6 +1501,21 @@ internal fun NativeKotlinCustomJournalScreen(
                             infoSlotId=null
                             reviewSwap(slot)
                         }) else null,
+                    onSkipRemainingExercise=if(!infoWarmupsOnly &&
+                        infoActions.mayRequestSkipRemaining)journal?.revision?.let{revision->
+                        ({
+                            infoSlotId=null
+                            pendingExerciseSkip=NativeExerciseSkipRequest(
+                                slot.slotId,revision)
+                        })
+                    }else null,
+                    onUndoWorkoutSwap=if(!infoWarmupsOnly &&
+                        infoActions.mayRequestUndoSwap)infoUndo?.let{swap->
+                        ({
+                            infoSlotId=null
+                            undoSwapConfirmEventId=swap.eventId
+                        })
+                    }else null,
                     unavailableReason=if(!infoWarmupsOnly && !finished)
                         infoOptions.reason else null,
                     outcomes=journal?.effectiveVisits.orEmpty().mapNotNull { (key,receipt)->

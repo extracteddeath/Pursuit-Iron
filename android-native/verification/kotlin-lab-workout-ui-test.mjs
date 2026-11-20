@@ -310,11 +310,16 @@ for(const fragment of [
   'selectedKey=presentation.firstUnresolvedSetKey ?:selectedKey',
   '!it.isResolved && !presentation.finished && !showAll',
   'Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())',
-  'val nextUnlogged=presentation.firstUnresolvedSetKey',
-  'onClick={selectedKey=nextUnlogged}',
-  'Text("Jump to next unlogged")'
+  'NativeKotlinWorkoutFocusNavigation(',
+  'nextUnfinished=presentation.firstUnresolvedSetKey',
+  'onReturnToNextUnfinished={'
 ])assert.ok(generatedFocus.includes(fragment),
   'Generated Focus/All must be accurate, accessible and recovery aware: '+fragment);
+assert.equal(generatedFocus.split('NativeKotlinWorkoutFocusNavigation(').length-1,1,
+  'Generated Focus must show exactly one source-typed Previous/Next navigator');
+assert.ok(!generatedFocus.includes('Text("Jump to next unlogged")') &&
+  !generatedFocus.includes('val nextUnlogged=presentation.firstUnresolvedSetKey'),
+  'Remove the duplicate standalone Previous/Next/Jump row below the set editor');
 assert.ok(journal.includes('!focusOnNext -> "ALL SETS"') &&
   journal.includes('requestedFocus!=null -> "REVIEW SET"'),
   'Custom focus header must reflect All sets and explicit set review');
@@ -930,6 +935,14 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
   'Generated workout must use shared accessible reps/RIR steppers and omit the load field for source-verified bodyweight sets');
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')+
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutInfoPresentation.kt');
+const infoPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeWorkoutInfoActionPolicy.kt');
+const betaBuild=read('android-native/app/build.gradle.kts');
+assert.ok(betaBuild.includes('"**/NativeWorkoutInfoActionPolicy.kt"') &&
+  infoPolicy.includes('mayRequestSkipRemaining=active && hasRemainingSets') &&
+  infoPolicy.includes('!hasRecordedWork && !linkedSuperset') &&
+  composer.includes('NativeWorkoutInfoActionPolicy.review(') &&
+  journal.includes('NativeWorkoutInfoActionPolicy.review('),
+  'Both native workout routes must compile the same source-gated skip/undo presentation policy');
 assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   sharedFocus.includes('contentDescription="Exercise details"') &&
   sharedFocus.includes('val stacked=maxWidth<520.dp ||') &&
@@ -952,6 +965,10 @@ assert.ok(sharedFocus.includes('onInfo:(()->Unit)?=null') &&
   infoSheet.includes('sets.count{it.type==DraftSetType.WORKING}') &&
   infoSheet.includes('onChooseMachine?.let') &&
   infoSheet.includes('onSwapExercise?.let') &&
+  infoSheet.includes('onSkipRemainingExercise?.let') &&
+  infoSheet.includes('onUndoWorkoutSwap?.let') &&
+  infoSheet.includes('Text("Skip remaining exercise sets…")') &&
+  infoSheet.includes('Text("Undo workout-only exercise swap")') &&
   composer.includes('onChooseMachine=if(!infoWarmupsOnly && infoOptions.canChangeStation)') &&
   journal.includes('onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)') &&
   infoSheet.includes('Text("Open full exercise history")') &&
@@ -962,7 +979,13 @@ assert.ok(!journal.includes('Text("Swap exercise")') &&
   journal.includes('onSwapExercise=if(!infoWarmupsOnly && infoOptions.canReplaceExercise)') &&
   journal.includes('onInfo=upcoming?.first?.slotId?.let{slotId->') &&
   journal.includes('reviewSwap(slot)') &&
-  journal.includes('onClick={confirmUndoSwap(swapEventId)}'),
+  journal.includes('onUndoWorkoutSwap=if(!infoWarmupsOnly &&') &&
+  journal.includes('undoSwapConfirmEventId=swap.eventId') &&
+  journal.includes('onClick={confirmUndoSwap(swapEventId)}') &&
+  !journal.includes('Text("Undo swap")') &&
+  !composer.includes('Text("Exercise options")') &&
+  composer.includes('pendingExerciseSkip=NativeExerciseSkipRequest(') &&
+  composer.includes('undoConfirm=event.eventId'),
   'Custom workout swap belongs in Exercise Info for Focus and All Sets; duplicate card button must stay removed and swap undo must remain available');
 const customPlate=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomPlateSheet.kt');
 const verifiedPlateDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinVerifiedPlateLayoutDomain.kt');

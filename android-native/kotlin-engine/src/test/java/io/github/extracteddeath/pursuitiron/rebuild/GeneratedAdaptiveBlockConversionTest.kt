@@ -302,6 +302,96 @@ class GeneratedAdaptiveBlockConversionTest {
     }
 
 
+    @Test fun optInStrengthGenerationActuallyRestoresEverySourceAccessoryOnTheSameDay() {
+        val original=fixture.cycle()
+        val existing=original.blocks.single()
+        val extras=(4..8).map{number->
+            fixture.movements[1].copy(
+                exerciseId="continuity-$number",
+                familyId="continuity-$number",
+                role=ComposerRole.ACCESSORY,
+                pattern=ComposerPattern.ISOLATION)
+        }
+        val hyper=existing.copy(blockId="hypertrophy",weeks=2,
+            days=existing.days.map{day ->
+                day.copy(slots=day.slots+extras.map{move ->
+                    CustomExerciseSlot("old_"+move.exerciseId,
+                        move.exerciseId,ComposerRole.ACCESSORY,
+                        day.slots.first().sets,pinned=false)
+                })
+            })
+        val strength=existing.copy(blockId="strength",
+            phase=TrainingPhase.STRENGTH,weeks=2,
+            days=existing.days.map{day ->
+                day.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            })
+        val cycle=original.copy(blocks=listOf(hyper,strength))
+        val base=fixture.generation()
+        val policy=checkNotNull(base.policy).copy(
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+            primaryLiftMinimumDays=mapOf("bench" to 1))
+        val program=base.copy(
+            phase=TrainingPhase.STRENGTH,policy=policy,
+            catalog=base.catalog+extras,
+            selectFromOfferedCatalog=true,
+            maximumExercisesPerDay=8)
+        val prescriptions=fixture.policies().map {
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        }
+        val proposed=GeneratedAdaptiveBlockRequest(cycle,"strength",
+            "recover_source_strength",program,prescriptions,
+            allowSourceMenuRecovery=true)
+        val result=GeneratedAdaptiveBlockDomain.propose(proposed)
+        assertEquals("Unexpected ${result.status}: ${result.explanation}; "+
+            "generation=${result.generatedWeek?.issues}",
+            GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,result.status)
+        val candidate=checkNotNull(result.proposedOption).proposedCycle
+        assertEquals(cycle.revision+1,candidate.revision)
+        val target=candidate.blocks.last()
+        assertEquals(3,target.days.size)
+        assertTrue(target.days.all{it.slots.size==8})
+        // No fixed assumed "five accessories per day": the actual
+        // composer may also omit secondary movements on some weekdays.
+        // Compare against the real blocked generator, not a guessed count.
+        val disallowed=GeneratedAdaptiveBlockDomain.propose(
+            proposed.copy(allowSourceMenuRecovery=false))
+        assertEquals(GeneratedAdaptiveBlockStatus.STRENGTH_EXERCISE_MENU_LOSS,
+            disallowed.status)
+        assertNull(disallowed.proposedOption)
+        assertTrue(disallowed.restoredSourceExercises.isEmpty())
+        val actualMissing=checkNotNull(disallowed.strengthRosterBoundary)
+            .affectedDays.flatMap{loss ->
+                loss.missingExerciseIds.map{loss.weekday to it}
+            }.toSet()
+        assertEquals(actualMissing.size,result.restoredSourceExercises.size)
+        assertEquals(actualMissing,result.restoredSourceExercises.map{
+            it.weekday to it.exerciseId
+        }.toSet())
+        assertEquals(setOf(0,2,4),
+            result.restoredSourceExercises.map{it.weekday}.toSet())
+        assertTrue(extras.map{it.exerciseId}.all{exerciseId ->
+            result.restoredSourceExercises.any{it.exerciseId==exerciseId}
+        })
+        assertTrue(result.restoredSourceExercises.all{record ->
+            val old=hyper.days.single{it.weekday==record.weekday}
+                .slots.single{it.slotId==record.sourceSlotId}
+            val now=target.days.single{it.weekday==record.weekday}
+                .slots.single{it.slotId==record.proposedSlotId}
+            now.sets==old.sets && now.exerciseId==old.exerciseId &&
+                now.role==old.role &&
+                now.role in setOf(ComposerRole.SECONDARY,ComposerRole.ACCESSORY)
+        })
+        assertEquals(StrengthRosterBoundaryStatus.CONTINUOUS,
+            result.strengthRosterBoundary?.status)
+        assertEquals(StrengthDoseBoundaryStatus.CONTINUOUS,
+            result.strengthDoseBoundary?.status)
+        assertEquals(original.revision,cycle.revision)
+        assertEquals(3,cycle.blocks.last().days.first().slots.size)
+        assertFalse(result.maySaveProgram)
+        assertFalse(result.mayIssueWorkout)
+    }
+
     @Test fun generatedStrengthCannotCutWorkingSetsInHalfWhileKeepingSameExercises() {
         val original=fixture.cycle()
         val existing=original.blocks.single()

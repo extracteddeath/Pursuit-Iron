@@ -23,7 +23,11 @@ data class GeneratedAdaptiveBlockRequest(
     val allowSourceMenuRecovery:Boolean=false,
     /** The athlete must separately opt into changing working set counts.
      * Generated Strength sets may only grow within authored phase ceilings. */
-    val allowSourceDoseRecovery:Boolean=false
+    val allowSourceDoseRecovery:Boolean=false,
+    /** Optional read-only replay of finished journal receipts for numerical
+     * provenance. This is NOT native-storage authentication or automatic
+     * permission to change the generated program. */
+    val historyReadoutRequest:KotlinProgramHistoryReadoutRequest?=null
 )
 
 enum class GeneratedAdaptiveBlockStatus {

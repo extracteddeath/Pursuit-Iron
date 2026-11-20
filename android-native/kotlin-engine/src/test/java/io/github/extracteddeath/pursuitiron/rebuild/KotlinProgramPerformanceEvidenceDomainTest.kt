@@ -17,12 +17,15 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         val reps:Int=12,val load:String="100",
         val outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
         val shortened:Boolean=false,
-        val loadBasis:LoadBasis=LoadBasis.SMITH_TOTAL
+        val loadBasis:LoadBasis=LoadBasis.SMITH_TOTAL,
+        val calendarDay:Int=0,
+        val role:ComposerRole=ComposerRole.PRIMARY
     )
 
     private fun facts(items:List<Visit>):Pair<KotlinProgramHistoryReadout,Map<String,Long>> {
         val workouts=items.map{v->
-            KotlinProgramHistoricalWorkout(v.workoutId,v.day,"finish-${v.workoutId}",
+            KotlinProgramHistoricalWorkout(
+                v.workoutId,v.day,v.calendarDay,"finish-${v.workoutId}",
                 3,0,if(v.outcome==KotlinJournalSetOutcome.COMPLETED)2 else 0,
                 if(v.outcome==KotlinJournalSetOutcome.SKIPPED)2 else 0,
                 if(v.outcome==KotlinJournalSetOutcome.FAILED_ATTEMPT)2 else 0,
@@ -31,7 +34,8 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         val sets=items.flatMap{v->
             (0..1).map{ordinal->
                 KotlinProgramHistoricalWorkingSet(
-                    v.workoutId,v.day,"bench","s${ordinal}",ordinal,
+                    v.workoutId,v.day,v.calendarDay,
+                    "bench",v.role,v.purpose,"s${ordinal}",ordinal,
                     DraftSetLoad.Verified(LoadUnit.LB,v.loadBasis,n(v.load)),
                     RepBand(8,12),v.targetRir,v.outcome,
                     if(v.outcome==KotlinJournalSetOutcome.COMPLETED)
@@ -54,7 +58,7 @@ class KotlinProgramPerformanceEvidenceDomainTest {
             }
         }
         val ledger=KotlinProgramHistoryReadout(
-            1,source.athleteId,source.programId,source,workouts,sets,
+            2,source.athleteId,source.programId,source,workouts,sets,
             "a".repeat(64))
         return ledger to items.associate{it.workoutId to it.completionOrder}
     }
@@ -75,6 +79,9 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         assertEquals(listOf("zzz","mmm","aaa"),t.evaluatedWorkoutIds)
         assertEquals(3,t.visits.size)
         assertEquals(0,t.key.dayIndex)
+        assertEquals(0,t.key.calendarDay)
+        assertEquals(ComposerRole.PRIMARY,t.key.role)
+        assertEquals(2,measured.schemaVersion)
         assertEquals(ComposerSessionPurpose.HYPERTROPHY,t.key.purpose)
         assertEquals("press-A",t.key.physicalMachineId)
         assertEquals(LoadBasis.SMITH_TOTAL,t.key.loadBasis)
@@ -143,6 +150,53 @@ class KotlinProgramPerformanceEvidenceDomainTest {
         }
         assertEquals(KotlinProgramPerformanceGate
             .CHANGED_LOAD_BASIS_AFTER_LAST_MATCHED_VISIT,smith.recentGate)
+    }
+
+    @Test fun sameProgramDayIndexOnDifferentWeekdaysNeverPoolsThreeVisits() {
+        val result=report(listOf(
+            a("mon-1",1),a("mon-2",2),
+            Visit("wed-1",3,calendarDay=2),
+            Visit("wed-2",4,calendarDay=2),
+            Visit("wed-3",5,calendarDay=2)))
+        val mon=result.threads.single{it.key.calendarDay==0}
+        val wed=result.threads.single{it.key.calendarDay==2}
+        assertEquals(0,mon.key.dayIndex)
+        assertEquals(0,wed.key.dayIndex)
+        assertEquals(KotlinProgramPerformanceGate
+            .CHANGED_WEEKDAY_OR_ROLE_AFTER_LAST_MATCHED_VISIT,mon.recentGate)
+        assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            wed.recentGate)
+        assertEquals(listOf("wed-1","wed-2","wed-3"),
+            wed.evaluatedWorkoutIds)
+    }
+
+    @Test fun changedIssuedExerciseRoleCannotReuseEarlierPrimaryTrend() {
+        val result=report(listOf(a("p1",1),a("p2",2),a("p3",3),
+            Visit("secondary",4,role=ComposerRole.SECONDARY)))
+        val primary=result.threads.single{
+            it.key.role==ComposerRole.PRIMARY
+        }
+        val secondary=result.threads.single{
+            it.key.role==ComposerRole.SECONDARY
+        }
+        assertEquals(KotlinProgramPerformanceGate
+            .CHANGED_WEEKDAY_OR_ROLE_AFTER_LAST_MATCHED_VISIT,
+            primary.recentGate)
+        assertEquals(KotlinProgramPerformanceGate.NEEDS_THREE_MATCHED_VISITS,
+            secondary.recentGate)
+        val (ledger,order)=facts(listOf(a("good",1)))
+        assertEquals(KotlinProgramPerformanceResult.Rejected(
+            KotlinProgramPerformanceRefusal.UNVERIFIED_SOURCE_FACT),
+            KotlinProgramPerformanceEvidenceDomain.review(
+                ledger.copy(workingSets=ledger.workingSets.mapIndexed{i,fact->
+                    if(i==0)fact.copy(calendarDay=5) else fact
+                }),order))
+        assertEquals(KotlinProgramPerformanceResult.Rejected(
+            KotlinProgramPerformanceRefusal.UNVERIFIED_SOURCE_FACT),
+            KotlinProgramPerformanceEvidenceDomain.review(
+                ledger.copy(workingSets=ledger.workingSets.mapIndexed{i,fact->
+                    if(i==0)fact.copy(role=ComposerRole.SECONDARY) else fact
+                }),order))
     }
 
     @Test fun duplicateOrdersUnknownPurposeAndMissingFactsFailClosed() {

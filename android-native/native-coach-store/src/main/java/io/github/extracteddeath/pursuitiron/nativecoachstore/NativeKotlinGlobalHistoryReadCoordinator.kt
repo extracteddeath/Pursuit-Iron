@@ -291,7 +291,8 @@ class NativeKotlinGlobalHistoryReadCoordinator(
                 NativeKotlinGeneratedFutureHistoryRefusal.GENERATION_UNRESOLVED)
         return when(val link=KotlinFutureProgramPerformanceLinkDomain.review(
             trustedInput,generated,owner.evidence.ledger,
-            owner.evidence.performance)) {
+            owner.evidence.performance,
+            owner.evidence.completionOrderByWorkout)) {
             is KotlinFuturePerformanceLinkResult.Rejected ->
                 NativeKotlinGeneratedFutureHistoryResult.Rejected(
                     NativeKotlinGeneratedFutureHistoryRefusal.SOURCE_OR_CELL_MISMATCH,

@@ -17,11 +17,17 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
         return input to result
     }
 
+    private data class Evidence(
+        val ledger:KotlinProgramHistoryReadout,
+        val report:KotlinProgramPerformanceReport,
+        val ordinals:Map<String,Long>
+    )
+
     private fun history(
         candidate:GeneratedAdaptiveBlockResult,
         issuedWeight:String="25",
         finalReportedReps:Int?=null
-    ):Pair<KotlinProgramHistoryReadout,KotlinProgramPerformanceReport> {
+    ):Evidence {
         val traced=checkNotNull(candidate.upstreamNumberTrace).sets
             .filter{it.exerciseId=="bench" && it.type==DraftSetType.WORKING}
         assertTrue(traced.isNotEmpty())
@@ -59,19 +65,20 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
             "athlete-1","cycle-1",source,setOf(0,1,2),journals)
         val ledger=(KotlinProgramHistoryReadoutDomain.review(scope)
             as KotlinProgramHistoryReadoutResult.Candidate).ledger
+        val ordinals=mapOf("w-1" to 1L,"w-2" to 2L,"w-3" to 3L)
         val report=(KotlinProgramPerformanceEvidenceDomain.review(
-            ledger,mapOf("w-1" to 1L,"w-2" to 2L,"w-3" to 3L))
+            ledger,ordinals)
             as KotlinProgramPerformanceResult.Reviewed).report
-        return ledger to report
+        return Evidence(ledger,report,ordinals)
     }
 
     @Test fun ownerReplayCellsOnlyOfferSameDaySameLoadRepCeilingReview() {
         val (input,future)=generated()
-        val (ledger,report)=history(future)
+        val (ledger,report,ordinals)=history(future)
         assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
             report.threads.single().recentGate)
         val linked=KotlinFutureProgramPerformanceLinkDomain.review(
-            input,future,ledger,report) as KotlinFuturePerformanceLinkResult.Reviewed
+            input,future,ledger,report,ordinals) as KotlinFuturePerformanceLinkResult.Reviewed
         val proven=linked.link.cells.filter {
             it.status==KotlinFuturePerformanceCellStatus.REP_CEILING_REVIEW_ONLY
         }
@@ -94,11 +101,11 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
 
     @Test fun historicalRepsAtTwentyPoundsCannotJustifyTwentyFivePoundFuture() {
         val (input,future)=generated()
-        val (ledger,report)=history(future,issuedWeight="20")
+        val (ledger,report,ordinals)=history(future,issuedWeight="20")
         assertEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
             report.threads.single().recentGate)
         val linked=KotlinFutureProgramPerformanceLinkDomain.review(
-            input,future,ledger,report) as KotlinFuturePerformanceLinkResult.Reviewed
+            input,future,ledger,report,ordinals) as KotlinFuturePerformanceLinkResult.Reviewed
         assertTrue(linked.link.cells.none{
             it.status==KotlinFuturePerformanceCellStatus.REP_CEILING_REVIEW_ONLY
         })
@@ -109,11 +116,11 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
 
     @Test fun nearFailureMostRecentVisitRemainsHistoryGuarded() {
         val (input,future)=generated()
-        val (ledger,report)=history(future,finalReportedReps=8)
+        val (ledger,report,ordinals)=history(future,finalReportedReps=8)
         assertNotEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
             report.threads.single().recentGate)
         val linked=KotlinFutureProgramPerformanceLinkDomain.review(
-            input,future,ledger,report) as KotlinFuturePerformanceLinkResult.Reviewed
+            input,future,ledger,report,ordinals) as KotlinFuturePerformanceLinkResult.Reviewed
         assertTrue(linked.link.cells.none{
             it.status==KotlinFuturePerformanceCellStatus.REP_CEILING_REVIEW_ONLY
         })
@@ -124,7 +131,7 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
 
     @Test fun mismatchedDayRevisionAndMachineCannotReuseOldEvidence() {
         val (input,future)=generated()
-        val (ledger,report)=history(future)
+        val (ledger,report,ordinals)=history(future)
         val numbers=checkNotNull(future.upstreamNumberTrace)
         val altered=future.copy(upstreamNumberTrace=numbers.copy(
             sets=numbers.sets.mapIndexed{i,fact->
@@ -133,11 +140,12 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
         assertEquals(KotlinFuturePerformanceLinkResult.Rejected(
             KotlinFuturePerformanceLinkRefusal.INVALID_FUTURE_TRACE),
             KotlinFutureProgramPerformanceLinkDomain.review(
-                input,altered,ledger,report))
+                input,altered,ledger,report,ordinals))
         assertEquals(KotlinFuturePerformanceLinkResult.Rejected(
             KotlinFuturePerformanceLinkRefusal.SOURCE_EPOCH_MISMATCH),
             KotlinFutureProgramPerformanceLinkDomain.review(input,future,
-                ledger.copy(source=source.copy(programRevision=3)),report))
+                ledger.copy(source=source.copy(programRevision=3)),report,
+                ordinals))
         // A distinct real machine must not inherit untagged DB history.
         val alternate=future.copy(proposedOption=
             checkNotNull(future.proposedOption).copy(proposedCycle=
@@ -152,10 +160,44 @@ class KotlinFutureProgramPerformanceLinkDomainTest {
                     })
                 }))
         val isolated=KotlinFutureProgramPerformanceLinkDomain.review(
-            input,alternate,ledger,report) as KotlinFuturePerformanceLinkResult.Reviewed
+            input,alternate,ledger,report,ordinals) as KotlinFuturePerformanceLinkResult.Reviewed
         assertTrue(isolated.link.cells.none{
             it.status==KotlinFuturePerformanceCellStatus.REP_CEILING_REVIEW_ONLY
         })
+    }
+
+    @Test fun pastedDigestCannotAuthenticateForgedRepCeilingOrHistoryOrder() {
+        val (input,future)=generated()
+        val (ledger,actual,ordinals)=history(
+            future,finalReportedReps=8)
+        assertNotEquals(KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY,
+            actual.threads.single().recentGate)
+        val fabricated=actual.copy(threads=actual.threads.map {thread->
+            thread.copy(recentGate=
+                KotlinProgramPerformanceGate.REP_CEILING_FOR_REVIEW_ONLY)
+        })
+        assertEquals("A copied replay digest is not a completed performance",
+            KotlinFuturePerformanceLinkResult.Rejected(
+                KotlinFuturePerformanceLinkRefusal.INVALID_HISTORY_EVIDENCE),
+            KotlinFutureProgramPerformanceLinkDomain.review(
+                input,future,ledger,fabricated,ordinals))
+        val alteredVisits=actual.copy(threads=actual.threads.map{thread->
+            thread.copy(evaluatedWorkoutIds=listOf("w-1","w-2","made-up"))
+        })
+        assertEquals(KotlinFuturePerformanceLinkResult.Rejected(
+            KotlinFuturePerformanceLinkRefusal.INVALID_HISTORY_EVIDENCE),
+            KotlinFutureProgramPerformanceLinkDomain.review(
+                input,future,ledger,alteredVisits,ordinals))
+        val invalidCompletionOrder=ordinals.mapValues{1L}
+        assertEquals(KotlinFuturePerformanceLinkResult.Rejected(
+            KotlinFuturePerformanceLinkRefusal.INVALID_HISTORY_EVIDENCE),
+            KotlinFutureProgramPerformanceLinkDomain.review(
+                input,future,ledger,actual,invalidCompletionOrder))
+        val staleOrder=mapOf("w-1" to 3L,"w-2" to 2L,"w-3" to 1L)
+        assertEquals(KotlinFuturePerformanceLinkResult.Rejected(
+            KotlinFuturePerformanceLinkRefusal.INVALID_HISTORY_EVIDENCE),
+            KotlinFutureProgramPerformanceLinkDomain.review(
+                input,future,ledger,actual,staleOrder))
     }
 
     @Test fun issuedNumericalEquivalenceIsCentralAndScaleIndependent() {

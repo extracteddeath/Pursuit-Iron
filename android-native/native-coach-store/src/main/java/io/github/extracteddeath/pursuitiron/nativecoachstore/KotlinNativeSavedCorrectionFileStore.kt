@@ -180,6 +180,11 @@ internal object SavedCorrectionBinary {
     fun encode(envelope: SavedCorrectionEnvelope): ByteArray {
         require(envelope.receipts.size <= MAX_RECEIPTS)
         require(envelope.formatVersion in LEGACY_VERSION..CURRENT_VERSION)
+        // A V1 fixture may be replayed, but no V1 writer may discard an
+        // explicitly supplied physical machine identity.
+        require(envelope.formatVersion>=2 || envelope.receipts.none{
+            it.correction.actual?.machineInstanceId!=null
+        })
         val body = ByteArrayOutputStream()
         DataOutputStream(body).use { out ->
             out.writeInt(MAGIC)

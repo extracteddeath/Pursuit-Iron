@@ -1464,8 +1464,14 @@ const assistedPrepared=read('android-native/native-coach-store/src/main/java/io/
 assert.match(assistedCoach,/CustomNextWorkoutCoachingStatus.READY_FOR_ASSISTANCE_REVIEW/);
 assert.match(assistedCoach,/target.machineInstanceId==request.requestedMachineInstanceId/);
 assert.match(assistedCoach,/AssistedCounterweightProgressionDomain.review\(/);
-assert.match(assistedAmendment,/candidate>=current.value \|\| candidate<zero/);
-assert.match(assistedAmendment,/stock.basis!=current.basis/);
+const futureLoadNumbers=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinFutureLoadNumberAuthorityDomain.kt');
+assert.match(assistedAmendment,/KotlinFutureLoadNumberAuthorityDomain\.review\(/);
+assert.match(assistedAmendment,/KotlinFutureLoadSource\.EARNED_ASSISTANCE_DECREMENT/);
+assert.match(futureLoadNumbers,/candidateLoad>=issuedLoad/);
+assert.match(futureLoadNumbers,/KotlinFutureLoadSource\.EARNED_NEXT_INCREMENT/);
+assert.match(futureLoadNumbers,/stock\.basis!=basis/);
+assert.match(futureLoadNumbers,/!current\.exact/);
+assert.match(futureLoadNumbers,/!candidate\.exact/);
 assert.match(assistedAmendment,/warmup->/);
 assert.match(assistedStore,/r.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT/);
 assert.match(assistedStore,/r.originalLoad.subtract\(r.proposedLoad\)/);

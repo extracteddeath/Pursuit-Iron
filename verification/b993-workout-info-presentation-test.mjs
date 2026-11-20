@@ -14,10 +14,10 @@ for(const name of names){
  assert.ok(css.includes('.'+role+'{')||css.includes('.'+role+',')||css.includes('.'+role+')'),'No CSS role '+role);
 }
 for(const [names,shared] of [
-  [['metric-value','record-value'],'font-size:15px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere'],
-  [['why-copy','cue-copy'],'font-size:13px;color:var(--wpb-theme-text);overflow-wrap:anywhere'],
+  [['metric-value','record-value'],'font-size:16px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere'],
+  [['why-copy','cue-copy'],'font-size:14px;color:var(--wpb-theme-text);overflow-wrap:anywhere'],
   [['metric-label','rest-caption'],'font-size:11px;color:var(--wpb-theme-muted)'],
-  [['secondary-copy','tempo-copy','demo-copy','set-helper'],'font-size:13px;color:var(--wpb-theme-muted)']
+  [['secondary-copy','tempo-copy','demo-copy','set-helper'],'font-size:14px;color:var(--wpb-theme-muted)']
 ]){
   const rule='#root .wpb :is('+names.map(name=>'.wpb-exinfo-'+name).join(',')+'){'+shared+'}';
   assert.ok(css.includes(rule),'One scoped typography owner required for '+names.join(','));

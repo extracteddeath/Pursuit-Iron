@@ -134,7 +134,7 @@ assert.match(snapshotCodec,/if\(version>=5\)writeInt\(amp.followUpRounds\)/);
 assert.match(restPauseProtocol,/fun continueRestPause\(/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
 assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);
-assert.match(journal,/follower\?\.kind==CustomAmplifierKind.REST_PAUSE/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(it,stageOrdinal\)/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopTitle/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageEarlyStopDescription/);
@@ -150,7 +150,7 @@ assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueCluster
 assert.match(restPauseProtocol,/fun continueCluster\(/);
 assert.match(restPauseProtocol,/amp.followUpRounds in 2\.\.5 && amp.followUpReps in 1\.\.4/);
 assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.CLUSTER/);
-assert.match(journal,/follower\?\.kind==CustomAmplifierKind.CLUSTER/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
 assert.match(journal,/CustomAmplifierKind.CLUSTER\)/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(/);
 
@@ -182,8 +182,8 @@ assert.match(journal,/if\(position==setCount\)"Last working set"/);
 assert.match(inlineTechnique,/CustomWorkoutExecutionDomain.followUpVisits\(journal,set\)/);
 assert.match(inlineTechnique,/journal.effectiveVisits\[key\]/);
 assert.match(inlineTechnique,/CustomAmplifierKind.DROP_SET/);
-assert.match(journal,/sameLoadActivation/);
-assert.match(journal,/follower\?\.kind==CustomAmplifierKind.LENGTHENED_PARTIALS/);
+assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
+assert.match(journal,/AmplifierFollowUpEntryLoad\.RecordedActivation/);
 assert.match(partialHistory,/Lengthened partials · partial reps/);
 assert.match(partialHistory,/final-set partial extension/);
 
@@ -233,7 +233,7 @@ assert.ok(!customTechniqueExcerpt.includes('Surface(color=MaterialTheme.colorSch
   'Native amp no longer requires permanent large preview card');
 
 assert.match(journal,/Each performed stage is logged separately/);
-assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}"'),
+assert.ok(journal.includes('"follow:${set.setKey}:stage:${followKey.stage}:activation:"+'),
   "stage identity must survive Focus/All and cold resume");
 
 for(const phrase of [
@@ -264,7 +264,7 @@ for(const phrase of [
   'PursuitWorkoutFocusHeader(',
   'slot.sets.filter{activeFocus==null ||',
   '"main:${set.setKey}:station:"',
-  '"follow:${set.setKey}:stage:${followKey.stage}"',
+  '"follow:${set.setKey}:stage:${followKey.stage}:activation:"+',
   'activeFocus?.part!=CustomWorkoutVisitPart.MAIN',
   'activeFocus?.part!=CustomWorkoutVisitPart.FOLLOW_UP'
 ])assert.ok(journal.includes(phrase),'Missing safe native focus behavior: '+phrase);
@@ -499,13 +499,16 @@ assert.ok(journal.includes('saved?.performed?.actualRir?.toString().orEmpty()') 
   localDrafts.includes('if(committed)null else store.read(identity)'),
   'Unknown actual RIR must stay blank and a committed receipt must override any restored UI draft');
 assert.ok(journal.includes('activationPerformed=main?.performed') &&
-  journal.includes('val sameLoadActivation=if(') &&
-  journal.includes('activationPerformed?.machineInstanceId==machineInstanceId') &&
-  journal.includes('sameLoadActivation ?:') &&
+  journal.includes('AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(') &&
+  journal.includes('activationReceiptRevision=observed?.appliedRevision') &&
+  journal.includes('val startingLoad=when(followUpEntryLoad)') &&
+  journal.includes('AmplifierFollowUpEntryLoad.RecordedActivation') &&
+  journal.includes('AmplifierFollowUpEntryLoad.ActivationUnavailable -> ""') &&
   journal.includes('Your issued target remains unchanged.'),
-  'Myo mini-set prefill must use observed same-machine activation without editing prescription');
+  'Myo mini-set prefill must be activation-owned, correction-scoped and separate from the issued prescription');
 assert.ok(journal.includes('val draftIdentity=NativePendingWorkoutDraftIdentity.make(') &&
-  journal.includes('set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,') &&
+  journal.includes('set.setKey,visitDraftIdentity,machineInstanceId,target,expectedReps,') &&
+  journal.includes('":activation:"+(activationReceiptRevision?.toString() ?: "none")') &&
   localDrafts.includes('val load=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('val reps=rememberSaveable(identity.value,receiptRevision)') &&
   localDrafts.includes('if(committed)store.discard(identity)'),
@@ -1220,7 +1223,8 @@ assert.match(lastPicker,/heightIn\(min=48\.dp\)/);
 assert.match(composer,/if\(!set\.isResolved\) PursuitUseLastCompletedSet\(/);
 assert.match(composer,/key=WorkoutReferenceKey\(target\.setKey\)/);
 assert.match(composer,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
-assert.match(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
+assert.match(journal,/if\(saved==null && part==CustomWorkoutVisitPart\.MAIN\)/);
+assert.doesNotMatch(journal,/if\(saved==null\) PursuitUseLastCompletedSet\(/);
 assert.match(journal,/part==CustomWorkoutVisitPart\.FOLLOW_UP\)/);
 assert.match(journal,/rir=last\.actualRir\?\.toString\(\)\.orEmpty\(\)/);
 const lastHelper=lastPicker.slice(
@@ -1588,4 +1592,28 @@ assert.ok(customLighterNoteSource.includes('fun fromCustomSlot(') &&
   customLighterNoteTests.includes('customLabelRejectsStraightMixedAndMismatchedPhysicalLoads') &&
   customLighterNoteTests.includes('customLabelRejectsWarmupsOmittedOrdinalsAndDuplicateReceipts'),
   'Custom Train must label exact source-authored lighter final sets, never an inferred load drop'
+);
+
+
+// A same-load technique inherits the ACTUALLY LOGGED activation set it is
+// attached to; never the first prescribed work row or a prior session Last
+// shortcut. The Kotlin engine owns the typed policy, while corrections get
+// distinct private draft identities tied to the activation receipt revision.
+const amplifierLoadDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/AdvancedAmplifierProtocolDomain.kt');
+const amplifierLoadTests=read('android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/AdvancedAmplifierProtocolDomainTest.kt');
+assert.ok(
+  amplifierLoadDomain.includes('sealed interface AmplifierFollowUpEntryLoad') &&
+  amplifierLoadDomain.includes('fun resolveFollowUpEntryLoad(') &&
+  amplifierLoadDomain.includes('actual.machineInstanceId!=selectedMachineId') &&
+  amplifierLoadDomain.includes('AmplifierFollowUpEntryLoad.RecordedActivation(actual)') &&
+  journal.includes('AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(') &&
+  journal.includes('activationPerformed=main?.performed') &&
+  journal.includes('activationReceiptRevision=observed?.appliedRevision') &&
+  journal.includes('if(saved==null && part==CustomWorkoutVisitPart.MAIN)') &&
+  journal.includes('ActivationUnavailable -> ""') &&
+  !journal.includes('sameLoadActivation') &&
+  amplifierLoadTests.includes('everyMyoStagePrefillsFromLastLoggedActivationNotFirstSetOrIssuedWeight') &&
+  amplifierLoadTests.includes('incompatibleActivationAndMachineNeverFallbackToEarlierSet') &&
+  amplifierLoadTests.includes('activationLoadResolutionIsOneSourceAcrossSingleAndStagedProtocols'),
+  'Follow-up load provenance: logged activation vs authored drop vs unverified, with no Last shortcut'
 );

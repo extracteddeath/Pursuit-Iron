@@ -89,4 +89,22 @@ class NativeKotlinPendingWorkoutDraftsTest {
         assertEquals("",NativePendingWorkoutDraftCodec.decode(encoded)?.rir)
         assertFalse(encoded!!.contains("machine-A"))
     }
+
+    @Test fun myoDraftFromPriorActivationRevisionCannotOverrideCorrectedLastSet() {
+        val before=identity(set="last-working-4",rir=null,
+            part="FOLLOW_UP:stage:1:activation:9")
+        val corrected=identity(set="last-working-4",rir=null,
+            part="FOLLOW_UP:stage:1:activation:10")
+        val laterMini=identity(set="last-working-4",rir=null,
+            part="FOLLOW_UP:stage:2:activation:10")
+        val firstSet=identity(set="working-1",rir=null,
+            part="FOLLOW_UP:stage:1:activation:10")
+        assertNotEquals(before,corrected)
+        assertNotEquals(corrected,laterMini)
+        assertNotEquals(firstSet,corrected)
+        assertEquals(corrected,identity(set="last-working-4",rir=null,
+            part="FOLLOW_UP:stage:1:activation:10"))
+        // Original main-set inputs retain their preexisting identity.
+        assertEquals(identity(part="MAIN:stage:1"),identity(part="MAIN:stage:1"))
+    }
 }

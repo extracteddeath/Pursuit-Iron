@@ -46,6 +46,21 @@ enum class MyoRepNextStep {
     INVALID_SEQUENCE
 }
 
+/**
+ * A single engine-owned source for the initial *editable* follow-up load.
+ * The original prescribed target and the athlete's performed set are distinct.
+ * No editor, generated cycle or future progression may treat an older first
+ * working set or a session-history button as the activation weight.
+ */
+sealed interface AmplifierFollowUpEntryLoad {
+    data class RecordedActivation(val performed:KotlinPerformedSet):
+        AmplifierFollowUpEntryLoad
+    data class AuthoredStage(val target:DraftSetLoad):
+        AmplifierFollowUpEntryLoad
+    /** No guessed load, no opposite-machine fallback. */
+    data object ActivationUnavailable:AmplifierFollowUpEntryLoad
+}
+
 object AdvancedAmplifierProtocolDomain {
     fun template(kind: CustomAmplifierKind): AdvancedAmplifierTemplate = when (kind) {
         CustomAmplifierKind.MYO_REPS -> AdvancedAmplifierTemplate(
@@ -204,6 +219,52 @@ object AdvancedAmplifierProtocolDomain {
         if(amp.kind==CustomAmplifierKind.DROP_SET)
             dropStageLoad(amp,stage) ?:main
         else amp.followUpLoad ?:main
+
+    /**
+     * The entry field for every new same-load myo / rest-pause / cluster /
+     * partial extension belongs to the COMPLETED activation set to which
+     * that amplifier is attached: not the first working set, issued load,
+     * other exercise, another physical machine or previous session.
+     *
+     * Legacy single-stage techniques with their own explicitly authored
+     * follow-up load retain the historical target; never silently migrate
+     * an existing signed prescription. Drop-set weights are always authored.
+     * This is presentation input only, never a change to issued targets,
+     * performed receipts or the next session's suggestion.
+     */
+    fun resolveFollowUpEntryLoad(
+        amp:CustomSetAmplifier,
+        issuedActivation:DraftSetLoad,
+        performedActivation:KotlinPerformedSet?,
+        selectedMachineId:String?,
+        stage:Int
+    ):AmplifierFollowUpEntryLoad {
+        val issued=followUpLoadForStage(amp,issuedActivation,stage)
+        if(amp.kind==CustomAmplifierKind.DROP_SET ||
+            amp.followUpLoad!=null)
+            return AmplifierFollowUpEntryLoad.AuthoredStage(issued)
+        if(amp.kind !in setOf(
+                CustomAmplifierKind.MYO_REPS,
+                CustomAmplifierKind.REST_PAUSE,
+                CustomAmplifierKind.CLUSTER,
+                CustomAmplifierKind.LENGTHENED_PARTIALS))
+            return AmplifierFollowUpEntryLoad.AuthoredStage(issued)
+        val actual=performedActivation
+            ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
+        if(actual.machineInstanceId!=selectedMachineId ||
+            actual.reps<=0)
+            return AmplifierFollowUpEntryLoad.ActivationUnavailable
+        when(issuedActivation) {
+            DraftSetLoad.ExplicitBodyweight ->
+                if(actual.load!=null || actual.unit!=null)
+                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            is DraftSetLoad.Verified ->
+                if(actual.load==null || actual.unit!=issuedActivation.unit ||
+                    actual.load.signum()<0)
+                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
+        }
+        return AmplifierFollowUpEntryLoad.RecordedActivation(actual)
+    }
 
     /** Both authoring entry points use one policy for OPTIONAL staged work.
      * Legacy single-follow-up recipes keep their exact old semantics. */

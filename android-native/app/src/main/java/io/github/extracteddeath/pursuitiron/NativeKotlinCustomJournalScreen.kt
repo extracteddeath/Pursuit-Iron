@@ -1258,12 +1258,14 @@ internal fun NativeKotlinCustomJournalScreen(
                                     .forEach { followKey ->
                                 val follower=current.effectiveVisits[followKey]
                                 editorStates.SaveableStateProvider(
-                                    "follow:${set.setKey}:stage:${followKey.stage}") {
+                                    "follow:${set.setKey}:stage:${followKey.stage}:activation:"+
+                                        (observed?.appliedRevision ?: "none")) {
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     stageOrdinal=followKey.stage,
                                     stageTotal=set.prescription.amplifier?.followUpRounds ?:1,
                                     activationPerformed=main?.performed,
+                                    activationReceiptRevision=observed?.appliedRevision,
                                     existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                     saving=busy,saveError=error,
                                     machineInstanceId=if(follower!=null)
@@ -1753,6 +1755,7 @@ private fun NativeKotlinCustomVisitEditor(
     stageOrdinal:Int=1,
     stageTotal:Int=1,
     activationPerformed:KotlinPerformedSet?=null,
+    activationReceiptRevision:Long?=null,
     amplifierSummary:CustomAmplifierSetSummary?=null,
     plannedLoadNote:String?=null
 ) {
@@ -1795,26 +1798,38 @@ private fun NativeKotlinCustomVisitEditor(
     val expectedReps=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
         follower?.followUpReps?.let{RepBand(it,it)} ?:prescription.reps
     else prescription.reps
+    // A correction to the main activation receipt changes the source of
+    // truth for every unsaved mini-set. Never reopen an old unsent draft
+    // under the new activation weight or silently overwrite a typed value.
+    val visitDraftIdentity=part.name+":stage:"+stageOrdinal+
+        (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+            ":activation:"+(activationReceiptRevision?.toString() ?: "none")
+        else "")
     val draftIdentity=NativePendingWorkoutDraftIdentity.make(
         athleteId,workoutId,issuedGymId.orEmpty(),exerciseId,
-        set.setKey,part.name+":stage:"+stageOrdinal,machineInstanceId,target,expectedReps,
+        set.setKey,visitDraftIdentity,machineInstanceId,target,expectedReps,
         if(part==CustomWorkoutVisitPart.FOLLOW_UP)null else prescription.targetRir)
-    // The prescribed target never changes; an athlete-entered activation
-    // load may be different. Same-load myo, rest-pause and cluster stages
-    // start from that recorded machine's activation, not the issued target.
-    val sameLoadActivation=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
-        (stageTotal>1 || follower?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS) &&
-        (follower?.kind==CustomAmplifierKind.MYO_REPS ||
-         follower?.kind==CustomAmplifierKind.REST_PAUSE ||
-         follower?.kind==CustomAmplifierKind.CLUSTER ||
-         follower?.kind==CustomAmplifierKind.LENGTHENED_PARTIALS) &&
-        saved==null && activationPerformed?.machineInstanceId==machineInstanceId &&
-        activationPerformed?.unit==verified?.unit)
-        activationPerformed?.load?.stripTrailingZeros()?.toPlainString()
+    // One engine policy selects the source of the editable follow-up load.
+    // The issued target remains immutable, while a new same-load mini-set
+    // starts from the completed activation set (not the first set or a
+    // historical reference). Saved observations always win on corrections.
+    val followUpEntryLoad=if(part==CustomWorkoutVisitPart.FOLLOW_UP &&
+        follower!=null && saved==null)
+        AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+            follower,prescription.load,activationPerformed,machineInstanceId,
+            stageOrdinal)
     else null
+    val startingLoad=when(followUpEntryLoad) {
+        is AmplifierFollowUpEntryLoad.RecordedActivation ->
+            followUpEntryLoad.performed.load
+                ?.stripTrailingZeros()?.toPlainString().orEmpty()
+        is AmplifierFollowUpEntryLoad.AuthoredStage ->
+            initialMachineScopedLoad(followUpEntryLoad.target,null,machineInstanceId)
+        AmplifierFollowUpEntryLoad.ActivationUnavailable -> ""
+        null ->initialMachineScopedLoad(target,saved?.performed,machineInstanceId)
+    }
     val draftBaseline=NativePendingWorkoutDraft(
-        sameLoadActivation ?:
-            initialMachineScopedLoad(target,saved?.performed,machineInstanceId),
+        startingLoad,
         saved?.performed?.reps?.toString() ?:
             (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
                 follower?.followUpReps else prescription.reps.minimum)
@@ -1868,7 +1883,14 @@ private fun NativeKotlinCustomVisitEditor(
                     Text("Discard recovered entry")
                 }
             }
-            if(saved==null) PursuitUseLastCompletedSet(
+            // A historical "Last" shortcut is never a valid source for a
+            // same-load activation mini-set, even if both weights happen to
+            // match. Preserve athlete edits through the normal fields.
+            // "Last session" is context, never an input source for any
+            // amplifier. Its authored stage or saved activation owns the
+            // default. Only ordinary main working sets expose Apply Last.
+            if(saved==null && part==CustomWorkoutVisitPart.MAIN)
+                PursuitUseLastCompletedSet(
                 mode=referenceMode,
                 history=physicalMachineLastReferences(lastReferences,machineInstanceId),
                 key=WorkoutReferenceKey(
@@ -1962,6 +1984,23 @@ private fun NativeKotlinCustomVisitEditor(
             AdvancedAmplifierProtocolDomain.stageLabel(it,stageOrdinal)
         } ?: "Amplifier follow-up"
         Text(label,style=MaterialTheme.typography.titleMedium)
+        if(part==CustomWorkoutVisitPart.FOLLOW_UP)when(val origin=followUpEntryLoad) {
+            is AmplifierFollowUpEntryLoad.RecordedActivation ->
+                Text("Starting weight follows the logged activation set: "+
+                    (origin.performed.load?.stripTrailingZeros()
+                        ?.toPlainString() ?: "bodyweight")+
+                    (origin.performed.unit?.let{" ${it.name.lowercase()}"} ?: "")+
+                    ". Your issued target remains unchanged. "+
+                    "Changing the weight ends the same-load sequence.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            AmplifierFollowUpEntryLoad.ActivationUnavailable ->
+                Text("Activation weight or machine is not verified. "+
+                    "No weight is filled from an earlier set.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> Unit
+        }
         if(part==CustomWorkoutVisitPart.MAIN)plannedLoadNote?.let {note->
             Text(note,style=MaterialTheme.typography.labelMedium,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2021,13 +2060,6 @@ private fun NativeKotlinCustomVisitEditor(
                     }
                     Text(protocol.techniqueCue,
                         style=MaterialTheme.typography.bodySmall)
-                    if(sameLoadActivation!=null)Text(
-                        "Weight starts from the logged activation set ("+
-                            sameLoadActivation+" "+
-                            verified?.unit?.name?.lowercase().orEmpty()+
-                            "). Your issued target remains unchanged.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         (follower.followUpActiveSeconds?.let{
                             "$it s planned follow-up work"

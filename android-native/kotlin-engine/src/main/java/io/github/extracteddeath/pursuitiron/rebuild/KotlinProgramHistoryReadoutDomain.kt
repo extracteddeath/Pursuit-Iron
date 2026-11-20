@@ -44,7 +44,11 @@ enum class KotlinHistoryComparisonGuard {
 data class KotlinProgramHistoricalWorkingSet(
     val workoutId:String,
     val dayIndex:Int,
+    /** The actual issued calendar weekday, not the split's day index. */
+    val calendarDay:Int,
     val exerciseId:String,
+    val role:ComposerRole,
+    val purpose:ComposerSessionPurpose,
     val setKey:String,
     val workingOrdinal:Int,
     val issuedLoad:DraftSetLoad,
@@ -64,6 +68,7 @@ data class KotlinProgramHistoricalWorkingSet(
 data class KotlinProgramHistoricalWorkout(
     val workoutId:String,
     val dayIndex:Int,
+    val calendarDay:Int,
     val finishEventId:String,
     val journalRevision:Long,
     val correctionRevision:Long,
@@ -147,7 +152,8 @@ object KotlinProgramHistoryReadoutDomain {
                 journal.originalSnapshot.source!=input.expectedSource ||
                 journal.storedIdentity.source!=input.expectedSource)
                 return refuse(KotlinProgramHistoryReadoutRefusal.SOURCE_MISMATCH)
-            if(journal.snapshot.dayIndex !in input.allowedDayIndices)
+            if(journal.snapshot.dayIndex !in input.allowedDayIndices ||
+                journal.snapshot.calendarDay !in 0..6)
                 return refuse(KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET)
             val correction=correctionsByWorkout[journal.snapshot.workoutId]
                 ?.singleOrNull()
@@ -173,8 +179,11 @@ object KotlinProgramHistoryReadoutDomain {
             if(reviewByExercise.size!=evidence.exerciseReviews.size)
                 return refuse(KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET)
             val originalKeys=working.map{it.setKey}
-            if(originalKeys.toSet().size!=originalKeys.size ||
-                working.any{it.originalOrdinal<0})
+            val issuedByKey=journal.snapshot.targets.associateBy{it.setKey}
+            if(issuedByKey.size!=journal.snapshot.targets.size ||
+                originalKeys.toSet().size!=originalKeys.size ||
+                working.any{it.originalOrdinal<0 ||
+                    issuedByKey[it.setKey]?.exerciseId!=it.exerciseId})
                 return refuse(KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET)
             val guardByExercise=working.groupBy{it.exerciseId}.mapValues{
                 (exerciseId,exerciseSets)->
@@ -200,10 +209,8 @@ object KotlinProgramHistoryReadoutDomain {
                     }
                 }==true
                 when {
-                    machineIds.size>1 ->
-                        KotlinHistoryComparisonGuard.MIXED_PHYSICAL_MACHINES
-                    requiresMachine && null in machineIds ->
-                        KotlinHistoryComparisonGuard.MACHINE_UNKNOWN
+                    // The missing station cannot mask a shortened, skipped,
+                    // corrected-to-failed or otherwise incompatible visit.
                     reviewed?.progressionGate!=
                         KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
                         !uniformSource ||
@@ -211,10 +218,18 @@ object KotlinProgramHistoryReadoutDomain {
                             it.outcome!=KotlinJournalSetOutcome.COMPLETED ||
                                 it.actual?.load==null
                         } ->KotlinHistoryComparisonGuard.INELIGIBLE_SESSION
+                    machineIds.size>1 ->
+                        KotlinHistoryComparisonGuard.MIXED_PHYSICAL_MACHINES
+                    requiresMachine && null in machineIds ->
+                        KotlinHistoryComparisonGuard.MACHINE_UNKNOWN
                     else ->KotlinHistoryComparisonGuard.COMPARABLE_REVIEW_ONLY
                 }
             }
             for(fact in working) {
+                val issued=issuedByKey[fact.setKey] ?:return refuse(
+                    KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET)
+                if(issued.type!=DraftSetType.WORKING)
+                    return refuse(KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET)
                 if(KotlinWorkingSetEvidenceDomain.review(
                     fact.originalOrdinal,fact.issuedLoad,fact.issuedRir,
                     fact.outcome,fact.actual
@@ -222,7 +237,9 @@ object KotlinProgramHistoryReadoutDomain {
                     return refuse(KotlinProgramHistoryReadoutRefusal.INVALID_DAY_OR_SET)
                 sets+=KotlinProgramHistoricalWorkingSet(
                     evidence.workoutId,journal.snapshot.dayIndex,
-                    fact.exerciseId,fact.setKey,fact.originalOrdinal,
+                    journal.snapshot.calendarDay,
+                    fact.exerciseId,issued.role,issued.purpose,
+                    fact.setKey,fact.originalOrdinal,
                     fact.issuedLoad,fact.issuedReps,fact.issuedRir,
                     fact.outcome,fact.actual?.load,fact.actual?.unit,
                     fact.actual?.reps,fact.actual?.actualRir,
@@ -232,6 +249,7 @@ object KotlinProgramHistoryReadoutDomain {
             }
             workouts+=KotlinProgramHistoricalWorkout(
                 evidence.workoutId,journal.snapshot.dayIndex,
+                journal.snapshot.calendarDay,
                 evidence.finishEventId,evidence.journalRevision,
                 correction?.correctionRevision ?:0L,
                 working.count{it.outcome==KotlinJournalSetOutcome.COMPLETED},
@@ -241,13 +259,13 @@ object KotlinProgramHistoryReadoutDomain {
         }
         val immutableWorkouts=Collections.unmodifiableList(workouts.toList())
         val immutableSets=Collections.unmodifiableList(sets.toList())
-        val digest=digest(listOf("KOTLIN_PROGRAM_HISTORY_REPLAY_V1",
+        val digest=digest(listOf("KOTLIN_PROGRAM_HISTORY_REPLAY_V2",
             input.athleteId,input.cycleId,input.expectedSource.toString(),
             input.allowedDayIndices.sorted().joinToString(","),
             immutableWorkouts.toString(),immutableSets.toString()
         ).joinToString("\n"))
         return KotlinProgramHistoryReadoutResult.Candidate(
-            KotlinProgramHistoryReadout(1,input.athleteId,input.cycleId,
+            KotlinProgramHistoryReadout(2,input.athleteId,input.cycleId,
                 input.expectedSource,immutableWorkouts,immutableSets,digest))
     }
 }

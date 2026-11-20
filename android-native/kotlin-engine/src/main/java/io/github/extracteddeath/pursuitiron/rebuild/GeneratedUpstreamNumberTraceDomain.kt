@@ -370,7 +370,10 @@ object GeneratedUpstreamNumberTraceDomain {
         // missing; this is a factual source-bound review ledger only.
         val history=request.historyReadoutRequest?.let { historical ->
             if(historical.athleteId!=athlete.athleteProfileId ||
-                historical.cycleId!=source.cycleId)
+                historical.cycleId!=source.cycleId ||
+                historical.expectedSource.gymId!=athlete.gym.gymId ||
+                historical.expectedSource.programRevision<=0L ||
+                historical.expectedSource.programRevision>source.revision)
                 return null
             (KotlinProgramHistoryReadoutDomain.review(historical)
                 as? KotlinProgramHistoryReadoutResult.Candidate)?.ledger

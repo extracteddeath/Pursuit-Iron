@@ -19,7 +19,10 @@ enum class GeneratedSetNumberOrigin {
 enum class GeneratedHistoryEvidenceState {
     /** The current generated composer has no authenticated workout receipts.
      * Its prior cycle is PRESCRIBED WORK, not completed training history. */
-    NOT_CONSUMED
+    NOT_CONSUMED,
+    /** Replay and corrections verified, but native storage-owner authentication
+     * is still required. No historical facts have authorized future numbers. */
+    REPLAY_VERIFIED_NOT_STORE_ATTESTED
 }
 
 data class GeneratedSetNumberLineage(
@@ -71,7 +74,8 @@ data class GeneratedUpstreamNumberTrace(
      * source-restored exercises and authorized extra Strength sets. Planned
      * muscle stimulus is not a recorded athlete performance observation. */
     val plannedWeekDose:WeeklyDoseFeasibilityReport,
-    val historyEvidence:GeneratedHistoryEvidenceState
+    val historyEvidence:GeneratedHistoryEvidenceState,
+    val replayedHistory:KotlinProgramHistoryReadout?=null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
@@ -361,18 +365,32 @@ object GeneratedUpstreamNumberTraceDomain {
         // A simple unchanged week must match the original audited
         // prescription; restoration or protected edits legitimately change
         // the final delivered weekly plan and are traced above separately.
+        // Replayed actuals never become an automatically authorized
+        // programming decision. Exact native storage attestation is still
+        // missing; this is a factual source-bound review ledger only.
+        val history=request.historyReadoutRequest?.let { historical ->
+            if(historical.athleteId!=athlete.athleteProfileId ||
+                historical.cycleId!=source.cycleId)
+                return null
+            (KotlinProgramHistoryReadoutDomain.review(historical)
+                as? KotlinProgramHistoryReadoutResult.Candidate)?.ledger
+                ?:return null
+        }
         val facts=Collections.unmodifiableList(numbered.toList())
         val signature=digest(listOf(
             "GENERATED_UPSTREAM_V1",source.toString(),
             request.program.toString(),request.prescriptions.toString(),
             candidate.toString(),facts.toString(),transition.toString(),
-            plannedDose.toString()
+            plannedDose.toString(),
+            history?.exactReplayDigest ?: "NO_REPLAYED_HISTORY"
         ).joinToString("\n"))
         return GeneratedUpstreamNumberTrace(
             1,athlete.athleteProfileId,athlete.profileRevision,
             source.cycleId,source.revision,candidate.revision,
             request.targetBlockId,block.phase,athlete.goal,
             signature,facts,transition,plannedDose,
-            GeneratedHistoryEvidenceState.NOT_CONSUMED)
+            if(history==null)GeneratedHistoryEvidenceState.NOT_CONSUMED
+            else GeneratedHistoryEvidenceState.REPLAY_VERIFIED_NOT_STORE_ATTESTED,
+            history)
     }
 }

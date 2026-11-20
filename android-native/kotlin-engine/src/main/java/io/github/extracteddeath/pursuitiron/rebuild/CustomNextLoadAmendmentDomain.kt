@@ -15,7 +15,9 @@ data class CustomNextLoadAmendment(
     val proposedLoad:BigDecimal,
     val unit:LoadUnit,
     val basis:LoadBasis,
-    val amended:CustomWorkoutDaySnapshot
+    val amended:CustomWorkoutDaySnapshot,
+    /** One physical-number decision shared with generated future programs. */
+    val numberFact:KotlinFutureLoadFact?=null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayEditCycle:Boolean get()=false
@@ -70,33 +72,22 @@ object CustomNextLoadAmendmentDomain {
         val candidate=checkNotNull(reviewed.loadReviewCandidate)
         val assisted=reviewed.status==
             CustomNextWorkoutCoachingStatus.READY_FOR_ASSISTANCE_REVIEW
-        if(maximumAuthorizedIncrease<=zero ||
-            maximumAuthorizedIncrease>BigDecimal("100000") ||
-            maximumAuthorizedIncrease.stripTrailingZeros().scale()>3 ||
-            candidate.stripTrailingZeros().scale()>3 ||
-            (if(assisted)
-                current.basis!=LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
-                    candidate>=current.value || candidate<zero ||
-                    current.value.subtract(candidate)>maximumAuthorizedIncrease
-            else current.basis==LoadBasis.ASSISTANCE_COUNTERWEIGHT ||
-                    candidate<=current.value ||
-                    candidate.subtract(current.value)>maximumAuthorizedIncrease))
-            return no(CustomNextLoadAmendmentRefusal.INVALID_INCREMENT)
-        if(stock==null || stock.unit!=current.unit || stock.basis!=current.basis)
-            return no(CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT)
-        val inspection=EquipmentLoadDomain.inspect(stock,current.value,current.unit)
-        if(inspection !is LoadInspection.Confirmed || !inspection.exact)
-            return no(CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT)
-        val next=if(assisted)
-            (EquipmentLoadDomain.inspect(stock,
-                current.value.subtract(BigDecimal("0.001")),current.unit)
-                as? LoadInspection.Confirmed)?.atOrBelow
-        else inspection.nextAbove
-        val verifiedCandidate=EquipmentLoadDomain.inspect(stock,candidate,current.unit)
-        if(next==null || !same(next,candidate) ||
-            verifiedCandidate !is LoadInspection.Confirmed ||
-            !verifiedCandidate.exact)
-            return no(CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT)
+        val numberReview=KotlinFutureLoadNumberAuthorityDomain.review(
+            issuedLoad=current.value,candidateLoad=candidate,
+            unit=current.unit,basis=current.basis,stock=stock,
+            maximumAuthorizedIncrease=maximumAuthorizedIncrease,
+            source=if(assisted)KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
+                else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+        if(numberReview is KotlinFutureLoadReview.Rejected) {
+            val unverified=numberReview.reason in setOf(
+                KotlinFutureLoadRefusal.UNVERIFIED_UNIT_OR_BASIS,
+                KotlinFutureLoadRefusal.UNVERIFIED_ISSUED_LOAD,
+                KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD)
+            return no(if(unverified)
+                CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT
+            else CustomNextLoadAmendmentRefusal.INVALID_INCREMENT)
+        }
+        val verifiedNumbers=numberReview as KotlinFutureLoadReview.Accepted
         // Keep every original warmup exactly as prescribed. On an assisted
         // machine its counterweight must remain HIGHER (easier) than the new
         // working setting; never silently create a harder warmup.
@@ -121,6 +112,6 @@ object CustomNextLoadAmendmentDomain {
             CustomNextLoadAmendment(slotId,
                 Collections.unmodifiableList(sets.map{it.setKey}),
                 normal(current.value),normal(candidate),current.unit,
-                current.basis,amended))
+                current.basis,amended,verifiedNumbers.fact))
     }
 }

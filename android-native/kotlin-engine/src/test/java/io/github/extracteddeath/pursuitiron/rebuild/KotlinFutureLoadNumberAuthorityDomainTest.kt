@@ -1,0 +1,116 @@
+package io.github.extracteddeath.pursuitiron.rebuild
+
+import java.math.BigDecimal
+import org.junit.Assert.*
+import org.junit.Test
+
+class KotlinFutureLoadNumberAuthorityDomainTest {
+    private fun n(value:String)=BigDecimal(value)
+    private val external=VerifiedLoadStock.Totals(
+        LoadUnit.LB,LoadBasis.MACHINE_STACK,
+        listOf("195","200","205","210","215").map(::n))
+    private val assisted=VerifiedLoadStock.Stack(
+        LoadUnit.LB,LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+        n("80"),n("5"),n("120"))
+
+    private fun review(
+        from:String="200",to:String="205",
+        source:KotlinFutureLoadSource=KotlinFutureLoadSource.EARNED_NEXT_INCREMENT,
+        stock:VerifiedLoadStock?=external,
+        unit:LoadUnit=LoadUnit.LB,
+        basis:LoadBasis=LoadBasis.MACHINE_STACK,
+        limit:String="5"
+    )=KotlinFutureLoadNumberAuthorityDomain.review(
+        n(from),n(to),unit,basis,stock,n(limit),source)
+
+    @Test fun earnedIncrementUsesOnlyImmediateVerifiedNextStockAndNeverWrites() {
+        val ready=review() as KotlinFutureLoadReview.Accepted
+        assertEquals(n("200"),ready.fact.issuedLoad)
+        assertEquals(n("205"),ready.fact.proposedLoad)
+        assertEquals(LoadBasis.MACHINE_STACK,ready.fact.basis)
+        assertEquals(KotlinFutureLoadSource.EARNED_NEXT_INCREMENT,ready.fact.source)
+        assertFalse(ready.fact.mayChangeIssuedWorkout)
+        assertFalse(ready.fact.mayModifyHistory)
+        assertFalse(ready.fact.maySaveFutureProgram)
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.NOT_ADJACENT_VERIFIED_INCREMENT),
+            review(to="210",limit="20"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT),
+            review(limit="2.5"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.WRONG_CHANGE_DIRECTION),
+            review(to="195"))
+    }
+
+    @Test fun verifiedRecoveryCanReturnToEarlierDemonstratedLoadNotInventAnIncrease() {
+        val recovery=KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD
+        assertTrue(review(from="210",to="195",source=recovery) is
+            KotlinFutureLoadReview.Accepted)
+        // The historical coach must verify the load was demonstrated.
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.WRONG_CHANGE_DIRECTION),
+            review(from="205",to="210",source=recovery))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
+            review(from="210",to="203",source=recovery))
+    }
+
+    @Test fun assistanceHasExactlyTheOppositeVerifiedPhysicalDirection() {
+        val source=KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
+        val ready=review(from="100",to="95",source=source,stock=assisted,
+            basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        assertTrue(ready is KotlinFutureLoadReview.Accepted)
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.NOT_ADJACENT_VERIFIED_INCREMENT),
+            review(from="100",to="90",source=source,stock=assisted,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT,limit="20"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT),
+            review(from="100",to="95",source=source,stock=assisted,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT,limit="2.5"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION),
+            review(from="100",to="105",stock=assisted,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION),
+            review(from="200",to="195",source=source,stock=external))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
+            review(from="80",to="75",source=source,stock=assisted,
+                basis=LoadBasis.ASSISTANCE_COUNTERWEIGHT))
+    }
+
+    @Test fun noUnverifiedUnitBasisTargetLoadOrRoundedCandidateCanAdvance() {
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_UNIT_OR_BASIS),review(stock=null))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_UNIT_OR_BASIS),
+            review(unit=LoadUnit.KG))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_UNIT_OR_BASIS),
+            review(basis=LoadBasis.CABLE_STACK))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_ISSUED_LOAD),
+            review(from="201"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
+            review(to="202.5"))
+    }
+
+    @Test fun invalidPrecisionOrBudgetRefusesRatherThanClampingOrRounding() {
+        listOf("205.0001","-5","100001").forEach { invalid ->
+            assertEquals(KotlinFutureLoadReview.Rejected(
+                KotlinFutureLoadRefusal.INVALID_NUMBER_OR_BUDGET),review(to=invalid))
+        }
+        listOf("0","-2","0.0001","100001").forEach { invalid ->
+            assertEquals(KotlinFutureLoadReview.Rejected(
+                KotlinFutureLoadRefusal.INVALID_NUMBER_OR_BUDGET),
+                review(limit=invalid))
+        }
+        // Numerically equivalent decimal representations remain equivalent.
+        assertTrue(review(from="200.000",to="205.000") is
+            KotlinFutureLoadReview.Accepted)
+    }
+}

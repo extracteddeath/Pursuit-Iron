@@ -67,7 +67,9 @@ data class CoachNextProgramLoadReview(
     val candidateProgram: ComposerRequest?,
     val explanation: String,
     /** Entire verified policy list for the proposed revision, when scoped. */
-    val candidatePolicies: List<ExercisePrescriptionPolicy>? = null
+    val candidatePolicies: List<ExercisePrescriptionPolicy>? = null,
+    /** Exact physical numerical decision, not proof of athlete consent. */
+    val numberFact: KotlinFutureLoadFact? = null
 ) {
     init {
         require(explanation.isNotBlank())
@@ -251,11 +253,16 @@ object CoachNextProgramLoadReviewDomain {
             return denied(CoachNextLoadReviewStatus.HISTORY_DOES_NOT_MATCH_PLANNED_LOAD,
                 "No earned change matches the current plan. Preserve the athlete's existing target.")
         }
-        val attainable = EquipmentLoadDomain.inspect(stock, candidate, equipment.unit)
-        if (attainable !is LoadInspection.Confirmed || !attainable.exact ||
-            same(candidate, workingLoad))
+        val numberReview=KotlinFutureLoadNumberAuthorityDomain.review(
+            issuedLoad=workingLoad,candidateLoad=candidate,
+            unit=equipment.unit,basis=stock.basis,stock=stock,
+            maximumAuthorizedIncrease=request.maximumAuthorizedIncrease,
+            source=if(kind==CoachNextLoadChangeKind.EARNED_INCREMENT)
+                KotlinFutureLoadSource.EARNED_NEXT_INCREMENT
+            else KotlinFutureLoadSource.RETURN_TO_DEMONSTRATED_LOAD)
+        if(numberReview !is KotlinFutureLoadReview.Accepted)
             return denied(CoachNextLoadReviewStatus.NO_SAFE_CHANGE,
-                "The reviewed change is not an available, distinct physical load.")
+                "The reviewed change is not a physically verified, appropriately sourced future load.")
         val modified = if(purpose==null)
             request.approvedProgram.copy(exercises =
                 Collections.unmodifiableList(request.approvedProgram.exercises.map {
@@ -309,7 +316,8 @@ object CoachNextProgramLoadReviewDomain {
                 "Two complete comparable workouts earned the next physically verified load. Review every affected training day before saving a new program revision."
             else "The overloaded session did not demonstrate the heaviest attempted weight across all sets. Review a return to the previously demonstrated load across the affected days.")+
                 ProgressionEffortDomain.assumptionNote(assumed),
-            if(purpose==null)null else modifiedPolicies
+            if(purpose==null)null else modifiedPolicies,
+            numberReview.fact
         )
     }
 }

@@ -144,3 +144,29 @@ creation, exact physical stock/increment choices, the separate custom History
 projection and amplifier-stage-specific outcome traces, fully authenticated
 day/machine historical queries, and multi-week continuous-plan optimizer.
 These are required by release-gate issue #786.
+
+## Current implementation checkpoint: future working-load candidates (partial)
+
+`KotlinFutureLoadNumberAuthorityDomain` is now the shared, pure numerical
+acceptance gate used by both `CoachNextProgramLoadReviewDomain` (generated)
+and `CustomNextLoadAmendmentDomain` (athlete-authored). They retain separate
+evidence-qualification and source-revision gates, but no longer each decide
+physical load direction, next verified equipment setting, increment budget
+and numeric candidate validity. The returned `KotlinFutureLoadFact` records
+the original and proposed loads, exact unit/basis, source kind and permitted
+step, with **no permission to issue, save or edit a workout**.
+
+- Earned external load increases must be **the next verified setting**, never
+  a rounded guess or a leap to the last set's heaviest attempted weight.
+- Earned assisted-machine progression goes **down** by one verified
+  counterweight setting and obeys the separately authorized step.
+- Overload recovery may propose a larger decrease only to a **physically
+  verified earlier demonstrated load**, once the separate two-session
+  evidence policy qualifies it and the athlete reviews the new version.
+- Mixed physical machine IDs or source/day histories are rejected by the
+  caller's evidence and revision fences; this numerical domain does NOT
+  authenticate saved history or infer that one machine's stock fits another.
+
+This is not yet a full shared program/cycle issuance engine: upstream
+rep-range, volume, phase, Leveling, rep-forecast and longitudinal evidence
+policies still require cross-route provenance and parity testing.

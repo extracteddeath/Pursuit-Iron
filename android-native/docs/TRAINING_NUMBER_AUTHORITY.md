@@ -121,3 +121,26 @@ longitudinal coaching, proposed next-session numbers, and any future
 automatic cycle optimizer. The later milestone should make a numerical
 decision trace reproducible from committed receipts and approved policy
 versions, and exercise that trace in paired random and adversarial simulations.
+
+
+## Current implementation checkpoint: shared future-facing working-set facts
+
+The canonical `KotlinWorkingSetEvidenceDomain` now calls the original
+`KotlinSetNumberAuthorityDomain` before producing a `WorkingSetFact`
+usable by any coach. It preserves original issued load and effort target,
+exact athlete-entered actuals, null/unreported RIR, the physical machine ID,
+and a read-only classification (same issued load, different performed load,
+failed or skipped).
+
+Both generated/custom **live next-set coaching** and generated **finished
+History** use this same conversion. The custom-cycle next-session rep
+assessment and future-load review use it too. Corrupt or incomparable
+observations cannot turn into numeric progression evidence. All future
+suggestions remain non-destructive proposals under separate review and owner
+consent; this new bridge cannot save a program or change completed sets.
+
+Still not complete: source-backed program/phase/set-count and rep-range
+creation, exact physical stock/increment choices, the separate custom History
+projection and amplifier-stage-specific outcome traces, fully authenticated
+day/machine historical queries, and multi-week continuous-plan optimizer.
+These are required by release-gate issue #786.

@@ -71,7 +71,9 @@ data class GeneratedAdaptiveBlockResult(
     val addedStrengthWorkingSets:List<GeneratedStrengthDoseAddedSet> = emptyList(),
     /** Strength exit -> Peak entry measurements only; a taper remains a
      * phase-specific athlete/coach decision, never an automatic set quota. */
-    val peakTaperBoundary:PeakTaperBoundaryReview?=null
+    val peakTaperBoundary:PeakTaperBoundaryReview?=null,
+    /** Independently reconciled, immutable source-bound numerical decisions. */
+    val upstreamNumberTrace:GeneratedUpstreamNumberTrace?=null
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -472,6 +474,12 @@ object GeneratedAdaptiveBlockDomain {
             return refuse(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
                 "The proposed block has incomplete slot continuity evidence.",
                 generation,prescribed)
+        val numbers=GeneratedUpstreamNumberTraceDomain.review(
+            input,reviewedStructure,generation,prescribed,fullContinuity,
+            restoredSourceExercises,addedStrengthSets)
+            ?:return refuse(GeneratedAdaptiveBlockStatus.CYCLE_UNRESOLVED,
+                "A generated set, rep band, authored source or phase dose has no reproducible numerical lineage.",
+                generation,prescribed)
         return GeneratedAdaptiveBlockResult(
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
@@ -482,6 +490,6 @@ object GeneratedAdaptiveBlockDomain {
             if(source.phase==TrainingPhase.PEAK)
                 PeakTaperBoundaryDomain.review(
                     reviewedStructure,input.targetBlockId)
-            else null)
+            else null,numbers)
     }
 }

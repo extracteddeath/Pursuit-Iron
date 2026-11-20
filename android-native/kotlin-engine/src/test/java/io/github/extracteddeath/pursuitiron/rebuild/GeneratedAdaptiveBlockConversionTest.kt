@@ -391,6 +391,20 @@ class GeneratedAdaptiveBlockConversionTest {
         assertEquals(actualMissing,result.restoredSourceExercises.map{
             it.weekday to it.exerciseId
         }.toSet())
+        // The final dose/time ledger must reflect the ACTUAL 8-exercise
+        // Strength candidate, not the earlier 3-exercise composer report.
+        val initialDose=checkNotNull(result.prescribedWeek?.finalAudit)
+        val rebuiltDose=checkNotNull(result.upstreamNumberTrace).plannedWeekDose
+        assertEquals(TrainingPhase.STRENGTH,rebuiltDose.phase)
+        assertEquals(initialDose.muscles.keys,rebuiltDose.muscles.keys)
+        assertTrue(rebuiltDose.muscles.any{(muscle,final)->
+            final.effectiveWorkingSets>
+                checkNotNull(initialDose.muscles[muscle]).effectiveWorkingSets
+        })
+        assertTrue(rebuiltDose.sessions.zip(initialDose.sessions).any{
+            (final,initial)->final.declaredSeconds>initial.declaredSeconds
+        })
+        assertEquals(3,rebuiltDose.sessions.size)
         assertEquals(setOf(0,2,4),
             result.restoredSourceExercises.map{it.weekday}.toSet())
         assertTrue(extras.map{it.exerciseId}.all{exerciseId ->

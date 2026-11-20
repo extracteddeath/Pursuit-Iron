@@ -201,6 +201,18 @@ candidate week's working-set and exercise-visit counts, skipping deload/test
 bridges. A SHA-256 digest covers the exact input request, source revision,
 exercise policies, resulting cycle and observed set facts for byte-sensitive
 replay. This is **not** a new progression algorithm or permission to issue.
+The complete proposed week now also undergoes an independent
+`WeeklyDoseFeasibilityDomain` pass **after** generated prescriptions,
+preserved athlete slots, source-menu restoration and separately consented
+Strength dose repair. This rebuilds actual planned working-set exposures from
+the final source-reviewed movement credits, including direct/indirect muscle
+credit, declared phase-specific MEV/MAV/MRV, direct training days, session
+rest durations and athlete time windows. Its typed `plannedWeekDose` result
+is included in the candidate's exact replay digest. It is a **planning**
+measurement, not a claim that the athlete completed those sets. Advanced
+amplifier extension contributions remain outside the regular working-set
+model and require their own reviewed dose policy.
+
 Adversarial JUnit cases reject plausible but unauthored rep edits, silent
 extra sets and stale source revisions, and assert separate Heavy vs General
 Peak rep/RIR/rest and Strength-to-Peak numbers.

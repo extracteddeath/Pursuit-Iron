@@ -19,6 +19,19 @@ class GeneratedUpstreamNumberTraceDomainTest {
         assertEquals(64,trace.exactRequestDigest.length)
         assertEquals(GeneratedHistoryEvidenceState.NOT_CONSUMED,
             trace.historyEvidence)
+        val dosage=trace.plannedWeekDose
+        assertEquals(TrainingPhase.HYPERTROPHY,dosage.phase)
+        assertEquals(checkNotNull(first.prescribedWeek?.finalAudit).muscles,
+            dosage.muscles)
+        assertEquals(checkNotNull(first.prescribedWeek?.finalAudit).sessions,
+            dosage.sessions)
+        assertEquals(3,dosage.sessions.size)
+        assertEquals(checkNotNull(request.program.policy).selectedBounds
+            .map{it.muscle}.toSet(),dosage.muscles.keys)
+        assertTrue(dosage.muscles.values.all{
+            it.effectiveWorkingSets==it.directWorkingSets+
+                it.indirectWorkingSets
+        })
         assertTrue(trace.sets.isNotEmpty())
         assertEquals(candidate.blocks.single().days.sumOf{day->
             day.slots.sumOf{it.sets.size}

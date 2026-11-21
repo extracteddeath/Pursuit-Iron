@@ -115,6 +115,25 @@ class BasicProgressionExtendedCoverageTest {
                 lastScope=scope.copy(gymId="other"))))
     }
 
+    @Test fun bodyweightCeilingRequiresLoggedRepsOnEveryWorkingSet() {
+        val scope = BasicUnloadedProgressionScope("athlete", "gym", "program", "block", "upper", "pushup")
+        fun candidate(targets: List<Int>, reps: List<Int>): BasicUnloadedProgressionResult.Candidate {
+            val facts = reps.mapIndexed { i, actual ->
+                WorkingSetFact(i, SetOutcome.COMPLETED, null, actual, null, null, 2)
+            }
+            val last = ProgressionWorkoutEvidence("prior", "pushup", LoadUnit.LB, band, 3, facts, "upper")
+            val request = BasicUnloadedProgressionRequest("next", scope, scope, last,
+                List(3) { DraftSetLoad.ExplicitBodyweight }, targets, band)
+            return BasicBodyweightRepProgressionDomain.review(request) as BasicUnloadedProgressionResult.Candidate
+        }
+
+        val newTarget = candidate(listOf(9, 9, 9), listOf(9, 9, 9))
+        assertEquals(listOf(10, 10, 10), newTarget.proposedExactReps)
+        assertFalse(newTarget.atRepCeiling)
+        assertFalse(candidate(listOf(10, 10, 10), listOf(10, 8, 10)).atRepCeiling)
+        assertTrue(candidate(listOf(10, 10, 10), listOf(10, 11, 10)).atRepCeiling)
+    }
+
     @Test fun repLadderBuildsTargetsThenResetsOnlyAfterAnEarnedVerifiedLoadStep() {
         val mode=BasicProgressionStrategy.REP_LADDER_PROGRESSION
         val building=request(mode,reps=listOf(8,7,10)).copy(

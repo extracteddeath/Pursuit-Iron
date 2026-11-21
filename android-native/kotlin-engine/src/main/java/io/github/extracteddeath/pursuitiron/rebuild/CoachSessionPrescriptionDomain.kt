@@ -87,7 +87,6 @@ data class SessionPrescriptionDraft(
 object CoachSessionPrescriptionDomain {
     private val zero=BigDecimal.ZERO
     private val maxLoad=BigDecimal("100000")
-    private val smallStep=BigDecimal("0.001")
 
     private fun canonical(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
     private fun validLoad(v:BigDecimal)=v>=zero && v<=maxLoad &&
@@ -169,8 +168,8 @@ object CoachSessionPrescriptionDomain {
         val eq=option.equipment as? ComposerEquipment.Verified ?:return null
         if(workingValue<=zero)return null
         val result=EquipmentLoadDomain.inspect(eq.inventory,
-            workingValue.subtract(smallStep),eq.unit)
-        val lower=(result as? LoadInspection.Confirmed)?.atOrBelow ?:return null
+            workingValue,eq.unit)
+        val lower=(result as? LoadInspection.Confirmed)?.nextBelow ?:return null
         if(lower<=zero || lower>=workingValue ||
             workingValue.subtract(lower)>maxDecrease)return null
         return load(option,lower)

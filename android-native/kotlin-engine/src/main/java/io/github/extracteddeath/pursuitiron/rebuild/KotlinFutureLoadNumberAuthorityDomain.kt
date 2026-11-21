@@ -48,7 +48,6 @@ sealed interface KotlinFutureLoadReview {
 
 object KotlinFutureLoadNumberAuthorityDomain {
     private val zero=BigDecimal.ZERO
-    private val minPrecision=BigDecimal("0.001")
 
     // Shared numeric envelope, not a second precision/ceiling table.
     // Authored stock, adjacency, directions and athlete consent remain here.
@@ -103,12 +102,7 @@ object KotlinFutureLoadNumberAuthorityDomain {
                     return no(KotlinFutureLoadRefusal.WRONG_CHANGE_DIRECTION)
                 // No invented minimum or negative counterweights; resolve the
                 // actual PREVIOUS available station setting from verified stock.
-                val before=EquipmentLoadDomain.inspect(
-                    stock,issuedLoad.subtract(minPrecision),unit)
-                    as? LoadInspection.Confirmed
-                    ?:return no(KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD)
-                if(before.atOrBelow==null ||
-                    !same(before.atOrBelow,candidateLoad))
+                if(current.nextBelow==null || !same(current.nextBelow,candidateLoad))
                     return no(KotlinFutureLoadRefusal.NOT_ADJACENT_VERIFIED_INCREMENT)
                 if(issuedLoad.subtract(candidateLoad)>maximumAuthorizedIncrease)
                     return no(KotlinFutureLoadRefusal.EXCEEDS_AUTHORIZED_INCREMENT)

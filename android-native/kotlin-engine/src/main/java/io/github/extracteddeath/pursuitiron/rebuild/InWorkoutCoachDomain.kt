@@ -58,8 +58,6 @@ data class InWorkoutReviewResult(
 object InWorkoutCoachDomain {
     private val zero=BigDecimal.ZERO
     private val maxStep=BigDecimal("100000")
-    /** All verified load stock has at most three decimal places. */
-    private val smallestUnit=BigDecimal("0.001")
     private fun normalized(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
 
     fun review(request:InWorkoutReviewRequest):InWorkoutReviewResult {
@@ -164,9 +162,7 @@ object InWorkoutCoachDomain {
                 "The next set has a different prescribed weight. Check the planned loading scheme and any edited actuals before changing it.")
         }
         if(lastReps<request.repBand.minimum) {
-            val below=EquipmentLoadDomain.inspect(request.equipment,
-                actual.subtract(smallestUnit),request.unit)
-            val smaller=(below as? LoadInspection.Confirmed)?.atOrBelow
+            val smaller=planned.nextBelow
             if(smaller!=null &&
                 actual.subtract(smaller)<=request.maximumApprovedReviewStep)
                 return result(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,

@@ -53,7 +53,6 @@ data class AssistedCounterweightReview(
 
 object AssistedCounterweightProgressionDomain {
     private val zero=BigDecimal.ZERO
-    private val smallestRepresentableStep=BigDecimal("0.001")
     private val maximum=BigDecimal("100000")
     private fun equal(a:BigDecimal,b:BigDecimal)=a.compareTo(b)==0
     private fun canonical(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
@@ -141,10 +140,7 @@ object AssistedCounterweightProgressionDomain {
                 current,assumed)
         if(current<=zero)return reject(
             AssistedCounterweightReviewStatus.NO_LOWER_CONFIRMED_ASSISTANCE,current,assumed)
-        val below=EquipmentLoadDomain.inspect(stock,
-            current.subtract(smallestRepresentableStep),recent.unit)
-            as? LoadInspection.Confirmed
-        val candidate=below?.atOrBelow
+        val candidate=exact.nextBelow
         if(candidate==null || candidate>=current)
             return reject(AssistedCounterweightReviewStatus.NO_LOWER_CONFIRMED_ASSISTANCE,
                 current,assumed)

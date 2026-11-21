@@ -11,6 +11,20 @@ class EquipmentLoadDomainTest {
         return EquipmentLoadDomain.inspect(stock, n(value), unit) as LoadInspection.Confirmed
     }
 
+    @Test fun lowerNeighborMatchesVerifiedInventoryAcrossSelectorAndExplicitStock() {
+        val stack = VerifiedLoadStock.Stack(LoadUnit.KG, LoadBasis.MACHINE_STACK,
+            n("0"), n("0.003"), n("0.010"))
+        val totals = VerifiedLoadStock.Totals(stack.unit, stack.basis,
+            listOf(n("0"), n("0.003"), n("0.006"), n("0.009")))
+        for (stock in listOf(stack, totals)) {
+            assertNull(verified(stock, "0").nextBelow)
+            assertEquals(n("0"), verified(stock, "0.003").nextBelow)
+            assertEquals(n("0.003"), verified(stock, "0.006").nextBelow)
+            assertEquals(n("0.006"), verified(stock, "0.007").nextBelow)
+            assertEquals(n("0.009"), verified(stock, "0.010").nextBelow)
+        }
+    }
+
     @Test fun symmetricPairsRequireExactVerifiedPlates() {
         val bar = VerifiedLoadStock.Barbell(
             LoadUnit.LB, n("45"), mapOf(n("2.5") to 2, n("5") to 2, n("25") to 1)
@@ -20,6 +34,7 @@ class EquipmentLoadDomainTest {
         assertTrue(full.exact)
         assertEquals(n("115"), full.atOrBelow)
         assertEquals(n("120"), full.nextAbove)
+        assertEquals(n("110"), full.nextBelow)
 
         val odd = verified(bar, "47")
         assertFalse(odd.exact)

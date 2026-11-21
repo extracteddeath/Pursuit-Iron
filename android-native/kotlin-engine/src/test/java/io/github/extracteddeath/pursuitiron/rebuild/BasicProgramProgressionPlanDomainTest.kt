@@ -244,6 +244,48 @@ class BasicProgramProgressionPlanDomainTest {
         assertFalse(ready.mayIssueWorkout)
     }
 
+    @Test fun specialistMethodNamesArePreservedWithoutInventingBasicLoads() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val periodized=cycle(block(phase=TrainingPhase.STRENGTH),
+            overrides=mapOf("block" to (2..4).map { week ->
+                CustomWeekSlotOverride(week,0,"slot",
+                    listOf(working("${100+week*5}"),working("${100+week*5}")))
+            }))
+        val ordinary=BasicProgramProgressionPlanDomain.review(periodized)
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
+            ordinary.assignments.single().route)
+        assertNull(BasicProgramProgressionPlanDomain.savedChoice(
+            ordinary.assignments.single()))
+        val wave=BasicProgramProgressionPlanDomain.review(periodized,
+            selectedStyles=mapOf(key to NativeProgressionStyle.WAVE))
+            as ProgramProgressionPlan.Ready
+        assertNull(wave.assignments.single().basicStrategy)
+        assertEquals(SavedProgressionMethod.WAVE,
+            BasicProgramProgressionPlanDomain.savedChoice(
+                wave.assignments.single()))
+        val frozen=periodized.copy(blocks=listOf(block(
+            phase=TrainingPhase.STRENGTH,slots=listOf(slot().copy(
+                progressionMethod=SavedProgressionMethod.WAVE)))))
+        val reopened=BasicProgramProgressionPlanDomain.review(frozen)
+            as ProgramProgressionPlan.Ready
+        assertEquals(SavedProgressionMethod.WAVE,
+            BasicProgramProgressionPlanDomain.savedChoice(
+                reopened.assignments.single()))
+
+        val strength=cycle(block(phase=TrainingPhase.STRENGTH,
+            slots=listOf(slot(role=ComposerRole.PRIMARY))))
+        val e1rm=BasicProgramProgressionPlanDomain.review(strength,
+            selectedStyles=mapOf(key to NativeProgressionStyle.E1RM))
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.E1RM_COACH_REVIEW,
+            e1rm.assignments.single().route)
+        assertNull(e1rm.assignments.single().basicStrategy)
+        assertEquals(SavedProgressionMethod.E1RM,
+            BasicProgramProgressionPlanDomain.savedChoice(
+                e1rm.assignments.single()))
+    }
+
     @Test fun savedMethodBeatsTransientPreviewAndSurvivesBlockDayIdentity() {
         val key=ProgramProgressionSlotKey("block",0,"slot")
         val cycle=cycle(block(slots=listOf(slot().copy(

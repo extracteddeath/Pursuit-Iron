@@ -307,6 +307,11 @@ object BasicProgramProgressionPlanDomain {
                     strategy=null
                     note="Peak/test targets require authored periodization, not a surprise load jump."
                 }
+                amplifier -> {
+                    route=ProgramProgressionRoute.SPECIAL_LOAD_SCHEME
+                    strategy=null
+                    note="An attached working-set technique needs specialist main-set and follow-up review, not an ordinary basic load increase."
+                }
                 special || bands.size!=1 -> {
                     route=ProgramProgressionRoute.SPECIAL_LOAD_SCHEME
                     strategy=null

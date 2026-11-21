@@ -22,7 +22,7 @@ internal object NativeMeasuredWorkoutParentCodec {
     private const val VERSION=1
     const val MAX_BYTES=3_000_000
     private const val MAX_SETS=64
-    private const val MAX_RECEIPTS=1024
+    private const val MAX_RECEIPTS=MeasuredWorkoutJournalDomain.MAX_RECEIPTS
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
     fun encode(stored:NativeMeasuredWorkoutStored):ByteArray {

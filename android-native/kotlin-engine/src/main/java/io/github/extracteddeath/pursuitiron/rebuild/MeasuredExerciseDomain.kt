@@ -325,6 +325,8 @@ sealed interface MeasuredJournalDecision {
  * before this can issue sets, save athlete history or be called beta-ready.
  */
 object MeasuredExerciseJournalDomain {
+    private const val MAX_RECORDS = 128
+    const val MAX_RECEIPTS = MAX_RECORDS + 1 // Finish remains available after the last correction.
     private val eventId=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     fun begin(plan:MeasuredExerciseSetPlan):MeasuredExerciseJournal? {
         val frozen=MeasuredWorkoutSnapshotDomain.plan(plan)
@@ -349,7 +351,7 @@ object MeasuredExerciseJournalDomain {
             return MeasuredJournalDecision.Rejected(MeasurementRefusal.STALE_REVISION)
         if(prior.finishedByEventId!=null)
             return MeasuredJournalDecision.Rejected(MeasurementRefusal.FINISHED)
-        if(prior.receipts.size>=128)
+        if(operation is MeasuredJournalOperation.Record && prior.receipts.size >= MAX_RECORDS)
             return MeasuredJournalDecision.Rejected(MeasurementRefusal.INVALID_ID_OR_SOURCE)
         when(operation) {
             is MeasuredJournalOperation.Record -> {
@@ -390,7 +392,7 @@ object MeasuredExerciseJournalDomain {
         receipts:List<MeasuredJournalReceipt>
     ):MeasuredExerciseJournal? {
         var current=begin(plan) ?:return null
-        if(receipts.size>128)return null
+        if(receipts.size>MAX_RECEIPTS)return null
         for(receipt in receipts) {
             val next=reduce(current,receipt.operation) as? MeasuredJournalDecision.Proposed
                 ?:return null

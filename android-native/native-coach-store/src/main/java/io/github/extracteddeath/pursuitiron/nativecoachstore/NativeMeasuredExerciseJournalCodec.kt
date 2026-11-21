@@ -23,7 +23,7 @@ internal object NativeMeasuredExerciseJournalCodec {
     private const val MAGIC=0x50494D31 // PIM1, disjoint from older PIJ/PICJ
     private const val VERSION=1
     const val MAX_BYTES=256_000
-    private const val MAX_RECEIPTS=128
+    private const val MAX_RECEIPTS=MeasuredExerciseJournalDomain.MAX_RECEIPTS
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
     private fun DataOutputStream.optionalText(value:String?) {

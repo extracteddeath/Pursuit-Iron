@@ -352,4 +352,63 @@ class CustomShorterSessionReviewDomainTest {
         assertFalse(short.canIssueWorkout)
     }
 
+    @Test fun multiRoundMyoRestIsCountedInPreviewAndProjection() {
+        val key=slot("primary",4,ComposerRole.PRIMARY,pinned=true)
+        val myo=slot("myo",3).let{original->
+            original.copy(sets=original.sets.mapIndexed{index,set->
+                if(index!=original.sets.lastIndex)set
+                else set.copy(prescription=set.prescription.copy(
+                    amplifier=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+                        4,25,followUpActiveSeconds=40,followUpRounds=3)))
+            })
+        }
+        // The old helper deliberately models a single rest; the authored
+        // protocol has THREE distinct post-activation rest periods.
+        val understated=snapshot(listOf(key,myo))
+        val full=understated.copy(
+            knownSetAndRestSeconds=understated.knownSetAndRestSeconds+50L)
+        assertEquals(CustomShortSessionStatus.INVALID_SNAPSHOT,
+            review(understated,30).status)
+        val result=review(full,30)
+        assertEquals(CustomShortSessionStatus.ALREADY_FITS,result.status)
+        assertEquals(full.knownSetAndRestSeconds+300L,
+            result.originalEstimatedSeconds)
+        assertEquals(full.knownSetAndRestSeconds,
+            CustomShorterSessionReviewDomain.project(full,30)
+                ?.knownSetAndRestSeconds)
+    }
+
+    @Test fun overflowedAmplifierRestCannotClaimFalseTwentyMinuteFit() {
+        val key=slot("primary",4,ComposerRole.PRIMARY,pinned=true)
+        val poisoned=slot("myo",3).let{original->
+            original.copy(sets=original.sets.mapIndexed{index,set->
+                if(index!=original.sets.lastIndex)set
+                else set.copy(prescription=set.prescription.copy(
+                    amplifier=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,
+                        4,Int.MAX_VALUE,followUpActiveSeconds=40,
+                        followUpRounds=4)))
+            })
+        }
+        val source=snapshot(listOf(key,poisoned))
+        // A corrupted snapshot could have echoed the old Int-overflow total,
+        // where Int.MAX_VALUE * 4 wraps to -4 seconds.
+        val forgedSeconds=source.slots.flatMap{it.sets}.sumOf{set->
+            val p=set.prescription
+            p.activeSeconds.toLong()+p.restSeconds+
+                (p.amplifier?.let{it.followUpRestSeconds*it.followUpRounds}?:0)+
+                (p.amplifier?.followUpActiveSeconds?:0)
+        }
+        val forged=source.copy(knownSetAndRestSeconds=forgedSeconds)
+        assertTrue(forgedSeconds<20*60L)
+        assertEquals(CustomShortSessionStatus.INVALID_SNAPSHOT,
+            review(forged,20).status)
+        assertNull(CustomShorterSessionReviewDomain.project(forged,20))
+        val hugeOrdinary=key.copy(sets=key.sets.mapIndexed{index,set->
+            if(index==0)set.copy(prescription=set.prescription.copy(
+                restSeconds=Int.MAX_VALUE)) else set
+        })
+        assertEquals(CustomShortSessionStatus.INVALID_SNAPSHOT,
+            review(snapshot(listOf(hugeOrdinary)),20).status)
+    }
+
 }

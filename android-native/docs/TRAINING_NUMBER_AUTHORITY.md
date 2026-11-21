@@ -680,3 +680,41 @@ These checks run on the staged data before a restored store is
 atomically published. They preserve existing backup bytes, do not
 perform activation, cannot grant workout issuance, and never silently
 remove the athlete's future-handoff barrier.
+
+### Native Plan — confirmed start Monday and read-only scheduled day
+
+The Android native host now instantiates the existing owner-fenced
+`NativeKotlinActivatedBlockCalendarFileStore` and exposes
+`readApprovedFutureBlockCalendar`, `previewApprovedFutureBlockCalendar`,
+`confirmApprovedFutureBlockCalendar` and
+`reviewApprovedFutureBlockDay`. The native Plan outline includes the
+new Material 3 calendar panel for an **already applied** future-block
+activation: the athlete reviews one of the current/next twelve *local*
+Mondays in their independently reviewed IANA timezone, sees the exact
+cycle/block/absolute first week, and must explicitly confirm the exact
+native fingerprint before the record is written. The panel cold-reads the
+owner-backed approval after successful confirmation. Owner, source/draft
+revisions, current approval and timezone are rechecked by the native
+transaction; unverified records never display as accepted.
+
+A dedicated read-only `NativeActivatedBlockScheduledDayDomain` maps
+only positions **inside the approved future block**:
+`firstWeekMonday + (absoluteWeek - firstAbsoluteWeek) * 7 days + weekday`.
+The host's `reviewApprovedFutureBlockDay` first reopens the current
+approved calendar and saved block weeks under the owner transaction.
+Earlier blocks, changed source/draft, extra weekdays or weeks outside
+that block receive no assigned date. The Plan screen displays the mapped
+date only for the independently verified next cycle slot that belongs
+to this block; generated, historical, pending issued and actual
+completed-workout identity remain separately resolved by their
+original native journals and History. A date is **scheduled only**,
+not evidence that a workout was performed, missed, skipped or rescheduled.
+Time zone and daylight-saving offsets cannot move a local Monday or
+invent a second workout. No exercise numbers or periodization are
+modified, and the future handoff/issuance guard remains unchanged.
+
+This is not yet a calendar-driven "today's workout" issuer, an
+auto-rescheduling policy, a first-block start approval, or a full
+goal-driven endless-plan engine. Those require separate owner-backed
+consent, original-issue date reconciliation, complete missed/late
+workout handling and on-device acceptance tests before activation.

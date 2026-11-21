@@ -1635,6 +1635,37 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             .calendar
         assertFalse(written.replayed)
         assertEquals(monday,accepted.firstWeekMonday)
+        val firstDay=NativeActivatedBlockScheduledDayReview.Scheduled(
+            "cycle-1","build",4,1,LocalDate.parse("2026-11-24"),
+            "America/New_York")
+        assertEquals(firstDay,calendar.reviewScheduledDay(
+            "owner-1","cycle-1","build",4,1))
+        val nextWeek=NativeActivatedBlockScheduledDayReview.Scheduled(
+            "cycle-1","build",5,2,LocalDate.parse("2026-12-02"),
+            "America/New_York")
+        assertEquals(nextWeek,calendar.reviewScheduledDay(
+            "owner-1","cycle-1","build",5,2))
+        assertEquals(NativeActivatedBlockScheduledDayReview.Rejected(
+            NativeActivatedBlockScheduledDayRefusal.OUTSIDE_APPROVED_BLOCK),
+            calendar.reviewScheduledDay("owner-1","cycle-1","build",3,1))
+        assertEquals(NativeActivatedBlockScheduledDayReview.Rejected(
+            NativeActivatedBlockScheduledDayRefusal.OUTSIDE_APPROVED_BLOCK),
+            calendar.reviewScheduledDay("owner-1","cycle-1","build",7,1))
+        assertEquals(NativeActivatedBlockScheduledDayReview.Rejected(
+            NativeActivatedBlockScheduledDayRefusal.UNSCHEDULED_WEEKDAY),
+            calendar.reviewScheduledDay("owner-1","cycle-1","build",4,6))
+        // DST shifts the UTC offset, not the approved *local calendar*
+        // dates or their issued schedule position.
+        assertEquals(LocalDate.parse("2026-03-09"),
+            (NativeActivatedBlockScheduledDayDomain.project(
+                accepted.copy(firstWeekMonday=LocalDate.parse("2026-03-02")),
+                3,5,0) as NativeActivatedBlockScheduledDayReview.Scheduled)
+                .scheduledLocalDate)
+        assertFalse(firstDay.mayMarkMissed)
+        assertFalse(firstDay.mayCompleteWorkout)
+        assertFalse(firstDay.mayReschedule)
+        assertFalse(firstDay.mayIssueWorkout)
+        assertFalse(firstDay.mayChangeNumbers)
         assertFalse(accepted.canIssueWorkout)
         assertFalse(accepted.canChangeProgram)
         assertFalse(accepted.canInferPriorBlockActivation)
@@ -1715,6 +1746,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeActivatedBlockCalendarRead.Rejected(
             NativeActivatedBlockCalendarRefusal.STALE_SOURCE_OR_DRAFT),
             calendar.read("owner-1","cycle-1","build"))
+        assertEquals(NativeActivatedBlockScheduledDayReview.Rejected(
+            NativeActivatedBlockScheduledDayRefusal.UNVERIFIED_CALENDAR),
+            calendar.reviewScheduledDay("owner-1","cycle-1","build",4,1))
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
     }
 

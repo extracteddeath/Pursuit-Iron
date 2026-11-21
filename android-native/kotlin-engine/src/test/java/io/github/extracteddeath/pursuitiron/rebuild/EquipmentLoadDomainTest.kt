@@ -115,4 +115,29 @@ class EquipmentLoadDomainTest {
             lastLower=result.atOrBelow
         }
     }
+    @Test fun stackArithmeticMatchesEveryBracketInAnExplicitInventory() {
+        for (minimum in listOf("0", "2.500")) for (increment in listOf("0.125", "1.25", "3")) {
+            val stack = VerifiedLoadStock.Stack(LoadUnit.KG, LoadBasis.MACHINE_STACK,
+                n(minimum), n(increment), n("6.120"))
+            val loads = generateSequence(stack.minimum) { it + stack.increment }
+                .takeWhile { it <= stack.maximum }.toList()
+            val explicit = VerifiedLoadStock.Totals(stack.unit, stack.basis, loads)
+            for (tick in 0..150) {
+                val input = BigDecimal(tick) * n("0.05")
+                assertEquals(EquipmentLoadDomain.inspect(explicit, input, stack.unit),
+                    EquipmentLoadDomain.inspect(stack, input, stack.unit))
+            }
+        }
+    }
+
+    @Test fun largestLegalStackHasAnExactLastStopAndRejectsAnExtraPosition() {
+        val stack = VerifiedLoadStock.Stack(LoadUnit.KG, LoadBasis.ASSISTANCE_COUNTERWEIGHT,
+            n("0"), n("0.001"), n("99.999"))
+        val top = verified(stack, "99.999")
+        assertTrue(top.exact)
+        assertNull(top.nextAbove)
+        assertEquals(n("99.999"), verified(stack, "100").atOrBelow)
+        assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK),
+            EquipmentLoadDomain.inspect(stack.copy(maximum=n("100")), n("0"), stack.unit))
+    }
 }

@@ -103,6 +103,8 @@ assert.match(firstProgram,/val exact=kotlinWorkingLoadEntered\(typed,option\.bas
 for(const file of ['NativeKotlinCustomJournalScreen.kt','NativeKotlinWorkoutCandidateScreen.kt']) {
     const journal=readFileSync(join(root,
         'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/'+file),'utf8');
-    assert.ok(journal.includes('kotlinWorkingLoadEntered((currentEditors[levelEditorKey('),
-        'Explicit unloaded landmine rows must receive the same optional Leveling draft: '+file);
+    assert.match(journal,/levelSetKeys=candidate\.eligibleSetKeys/);
+    assert.match(journal,/levelSetKeys=unfinished\.map/);
+    assert.match(journal,/set(?:\.target)?\.setKey in levelSetKeys\)/,
+        'Only the reviewed rows (including eligible unloaded landmine sets) receive the prefill: '+file);
 }

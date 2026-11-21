@@ -294,4 +294,33 @@ class DoubleProgressionLevelingDomainTest {
                     LoadUnit.LB,LoadBasis.SMITH_TOTAL,listOf(n("0")))))
     }
 
+    @Test fun equipmentChoiceUsesTheExactMeanOnEitherSideOfAMidpoint() {
+        val weights = VerifiedLoadStock.Totals(LoadUnit.LB, LoadBasis.SMITH_TOTAL,
+            listOf("100", "100.002", "100.005").map(::n))
+        for ((entries, expected) in listOf(
+            listOf("100", "100", "100.002") to "100",
+            listOf("100", "100.002") to "100.002",
+            listOf("100", "100.002", "100.002") to "100.002",
+            listOf("100.002", "100.005") to "100.005"
+        )) {
+            val prior = DoubleProgressionLevelingDomain.review(
+                facts(*entries.toTypedArray()), band, 2, weights) as LevelingReviewResult.Candidate
+            val today = DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+                current(*entries.toTypedArray()), weights) as CurrentWorkoutLevelingReview.Ready
+            assertEquals(n(expected), prior.proposedStraightSetLoad)
+            assertEquals(prior.proposedStraightSetLoad, today.roundedLoad)
+        }
+    }
+
+    @Test fun priorAndCurrentLandmineReviewsCountTheUnloadedBar() {
+        val plates = VerifiedLoadStock.Totals(LoadUnit.LB, LoadBasis.LANDMINE_ADDED_PLATES,
+            listOf("0", "5", "10").map(::n))
+        val prior = DoubleProgressionLevelingDomain.review(facts("0","10"), band, 2, plates)
+            as LevelingReviewResult.Candidate
+        val today = DoubleProgressionLevelingDomain.reviewCurrentWorkout(
+            current("0","10").map { it.copy(basis=plates.basis) }, plates)
+            as CurrentWorkoutLevelingReview.Ready
+        assertEquals(n("5"), prior.proposedStraightSetLoad)
+        assertEquals(prior.proposedStraightSetLoad, today.roundedLoad)
+    }
 }

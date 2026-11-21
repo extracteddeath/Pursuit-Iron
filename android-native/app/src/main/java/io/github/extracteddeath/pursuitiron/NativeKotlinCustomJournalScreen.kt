@@ -87,6 +87,7 @@ internal fun NativeKotlinCustomJournalScreen(
     var levelMachineId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var levelWeight by rememberSaveable(workoutId){mutableStateOf("")}
     var levelReps by rememberSaveable(workoutId){mutableIntStateOf(0)}
+    var levelSetKeys by rememberSaveable(workoutId) { mutableStateOf(emptyList<String>()) }
     var levelVersion by rememberSaveable(workoutId){mutableIntStateOf(0)}
     // A previous completed workout is an optional source-verified review.
     // Only a deliberate athlete tap may populate current unsaved editors.
@@ -993,6 +994,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                         !machineChoices.busy) {
                                         levelSlotId=slot.slotId
                                         levelMachineId=selectedMachineId
+                                        levelSetKeys=candidate.eligibleSetKeys
                                         levelWeight=candidate.roundedLoad
                                             .stripTrailingZeros().toPlainString()
                                         levelReps=candidate.averageReps
@@ -1094,6 +1096,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                         unfinished.isNotEmpty()) {
                                         levelSlotId=slot.slotId
                                         levelMachineId=selectedMachineId
+                                        levelSetKeys=unfinished.map { it.setKey }
                                         levelWeight=prior.proposedStraightSetLoad
                                             .stripTrailingZeros().toPlainString()
                                         levelReps=prior.repsPerSet
@@ -1209,12 +1212,7 @@ internal fun NativeKotlinCustomJournalScreen(
                                     slot.slotId==levelSlotId &&
                                     mainMachineId==levelMachineId &&
                                     levelWeight.isNotBlank() && levelReps>0 &&
-                                    kotlinWorkingLoadEntered((currentEditors[levelEditorKey(
-                                        set.setKey,mainMachineId)]?.weight
-                                        ?:initialMachineScopedLoad(
-                                            set.prescription.load,null,mainMachineId))
-                                        .toBigDecimalOrNull(),
-                                        (set.prescription.load as? DraftSetLoad.Verified)?.basis))
+                                    set.setKey in levelSetKeys)
                                     CurrentWorkoutLevelingDraft(
                                         levelVersion,levelWeight,levelReps)
                                 else null,

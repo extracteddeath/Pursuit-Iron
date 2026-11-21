@@ -90,6 +90,61 @@ sealed interface NativeActivatedBlockCalendarWrite {
  * when its original program is no longer the active one. A stale calendar
  * must NEVER be accepted as fresh program approval.
  */
+/**
+ * A date is an explicitly approved *scheduled position*, never proof that
+ * the athlete trained, missed a workout, or consented to a change.
+ * An old issued session must still be resumed with its original journal.
+ */
+sealed interface NativeActivatedBlockScheduledDayReview {
+    data class Scheduled(
+        val cycleId:String,val blockId:String,
+        val absoluteWeek:Int,val weekday:Int,
+        val scheduledLocalDate:LocalDate,
+        val timezoneId:String
+    ):NativeActivatedBlockScheduledDayReview {
+        val mayIssueWorkout:Boolean get()=false
+        val mayCompleteWorkout:Boolean get()=false
+        val mayMarkMissed:Boolean get()=false
+        val mayReschedule:Boolean get()=false
+        val mayChangeNumbers:Boolean get()=false
+    }
+    data class Rejected(val reason:NativeActivatedBlockScheduledDayRefusal):
+        NativeActivatedBlockScheduledDayReview
+}
+enum class NativeActivatedBlockScheduledDayRefusal {
+    NOT_AUTHORIZED, UNVERIFIED_CALENDAR, OUTSIDE_APPROVED_BLOCK,
+    UNSCHEDULED_WEEKDAY, STALE_SOURCE_OR_DRAFT
+}
+
+/**
+ * Pure, deterministic projection. The firstAbsoluteWeek is a historical
+ * issued program week label; the date anchor is for the CURRENT block only.
+ * Never map earlier blocks or an unreviewed weekday into this schedule.
+ */
+internal object NativeActivatedBlockScheduledDayDomain {
+    fun project(
+        approved:NativeActivatedBlockCalendar,
+        weeksInBlock:Int,
+        absoluteWeek:Int,
+        weekday:Int
+    ):NativeActivatedBlockScheduledDayReview {
+        if(weeksInBlock !in 1..52 ||
+            absoluteWeek<approved.firstAbsoluteWeek ||
+            absoluteWeek.toLong()>=approved.firstAbsoluteWeek.toLong()+weeksInBlock)
+            return NativeActivatedBlockScheduledDayReview.Rejected(
+                NativeActivatedBlockScheduledDayRefusal.OUTSIDE_APPROVED_BLOCK)
+        if(weekday !in approved.scheduledWeekdays)
+            return NativeActivatedBlockScheduledDayReview.Rejected(
+                NativeActivatedBlockScheduledDayRefusal.UNSCHEDULED_WEEKDAY)
+        val date=approved.firstWeekMonday
+            .plusWeeks((absoluteWeek-approved.firstAbsoluteWeek).toLong())
+            .plusDays(weekday.toLong())
+        return NativeActivatedBlockScheduledDayReview.Scheduled(
+            approved.cycleId,approved.blockId,absoluteWeek,weekday,
+            date,approved.timezoneId)
+    }
+}
+
 internal data class NativeActivatedBlockCalendarInventoryFact(
     val calendar:NativeActivatedBlockCalendar,
     val sourceStillCurrent:Boolean
@@ -343,6 +398,41 @@ class NativeKotlinActivatedBlockCalendarFileStore(
         !monday.isBefore(thisMonday) &&
             !monday.isAfter(thisMonday.plusWeeks(12))
     }.getOrDefault(false)
+
+    /**
+     * Owner-verified, read-only day projection for a CURRENT, confirmed
+     * block. An old or missing calendar is never replaced by a guessed date.
+     * No timestamps or journal state are mutated here.
+     */
+    fun reviewScheduledDay(
+        ownerKey:String,cycleId:String,blockId:String,
+        absoluteWeek:Int,weekday:Int
+    ):NativeActivatedBlockScheduledDayReview {
+        if(!listOf(ownerKey,cycleId,blockId).all(validId::matches) ||
+            active(ownerKey)==null)
+            return NativeActivatedBlockScheduledDayReview.Rejected(
+                NativeActivatedBlockScheduledDayRefusal.NOT_AUTHORIZED)
+        return runCatching{fence.withOwnerTransaction(ownerKey) {
+            val approved=(read(ownerKey,cycleId,blockId) as?
+                NativeActivatedBlockCalendarRead.Found)?.calendar
+                ?:return@withOwnerTransaction NativeActivatedBlockScheduledDayReview.Rejected(
+                    NativeActivatedBlockScheduledDayRefusal.UNVERIFIED_CALENDAR)
+            val cycle=(drafts.read(ownerKey,cycleId) as?
+                NativeCustomDraftReadResult.Found)?.draft
+                ?:return@withOwnerTransaction NativeActivatedBlockScheduledDayReview.Rejected(
+                    NativeActivatedBlockScheduledDayRefusal.STALE_SOURCE_OR_DRAFT)
+            val block=cycle.blocks.firstOrNull{it.blockId==blockId}
+                ?:return@withOwnerTransaction NativeActivatedBlockScheduledDayReview.Rejected(
+                    NativeActivatedBlockScheduledDayRefusal.STALE_SOURCE_OR_DRAFT)
+            if(cycle.revision!=approved.draftRevision ||
+                cycle.athleteId!=approved.athleteId)
+                return@withOwnerTransaction NativeActivatedBlockScheduledDayReview.Rejected(
+                    NativeActivatedBlockScheduledDayRefusal.STALE_SOURCE_OR_DRAFT)
+            NativeActivatedBlockScheduledDayDomain.project(
+                approved,block.weeks,absoluteWeek,weekday)
+        }}.getOrElse{NativeActivatedBlockScheduledDayReview.Rejected(
+            NativeActivatedBlockScheduledDayRefusal.UNVERIFIED_CALENDAR)}
+    }
 
     fun preview(ownerKey:String,cycleId:String,blockId:String,
         firstWeekMonday:LocalDate):NativeActivatedBlockCalendarPreview {

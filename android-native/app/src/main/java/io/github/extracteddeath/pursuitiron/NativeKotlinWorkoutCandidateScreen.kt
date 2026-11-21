@@ -229,6 +229,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     var levelMachineId by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var levelWeight by rememberSaveable(workoutId){mutableStateOf("")}
     var levelReps by rememberSaveable(workoutId){mutableIntStateOf(0)}
+    var levelSetKeys by rememberSaveable(workoutId) { mutableStateOf(emptyList<String>()) }
     var levelVersion by rememberSaveable(workoutId){mutableIntStateOf(0)}
     val currentEditors=rememberSaveable(workoutId,
         saver=currentWorkoutEditorSaver) {
@@ -737,6 +738,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                             !machineChoices.busy && workingSets.any{!it.isResolved}) {
                             levelExerciseId=exerciseId
                             levelMachineId=currentMachine
+                            levelSetKeys=candidate.eligibleSetKeys
                             levelWeight=candidate.roundedLoad
                                 .stripTrailingZeros().toPlainString()
                             levelReps=candidate.averageReps
@@ -829,6 +831,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                                 !machineChoices.busy && unfinished.isNotEmpty()) {
                                 levelExerciseId=exerciseId
                                 levelMachineId=currentMachine
+                                levelSetKeys=unfinished.map { it.target.setKey }
                                 levelWeight=prior.proposedStraightSetLoad
                                     .stripTrailingZeros().toPlainString()
                                 levelReps=prior.repsPerSet
@@ -955,12 +958,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         set.target.exerciseId==levelExerciseId &&
                         recordedMachineId==levelMachineId &&
                         levelWeight.isNotBlank() && levelReps>0 &&
-                        kotlinWorkingLoadEntered((currentEditors[levelEditorKey(
-                            set.target.setKey,recordedMachineId)]?.weight
-                            ?:initialMachineScopedLoad(
-                                set.target.load,null,recordedMachineId))
-                            .toBigDecimalOrNull(),
-                            (set.target.load as? DraftSetLoad.Verified)?.basis))
+                        set.target.setKey in levelSetKeys)
                         CurrentWorkoutLevelingDraft(levelVersion,levelWeight,levelReps)
                     else null,
                     position=allSets.filter{it.target.exerciseId==set.target.exerciseId &&

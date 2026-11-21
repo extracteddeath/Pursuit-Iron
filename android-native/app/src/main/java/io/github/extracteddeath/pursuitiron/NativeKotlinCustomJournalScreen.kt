@@ -1255,15 +1255,27 @@ internal fun NativeKotlinCustomJournalScreen(
                                 followKeys.filter{activeFocus==null || it==activeFocus}
                                     .forEach { followKey ->
                                 val follower=current.effectiveVisits[followKey]
+                                val precedingDrop=if(followKey.stage>1 &&
+                                    set.prescription.amplifier?.kind==
+                                        CustomAmplifierKind.DROP_SET)
+                                    current.effectiveVisits[CustomWorkoutVisitKey(
+                                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,
+                                        followKey.stage-1)]
+                                else null
                                 editorStates.SaveableStateProvider(
                                     "follow:${set.setKey}:stage:${followKey.stage}:activation:"+
-                                        (observed?.appliedRevision ?: "none")) {
+                                        (observed?.appliedRevision ?: "none")+
+                                        ":previous:"+
+                                        (precedingDrop?.appliedRevision ?: "none")) {
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     stageOrdinal=followKey.stage,
                                     stageTotal=set.prescription.amplifier?.followUpRounds ?:1,
                                     activationPerformed=main?.performed,
                                     activationReceiptRevision=observed?.appliedRevision,
+                                    precedingDropPerformed=(precedingDrop?.operation as?
+                                        CustomWorkoutJournalOperation.Record)?.performed,
+                                    precedingDropReceiptRevision=precedingDrop?.appliedRevision,
                                     existing=follower,locked=busy||finished||!machineChoices.ready||machineChoices.busy,
                                     saving=busy,saveError=error,
                                     machineInstanceId=if(follower!=null)
@@ -1754,6 +1766,8 @@ private fun NativeKotlinCustomVisitEditor(
     stageTotal:Int=1,
     activationPerformed:KotlinPerformedSet?=null,
     activationReceiptRevision:Long?=null,
+    precedingDropPerformed:KotlinPerformedSet?=null,
+    precedingDropReceiptRevision:Long?=null,
     amplifierSummary:CustomAmplifierSetSummary?=null,
     plannedLoadNote:String?=null
 ) {
@@ -1801,7 +1815,9 @@ private fun NativeKotlinCustomVisitEditor(
     // under the new activation weight or silently overwrite a typed value.
     val visitDraftIdentity=part.name+":stage:"+stageOrdinal+
         (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
-            ":activation:"+(activationReceiptRevision?.toString() ?: "none")
+            ":activation:"+(activationReceiptRevision?.toString() ?: "none")+
+                ":previous-drop:"+
+                (precedingDropReceiptRevision?.toString() ?: "none")
         else "")
     val draftIdentity=NativePendingWorkoutDraftIdentity.make(
         athleteId,workoutId,issuedGymId.orEmpty(),exerciseId,
@@ -1815,7 +1831,7 @@ private fun NativeKotlinCustomVisitEditor(
         follower!=null && saved==null)
         AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
             follower,prescription.load,activationPerformed,machineInstanceId,
-            stageOrdinal)
+            stageOrdinal,precedingDropPerformed)
     else null
     val startingLoad=when(followUpEntryLoad) {
         is AmplifierFollowUpEntryLoad.RecordedActivation ->

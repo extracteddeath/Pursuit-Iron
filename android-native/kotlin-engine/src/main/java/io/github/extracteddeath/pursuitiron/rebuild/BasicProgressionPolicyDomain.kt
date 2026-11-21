@@ -187,13 +187,9 @@ object BasicProgressionPolicyDomain {
         if (request.strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION) {
             val targets = request.issuedRepTargets
                 ?: return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
-            if (targets.size != loads.size ||
-                targets.any { it !in request.repBand.minimum..request.repBand.maximum })
-                return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
-            val proposed = targets.mapIndexed { i, target ->
-                if (facts[i].actualReps!! >= target && target < request.repBand.maximum)
-                    target + 1 else target
-            }
+            val proposed = BasicRepTargetStepDomain.advance(
+                targets,facts.map {it.actualReps!!},request.repBand)
+                ?:return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
             val changed = targets.indices.filter { proposed[it] != targets[it] }.toSet()
             return candidate(loads, emptySet(),
                 if (changed.isEmpty()) BasicProgressionDecision.BUILD_REPS

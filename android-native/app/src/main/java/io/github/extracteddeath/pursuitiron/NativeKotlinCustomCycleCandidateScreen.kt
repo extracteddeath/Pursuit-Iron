@@ -441,7 +441,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         current,block.blockId,day.weekday)
                 },
                 machineReview=planMachineReview,
-                onManageMachine=onManagePhysicalMachine)
+                onManageMachine=onManagePhysicalMachine,
+                enableProgressionEditing=true,
+                onProgressionChoice={slotId,method->
+                    controller.chooseExerciseProgression(
+                        block.blockId,day.weekday,slotId,method)
+                })
         }
     }
     val renderNavigator:@Composable (Boolean)->Unit={wide->

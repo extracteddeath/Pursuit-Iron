@@ -20,8 +20,8 @@ import java.util.Collections
  */
 internal object NativeKotlinCustomWorkoutSnapshotCodec {
     private const val MAGIC=0x50494357 // PICW
-    private const val VERSION=6
-    private const val SLOT_V3_MAGIC=0x50495333 // PIS3
+    private const val VERSION=7
+    private const val SLOT_MAGIC=0x50495333 // PIS3
     const val MAX_BYTES=256_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val labelLimit=2000
@@ -37,9 +37,6 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             ?:throw IOException("unknown custom workout enum")
     }
     private fun DataOutputStream.kind(value:Enum<*>)=writeUTF(value.name)
-    private fun DataOutputStream.decimal(value:BigDecimal)=
-        writeUTF(value.toPlainString())
-    private fun DataInputStream.decimal()=BigDecimal(readUTF())
     private fun DataOutputStream.optional(value:String?) {
         writeBoolean(value!=null)
         if(value!=null)writeUTF(value)
@@ -52,65 +49,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
     }
     private fun DataInputStream.optionalInt():Int?=
         if(readBoolean())readInt() else null
-    private fun DataOutputStream.load(value:DraftSetLoad) {
-        when(value) {
-            DraftSetLoad.ExplicitBodyweight->writeByte(0)
-            is DraftSetLoad.Verified -> {
-                writeByte(1)
-                kind(value.unit)
-                kind(value.basis)
-                decimal(value.value)
-            }
-        }
-    }
-    private fun DataInputStream.load():DraftSetLoad=when(readUnsignedByte()) {
-        0->DraftSetLoad.ExplicitBodyweight
-        1->DraftSetLoad.Verified(kind(),kind(),decimal())
-        else->throw IOException("unknown authored load")
-    }
-    private fun DataOutputStream.authored(set:CustomAuthoredSet,version:Int) {
-        kind(set.type)
-        load(set.load)
-        writeInt(set.reps.minimum)
-        writeInt(set.reps.maximum)
-        optionalInt(set.targetRir)
-        writeInt(set.activeSeconds)
-        writeInt(set.restSeconds)
-        writeBoolean(set.amplifier!=null)
-        set.amplifier?.let{ amp ->
-            kind(amp.kind)
-            writeInt(amp.followUpReps)
-            writeInt(amp.followUpRestSeconds)
-            writeBoolean(amp.followUpLoad!=null)
-            amp.followUpLoad?.let { load(it) }
-            if(version>=3)optionalInt(amp.followUpActiveSeconds)
-            if(version>=5)writeInt(amp.followUpRounds)
-            if(version>=6) {
-                writeBoolean(amp.secondDropLoad!=null)
-                amp.secondDropLoad?.let{load(it)}
-            }
-        }
-    }
-    private fun DataInputStream.authored(version:Int):CustomAuthoredSet {
-        val type=kind<DraftSetType>()
-        val load=load()
-        val reps=RepBand(readInt(),readInt())
-        val rir=optionalInt()
-        val active=readInt()
-        val rest=readInt()
-        val amp=if(readBoolean()) {
-            val type=kind<CustomAmplifierKind>()
-            val reps=readInt()
-            val rest=readInt()
-            val follow=if(readBoolean())load() else null
-            CustomSetAmplifier(type,reps,rest,follow,
-                if(version>=3)optionalInt() else null,
-                if(version>=5)readInt() else 1,
-                if(version>=6 && readBoolean())load() else null)
-        } else null
-        return CustomAuthoredSet(type,load,reps,rir,active,rest,amp)
-    }
-    private fun DataOutputStream.slot(slot:CustomWorkoutSlotSnapshot,version:Int) {
+    private fun DataOutputStream.slot(slot:CustomWorkoutSlotSnapshot) {
         writeUTF(slot.slotId)
         writeUTF(slot.exerciseId)
         writeUTF(slot.familyId)
@@ -125,11 +64,11 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             writeUTF(set.setKey)
             writeUTF(set.slotId)
             writeInt(set.ordinalInSlot)
-            authored(set.prescription,version)
+            NativeAuthoredSetCodec.write(this, set.prescription)
         }
-        if(version>=4)optional(slot.machineInstanceId)
+        optional(slot.machineInstanceId)
     }
-    private fun DataInputStream.slot(version:Int):CustomWorkoutSlotSnapshot {
+    private fun DataInputStream.slot():CustomWorkoutSlotSnapshot {
         val slotId=readUTF()
         val exerciseId=readUTF()
         val familyId=readUTF()
@@ -142,42 +81,27 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         val count=readInt()
         if(count !in 1..20)throw IOException("invalid swap slot set count")
         val sets=List(count) {
-            CustomWorkoutSetSnapshot(readUTF(),readUTF(),readInt(),authored(version))
+            CustomWorkoutSetSnapshot(readUTF(),readUTF(),readInt(),NativeAuthoredSetCodec.read(this))
         }
-        val machine=if(version>=4)optional() else null
+        val machine=optional()
         return CustomWorkoutSlotSnapshot(slotId,exerciseId,familyId,
             variantId,role,attachment,group,pinned,note,
             Collections.unmodifiableList(sets),machine)
     }
-    /** Legacy journal Swap payloads remain unframed. Timed amplifiers use
-     * an explicit v3 frame for exact ACTIVE follow-up seconds on cold replay. */
     internal fun encodeSlot(value:CustomWorkoutSlotSnapshot):ByteArray =
         ByteArrayOutputStream().also{bytes->
             DataOutputStream(bytes).use { out->
-                val timed=value.sets.any {
-                    it.prescription.amplifier?.followUpActiveSeconds!=null
-                }
-                val version=if(value.sets.any{
-                    it.prescription.amplifier?.secondDropLoad!=null
-                })VERSION else if(value.sets.any{
-                    it.prescription.amplifier?.followUpRounds?.let{n->n>1}==true
-                })5 else if(value.machineInstanceId!=null)4
-                    else if(timed)3 else 1
-                if(version>1){out.writeInt(SLOT_V3_MAGIC);out.writeInt(version)}
-                out.slot(value,version)
+                out.writeInt(SLOT_MAGIC)
+                out.writeInt(VERSION)
+                out.slot(value)
             }
         }.toByteArray().also { require(it.size in 24..MAX_BYTES) }
     internal fun decodeSlot(bytes:ByteArray):CustomWorkoutSlotSnapshot {
         if(bytes.size !in 24..MAX_BYTES)throw IOException("invalid swap slot size")
         return DataInputStream(ByteArrayInputStream(bytes)).use { input->
-            input.mark(8)
-            val framed=input.readInt()==SLOT_V3_MAGIC
-            val version=if(framed)input.readInt() else {
-                input.reset();1
-            }
-            if(version !in listOf(1,3,4,5,VERSION))
+            if (input.readInt() != SLOT_MAGIC || input.readInt() != VERSION)
                 throw IOException("unsupported swap slot version")
-            val slot=input.slot(version)
+            val slot=input.slot()
             if(input.available()!=0)throw IOException("trailing swap slot bytes")
             slot
         }
@@ -319,16 +243,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         validate(snapshot)
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use{out->
-            val version=if(snapshot.slots.any{slot->slot.sets.any{
-                    it.prescription.amplifier?.secondDropLoad!=null
-                }})VERSION else if(snapshot.slots.any{slot->slot.sets.any{
-                    it.prescription.amplifier?.followUpRounds?.let{n->n>1}==true
-                }})5 else if(snapshot.slots.any{
-                    it.machineInstanceId!=null
-                })4 else if(snapshot.slots.any{slot->slot.sets.any{
-                    it.prescription.amplifier?.followUpActiveSeconds!=null
-                }})3 else if(snapshot.shortSessionLimitMinutes!=null)2 else 1
-            out.writeInt(MAGIC);out.writeInt(version)
+            out.writeInt(MAGIC)
+            out.writeInt(VERSION)
             val stamp=snapshot.stamp
             out.writeUTF(stamp.athleteId)
             out.writeUTF(stamp.athleteProfileRevision)
@@ -348,14 +264,10 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             out.writeLong(snapshot.knownSetAndRestSeconds)
             out.optionalInt(snapshot.declaredNonSetSeconds)
             out.writeInt(snapshot.slots.size)
-            snapshot.slots.forEach {out.slot(it,version)}
-            // Keep every historical full custom snapshot byte-identical.
-            if(version>=2) {
-                if(version>=3)out.optionalInt(snapshot.shortSessionLimitMinutes)
-                else out.writeInt(checkNotNull(snapshot.shortSessionLimitMinutes))
-                out.writeInt(snapshot.shortSessionOmittedSetKeys.size)
-                snapshot.shortSessionOmittedSetKeys.forEach(out::writeUTF)
-            }
+            snapshot.slots.forEach {out.slot(it)}
+            out.optionalInt(snapshot.shortSessionLimitMinutes)
+            out.writeInt(snapshot.shortSessionOmittedSetKeys.size)
+            snapshot.shortSessionOmittedSetKeys.forEach(out::writeUTF)
         }
         return output.toByteArray().also {
             require(it.size in 16..MAX_BYTES)
@@ -367,8 +279,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             DataInputStream(ByteArrayInputStream(bytes)).use{input->
                 if(input.readInt()!=MAGIC)
                     throw IOException("unsupported custom session magic")
-                val version=input.readInt()
-                if(version !in 1..VERSION)
+                if (input.readInt() != VERSION)
                     throw IOException("unsupported custom session snapshot")
                 val stamp=CustomWorkoutSourceStamp(
                     input.readUTF(),input.readUTF(),input.readUTF(),
@@ -388,23 +299,17 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 if(size !in 1..MAX_SLOTS)throw IOException("invalid number of slots")
                 var totalSets=0
                 val slots=List(size) {
-                    input.slot(version).also {slot->
+                    input.slot().also {slot->
                         totalSets+=slot.sets.size
                         if(totalSets>MAX_TARGETS)
                             throw IOException("invalid set count")
                     }
                 }
-                val timeLimit=when(version){
-                    in 3..VERSION->input.optionalInt()
-                    2->input.readInt()
-                    else->null
-                }
-                val omissions=if(version>=2){
-                    val count=input.readInt()
-                    if(count !in 0..MAX_TARGETS)
-                        throw IOException("invalid custom omission count")
-                    Collections.unmodifiableList(List(count){input.readUTF()})
-                } else emptyList()
+                val timeLimit = input.optionalInt()
+                val count = input.readInt()
+                if (count !in 0..MAX_TARGETS)
+                    throw IOException("invalid custom omission count")
+                val omissions = Collections.unmodifiableList(List(count) { input.readUTF() })
                 if(input.available()!=0)
                     throw IOException("trailing custom snapshot data")
                 CustomWorkoutDaySnapshot(stamp,absoluteWeek,inBlock,blockId,

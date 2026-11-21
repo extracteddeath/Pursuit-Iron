@@ -6,7 +6,6 @@ import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
-import java.math.BigDecimal
 import java.util.Collections
 
 /**
@@ -34,12 +33,6 @@ internal object NativeCustomCycleDraftCodec {
     }
     private fun DataInputStream.optionalString(): String? =
         if (readBoolean()) readUTF() else null
-    private fun DataOutputStream.optionalInt(value: Int?) {
-        writeBoolean(value != null)
-        if (value != null) writeInt(value)
-    }
-    private fun DataInputStream.optionalInt(): Int? =
-        if (readBoolean()) readInt() else null
     private fun <T> DataOutputStream.items(values: Collection<T>, put: (T) -> Unit) {
         writeInt(values.size)
         values.forEach(put)
@@ -49,69 +42,11 @@ internal object NativeCustomCycleDraftCodec {
         if (length !in 0..max) throw IOException("Custom draft collection bound")
         return Collections.unmodifiableList(List(length) { get() })
     }
-    private fun DataOutputStream.load(value: DraftSetLoad) {
-        when (value) {
-            DraftSetLoad.ExplicitBodyweight -> writeByte(0)
-            is DraftSetLoad.Verified -> {
-                writeByte(1)
-                enum(value.unit)
-                enum(value.basis)
-                writeUTF(value.value.toPlainString())
-            }
-        }
-    }
-    private fun DataInputStream.load(): DraftSetLoad = when (readUnsignedByte()) {
-        0 -> DraftSetLoad.ExplicitBodyweight
-        1 -> DraftSetLoad.Verified(
-            enum<LoadUnit>(), enum<LoadBasis>(), BigDecimal(readUTF()))
-        else -> throw IOException("Unknown custom load kind")
-    }
-    private fun DataOutputStream.set(value: CustomAuthoredSet) {
-        enum(value.type)
-        load(value.load)
-        writeInt(value.reps.minimum)
-        writeInt(value.reps.maximum)
-        optionalInt(value.targetRir)
-        writeInt(value.activeSeconds)
-        writeInt(value.restSeconds)
-        val amplifier = value.amplifier
-        writeBoolean(amplifier != null)
-        if (amplifier != null) {
-            enum(amplifier.kind)
-            writeInt(amplifier.followUpReps)
-            writeInt(amplifier.followUpRestSeconds)
-            writeBoolean(amplifier.followUpLoad != null)
-            amplifier.followUpLoad?.let { load(it) }
-            optionalInt(amplifier.followUpActiveSeconds)
-            writeInt(amplifier.followUpRounds)
-            writeBoolean(amplifier.secondDropLoad != null)
-            amplifier.secondDropLoad?.let { load(it) }
-        }
-    }
-    private fun DataInputStream.set(): CustomAuthoredSet {
-        val type = enum<DraftSetType>()
-        val weight = load()
-        val reps = RepBand(readInt(), readInt())
-        val rir = optionalInt()
-        val active = readInt()
-        val rest = readInt()
-        val amplifier = if (readBoolean()) {
-            val kind = enum<CustomAmplifierKind>()
-            val repsExtra = readInt()
-            val restExtra = readInt()
-            val nextLoad=if(readBoolean())load() else null
-            CustomSetAmplifier(kind,repsExtra,restExtra,nextLoad,
-                optionalInt(),
-                readInt(),
-                if(readBoolean())load() else null)
-        } else null
-        return CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier)
-    }
     private fun DataOutputStream.slot(value: CustomExerciseSlot) {
         writeUTF(value.slotId)
         writeUTF(value.exerciseId)
         enum(value.role)
-        items(value.sets) { set(it) }
+        items(value.sets) { NativeAuthoredSetCodec.write(this, it) }
         optionalString(value.attachmentId)
         optionalString(value.supersetGroup)
         writeBoolean(value.pinned)
@@ -122,7 +57,7 @@ internal object NativeCustomCycleDraftCodec {
     }
     private fun DataInputStream.slot(): CustomExerciseSlot =
         CustomExerciseSlot(readUTF(), readUTF(), enum<ComposerRole>(),
-            items(20) { set() }, optionalString(), optionalString(),
+            items(20) { NativeAuthoredSetCodec.read(this) }, optionalString(), optionalString(),
             readBoolean(), readUTF(),
             optionalString(),
             if(readBoolean())
@@ -172,10 +107,10 @@ internal object NativeCustomCycleDraftCodec {
         writeInt(value.weekInBlock)
         writeInt(value.weekday)
         writeUTF(value.slotId)
-        items(value.sets) { set(it) }
+        items(value.sets) { NativeAuthoredSetCodec.write(this, it) }
     }
     private fun DataInputStream.readOverride(): CustomWeekSlotOverride =
-        CustomWeekSlotOverride(readInt(), readInt(), readUTF(), items(20) { set() })
+        CustomWeekSlotOverride(readInt(), readInt(), readUTF(), items(20) { NativeAuthoredSetCodec.read(this) })
 
     /**
      * Structural bounds only. Coach/equipment approval is ALWAYS a separate

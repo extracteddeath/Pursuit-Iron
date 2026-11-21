@@ -82,9 +82,9 @@ class NativeKotlinCustomMachineBindingPolicyTest {
         assertArrayEquals(unboundBytes,NativeCustomCycleDraftCodec.encode(old))
 
         val original=NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot())
-        assertEquals(1,original[7].toInt())
+        assertEquals(7,original[7].toInt())
         val machine=NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot("A"))
-        assertEquals(4,machine[7].toInt())
+        assertEquals(7,machine[7].toInt())
         assertEquals(snapshot("A"),
             NativeKotlinCustomWorkoutSnapshotCodec.decode(machine))
         assertArrayEquals(machine,NativeKotlinCustomWorkoutSnapshotCodec.encode(

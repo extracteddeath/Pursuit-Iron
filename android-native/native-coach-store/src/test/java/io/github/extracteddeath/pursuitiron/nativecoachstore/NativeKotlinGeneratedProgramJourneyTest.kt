@@ -931,6 +931,43 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(0,complete.customUnfinished)
     }
 
+    @Test fun basicAndCoachedReadersRejectCorruptMachineRosterWithoutFallback() {
+        val (cycle,inputs)=saveGenerated()
+        val disk=Disk()
+        val day=cycle.blocks.single().days.first()
+        val slot=day.slots.first()
+        val basic=NativeKotlinCustomBasicNextReview(
+            disk.fence,identity,disk.drafts,disk.sources,disk.preflight,
+            disk.timeline,disk.journals,disk.machines)
+        val clean=basic.reviewAuthored(owner,cycleId,inputs,
+            1,day.weekday,slot.slotId,"first-basic-review",n("5"))
+        assertTrue(clean.toString(),
+            clean is NativeCustomBasicNextReadResult.Reviewed)
+        assertTrue(disk.machines.save(owner,0,emptyList())
+            is NativeMachineRosterResult.Saved)
+        val path=java.nio.file.Files.list(disk.root).use{stream->
+            stream.filter{
+                it.fileName.toString().startsWith("machine-roster-") &&
+                    it.fileName.toString().endsWith(".bin")
+            }.findFirst().orElseThrow()
+        }
+        val damaged=java.nio.file.Files.readAllBytes(path)
+        damaged[damaged.lastIndex]=(damaged.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(path,damaged)
+        assertEquals(NativeCustomBasicNextReadResult.Rejected(
+            NativeCustomBasicNextRefusal.MACHINE_ROSTER_UNAVAILABLE),
+            basic.reviewAuthored(owner,cycleId,inputs,1,day.weekday,
+                slot.slotId,"first-basic-review",n("5")))
+        val coach=NativeKotlinCustomNextWorkoutReview(
+            disk.fence,identity,null,null,disk.sources,disk.timeline,
+            disk.journals,null,disk.preflight,disk.machines)
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE),
+            coach.reviewAuthored(owner,cycleId,inputs,1,day.weekday,
+                slot.slotId,CoachReadiness.NORMAL,false,n("5")))
+        assertArrayEquals(damaged,java.nio.file.Files.readAllBytes(path))
+    }
+
     @Test fun finishedGeneratedWorkoutWithWarmupsProvidesRealV2CoachingEvidence() {
         val (cycle,inputs)=saveGenerated()
         val day=cycle.blocks.single().days.minBy {it.weekday}
@@ -1056,6 +1093,44 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertTrue(actualCoach.historyRevision>0)
         assertTrue(actualCoach.approvedConsentRevision>0)
         assertFalse(actualCoach.mayIssueWorkout)
+        // Basic progression is a separate read-only owner-fenced path.
+        // It is computed from the same signed next day and every verified
+        // saved receipt, not from displayed Last or UI-supplied observations.
+        val savedDay=cycle.blocks.single().days.single{it.weekday==day.weekday}
+        val basicSlot=checkNotNull(savedDay.slots.firstOrNull{slot->
+            slot.progressionMethod in setOf(
+                SavedProgressionMethod.DOUBLE, SavedProgressionMethod.DYNAMIC,
+                SavedProgressionMethod.LINEAR, SavedProgressionMethod.AUTO) &&
+                slot.sets.filter{it.type==DraftSetType.WORKING}.let{working->
+                    working.isNotEmpty() &&
+                        working.all{it.load is DraftSetLoad.Verified &&
+                            it.amplifier==null}
+                }
+        })
+        val basicOwner=NativeKotlinCustomBasicNextReview(
+            disk.fence,identity,disk.drafts,disk.sources,disk.preflight,
+            disk.timeline,disk.journals,disk.machines)
+        val basicRead=basicOwner.reviewAuthored(
+            owner,cycleId,inputs,2,day.weekday,basicSlot.slotId,
+            "generated-next-basic-2",n("5"))
+        assertTrue(basicRead.toString(),
+            basicRead is NativeCustomBasicNextReadResult.Reviewed)
+        val basicVerified=basicRead as NativeCustomBasicNextReadResult.Reviewed
+        assertEquals(next,basicVerified.next)
+        assertTrue(basicVerified.historyRevision>0)
+        assertTrue(basicVerified.approvedConsentRevision>0)
+        val basicProjection=basicVerified.projection
+        assertTrue(basicProjection.toString(),
+            basicProjection is CustomBasicHistoryResult.Reviewed)
+        val recommended=basicProjection as CustomBasicHistoryResult.Reviewed
+        assertEquals(workoutId,recommended.historyWorkoutId)
+        assertEquals(basicSlot.slotId,recommended.slotId)
+        assertFalse(recommended.mayIssueWorkout)
+        assertFalse(basicVerified.maySaveProgram)
+        assertEquals(NativeCustomBasicNextReadResult.Rejected(
+            NativeCustomBasicNextRefusal.INVALID_SCOPE),
+            basicOwner.reviewAuthored(owner,cycleId,inputs,2,day.weekday,
+                basicSlot.slotId,workoutId,n("5")))
         val safer=ownerCoach.reviewAuthored(owner,cycleId,inputs,
             2,day.weekday,selected.slotId,CoachReadiness.NORMAL,false,n("5"),
             CustomRepForecastPolicy.TARGET_RIR_TREND_V3)
@@ -1111,6 +1186,16 @@ class NativeKotlinGeneratedProgramJourneyTest {
         val manualSave=disk.settings.save(owner,1,
             CoachAssistancePolicy.MANUAL)
         assertTrue(manualSave.toString(),manualSave is NativeCoachSettingsWrite.Saved)
+        // Manual coaching opt-out must not disable the athlete's independent
+        // basic logging/progression selection or rewrite its source numbers.
+        val basicWhileManual=basicOwner.reviewAuthored(
+            owner,cycleId,inputs,2,day.weekday,basicSlot.slotId,
+            "generated-next-basic-manual",n("5"))
+        assertTrue(basicWhileManual.toString(),
+            basicWhileManual is NativeCustomBasicNextReadResult.Reviewed)
+        assertEquals(basicProjection,
+            (basicWhileManual as NativeCustomBasicNextReadResult.Reviewed)
+                .projection)
         assertEquals(NativeCustomNextCoachResult.Rejected(
             NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED),
             settingsCoach.reviewAuthored(owner,cycleId,inputs,

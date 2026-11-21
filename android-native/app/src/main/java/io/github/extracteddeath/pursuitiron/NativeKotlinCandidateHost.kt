@@ -188,6 +188,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
         customIssuedStore,coachSettings,customWorkoutPreflight,machineRosters)
+    // Basic logging/progression is independent of opt-in fatigue coaching.
+    // This is only a verified read; it cannot prepare, issue or save a set.
+    private val customBasicNextReview=NativeKotlinCustomBasicNextReview(
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customWorkoutPreflight,mixedHistoryReader,customIssuedStore,
+        machineRosters)
     private val ownerFutureWeekProposals=NativeKotlinReviewedFutureWeekProposal(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs,adaptiveCyclePermissions,coachSettings,
@@ -1914,6 +1920,22 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customNextWorkoutCoach.reviewAuthored(signed.ownerKey,cycleId,
             inputs,nextAbsoluteWeek,nextWeekday,slotId,readiness,
             movementRestricted,maximumAuthorizedIncrease,repForecastPolicy)
+    }
+
+    /** Source-authenticated basic progression preview for the saved custom
+     * method. Works even when optional coaching is turned off. A candidate is
+     * never an edited prescription or an issuance grant. */
+    fun reviewNextAuthoredBasicProgression(
+        cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,nextWorkoutId:String,
+        maximumAuthorizedIncrement:java.math.BigDecimal
+    ):NativeCustomBasicNextReadResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeCustomBasicNextReadResult.Rejected(
+                NativeCustomBasicNextRefusal.NOT_AUTHORIZED)
+        return customBasicNextReview.reviewAuthored(
+            signed.ownerKey,cycleId,inputs,nextAbsoluteWeek,nextWeekday,
+            slotId,nextWorkoutId,maximumAuthorizedIncrement)
     }
 
     /**

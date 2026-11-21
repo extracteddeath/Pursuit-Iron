@@ -288,6 +288,45 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertFalse(receipt.mayAlterHistory)
     }
 
+    @Test fun exactRepTargetIsPartOfSignedProgramIdentityNotAnUnreviewedLabel() {
+        initialize()
+        val original=cycle()
+        val changed=original.copy(blocks=original.blocks.map{block ->
+            block.copy(days=block.days.map{day ->
+                day.copy(slots=day.slots.map{slot ->
+                    slot.copy(sets=slot.sets.map{set ->
+                        if(set.type==DraftSetType.WORKING)
+                            set.copy(exactRepTarget=12)
+                        else set
+                    })
+                })
+            })
+        })
+        // Compare the SAME cycle revision and source: a change to an exact
+        // rep target alone must alter the signed source fingerprint. A
+        // previous consent must not authorize an edited workout by accident.
+        val baseline=NativeCustomCycleSignoffFingerprint.calculate(
+            original,source(),inputs())
+        val retargeted=NativeCustomCycleSignoffFingerprint.calculate(
+            changed,source(),inputs())
+        assertNotEquals(baseline,retargeted)
+        assertEquals(64,retargeted.length)
+        assertNotEquals(NativeCustomCycleDraftCodec.encode(original).toList(),
+            NativeCustomCycleDraftCodec.encode(changed).toList())
+        val receipt=approved()
+        assertEquals(baseline,receipt.fingerprintSha256)
+        val newCycle=changed.copy(revision=2)
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            drafts.save("owner-1","cycle-1",1,newCycle))
+        assertEquals(NativeCustomSignoffRead.Found(receipt,false),
+            store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeCustomSavedCoachReview.Rejected(
+            NativeCustomSignoffRefusal.STALE_PROGRAM),
+            store().recoverReviewedInputs("owner-1","cycle-1"))
+        assertEquals(newCycle,(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+    }
+
     @Test fun savedCustomRulesColdRecoverInManualModeAndCannotBeMutated() {
         initialize()
         val supplied=inputs()

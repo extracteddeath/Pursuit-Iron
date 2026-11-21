@@ -74,14 +74,21 @@ object GeneratedStrengthDoseRecoveryDomain {
                 slot.sets.count{it.type==DraftSetType.WORKING}
             }
         }.toMutableMap()
-        val daySeconds=block.days.associate{day ->
-            day.weekday to (
-                nonSetSecondsByWeekday.getValue(day.weekday).toLong()+
-                    day.slots.sumOf{slot->slot.sets.sumOf{set ->
-                        set.activeSeconds.toLong()+set.restSeconds.toLong()
-                    }}
-                )
-        }.toMutableMap()
+        // Use the same exact stage-active/rest accounting as cycle Preview,
+        // full-cycle coaching, short-session review and durable Swap/Undo.
+        // An unmeasured amplifier cannot prove a hard time cap even if the
+        // ordinary strength sets look short enough.
+        val daySeconds=linkedMapOf<Int,Long>()
+        for(day in block.days) {
+            val sets=day.slots.flatMap{it.sets}
+            if(sets.any{it.amplifier!=null &&
+                    it.amplifier.followUpActiveSeconds==null})
+                return refuse("Advanced-set active work is not measured; a reviewed session limit cannot be established.")
+            val known=CustomWorkoutTimingDomain.totalSeconds(sets)
+                ?:return refuse("The source has invalid or unbounded authored set and amplifier timing.")
+            daySeconds[day.weekday]=
+                nonSetSecondsByWeekday.getValue(day.weekday).toLong()+known
+        }
         val credits=mutableMapOf<TrainingMuscle,BigDecimal>()
         for(day in block.days)for(slot in day.slots) {
             val movement=catalogById[slot.exerciseId]
@@ -140,8 +147,8 @@ object GeneratedStrengthDoseRecoveryDomain {
                         slot.sets.size>=20 || one?.targetRir==null ||
                         work.any{it!=one || it.amplifier!=null})
                         return@mapNotNull null
-                    val cost=one.activeSeconds.toLong()+
-                        one.restSeconds.toLong()
+                    val cost=CustomWorkoutTimingDomain.setSeconds(one)
+                        ?:return@mapNotNull null
                     val maxSeconds=maximumSessionMinutes?.times(60L)
                     if(maxSeconds!=null &&
                         (daySeconds[day.weekday] ?:Long.MAX_VALUE)+cost>
@@ -172,7 +179,7 @@ object GeneratedStrengthDoseRecoveryDomain {
             })
             dayCount[next.weekday]=checkNotNull(dayCount[next.weekday])+1
             daySeconds[next.weekday]=checkNotNull(daySeconds[next.weekday])+
-                set.activeSeconds.toLong()+set.restSeconds.toLong()
+                checkNotNull(CustomWorkoutTimingDomain.setSeconds(set))
             for(credit in movement.credits)
                 credits[credit.muscle]=(credits[credit.muscle] ?:zero)
                     .add(credit.fractionalSet)

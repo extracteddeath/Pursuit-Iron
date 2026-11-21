@@ -227,4 +227,37 @@ class KotlinSetNumberAuthorityDomainTest {
         assertFalse(generatedHistory.evidence.canApplyProgression)
         assertFalse(customHistory.evidence.canApplyProgression)
     }
+
+    @Test fun futureProposalsAndPerformedSetsShareExactlyOnePhysicalWeightEnvelope() {
+        // Numeric format (not history, consent, increment stock or effort)
+        // must be identical across the present and future number policies.
+        val permitted=listOf("0","0.0000","0.001","12.1000",
+            "100.0010","99999.999","100000.0000","1E+3")
+        val refused=listOf("-0.001","0.0001","12.1001",
+            "99999.9991","100000.001","100001","1E-4")
+        for(text in permitted) {
+            val value=n(text)
+            assertTrue("Valid physical weight: $text",
+                KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value))
+            assertTrue("Valid completed physical observation: $text",
+                KotlinSetNumberAuthorityDomain.valid(load("215"),
+                    KotlinJournalSetOutcome.COMPLETED,
+                    actual(text)))
+        }
+        for(text in refused) {
+            val value=n(text)
+            assertFalse("Invalid physical weight: $text",
+                KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value))
+            assertFalse("Invalid completed physical observation: $text",
+                KotlinSetNumberAuthorityDomain.valid(load("215"),
+                    KotlinJournalSetOutcome.COMPLETED,actual(text)))
+        }
+        // This envelope is shared, but an accepted performed set never
+        // creates automatic permission to issue any new weight.
+        val recorded=KotlinSetNumberAuthorityDomain.review(load(),
+            KotlinJournalSetOutcome.COMPLETED,actual("100000.0000"))
+            as KotlinSetNumberReview.Accepted
+        assertFalse(recorded.fact.mayModifyIssuedTarget)
+        assertFalse(recorded.fact.mayChangeFutureProgram)
+    }
 }

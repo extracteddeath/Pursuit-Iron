@@ -1501,6 +1501,19 @@ internal class NativeKotlinCustomCycleController(
             draft,draft.revision,blockId,weekday,order)
     }
 
+    /**
+     * Athlete-owned progression change: the existing CAS writer, undo
+     * receipt and consent invalidation apply exactly as for any set edit.
+     * Never changes historical loads or an already issued workout.
+     */
+    fun chooseExerciseProgression(
+        blockId:String,weekday:Int,slotId:String,
+        method:SavedProgressionMethod?
+    ) = edit {draft->
+        CustomCycleBuilderDomain.setProgressionMethod(
+            draft,draft.revision,blockId,weekday,slotId,method)
+    }
+
     fun editReviewedExerciseSets(
         blockId: String, weekday: Int, slotId: String,
         sets: List<CustomAuthoredSet>

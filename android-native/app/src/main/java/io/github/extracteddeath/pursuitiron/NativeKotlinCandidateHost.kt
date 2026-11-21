@@ -3443,11 +3443,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 // evidence. The ONE Kotlin coaching policy must also refuse
                 // to read A's fatigue history when the workout now uses B.
                 val roster=(machineRosters.read(signed.ownerKey)
-                    as? NativeMachineRosterResult.Saved)?.snapshot
+                    as? NativeMachineRosterResult.Saved)?.snapshot ?:return@withOwnerTransaction null
                 val issuedGym=journal.originalSnapshot.source.gymId
-                val hasPhysicalStations=roster?.configurations?.any{
+                val hasPhysicalStations=roster.configurations.any{
                     it.gymId==issuedGym && it.exerciseId==selected.exerciseId && it.machines.isNotEmpty()
-                } == true
+                }
                 val selectedPhysicalMachine=if(hasPhysicalStations) {
                     val choices=(workoutMachineChoices.read(signed.ownerKey,
                         workoutId,false,issuedGym)
@@ -3460,8 +3460,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     LiveMachineCoachScope.Physical(selectedPhysicalMachine)
                 else LiveMachineCoachScope.ExerciseOnly
                 val stock:VerifiedLoadStock?=
-                    if(current?.approvedSource!=journal.snapshot.source ||
-                        roster==null) null
+                    if(current?.approvedSource!=journal.snapshot.source) null
                     else if(hasPhysicalStations) {
                         val config=KotlinMachineAlternativesDomain.forGymExercise(
                             roster.configurations,issuedGym,selected.exerciseId)

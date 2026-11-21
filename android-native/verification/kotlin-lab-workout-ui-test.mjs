@@ -802,19 +802,20 @@ assert.ok(liveCoachDomain.includes('val machineScope:LiveMachineCoachScope=') &&
 
 const physicalStockDomain=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinMachineLiveCoachingDomain.kt');
 assert.ok(generatedCoachHost.includes('val issuedGym=journal.originalSnapshot.source.gymId') &&
-  generatedCoachHost.includes('val hasPhysicalStations=roster?.configurations?.any{') &&
+  generatedCoachHost.includes('val hasPhysicalStations=roster.configurations.any{') &&
   generatedCoachHost.includes('it.gymId==issuedGym && it.exerciseId==selected.exerciseId') &&
   generatedCoachHost.includes('it.machines.isNotEmpty()') &&
   generatedCoachHost.includes('workoutMachineChoices.read(signed.ownerKey,') &&
   generatedCoachHost.includes('as? NativeWorkoutMachineChoiceResult.Saved') &&
   generatedCoachHost.includes('KotlinMachineLiveCoachingDomain.confirmedForNext(') &&
-  generatedCoachHost.includes('roster==null) null') &&
+  generatedCoachHost.includes('as? NativeMachineRosterResult.Saved)?.snapshot ?:return@withOwnerTransaction null') &&
   generatedCoachHost.includes('KotlinJournalLiveSetCoachDomain.review('),
   'Generated coaching must verify durable physical station and exact confirmed machine stack');
 const customMachineCoach=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomLiveSetCoachReview.kt');
 assert.ok(customMachineCoach.includes('private val machineRosters:NativeKotlinMachineRosterFileStore') &&
   customMachineCoach.includes('private val workoutMachineChoices:NativeKotlinWorkoutMachineChoiceFileStore') &&
   customMachineCoach.includes('machineRosters.read(ownerKey)') &&
+  customMachineCoach.includes('as? NativeMachineRosterResult.Saved)?.snapshot ?:return@withOwnerTransaction null') &&
   customMachineCoach.includes('val issuedGym=journal.originalSnapshot.stamp.gymId') &&
   customMachineCoach.includes('it.machines.isNotEmpty()') &&
   customMachineCoach.includes('workoutMachineChoices.read(ownerKey,workoutId,') &&

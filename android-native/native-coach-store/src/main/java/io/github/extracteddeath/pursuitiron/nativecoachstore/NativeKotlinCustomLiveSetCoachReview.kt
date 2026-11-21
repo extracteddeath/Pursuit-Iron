@@ -46,11 +46,11 @@ class NativeKotlinCustomLiveSetCoachReview(
             // verifies the chosen station's unique inventory, allow rep and
             // fatigue reviews but no machine-specific load change suggestion.
             val roster=(machineRosters.read(ownerKey)
-                as? NativeMachineRosterResult.Saved)?.snapshot
+                as? NativeMachineRosterResult.Saved)?.snapshot ?:return@withOwnerTransaction null
             val issuedGym=journal.originalSnapshot.stamp.gymId
-            val hasPhysicalStations=roster?.configurations?.any{
+            val hasPhysicalStations=roster.configurations.any{
                 it.gymId==issuedGym && it.exerciseId==slot.exerciseId && it.machines.isNotEmpty()
-            } == true
+            }
             // Even when source/stock is unavailable, a physical Machine B
             // may not inherit Machine A's recorded fatigue. Pass the selected
             // ID separately from stock proof to the ONE shared Kotlin policy.
@@ -65,8 +65,7 @@ class NativeKotlinCustomLiveSetCoachReview(
             val machineScope=if(hasPhysicalStations)
                 LiveMachineCoachScope.Physical(selectedPhysicalMachine)
             else LiveMachineCoachScope.ExerciseOnly
-            val stock:VerifiedLoadStock?=if(roster!=null &&
-                source?.athleteId==owner.athleteId &&
+            val stock:VerifiedLoadStock?=if(source?.athleteId==owner.athleteId &&
                 setup?.athleteProfileId==stamp.athleteId &&
                 setup.profileRevision==stamp.athleteProfileRevision &&
                 setup.gym.gymId==stamp.gymId &&

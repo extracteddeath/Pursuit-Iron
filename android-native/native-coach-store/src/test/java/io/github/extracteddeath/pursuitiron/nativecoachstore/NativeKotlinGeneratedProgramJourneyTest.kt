@@ -585,6 +585,16 @@ class NativeKotlinGeneratedProgramJourneyTest {
         assertEquals(LiveSetCoachResult.Unavailable(
             LiveSetCoachUnavailable.PHYSICAL_MACHINE_HISTORY_MISMATCH),
             look())
+        val rosterFile = java.nio.file.Files.list(Disk().root).use { files ->
+            files.filter { it.fileName.toString().startsWith("machine-roster-") &&
+                it.fileName.toString().endsWith(".bin") }.findFirst().get()
+        }
+        val savedRoster = java.nio.file.Files.readAllBytes(rosterFile)
+        java.nio.file.Files.write(rosterFile, byteArrayOf(1, 2, 3))
+        assertNull(look())
+        assertEquals(journal, (Disk().journals.open(owner, id)
+            as NativeCustomJournalResult.Durable).issued.journal)
+        java.nio.file.Files.write(rosterFile, savedRoster)
         assertTrue(Disk().machines.save(owner,1,listOf(
             KotlinGymMachineAlternatives("gym-1",slot.exerciseId,null,emptyList())))
             is NativeMachineRosterResult.Saved)

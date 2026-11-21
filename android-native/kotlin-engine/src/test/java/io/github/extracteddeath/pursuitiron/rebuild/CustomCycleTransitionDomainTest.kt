@@ -532,4 +532,38 @@ class CustomCycleTransitionDomainTest {
         assertFalse(review.mayModifyHistory)
     }
 
+    @Test fun differentSecondDropWeightRequiresLoadAndAmplifierPermissions() {
+        val first=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(155))
+        val second=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(135))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,6,15,first,
+            followUpRounds=2,secondDropLoad=second)
+        val initial=cycle().let{source->
+            val block=source.blocks.single()
+            val day=block.days.single()
+            source.copy(blocks=listOf(block.copy(days=listOf(day.copy(
+                slots=listOf(day.slots.single().copy(
+                    sets=listOf(set(amp=amp),set()))))))))
+        }
+        val oldBlock=initial.blocks.single()
+        val oldDay=oldBlock.days.single()
+        val oldSlot=oldDay.slots.single()
+        val changedFirst=oldSlot.sets.first().copy(
+            amplifier=amp.copy(secondDropLoad=second.copy(value=n(105))))
+        val candidate=initial.copy(revision=4,blocks=listOf(oldBlock.copy(
+            days=listOf(oldDay.copy(slots=listOf(oldSlot.copy(
+                sets=listOf(changedFirst,oldSlot.sets.last()))))))))
+        val denied=transition(initial,candidate,
+            CustomCycleCoachPermissions(adaptAmplifiers=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.LOADS),denied.blockedKinds)
+        assertTrue(denied.differences.any{
+            it.kind==CustomCycleChangeKind.LOADS &&
+                it.location.endsWith(".amplifier.secondDrop")
+        })
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(initial,candidate,
+                CustomCycleCoachPermissions(adaptLoads=true,
+                    adaptAmplifiers=true)).status)
+    }
+
 }

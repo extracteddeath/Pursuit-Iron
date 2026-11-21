@@ -35,6 +35,16 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertTrue(cycle.blocks.first().days.flatMap {it.slots}.all {slot->
             slot.sets.any{it.type==DraftSetType.WORKING}
         })
+        val plan=checkNotNull(proposed.progressionPlan)
+        val savedSlots=cycle.blocks.flatMap{it.days}.flatMap{it.slots}
+        assertEquals(savedSlots.size,plan.assignments.size)
+        assertEquals(savedSlots.size,plan.assignments.map{it.key}.distinct().size)
+        assertTrue(plan.assignments.all{it.route==ProgramProgressionRoute.BASIC_WEIGHTED})
+        // Reviewed quick-change dumbbell compounds are individually
+        // loadable: Auto routes these to per-set dynamic, not global DP.
+        assertTrue(plan.assignments.all{
+            it.basicStrategy==BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+        })
         assertFalse(proposed.mayApproveProgram)
         assertFalse(proposed.mayIssueWorkout)
         assertEquals(candidate,reviewed())

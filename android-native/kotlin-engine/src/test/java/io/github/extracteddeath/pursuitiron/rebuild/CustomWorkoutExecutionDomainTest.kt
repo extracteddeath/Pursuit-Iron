@@ -230,7 +230,11 @@ class CustomWorkoutExecutionDomainTest {
     }
     @Test fun everyAmplifierKeepsItsOwnPauseAndMustResolveBeforeThePartner() {
         for(kind in CustomAmplifierKind.entries) {
-            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15)),slot("b"))
+            val prescribedReduction=if(kind==CustomAmplifierKind.DROP_SET)
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("15")) else null
+            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15,
+                followUpLoad=prescribedReduction)),slot("b"))
             j=record(j,"a:s1")
             assertEquals(visit("a:s1",CustomWorkoutVisitPart.FOLLOW_UP),next(j))
             assertEquals(15,rest(j).automaticCue?.seconds)
@@ -249,7 +253,10 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(150,rest(j).manualRestSeconds)
     }
     @Test fun outOfOrderCompletionCannotClaimAnUnfinishedRoundOrSkipATriggeredAmplifier() {
-        var j=initial(slot("a"),slot("b",amplifier=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,4,0)))
+        var j=initial(slot("a"),slot("b",amplifier=CustomSetAmplifier(
+            CustomAmplifierKind.DROP_SET,4,0,followUpLoad=
+                DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.DUMBBELL_PER_HAND,BigDecimal("15")))))
         j=record(j,"b:s1")
         assertEquals(visit("b:s1",CustomWorkoutVisitPart.FOLLOW_UP),next(j))
         assertEquals(0,rest(j).automaticCue?.seconds)
@@ -327,7 +334,11 @@ class CustomWorkoutExecutionDomainTest {
 
     @Test fun remainingCustomExercisePreservesSupersetPartnerAndCompletedMain() {
         for(kind in CustomAmplifierKind.entries) {
-            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15)),slot("b"))
+            val prescribedReduction=if(kind==CustomAmplifierKind.DROP_SET)
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("15")) else null
+            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15,
+                followUpLoad=prescribedReduction)),slot("b"))
             j=record(j,"a:s1")
             val original=j
             val review=WorkoutRemainingExerciseDomain.custom(j,"a")!!
@@ -779,6 +790,80 @@ class CustomWorkoutExecutionDomainTest {
                 as CustomWorkoutJournalDecision.Rejected).reason)
         assertNull(next(journal))
         assertTrue(journal.canProposeFinish)
+    }
+
+    @Test fun singleDropMustBeBelowRealActivationOrItCannotBeIssued() {
+        fun verified(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=verified("15"))
+        for(actualWeight in listOf("12","15","15.00")) {
+            var journal=initial(slot("single",1,null,amplifier=amp))
+            journal=record(journal,"single:s1",actualWeight=actualWeight,
+                station="machine-A")
+            val set=journal.snapshot.slots.single().sets.single()
+            assertTrue("An increase or unchanged load cannot be called a drop",
+                CustomWorkoutExecutionDomain.followUpVisits(journal,set).isEmpty())
+            assertNull(next(journal))
+            assertTrue(journal.canProposeFinish)
+            val invented=CustomWorkoutJournalOperation.Record(
+                "wrong-single-drop-${actualWeight.replace('.', '_')}",journal.revision,
+                visit("single:s1",CustomWorkoutVisitPart.FOLLOW_UP),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,8,2,
+                    "machine-A"))
+            assertEquals(CustomWorkoutJournalRefusal.FOLLOW_UP_NOT_AUTHORED,
+                (CustomWorkoutJournalDomain.reduce(journal,invented)
+                    as CustomWorkoutJournalDecision.Rejected).reason)
+        }
+        for(actualWeight in listOf("20","17.5")) {
+            var journal=initial(slot("single",1,null,amplifier=amp))
+            journal=record(journal,"single:s1",actualWeight=actualWeight,
+                station="machine-A")
+            assertEquals(visit("single:s1",CustomWorkoutVisitPart.FOLLOW_UP),
+                next(journal))
+            journal=record(journal,"single:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+                actualWeight="15",station="machine-A")
+            assertNull(next(journal))
+            assertTrue(journal.canProposeFinish)
+            assertEquals(BigDecimal(actualWeight), (journal.receipts.first()
+                .operation as CustomWorkoutJournalOperation.Record).performed!!.load)
+            assertEquals(BigDecimal("15"),(journal.receipts.last()
+                .operation as CustomWorkoutJournalOperation.Record).performed!!.load)
+            var replay=CustomWorkoutJournalDomain.begin(journal.workoutId,
+                journal.originalSnapshot,journal.preparedConsentFingerprint)
+            journal.receipts.forEach{receipt->
+                replay=(CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+                    as CustomWorkoutJournalDecision.Proposed).draft
+            }
+            assertEquals(journal,replay)
+            assertNull(next(replay))
+        }
+    }
+
+    @Test fun malformedLegacySingleDropCannotGetAnUnreviewedWeightFromJournal() {
+        fun verified(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(n))
+        val invalid=listOf(
+            CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                followUpLoad=verified("20")),
+            CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                followUpLoad=verified("25")),
+            CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                followUpLoad=null),
+            CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                followUpLoad=DraftSetLoad.Verified(LoadUnit.KG,
+                    LoadBasis.DUMBBELL_PER_HAND,BigDecimal("7")))
+        )
+        invalid.forEach { amp->
+            var journal=initial(slot("bad",1,null,amplifier=amp))
+            journal=record(journal,"bad:s1",actualWeight="20")
+            val set=journal.snapshot.slots.single().sets.single()
+            assertTrue(amp.toString(),
+                CustomWorkoutExecutionDomain.followUpVisits(journal,set).isEmpty())
+            assertNull(next(journal))
+            assertTrue(journal.canProposeFinish)
+        }
     }
 
     @Test fun twoPhysicalDropStagesRecordTheirOwnActualsBeforeNextSupersetMovement() {

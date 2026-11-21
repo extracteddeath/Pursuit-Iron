@@ -239,9 +239,26 @@ object AdvancedAmplifierProtocolDomain {
         selectedMachineId:String?,
         stage:Int
     ):AmplifierFollowUpEntryLoad {
+        // An authored target is not evidence that it is a real *drop*
+        // from the completed activation. This applies to legacy single-drop
+        // and newer two-drop recipes identically, including Focus prefill.
+        if(stage !in 1..amp.followUpRounds)
+            return AmplifierFollowUpEntryLoad.ActivationUnavailable
+        if(amp.kind==CustomAmplifierKind.DROP_SET) {
+            if(!validDropSequence(issuedActivation,amp))
+                return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            val target=dropStageLoad(amp,stage) as? DraftSetLoad.Verified
+                ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            val actual=performedActivation
+                ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            if(actual.reps<=0 || actual.machineInstanceId!=selectedMachineId ||
+                actual.unit!=target.unit || actual.load==null ||
+                actual.load.compareTo(target.value)<=0)
+                return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            return AmplifierFollowUpEntryLoad.AuthoredStage(target)
+        }
         val issued=followUpLoadForStage(amp,issuedActivation,stage)
-        if(amp.kind==CustomAmplifierKind.DROP_SET ||
-            amp.followUpLoad!=null)
+        if(amp.followUpLoad!=null)
             return AmplifierFollowUpEntryLoad.AuthoredStage(issued)
         if(amp.kind !in setOf(
                 CustomAmplifierKind.MYO_REPS,

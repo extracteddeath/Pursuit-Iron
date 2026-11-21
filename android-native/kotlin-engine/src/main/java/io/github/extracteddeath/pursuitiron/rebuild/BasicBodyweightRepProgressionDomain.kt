@@ -52,7 +52,9 @@ sealed interface BasicUnloadedProgressionResult {
     data class Candidate(
         val proposedExactReps:List<Int>,
         val advancedOrdinals:Set<Int>,
-        val evidenceWorkoutId:String
+        val evidenceWorkoutId:String,
+        /** At the cap, a harder movement or explicitly added load needs review. */
+        val atRepCeiling:Boolean=false
     ):BasicUnloadedProgressionResult {
         val mayChangeIssuedWorkout:Boolean get()=false
         val maySaveProgram:Boolean get()=false
@@ -97,6 +99,7 @@ object BasicBodyweightRepProgressionDomain {
             ?:return no(BasicUnloadedRefusal.INVALID_REP_TARGETS)
         val changed=proposal.indices.filter {proposal[it]!=request.issuedExactReps[it]}.toSet()
         return BasicUnloadedProgressionResult.Candidate(proposal,
-            Collections.unmodifiableSet(changed),previous.workoutId)
+            Collections.unmodifiableSet(changed),previous.workoutId,
+            proposal.all{it==request.repBand.maximum})
     }
 }

@@ -94,12 +94,13 @@ object BasicBodyweightRepProgressionDomain {
                 (it.actualRir!=null && it.actualRir !in 0..10)
             })
             return no(BasicUnloadedRefusal.INCOMPLETE_WORK)
+        val completedReps=facts.map{it.actualReps!!}
         val proposal=BasicRepTargetStepDomain.advance(
-            request.issuedExactReps,facts.map{it.actualReps!!},request.repBand)
+            request.issuedExactReps,completedReps,request.repBand)
             ?:return no(BasicUnloadedRefusal.INVALID_REP_TARGETS)
         val changed=proposal.indices.filter {proposal[it]!=request.issuedExactReps[it]}.toSet()
         return BasicUnloadedProgressionResult.Candidate(proposal,
             Collections.unmodifiableSet(changed),previous.workoutId,
-            proposal.all{it==request.repBand.maximum})
+            completedReps.all{it>=request.repBand.maximum})
     }
 }

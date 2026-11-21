@@ -132,9 +132,10 @@ object BasicProgressionPolicyDomain {
         if (request.strategy == BasicProgressionStrategy.MANUAL_LOGGING)
             return candidate(loads,emptySet(),BasicProgressionDecision.MANUAL_REPEAT)
 
-        if (request.maximumAuthorizedIncrement <= zero ||
-            !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(
-                request.maximumAuthorizedIncrement))
+        if (request.strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION &&
+            (request.maximumAuthorizedIncrement <= zero ||
+                !KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(
+                    request.maximumAuthorizedIncrement)))
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
 
         val previous = request.previous
@@ -177,7 +178,8 @@ object BasicProgressionPolicyDomain {
             return reject(BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME)
 
         val assistance = request.nextScope.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT
-        if (assistance !=
+        if (request.strategy != BasicProgressionStrategy.REP_TARGET_PROGRESSION &&
+            assistance !=
             (request.strategy == BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION))
             return reject(BasicProgressionRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION)
 

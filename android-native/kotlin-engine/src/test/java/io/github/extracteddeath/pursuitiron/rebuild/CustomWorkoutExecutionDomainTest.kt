@@ -1135,11 +1135,15 @@ class CustomWorkoutExecutionDomainTest {
         val finished=(CustomWorkoutJournalDomain.reduce(journal,
             CustomWorkoutJournalOperation.Finish("finish",journal.revision))
                 as CustomWorkoutJournalDecision.Proposed).draft
-        val rebuilt=CustomWorkoutJournalReplayDomain.replay(
-            finished.originalSnapshot,finished.workoutId,
-            finished.preparedConsentFingerprint,finished.receipts,
-            finished.revision,finished.finishedByEventId)
-        assertTrue(rebuilt.toString(),rebuilt is CustomWorkoutJournalReplayResult.Recovered)
+        var rebuilt=CustomWorkoutJournalDomain.begin(
+            finished.workoutId,finished.originalSnapshot,
+            finished.preparedConsentFingerprint)
+        for(receipt in finished.receipts) {
+            val replay=CustomWorkoutJournalDomain.reduce(rebuilt,receipt.operation)
+            assertTrue(replay.toString(),replay is CustomWorkoutJournalDecision.Proposed)
+            rebuilt=(replay as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        assertEquals(finished,rebuilt)
     }
 
 }

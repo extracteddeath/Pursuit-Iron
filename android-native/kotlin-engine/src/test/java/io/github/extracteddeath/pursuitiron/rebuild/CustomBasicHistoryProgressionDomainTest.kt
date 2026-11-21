@@ -172,6 +172,31 @@ class CustomBasicHistoryProgressionDomainTest {
                 CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun issuedMachineWithNoActualStationNeverBecomesGenericOrOtherStationEvidence() {
+        val unverified=completed(2,week=2,machine="B").let { session ->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map { visit ->
+                    visit.copy(actual=visit.actual?.copy(machineInstanceId=null))
+                }))
+        }
+        // Even a recorded B prescription is not proof that B was used.
+        // Nor can its unverified actuals be credited to generic equipment.
+        for(machine in listOf("B",null)) {
+            val result=review(next=snapshot(3,machine=machine),
+                sessions=listOf(unverified),machine=machine)
+            assertEquals(machine.toString(),
+                CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+                (result as CustomBasicHistoryResult.Rejected).reason)
+        }
+        // A more recent unknown station must block the older verified A
+        // success instead of silently earning another A load increment.
+        val priorA=completed(1,machine="A")
+        val result=review(next=snapshot(3,machine="A"),
+            sessions=listOf(priorA,unverified),machine="A")
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (result as CustomBasicHistoryResult.Rejected).reason)
+    }
+
     @Test fun programDayAndAuthoredWeekOverridesCannotBorrowOtherNumericalOwners() {
         assertEquals(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY,
             (review(next=snapshot(2,day=2)) as

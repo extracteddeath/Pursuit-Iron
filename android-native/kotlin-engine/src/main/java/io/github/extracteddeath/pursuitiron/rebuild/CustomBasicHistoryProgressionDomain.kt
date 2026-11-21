@@ -190,6 +190,14 @@ object CustomBasicHistoryProgressionDomain {
                 KotlinMachineAlternativesDomain.normalizeMachineId(
                     it.machineInstanceId)
             }.toSet()
+            // An issued physical station with no recorded actual station is
+            // ambiguous. Do not relabel its performance as a generic load,
+            // even if an older same-day visit at the desired station passed.
+            // A fully recorded actual station may still legitimately differ
+            // from the issued default when the athlete switched machines.
+            if(observedMachines.isEmpty() &&
+                historicalSlot.machineInstanceId!=null)
+                return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             // A wholly different, explicitly observed machine is its OWN
             // history. An unknown/partial station is never quietly bypassed.
             // A real observed B workout must not suppress an earlier

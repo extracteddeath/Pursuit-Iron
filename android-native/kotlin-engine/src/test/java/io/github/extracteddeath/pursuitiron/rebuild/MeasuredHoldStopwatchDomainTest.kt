@@ -88,4 +88,22 @@ class MeasuredHoldStopwatchDomainTest {
             MeasuredHoldStopwatchState(stoppedElapsedMs=-1L),
             100L,boot+100L))
     }
+
+    @Test fun restoredLongCannotWrapIntoAnApparentlyValidHold() {
+        // Both positive and negative overflow used to narrow to 30 seconds.
+        val wrap=4_294_967_296L*1000L
+        for(elapsed in listOf(wrap+30_000L,-wrap+30_000L,
+            Long.MAX_VALUE,Long.MIN_VALUE,-1L,3_601_000L)) {
+            val state=MeasuredHoldStopwatchState(stoppedElapsedMs=elapsed)
+            assertNull("elapsed=$elapsed",MeasuredHoldStopwatchDomain.display(
+                state,100L,boot+100L))
+            assertNull("elapsed=$elapsed",MeasuredHoldStopwatchDomain.usableSeconds(state))
+        }
+        for((elapsed,seconds) in listOf(1_000L to 1,
+            30_999L to 30,3_600_999L to 3600)) {
+            val state=MeasuredHoldStopwatchState(stoppedElapsedMs=elapsed)
+            assertNotNull(MeasuredHoldStopwatchDomain.display(state,100L,boot+100L))
+            assertEquals(seconds,MeasuredHoldStopwatchDomain.usableSeconds(state))
+        }
+    }
 }

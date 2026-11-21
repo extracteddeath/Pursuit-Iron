@@ -795,3 +795,21 @@ byte-identical archives and cold decoding. The six added counterexamples fail
 on the prior implementation; the focused JVM suite passes 45 tests after the
 fix. Full engine parity, the complete Material 3 Expressive UI and physical
 Android acceptance remain open. No APK/AAB.
+
+
+### Measured stopwatch restore and compact entry controls
+
+A restored hold timer must validate the original Long milliseconds against
+the same one-hour limit used by display before conversion to Int seconds.
+Positive or negative overflow can no longer produce a plausible 30-second
+entry while the stopwatch display reports unavailable time. The original
+round-down rule and separate explicit Use / Record actions remain intact.
+The regression reproduces that overflow on the prior code and covers both
+signs, Long extrema, expired values and valid boundary seconds.
+
+Measured unit choices and stopwatch side choices now wrap through the shared
+Compose FlowRow layout with existing Material spacing and controls. Narrow
+windows and enlarged text can wrap choices onto another row without a
+separate logger, arithmetic path or changed set identity. Source compilation
+and policy tests do not replace Android visual or accessibility acceptance.
+No APK/AAB.

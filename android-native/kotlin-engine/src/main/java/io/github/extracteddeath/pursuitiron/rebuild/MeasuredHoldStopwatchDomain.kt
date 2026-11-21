@@ -64,7 +64,12 @@ object MeasuredHoldStopwatchDomain {
     /** Truncate fractional seconds; NEVER overstate a measured hold. */
     fun usableSeconds(state:MeasuredHoldStopwatchState):Int? {
         if(state.running)return null
-        val elapsed=state.stoppedElapsedMs ?:return null
+        // Validate the original Long before narrowing. Corrupt restored
+        // milliseconds can otherwise wrap to a plausible small Int, while
+        // the display correctly refuses the very same elapsed value.
+        val elapsed=state.stoppedElapsedMs?.takeIf{
+            it in 0..MAX_ELAPSED_MS
+        } ?:return null
         return (elapsed/1000L).toInt().takeIf{it in 1..MAX_SECONDS}
     }
 

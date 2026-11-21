@@ -96,6 +96,10 @@ class CustomCycleBuilderDomainTest {
         val selected=accepted(CustomCycleBuilderDomain.setProgressionMethod(
             prior,prior,"base",0,"bench-a",SavedProgressionMethod.DOUBLE))
         val later=selected.draft.copy(weekOverrides=current.weekOverrides)
+        val availableAfter=CustomCycleBuilderDomain.availableProgressionMethods(
+            later,ProgramProgressionSlotKey("base",0,"bench-a"))
+        assertTrue(SavedProgressionMethod.DOUBLE in availableAfter)
+        assertFalse(SavedProgressionMethod.LINEAR in availableAfter)
         val replay=BasicProgramProgressionPlanDomain.review(later)
             as ProgramProgressionPlan.Ready
         val slot=replay.assignments.single {it.key.slotId=="bench-a"}

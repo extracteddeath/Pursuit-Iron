@@ -796,7 +796,7 @@ class CustomWorkoutExecutionDomainTest {
             assertNull(next(journal))
             assertTrue(journal.canProposeFinish)
             val invented=CustomWorkoutJournalOperation.Record(
-                "wrong-single-drop-$actualWeight",journal.revision,
+                "wrong-single-drop-${actualWeight.replace('.', '_')}",journal.revision,
                 visit("single:s1",CustomWorkoutVisitPart.FOLLOW_UP),
                 KotlinJournalSetOutcome.COMPLETED,
                 KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,8,2,

@@ -111,6 +111,13 @@ object CustomBasicHistoryProgressionDomain {
                 no(CustomBasicHistoryRefusal.NO_SAVED_BASIC_METHOD)
             else no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
 
+        if(saved.progressionMethod in setOf(SavedProgressionMethod.REP_TARGETS,
+                SavedProgressionMethod.LADDER,SavedProgressionMethod.BODYWEIGHT_REPS) &&
+            selected.sets.any{set->set.prescription.type==DraftSetType.WORKING &&
+                set.prescription.exactRepTarget?.let{
+                    it in set.prescription.reps.minimum..set.prescription.reps.maximum
+                }!=true})
+            return no(CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE)
         val plan=BasicProgramProgressionPlanDomain.review(cycle)
             as? ProgramProgressionPlan.Ready
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)

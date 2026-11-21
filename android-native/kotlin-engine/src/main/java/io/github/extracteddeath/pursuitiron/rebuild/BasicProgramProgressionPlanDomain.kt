@@ -224,6 +224,16 @@ object BasicProgramProgressionPlanDomain {
             val requested=selectedStrategies[key] ?: savedBasic ?: styledBasic ?:
                 if(key in selectedPerSetDynamic)
                     BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION else null
+            // A named rep progression is not ready solely because its range
+            // is valid. Every working set needs a separately saved exact
+            // current target. Generated/default logging remains possible
+            // without one, but cannot claim this specific method is ready.
+            val needsExactTargets=saved==SavedProgressionMethod.BODYWEIGHT_REPS ||
+                requested in setOf(BasicProgressionStrategy.REP_TARGET_PROGRESSION,
+                    BasicProgressionStrategy.REP_LADDER_PROGRESSION)
+            if(needsExactTargets && working.any {set->
+                set.exactRepTarget?.let{it in set.reps.minimum..set.reps.maximum}!=true
+            })return no("The selected rep progression needs an exact current target for every working set, separately from its approved rep range.")
             // The base slot prescribes week 1. Every later week must have
             // an explicit source-authored prescription before we can call
             // the block a Wave. A single week-2 override is NOT a wave:

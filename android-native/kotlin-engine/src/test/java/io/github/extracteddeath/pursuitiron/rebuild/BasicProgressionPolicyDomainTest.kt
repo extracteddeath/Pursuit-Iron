@@ -11,7 +11,7 @@ class BasicProgressionPolicyDomainTest {
         LoadUnit.LB,LoadBasis.MACHINE_STACK,
         listOf("90","95","100","105","110","115").map(::n))
     private val scope=BasicProgressionScope(
-        athleteId="athlete",programId="program",blockId="block-1",
+        athleteId="athlete",programId="program",gymId="gym-1",blockId="block-1",
         trainingDayId="Upper-1",exerciseId="machine-press",
         machineInstanceId="machine-A",unit=LoadUnit.LB,basis=LoadBasis.MACHINE_STACK)
 
@@ -123,6 +123,7 @@ class BasicProgressionPolicyDomainTest {
             scope.copy(blockId="block-2"),
             scope.copy(athleteId="other"),
             scope.copy(programId="other"),
+            scope.copy(gymId="gym-2"),
             scope.copy(exerciseId="incline-press"))
         for(other in changes) {
             assertEquals(other.toString(),BasicProgressionResult.Refused(

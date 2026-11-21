@@ -186,7 +186,7 @@ object CustomBasicHistoryProgressionDomain {
             }
             if(visits.isEmpty())
                 return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
-            val observedMachines=visits.mapNotNull{it.actual}.map {
+            val observedMachines=visits.mapNotNull{it.actual}.mapNotNull {
                 KotlinMachineAlternativesDomain.normalizeMachineId(
                     it.machineInstanceId)
             }.toSet()

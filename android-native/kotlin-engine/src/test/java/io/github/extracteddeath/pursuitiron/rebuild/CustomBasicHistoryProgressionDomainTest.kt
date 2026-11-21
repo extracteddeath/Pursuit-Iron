@@ -362,7 +362,7 @@ class CustomBasicHistoryProgressionDomainTest {
                 })
             })
         }
-        fun next(target:Int)=snapshot().let {day ->
+        fun next(target:Int,dayIndex:Int=0)=snapshot(day=dayIndex).let {day ->
             day.copy(slots=day.slots.map{slot ->
                 slot.copy(sets=slot.sets.map{set ->
                     set.copy(prescription=set.prescription.copy(
@@ -426,10 +426,8 @@ class CustomBasicHistoryProgressionDomainTest {
         assertEquals(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,
             (noExact as CustomBasicHistoryResult.Rejected).reason)
         assertEquals(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY,
-            (review(program=athletePlan,next=next(8).copy(weekday=2,
-                slots=next(8).slots.map{it.copy(slotId="push",sets=it.sets.map{set->
-                    set.copy(slotId="push")
-                })}),sessions=listOf(prior(listOf(8,8)))) as
+            (review(program=athletePlan,next=next(8,dayIndex=2),
+                sessions=listOf(prior(listOf(8,8)))) as
                 CustomBasicHistoryResult.Rejected).reason)
     }
 

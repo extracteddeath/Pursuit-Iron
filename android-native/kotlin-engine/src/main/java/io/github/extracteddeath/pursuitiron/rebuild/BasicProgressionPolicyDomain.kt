@@ -22,6 +22,8 @@ enum class BasicProgressionStrategy {
     PER_SET_DYNAMIC_PROGRESSION,
     LINEAR_LOAD_PROGRESSION,
     REP_TARGET_PROGRESSION,
+    /** Rep ladder earns a load step at the ceiling, then resets to its floor. */
+    REP_LADDER_PROGRESSION,
     ASSISTANCE_DOUBLE_PROGRESSION
 }
 
@@ -173,6 +175,7 @@ object BasicProgressionPolicyDomain {
         val uniformStrategy = request.strategy in setOf(
             BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
             BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION,
             BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION)
         if (uniformStrategy && loads.any { it.compareTo(loads.first()) != 0 })
             return reject(BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME)
@@ -186,17 +189,23 @@ object BasicProgressionPolicyDomain {
         // A rep-only policy does not need invented stock increments. Its
         // authenticated exact issued targets are independent of logged
         // achievement; no reported RIR or fatigue forecast is inferred.
-        if (request.strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION) {
+        val ladder=request.strategy==BasicProgressionStrategy.REP_LADDER_PROGRESSION
+        if (request.strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION ||
+            ladder) {
             val targets = request.issuedRepTargets
                 ?: return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
             val proposed = BasicRepTargetStepDomain.advance(
                 targets,facts.map {it.actualReps!!},request.repBand)
                 ?:return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
             val changed = targets.indices.filter { proposed[it] != targets[it] }.toSet()
-            return candidate(loads, emptySet(),
-                if (changed.isEmpty()) BasicProgressionDecision.BUILD_REPS
-                else BasicProgressionDecision.EARNED_REP_TARGET,
-                previous.workoutId, proposed, changed)
+            // Rep ladder remains at the same physical weight until EVERY
+            // completed set reaches its rep ceiling. Rep-only NEVER changes
+            // load, even after reaching the ceiling.
+            if(!ladder || facts.any{it.actualReps!!<request.repBand.maximum})
+                return candidate(loads, emptySet(),
+                    if (changed.isEmpty()) BasicProgressionDecision.BUILD_REPS
+                    else BasicProgressionDecision.EARNED_REP_TARGET,
+                    previous.workoutId, proposed, changed)
         }
 
         val stock = request.verifiedStock
@@ -219,7 +228,8 @@ object BasicProgressionPolicyDomain {
         }
         val eligible = when(request.strategy) {
             BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
-            BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION ->
+            BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION ->
                 if (ceilingOrdinals.size == facts.size) facts.indices.toList() else emptyList()
             BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION ->
                 if (floorOrdinals.size == facts.size) facts.indices.toList() else emptyList()
@@ -270,12 +280,18 @@ object BasicProgressionPolicyDomain {
                 else BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL,
                 previous.workoutId)
 
+        val ladderReset=if(ladder && changed.size==facts.size)
+            List(facts.size){request.repBand.minimum} else null
         return candidate(proposals,changed,
             when {
                 changed.isNotEmpty() -> BasicProgressionDecision.EARNED_INCREMENT
                 atMaximum -> BasicProgressionDecision.MAXIMUM_LOAD_REACHED
                 blockedByLimit -> BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL
                 else -> BasicProgressionDecision.BUILD_REPS
-            },previous.workoutId)
+            },previous.workoutId,
+            ladderReset, if(ladderReset==null)emptySet()
+                else ladderReset.indices.filter{
+                    ladderReset[it]!=request.issuedRepTargets!![it]
+                }.toSet())
     }
 }

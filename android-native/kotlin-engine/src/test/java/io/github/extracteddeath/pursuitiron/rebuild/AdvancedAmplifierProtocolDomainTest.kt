@@ -407,4 +407,68 @@ class AdvancedAmplifierProtocolDomainTest {
                 amp,load("100"),activation,"machine-A",2,first))
     }
 
+
+    @Test fun oneDropStageAuthorityOwnsLiveReceiptsAndSavedCorrections() {
+        fun load(n:String)=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+            java.math.BigDecimal(n))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,
+            8,10,followUpLoad=load("75"),followUpRounds=2,
+            secondDropLoad=load("55"))
+        val activation=KotlinPerformedSet(
+            java.math.BigDecimal("95"),LoadUnit.LB,12,2,"machine-a")
+        val first=KotlinPerformedSet(
+            java.math.BigDecimal("75.000"),LoadUnit.LB,8,2,"machine-a")
+        val second=KotlinPerformedSet(
+            java.math.BigDecimal("60"),LoadUnit.LB,8,2,"machine-a")
+        fun accepted(stage:Int,preceding:KotlinPerformedSet?,
+            performed:KotlinPerformedSet?,
+            activationActual:KotlinPerformedSet?=activation)=
+            AdvancedAmplifierProtocolDomain.validPerformedDropStage(
+                amp,load("100"),activationActual,preceding,performed,stage)
+        assertTrue(accepted(1,null,first))
+        assertTrue(accepted(2,first,second))
+        // A physical first drop may differ from the scripted target, but
+        // such a deviation NEVER licenses the independently authored next.
+        assertTrue(accepted(1,null,
+            first.copy(load=java.math.BigDecimal("70"))))
+        assertFalse(accepted(2,
+            first.copy(load=java.math.BigDecimal("70")),second))
+        assertFalse(accepted(2,null,second))
+        assertFalse(accepted(1,null,
+            first.copy(load=java.math.BigDecimal("95"))))
+        assertFalse(accepted(1,null,
+            first.copy(load=java.math.BigDecimal("96"))))
+        assertFalse(accepted(2,first,
+            second.copy(load=java.math.BigDecimal("75"))))
+        assertFalse(accepted(2,first,
+            second.copy(load=java.math.BigDecimal("76"))))
+        assertFalse(accepted(2,first,
+            second.copy(load=java.math.BigDecimal.ZERO)))
+        assertFalse(accepted(2,first,
+            second.copy(machineInstanceId="machine-b")))
+        assertFalse(accepted(2,first,
+            second.copy(unit=LoadUnit.KG)))
+        assertFalse(accepted(2,
+            first.copy(machineInstanceId="machine-b"),second))
+        assertFalse(accepted(2,
+            first.copy(unit=LoadUnit.KG),second))
+        assertFalse(accepted(2,
+            first.copy(reps=0),second))
+        assertFalse(accepted(2,first,second,
+            activation.copy(load=java.math.BigDecimal("70"))))
+        assertFalse(accepted(2,first,second,
+            activation.copy(machineInstanceId="machine-b")))
+        assertFalse(accepted(2,first,second,
+            activation.copy(unit=LoadUnit.KG)))
+        assertFalse(accepted(2,first,second.copy(reps=0)))
+        // A physically impossible or corrupt authored plan refuses all
+        // attempts, even if the athlete's two actual loads descend.
+        val malformed=amp.copy(secondDropLoad=load("80"))
+        assertFalse(AdvancedAmplifierProtocolDomain.validPerformedDropStage(
+            malformed,load("100"),activation,first,second,2))
+        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(load("55")),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-a",2,first))
+    }
 }

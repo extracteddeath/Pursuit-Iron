@@ -113,4 +113,36 @@ class KotlinFutureLoadNumberAuthorityDomainTest {
         assertTrue(review(from="200.000",to="205.000") is
             KotlinFutureLoadReview.Accepted)
     }
+
+    @Test fun futureCandidateNumbersUseExactlyThePerformedSetWeightEnvelope() {
+        val physical=listOf("0","0.001","205","205.0000",
+            "99999.999","100000.000","1E+3")
+        val invalid=listOf("-0.001","0.0001","205.0001",
+            "100000.001","100001","1E-4")
+        for(text in physical) {
+            assertTrue(text,KotlinSetNumberAuthorityDomain
+                .validPhysicalLoadValue(n(text)))
+            val rejected=review(to=text) as? KotlinFutureLoadReview.Rejected
+            assertNotEquals(text,KotlinFutureLoadRefusal.INVALID_NUMBER_OR_BUDGET,
+                rejected?.reason)
+        }
+        for(text in invalid) {
+            assertFalse(text,KotlinSetNumberAuthorityDomain
+                .validPhysicalLoadValue(n(text)))
+            assertEquals(text,KotlinFutureLoadReview.Rejected(
+                KotlinFutureLoadRefusal.INVALID_NUMBER_OR_BUDGET),
+                review(to=text))
+        }
+        // Same physical format is not an approval or stock waiver.
+        val reviewed=review(from="200.0000",to="205.000") as
+            KotlinFutureLoadReview.Accepted
+        assertFalse(reviewed.fact.maySaveFutureProgram)
+        assertFalse(reviewed.fact.mayChangeIssuedWorkout)
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.INVALID_NUMBER_OR_BUDGET),
+            review(limit="0"))
+        assertEquals(KotlinFutureLoadReview.Rejected(
+            KotlinFutureLoadRefusal.UNVERIFIED_CANDIDATE_LOAD),
+            review(to="204"))
+    }
 }

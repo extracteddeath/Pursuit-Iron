@@ -40,6 +40,28 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             listOf(first,second),3L*145+15+20,240
         )
     }
+    @Test fun exactTargetsSurviveFullAndSwapSnapshotsAndRejectOutsideBand() {
+        val original=fixture()
+        val slot=original.slots.first()
+        val working=slot.sets.last()
+        val selected=slot.copy(sets=slot.sets.dropLast(1)+working.copy(
+            prescription=working.prescription.copy(exactRepTarget=10)))
+        val schedule=original.copy(slots=listOf(selected,original.slots.last()))
+        val reopened=NativeKotlinCustomWorkoutSnapshotCodec.decode(
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(schedule))
+        assertEquals(schedule,reopened)
+        assertEquals(10,reopened.slots.first().sets.last()
+            .prescription.exactRepTarget)
+        assertEquals(selected,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(
+            NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(selected)))
+        val invalid=schedule.copy(slots=listOf(selected.copy(sets=
+            selected.sets.dropLast(1)+working.copy(prescription=
+                working.prescription.copy(exactRepTarget=13))),original.slots.last()))
+        assertThrows(IllegalArgumentException::class.java){
+            NativeKotlinCustomWorkoutSnapshotCodec.encode(invalid)
+        }
+    }
+
     @Test fun exactCustomSessionRoundTripsEverySetAndProvenanceField() {
         val first=fixture()
         val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(first)
@@ -96,7 +118,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
     @Test fun reducedSnapshotRoundTripsWithItsOmissionList() {
         val old=fixture()
         val base=NativeKotlinCustomWorkoutSnapshotCodec.encode(old)
-        assertEquals(7,base[7].toInt())
+        assertEquals(8,base[7].toInt())
         val safe=old.copy(slots=old.slots.map{slot->
             slot.copy(supersetGroup=null,sets=slot.sets.map {set->
                 set.copy(prescription=set.prescription.copy(amplifier=null))
@@ -132,7 +154,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
     @Test fun timedAmplifierPersistsThroughFullAndReducedSnapshotsAndSwap() {
         val old=fixture()
         val base=NativeKotlinCustomWorkoutSnapshotCodec.encode(old)
-        assertEquals(7,base[7].toInt())
+        assertEquals(8,base[7].toInt())
         val timed=old.copy(slots=old.slots.map{slot->
             slot.copy(sets=slot.sets.map{set->
                 val amp=set.prescription.amplifier

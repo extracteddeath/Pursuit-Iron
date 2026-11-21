@@ -64,6 +64,9 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
     var scheduledDay by remember(host,athleteId,cycleId,cycleRevision,sourceRevision) {
         mutableStateOf<NativeActivatedBlockScheduledDayReview?>(null)
     }
+    var scheduledWeek by remember(host,athleteId,cycleId,cycleRevision,sourceRevision) {
+        mutableStateOf<List<NativeActivatedBlockScheduledDayReview.Scheduled>>(emptyList())
+    }
     val scope=rememberCoroutineScope()
 
     suspend fun refresh() {
@@ -110,6 +113,7 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
         message=null
         editing=false
         scheduledDay=null
+        scheduledWeek=emptyList()
         refresh()
     }
 
@@ -129,12 +133,29 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
     LaunchedEffect(host,athleteId,cycleId,cycleRevision,sourceRevision,
         existing?.approvalFingerprint,nextWeekAndDay) {
         scheduledDay=null
+        scheduledWeek=emptyList()
         val present=existing
         val position=nextWeekAndDay
         if(present!=null && position!=null) {
-            scheduledDay=withContext(Dispatchers.IO) {
-                host.reviewApprovedFutureBlockDay(
+            // Owner-verify EVERY programmed weekday in the exact same
+            // absolute week. If even one is stale or outside the block,
+            // never publish a partial, misleading week calendar.
+            val reviewed=withContext(Dispatchers.IO) {
+                val next=host.reviewApprovedFutureBlockDay(
                     cycleId,present.blockId,position.first,position.second)
+                val week=present.scheduledWeekdays.sorted().map { weekday ->
+                    host.reviewApprovedFutureBlockDay(
+                        cycleId,present.blockId,position.first,weekday)
+                }
+                next to week
+            }
+            scheduledDay=reviewed.first
+            val days=reviewed.second
+            if(days.size==present.scheduledWeekdays.size &&
+                days.isNotEmpty() &&
+                days.all { it is NativeActivatedBlockScheduledDayReview.Scheduled }) {
+                scheduledWeek=days.filterIsInstance<
+                    NativeActivatedBlockScheduledDayReview.Scheduled>()
             }
         }
     }
@@ -165,6 +186,36 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 null -> Text("Checking scheduled day…",
                     style=MaterialTheme.typography.bodySmall)
+            }
+            if(scheduledWeek.isNotEmpty() && nextWeekAndDay!=null) {
+                HorizontalDivider()
+                Text("Approved training week ${nextWeekAndDay.first} · scheduled only",
+                    style=MaterialTheme.typography.titleSmall)
+                Text("These are program dates, not completion, missed-workout or reschedule records.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    scheduledWeek.forEach { dated ->
+                        val positionLabel=if(dated.weekday==nextWeekAndDay.second)
+                            when(nextSlot) {
+                                is NativeCustomNextCycleSlot.ResumeIssued ->
+                                    "Resume existing workout"
+                                is NativeCustomNextCycleSlot.Prepared ->
+                                    "Preparation saved"
+                                is NativeCustomNextCycleSlot.Next ->
+                                    "Next workout position"
+                                else -> "Scheduled"
+                            }
+                        else "Scheduled"
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement=Arrangement.SpaceBetween) {
+                            Text(dated.scheduledLocalDate.format(approvedDateLabel),
+                                style=MaterialTheme.typography.bodyMedium)
+                            Text(positionLabel,style=MaterialTheme.typography.labelMedium,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
         } else if(saved is NativeActivatedBlockCalendarRead.Rejected) {
             Text("The saved calendar could not be verified. A stale or changed program cannot reuse this date.",

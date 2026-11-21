@@ -99,8 +99,17 @@ object BasicProgramProgressionPlanDomain {
                         SavedProgressionMethod.ASSISTANCE_DOUBLE
                     null -> null
                 }
-            // Other routes are deliberate specialist plans/holds, not an
-            // earned baseline strategy masquerading as a stored method.
+            // A reviewed wave/e1RM selection is a saved *method*, not a
+            // numerical basic strategy. Preserve its name only on the
+            // matching specialist route; the source owns all wave weeks
+            // and the effort reviewer owns any e1RM recommendation.
+            ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION ->
+                if(assignment.selectedStyle==NativeProgressionStyle.WAVE)
+                    SavedProgressionMethod.WAVE else null
+            ProgramProgressionRoute.E1RM_COACH_REVIEW ->
+                if(assignment.selectedStyle==NativeProgressionStyle.E1RM)
+                    SavedProgressionMethod.E1RM else null
+            // Recovery, peak and other authored schemes are not overload.
             else -> null
         }
 

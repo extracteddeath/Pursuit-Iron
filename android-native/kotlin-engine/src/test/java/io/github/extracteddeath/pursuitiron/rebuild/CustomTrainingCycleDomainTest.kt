@@ -116,6 +116,26 @@ class CustomTrainingCycleDomainTest {
         valid(cycle())
     }
 
+    @Test fun savedDoubleProgressionCannotEraseAnExplicitCoachApprovedWeekEdit() {
+        val original=cycle(listOf(block(days=listOf(
+            CustomTrainingDay(0,"Upper",ComposerSessionPurpose.HYPERTROPHY,
+                listOf(benchSlot().copy(
+                    progressionMethod=SavedProgressionMethod.DOUBLE)))))))
+        val amended=original.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(2,0,"main-press",
+                listOf(weighted(200),weighted(200))))))
+        val actual=valid(amended)
+        assertEquals(SavedProgressionMethod.DOUBLE,
+            actual.verifiedDraft!!.blocks.single().days.single()
+                .slots.single().progressionMethod)
+        assertEquals(n(200),((CustomTrainingCycleDomain.week(actual,2)!!
+            .days.single().slots.single().sets.first().load)
+            as DraftSetLoad.Verified).value)
+        assertEquals(n(185),((CustomTrainingCycleDomain.week(actual,1)!!
+            .days.single().slots.single().sets.first().load)
+            as DraftSetLoad.Verified).value)
+    }
+
     @Test fun trulyCustomCycleKeepsWeekdayOrderAndExerciseOrderWithoutComposer() {
         val original = cycle()
         val reviewed = valid(original)

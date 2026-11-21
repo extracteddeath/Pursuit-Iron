@@ -44,6 +44,16 @@ class MeasuredSessionAuthoringDomainTest {
             singleSide=MeasuredSide.RIGHT,targetExternalLoad=n("20")),
         MeasuredSessionSelection("side-plank",30,1))
 
+    @Test fun everySetCountShownByTheStepperComposesThatManySets() {
+        val athlete=profile()
+        assertEquals(1..8,MeasuredSessionAuthoringDomain.setsPerExercise)
+        for(count in MeasuredSessionAuthoringDomain.setsPerExercise) {
+            val plan=MeasuredSessionAuthoringDomain.compose("measured-count",3,athlete,
+                listOf(MeasuredSessionSelection("plank",30,count)))
+            assertEquals(count,plan?.sets?.size)
+        }
+    }
+
     @Test fun multiExerciseSingleSessionRetainsMeasurementTypesAndUniqueSetOrder() {
         val entries=selections()
         val plan=MeasuredSessionAuthoringDomain.compose(

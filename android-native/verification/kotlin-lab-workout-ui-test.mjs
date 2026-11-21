@@ -1548,6 +1548,13 @@ assert.match(measuredEditor,/MeasuredExerciseEntryDomain\.parse\(/);
 assert.match(measuredEditor,/plan\.sides\.sortedBy\{it\.ordinal\}/);
 assert.match(measuredEditor,/MeasuredEntryUnit\.MINUTES_SECONDS/);
 assert.match(measuredEditor,/MeasuredEntryUnit\.FEET/);
+// A rack with both weights does not establish that a matched pair exists
+// at a newly entered weight, in another gym, or for another session.
+assert.ok(measured.includes('"$workoutId|$sourceKey|"+targetWeight.stripTrailingZeros().toPlainString()'));
+assert.ok(measured.includes('pairKey != null && confirmedPairKey == pairKey'));
+assert.ok(measured.includes('targetExternalLoad=it;confirmedPairKey=null'));
+assert.ok(measured.includes('confirmedPairKey=if(checked) pairKey else null'));
+assert.ok(measured.includes('val setRange = MeasuredSessionAuthoringDomain.setsPerExercise'));
 assert.match(measuredEditor,/roundedApproved/);
 assert.match(measuredEditor,/Checkbox\(/);
 assert.match(measuredEditor,/val failedZero=if\(unit==MeasuredEntryUnit\.MINUTES_SECONDS\)"0:00" else "0"/);

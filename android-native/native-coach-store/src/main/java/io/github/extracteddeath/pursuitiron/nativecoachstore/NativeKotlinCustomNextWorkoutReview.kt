@@ -189,37 +189,22 @@ class NativeKotlinCustomNextWorkoutReview(
             val selected=next.slots.singleOrNull{it.slotId==slotId}
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
-            val movement=source.catalog.singleOrNull{
-                it.exerciseId==selected.exerciseId &&
-                    it.familyId==selected.familyId &&
-                    it.variantId==selected.variantId
-            }?:return@withOwnerTransaction reject(
-                NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
-            val savedMachines=machineRosters?.read(ownerKey)
-                as? NativeMachineRosterResult.Saved
-            val machineConfig=savedMachines?.snapshot?.configurations
-                ?.singleOrNull {
-                    it.gymId==gym.gymId &&
-                        it.exerciseId==selected.exerciseId
-                }
-            val selectedMachine=selected.machineInstanceId
-                ?:machineConfig?.defaultMachineId
-            // A logical exercise's verified stock DOES NOT certify both
-            // physical A/B stacks. Machine variants may earn a load step
-            // only from their OWN athlete-confirmed limits and increment.
-            val verifiedStock=if(machineConfig==null &&
-                selected.machineInstanceId!=null) null
-            else if(machineConfig==null)
-                movement.equipmentId?.let{gym.confirmedStock[it]}
-                    ?.takeIf{
-                        it.basis==movement.expectedLoadBasis && it.unit==gym.unit
-                    }
-            else selectedMachine?.let {id->
-                movement.expectedLoadBasis?.let{basis->
-                    KotlinMachineAlternativesDomain.confirmedStack(
-                        machineConfig,id,basis)?.takeIf{it.unit==gym.unit}
-                }
+            // The same source-verified physical-stock selector is used by
+            // basic progression. A corrupt injected machine roster cannot
+            // be reinterpreted as a gym with no configured A/B machines.
+            val machineRoster=when {
+                machineRosters==null -> null
+                else -> (machineRosters.read(ownerKey)
+                    as? NativeMachineRosterResult.Saved)?.snapshot
+                    ?:return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
             }
+            val physical=NativeKotlinCustomSelectedStockDomain.resolve(
+                source,selected,machineRoster)
+                ?:return@withOwnerTransaction reject(
+                    NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
+            val selectedMachine=physical.machineInstanceId
+            val verifiedStock=physical.stock
             val historyRead=history.read(ownerKey,current.athleteId)
             val full=historyRead as? NativeKotlinMixedHistoryReadResult.Review
                 ?:return@withOwnerTransaction when(historyRead) {

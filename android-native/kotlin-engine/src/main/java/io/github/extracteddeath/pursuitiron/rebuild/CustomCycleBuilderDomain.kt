@@ -80,6 +80,55 @@ object CustomCycleBuilderDomain {
             next, CustomCycleDraftReceipt(label, original, next))
     }
 
+    /**
+     * Explicit per-slot progression preference. One revisioned source edit
+     * is the ONLY path to changing a saved method. We reuse the existing
+     * full-cycle progression reviewer instead of adding a second eligibility
+     * table or deriving a method from a display label.
+     *
+     * This is not a future-set grant: signed consent, prepared sessions,
+     * actual history and the selected machine are untouched.
+     */
+    fun setProgressionMethod(
+        current:CustomTrainingCycle,expectedRevision:Long,
+        blockId:String,weekday:Int,slotId:String,
+        method:SavedProgressionMethod?
+    ):CustomCycleBuilderResult {
+        val block=current.blocks.singleOrNull{it.blockId==blockId}
+            ?:return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val day=block.days.singleOrNull{it.weekday==weekday}
+            ?:return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        val slot=day.slots.singleOrNull{it.slotId==slotId}
+            ?:return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        if(slot.progressionMethod==method)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current,expectedRevision,"change-exercise-progression") {
+            val next=current.copy(blocks=current.blocks.map{candidateBlock->
+                if(candidateBlock.blockId!=blockId)candidateBlock
+                else candidateBlock.copy(days=candidateBlock.days.map{candidateDay->
+                    if(candidateDay.weekday!=weekday)candidateDay
+                    else candidateDay.copy(slots=candidateDay.slots.map{candidateSlot->
+                        if(candidateSlot.slotId!=slotId)candidateSlot
+                        else candidateSlot.copy(progressionMethod=method)
+                    })
+                })
+            })
+            // Clearing a selection is also useful for a partially authored
+            // program; a new explicit method requires a full auditable plan.
+            if(method!=null) {
+                val checked=BasicProgramProgressionPlanDomain.review(next)
+                val selected=(checked as? ProgramProgressionPlan.Ready)
+                    ?.assignments?.singleOrNull{it.key==
+                        ProgramProgressionSlotKey(blockId,weekday,slotId)}
+                if(selected?.savedMethod!=method) null else next
+            } else next
+        }
+    }
+
     /** Atomic program-only grouping. Empty membership explicitly unlinks the
      * entire group, also when supersets were disabled after it was authored.
      * Never steals a slot from another group or changes sets/week overrides. */

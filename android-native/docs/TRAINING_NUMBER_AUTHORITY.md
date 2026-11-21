@@ -629,3 +629,29 @@ authority primitive, **not completion of goal-driven autopilot**. Backup and
 restoration integration, migrations, first-block activation, source-consistent
 week replay, time-zone travel handling and real-device testing remain
 required before using the anchor for any automatic program decision.
+
+### Complete owner calendar-file inventory during encrypted restore
+
+The encrypted native training snapshot already carries private calendar
+record bytes. The **staged core restore audit** now separately enumerates
+**every physical** `activated-block-calendar-*` entry, including archived
+records for superseded cycles. It verifies the strict owner/cycle/block hash
+filename, file type (not a symlink), versioned length/checksum envelope,
+internal content fingerprint, real owner/athlete, original approved Monday,
+cycle/source/draft revisions, IANA timezone, day schedule and uniqueness.
+A malformed, interrupted `.pending`, renamed or foreign calendar is a
+`FUTURE_CALENDARS_UNVERIFIED` recovery refusal, **not** a silently omitted
+file. An archived but well-formed record may be retained and reported as
+`staleFutureBlockCalendars`; it is *not* currently approved, and normal
+`read` still refuses it when the active source/draft no longer matches.
+
+The independent staged audit records separate counts of currently matching
+and archived calendar records. The encrypted clean-store test covers
+owner-approved future source transition → calendar acceptance → complete
+snapshot capture → isolated staged byte verification → atomic restore →
+cold read of the **exact same** calendar and preserved issuance barrier.
+It also proves that corrupted date bytes stop the staging audit before
+publication. The backup does **not** make checksum authentication into
+cryptographic source attestation or authorize any training edit. Production
+UI selection, first-block activation, full historic plan adherence and
+automated muscle-frequency/phase changes remain distinct open work.

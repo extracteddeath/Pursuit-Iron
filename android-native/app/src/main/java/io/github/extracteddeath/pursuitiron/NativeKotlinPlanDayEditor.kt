@@ -97,7 +97,9 @@ internal fun NativeKotlinPlanDayEditor(
     onRemoveExercise:(String)->Unit,onMoveToDay:(String)->Unit,
     onEditDay:()->Unit,onAddExercise:()->Unit,onRemoveDay:()->Unit,
     machineReview:NativePlanMachineReview?=null,
-    onManageMachine:(String)->Unit={}
+    onManageMachine:(String)->Unit={},
+    enableProgressionEditing:Boolean=false,
+    onProgressionChoice:(String,SavedProgressionMethod?)->Unit={_,_->}
 ) {
     if(!nativePlanDayIsCurrent(draft,block,day)) {
         PursuitEmptyState("Program changed",
@@ -120,6 +122,18 @@ internal fun NativeKotlinPlanDayEditor(
             }.orEmpty()
             key(slot.slotId) {
             var moreActionsExpanded by rememberSaveable { mutableStateOf(false) }
+            var showProgressionPicker by rememberSaveable {
+                mutableStateOf(false)
+            }
+            if(showProgressionPicker && enableProgressionEditing) {
+                NativeKotlinProgressionMethodPicker(
+                    draft,block.blockId,day.weekday,slot.slotId,busy,
+                    onDismiss={showProgressionPicker=false},
+                    onSave={method->
+                        showProgressionPicker=false
+                        onProgressionChoice(slot.slotId,method)
+                    })
+            }
             PursuitCard {
                 Text((index+1).toString()+". "+kotlinExerciseLabel(slot.exerciseId),
                     style=MaterialTheme.typography.titleMedium)
@@ -131,6 +145,9 @@ internal fun NativeKotlinPlanDayEditor(
                     if(actions.weekOverride)append(" · Week-specific sets")
                 }
                 Text(facts,style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Progression · "+savedProgressionLabel(slot.progressionMethod),
+                    style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(actions.superset)Text(
                     "Superset with "+partnerNames.joinToString(" / ").ifEmpty{"linked movement"},
@@ -169,6 +186,12 @@ internal fun NativeKotlinPlanDayEditor(
                     moreActionsExpanded,{moreActionsExpanded=!moreActionsExpanded}
                 )
                 if(moreActionsExpanded) {
+                    if(enableProgressionEditing && actions.edit)
+                        TextButton(
+                            onClick={showProgressionPicker=true},
+                            enabled=!busy,
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                        ) {Text("Change progression method")}
                     if(day.slots.size>1)PursuitResponsiveActionPair(
                         primary={m->
                             TextButton(onClick={onMoveExercise(slot.slotId,-1)},

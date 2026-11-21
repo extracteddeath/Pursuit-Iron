@@ -19,7 +19,7 @@ class NativeLegacyMuscleCoverageTest {
     private val identity=NativeKotlinCurrentIdentity{owner}
 
     private fun restoreFixture(resource:String,sha:String):Path {
-        val root=temp.newFolder("legacy").toPath()
+        val root=temp.newFolder().toPath()
         val text=checkNotNull(javaClass.getResourceAsStream(
             "/$resource")).use{it.readBytes()}
         assertEquals(sha,
@@ -41,66 +41,27 @@ class NativeLegacyMuscleCoverageTest {
         }
     }
 
-    @Test fun actualV8StoreColdOpensWithOriginalApprovalsHistoryAndExactBytes() {
-        assertFrozen("legacy-v8-sixteen-muscle-store.zip.base64",
-            "b085e12305e59ee848b2e54f46ea5f84c1ee6547b23097b73e2ca1d5cec1d942",
-            293,"v8",TrainingMuscleCoverage.legacyV1)
-    }
-
-    @Test fun actualV9StoreColdOpensWithoutSilentlyUpgradingItsEighteenMuscleApproval() {
-        assertFrozen("legacy-v9-eighteen-muscle-store.zip.base64",
-            "5ebc95e852a30ea65758d03f8737f26040e13306180dc8cfd584a2f206a8f9a8",301,"v9",TrainingMuscleCoverage.legacyV2)
-    }
-
-    @Test fun actualV10StoreKeepsItsTwentyMuscleConsentAndEveryOriginalFileByte() {
-        assertFrozen("legacy-v10-twenty-muscle-store.zip.base64",
-            "a81e28d3087575ecb7378d579c04e27fb92ba03ed1c634cd8c78662a2ef8af06",
-            320,"v10",TrainingMuscleCoverage.legacyV3)
-    }
-
-    private fun assertFrozen(resource:String,sha:String,catalogSize:Int,
-        revision:String,scope:List<TrainingMuscle>) {
-        val root=restoreFixture(resource,sha)
-        val before=content(root)
-        assertEquals(21,before.size)
-        assertTrue((NativeKotlinHistoryManifestFileStore(root).open(owner.ownerKey,owner.athleteId)
-            as NativeHistoryLedgerResult.Durable).ledger.completions.all{it.completedAtEpochMillis==null})
-        val audit=NativeKotlinStagedCoreStoreAudit.inspect(root,owner)
-        assertTrue(audit.toString(),audit is NativeKotlinStagedCoreAuditResult.Verified)
-        val verified=audit as NativeKotlinStagedCoreAuditResult.Verified
-        assertEquals(4,verified.finishedWorkouts)
-        assertEquals(4,verified.customIssued)
-        assertEquals(0,verified.customUnfinished)
-        val fence=NativeKotlinApprovalRevisionFence(root)
-        val drafts=NativeCustomCycleDraftFileStore(root,fence,identity)
-        val sources=NativeKotlinCustomAuthoringSourceFileStore(root,fence,identity)
-        val source=(sources.read(owner.ownerKey) as NativeAuthoringSourceRead.Found).source
-        assertEquals(catalogSize,source.catalog.size)
-        val program=(drafts.read(owner.ownerKey,"generated-first")
-            as NativeCustomDraftReadResult.Found).draft
-        val consent=NativeKotlinCustomCycleSignoffFileStore(root,fence,identity,drafts,sources)
-        val recovered=consent.recoverReviewedInputs(owner.ownerKey,"generated-first")
-        assertTrue(recovered.toString(),recovered is NativeCustomSavedCoachReview.Ready)
-        val inputs=(recovered as NativeCustomSavedCoachReview.Ready).inputs
-        val policy=inputs.policiesByPhase.getValue(TrainingPhase.HYPERTROPHY)
-        assertEquals(revision,policy.revision)
-        assertEquals(scope,
-            policy.selectedBounds.map{it.muscle})
-        val signed=consent.read(owner.ownerKey,"generated-first",inputs)
-        assertTrue(signed.toString(),signed is NativeCustomSignoffRead.Found && signed.isCurrent)
-        assertEquals(program.revision,
-            (signed as NativeCustomSignoffRead.Found).receipt.cycleRevision)
-        val seed=(NativeKotlinFirstProgramSeedFileStore(root,fence,identity)
-            .read(owner.ownerKey,"generated-first") as NativeFirstProgramSeedRead.Found).seed
-        assertEquals(source.revision,seed.sourceRevision)
-        val regenerated=CoachFirstProgramStartDomain.review(FirstProgramStartRequest(
-            source.setup,source.catalog,seed.startingLoads,seed.bodyweightExercises,
-            seed.phase,seed.extraFocuses,seed.nonSetSeconds,seed.policyVersion))
-        assertEquals(regenerated.issues.toString(),FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,regenerated.status)
-        assertEquals(program,CoachFirstProgramDraftConversionDomain.propose(regenerated,source.setup,
-            source.catalog,seed.cycleId,seed.title,seed.blockWeeks).cycle)
-        assertEquals(scope,regenerated.policy?.selectedBounds?.map{it.muscle})
-        assertEquals(before,content(root))
+    @Test fun prereleaseStoresCannotAuthorizeWorkoutRecoveryOrRewriteFiles() {
+        val fixtures = mapOf(
+            "legacy-v8-sixteen-muscle-store.zip.base64" to
+                "b085e12305e59ee848b2e54f46ea5f84c1ee6547b23097b73e2ca1d5cec1d942",
+            "legacy-v9-eighteen-muscle-store.zip.base64" to
+                "5ebc95e852a30ea65758d03f8737f26040e13306180dc8cfd584a2f206a8f9a8",
+            "legacy-v10-twenty-muscle-store.zip.base64" to
+                "a81e28d3087575ecb7378d579c04e27fb92ba03ed1c634cd8c78662a2ef8af06"
+        )
+        for ((resource, sha) in fixtures) {
+            val root = restoreFixture(resource, sha)
+            val before = content(root)
+            assertEquals(21, before.size)
+            val audit = NativeKotlinStagedCoreStoreAudit.inspect(root, owner)
+            assertTrue(audit.toString(), audit is NativeKotlinStagedCoreAuditResult.Rejected)
+            val drafts = NativeCustomCycleDraftFileStore(root,
+                NativeKotlinApprovalRevisionFence(root), identity)
+            assertEquals(NativeCustomDraftReadResult.Rejected(NativeCustomDraftRefusal.CORRUPT_RECORD),
+                drafts.read(owner.ownerKey, "generated-first"))
+            assertEquals(before, content(root))
+        }
     }
 
     @Test fun policyCodecPreservesLegacyAndNewScopesWithoutFillingOrDroppingRows() {

@@ -79,7 +79,14 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
                         }
                     }
                     OutlinedButton(
-                        onClick={monday=plan.selectedMonday.plusWeeks(1)},
+                        enabled=plan.previousMonday!=null,
+                        onClick={monday=plan.previousMonday},
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Previous week")
+                    }
+                    OutlinedButton(
+                        enabled=plan.nextMonday!=null,
+                        onClick={monday=plan.nextMonday},
                         modifier=Modifier.fillMaxWidth()) {
                         Text("Preview following week")
                     }
@@ -92,10 +99,14 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            is NativeFirstBlockCalendarPreview.Rejected ->
+            is NativeFirstBlockCalendarPreview.Rejected -> {
                 Text("No verified Week 1 calendar can be proposed (${reviewed.reason.name.lowercase().replace('_',' ')}). Nothing has been scheduled.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(monday!=null) TextButton(onClick={monday=null}) {
+                    Text("Return to this week's preview")
+                }
+            }
             null -> Text("Verifying the signed program, history and training calendar…",
                 style=MaterialTheme.typography.bodySmall)
         }

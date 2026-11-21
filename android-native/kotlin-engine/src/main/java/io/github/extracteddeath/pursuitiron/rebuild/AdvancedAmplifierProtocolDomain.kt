@@ -237,7 +237,10 @@ object AdvancedAmplifierProtocolDomain {
         issuedActivation:DraftSetLoad,
         performedActivation:KotlinPerformedSet?,
         selectedMachineId:String?,
-        stage:Int
+        stage:Int,
+        /** For the second drop this is the FIRST PERFORMED drop, never
+         * another copy of the activation or a guessed authored weight. */
+        precedingDropPerformed:KotlinPerformedSet?=null
     ):AmplifierFollowUpEntryLoad {
         // An authored target is not evidence that it is a real *drop*
         // from the completed activation. This applies to legacy single-drop
@@ -249,12 +252,28 @@ object AdvancedAmplifierProtocolDomain {
                 return AmplifierFollowUpEntryLoad.ActivationUnavailable
             val target=dropStageLoad(amp,stage) as? DraftSetLoad.Verified
                 ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            val actual=performedActivation
+            val activation=performedActivation
                 ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            if(actual.reps<=0 || actual.machineInstanceId!=selectedMachineId ||
+            val actual=if(stage==1)activation else precedingDropPerformed
+                ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            if(activation.reps<=0 || actual.reps<=0 ||
+                activation.machineInstanceId!=selectedMachineId ||
+                actual.machineInstanceId!=activation.machineInstanceId ||
                 actual.unit!=target.unit || actual.load==null ||
                 actual.load.compareTo(target.value)<=0)
                 return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            // Only stage one can be started directly from the activation.
+            // A second reduction requires a factual first reduction at the
+            // exact authored stage-one weight; otherwise the live execution
+            // policy closes the sequence without inventing a new target.
+            if(stage==2) {
+                val previousTarget=dropStageLoad(amp,1)
+                    as? DraftSetLoad.Verified
+                    ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
+                if(actual.load.compareTo(previousTarget.value)!=0 ||
+                    actual.unit!=previousTarget.unit)
+                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
+            }
             return AmplifierFollowUpEntryLoad.AuthoredStage(target)
         }
         val issued=followUpLoadForStage(amp,issuedActivation,stage)

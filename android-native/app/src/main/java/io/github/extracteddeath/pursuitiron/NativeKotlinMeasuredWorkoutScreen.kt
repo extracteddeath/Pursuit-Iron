@@ -157,11 +157,20 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         reloadSource()
         reload()
     }
-    BackHandler(enabled=!busy){onClose()}
+    BackHandler { if (!busy) onClose() }
     val entryState=NativeMeasuredWorkoutEntryPolicy.resolve(
         expectsExisting,lookupComplete,stored!=null,
         (storedLookup as? NativeMeasuredWorkoutStoreResult.Rejected)
             ?.reason==NativeMeasuredWorkoutStoreRefusal.NOT_ISSUED)
+    // Navigation, the set list and the Finish dialog share the same immutable
+    // journal. Replay it once per selection or receipt change during rendering.
+    val displayedJournal = stored?.journal
+    val reviewedFocus = remember(entryState, displayedJournal, focusSetKey) {
+        if (entryState == NativeMeasuredWorkoutEntryState.RECORDING &&
+            displayedJournal != null && displayedJournal.finishedByEventId == null)
+            MeasuredWorkoutFocusDomain.review(displayedJournal, focusSetKey)
+        else null
+    }
     val source=(sourceRead as? NativeAuthoringSourceRead.Found)?.source
     val sourceState=NativeMeasuredSourcePolicy.resolve(
         sourceLookupComplete,source!=null && source.setup.reviewed!=null)
@@ -526,8 +535,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                     stored=null;review=null;message=null
                 }) {Text("Create another measured workout")}
             } else {
-                val focus=MeasuredWorkoutFocusDomain.review(
-                    journal,focusSetKey)
+                val focus=reviewedFocus
                 if(focus==null) {
                     Text("Verified measured set navigation is unavailable. "+
                         "Leave and reopen the saved workout.",
@@ -535,8 +543,9 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                 } else {
                     val set=journal.approvedPlan.sets[focus.selectedOrdinal-1]
                     val child=journal.bySetKey.getValue(set.setKey)
-                    val selectedReview=MeasuredWorkoutResultReviewDomain.review(
-                        set,child)
+                    val selectedReview=remember(set, child) {
+                        MeasuredWorkoutResultReviewDomain.review(set, child)
+                    }
                     val definition=MeasuredExerciseCatalogDomain.find(set.exerciseId)
                     Text("${focus.recordedSets} of ${focus.totalSets} sets saved",
                         style=MaterialTheme.typography.titleMedium)
@@ -563,8 +572,10 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 "Review the actual saved status of every set. "+
                                     "Choosing a row never records a result.")
                             journal.approvedPlan.sets.forEachIndexed {index,planned->
-                                val rowReview=MeasuredWorkoutResultReviewDomain.review(
-                                    planned,journal.bySetKey[planned.setKey])
+                                val rowJournal=journal.bySetKey[planned.setKey]
+                                val rowReview=remember(planned, rowJournal) {
+                                    MeasuredWorkoutResultReviewDomain.review(planned, rowJournal)
+                                }
                                 val saved=rowReview.resolved
                                 val name=MeasuredExerciseCatalogDomain.find(
                                     planned.exerciseId)?.displayName
@@ -723,8 +734,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         stored?.journal?.let{measured->
             measured.canProposeFinish &&
                 measured.finishedByEventId==null &&
-                MeasuredWorkoutFocusDomain.review(
-                    measured,focusSetKey)!=null
+                reviewedFocus!=null
         }==true)
         Column(Modifier.fillMaxWidth().widthIn(max=920.dp)
             .align(Alignment.CenterHorizontally)
@@ -826,8 +836,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             entryState==NativeMeasuredWorkoutEntryState.RECORDING &&
                 stored?.journal?.canProposeFinish==true &&
                 stored?.journal?.finishedByEventId==null &&
-                MeasuredWorkoutFocusDomain.review(
-                    stored?.journal ?: return@let,focusSetKey)!=null)
+                reviewedFocus!=null)
         AlertDialog(
         onDismissRequest={if(!busy)finishReview=null},
         title={Text("Finish measured workout?")},

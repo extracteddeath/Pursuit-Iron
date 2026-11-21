@@ -88,18 +88,18 @@ object MeasuredWorkoutJournalDomain {
      * A screen cannot combine individually valid sets from unrelated workouts.
      */
     fun begin(input:MeasuredWorkoutPlan):MeasuredWorkoutJournal? {
-        if(!id.matches(input.workoutId) || !id.matches(input.gymId) ||
-            input.gymRevision !in 1..MAX_REVISION ||
-            input.sets.size !in 1..MAX_SETS ||
-            input.sets.map{it.setKey}.toSet().size!=input.sets.size ||
-            input.sets.any{set->
-                set.workoutId!=input.workoutId ||
-                set.gymId!=input.gymId ||
-                set.gymRevision!=input.gymRevision ||
+        val frozen=input.copy(sets=Collections.unmodifiableList(
+            input.sets.map(MeasuredWorkoutSnapshotDomain::plan)))
+        if(!id.matches(frozen.workoutId) || !id.matches(frozen.gymId) ||
+            frozen.gymRevision !in 1..MAX_REVISION ||
+            frozen.sets.size !in 1..MAX_SETS ||
+            frozen.sets.map{it.setKey}.toSet().size!=frozen.sets.size ||
+            frozen.sets.any{set->
+                set.workoutId!=frozen.workoutId ||
+                set.gymId!=frozen.gymId ||
+                set.gymRevision!=frozen.gymRevision ||
                 MeasuredExerciseDomain.inspect(set) !is MeasurementPlanResult.Candidate
             })return null
-        val frozen=input.copy(sets=Collections.unmodifiableList(
-            input.sets.toList()))
         val initial=frozen.sets.associate{plan->
             plan.setKey to (MeasuredExerciseJournalDomain.begin(plan)
                 ?:return null)
@@ -110,8 +110,9 @@ object MeasuredWorkoutJournalDomain {
 
     fun reduce(
         original:MeasuredWorkoutJournal,
-        operation:MeasuredWorkoutOperation
+        input:MeasuredWorkoutOperation
     ):MeasuredWorkoutDecision {
+        val operation=MeasuredWorkoutSnapshotDomain.operation(input)
         fun reject(reason:MeasuredWorkoutRefusal,
             setReason:MeasurementRefusal?=null)=
             MeasuredWorkoutDecision.Rejected(reason,setReason)
@@ -184,4 +185,8 @@ object MeasuredWorkoutJournalDomain {
         }
         return state
     }
+
+    /** Owner verification remains the native caller's responsibility. */
+    fun verified(journal:MeasuredWorkoutJournal):Boolean =
+        replay(journal.approvedPlan,journal.receipts)==journal
 }

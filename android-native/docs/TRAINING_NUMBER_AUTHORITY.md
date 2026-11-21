@@ -769,3 +769,29 @@ initial start-date transaction, full encrypted backup/restore census, stale
 consent and reschedule policy, first-week issuance integration, historical
 program revision handling, and device acceptance. The future-block
 approval store is not reused for first-block start authority.
+
+
+### Immutable measured prescriptions and actual observations
+
+The shared measured journal now takes independent, unmodifiable snapshots of
+all collection operands before retaining a prescription or record: side
+assignments, fixture/band confirmations, physical load totals and actual
+left/right quantities. The multi-set parent retains the same frozen plan and
+record semantics as its child journal. Mutating an editor-owned collection
+after begin, Record or correction cannot rewrite an issued target, past
+receipt, effective actual or serialized archive. No stored format or training
+number changes.
+
+Measured Result review, Focus navigation and read-only comparison now verify
+the cached state against the original reducer's complete receipt replay. A
+stale pre-correction pointer, fabricated Finish, missing parent receipt or
+misattached child cannot display an earlier actual, count as completed work,
+advance Focus or establish an improvement. Native ownership and durable
+History publication remain separate checks.
+
+Regression fixtures exercise all 14 timed/carry/banded identities, independent
+parent/child copies, direct mutation attempts, correction, idempotent Finish,
+byte-identical archives and cold decoding. The six added counterexamples fail
+on the prior implementation; the focused JVM suite passes 45 tests after the
+fix. Full engine parity, the complete Material 3 Expressive UI and physical
+Android acceptance remain open. No APK/AAB.

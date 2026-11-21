@@ -326,14 +326,17 @@ sealed interface MeasuredJournalDecision {
  */
 object MeasuredExerciseJournalDomain {
     private val eventId=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    fun begin(plan:MeasuredExerciseSetPlan):MeasuredExerciseJournal? =
-        if(MeasuredExerciseDomain.inspect(plan) is MeasurementPlanResult.Candidate)
-            MeasuredExerciseJournal(plan,0,emptyList(),null,null) else null
+    fun begin(plan:MeasuredExerciseSetPlan):MeasuredExerciseJournal? {
+        val frozen=MeasuredWorkoutSnapshotDomain.plan(plan)
+        return if(MeasuredExerciseDomain.inspect(frozen) is MeasurementPlanResult.Candidate)
+            MeasuredExerciseJournal(frozen,0,emptyList(),null,null) else null
+    }
 
     fun reduce(
         prior:MeasuredExerciseJournal,
-        operation:MeasuredJournalOperation
+        input:MeasuredJournalOperation
     ):MeasuredJournalDecision {
+        val operation=MeasuredWorkoutSnapshotDomain.operation(input)
         if(!eventId.matches(operation.eventId))
             return MeasuredJournalDecision.Rejected(MeasurementRefusal.INVALID_ID_OR_SOURCE)
         val previous=prior.receipts.firstOrNull {
@@ -396,6 +399,10 @@ object MeasuredExerciseJournalDomain {
         }
         return current
     }
+
+    /** Verify cached actual/correction/Finish pointers against the one receipt stream. */
+    fun verified(journal:MeasuredExerciseJournal):Boolean =
+        replay(journal.immutablePlan,journal.receipts)==journal
 }
 
 /** Read-only, comparable actual results only; never grant PRs or change load. */
@@ -405,6 +412,9 @@ object MeasuredExerciseComparisonDomain {
         before:MeasuredExerciseJournal,
         after:MeasuredExerciseJournal
     ):MeasuredComparison {
+        if(!MeasuredExerciseJournalDomain.verified(before) ||
+            !MeasuredExerciseJournalDomain.verified(after))
+            return MeasuredComparison.NOT_COMPARABLE
         val a=before.immutablePlan
         val b=after.immutablePlan
         val first=(before.effectiveRecord?.operation as? MeasuredJournalOperation.Record)

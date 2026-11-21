@@ -67,7 +67,10 @@ object BasicProgramProgressionPlanDomain {
     fun review(
         cycle:CustomTrainingCycle,
         /** Only the explicitly selected slots can use independent per-set load progression. */
-        selectedPerSetDynamic:Set<ProgramProgressionSlotKey> = emptySet()
+        selectedPerSetDynamic:Set<ProgramProgressionSlotKey> = emptySet(),
+        /** Explicit user/programmer choices, never inferred from fatigue. */
+        selectedStrategies:Map<ProgramProgressionSlotKey,BasicProgressionStrategy> =
+            emptyMap()
     ):ProgramProgressionPlan {
         fun no(why:String)=ProgramProgressionPlan.Refused(why)
         if(cycle.athleteId.isBlank() || cycle.cycleId.isBlank() ||
@@ -80,7 +83,12 @@ object BasicProgramProgressionPlanDomain {
             }
         }
         if(allKeys.size !in 1..2048 || allKeys.distinct().size!=allKeys.size ||
-            !allKeys.toSet().containsAll(selectedPerSetDynamic))
+            !allKeys.toSet().containsAll(selectedPerSetDynamic) ||
+            !allKeys.toSet().containsAll(selectedStrategies.keys) ||
+            selectedPerSetDynamic.any { key ->
+                selectedStrategies[key]!=null &&
+                    selectedStrategies[key]!=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+            })
             return no("Every selected progression must match one unique actual source slot.")
 
         val assignments=ArrayList<ProgramProgressionAssignment>()
@@ -110,12 +118,31 @@ object BasicProgramProgressionPlanDomain {
                 it.weekday==day.weekday && it.slotId==slot.slotId
             }.map {it.weekInBlock}.toSet()
             val amplifier=working.any {it.amplifier!=null}
-            val selectedDynamic=key in selectedPerSetDynamic
-            if(selectedDynamic && (bodyweight || assistance || bands.size!=1 ||
-                block.purpose!=CustomBlockPurpose.TRAINING ||
-                block.phase==TrainingPhase.PEAK || authored.isNotEmpty()))
-                return no("Independent set progression is incompatible with this exercise or phase.")
-            val special=loaded && !sameWeights && !selectedDynamic
+            val requested=selectedStrategies[key] ?:
+                if(key in selectedPerSetDynamic)
+                    BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION else null
+            val selectedDynamic=requested==
+                BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+            val unavailablePhase=block.purpose!=CustomBlockPurpose.TRAINING ||
+                block.phase==TrainingPhase.PEAK || authored.isNotEmpty()
+            if(requested!=null && requested!=BasicProgressionStrategy.MANUAL_LOGGING &&
+                unavailablePhase)
+                return no("An authored week, recovery or peak block cannot be overridden by an earned basic progression.")
+            if(requested!=null && requested!=BasicProgressionStrategy.MANUAL_LOGGING &&
+                (bodyweight || bands.size!=1 || (assistance &&
+                    requested !in setOf(
+                        BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
+                        BasicProgressionStrategy.REP_TARGET_PROGRESSION)) ||
+                    (!assistance &&
+                        requested==BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION) ||
+                    ((requested==BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION ||
+                        requested==BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION) &&
+                        !sameWeights)))
+                return no("The requested basic progression cannot operate on this authored set scheme.")
+            if(selectedDynamic && (bodyweight || assistance))
+                return no("Independent weighted-set progression requires an ordinary weighted movement.")
+            val special=loaded && !sameWeights && !selectedDynamic &&
+                requested!=BasicProgressionStrategy.REP_TARGET_PROGRESSION
             // No inferential distinction between an intended backoff, pyramid,
             // percentage wave or different manually set loads: require a real
             // authored load scheme instead of silently leveling all sets.
@@ -123,6 +150,11 @@ object BasicProgramProgressionPlanDomain {
             val strategy:BasicProgressionStrategy?
             val note:String
             when {
+                requested==BasicProgressionStrategy.MANUAL_LOGGING -> {
+                    route=ProgramProgressionRoute.MANUAL
+                    strategy=BasicProgressionStrategy.MANUAL_LOGGING
+                    note="Keep the athlete's exact prescription unchanged and log factual work."
+                }
                 block.purpose==CustomBlockPurpose.RECOVERY -> {
                     route=ProgramProgressionRoute.RECOVERY_HOLD
                     strategy=null
@@ -154,10 +186,10 @@ object BasicProgramProgressionPlanDomain {
                     strategy=BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
                     note="Earn one verified lower counterweight after all straight work reaches the upper rep bound."
                 }
-                selectedDynamic -> {
+                requested!=null -> {
                     route=ProgramProgressionRoute.BASIC_WEIGHTED
-                    strategy=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
-                    note="Each signed working-set ordinal progresses independently."
+                    strategy=requested
+                    note="Source-selected, explicit basic progression; no automatic load or target changes."
                 }
                 block.phase==TrainingPhase.STRENGTH &&
                     slot.role==ComposerRole.PRIMARY -> {

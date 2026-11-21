@@ -286,6 +286,43 @@ class BasicProgramProgressionPlanDomainTest {
                 e1rm.assignments.single()))
     }
 
+    @Test fun e1rmCannotBorrowBodyweightAssistanceOrConflictingAuthoredSchemes() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        fun review(sets:List<CustomAuthoredSet>,
+            overrides:Map<String,List<CustomWeekSlotOverride>> = emptyMap(),
+            method:SavedProgressionMethod?=null) =
+            BasicProgramProgressionPlanDomain.review(
+                cycle(block(phase=TrainingPhase.STRENGTH,
+                    slots=listOf(slot(role=ComposerRole.PRIMARY,
+                        sets=sets).copy(progressionMethod=method))),
+                    overrides=overrides),
+                selectedStyles=if(method==null)
+                    mapOf(key to NativeProgressionStyle.E1RM) else emptyMap())
+        val valid=review(listOf(working(),working()))
+        assertTrue(valid is ProgramProgressionPlan.Ready)
+        val bodyweight=CustomAuthoredSet(DraftSetType.WORKING,
+            DraftSetLoad.ExplicitBodyweight,RepBand(6,10),2,45,90)
+        assertTrue(review(listOf(bodyweight,bodyweight))
+            is ProgramProgressionPlan.Refused)
+        assertTrue(review(listOf(working("40",assisted=true),
+            working("40",assisted=true))) is ProgramProgressionPlan.Refused)
+        assertTrue(review(listOf(working("100"),working("95")))
+            is ProgramProgressionPlan.Refused)
+        assertTrue(review(listOf(working("100"),
+            working("100",RepBand(8,12)))) is ProgramProgressionPlan.Refused)
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpRounds=3)
+        assertTrue(review(listOf(working(amplifier=amp),working()))
+            is ProgramProgressionPlan.Refused)
+        val authored=mapOf("block" to listOf(
+            CustomWeekSlotOverride(2,0,"slot",listOf(working("105"),working("105")))))
+        assertTrue(review(listOf(working(),working()),overrides=authored)
+            is ProgramProgressionPlan.Refused)
+        assertTrue(review(listOf(bodyweight,bodyweight),
+            method=SavedProgressionMethod.E1RM)
+            is ProgramProgressionPlan.Refused)
+    }
+
     @Test fun savedMethodBeatsTransientPreviewAndSurvivesBlockDayIdentity() {
         val key=ProgramProgressionSlotKey("block",0,"slot")
         val cycle=cycle(block(slots=listOf(slot().copy(

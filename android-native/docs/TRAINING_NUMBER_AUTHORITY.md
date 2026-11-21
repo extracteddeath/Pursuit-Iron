@@ -655,3 +655,28 @@ publication. The backup does **not** make checksum authentication into
 cryptographic source attestation or authorize any training edit. Production
 UI selection, first-block activation, full historic plan adherence and
 automated muscle-frequency/phase changes remain distinct open work.
+
+### Independent native activation commit-intent restore census
+
+The second-consent namespace (`future-activation-<hash>.bin`)
+and the post-consent source-switch WAL namespace
+(`future-activation-commit-<hash>.bin`) share a textual prefix but
+**not** a binary schema. Staged recovery now scans them independently:
+the archived approval inventory examines only exact second-consent
+names, while `NativeKotlinFutureActivationCommitTransaction.inventoryOwner`
+accounts for every physical commit-intent file under its own prefix.
+Commit inventory requires the original owner-hashed path, regular
+unsymlinked file, valid write-ahead envelope, exact athlete/handoff,
+and a verified `Prepared` or `Applied` source-CAS state. Missing intents
+are legitimate when no source transition began. Corrupt, foreign,
+renamed, conflicting, or interrupted `.pending` intents are a separate
+`FUTURE_ACTIVATION_INTENT_UNVERIFIED` refusal, never discarded as
+irrelevant or confused with consent. A correctly `Prepared` intent
+remains a source-change barrier during recovery; an `Applied` one
+preserves its original approved source and cannot be replayed as new
+athlete consent.
+
+These checks run on the staged data before a restored store is
+atomically published. They preserve existing backup bytes, do not
+perform activation, cannot grant workout issuance, and never silently
+remove the athlete's future-handoff barrier.

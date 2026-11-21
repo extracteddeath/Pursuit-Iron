@@ -1816,16 +1816,16 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val password="owner-calendar-clean-recovery-password".toCharArray()
         val snap=NativeKotlinEncryptedTrainingSnapshot.capture(
             temp.root.toPath(),fence,expected,{active},
-            {NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected)
-                is NativeKotlinStagedCoreAuditResult.Verified},password)
+            {NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected) is
+                NativeKotlinStagedCoreAuditResult.Verified},password)
         assertTrue(snap.toString(),snap is NativeKotlinTrainingSnapshotResult.Ready)
         val target=temp.newFolder("calendar-clean-restore").toPath()
             .resolve("kotlin-coach-v1")
         val restored=NativeKotlinCleanStoreRestore.restoreToAbsentStore(
             target,(snap as NativeKotlinTrainingSnapshotResult.Ready).encrypted,
             password,expected,
-            {stage,who->NativeKotlinStagedCoreStoreAudit.inspect(stage,who)
-                is NativeKotlinStagedCoreAuditResult.Verified})
+            {stage,who->NativeKotlinStagedCoreStoreAudit.inspect(stage,who) is
+                NativeKotlinStagedCoreAuditResult.Verified})
         password.fill('\u0000')
         assertTrue(restored.toString(),
             restored is NativeKotlinCleanRestoreResult.Committed)

@@ -596,4 +596,56 @@ class CustomWorkoutJournalDomainTest {
         assertEquals(0,skipped.unresolvedVisitCount)
     }
 
+    @Test fun swapUndoUseExactMultiStageAmplifierTimeAndPreserveOtherSets() {
+        val original=twoSlotInitial()
+        val replacement=substitute(revision=0L).let {request->
+            val slot=request.replacement
+            val authored=slot.sets.single()
+            val multi=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+                followUpActiveSeconds=75,followUpRounds=3)
+            request.copy(replacement=slot.copy(sets=listOf(authored.copy(
+                prescription=authored.prescription.copy(amplifier=multi)))))
+        }
+        val swapped=accept(original,replacement)
+        // Other slot: 45 + 90 = 135. New multi-stage slot:
+        // 45 + 90 + (3 * 20) + 75 = 270. No invented rest overlap.
+        assertEquals(405L,swapped.snapshot.knownSetAndRestSeconds)
+        assertEquals(original.originalSnapshot,swapped.originalSnapshot)
+        val undone=accept(swapped,CustomWorkoutJournalOperation.UndoSwap(
+            "undo-extended",swapped.revision,replacement.eventId))
+        assertEquals(270L,undone.snapshot.knownSetAndRestSeconds)
+        assertEquals(original.snapshot,undone.snapshot)
+        var replay=CustomWorkoutJournalDomain.begin(original.workoutId,
+            original.originalSnapshot,original.preparedConsentFingerprint)
+        for(receipt in undone.receipts) {
+            val result=CustomWorkoutJournalDomain.reduce(replay,receipt.operation)
+            assertTrue(result.toString(),result is CustomWorkoutJournalDecision.Proposed)
+            replay=(result as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        assertEquals(undone,replay)
+    }
+
+    @Test fun swapCannotHideOverflowedOrInvalidAmplifierTiming() {
+        val source=twoSlotInitial()
+        val base=substitute(revision=0L)
+        val row=base.replacement.sets.single()
+        val invalid=listOf(
+            CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,Int.MAX_VALUE,
+                followUpActiveSeconds=60,followUpRounds=4),
+            CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+                followUpActiveSeconds=0,followUpRounds=3),
+            CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+                followUpLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.DUMBBELL_PER_HAND,BigDecimal("25")))
+        )
+        invalid.forEachIndexed {index,amp->
+            val request=base.copy(eventId="invalid-swap-$index",
+                replacement=base.replacement.copy(sets=listOf(row.copy(
+                    prescription=row.prescription.copy(amplifier=amp)))))
+            assertEquals(CustomWorkoutJournalDecision.Rejected(
+                CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET),
+                CustomWorkoutJournalDomain.reduce(source,request))
+        }
+    }
+
 }

@@ -187,7 +187,13 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
                 null -> Text("Checking scheduled day…",
                     style=MaterialTheme.typography.bodySmall)
             }
-            if(scheduledWeek.isNotEmpty() && nextWeekAndDay!=null) {
+            if(scheduledWeek.isNotEmpty() && nextWeekAndDay!=null &&
+                scheduledWeek.map{it.weekday}.toSet()==existing.scheduledWeekdays &&
+                scheduledWeek.all {
+                    it.cycleId==cycleId && it.blockId==existing.blockId &&
+                        it.absoluteWeek==nextWeekAndDay.first &&
+                        it.timezoneId==existing.timezoneId
+                }) {
                 HorizontalDivider()
                 Text("Approved training week ${nextWeekAndDay.first} · scheduled only",
                     style=MaterialTheme.typography.titleSmall)

@@ -428,6 +428,21 @@ object CustomTrainingCycleDomain {
             } > 1500)
             issue(CustomCycleIssueKind.EXCESSIVE_WORK, "blocks",
                 "Too many authored sets for one bounded planning review.")
+        // Validate durable progression methods at the same trusted draft
+        // review boundary as physical sets and weekly overrides. An invalid
+        // saved selector must never survive by relying on the Plan editor or
+        // a later workout preflight to notice it. All compatibility rules
+        // remain owned by the single shared progression classifier.
+        if (issues.isEmpty() && input.blocks.any { block ->
+                block.days.any { day ->
+                    day.slots.any { it.progressionMethod != null }
+                }
+            }) {
+            val progression = BasicProgramProgressionPlanDomain.review(input)
+            if (progression is ProgramProgressionPlan.Refused)
+                issue(CustomCycleIssueKind.INVALID_SLOT, "progression",
+                    progression.explanation)
+        }
         val accepted = issues.isEmpty()
         return CustomCycleReview(
             if (accepted) CustomCycleReviewStatus.READY_FOR_COACH_REVIEW

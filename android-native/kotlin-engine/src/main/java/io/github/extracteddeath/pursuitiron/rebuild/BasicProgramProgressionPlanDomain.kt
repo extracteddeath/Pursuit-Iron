@@ -105,7 +105,8 @@ object BasicProgramProgressionPlanDomain {
             // and the effort reviewer owns any e1RM recommendation.
             ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION ->
                 if(assignment.selectedStyle==NativeProgressionStyle.WAVE)
-                    SavedProgressionMethod.WAVE else null
+                    SavedProgressionMethod.WAVE
+                else assignment.savedMethod // preserve a signed basic method behind the authored week
             ProgramProgressionRoute.E1RM_COACH_REVIEW ->
                 if(assignment.selectedStyle==NativeProgressionStyle.E1RM)
                     SavedProgressionMethod.E1RM else null
@@ -246,8 +247,14 @@ object BasicProgramProgressionPlanDomain {
                 return no("e1RM progression requires a straight weighted primary strength or peak exercise with no conflicting authored week or amplifier.")
             val selectedDynamic=requested==
                 BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+            // A durable basic method can coexist with a later explicitly
+            // reviewed week override. That authored week is authoritative;
+            // the saved method remains the fallback intent, NOT a load writer
+            // on that week. A new transient basic selection cannot override
+            // periodization, and recovery/peak still block basic overload.
             val unavailablePhase=block.purpose!=CustomBlockPurpose.TRAINING ||
-                block.phase==TrainingPhase.PEAK || authored.isNotEmpty()
+                block.phase==TrainingPhase.PEAK ||
+                (authored.isNotEmpty() && saved==null)
             if(requested!=null && requested!=BasicProgressionStrategy.MANUAL_LOGGING &&
                 unavailablePhase)
                 return no("An authored week, recovery or peak block cannot be overridden by an earned basic progression.")

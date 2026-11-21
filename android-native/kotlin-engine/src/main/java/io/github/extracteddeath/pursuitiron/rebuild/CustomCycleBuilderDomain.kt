@@ -117,6 +117,20 @@ object CustomCycleBuilderDomain {
     private fun reviewedProgressionCandidate(
         cycle: CustomTrainingCycle, key: ProgramProgressionSlotKey, method: SavedProgressionMethod?
     ): CustomTrainingCycle? {
+        // Editing a method is a NEW intent. Do not allow a new basic
+        // progression to claim a slot whose exact future week has already
+        // been authored. A previously saved basic method may remain when
+        // the athlete subsequently accepts a coached week edit; the shared
+        // progression resolver then gives those signed week sets priority.
+        // Wave expressly requires authored weeks, and Manual is a hold.
+        val currentMethod=cycle.blocks.singleOrNull { it.blockId==key.blockId }
+            ?.days?.singleOrNull { it.weekday==key.weekday }
+            ?.slots?.singleOrNull { it.slotId==key.slotId }?.progressionMethod
+        if (method != null && method!=currentMethod && method !in setOf(
+                SavedProgressionMethod.WAVE, SavedProgressionMethod.MANUAL
+            ) && cycle.weekOverrides[key.blockId].orEmpty().any {
+                it.weekday == key.weekday && it.slotId == key.slotId
+            }) return null
         val next = cycle.copy(blocks = cycle.blocks.map { block ->
             if (block.blockId != key.blockId) block else block.copy(days = block.days.map { day ->
                 if (day.weekday != key.weekday) day else day.copy(slots = day.slots.map { slot ->

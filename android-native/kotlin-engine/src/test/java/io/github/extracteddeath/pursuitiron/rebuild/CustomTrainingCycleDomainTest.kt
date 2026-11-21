@@ -67,6 +67,75 @@ class CustomTrainingCycleDomainTest {
                 CustomCycleReviewStatus.READY_FOR_COACH_REVIEW, it.status)
         }
 
+    @Test fun savedProgressionMustPassOneCanonicalReviewBeforeDraftIsAccepted() {
+        val starting=benchSlot().copy(
+            progressionMethod=SavedProgressionMethod.WAVE)
+        val strength=block(phase=TrainingPhase.STRENGTH,days=listOf(
+            CustomTrainingDay(0,"Strength A",ComposerSessionPurpose.STRENGTH_SKILL,
+                listOf(starting))))
+        val program=cycle(listOf(strength))
+        // A four-week Wave cannot claim a saved progression with only
+        // one later week's load authored. The program must fail *here*,
+        // before an athlete is allowed to sign or issue it.
+        val missing=program.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(2,0,"main-press",
+                listOf(weighted(200),weighted(200))))))
+        val denied=reviewed(missing)
+        assertEquals(CustomCycleReviewStatus.UNRESOLVED,denied.status)
+        assertNull(denied.verifiedDraft)
+        assertTrue(denied.issues.any{
+            it.kind==CustomCycleIssueKind.INVALID_SLOT &&
+                it.location=="progression" && it.explanation.contains("Wave")
+        })
+        val full=program.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(2,0,"main-press",
+                listOf(weighted(200),weighted(200))),
+            CustomWeekSlotOverride(3,0,"main-press",
+                listOf(weighted(175),weighted(175))),
+            CustomWeekSlotOverride(4,0,"main-press",
+                listOf(weighted(205),weighted(205)))
+        )))
+        assertEquals(SavedProgressionMethod.WAVE,
+            valid(full).verifiedDraft!!.blocks.single().days.single()
+                .slots.single().progressionMethod)
+        // A bodyweight movement is a valid authored source, but it can
+        // never carry a specialist estimated-barbell-max method.
+        val impossible=cycle(listOf(block(
+            phase=TrainingPhase.STRENGTH,days=listOf(
+                CustomTrainingDay(0,"Pull",ComposerSessionPurpose.STRENGTH_SKILL,
+                    listOf(rowSlot().copy(role=ComposerRole.PRIMARY,
+                        progressionMethod=SavedProgressionMethod.E1RM)))))))
+        val noMax=reviewed(impossible)
+        assertTrue(noMax.issues.toString(),noMax.issues.any{
+            it.kind==CustomCycleIssueKind.INVALID_SLOT &&
+                it.location=="progression"
+        })
+        assertNull(noMax.verifiedDraft)
+        // Valid hand-authored mixed strength schemes with NO named
+        // progression remain first-class, not silently flattened.
+        valid(cycle())
+    }
+
+    @Test fun savedDoubleProgressionCannotEraseAnExplicitCoachApprovedWeekEdit() {
+        val original=cycle(listOf(block(days=listOf(
+            CustomTrainingDay(0,"Upper",ComposerSessionPurpose.HYPERTROPHY,
+                listOf(benchSlot().copy(
+                    progressionMethod=SavedProgressionMethod.DOUBLE)))))))
+        val amended=original.copy(weekOverrides=mapOf("base" to listOf(
+            CustomWeekSlotOverride(2,0,"main-press",
+                listOf(weighted(200),weighted(200))))))
+        val actual=valid(amended)
+        assertEquals(SavedProgressionMethod.DOUBLE,
+            actual.verifiedDraft!!.blocks.single().days.single()
+                .slots.single().progressionMethod)
+        assertEquals(n(200),((CustomTrainingCycleDomain.week(actual,2)!!
+            .days.single().slots.single().sets.first().load)
+            as DraftSetLoad.Verified).value)
+        assertEquals(n(185),((CustomTrainingCycleDomain.week(actual,1)!!
+            .days.single().slots.single().sets.first().load)
+            as DraftSetLoad.Verified).value)
+    }
+
     @Test fun trulyCustomCycleKeepsWeekdayOrderAndExerciseOrderWithoutComposer() {
         val original = cycle()
         val reviewed = valid(original)

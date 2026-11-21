@@ -323,6 +323,32 @@ class BasicProgramProgressionPlanDomainTest {
             is ProgramProgressionPlan.Refused)
     }
 
+    @Test fun savedBasicMethodSurvivesReviewedWeekEditsWithoutMutatingAuthoredNumbers() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val override=CustomWeekSlotOverride(2,0,"slot",
+            listOf(working("105"),working("105")))
+        val saved=cycle(block(slots=listOf(slot().copy(
+            progressionMethod=SavedProgressionMethod.DOUBLE))),
+            overrides=mapOf("block" to listOf(override)))
+        val reviewed=BasicProgramProgressionPlanDomain.review(saved)
+            as ProgramProgressionPlan.Ready
+        val choice=reviewed.assignments.single()
+        assertEquals(setOf(2),choice.authoredWeekNumbers)
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
+            choice.route)
+        assertNull(choice.basicStrategy)
+        assertEquals(SavedProgressionMethod.DOUBLE,
+            BasicProgramProgressionPlanDomain.savedChoice(choice))
+        assertFalse(choice.mayModifyIssuedSet)
+        // A preview-only progression selection cannot supersede the same
+        // athlete-authored week without editing and signing the source.
+        val unsaved=saved.copy(blocks=listOf(block()))
+        assertTrue(BasicProgramProgressionPlanDomain.review(unsaved,
+            selectedStrategies=mapOf(key to
+                BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION))
+            is ProgramProgressionPlan.Refused)
+    }
+
     @Test fun savedMethodBeatsTransientPreviewAndSurvivesBlockDayIdentity() {
         val key=ProgramProgressionSlotKey("block",0,"slot")
         val cycle=cycle(block(slots=listOf(slot().copy(

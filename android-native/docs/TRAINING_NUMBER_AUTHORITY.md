@@ -718,3 +718,18 @@ auto-rescheduling policy, a first-block start approval, or a full
 goal-driven endless-plan engine. Those require separate owner-backed
 consent, original-issue date reconciliation, complete missed/late
 workout handling and on-device acceptance tests before activation.
+
+
+### Complete read-only Plan week around the next verified position
+
+For an approved current future block, the native Plan Calendar panel now asks the
+owner-fenced calendar store to project **every actual scheduled weekday** in
+the independently verified next absolute week. It displays a week only if
+*all* programmed days pass the cold source/draft/calendar checks; a changed,
+out-of-block or unverified date cannot leave a partial schedule on screen.
+Next, prepared and existing unfinished-workout positions use distinct labels;
+none are evidence of a completed or missed session. Headless tests cover the
+entire programmed week over the spring daylight-saving transition and reject
+unscheduled weekdays and adjacent blocks. This remains read-only; dates
+cannot issue or move a workout, override journal-resume priority, or change
+sets, loads, reps, or phase decisions.

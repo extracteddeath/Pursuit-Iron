@@ -107,6 +107,17 @@ class ReviewedSerratusTibialisCatalogTest {
         }
         val conversion=CoachFirstProgramDraftConversionDomain.propose(result,input.setup,input.catalog,"new-groups","New groups",4)
         assertEquals(conversion.reason,FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,conversion.status)
+        val saved=checkNotNull(conversion.cycle)
+        val unweightedSlots=saved.blocks.flatMap{it.days}.flatMap{it.slots}
+            .filter{it.exerciseId in ids}
+        assertTrue(unweightedSlots.isNotEmpty())
+        assertTrue(unweightedSlots.all{slot->
+            slot.progressionMethod==SavedProgressionMethod.BODYWEIGHT_REPS &&
+                slot.sets.filter{it.type==DraftSetType.WORKING}.all {set->
+                    set.load==DraftSetLoad.ExplicitBodyweight &&
+                        set.exactRepTarget==set.reps.minimum
+                }
+        })
         val policy=checkNotNull(CoachFirstProgramDraftConversionDomain.policyForInitialFullCycleReview(result,input.setup))
         val audit=CustomCycleCoachAuditDomain.review(checkNotNull(conversion.cycle),input.setup,input.catalog,policy)
         assertEquals(audit.issues.toString(),CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)

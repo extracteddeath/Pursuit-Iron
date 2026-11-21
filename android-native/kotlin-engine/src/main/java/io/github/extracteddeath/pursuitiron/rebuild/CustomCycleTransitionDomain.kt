@@ -78,6 +78,19 @@ data class CustomCycleTransitionReview(
  * masked by a shared exercise ID or the same phase label.
  */
 object CustomCycleTransitionDomain {
+    // Load formatting is not a change of physical weight. Machine A/B remains
+    // a separate exact identity and is compared in each authored slot.
+    private fun sameLoad(a:DraftSetLoad?,b:DraftSetLoad?):Boolean =
+        if(a==null || b==null) a==null && b==null
+        else KotlinSetNumberAuthorityDomain.sameIssuedTarget(a,b)
+
+    private fun sameAmplifier(a:CustomSetAmplifier?,b:CustomSetAmplifier?):Boolean =
+        if(a==null || b==null) a==null && b==null
+        else a.copy(followUpLoad=null,secondDropLoad=null)==
+            b.copy(followUpLoad=null,secondDropLoad=null) &&
+            sameLoad(a.followUpLoad,b.followUpLoad) &&
+            sameLoad(a.secondDropLoad,b.secondDropLoad)
+
     private fun compareSets(
         old: List<CustomAuthoredSet>, next: List<CustomAuthoredSet>,
         at: String, emit: (CustomCycleChangeKind, String, String) -> Unit
@@ -89,7 +102,7 @@ object CustomCycleTransitionDomain {
             val a = old[i]
             val b = next[i]
             val path = at + ".set." + i
-            if (a.load != b.load) emit(CustomCycleChangeKind.LOADS, path,
+            if (!sameLoad(a.load,b.load)) emit(CustomCycleChangeKind.LOADS, path,
                 "Working load, unit or physical basis changed.")
             if (a.reps != b.reps) emit(CustomCycleChangeKind.REPS, path,
                 "Authored repetition target changed.")
@@ -99,12 +112,15 @@ object CustomCycleTransitionDomain {
                 a.activeSeconds != b.activeSeconds)
                 emit(CustomCycleChangeKind.REST, path,
                     "Rest or working time changed.")
-            if (a.amplifier != b.amplifier) {
+            if (!sameAmplifier(a.amplifier,b.amplifier)) {
                 emit(CustomCycleChangeKind.AMPLIFIERS, path,
                     "An authored amplifier or follow-up protocol changed.")
-                if (a.amplifier?.followUpLoad != b.amplifier?.followUpLoad)
+                if (!sameLoad(a.amplifier?.followUpLoad,b.amplifier?.followUpLoad))
                     emit(CustomCycleChangeKind.LOADS, path + ".amplifier",
                         "Amplifier follow-up load changed.")
+                if (!sameLoad(a.amplifier?.secondDropLoad,b.amplifier?.secondDropLoad))
+                    emit(CustomCycleChangeKind.LOADS, path + ".amplifier.secondDrop",
+                        "Second verified drop load changed.")
             }
         }
     }
@@ -190,6 +206,9 @@ object CustomCycleTransitionDomain {
                     if(slot.attachmentId!=previous.attachmentId)
                         emit(CustomCycleChangeKind.ATTACHMENTS,at,
                             "New block changes a verified attachment.")
+                    if(slot.machineInstanceId!=previous.machineInstanceId)
+                        emit(CustomCycleChangeKind.ATTACHMENTS,at+".machine",
+                            "New block changes the physical Machine A/B identity; its load history cannot transfer.")
                     if(slot.supersetGroup!=previous.supersetGroup)
                         emit(CustomCycleChangeKind.SUPERSETS,at,
                             "New block changes a superset group.")
@@ -271,6 +290,9 @@ object CustomCycleTransitionDomain {
                     if (slot.attachmentId != proposedSlot.attachmentId)
                         emit(CustomCycleChangeKind.ATTACHMENTS, slotPath,
                             "Equipment attachment changed.")
+                    if (slot.machineInstanceId != proposedSlot.machineInstanceId)
+                        emit(CustomCycleChangeKind.ATTACHMENTS, slotPath+".machine",
+                            "Physical Machine A/B identity changed; its load history remains separate.")
                     if (slot.supersetGroup != proposedSlot.supersetGroup)
                         emit(CustomCycleChangeKind.SUPERSETS, slotPath,
                             "Superset pairing changed.")

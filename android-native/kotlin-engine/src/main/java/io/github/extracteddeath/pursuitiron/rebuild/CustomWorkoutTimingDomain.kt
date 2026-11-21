@@ -19,8 +19,7 @@ object CustomWorkoutTimingDomain {
                 amplifier.followUpActiveSeconds?.let{it !in 1..3600}==true))
             return null
         return set.activeSeconds.toLong()+set.restSeconds.toLong()+
-            (amplifier?.followUpRestSeconds?.toLong()
-                ?.times(amplifier.followUpRounds) ?:0L)+
+            (amplifier?.let{it.followUpRestSeconds.toLong()*it.followUpRounds} ?:0L)+
             (amplifier?.followUpActiveSeconds?.toLong() ?:0L)
     }
 

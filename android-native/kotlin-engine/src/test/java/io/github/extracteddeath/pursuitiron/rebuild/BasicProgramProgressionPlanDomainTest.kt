@@ -195,9 +195,10 @@ class BasicProgramProgressionPlanDomainTest {
                 selectedStyles=mapOf(key to NativeProgressionStyle.WAVE)))
         val wave=BasicProgramProgressionPlanDomain.review(
             cycle(block(phase=TrainingPhase.STRENGTH),
-                overrides=mapOf("block" to listOf(
-                    CustomWeekSlotOverride(2,0,"slot",
-                        listOf(working("105"),working("105")))))),
+                overrides=mapOf("block" to (2..4).map { week ->
+                    CustomWeekSlotOverride(week,0,"slot",
+                        listOf(working("${100+week*5}"),working("${100+week*5}")))
+                })),
             selectedStyles=mapOf(key to NativeProgressionStyle.WAVE))
             as ProgramProgressionPlan.Ready
         assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
@@ -213,6 +214,34 @@ class BasicProgramProgressionPlanDomainTest {
             as ProgramProgressionPlan.Ready
         assertNotNull(auto.assignments.single().basicStrategy)
         assertEquals(NativeProgressionStyle.AUTO,auto.assignments.single().selectedStyle)
+    }
+
+    @Test fun waveRequiresEverySubsequentAuthoredWeekAndRejectsRepeatedWeek() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val saved=block(phase=TrainingPhase.STRENGTH,slots=listOf(
+            slot().copy(progressionMethod=SavedProgressionMethod.WAVE)))
+        fun override(week:Int)=CustomWeekSlotOverride(week,0,"slot",
+            listOf(working("${100+week*5}"),working("${100+week*5}")))
+        val partial=cycle(saved,overrides=mapOf("block" to
+            listOf(override(2),override(4))))
+        assertTrue(BasicProgramProgressionPlanDomain.review(partial)
+            is ProgramProgressionPlan.Refused)
+        val duplicate=cycle(saved,overrides=mapOf("block" to
+            listOf(override(2),override(3),override(3),override(4))))
+        assertTrue(BasicProgramProgressionPlanDomain.review(duplicate)
+            is ProgramProgressionPlan.Refused)
+        val complete=cycle(saved,overrides=mapOf("block" to
+            listOf(override(2),override(3),override(4))))
+        val ready=BasicProgramProgressionPlanDomain.review(complete)
+            as ProgramProgressionPlan.Ready
+        val chosen=ready.assignments.single()
+        assertEquals(key,chosen.key)
+        assertEquals(SavedProgressionMethod.WAVE,chosen.savedMethod)
+        assertEquals(setOf(2,3,4),chosen.authoredWeekNumbers)
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
+            chosen.route)
+        assertNull(chosen.basicStrategy)
+        assertFalse(ready.mayIssueWorkout)
     }
 
     @Test fun savedMethodBeatsTransientPreviewAndSurvivesBlockDayIdentity() {

@@ -15,7 +15,7 @@ class BasicProgramProgressionPlanDomainTest {
             band,2,45,90,amplifier)
     private fun slot(
         id:String="slot",role:ComposerRole=ComposerRole.SECONDARY,
-        sets:List<CustomAuthoredSet>=listOf(working(),working()),
+        sets:List<CustomAuthoredSet> = listOf(working(),working()),
         exerciseId:String="press"
     )=CustomExerciseSlot(id,exerciseId,role,sets)
     private fun block(
@@ -120,6 +120,49 @@ class BasicProgramProgressionPlanDomainTest {
         assertTrue(BasicProgramProgressionPlanDomain.review(
             cycle(block(slots=listOf(mixed))))
             is ProgramProgressionPlan.Refused)
+    }
+
+    @Test fun explicitUserModesCoverManualRepOnlyAndPerSetWithoutOverridingPeak() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val source=cycle(block())
+        val manual=BasicProgramProgressionPlanDomain.review(source,
+            selectedStrategies=mapOf(key to BasicProgressionStrategy.MANUAL_LOGGING))
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.MANUAL,manual.assignments.single().route)
+        assertEquals(BasicProgressionStrategy.MANUAL_LOGGING,
+            manual.assignments.single().basicStrategy)
+        val reps=BasicProgramProgressionPlanDomain.review(source,
+            selectedStrategies=mapOf(key to BasicProgressionStrategy.REP_TARGET_PROGRESSION))
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.REP_TARGET_PROGRESSION,
+            reps.assignments.single().basicStrategy)
+        val dynamic=BasicProgramProgressionPlanDomain.review(source,
+            selectedStrategies=mapOf(key to BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION))
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            dynamic.assignments.single().basicStrategy)
+        assertTrue(BasicProgramProgressionPlanDomain.review(
+            cycle(block(phase=TrainingPhase.PEAK)),
+            selectedStrategies=mapOf(key to BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION))
+            is ProgramProgressionPlan.Refused)
+        val manuallyHeldPeak=BasicProgramProgressionPlanDomain.review(
+            cycle(block(phase=TrainingPhase.PEAK)),
+            selectedStrategies=mapOf(key to BasicProgressionStrategy.MANUAL_LOGGING))
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.MANUAL,
+            manuallyHeldPeak.assignments.single().route)
+    }
+
+    @Test fun explicitAssistedRepOnlyNeverGetsOverriddenByDecrementStrategy() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val ass=slot(sets=listOf(working("40",assisted=true),
+            working("40",assisted=true)))
+        val result=BasicProgramProgressionPlanDomain.review(
+            cycle(block(slots=listOf(ass))),
+            selectedStrategies=mapOf(key to BasicProgressionStrategy.REP_TARGET_PROGRESSION))
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.REP_TARGET_PROGRESSION,
+            result.assignments.single().basicStrategy)
     }
 
     @Test fun techniqueFollowUpsNeverCreateNewIndependentLoadProgressions() {

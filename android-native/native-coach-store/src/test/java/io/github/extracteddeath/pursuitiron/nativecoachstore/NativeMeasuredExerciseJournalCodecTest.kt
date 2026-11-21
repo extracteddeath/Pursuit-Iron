@@ -66,6 +66,53 @@ class NativeMeasuredExerciseJournalCodecTest {
     }
     private fun denied(block:()->Unit):Boolean=runCatching{block()}.isFailure
 
+    @Test fun callerMutationsCannotChangeArchiveBytesOrColdReplayedActuals() {
+        for(definition in MeasuredExerciseCatalogDomain.all) {
+            val source=plan(definition.exerciseId)
+            val sides=source.sides.toMutableSet()
+            val fixtures=source.confirmedFixtures.toMutableSet()
+            val bands=source.gymConfirmedBandIds.toMutableSet()
+            val stock=source.physicalStock as? VerifiedLoadStock.Totals
+            val loads=stock?.loads?.toMutableList()
+            val input=source.copy(sides=sides,confirmedFixtures=fixtures,
+                gymConfirmedBandIds=bands,
+                physicalStock=stock?.copy(loads=checkNotNull(loads)))
+            val issued=checkNotNull(MeasuredExerciseJournalDomain.begin(input))
+            val original=NativeMeasuredExerciseJournalCodec.encode(
+                "owner-one","athlete-one",issued)
+            sides.clear();fixtures.clear();bands.clear();loads?.clear()
+            assertArrayEquals(definition.exerciseId,original,
+                NativeMeasuredExerciseJournalCodec.encode("owner-one","athlete-one",issued))
+            val measured=actual(issued.immutablePlan)
+            val observed=measured.sides.toMutableList()
+            val recorded=(MeasuredExerciseJournalDomain.reduce(issued,
+                MeasuredJournalOperation.Record("record",0,MeasuredSetOutcome.COMPLETED,
+                    measured.copy(sides=observed)))
+                as MeasuredJournalDecision.Proposed).journal
+            val recordedBytes=NativeMeasuredExerciseJournalCodec.encode(
+                "owner-one","athlete-one",recorded)
+            observed.clear()
+            assertArrayEquals(recordedBytes,NativeMeasuredExerciseJournalCodec.encode(
+                "owner-one","athlete-one",recorded))
+            val corrected=(MeasuredExerciseJournalDomain.reduce(recorded,
+                MeasuredJournalOperation.Record("correct",1,MeasuredSetOutcome.COMPLETED,
+                    actual(issued.immutablePlan,quantity=25),"record"))
+                as MeasuredJournalDecision.Proposed).journal
+            val finished=(MeasuredExerciseJournalDomain.reduce(corrected,
+                MeasuredJournalOperation.Finish("finish",2))
+                as MeasuredJournalDecision.Proposed).journal
+            val reopened=NativeMeasuredExerciseJournalCodec.decode(
+                NativeMeasuredExerciseJournalCodec.encode("owner-one","athlete-one",finished),
+                "owner-one","athlete-one")
+            assertEquals(finished,reopened)
+            assertEquals("finish",reopened.finishedByEventId)
+            assertTrue((reopened.effectiveRecord!!.operation as
+                MeasuredJournalOperation.Record).actual!!.sides.all{it.amount==25})
+            assertEquals(MeasuredSetReviewStatus.COMPLETED,
+                MeasuredWorkoutResultReviewDomain.review(reopened.immutablePlan,reopened).status)
+        }
+    }
+
     @Test fun all14SourceExactMeasuredJournalsEncodeDecodeAndPreserveFacts() {
         val ids=MeasuredExerciseCatalogDomain.all.map{it.exerciseId}
         assertEquals(14,ids.size)

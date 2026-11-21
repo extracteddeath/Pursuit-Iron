@@ -36,7 +36,8 @@ object MeasuredWorkoutResultReviewDomain {
         plan:MeasuredExerciseSetPlan,
         journal:MeasuredExerciseJournal?
     ):MeasuredSetResultReview {
-        if(journal==null || journal.immutablePlan!=plan)
+        if(journal==null || journal.immutablePlan!=plan ||
+            !MeasuredExerciseJournalDomain.verified(journal))
             return MeasuredSetResultReview(MeasuredSetReviewStatus.UNVERIFIED)
         val receipt=journal.effectiveRecord
             ?:return MeasuredSetResultReview(MeasuredSetReviewStatus.PENDING)

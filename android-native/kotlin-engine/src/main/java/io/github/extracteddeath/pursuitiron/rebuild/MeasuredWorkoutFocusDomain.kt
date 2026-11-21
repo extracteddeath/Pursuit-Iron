@@ -23,6 +23,7 @@ object MeasuredWorkoutFocusDomain {
     fun review(
         journal:MeasuredWorkoutJournal,requestedSetKey:String?
     ):MeasuredWorkoutFocusSnapshot? {
+        if(!MeasuredWorkoutJournalDomain.verified(journal))return null
         val plans=journal.approvedPlan.sets
         if(plans.isEmpty() ||
             plans.map{it.setKey}.toSet().size!=plans.size ||
@@ -55,6 +56,8 @@ object MeasuredWorkoutFocusDomain {
         after:MeasuredWorkoutJournal,
         setKey:String
     ):String? {
+        if(!MeasuredWorkoutJournalDomain.verified(before) ||
+            !MeasuredWorkoutJournalDomain.verified(after))return null
         if(before.approvedPlan!=after.approvedPlan ||
             before.finishedByEventId!=null ||
             after.finishedByEventId!=null ||

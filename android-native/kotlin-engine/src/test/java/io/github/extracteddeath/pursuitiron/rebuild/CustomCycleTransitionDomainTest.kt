@@ -452,4 +452,84 @@ class CustomCycleTransitionDomainTest {
             reviewed.differences.map {it.kind}.toSet())
     }
 
+    private fun withMachine(source:CustomTrainingCycle,station:String):CustomTrainingCycle =
+        source.copy(blocks=source.blocks.map{block->
+            block.copy(days=block.days.map{day->
+                day.copy(slots=day.slots.map{slot->
+                    slot.copy(machineInstanceId=station)
+                })
+            })
+        })
+
+    @Test fun changingPhysicalMachineIsNeverMisreportedAsNoChange() {
+        val old=withMachine(cycle(),"machine-a")
+        val candidate=withMachine(old.copy(revision=4),"machine-b")
+        val denied=transition(old,candidate)
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.ATTACHMENTS),denied.blockedKinds)
+        assertTrue(denied.differences.any{
+            it.location.endsWith(".machine") &&
+                it.explanation.contains("Machine A/B")
+        })
+        val allowed=transition(old,candidate,
+            CustomCycleCoachPermissions(adaptAttachments=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            allowed.status)
+        assertFalse(allowed.mayApplyAutomatically)
+        assertFalse(allowed.mayModifyHistory)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(old,candidate,
+                origin=CustomCycleEditOrigin.ATHLETE_EDIT).status)
+    }
+
+    @Test fun addedBlockCannotSmuggleDifferentMachineThroughBlockPermission() {
+        val old=withMachine(cycle(),"machine-a")
+        val prior=old.blocks.single()
+        val changedSlot=prior.days.single().slots.single()
+            .copy(machineInstanceId="machine-b")
+        val newBlock=prior.copy(blockId="strength-b",label="Next block",
+            days=listOf(prior.days.single().copy(slots=listOf(changedSlot))))
+        val candidate=old.copy(revision=4,blocks=listOf(prior,newBlock))
+        val denied=transition(old,candidate,
+            CustomCycleCoachPermissions(adaptBlocks=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.ATTACHMENTS),denied.blockedKinds)
+        val allowed=transition(old,candidate,
+            CustomCycleCoachPermissions(adaptBlocks=true,adaptAttachments=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            allowed.status)
+    }
+
+    @Test fun equivalentDecimalLoadScaleIsNotAProgramOrAmplifierEdit() {
+        val firstDrop=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(155))
+        val secondDrop=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(135))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,6,15,firstDrop,
+            followUpRounds=2,secondDropLoad=secondDrop)
+        val original=cycle().let{base->
+            val block=base.blocks.single()
+            val day=block.days.single()
+            base.copy(blocks=listOf(block.copy(days=listOf(day.copy(
+                slots=listOf(day.slots.single().copy(
+                    sets=listOf(set(amp=amp),set()))))))))
+        }
+        val baseBlock=original.blocks.single()
+        val baseDay=baseBlock.days.single()
+        val first=baseDay.slots.single().sets.first()
+        val modified=first.copy(
+            load=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+                BigDecimal("185.000")),
+            amplifier=amp.copy(
+                followUpLoad=firstDrop.copy(value=BigDecimal("155.00")),
+                secondDropLoad=secondDrop.copy(value=BigDecimal("135.000"))))
+        val candidate=original.copy(revision=4,blocks=listOf(
+            baseBlock.copy(days=listOf(baseDay.copy(slots=listOf(
+                baseDay.slots.single().copy(
+                    sets=listOf(modified,baseDay.slots.single().sets.last()))))))))
+        val review=transition(original,candidate)
+        assertEquals(review.differences.toString(),
+            CustomCycleTransitionStatus.NO_CHANGE,review.status)
+        assertTrue(review.differences.isEmpty())
+        assertFalse(review.mayModifyHistory)
+    }
+
 }

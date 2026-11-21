@@ -16,7 +16,10 @@ enum class FirstProgramDraftStatus {
 data class FirstProgramDraftReview(
     val status:FirstProgramDraftStatus,
     val cycle:CustomTrainingCycle?,
-    val reason:String
+    val reason:String,
+    /** Complete reviewed per-slot baseline/specialist progression assignments.
+     * Not persisted or activated until a separate native owner handoff. */
+    val progressionPlan:ProgramProgressionPlan.Ready?=null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayApproveProgram:Boolean get()=false
@@ -180,11 +183,23 @@ object CoachFirstProgramDraftConversionDomain {
                 return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                     "Optional myo-reps exceed the current full-cycle coaching, fatigue or session-time review; use straight sets instead.")
         }
+        // A generator must account for the progression route of EVERY saved
+        // slot. Do this only after the fully-authored cycle passed inventory
+        // and source review; never guess a weight from an unreviewed draft.
+        val progressionPlan=BasicProgramProgressionPlanDomain.review(next)
+            as? ProgramProgressionPlan.Ready
+            ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                "A complete source-bound progression plan could not be assigned.")
+        if(progressionPlan.assignments.size !=
+            next.blocks.sumOf{block->block.days.sumOf{day->day.slots.size}})
+            return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                "A generated exercise was left without an explicit progression route.")
         return FirstProgramDraftReview(
             FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             next,
             if(includeMyoFinisher)
                 "Optional myo-reps on one reviewed accessory have passed the full-cycle audit. Explicit program approval and workout issuance are still required."
-            else "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.")
+            else "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.",
+            progressionPlan)
     }
 }

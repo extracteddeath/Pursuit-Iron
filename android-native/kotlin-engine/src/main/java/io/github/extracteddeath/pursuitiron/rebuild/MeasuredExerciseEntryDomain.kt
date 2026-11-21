@@ -109,7 +109,7 @@ object MeasuredExerciseEntryDomain {
         val exact=length.stripTrailingZeros().scale()<=0
         val centimeters=length.setScale(0,RoundingMode.HALF_UP)
             .toIntOrNullSafe() ?:return null
-        if(centimeters !in 0..1_000_000)return null
+        if(centimeters !in 0..1_000_000 || centimeters==0 && length.signum()!=0)return null
         // Feet is the only supported presentation unit that may need
         // rounding. An explicit notice is required; target/storage stay cm.
         return centimeters to (unit==MeasuredEntryUnit.FEET && !exact)

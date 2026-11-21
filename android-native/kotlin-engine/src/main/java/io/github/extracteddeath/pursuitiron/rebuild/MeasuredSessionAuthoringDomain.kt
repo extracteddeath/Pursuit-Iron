@@ -23,6 +23,7 @@ data class MeasuredSessionSelection(
 )
 
 object MeasuredSessionAuthoringDomain {
+    val setsPerExercise = 1..8
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val maxLoad=BigDecimal("100000")
     private fun verifiedBands(profile:ReviewedAthleteSetup):Set<String> =
@@ -126,7 +127,7 @@ object MeasuredSessionAuthoringDomain {
         if(!id.matches(workoutId) || sourceRevision<1 ||
             sourceRevision>9_007_199_254_740_991L ||
             selections.size !in 1..32 ||
-            selections.any{it.sets !in 1..8} ||
+            selections.any{it.sets !in setsPerExercise} ||
             selections.sumOf{it.sets} !in 1..64)return null
         val choices=available(profile).associateBy{it.exerciseId}
         val sets=ArrayList<MeasuredExerciseSetPlan>()

@@ -2,6 +2,8 @@ package io.github.extracteddeath.pursuitiron
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
@@ -83,7 +85,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
     var selectedBandId by rememberSaveable{mutableStateOf("")}
     var selectedSide by rememberSaveable{mutableStateOf("LEFT")}
     var targetExternalLoad by rememberSaveable{mutableStateOf("")}
-    var matchedPairConfirmed by rememberSaveable{mutableStateOf(false)}
+    var confirmedPairKey by rememberSaveable { mutableStateOf<String?>(null) }
     var target by rememberSaveable{mutableStateOf("30")}
     var setCount by rememberSaveable{mutableIntStateOf(2)}
     var review by remember{mutableStateOf<NativeMeasuredConsentResult.Preview?>(null)}
@@ -203,6 +205,15 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
         runCatching{BigDecimal(target.trim()).multiply(BigDecimal("100"))
             .intValueExact()}.getOrNull()
         else target.toIntOrNull()
+    val sourceKey=source?.let{
+        it.ownerKey+"|"+it.athleteId+"|"+it.revision+"|"+
+            it.setup.reviewed?.gym?.gymId
+    }
+    val pairKey = if (definition?.exerciseId == "farmers" && sourceKey != null &&
+        targetWeight != null && exactLoad) {
+        "$workoutId|$sourceKey|"+targetWeight.stripTrailingZeros().toPlainString()
+    } else null
+    val matchedPairConfirmed = pairKey != null && confirmedPairKey == pairKey
     val currentSelection=if(definition!=null && quantity!=null)
         MeasuredSessionSelection(definition.exerciseId,quantity,setCount,
             singleSide=if(definition.sideRule==
@@ -214,10 +225,6 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
             matchedPairConfirmed=definition.exerciseId=="farmers" &&
                 matchedPairConfirmed)
         else null
-    val sourceKey=source?.let{
-        it.ownerKey+"|"+it.athleteId+"|"+it.revision+"|"+
-            it.setup.reviewed?.gym?.gymId
-    }
     val draftMatches=queuedDrafts.isEmpty() ||
         (sourceKey!=null && sourceKey==draftSourceKey)
     val parsedDrafts=queuedDrafts.map{
@@ -308,7 +315,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                                 else -> "30"
                                             }
                                             targetExternalLoad=""
-                                            matchedPairConfirmed=false
+                                            confirmedPairKey=null
                                             review=null;message=null;menuOpen=false
                                         })
                                 }
@@ -328,15 +335,14 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 keyboardType=if(definition?.kind==
                                     MeasuredExerciseKind.CARRY_CENTIMETERS)
                                     KeyboardType.Decimal else KeyboardType.Number))
-                        Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
-                            (1..4).forEach{number->
-                                FilterChip(selected=setCount==number,
-                                    enabled=!busy,
-                                    onClick={setCount=number;review=null},
-                                    label={Text(number.toString()+
-                                        if(number==1)" set" else " sets")})
-                            }
-                        }
+                        val setRange = MeasuredSessionAuthoringDomain.setsPerExercise
+                        PreviewStepper(
+                            title="Sets", value=setCount.toString(),
+                            subtract={ setCount--; review=null },
+                            add={ setCount++; review=null },
+                            canSubtract=!busy && setCount > setRange.first,
+                            canAdd=!busy && setCount < setRange.last
+                        )
                         Text("Verified physical setup: "+station,
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -357,7 +363,7 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                 "Only physically verified selectable weights may be used.",
                                 style=MaterialTheme.typography.bodySmall)
                             OutlinedTextField(value=targetExternalLoad,onValueChange={
-                                targetExternalLoad=it;review=null
+                                targetExternalLoad=it;confirmedPairKey=null;review=null
                             },label={Text("Target load ("+gym?.unit+")"+
                                 if(definition?.loadKind==MeasuredLoadKind.VERIFIED_PER_HAND)
                                     " per hand" else " added mass")},
@@ -371,13 +377,21 @@ internal fun NativeKotlinMeasuredWorkoutScreen(
                                     color=MaterialTheme.colorScheme.error,
                                     style=MaterialTheme.typography.bodySmall)
                             if(definition?.exerciseId=="farmers")
-                                Row {
+                                Row(
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
+                                        .toggleable(value=matchedPairConfirmed,
+                                            enabled=!busy && pairKey!=null,
+                                            role=Role.Checkbox,
+                                            onValueChange={ checked ->
+                                                confirmedPairKey=if(checked) pairKey else null
+                                                review=null
+                                            }),
+                                    verticalAlignment=Alignment.CenterVertically,
+                                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)
+                                ) {
                                     Checkbox(checked=matchedPairConfirmed,
-                                        enabled=!busy,onCheckedChange={
-                                            matchedPairConfirmed=it;review=null
-                                        })
-                                    Text("I physically confirmed two matching "+
-                                        "dumbbells at this weight",
+                                        enabled=!busy && pairKey!=null,onCheckedChange=null)
+                                    Text("I confirmed two matching dumbbells at this weight",
                                         style=MaterialTheme.typography.bodySmall)
                                 }
                         }

@@ -118,6 +118,15 @@ class MeasuredExerciseEntryDomainTest {
             MeasuredEntryRefusal.WRONG_QUANTITY_UNIT)
     }
 
+    @Test fun positiveFeetCannotRoundIntoAFailedZeroDistanceReceipt() {
+        val p=plan("farmers")
+        for(outcome in listOf(MeasuredSetOutcome.FAILED_ATTEMPT,MeasuredSetOutcome.COMPLETED))
+            refused(MeasuredExerciseEntryDomain.parse(p,outcome,
+                input(p,raw="0.01",unit=MeasuredEntryUnit.FEET)),MeasuredEntryRefusal.INVALID_QUANTITY)
+        accepted(MeasuredExerciseEntryDomain.parse(p,MeasuredSetOutcome.FAILED_ATTEMPT,
+            input(p,raw="0.00",unit=MeasuredEntryUnit.FEET)))
+    }
+
     @Test fun metersAndCentimetersAreExactAndFeetExplicitlyRound() {
         val p=plan("farmers")
         val meters=accepted(MeasuredExerciseEntryDomain.parse(

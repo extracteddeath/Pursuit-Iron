@@ -140,17 +140,19 @@ private fun MeasuredSetEditorContent(
             plan.bandId else null,
         if(definition.kind==MeasuredExerciseKind.CARRY_CENTIMETERS)
             elapsed else null)
-    val completedReview=MeasuredExerciseEntryDomain.parse(
-        plan,MeasuredSetOutcome.COMPLETED,submitted)
+    val completedReview=remember(plan,submitted) {
+        MeasuredExerciseEntryDomain.parse(plan,MeasuredSetOutcome.COMPLETED,submitted)
+    }
     val completed=completedReview as? MeasuredExerciseEntryDecision.Accepted
     // A deliberate Failed action means ZERO completed measurement. Do not
     // make athletes enter zero in every left/right/time/distance field;
     // preserve independently entered actual physical weight and band setup.
     val failedZero=if(unit==MeasuredEntryUnit.MINUTES_SECONDS)"0:00" else "0"
     val failedInput=submitted.copy(quantityBySide=plan.sides.associateWith{failedZero})
-    val failed=MeasuredExerciseEntryDomain.parse(
-        plan,MeasuredSetOutcome.FAILED_ATTEMPT,failedInput)
-        as? MeasuredExerciseEntryDecision.Accepted
+    val failed=remember(plan,failedInput) {
+        MeasuredExerciseEntryDomain.parse(plan,MeasuredSetOutcome.FAILED_ATTEMPT,failedInput)
+            as? MeasuredExerciseEntryDecision.Accepted
+    }
     val approximate=completed?.approximateDistanceConversion==true
     val roundingAcknowledged=!approximate || roundedApproved
     val label=when(unit) {

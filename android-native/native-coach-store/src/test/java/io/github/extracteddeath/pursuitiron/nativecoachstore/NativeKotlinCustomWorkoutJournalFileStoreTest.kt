@@ -392,7 +392,7 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
         assertEquals(195L,stored.snapshot.knownSetAndRestSeconds)
         assertEquals(50,stored.snapshot.slots.single().sets.single()
             .prescription.amplifier?.followUpActiveSeconds)
-        assertEquals(7,NativeKotlinCustomWorkoutSnapshotCodec.encode(
+        assertEquals(8,NativeKotlinCustomWorkoutSnapshotCodec.encode(
             stored.snapshot)[7].toInt())
         assertEquals(stored,(prepared.open("owner-1","timed-advanced-1")
             as NativeCustomPreparedRead.Found).workout)

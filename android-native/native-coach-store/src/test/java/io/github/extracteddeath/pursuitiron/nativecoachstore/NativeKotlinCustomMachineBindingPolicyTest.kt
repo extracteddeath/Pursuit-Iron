@@ -72,19 +72,19 @@ class NativeKotlinCustomMachineBindingPolicyTest {
     @Test fun machineBindingsSurviveDraftAndIssuedSnapshotColdRoundTrips() {
         val old=cycle()
         val unboundBytes=NativeCustomCycleDraftCodec.encode(old)
-        assertEquals(7,unboundBytes[7].toInt())
+        assertEquals(8,unboundBytes[7].toInt())
         val bound=cycle("A")
         val raw=NativeCustomCycleDraftCodec.encode(bound)
-        assertEquals(7,raw[7].toInt())
+        assertEquals(8,raw[7].toInt())
         assertEquals(bound,NativeCustomCycleDraftCodec.decode(raw))
         assertArrayEquals(raw,NativeCustomCycleDraftCodec.encode(
             NativeCustomCycleDraftCodec.decode(raw)))
         assertArrayEquals(unboundBytes,NativeCustomCycleDraftCodec.encode(old))
 
         val original=NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot())
-        assertEquals(7,original[7].toInt())
+        assertEquals(8,original[7].toInt())
         val machine=NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot("A"))
-        assertEquals(7,machine[7].toInt())
+        assertEquals(8,machine[7].toInt())
         assertEquals(snapshot("A"),
             NativeKotlinCustomWorkoutSnapshotCodec.decode(machine))
         assertArrayEquals(machine,NativeKotlinCustomWorkoutSnapshotCodec.encode(

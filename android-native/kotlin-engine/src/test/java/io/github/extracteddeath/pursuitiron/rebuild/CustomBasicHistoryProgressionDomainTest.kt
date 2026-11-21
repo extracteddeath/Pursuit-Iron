@@ -224,6 +224,44 @@ class CustomBasicHistoryProgressionDomainTest {
                 CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun sourceExactTargetsAdvanceAndLadderResetsAtTrueBandFloor() {
+        fun planned(method:SavedProgressionMethod,target:Int):CustomTrainingCycle {
+            val base=cycle(method)
+            return base.copy(blocks=base.blocks.map{block ->
+                block.copy(days=block.days.map{day ->
+                    day.copy(slots=day.slots.map{slot ->
+                        slot.copy(sets=slot.sets.map{
+                            it.copy(exactRepTarget=target)
+                        })
+                    })
+                })
+            })
+        }
+        fun issued(target:Int)=snapshot().let{next ->
+            next.copy(slots=next.slots.map{slot ->
+                slot.copy(sets=slot.sets.map{set ->
+                    set.copy(prescription=set.prescription.copy(exactRepTarget=target))
+                })
+            })
+        }
+        for(method in listOf(SavedProgressionMethod.REP_TARGETS,
+            SavedProgressionMethod.LADDER)) {
+            val result=review(next=issued(8),program=planned(method,8),
+                sessions=listOf(completed(1,reps=listOf(8,8))))
+            assertTrue(result.toString(),result is CustomBasicHistoryResult.Reviewed)
+            val candidate=(result as CustomBasicHistoryResult.Reviewed).candidate
+            assertEquals(listOf(n(100),n(100)),candidate.proposedWorkingLoads)
+            assertEquals(listOf(9,9),candidate.proposedRepTargets)
+        }
+        val result=review(next=issued(10),
+            program=planned(SavedProgressionMethod.LADDER,10),
+            sessions=listOf(completed(1,reps=listOf(10,10))))
+        assertTrue(result.toString(),result is CustomBasicHistoryResult.Reviewed)
+        val candidate=(result as CustomBasicHistoryResult.Reviewed).candidate
+        assertEquals(listOf(n(105),n(105)),candidate.proposedWorkingLoads)
+        assertEquals(listOf(6,6),candidate.proposedRepTargets)
+    }
+
     @Test fun exactRepOnlyRoutesNeverDeriveExactTargetsFromARepBand() {
         assertEquals(CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE,
             (review(program=cycle(SavedProgressionMethod.REP_TARGETS)) as

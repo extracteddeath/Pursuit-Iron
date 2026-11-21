@@ -20,7 +20,7 @@ import java.util.Collections
  */
 internal object NativeKotlinCustomWorkoutSnapshotCodec {
     private const val MAGIC=0x50494357 // PICW
-    private const val VERSION=7
+    private const val VERSION=8
     private const val SLOT_MAGIC=0x50495333 // PIS3
     const val MAX_BYTES=256_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -68,7 +68,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         }
         optional(slot.machineInstanceId)
     }
-    private fun DataInputStream.slot():CustomWorkoutSlotSnapshot {
+    private fun DataInputStream.slot(version:Int):CustomWorkoutSlotSnapshot {
         val slotId=readUTF()
         val exerciseId=readUTF()
         val familyId=readUTF()
@@ -81,7 +81,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         val count=readInt()
         if(count !in 1..20)throw IOException("invalid swap slot set count")
         val sets=List(count) {
-            CustomWorkoutSetSnapshot(readUTF(),readUTF(),readInt(),NativeAuthoredSetCodec.read(this))
+            CustomWorkoutSetSnapshot(readUTF(),readUTF(),readInt(),NativeAuthoredSetCodec.read(this,version>=8))
         }
         val machine=optional()
         return CustomWorkoutSlotSnapshot(slotId,exerciseId,familyId,
@@ -99,9 +99,12 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
     internal fun decodeSlot(bytes:ByteArray):CustomWorkoutSlotSnapshot {
         if(bytes.size !in 24..MAX_BYTES)throw IOException("invalid swap slot size")
         return DataInputStream(ByteArrayInputStream(bytes)).use { input->
-            if (input.readInt() != SLOT_MAGIC || input.readInt() != VERSION)
+            if (input.readInt() != SLOT_MAGIC)
+                throw IOException("unsupported swap slot magic")
+            val version=input.readInt()
+            if(version !in 7..VERSION)
                 throw IOException("unsupported swap slot version")
-            val slot=input.slot()
+            val slot=input.slot(version)
             if(input.available()!=0)throw IOException("trailing swap slot bytes")
             slot
         }
@@ -184,6 +187,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 val p=set.prescription
                 require(p.reps.minimum in 1..100 &&
                     p.reps.maximum in p.reps.minimum..100)
+                require(p.exactRepTarget==null ||
+                    (p.type==DraftSetType.WORKING &&
+                        p.exactRepTarget in p.reps.minimum..p.reps.maximum))
                 require(p.targetRir?.let { it in 0..10 } != false)
                 require(p.activeSeconds in 1..3600 &&
                     p.restSeconds in 0..3600)
@@ -279,7 +285,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             DataInputStream(ByteArrayInputStream(bytes)).use{input->
                 if(input.readInt()!=MAGIC)
                     throw IOException("unsupported custom session magic")
-                if (input.readInt() != VERSION)
+                val version=input.readInt()
+                if(version !in 7..VERSION)
                     throw IOException("unsupported custom session snapshot")
                 val stamp=CustomWorkoutSourceStamp(
                     input.readUTF(),input.readUTF(),input.readUTF(),
@@ -299,7 +306,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 if(size !in 1..MAX_SLOTS)throw IOException("invalid number of slots")
                 var totalSets=0
                 val slots=List(size) {
-                    input.slot().also {slot->
+                    input.slot(version).also {slot->
                         totalSets+=slot.sets.size
                         if(totalSets>MAX_TARGETS)
                             throw IOException("invalid set count")

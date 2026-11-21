@@ -128,9 +128,8 @@ object CustomBasicHistoryProgressionDomain {
         val exactReps=if(strategy in setOf(
                 BasicProgressionStrategy.REP_TARGET_PROGRESSION,
                 BasicProgressionStrategy.REP_LADDER_PROGRESSION)) {
-            if(working.any {it.prescription.reps.minimum!=it.prescription.reps.maximum})
-                return no(CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE)
-            working.map {it.prescription.reps.minimum}
+            working.map {it.prescription.exactRepTarget
+                ?:return no(CustomBasicHistoryRefusal.EXACT_REP_TARGETS_UNAVAILABLE)}
         } else null
         val normalizedMachine=KotlinMachineAlternativesDomain.normalizeMachineId(
             request.selectedMachineInstanceId)

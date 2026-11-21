@@ -57,8 +57,9 @@ internal object NativeAuthoredSetCodec {
             writeBoolean(amplifier.secondDropLoad != null)
             amplifier.secondDropLoad?.let { load(it) }
         }
+        optionalInt(value.exactRepTarget)
     }
-    fun read(input: DataInputStream): CustomAuthoredSet = with(input) {
+    fun read(input: DataInputStream, hasExactTarget:Boolean=true): CustomAuthoredSet = with(input) {
         val type = enum<DraftSetType>()
         val weight = load()
         val reps = RepBand(readInt(), readInt())
@@ -75,6 +76,7 @@ internal object NativeAuthoredSetCodec {
                 readInt(),
                 if(readBoolean())load() else null)
         } else null
-        CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier)
+        val exact=if(hasExactTarget)optionalInt() else null
+        CustomAuthoredSet(type, weight, reps, rir, active, rest, amplifier,exact)
     }
 }

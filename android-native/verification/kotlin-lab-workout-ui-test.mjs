@@ -132,7 +132,12 @@ assert.ok(!snapshotAmplifierGate.includes('amp.kind==CustomAmplifierKind.MYO_REP
 assert.match(snapshotCodec,/if\(version>=5\)writeInt\(amp.followUpRounds\)/);
 
 assert.match(restPauseProtocol,/fun continueRestPause\(/);
-assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.REST_PAUSE/);
+// The live custom journal now protects all completed amplifier types through
+// one factual activation-load/station rule. A rest-pause-only special case
+// would fail to protect legacy one-drop and same-load partials.
+assert.match(restPauseJournal,/nextEffective.any/);
+assert.match(restPauseJournal,/CustomWorkoutExecutionDomain.sameActualLoadAndStation/);
+assert.match(restPauseJournal,/key.part==CustomWorkoutVisitPart.FOLLOW_UP/);
 assert.match(journal,/CustomWorkoutExecutionDomain.followUpVisits\(/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(it,stageOrdinal\)/);
@@ -149,7 +154,8 @@ assert.match(restPauseSheet,/Planned submaximal quality reps, not a failure meth
 assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain.continueCluster/);
 assert.match(restPauseProtocol,/fun continueCluster\(/);
 assert.match(restPauseProtocol,/amp.followUpRounds in 2\.\.5 && amp.followUpReps in 1\.\.4/);
-assert.match(restPauseJournal,/it.kind==CustomAmplifierKind.CLUSTER/);
+assert.match(restPauseProtocol,/CustomAmplifierKind.CLUSTER ->/);
+assert.match(restPauseJournal,/operation.outcome==KotlinJournalSetOutcome.COMPLETED/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
 assert.match(journal,/CustomAmplifierKind.CLUSTER\)/);
 assert.match(journal,/AdvancedAmplifierProtocolDomain.stageLabel\(/);

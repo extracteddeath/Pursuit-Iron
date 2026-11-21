@@ -25,6 +25,24 @@ internal fun NativeMeasuredExerciseSetEditor(
     busy:Boolean,
     onRecord:(MeasuredJournalOperation.Record)->Unit
 ) {
+    val journal = stored.journal
+    val plan = journal.immutablePlan
+    key(stored.ownerKey, stored.athleteId, plan.workoutId, plan.setKey, journal.revision) {
+        var editGeneration by rememberSaveable { mutableIntStateOf(0) }
+        key(editGeneration) {
+            MeasuredSetEditorContent(stored, busy, onRecord,
+                onDiscardCorrection = { editGeneration++ })
+        }
+    }
+}
+
+@Composable
+private fun MeasuredSetEditorContent(
+    stored: NativeMeasuredStoredSet,
+    busy: Boolean,
+    onRecord: (MeasuredJournalOperation.Record) -> Unit,
+    onDiscardCorrection: () -> Unit
+) {
     val journal=stored.journal
     val plan=journal.immutablePlan
     val definition=MeasuredExerciseCatalogDomain.find(plan.exerciseId) ?:return
@@ -380,9 +398,15 @@ internal fun NativeMeasuredExerciseSetEditor(
                         label={Text("Carry elapsed seconds (optional)")},
                         singleLine=true,
                         keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
-                if(approximate) {
-                    Text("Feet are rounded to the nearest centimeter. "+
-                        "Review the recorded measurement (within 0.5 cm).",
+                if(completed != null && approximate) {
+                    val distance = completed.convertedCentimetersBySide.entries.joinToString(" · ") { (side, cm) ->
+                        when (side) {
+                            MeasuredSide.BOTH -> "${cm} cm"
+                            MeasuredSide.LEFT -> "Left ${cm} cm"
+                            MeasuredSide.RIGHT -> "Right ${cm} cm"
+                        }
+                    }
+                    Text("Distance to save: $distance (rounded to the nearest centimeter).",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){
@@ -422,7 +446,7 @@ internal fun NativeMeasuredExerciseSetEditor(
                     }
                 }
                 if(previous!=null)TextButton(
-                    enabled=!busy,onClick={editing=false}) {
+                    enabled=!busy,onClick=onDiscardCorrection) {
                     Text("Cancel correction")
                 }
             }

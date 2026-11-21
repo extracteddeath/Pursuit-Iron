@@ -423,7 +423,11 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             require(!Files.isSymbolicLink(directory) &&
                 Files.isDirectory(directory,java.nio.file.LinkOption.NOFOLLOW_LINKS))
             val physical=Files.list(directory).use {stream->
-                stream.filter{it.fileName.toString().startsWith("future-activation-")}.limit(4097).toList()
+                stream.filter{
+                    val name=it.fileName.toString()
+                    name.startsWith("future-activation-") &&
+                        !name.startsWith("future-activation-commit-")
+                }.limit(4097).toList()
             }
             require(physical.size<=4096)
             val names=Regex("^future-activation-[a-f0-9]{64}\\.bin$")

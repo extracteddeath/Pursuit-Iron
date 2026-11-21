@@ -31,6 +31,8 @@ enum class NativeKotlinStagedCoreRefusal {
     FUTURE_APPROVALS_UNVERIFIED,
     FUTURE_CONTEXTS_UNVERIFIED,
     FUTURE_HANDOFF_UNVERIFIED,
+    FUTURE_ACTIVATION_INTENT_UNVERIFIED,
+    FUTURE_CALENDARS_UNVERIFIED,
     HISTORY_UNVERIFIED,
     CUSTOM_INVENTORY_UNVERIFIED,
     GENERATED_INVENTORY_UNVERIFIED,
@@ -61,7 +63,12 @@ sealed interface NativeKotlinStagedCoreAuditResult {
         val revokedCustomConsents:Int=0,
         val legacyCustomConsents:Int=0,
         /** Owner-verified v1/v2 generated provenance; not an approval. */
-        val generatedFirstProgramSeeds:Int=0
+        val generatedFirstProgramSeeds:Int=0,
+        /** Current and archived calendar approvals; none are issue grants. */
+        val approvedFutureBlockCalendars:Int=0,
+        val staleFutureBlockCalendars:Int=0,
+        val appliedFutureActivationIntents:Int=0,
+        val preparedFutureActivationIntents:Int=0
     ):NativeKotlinStagedCoreAuditResult
     data class Rejected(val reason:NativeKotlinStagedCoreRefusal):
         NativeKotlinStagedCoreAuditResult
@@ -137,6 +144,12 @@ object NativeKotlinStagedCoreStoreAudit {
             val futureApprovals=NativeKotlinFutureActivationApprovalFileStore(
                 stagedRoot,fence,identity,boundary,contexts,drafts,sources,
                 adaptivePermissions)
+            val appliedFuture=NativeKotlinFutureActivationCommitTransaction(
+                stagedRoot,fence,identity,sources,drafts,contexts,
+                futureApprovals,handoff)
+            val calendars=NativeKotlinActivatedBlockCalendarFileStore(
+                stagedRoot,fence,identity,appliedFuture,sources,drafts,
+                NativeHistoryCompletionClock.Undated)
             fence.withOwnerTransaction(expected.ownerKey) {
                 val activeSource=sources.read(expected.ownerKey)
                     as? NativeAuthoringSourceRead.Found
@@ -203,6 +216,13 @@ object NativeKotlinStagedCoreStoreAudit {
                     as? NativeFutureApprovalInventory.Verified
                     ?:return@withOwnerTransaction reject(
                         NativeKotlinStagedCoreRefusal.FUTURE_APPROVALS_UNVERIFIED)
+                // Read EVERY archived date record, including superseded
+                // programs. Never silently discard a foreign, renamed,
+                // corrupt or interrupted physical calendar during restore.
+                val savedCalendars=calendars.inventoryOwner(expected.ownerKey)
+                    as? NativeActivatedBlockCalendarInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.FUTURE_CALENDARS_UNVERIFIED)
                 val switchBarrier=handoff.inventoryOwner(expected.ownerKey)
                 if(switchBarrier !is NativeFutureHandoffReview.Missing &&
                     switchBarrier !is NativeFutureHandoffReview.Staged)
@@ -226,6 +246,15 @@ object NativeKotlinStagedCoreStoreAudit {
                         return@withOwnerTransaction reject(
                             NativeKotlinStagedCoreRefusal.FUTURE_HANDOFF_UNVERIFIED)
                 }
+                // The historical second-consent and the write-ahead
+                // source-activation transaction have overlapping filename
+                // prefixes but different binary schemas. Validate the
+                // physical transaction separately; a malformed .pending
+                // or forged source-CAS intent must never restore silently.
+                val activationIntents=appliedFuture.inventoryOwner(
+                    expected.ownerKey) as? NativeFutureCommitInventory.Verified
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinStagedCoreRefusal.FUTURE_ACTIVATION_INTENT_UNVERIFIED)
                 // Mixed History fully replays every manifest-backed
                 // generated/custom completion and all saved corrections.
                 val verifiedHistory=mixed.read(
@@ -330,7 +359,11 @@ object NativeKotlinStagedCoreStoreAudit {
                     customConsents.records.size,
                     customConsents.records.count{it.revoked},
                     customConsents.records.count{!it.revoked && !it.hasReviewedInputs},
-                    seedInventory.seeds.size)
+                    seedInventory.seeds.size,
+                    savedCalendars.records.count{it.sourceStillCurrent},
+                    savedCalendars.records.count{!it.sourceStillCurrent},
+                    if(activationIntents.state is NativeFutureCommitReview.Applied)1 else 0,
+                    if(activationIntents.state is NativeFutureCommitReview.Prepared)1 else 0)
             }
         } catch(_:Exception) {
             reject(NativeKotlinStagedCoreRefusal.STORE_IO_UNAVAILABLE)

@@ -629,3 +629,54 @@ authority primitive, **not completion of goal-driven autopilot**. Backup and
 restoration integration, migrations, first-block activation, source-consistent
 week replay, time-zone travel handling and real-device testing remain
 required before using the anchor for any automatic program decision.
+
+### Complete owner calendar-file inventory during encrypted restore
+
+The encrypted native training snapshot already carries private calendar
+record bytes. The **staged core restore audit** now separately enumerates
+**every physical** `activated-block-calendar-*` entry, including archived
+records for superseded cycles. It verifies the strict owner/cycle/block hash
+filename, file type (not a symlink), versioned length/checksum envelope,
+internal content fingerprint, real owner/athlete, original approved Monday,
+cycle/source/draft revisions, IANA timezone, day schedule and uniqueness.
+A malformed, interrupted `.pending`, renamed or foreign calendar is a
+`FUTURE_CALENDARS_UNVERIFIED` recovery refusal, **not** a silently omitted
+file. An archived but well-formed record may be retained and reported as
+`staleFutureBlockCalendars`; it is *not* currently approved, and normal
+`read` still refuses it when the active source/draft no longer matches.
+
+The independent staged audit records separate counts of currently matching
+and archived calendar records. The encrypted clean-store test covers
+owner-approved future source transition → calendar acceptance → complete
+snapshot capture → isolated staged byte verification → atomic restore →
+cold read of the **exact same** calendar and preserved issuance barrier.
+It also proves that corrupted date bytes stop the staging audit before
+publication. The backup does **not** make checksum authentication into
+cryptographic source attestation or authorize any training edit. Production
+UI selection, first-block activation, full historic plan adherence and
+automated muscle-frequency/phase changes remain distinct open work.
+
+### Independent native activation commit-intent restore census
+
+The second-consent namespace (`future-activation-<hash>.bin`)
+and the post-consent source-switch WAL namespace
+(`future-activation-commit-<hash>.bin`) share a textual prefix but
+**not** a binary schema. Staged recovery now scans them independently:
+the archived approval inventory examines only exact second-consent
+names, while `NativeKotlinFutureActivationCommitTransaction.inventoryOwner`
+accounts for every physical commit-intent file under its own prefix.
+Commit inventory requires the original owner-hashed path, regular
+unsymlinked file, valid write-ahead envelope, exact athlete/handoff,
+and a verified `Prepared` or `Applied` source-CAS state. Missing intents
+are legitimate when no source transition began. Corrupt, foreign,
+renamed, conflicting, or interrupted `.pending` intents are a separate
+`FUTURE_ACTIVATION_INTENT_UNVERIFIED` refusal, never discarded as
+irrelevant or confused with consent. A correctly `Prepared` intent
+remains a source-change barrier during recovery; an `Applied` one
+preserves its original approved source and cannot be replayed as new
+athlete consent.
+
+These checks run on the staged data before a restored store is
+atomically published. They preserve existing backup bytes, do not
+perform activation, cannot grant workout issuance, and never silently
+remove the athlete's future-handoff barrier.

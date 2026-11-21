@@ -63,6 +63,16 @@ sealed interface NativeFutureCommitReview {
     data class Rejected(val reason:NativeFutureCommitRefusal):
         NativeFutureCommitReview
 }
+/**
+ * Read-only physical recovery census of the distinct write-ahead activation
+ * intent namespace. Never equate a pending/applied intent with a new grant.
+ */
+internal sealed interface NativeFutureCommitInventory {
+    data class Verified(val state:NativeFutureCommitReview?):
+        NativeFutureCommitInventory
+    data object InvalidOrForeign:NativeFutureCommitInventory
+}
+
 sealed interface NativeFutureActivatedCycleReview {
     data class Ready(
         val audit:CustomCoachAudit,val cycleId:String,val blockId:String,
@@ -285,6 +295,48 @@ class NativeKotlinFutureActivationCommitTransaction(
                 NativeFutureCommitRefusal.SOURCE_CONFLICT)
         return NativeFutureCommitReview.Prepared(h.cycleId,h.blockId)
     }
+    /**
+     * Inspect ALL physical commit-intent entries, not just the expected
+     * filename. The second-consent store has a separate (non-overlapping)
+     * namespace; both inventories must succeed for staged backup restore.
+     *
+     * A prepared intent is legitimate and must keep the issuance barrier,
+     * but an orphan, pending file, wrong-owner name or source conflict fails
+     * closed. No existing data is repaired or mutated by this census.
+     */
+    internal fun inventoryOwner(ownerKey:String):NativeFutureCommitInventory =
+        runCatching {fence.withOwnerTransaction(ownerKey) {
+            val signed=owner(ownerKey)
+                ?:return@withOwnerTransaction NativeFutureCommitInventory.InvalidOrForeign
+            val noFollow=java.nio.file.LinkOption.NOFOLLOW_LINKS
+            if(!Files.exists(directory,noFollow))
+                return@withOwnerTransaction NativeFutureCommitInventory.Verified(null)
+            require(!Files.isSymbolicLink(directory) &&
+                Files.isDirectory(directory,noFollow))
+            val physical=Files.list(directory).use{stream->
+                stream.filter{it.fileName.toString().startsWith(
+                    "future-activation-commit-")}.limit(4097).toList()
+            }
+            require(physical.size<=1)
+            if(physical.isEmpty())
+                return@withOwnerTransaction NativeFutureCommitInventory.Verified(null)
+            val file=physical.single()
+            require(file==path(ownerKey) &&
+                !Files.isSymbolicLink(file) &&
+                Files.isRegularFile(file,noFollow))
+            val record=decode(file) ?:error("Missing activation intent")
+            require(record.handoff.ownerKey==ownerKey &&
+                record.handoff.athleteId==signed.athleteId)
+            val receipt=(handoffs.inventoryOwner(ownerKey)
+                as? NativeFutureHandoffReview.Staged)?.receipt
+                ?:error("Activation intent without exact staged handoff")
+            val review=resolved(ownerKey,receipt,record,true)
+            require(review is NativeFutureCommitReview.Prepared ||
+                review is NativeFutureCommitReview.Applied)
+            require(owner(ownerKey)==signed)
+            NativeFutureCommitInventory.Verified(review)
+        }}.getOrElse {NativeFutureCommitInventory.InvalidOrForeign}
+
     fun read(ownerKey:String):NativeFutureCommitReview =
         runCatching{fence.withOwnerTransaction(ownerKey){
             if(owner(ownerKey)==null)return@withOwnerTransaction NativeFutureCommitReview.Rejected(

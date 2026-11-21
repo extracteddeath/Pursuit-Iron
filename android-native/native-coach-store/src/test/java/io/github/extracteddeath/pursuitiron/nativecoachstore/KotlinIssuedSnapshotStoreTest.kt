@@ -75,9 +75,9 @@ class KotlinIssuedSnapshotStoreTest {
         }
     }
 
-    @Test fun limitedIssuedTargetsColdReopenWithoutReindexingOrRewritingLegacy() {
+    @Test fun fullAndShortenedWorkoutsColdReopenWithOriginalSetKeys() {
         val normal=KotlinIssuedSnapshotCodec.encode(original)
-        assertEquals(1,normal[7].toInt())
+        assertEquals(3,normal[7].toInt())
         assertEquals(original,KotlinIssuedSnapshotCodec.decode(normal))
         val reduced=original.copy(
             estimatedMinutes=20,
@@ -85,8 +85,17 @@ class KotlinIssuedSnapshotStoreTest {
             shortSessionLimitMinutes=20,
             shortSessionOmittedSetKeys=listOf("chin:s1"))
         val data=KotlinIssuedSnapshotCodec.encode(reduced)
-        assertEquals(2,data[7].toInt())
+        assertEquals(3,data[7].toInt())
         assertEquals(reduced,KotlinIssuedSnapshotCodec.decode(data))
+        for (payload in listOf(normal, data)) {
+            for (unsupported in listOf(1, 2, 4)) {
+                val changed = payload.copyOf().apply { this[7] = unsupported.toByte() }
+                assertThrows(java.io.IOException::class.java) { KotlinIssuedSnapshotCodec.decode(changed) }
+            }
+            assertThrows(java.io.IOException::class.java) {
+                KotlinIssuedSnapshotCodec.decode(payload.copyOf(payload.size - 1))
+            }
+        }
         assertTrue(reduced.prescriptionEditedForTime)
         assertFalse(original.prescriptionEditedForTime)
         assertEquals(original.targets.take(2).map{it.setKey},

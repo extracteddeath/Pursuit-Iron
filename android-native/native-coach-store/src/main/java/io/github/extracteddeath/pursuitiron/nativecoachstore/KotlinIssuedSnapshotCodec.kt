@@ -19,7 +19,7 @@ import java.util.Collections
  */
 internal object KotlinIssuedSnapshotCodec {
     private const val MAGIC=0x50495331 // PIS1
-    private const val VERSION=2
+    private const val VERSION=3
     private const val MAX_TARGETS=256
     private const val MAX_BYTES=250_000
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
@@ -74,8 +74,8 @@ internal object KotlinIssuedSnapshotCodec {
         val bytes=ByteArrayOutputStream()
         DataOutputStream(bytes).use { out ->
             val s=snapshot.source
-            val version=if(snapshot.shortSessionLimitMinutes==null)1 else VERSION
-            out.writeInt(MAGIC);out.writeInt(version)
+            out.writeInt(MAGIC)
+            out.writeInt(VERSION)
             out.writeUTF(s.athleteId);out.writeLong(s.athleteRevision)
             out.writeUTF(s.programId);out.writeLong(s.programRevision)
             out.writeUTF(s.gymId);out.writeLong(s.gymRevision)
@@ -102,12 +102,11 @@ internal object KotlinIssuedSnapshotCodec {
                 if(rir!=null)out.writeInt(rir)
                 out.writeInt(t.activeSeconds);out.writeInt(t.restSeconds)
             }
-            // Version 1 remains byte-identical for every existing workout.
-            if(version>=2) {
-                out.writeInt(checkNotNull(snapshot.shortSessionLimitMinutes))
-                out.writeInt(snapshot.shortSessionOmittedSetKeys.size)
-                snapshot.shortSessionOmittedSetKeys.forEach(out::writeUTF)
-            }
+            val limit = snapshot.shortSessionLimitMinutes
+            out.writeBoolean(limit != null)
+            if (limit != null) out.writeInt(limit)
+            out.writeInt(snapshot.shortSessionOmittedSetKeys.size)
+            snapshot.shortSessionOmittedSetKeys.forEach(out::writeUTF)
         }
         return bytes.toByteArray().also {
             require(it.size<=MAX_BYTES)
@@ -126,8 +125,7 @@ internal object KotlinIssuedSnapshotCodec {
             DataInputStream(ByteArrayInputStream(raw)).use { input ->
                 if(input.readInt()!=MAGIC)
                     throw IOException("unknown snapshot format")
-                val version=input.readInt()
-                if(version !in 1..VERSION)
+                if (input.readInt() != VERSION)
                     throw IOException("unsupported snapshot format")
                 val source=KotlinTrainingSourceRevision(
                     input.readUTF(),input.readLong(),input.readUTF(),input.readLong(),
@@ -165,12 +163,11 @@ internal object KotlinIssuedSnapshotCodec {
                         rir,active,rest
                     ))
                 }
-                val limit=if(version>=2)input.readInt() else null
-                val omitted=if(version>=2) {
-                    val n=input.readInt()
-                    if(n !in 0..MAX_TARGETS)throw IOException("invalid omission count")
-                    Collections.unmodifiableList(List(n){input.readUTF()})
-                } else emptyList()
+                val limit = if (input.readBoolean()) input.readInt() else null
+                val omissionCount = input.readInt()
+                if (omissionCount !in 0..MAX_TARGETS - count)
+                    throw IOException("invalid omission count")
+                val omitted = Collections.unmodifiableList(List(omissionCount) { input.readUTF() })
                 if(input.available()!=0)throw IOException("trailing snapshot data")
                 KotlinStagedWorkout(source,grant,workout,calendarDay,dayIndex,
                     purpose,minutes,Collections.unmodifiableList(targets),

@@ -317,8 +317,8 @@ object CustomWorkoutJournalDomain {
                             val performedLoad=actual?.load
                             if(predecessor?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
                                 previousLoad==null || performedLoad==null ||
-                                actual.unit!=before.unit ||
-                                actual.machineInstanceId!=before.machineInstanceId ||
+                                actual?.unit!=before?.unit ||
+                                actual?.machineInstanceId!=before?.machineInstanceId ||
                                 performedLoad.signum()<=0 ||
                                 performedLoad.compareTo(previousLoad)>=0)
                                 return CustomWorkoutJournalDecision.Rejected(

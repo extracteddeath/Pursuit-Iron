@@ -165,6 +165,56 @@ class BasicProgramProgressionPlanDomainTest {
             result.assignments.single().basicStrategy)
     }
 
+    @Test fun allWebProgressionStyleNamesHaveTypedNativeRoutes() {
+        assertEquals(setOf(NativeProgressionStyle.AUTO,
+            NativeProgressionStyle.DOUBLE,NativeProgressionStyle.DYNAMIC,
+            NativeProgressionStyle.LADDER,NativeProgressionStyle.LINEAR,
+            NativeProgressionStyle.WAVE,NativeProgressionStyle.E1RM),
+            NativeProgressionStyle.entries.toSet())
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val source=cycle(block(phase=TrainingPhase.STRENGTH,
+            slots=listOf(slot(role=ComposerRole.PRIMARY))))
+        for((style,expected) in mapOf(
+            NativeProgressionStyle.DOUBLE to
+                BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            NativeProgressionStyle.DYNAMIC to
+                BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
+            NativeProgressionStyle.LADDER to
+                BasicProgressionStrategy.REP_LADDER_PROGRESSION,
+            NativeProgressionStyle.LINEAR to
+                BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION)) {
+            val response=BasicProgramProgressionPlanDomain.review(
+                source,selectedStyles=mapOf(key to style))
+                as ProgramProgressionPlan.Ready
+            assertEquals(expected,response.assignments.single().basicStrategy)
+            assertEquals(style,response.assignments.single().selectedStyle)
+        }
+        assertEquals(ProgramProgressionPlan.Refused(
+            "Wave progression needs a complete separately authored weekly load plan, not an invented wave."),
+            BasicProgramProgressionPlanDomain.review(source,
+                selectedStyles=mapOf(key to NativeProgressionStyle.WAVE)))
+        val wave=BasicProgramProgressionPlanDomain.review(
+            cycle(block(phase=TrainingPhase.STRENGTH),
+                overrides=mapOf("block" to listOf(
+                    CustomWeekSlotOverride(2,0,"slot",
+                        listOf(working("105"),working("105")))))),
+            selectedStyles=mapOf(key to NativeProgressionStyle.WAVE))
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
+            wave.assignments.single().route)
+        val e1rm=BasicProgramProgressionPlanDomain.review(source,
+            selectedStyles=mapOf(key to NativeProgressionStyle.E1RM))
+            as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.E1RM_COACH_REVIEW,
+            e1rm.assignments.single().route)
+        assertNull(e1rm.assignments.single().basicStrategy)
+        val auto=BasicProgramProgressionPlanDomain.review(source,
+            selectedStyles=mapOf(key to NativeProgressionStyle.AUTO))
+            as ProgramProgressionPlan.Ready
+        assertNotNull(auto.assignments.single().basicStrategy)
+        assertEquals(NativeProgressionStyle.AUTO,auto.assignments.single().selectedStyle)
+    }
+
     @Test fun techniqueFollowUpsNeverCreateNewIndependentLoadProgressions() {
         val amplifier=CustomSetAmplifier(
             CustomAmplifierKind.MYO_REPS,4,20,

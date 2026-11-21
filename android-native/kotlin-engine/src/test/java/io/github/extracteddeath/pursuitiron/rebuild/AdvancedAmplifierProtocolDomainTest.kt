@@ -300,6 +300,42 @@ class AdvancedAmplifierProtocolDomainTest {
                 amp,issued,valid.copy(load=null),"station-a",1))
     }
 
+    @Test fun singleDropEditorUsesOnlyVerifiedReductionFromLastActualSet() {
+        fun weight(n:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.SMITH_TOTAL,java.math.BigDecimal(n))
+        val issued=weight("200")
+        val drop=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=weight("150"))
+        fun entry(actual:String,station:String?="machine-A",
+            unit:LoadUnit=LoadUnit.LB,selected:String?="machine-A")=
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                drop,issued,KotlinPerformedSet(java.math.BigDecimal(actual),
+                    unit,12,1,station),selected,1)
+        val unavailable=AmplifierFollowUpEntryLoad.ActivationUnavailable
+        assertEquals(unavailable,entry("135"))
+        assertEquals(unavailable,entry("150"))
+        assertEquals(unavailable,entry("150.00"))
+        assertEquals(unavailable,entry("175",selected="machine-B"))
+        assertEquals(unavailable,entry("175",unit=LoadUnit.KG))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                drop,issued,null,"machine-A",1))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                drop,issued,KotlinPerformedSet(java.math.BigDecimal("175"),
+                    LoadUnit.LB,12,1,"machine-A"),"machine-A",2))
+        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(weight("150")),
+            entry("175"))
+        // Issued load (200) is not used to pretend the real 135 lb
+        // activation allows a heavier 150 lb "drop".
+        assertEquals(issued,weight("200"))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                drop.copy(followUpLoad=weight("200")),issued,
+                KotlinPerformedSet(java.math.BigDecimal("205"),
+                    LoadUnit.LB,12,1,"machine-A"),"machine-A",1))
+    }
+
     @Test fun explicitLegacyAndDropLoadsRemainAuthoredWhileBodyweightFollowsActual() {
         val issued=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
             java.math.BigDecimal("185"))

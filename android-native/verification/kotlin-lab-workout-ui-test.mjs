@@ -1673,6 +1673,16 @@ assert.ok(
 // precise decimal range, reps, RIR, outcomes and machine-instance syntax.
 // A source-level gate supplements the real JUnit replay and history matrix.
 const numberAuthority=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinSetNumberAuthorityDomain.kt');
+// Actual-set and future-coaching numeric envelopes are ONE predicate,
+// never separately edited ceiling/scale rules. Intent, equipment stock,
+// consent and read-only issuance still belong to their distinct owners.
+assert.ok(numberAuthority.includes('internal fun validPhysicalLoadValue(') &&
+  numberAuthority.includes('if(!validPhysicalLoadValue(load))') &&
+  futureLoadNumbers.includes('KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)') &&
+  !futureLoadNumbers.includes('value.stripTrailingZeros().scale()<=3') &&
+  !futureLoadNumbers.includes('BigDecimal("100000")'),
+  'Kotlin actual and future weight numbers must share one physical envelope');
+
 const numberGenerated=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutJournalDomain.kt');
 const numberCustom=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutJournalDomain.kt');
 const numberEditor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/KotlinWorkoutEntryDomain.kt');

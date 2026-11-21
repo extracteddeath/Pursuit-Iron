@@ -128,7 +128,12 @@ internal fun NativeKotlinWorkoutExerciseInfoSheet(
                     null -> "Not recorded"
                 },style=MaterialTheme.typography.labelMedium,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${set.load} · ${set.reps} · target RIR ${set.targetRir}",
+                // Warm-ups and legacy sets without an authored RIR
+                // must not display the literal "target RIR Not set" as
+                // if that were a coaching prescription.
+                val rirLabel=if(set.targetRir=="Not set")"" else
+                    " · target RIR ${set.targetRir}"
+                Text("${set.load} · ${set.reps}$rirLabel",
                     style=MaterialTheme.typography.bodyMedium)
                 Text("${set.workSeconds}s active · ${set.restSeconds}s planned rest",
                     style=MaterialTheme.typography.bodySmall,

@@ -53,19 +53,80 @@ class NativeKotlinWorkoutInfoPresentationTest {
         val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,5,15,followUpActiveSeconds=40)
         val shown=customWorkoutInfoSets(listOf(custom("amp",1,DraftSetType.WORKING,amplifier=amp))).single()
         val technique=checkNotNull(shown.technique)
-        assertTrue(technique.contains("5 follow-up reps"))
-        assertTrue(technique.contains("15s follow-up rest"))
-        assertTrue(technique.contains("40s follow-up work"))
+        assertTrue(technique.contains("Myo-reps"))
+        assertTrue(technique.contains("1 mini-set"))
+        assertTrue(technique.contains("5 reps per mini-set"))
+        assertTrue(technique.contains("15s between mini-set"))
+        assertTrue(technique.contains("40s total follow-up work"))
+        assertTrue(technique.contains("same activation load and station"))
         assertEquals(30,shown.workSeconds)
         assertEquals(60,shown.restSeconds)
         val unknown=customWorkoutInfoSets(listOf(custom("unknown",1,DraftSetType.WORKING,
             amplifier=amp.copy(followUpActiveSeconds=null)))).single()
         val missing=checkNotNull(unknown.technique)
         assertTrue(missing.contains("follow-up work time not set"))
-        assertFalse(missing.contains("40s follow-up work"))
+        assertFalse(missing.contains("40s total follow-up work"))
     }
     @Test fun emptyDetailsNeverInventAnEntry() {
         assertTrue(customWorkoutInfoSets(emptyList()).isEmpty())
         assertTrue(composerWorkoutInfoSets(emptyList()).isEmpty())
     }
+    @Test fun stagedMyoAndClusterInfoCountsActualAuthoredRoundsNotMainSets() {
+        val myo=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpActiveSeconds=80,followUpRounds=5)
+        val clusters=CustomSetAmplifier(CustomAmplifierKind.CLUSTER,2,30,
+            followUpActiveSeconds=60,followUpRounds=3)
+        val a=checkNotNull(customWorkoutInfoSets(listOf(custom(
+            "myo",1,DraftSetType.WORKING,amplifier=myo))).single().technique)
+        assertTrue(a,a.contains("5 mini-sets"))
+        assertTrue(a,a.contains("4 reps per mini-set"))
+        assertTrue(a,a.contains("20s between mini-sets"))
+        assertTrue(a,a.contains("80s total follow-up work"))
+        val b=checkNotNull(customWorkoutInfoSets(listOf(custom(
+            "cluster",1,DraftSetType.WORKING,amplifier=clusters))).single().technique)
+        assertTrue(b,b.contains("3 clusters"))
+        assertTrue(b,b.contains("2 reps per cluster"))
+        assertTrue(b,b.contains("30s between clusters"))
+    }
+
+    @Test fun infoDisplaysBothDistinctAuthoredDropsWithoutClaimingPerformedLoads() {
+        fun load(s:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(s))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=load("15"),followUpActiveSeconds=35,
+            followUpRounds=2,secondDropLoad=load("10"))
+        val parent=custom("drop",1,DraftSetType.WORKING).copy(
+            prescription=CustomAuthoredSet(DraftSetType.WORKING,load("20"),
+                RepBand(8,12),2,30,60,amp))
+        val info=customWorkoutInfoSets(listOf(parent)).single()
+        val technique=checkNotNull(info.technique)
+        assertTrue(technique,technique.contains("2 weight drops"))
+        assertTrue(technique,technique.contains("Drop 1: 15 lb"))
+        assertTrue(technique,technique.contains("Drop 2: 10 lb"))
+        assertTrue(technique,technique.indexOf("Drop 1:")<technique.indexOf("Drop 2:"))
+        assertTrue(technique,technique.contains("35s total follow-up work"))
+        assertFalse(technique.contains("performed"))
+        assertTrue(info.load,info.load.startsWith("20 lb"))
+        assertTrue(info.load,info.load.contains("per"))
+        val invalid=parent.copy(prescription=parent.prescription.copy(
+            amplifier=amp.copy(secondDropLoad=load("16"))))
+        val warning=checkNotNull(customWorkoutInfoSets(listOf(invalid))
+            .single().technique)
+        assertTrue(warning,warning.contains("drop weights require review"))
+        assertFalse(warning.contains("Drop 2: 16"))
+    }
+
+    @Test fun lengthenedPartialsRemainDistinctFromFullRangeWorkingReps() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.LENGTHENED_PARTIALS,
+            6,0,followUpActiveSeconds=15)
+        val text=checkNotNull(customWorkoutInfoSets(listOf(custom(
+            "partials",1,DraftSetType.WORKING,amplifier=amp)))
+            .single().technique)
+        assertTrue(text,text.contains("Lengthened partials"))
+        assertTrue(text,text.contains("6 controlled partial reps"))
+        assertTrue(text,text.contains("final working set"))
+        assertTrue(text,text.contains("same load and station"))
+        assertFalse(text.contains("6 reps per partial rep"))
+    }
+
 }

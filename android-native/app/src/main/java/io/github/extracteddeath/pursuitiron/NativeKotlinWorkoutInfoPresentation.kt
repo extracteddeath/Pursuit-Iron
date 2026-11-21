@@ -48,19 +48,49 @@ internal fun composerWorkoutInfoSets(
     )
 }
 
+/** Plan-only amplifier description. The engine owns stage counts, labels
+ * and physical target loads; this never confuses targets with actuals.
+ * A malformed legacy technique is disclosed instead of invented. */
+private fun infoTechnique(set:CustomAuthoredSet):String? {
+    val amp=set.amplifier ?:return null
+    val title=AdvancedAmplifierProtocolDomain.template(amp.kind).title
+    if(!AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp))
+        return "$title · technique configuration needs review"
+    val total=amp.followUpRounds
+    val singular=AdvancedAmplifierProtocolDomain.stageNoun(amp.kind)
+    val plural=AdvancedAmplifierProtocolDomain.stageNoun(amp.kind,total!=1)
+    val action=when(amp.kind) {
+        CustomAmplifierKind.LENGTHENED_PARTIALS ->
+            "${amp.followUpReps} controlled partial reps on the final working set · same load and station"
+        else -> "$total $plural · ${amp.followUpReps} reps per $singular"
+    }
+    val rest=if(amp.kind==CustomAmplifierKind.LENGTHENED_PARTIALS)
+        "no added rest" else "${amp.followUpRestSeconds}s between $plural"
+    val work=amp.followUpActiveSeconds?.let {
+        "${it}s total follow-up work"
+    } ?: "follow-up work time not set"
+    val physical=when(amp.kind) {
+        CustomAmplifierKind.DROP_SET -> {
+            if(!AdvancedAmplifierProtocolDomain.validDropSequence(set.load,amp))
+                "drop weights require review"
+            else (1..amp.followUpRounds).map {stage ->
+                val load=AdvancedAmplifierProtocolDomain.dropStageLoad(amp,stage)
+                "Drop $stage: "+(load?.let(::infoLoad) ?: "not confirmed")
+            }.joinToString(" · ")
+        }
+        else ->amp.followUpLoad?.let {
+            "Authored follow-up: ${infoLoad(it)}"
+        } ?: "same activation load and station"
+    }
+    return listOf(title,action,rest,work,physical).joinToString(" · ")
+}
+
 /** Issued custom workout; keep each authored amplifier with its owner set. */
 internal fun customWorkoutInfoSets(
     targets:List<CustomWorkoutSetSnapshot>
 ):List<NativeWorkoutInfoSet> = targets.map { snapshot ->
     val target=snapshot.prescription
-    val technique=target.amplifier?.let{amp->
-        "${amp.kind.name.lowercase().replace('_',' ')} · "+
-            "${amp.followUpReps} follow-up reps · "+
-            "${amp.followUpRestSeconds}s follow-up rest"+
-            (amp.followUpActiveSeconds?.let{" · ${it}s follow-up work"}
-                ?: " · follow-up work time not set")+
-            (amp.followUpLoad?.let{" · ${infoLoad(it)}"} ?: "")
-    }
+    val technique=infoTechnique(target)
     // Durable ordinals count every set in the slot. UI numbering restarts
     // for working sets after warm-ups, matching Focus and the actual logger.
     val position=targets.asSequence().filter {

@@ -231,19 +231,20 @@ object CustomWorkoutJournalDomain {
                     as? CustomWorkoutJournalOperation.Record)
                 val plan=when(operation.visit.part) {
                     CustomWorkoutVisitPart.MAIN -> {
-                        // A correction to the activation load or station
-                        // after any same-load staged technique would invalidate
-                        // its lineage. Never erase factual mini-set receipts.
-                        if(main!=null && target.prescription.amplifier?.let{
-                                (it.kind==CustomAmplifierKind.LENGTHENED_PARTIALS ||
-                                 it.followUpRounds>1 &&
-                                    (it.kind==CustomAmplifierKind.DROP_SET ||
-                                     it.kind==CustomAmplifierKind.MYO_REPS ||
-                                     it.kind==CustomAmplifierKind.REST_PAUSE ||
-                                     it.kind==CustomAmplifierKind.CLUSTER))
-                            }==true && nextEffective.keys.any {
-                                it.setKey==operation.visit.setKey &&
-                                    it.part==CustomWorkoutVisitPart.FOLLOW_UP
+                        // A completed dependent drop, mini-set, pause,
+                        // cluster or partial stays anchored to the ACTUAL
+                        // activation's physical load and station. Comparing
+                        // numeric BigDecimals avoids 20 vs 20.000 drift.
+                        // Skipping the main remains possible only AFTER
+                        // every dependent follow-up has been skipped.
+                        if(main!=null &&
+                            operation.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                            nextEffective.any { (key,receipt)->
+                                key.setKey==operation.visit.setKey &&
+                                    key.part==CustomWorkoutVisitPart.FOLLOW_UP &&
+                                    (receipt.operation as?
+                                        CustomWorkoutJournalOperation.Record)
+                                        ?.outcome==KotlinJournalSetOutcome.COMPLETED
                             } &&
                             !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
                                 main.performed,operation.performed))
@@ -296,6 +297,33 @@ object CustomWorkoutJournalDomain {
                                 main.performed,operation.performed))
                             return CustomWorkoutJournalDecision.Rejected(
                                 CustomWorkoutJournalRefusal.INVALID_ACTUAL)
+                        // The independently reviewed lower stage target
+                        // does not prove the athlete actually reduced weight.
+                        // Enforce the REAL completed reduction at every drop,
+                        // including the legacy one-drop path and corrected
+                        // observations. Never invent a second-stage weight
+                        // from a first-stage load or another Machine A/B.
+                        if(amp.kind==CustomAmplifierKind.DROP_SET &&
+                            operation.outcome==KotlinJournalSetOutcome.COMPLETED) {
+                            val predecessor=if(operation.visit.stage==1)main
+                                else (nextEffective[CustomWorkoutVisitKey(
+                                    operation.visit.setKey,
+                                    CustomWorkoutVisitPart.FOLLOW_UP,
+                                    operation.visit.stage-1)]?.operation as?
+                                        CustomWorkoutJournalOperation.Record)
+                            val before=predecessor?.performed
+                            val actual=operation.performed
+                            val previousLoad=before?.load
+                            val performedLoad=actual?.load
+                            if(predecessor?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                                previousLoad==null || performedLoad==null ||
+                                actual.unit!=before.unit ||
+                                actual.machineInstanceId!=before.machineInstanceId ||
+                                performedLoad.signum()<=0 ||
+                                performedLoad.compareTo(previousLoad)>=0)
+                                return CustomWorkoutJournalDecision.Rejected(
+                                    CustomWorkoutJournalRefusal.INVALID_ACTUAL)
+                        }
                         AdvancedAmplifierProtocolDomain.followUpLoadForStage(
                             amp,target.prescription.load,operation.visit.stage)
                     }

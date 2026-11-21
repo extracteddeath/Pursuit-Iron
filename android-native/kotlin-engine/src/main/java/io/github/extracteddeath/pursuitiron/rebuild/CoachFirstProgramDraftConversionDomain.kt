@@ -203,21 +203,22 @@ object CoachFirstProgramDraftConversionDomain {
         // a different progression. Special/peak/periodized visits remain
         // null: these are authored source schemes, not basic overload.
         val selectedByKey=progressionPlan.assignments.associateBy{it.key}
-        val persisted=next.copy(blocks=Collections.unmodifiableList(
-            next.blocks.map {block->block.copy(
-                days=Collections.unmodifiableList(block.days.map{day->
-                    day.copy(slots=Collections.unmodifiableList(day.slots.map{slot->
-                        val key=ProgramProgressionSlotKey(
-                            block.blockId,day.weekday,slot.slotId)
-                        val decision=selectedByKey[key]
-                            ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
-                                "A generated slot has no source-linked progression decision.")
-                        slot.copy(progressionMethod=
-                            BasicProgramProgressionPlanDomain.savedChoice(decision))
-                    }))
-                }))
+        val persistedBlocks=next.blocks.map{block->
+            val savedDays=block.days.map{day->
+                val savedSlots=day.slots.map{slot->
+                    val key=ProgramProgressionSlotKey(
+                        block.blockId,day.weekday,slot.slotId)
+                    val decision=selectedByKey[key]
+                        ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                            "A generated slot has no source-linked progression decision.")
+                    slot.copy(progressionMethod=
+                        BasicProgramProgressionPlanDomain.savedChoice(decision))
+                }
+                day.copy(slots=Collections.unmodifiableList(savedSlots))
             }
-        ))
+            block.copy(days=Collections.unmodifiableList(savedDays))
+        }
+        val persisted=next.copy(blocks=Collections.unmodifiableList(persistedBlocks))
         // Re-review the identical cycle structure AFTER freezing choices,
         // using the same equipment and catalog sources. This refuses a
         // selection that could not be replayed on app restart.

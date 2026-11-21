@@ -186,7 +186,9 @@ object CoachFirstProgramDraftConversionDomain {
         // A generator must account for the progression route of EVERY saved
         // slot. Do this only after the fully-authored cycle passed inventory
         // and source review; never guess a weight from an unreviewed draft.
-        val progressionPlan=BasicProgramProgressionPlanDomain.review(next)
+        val progressionPlan=BasicProgramProgressionPlanDomain.review(
+            next,reviewedCatalog=curatedCatalog.associateBy{it.exerciseId},
+            experience=athlete.experience)
             as? ProgramProgressionPlan.Ready
             ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "A complete source-bound progression plan could not be assigned.")

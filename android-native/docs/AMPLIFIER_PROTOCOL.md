@@ -138,3 +138,28 @@ protocols. Every claim of beta safety still requires on-device acceptance.
 7. **Tests:** pure stop-state/range/quality evaluator, stage identity and ordering in supersets, load rounding/decline for drops, time/rest cues, crash-safe persistence, correction/undo, source reissuance, custom/generated parity, accessibility + screenshots, no legacy JS dependency. No APK before full native UI acceptance.
 
 This contract deliberately separates a science-informed recommendation from an *issued and independently logged workout*. The custom myo-rep and rest-pause slices have been merged. This staged cluster implementation uses the same established visit IDs, explicit same-load/machine constraints, optional stop and replay. No new persisted field is required; older single-follow-up cluster snapshots stay as-is. Multi-stage **drops still require explicit separately verified weights for every drop** and cannot be faked by duplicating one follow-up. Generated program support, web parity, full device accessibility and end-to-end beta acceptance remain open after CI. No APK before the full UI is complete.
+
+
+## Executable drop-stage authority (single and multi-drop)
+
+A drop is never authorized merely because the issued activation *target*
+was heavier. The shared native journal/Focus execution projection now
+requires **every** drop stage, including the legacy one-follow-up case,
+to be individually verified as a physical reduction from the immediately
+preceding **completed actual** stage at the same machine/station and in the
+same load unit. The authored load sequence must itself be structurally
+valid (positive, strictly descending, same basis and unit) before any
+optional drop can be offered. A changed or missing actual activation,
+same-weight "drop", lighter-than-planned activation, or absent drop load
+ends the optional sequence without inventing or reweighting a set.
+
+Focus's new-entry policy refuses to prefill a single drop when the
+performed activation does not exceed the authored drop load; the
+authored target is otherwise preserved rather than silently derived
+from the old first working set. This is read-only eligibility and
+editable-field initialization, not permission to modify issued sets,
+future progression, old recorded receipts, or a physical station.
+Headless regressions include unchanged/lighter activation, invalid
+authored reductions, valid lower loads, machine/unit mismatch and cold
+journal replay. The full native device QA and broader periodization
+parity gates remain open.

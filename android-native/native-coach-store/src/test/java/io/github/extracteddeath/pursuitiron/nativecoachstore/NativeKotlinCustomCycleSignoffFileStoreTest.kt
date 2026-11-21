@@ -1718,6 +1718,142 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
     }
 
+    @Test fun blockCalendarRestoreInventoryScansEveryPhysicalArchivedFile() {
+        val fixture=activationFixture()
+        val calendar=activatedBlockCalendar(fixture)
+        assertEquals(NativeActivatedBlockCalendarInventory.Verified(emptyList()),
+            calendar.inventoryOwner("owner-1"))
+        assertTrue(activationTransaction(fixture).commit("owner-1")
+            is NativeFutureCommitReview.Applied)
+        val monday=LocalDate.parse("2026-11-23")
+        val offer=calendar.preview("owner-1","cycle-1","build",monday)
+            as NativeActivatedBlockCalendarPreview.Ready
+        assertTrue(calendar.confirm("owner-1","cycle-1","build",monday,
+            offer.fingerprint,true)
+            is NativeActivatedBlockCalendarWrite.Committed)
+        val original=calendar.inventoryOwner("owner-1")
+            as NativeActivatedBlockCalendarInventory.Verified
+        assertEquals(1,original.records.size)
+        assertEquals(offer.proposed,original.records.single().calendar)
+        assertTrue(original.records.single().sourceStillCurrent)
+        val physical=futurePhysical("activated-block-calendar-")
+        val bytes=Files.readAllBytes(physical)
+        for(name in listOf(
+            "activated-block-calendar-"+"0".repeat(64)+".bin",
+            "activated-block-calendar-interrupted.pending")) {
+            val unwanted=temp.root.toPath().resolve(name)
+            Files.write(unwanted,bytes)
+            assertEquals(name,NativeActivatedBlockCalendarInventory.InvalidOrForeign,
+                calendar.inventoryOwner("owner-1"))
+            Files.delete(unwanted)
+        }
+        Files.write(physical,bytes.copyOf().also {
+            it[it.lastIndex]=(it.last().toInt() xor 3).toByte()
+        })
+        assertEquals(NativeActivatedBlockCalendarInventory.InvalidOrForeign,
+            calendar.inventoryOwner("owner-1"))
+        Files.write(physical,bytes)
+        assertEquals(original,calendar.inventoryOwner("owner-1"))
+        active=NativeKotlinOwnerIdentity("owner-2","athlete-2")
+        assertEquals(NativeActivatedBlockCalendarInventory.InvalidOrForeign,
+            calendar.inventoryOwner("owner-1"))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeCustomDraftWriteResult.Committed(4),
+            drafts.save("owner-1","cycle-1",3,
+                futureCycle().copy(revision=4,title="Archived past training block")))
+        val stale=calendar.inventoryOwner("owner-1")
+            as NativeActivatedBlockCalendarInventory.Verified
+        assertEquals(1,stale.records.size)
+        assertEquals(offer.proposed,stale.records.single().calendar)
+        assertFalse(stale.records.single().sourceStillCurrent)
+        assertEquals(NativeActivatedBlockCalendarRead.Rejected(
+            NativeActivatedBlockCalendarRefusal.STALE_SOURCE_OR_DRAFT),
+            calendar.read("owner-1","cycle-1","build"))
+    }
+
+    @Test fun approvedBlockCalendarIsPreservedByEncryptedCleanRestore() {
+        readyFutureForSecondConsent(
+            realPriorHistory=true,datedPriorHistory=true)
+        recoveryOwnerFile()
+        val checkpoint=productionRecoveryCheckpoint()
+        val grant=acceptedFutureForRecovery(checkpoint)
+        val handoff=newHandoff()
+        assertTrue(handoff.stage("owner-1","cycle-1","build",
+            grant.revision,grant.reviewedFingerprint,checkpoint,true)
+            is NativeFutureHandoffReview.Staged)
+        val tx=NativeKotlinFutureActivationCommitTransaction(
+            temp.root.toPath(),fence,identity,sources,drafts,
+            futureStore(),checkpoint,handoff)
+        val applied=tx.commit("owner-1")
+        assertTrue(applied.toString(),applied is NativeFutureCommitReview.Applied)
+        val clock=NativeHistoryCompletionClock{
+            java.time.Instant.parse("2026-11-20T17:00:00Z").toEpochMilli()
+        }
+        val calendar=NativeKotlinActivatedBlockCalendarFileStore(
+            temp.root.toPath(),fence,identity,tx,sources,drafts,clock)
+        val monday=LocalDate.parse("2026-11-23")
+        val offer=calendar.preview("owner-1","cycle-1","build",monday)
+            as NativeActivatedBlockCalendarPreview.Ready
+        val accepted=calendar.confirm("owner-1","cycle-1","build",
+            monday,offer.fingerprint,true) as NativeActivatedBlockCalendarWrite.Committed
+        val expected=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val before=NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected)
+        assertTrue(before.toString(),before is NativeKotlinStagedCoreAuditResult.Verified)
+        assertEquals(1,(before as NativeKotlinStagedCoreAuditResult.Verified)
+            .approvedFutureBlockCalendars)
+        assertEquals(0,before.staleFutureBlockCalendars)
+        val file=futurePhysical("activated-block-calendar-")
+        val bytes=Files.readAllBytes(file)
+        Files.write(file,bytes.copyOf().also{
+            it[it.lastIndex]=(it.last().toInt() xor 1).toByte()
+        })
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.FUTURE_CALENDARS_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        Files.write(file,bytes)
+        assertEquals(before,NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected))
+        val password="owner-calendar-clean-recovery-password".toCharArray()
+        val snap=NativeKotlinEncryptedTrainingSnapshot.capture(
+            temp.root.toPath(),fence,expected,{active},
+            {NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected)
+                is NativeKotlinStagedCoreAuditResult.Verified},password)
+        assertTrue(snap.toString(),snap is NativeKotlinTrainingSnapshotResult.Ready)
+        val target=temp.newFolder("calendar-clean-restore").toPath()
+            .resolve("kotlin-coach-v1")
+        val restored=NativeKotlinCleanStoreRestore.restoreToAbsentStore(
+            target,(snap as NativeKotlinTrainingSnapshotResult.Ready).encrypted,
+            password,expected,
+            {stage,who->NativeKotlinStagedCoreStoreAudit.inspect(stage,who)
+                is NativeKotlinStagedCoreAuditResult.Verified})
+        password.fill('\u0000')
+        assertTrue(restored.toString(),
+            restored is NativeKotlinCleanRestoreResult.Committed)
+        assertEquals(before,NativeKotlinStagedCoreStoreAudit.inspect(target,expected))
+        val coldFence=NativeKotlinApprovalRevisionFence(target)
+        val coldSource=NativeKotlinCustomAuthoringSourceFileStore(target,coldFence,identity)
+        val coldDraft=NativeCustomCycleDraftFileStore(target,coldFence,identity)
+        val coldContexts=NativeKotlinFutureBlockContextFileStore(
+            target,coldFence,identity,coldDraft,coldSource)
+        val coldRights=NativeKotlinAdaptiveCyclePermissionFileStore(
+            target,coldFence,identity)
+        val coldHandoff=NativeKotlinFutureActivationHandoffFileStore(
+            target,coldFence,identity,coldSource)
+        val coldApprovals=NativeKotlinFutureActivationApprovalFileStore(
+            target,coldFence,identity,
+            {_,_,_->error("Restore read must never issue a new activation")},
+            coldContexts,coldDraft,coldSource,coldRights)
+        val coldTx=NativeKotlinFutureActivationCommitTransaction(
+            target,coldFence,identity,coldSource,coldDraft,coldContexts,
+            coldApprovals,coldHandoff)
+        val coldCalendar=NativeKotlinActivatedBlockCalendarFileStore(
+            target,coldFence,identity,coldTx,coldSource,coldDraft,
+            NativeHistoryCompletionClock.Undated)
+        assertEquals(NativeActivatedBlockCalendarRead.Found(accepted.calendar),
+            coldCalendar.read("owner-1","cycle-1","build"))
+        assertTrue(coldHandoff.blocksNewIssuance("owner-1"))
+    }
+
     @Test fun activatedCycleAuditsOriginalCompletedScheduleAndNewFuturePolicy() {
         val fixture=activationFixture()
         val transaction=activationTransaction(fixture)

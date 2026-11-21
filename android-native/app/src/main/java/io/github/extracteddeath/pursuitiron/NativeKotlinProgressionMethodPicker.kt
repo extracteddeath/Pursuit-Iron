@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -8,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.rebuild.*
 
@@ -107,13 +109,14 @@ internal fun NativeKotlinProgressionMethodPicker(
         onDismissRequest={if(!busy)onDismiss()},
         title={Text("Progression method")},
         text={
-            Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)){
+            Column(Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)){
                 Text(kotlinExerciseLabel(slot.exerciseId),
                     style=MaterialTheme.typography.titleSmall)
                 Text("Changing a program method needs another full-cycle review and approval. Saved history and issued workouts will not change.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+                Column(Modifier.selectableGroup()) {
                     // Null is a genuine legacy/program-default choice, not
                     // a hidden alias of Double or Manual.
                     val choices:List<SavedProgressionMethod?> =
@@ -121,13 +124,17 @@ internal fun NativeKotlinProgressionMethodPicker(
                     choices.forEach {method ->
                         val optionAllowed=method==null || available[method]==true
                         Row(
-                            modifier=Modifier.fillMaxWidth().clickable(
-                                enabled=!busy && optionAllowed
-                            ){proposed=method},
+                            modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(
+                                selected=proposed==method,
+                                enabled=!busy && optionAllowed,
+                                role=Role.RadioButton,
+                                onClick={proposed=method}
+                            ).padding(vertical=PursuitSpace.xxs),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
                             verticalAlignment=Alignment.CenterVertically
                         ) {
                             RadioButton(selected=proposed==method,
-                                onClick={proposed=method},
+                                onClick=null,
                                 enabled=!busy && optionAllowed)
                             Column(Modifier.weight(1f)) {
                                 Text(savedProgressionLabel(method),

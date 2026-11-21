@@ -212,4 +212,27 @@ class CustomWorkoutSnapshotDomainTest {
                 StarterExerciseTranche.movements(),1,1,0))
     }
 
+    @Test fun customPreviewUsesSameExactStagedTimeAsSwapAndShortReview() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpActiveSeconds=75,followUpRounds=3)
+        val base=cycle()
+        val block=base.blocks.single()
+        val firstDay=block.days.first()
+        val old=firstDay.slots.first()
+        val authored=set(12,amp)
+        val updatedDay=firstDay.copy(slots=
+            listOf(old.copy(sets=listOf(authored)))+firstDay.slots.drop(1))
+        val staged=base.copy(blocks=listOf(block.copy(days=
+            listOf(updatedDay)+block.days.drop(1))))
+        val result=preview(staged)
+        assertTrue(result.toString(),result is CustomWorkoutSnapshotResult.Preview)
+        val session=(result as CustomWorkoutSnapshotResult.Preview).snapshot
+        // First set: 50 + 90 + 3x20 + 75 = 275. Other set: 140.
+        assertEquals(415L,session.knownSetAndRestSeconds)
+        assertEquals(275L,CustomWorkoutTimingDomain.setSeconds(authored))
+        assertEquals(415L,CustomWorkoutTimingDomain.totalSeconds(
+            session.slots.flatMap{slot->slot.sets.map{it.prescription}}))
+        assertEquals(amp,session.slots.first().sets.single().prescription.amplifier)
+    }
+
 }

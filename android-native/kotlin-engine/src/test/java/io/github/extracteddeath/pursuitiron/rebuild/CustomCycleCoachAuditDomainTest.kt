@@ -915,4 +915,31 @@ class CustomCycleCoachAuditDomainTest {
         assertFalse(invalid.canIssueWorkout)
     }
 
+    @Test fun reviewedWeekSecondsCountEveryAdvancedRestAndActiveStage() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.MYO_REPS,4,20,
+            followUpActiveSeconds=75,followUpRounds=3)
+        val baseline=cycle()
+        val block=baseline.blocks.single()
+        val first=block.days.first()
+        val enhanced=first.copy(slots=first.slots.map { slot->
+            slot.copy(sets=slot.sets.map {set->
+                set.copy(amplifier=amp)
+            })
+        })
+        val candidate=baseline.copy(blocks=listOf(block.copy(days=
+            listOf(enhanced)+block.days.drop(1))))
+        val review=CustomCycleCoachAuditDomain.review(
+            candidate,setup(),StarterExerciseTranche.movements(),inputs())
+        assertEquals(review.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,review.status)
+        val week=review.weeks.first()
+        assertEquals(265L,week.knownSecondsByDay[0])
+        assertEquals(465L,week.estimatedSecondsByDay[0])
+        assertEquals(130L,week.knownSecondsByDay[2])
+        assertEquals(130L,week.knownSecondsByDay[4])
+        assertEquals(265L,CustomWorkoutTimingDomain.setSeconds(
+            enhanced.slots.single().sets.single()))
+        assertFalse(review.mayIssueWorkout)
+    }
+
 }

@@ -323,16 +323,19 @@ object CustomCycleCoachAuditDomain {
                             }
                         }
                         for (set in slot.sets) {
-                            seconds+=set.activeSeconds.toLong()+set.restSeconds
-                            val amp=set.amplifier
-                            if (amp!=null) {
-                                if(amp.followUpActiveSeconds==null)
-                                    missingAdvancedWork=true
-                                // Authored follow-up work time is counted;
-                                // missing active seconds remain unresolved.
-                                seconds+=amp.followUpRestSeconds * amp.followUpRounds+
-                                    (amp.followUpActiveSeconds?:0)
-                            }
+                            // Source-verified active, rest and EVERY
+                            // amplifier stage use the exact same bounded
+                            // Long arithmetic as Preview and Swap / Undo.
+                            val counted=CustomWorkoutTimingDomain.setSeconds(set)
+                            if(counted==null) {
+                                add(CustomCoachIssueKind.INVALID_CUSTOM_CYCLE,
+                                    "week.$weekNumber.day.${day.weekday}.slot.${slot.slotId}",
+                                    "An authored set has invalid work/rest or amplifier timing.")
+                                missingAdvancedWork=true
+                            } else seconds+=counted
+                            if(set.amplifier!=null &&
+                                set.amplifier.followUpActiveSeconds==null)
+                                missingAdvancedWork=true
                         }
                     }
                     touched.forEach {

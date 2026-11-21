@@ -68,16 +68,10 @@ object CustomShorterSessionReviewDomain {
     private const val MAX_SLOTS = 32
     private const val MAX_SETS = 256
 
-    /** Count an entire authored technique in Long units. Every preview,
-     * trimmed result and saved projection must use precisely this policy;
-     * a malformed Int cannot wrap positive rest duration negative. */
-    private fun countedSeconds(set:CustomWorkoutSetSnapshot):Long {
-        val prescription=set.prescription
-        val amp=prescription.amplifier
-        return prescription.activeSeconds.toLong()+prescription.restSeconds.toLong()+
-            (amp?.followUpRestSeconds?.toLong()?.times(amp.followUpRounds) ?: 0L)+
-            (amp?.followUpActiveSeconds?.toLong() ?: 0L)
-    }
+    /** All reviewed, trimmed and swapped custom sessions share the same
+     * canonical Long timing calculation and exact protocol bounds. */
+    private fun countedSeconds(set:CustomWorkoutSetSnapshot):Long =
+        checkNotNull(CustomWorkoutTimingDomain.setSeconds(set.prescription))
 
     private fun invalid(
         kind: CustomShortSessionStatus, minutes: Int, message: String,
@@ -118,14 +112,8 @@ object CustomShorterSessionReviewDomain {
                 slot.sets.isNotEmpty() && slot.sets.size<=20 &&
                 slot.sets.withIndex().all {(i,set)->
                     set.slotId==slot.slotId && set.ordinalInSlot==i+1 &&
-                    set.prescription.activeSeconds in 1..3600 &&
-                    set.prescription.restSeconds in 0..3600 &&
-                    (set.prescription.amplifier?.let {amp->
-                        amp.followUpRestSeconds in 0..3600 &&
-                        AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp) &&
-                        (amp.followUpActiveSeconds==null ||
-                            amp.followUpActiveSeconds in 1..3600)
-                    }!=false)
+                    CustomWorkoutTimingDomain.setSeconds(
+                        set.prescription)!=null
                 } &&
                 slot.sets.any {it.prescription.type==DraftSetType.WORKING}
             }

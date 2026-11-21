@@ -363,7 +363,12 @@ object CustomWorkoutJournalDomain {
                         set.prescription.activeSeconds !in 1..3600 ||
                         set.prescription.restSeconds !in 0..3600 ||
                         (set.prescription.type==DraftSetType.WARMUP &&
-                            set.prescription.amplifier!=null)
+                            set.prescription.amplifier!=null) ||
+                        (set.prescription.amplifier?.let{amp->
+                            amp.kind==CustomAmplifierKind.DROP_SET &&
+                                !AdvancedAmplifierProtocolDomain.validDropSequence(
+                                    set.prescription.load,amp)
+                        }==true)
                     } || next.sets.map{it.ordinalInSlot}.toSet().size!=count)
                     return CustomWorkoutJournalDecision.Rejected(
                         CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
@@ -373,15 +378,9 @@ object CustomWorkoutJournalDomain {
                 if(changed.sumOf{it.sets.size}>256)
                     return CustomWorkoutJournalDecision.Rejected(
                         CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
-                val duration=changed.sumOf { slot ->
-                    slot.sets.sumOf{set ->
-                        set.prescription.activeSeconds.toLong()+
-                        set.prescription.restSeconds.toLong()+
-                        (set.prescription.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)
-                    }
-                }
-                if(duration !in 1L..10_000_000L)
-                    return CustomWorkoutJournalDecision.Rejected(
+                val duration=CustomWorkoutTimingDomain.totalSeconds(
+                    changed.flatMap{slot->slot.sets.map{it.prescription}})
+                    ?:return CustomWorkoutJournalDecision.Rejected(
                         CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
                 nextSnapshot=prior.snapshot.copy(
                     slots=Collections.unmodifiableList(changed),
@@ -430,15 +429,9 @@ object CustomWorkoutJournalDomain {
                 val changed=prior.snapshot.slots.toMutableList().also{
                     it[replacementIndex]=previous
                 }
-                val duration=changed.sumOf {slot->
-                    slot.sets.sumOf {set->
-                        set.prescription.activeSeconds.toLong()+
-                            set.prescription.restSeconds.toLong()+
-                            (set.prescription.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)
-                    }
-                }
-                if(duration !in 1L..10_000_000L)
-                    return CustomWorkoutJournalDecision.Rejected(
+                val duration=CustomWorkoutTimingDomain.totalSeconds(
+                    changed.flatMap{slot->slot.sets.map{it.prescription}})
+                    ?:return CustomWorkoutJournalDecision.Rejected(
                         CustomWorkoutJournalRefusal.SWAP_INVALID_TARGET)
                 nextSnapshot=prior.snapshot.copy(
                     slots=Collections.unmodifiableList(changed),

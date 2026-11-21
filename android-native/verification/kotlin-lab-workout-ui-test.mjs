@@ -124,7 +124,7 @@ assert.match(restPauseProtocol,/fun validStagedFollowUps\(/);
 const snapshotCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutSnapshotCodec.kt');
 const snapshotAmplifierGate=snapshotCodec.slice(
   snapshotCodec.indexOf('p.amplifier?.let{ amp ->'),
-  snapshotCodec.indexOf('duration+=p.activeSeconds'));
+  snapshotCodec.indexOf('require(duration==snapshot.knownSetAndRestSeconds)'));
 assert.ok(snapshotAmplifierGate.includes('AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp)'),
   'Versioned workout snapshots must use the same staged technique authority as Kotlin engine');
 assert.ok(!snapshotAmplifierGate.includes('amp.kind==CustomAmplifierKind.MYO_REPS'),

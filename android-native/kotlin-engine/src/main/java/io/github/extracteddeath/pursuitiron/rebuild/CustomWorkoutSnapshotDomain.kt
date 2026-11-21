@@ -171,9 +171,10 @@ object CustomWorkoutSnapshotDomain {
                 if(!seenKeys.add(key))
                     return CustomWorkoutSnapshotResult.Rejected(
                         CustomWorkoutSnapshotRefusal.DUPLICATE_SET_IDENTITY)
-                knownSeconds+=set.activeSeconds.toLong()+set.restSeconds+
-                    (set.amplifier?.let{it.followUpRestSeconds * it.followUpRounds} ?:0)+
-                    (set.amplifier?.followUpActiveSeconds ?:0)
+                val authoredSeconds=CustomWorkoutTimingDomain.setSeconds(set)
+                    ?:return CustomWorkoutSnapshotResult.Rejected(
+                        CustomWorkoutSnapshotRefusal.INVALID_CYCLE)
+                knownSeconds+=authoredSeconds
                 CustomWorkoutSetSnapshot(key,slot.slotId,index+1,
                     set.copy(amplifier=set.amplifier?.copy()))
             }

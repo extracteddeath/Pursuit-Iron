@@ -303,9 +303,11 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                             next.value<original.value)
                     }
                 }
-                duration+=p.activeSeconds+p.restSeconds+
-                    (p.amplifier?.let{it.followUpRestSeconds * it.followUpRounds}?:0)+
-                    (p.amplifier?.followUpActiveSeconds?:0)
+                // Validate the precise same authored seconds used by
+                // custom workout Preview, weekly dose audit and Swap / Undo.
+                // Int multiplication once let a forged large stage-rest field
+                // wrap into a small, plausible saved duration.
+                duration+=checkNotNull(CustomWorkoutTimingDomain.setSeconds(p))
             }
         }
         require(duration==snapshot.knownSetAndRestSeconds)

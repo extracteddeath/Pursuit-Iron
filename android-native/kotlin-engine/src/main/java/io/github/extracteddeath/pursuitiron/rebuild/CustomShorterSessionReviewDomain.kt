@@ -68,6 +68,17 @@ object CustomShorterSessionReviewDomain {
     private const val MAX_SLOTS = 32
     private const val MAX_SETS = 256
 
+    /** Count an entire authored technique in Long units. Every preview,
+     * trimmed result and saved projection must use precisely this policy;
+     * a malformed Int cannot wrap positive rest duration negative. */
+    private fun countedSeconds(set:CustomWorkoutSetSnapshot):Long {
+        val prescription=set.prescription
+        val amp=prescription.amplifier
+        return prescription.activeSeconds.toLong()+prescription.restSeconds.toLong()+
+            (amp?.followUpRestSeconds?.toLong()?.times(amp.followUpRounds) ?: 0L)+
+            (amp?.followUpActiveSeconds?.toLong() ?: 0L)
+    }
+
     private fun invalid(
         kind: CustomShortSessionStatus, minutes: Int, message: String,
         sourceStamp: CustomWorkoutSourceStamp? = null
@@ -107,11 +118,13 @@ object CustomShorterSessionReviewDomain {
                 slot.sets.isNotEmpty() && slot.sets.size<=20 &&
                 slot.sets.withIndex().all {(i,set)->
                     set.slotId==slot.slotId && set.ordinalInSlot==i+1 &&
-                    set.prescription.activeSeconds>0 &&
-                    set.prescription.restSeconds>=0 &&
-                    (set.prescription.amplifier?.followUpRestSeconds?:0)>=0 &&
-                    (set.prescription.amplifier?.followUpActiveSeconds?.let{
-                        it in 1..3600
+                    set.prescription.activeSeconds in 1..3600 &&
+                    set.prescription.restSeconds in 0..3600 &&
+                    (set.prescription.amplifier?.let {amp->
+                        amp.followUpRestSeconds in 0..3600 &&
+                        AdvancedAmplifierProtocolDomain.validStagedFollowUps(amp) &&
+                        (amp.followUpActiveSeconds==null ||
+                            amp.followUpActiveSeconds in 1..3600)
                     }!=false)
                 } &&
                 slot.sets.any {it.prescription.type==DraftSetType.WORKING}
@@ -119,12 +132,7 @@ object CustomShorterSessionReviewDomain {
         if(!sourceValid)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
                 requestedMinutes,"The full custom session has invalid slot or set identities.",source.stamp)
-        val knownSetSeconds=ordered.sumOf {
-            it.prescription.activeSeconds.toLong()+
-                it.prescription.restSeconds+
-                (it.prescription.amplifier?.let{amp->amp.followUpRestSeconds * amp.followUpRounds}?:0)+
-                (it.prescription.amplifier?.followUpActiveSeconds?:0)
-        }
+        val knownSetSeconds=ordered.sumOf(::countedSeconds)
         if(knownSetSeconds!=source.knownSetAndRestSeconds)
             return invalid(CustomShortSessionStatus.INVALID_SNAPSHOT,
                 requestedMinutes,"The current set timing no longer matches the approved snapshot.",source.stamp)
@@ -174,12 +182,7 @@ object CustomShorterSessionReviewDomain {
         }
         val keys=keySet.toMutableSet()
         fun selected()=ordered.filter{it.setKey in keys}
-        fun seconds()=overhead+selected().sumOf {
-            it.prescription.activeSeconds.toLong()+
-                it.prescription.restSeconds+
-                (it.prescription.amplifier?.let{amp->amp.followUpRestSeconds * amp.followUpRounds}?:0)+
-                (it.prescription.amplifier?.followUpActiveSeconds?:0)
-        }
+        fun seconds()=overhead+selected().sumOf(::countedSeconds)
         fun remainingWorking()=selected().count{
             it.prescription.type==DraftSetType.WORKING
         }
@@ -317,12 +320,7 @@ object CustomShorterSessionReviewDomain {
         if(kept!=reviewed.retainedSetKeys ||
             omitted!=original.slots.flatMap{it.sets}
                 .map{it.setKey}.filterNot{it in setKeys})return null
-        val duration=survivors.flatMap{it.sets}.sumOf{
-            it.prescription.activeSeconds.toLong()+
-                it.prescription.restSeconds+
-                (it.prescription.amplifier?.let{amp->amp.followUpRestSeconds * amp.followUpRounds}?:0)+
-                (it.prescription.amplifier?.followUpActiveSeconds?:0)
-        }
+        val duration=survivors.flatMap{it.sets}.sumOf(::countedSeconds)
         val groups=survivors.mapNotNull{it.supersetGroup}.distinct()
         if(groups.any{group->
             survivors.count{it.supersetGroup==group}!=

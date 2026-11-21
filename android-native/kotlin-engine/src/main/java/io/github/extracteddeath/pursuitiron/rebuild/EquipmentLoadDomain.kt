@@ -108,7 +108,8 @@ sealed interface LoadInspection {
         val entered: BigDecimal,
         val exact: Boolean,
         val atOrBelow: BigDecimal?,
-        val nextAbove: BigDecimal?
+        val nextAbove: BigDecimal?,
+        val nextBelow: BigDecimal?
     ) : LoadInspection
 }
 
@@ -155,7 +156,8 @@ object EquipmentLoadDomain {
             unit = enteredUnit, basis = stock.basis, entered = normalized(entered),
             exact = attainable.contains(entered),
             atOrBelow = attainable.floor(entered)?.let(::normalized),
-            nextAbove = attainable.higher(entered)?.let(::normalized)
+            nextAbove = attainable.higher(entered)?.let(::normalized),
+            nextBelow = attainable.lower(entered)?.let(::normalized)
         )
     }
 
@@ -177,8 +179,10 @@ object EquipmentLoadDomain {
         }
         val upper = if (lower == null) minimum else
             (lower + step).takeIf { it <= maximum }?.let(::normalized)
+        val exact = lower != null && lower.compareTo(entered) == 0
+        val below = if (exact) lower?.subtract(step)?.takeIf { it >= minimum } else lower
         return LoadInspection.Confirmed(stock.unit, stock.basis, entered,
-            lower != null && lower.compareTo(entered) == 0, lower, upper)
+            exact, lower, upper, below?.let(::normalized))
     }
 
     private fun attainable(stock: VerifiedLoadStock): NavigableSet<BigDecimal> = when(stock) {

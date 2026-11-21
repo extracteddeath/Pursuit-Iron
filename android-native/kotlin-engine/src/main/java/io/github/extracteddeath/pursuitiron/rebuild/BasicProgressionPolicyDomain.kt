@@ -250,10 +250,7 @@ object BasicProgressionPolicyDomain {
         for (ordinal in eligible) {
             val next = if (assistance) {
                 // Lower counterweight means LESS assistance, not a load drop.
-                if (loads[ordinal] <= zero) null else
-                    (EquipmentLoadDomain.inspect(stock,
-                        loads[ordinal].subtract(BigDecimal("0.001")),
-                        request.nextScope.unit) as? LoadInspection.Confirmed)?.atOrBelow
+                inspected[ordinal].nextBelow
             } else inspected[ordinal].nextAbove
             if (next == null) {
                 atMaximum = true

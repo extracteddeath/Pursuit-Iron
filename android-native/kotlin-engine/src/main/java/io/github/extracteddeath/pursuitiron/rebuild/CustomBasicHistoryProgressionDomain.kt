@@ -235,11 +235,13 @@ object CustomBasicHistoryProgressionDomain {
                 ?:return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             if(item.prescription.load!=prescribed ||
                 item.prescription.reps!=observed.prescribedReps ||
+                item.prescription.reps!=targetReps ||
                 prescribed.unit!=unit || prescribed.basis!=basis ||
                 observed.amplifierKind!=null ||
                 (observed.actual!=null &&
-                    KotlinMachineAlternativesDomain.normalizeMachineId(
-                        observed.actual.machineInstanceId)!=normalizedMachine))
+                    (observed.actual.unit!=unit ||
+                        KotlinMachineAlternativesDomain.normalizeMachineId(
+                            observed.actual.machineInstanceId)!=normalizedMachine)))
                 return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             WorkingSetFact(
                 ordinal,

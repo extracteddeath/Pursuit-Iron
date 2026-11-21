@@ -1507,11 +1507,11 @@ internal class NativeKotlinCustomCycleController(
      * Never changes historical loads or an already issued workout.
      */
     fun chooseExerciseProgression(
-        blockId:String,weekday:Int,slotId:String,
+        reviewed: CustomTrainingCycle, blockId:String,weekday:Int,slotId:String,
         method:SavedProgressionMethod?
     ) = edit {draft->
         CustomCycleBuilderDomain.setProgressionMethod(
-            draft,draft.revision,blockId,weekday,slotId,method)
+            draft,reviewed,blockId,weekday,slotId,method)
     }
 
     fun editReviewedExerciseSets(

@@ -122,7 +122,7 @@ internal fun NativeKotlinPlanDayEditor(
             }.orEmpty()
             key(slot.slotId) {
             var moreActionsExpanded by rememberSaveable { mutableStateOf(false) }
-            var showProgressionPicker by rememberSaveable {
+            var showProgressionPicker by remember(draft, block.blockId, day.weekday, slot.slotId) {
                 mutableStateOf(false)
             }
             if(showProgressionPicker && enableProgressionEditing) {

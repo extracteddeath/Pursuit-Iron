@@ -39,7 +39,7 @@ class CustomCycleBuilderDomainTest {
     @Test fun selectedProgressionUsesOriginalCycleCasUndoAndOnlyOneSlot() {
         val before=draft()
         val changed=accepted(CustomCycleBuilderDomain.setProgressionMethod(
-            before,1,"base",0,"bench-b",SavedProgressionMethod.DYNAMIC))
+            before,before,"base",0,"bench-b",SavedProgressionMethod.DYNAMIC))
         assertEquals(2L,changed.draft.revision)
         assertEquals("change-exercise-progression",changed.receipt.operation)
         val day=changed.draft.blocks.single().days.single()
@@ -51,7 +51,7 @@ class CustomCycleBuilderDomainTest {
             day.slots.last().sets)
         assertEquals(CustomCycleBuilderRefusal.STALE_REVISION,
             (CustomCycleBuilderDomain.setProgressionMethod(
-                changed.draft,1,"base",0,"bench-b",SavedProgressionMethod.DOUBLE)
+                changed.draft,before,"base",0,"bench-b",SavedProgressionMethod.DOUBLE)
                 as CustomCycleBuilderResult.Rejected).reason)
         val undone=accepted(CustomCycleBuilderDomain.undo(
             changed.draft,changed.receipt))
@@ -67,23 +67,40 @@ class CustomCycleBuilderDomainTest {
             SavedProgressionMethod.WAVE,
             SavedProgressionMethod.E1RM)) {
             val result=CustomCycleBuilderDomain.setProgressionMethod(
-                before,1,"base",0,"bench-b",mode)
+                before,before,"base",0,"bench-b",mode)
             assertEquals(mode.toString(),
                 CustomCycleBuilderRefusal.INVALID_INPUT,
                 (result as CustomCycleBuilderResult.Rejected).reason)
         }
         val preprogrammed=CustomCycleBuilderDomain.setProgressionMethod(
-            before,1,"base",0,"bench-a",SavedProgressionMethod.DOUBLE)
+            before,before,"base",0,"bench-a",SavedProgressionMethod.DOUBLE)
         assertTrue(preprogrammed is CustomCycleBuilderResult.Rejected)
         val manual=accepted(CustomCycleBuilderDomain.setProgressionMethod(
-            before,1,"base",0,"bench-a",SavedProgressionMethod.MANUAL))
+            before,before,"base",0,"bench-a",SavedProgressionMethod.MANUAL))
         assertEquals(SavedProgressionMethod.MANUAL,
             manual.draft.blocks.single().days.single().slots.first()
                 .progressionMethod)
         val reset=accepted(CustomCycleBuilderDomain.setProgressionMethod(
-            manual.draft,2,"base",0,"bench-a",null))
+            manual.draft,manual.draft,"base",0,"bench-a",null))
         assertNull(reset.draft.blocks.single().days.single().slots.first()
             .progressionMethod)
+    }
+
+    @Test fun progressionChoicesMatchSaveAndCannotCrossProgramsOrAthletes() {
+        val reviewed = draft()
+        val key = ProgramProgressionSlotKey("base", 0, "bench-b")
+        val available = CustomCycleBuilderDomain.availableProgressionMethods(reviewed, key)
+        for (method in SavedProgressionMethod.entries) {
+            val result = CustomCycleBuilderDomain.setProgressionMethod(
+                reviewed, reviewed, key.blockId, key.weekday, key.slotId, method)
+            assertEquals(method.name, method in available, result is CustomCycleBuilderResult.Proposed)
+        }
+        for (changed in listOf(reviewed.copy(cycleId = "another"),
+            reviewed.copy(athleteId = "another"), reviewed.copy(revision = 2))) {
+            val result = CustomCycleBuilderDomain.setProgressionMethod(
+                changed, reviewed, key.blockId, key.weekday, key.slotId, SavedProgressionMethod.DOUBLE)
+            assertEquals(CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.STALE_REVISION), result)
+        }
     }
 
     @Test fun blankAllowsUnfinishedDraftWithoutPretendingWorkoutReady() {

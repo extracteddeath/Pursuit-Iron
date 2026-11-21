@@ -445,7 +445,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 enableProgressionEditing=true,
                 onProgressionChoice={slotId,method->
                     controller.chooseExerciseProgression(
-                        block.blockId,day.weekday,slotId,method)
+                        current,block.blockId,day.weekday,slotId,method)
                 })
         }
     }

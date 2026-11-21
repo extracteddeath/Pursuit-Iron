@@ -57,11 +57,7 @@ class NativeKotlinCustomBasicNextReview(
         fun refuse(reason:NativeCustomBasicNextRefusal)=
             NativeCustomBasicNextReadResult.Rejected(reason)
         if(listOf(ownerKey,cycleId,slotId,nextWorkoutId).any{!id.matches(it)} ||
-            absoluteWeek !in 1..104 || weekday !in 0..6 ||
-            // The engine's single number authority validates the exact
-            // physical envelope for non-manual progression. Keep the native
-            // owner input gate structural instead of duplicating that policy.
-            maximumAuthorizedIncrement<=BigDecimal.ZERO)
+            absoluteWeek !in 1..104 || weekday !in 0..6)
             return refuse(NativeCustomBasicNextRefusal.INVALID_SCOPE)
         return runCatching {
             fence.withOwnerTransaction(ownerKey) {
@@ -147,6 +143,10 @@ class NativeKotlinCustomBasicNextReview(
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction refuse(
                         NativeCustomBasicNextRefusal.NOT_AUTHORIZED)
+                // Delegate increment eligibility to the ONE numerical engine.
+                // Unloaded rep progression, rep-only and manual logging do not
+                // require a positive physical weight step. A weighted increase
+                // will still refuse zero/invalid stock inside its own policy.
                 val candidate=CustomBasicHistoryProgressionDomain.review(
                     CustomBasicHistoryRequest(
                         cycle,next,nextWorkoutId,slotId,completed,

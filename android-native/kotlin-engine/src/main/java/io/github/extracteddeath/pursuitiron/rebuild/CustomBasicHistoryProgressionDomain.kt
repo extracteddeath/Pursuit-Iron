@@ -186,10 +186,24 @@ object CustomBasicHistoryProgressionDomain {
             }
             if(visits.isEmpty())
                 return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
-            val observedMachines=visits.mapNotNull{it.actual}.map {
-                KotlinMachineAlternativesDomain.normalizeMachineId(
-                    it.machineInstanceId)
-            }.toSet()
+            // Machine comparison must preserve raw absent actual IDs.
+            // normalizeMachineId(null) creates a compatibility sentinel,
+            // which is NOT evidence that a physical station was used.
+            val actualMachineIds=visits.mapNotNull{it.actual}.map{
+                it.machineInstanceId
+            }
+            if(actualMachineIds.any {it!=null &&
+                !KotlinMachineAlternativesDomain.validInstanceId(it)})
+                return no(CustomBasicHistoryRefusal.INVALID_HISTORY)
+            val observedMachines=actualMachineIds.filterNotNull().toSet()
+            // An issued physical station with no recorded actual station is
+            // ambiguous. Do not relabel its performance as a generic load,
+            // even if an older same-day visit at the desired station passed.
+            // A fully recorded actual station may still legitimately differ
+            // from the issued default when the athlete switched machines.
+            if(observedMachines.isEmpty() &&
+                historicalSlot.machineInstanceId!=null)
+                return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             // A wholly different, explicitly observed machine is its OWN
             // history. An unknown/partial station is never quietly bypassed.
             // A real observed B workout must not suppress an earlier
@@ -199,7 +213,7 @@ object CustomBasicHistoryProgressionDomain {
             // do NOT skip past that ambiguous missed work to an older win.
             if(observedMachines.size==1 &&
                 normalizedMachine !in observedMachines &&
-                visits.all{it.actual!=null})
+                visits.all{it.actual?.machineInstanceId!=null})
                 continue
             if(observedMachines.size>1 ||
                 (observedMachines.isNotEmpty() &&

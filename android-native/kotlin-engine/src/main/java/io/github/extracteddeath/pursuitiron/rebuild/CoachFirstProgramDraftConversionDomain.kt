@@ -196,9 +196,49 @@ object CoachFirstProgramDraftConversionDomain {
             next.blocks.sumOf{block->block.days.sumOf{day->day.slots.size}})
             return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                 "A generated exercise was left without an explicit progression route.")
+
+        // Freeze the selected *method* in the very same cycle DTO saved by
+        // the authenticated native draft store. A transient preview-only
+        // map would disappear after cold launch, letting Auto silently pick
+        // a different progression. Special/peak/periodized visits remain
+        // null: these are authored source schemes, not basic overload.
+        val selectedByKey=progressionPlan.assignments.associateBy{it.key}
+        val persisted=next.copy(blocks=Collections.unmodifiableList(
+            next.blocks.map {block->block.copy(
+                days=Collections.unmodifiableList(block.days.map{day->
+                    day.copy(slots=Collections.unmodifiableList(day.slots.map{slot->
+                        val key=ProgramProgressionSlotKey(
+                            block.blockId,day.weekday,slot.slotId)
+                        val decision=selectedByKey[key]
+                            ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                                "A generated slot has no source-linked progression decision.")
+                        slot.copy(progressionMethod=
+                            BasicProgramProgressionPlanDomain.savedChoice(decision))
+                    }))
+                }))
+            )}
+        ))
+        // Re-review the identical cycle structure AFTER freezing choices,
+        // using the same equipment and catalog sources. This refuses a
+        // selection that could not be replayed on app restart.
+        val persistedReview=runCatching{
+            CustomTrainingCycleDomain.review(persisted,available)
+        }.getOrNull()
+        val replay=BasicProgramProgressionPlanDomain.review(
+            persisted,reviewedCatalog=curatedCatalog.associateBy{it.exerciseId},
+            experience=athlete.experience) as? ProgramProgressionPlan.Ready
+        if(persistedReview?.verifiedDraft==null || replay==null ||
+            replay.assignments.size!=progressionPlan.assignments.size ||
+            replay.assignments.zip(progressionPlan.assignments).any{(actual,planned)->
+                actual.key!=planned.key ||
+                    actual.route!=planned.route ||
+                    actual.basicStrategy!=planned.basicStrategy
+            })
+            return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
+                "Saved progression choices could not reproduce the original reviewed program.")
         return FirstProgramDraftReview(
             FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
-            next,
+            persisted,
             if(includeMyoFinisher)
                 "Optional myo-reps on one reviewed accessory have passed the full-cycle audit. Explicit program approval and workout issuance are still required."
             else "Reviewed native draft; still requires full-cycle coaching audit, athlete consent and separate workout approval.",

@@ -109,19 +109,18 @@ object CustomWorkoutExecutionDomain {
                 // the issued target. Never present an optional drop that
                 // would increase or hold weight relative to the last
                 // performed stage; a changed target is not consent.
-                val proposed=AdvancedAmplifierProtocolDomain.dropStageLoad(
-                    amp,stage) as? DraftSetLoad.Verified ?:break
-                val priorObserved=if(stage==1)main.performed else
+                val previous=if(stage==1)null else
                     (journal.effectiveVisits[CustomWorkoutVisitKey(
                         set.setKey,CustomWorkoutVisitPart.FOLLOW_UP,stage-1)]
                         ?.operation as? CustomWorkoutJournalOperation.Record)
                         ?.performed
-                val actualPriorLoad=priorObserved?.load
-                if(actualPriorLoad==null ||
-                    priorObserved?.unit!=proposed.unit ||
-                    actualPriorLoad.compareTo(proposed.value)<=0 ||
-                    priorObserved?.machineInstanceId!=main.performed?.machineInstanceId)
-                    break
+                // The SAME source-authority governs the editable prefill
+                // and the actual permitted next stage. The second drop must
+                // follow the recorded FIRST drop, not the activation.
+                val entry=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                    amp,set.prescription.load,main.performed,
+                    main.performed?.machineInstanceId,stage,previous)
+                if(entry !is AmplifierFollowUpEntryLoad.AuthoredStage)break
             }
             visits+=key
             val recorded=journal.effectiveVisits[key]?.operation

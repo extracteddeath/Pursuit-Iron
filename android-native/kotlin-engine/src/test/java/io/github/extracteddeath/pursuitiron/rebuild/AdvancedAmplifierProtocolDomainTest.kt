@@ -360,4 +360,51 @@ class AdvancedAmplifierProtocolDomainTest {
                     4,20,followUpRounds=3),
                 DraftSetLoad.ExplicitBodyweight,bodyweight,null,2))
     }
+    @Test fun doubleDropEditorAndExecutionAnchorStageTwoToActualFirstReduction() {
+        fun load(s:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.MACHINE_STACK,java.math.BigDecimal(s))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            followUpLoad=load("75"),followUpRounds=2,
+            secondDropLoad=load("55"))
+        val activation=KotlinPerformedSet(java.math.BigDecimal("95"),
+            LoadUnit.LB,12,1,"machine-A")
+        val first=KotlinPerformedSet(java.math.BigDecimal("75.000"),
+            LoadUnit.LB,9,1,"machine-A")
+        val unavailable=AmplifierFollowUpEntryLoad.ActivationUnavailable
+        val firstEntry=AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+            amp,load("100"),activation,"machine-A",1)
+        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(load("75")),firstEntry)
+        // The activation was heavier than 55, but it cannot stand in for
+        // an absent or changed preceding physical weight drop.
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2,
+                first.copy(load=java.math.BigDecimal("50"))))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2,
+                first.copy(load=java.math.BigDecimal("70"))))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2,
+                first.copy(machineInstanceId="machine-B")))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-B",2,first))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2,
+                first.copy(unit=LoadUnit.KG)))
+        assertEquals(unavailable,
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2,
+                first.copy(reps=0)))
+        assertEquals(AmplifierFollowUpEntryLoad.AuthoredStage(load("55")),
+            AdvancedAmplifierProtocolDomain.resolveFollowUpEntryLoad(
+                amp,load("100"),activation,"machine-A",2,first))
+    }
+
 }

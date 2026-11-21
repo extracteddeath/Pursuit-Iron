@@ -105,6 +105,30 @@ class CustomBasicHistoryProgressionDomainTest {
         assertFalse(result.mayModifyHistory)
     }
 
+    @Test fun dynamicProgressionNeverLevelsAHeavierSetAcrossTheWholeExercise() {
+        val history=completed(1,reps=listOf(10,5))
+        val result=review(program=cycle(SavedProgressionMethod.DYNAMIC),
+            sessions=listOf(history))
+        assertTrue(result.toString(),result is CustomBasicHistoryResult.Reviewed)
+        val candidate=(result as CustomBasicHistoryResult.Reviewed).candidate
+        assertEquals(listOf(n(105),n(100)),candidate.proposedWorkingLoads)
+        assertEquals(setOf(0),candidate.increasedOrdinals)
+    }
+
+    @Test fun manualLoggingHasNoHistoryDependencyOrHiddenLoadSuggestion() {
+        val result=review(program=cycle(SavedProgressionMethod.MANUAL),
+            sessions=emptyList())
+        assertTrue(result.toString(),result is CustomBasicHistoryResult.Reviewed)
+        val ready=result as CustomBasicHistoryResult.Reviewed
+        assertNull(ready.historyWorkoutId)
+        assertNull(ready.completionOrder)
+        assertEquals(BasicProgressionDecision.MANUAL_REPEAT,
+            ready.candidate.decision)
+        assertEquals(listOf(n(100),n(100)),
+            ready.candidate.proposedWorkingLoads)
+        assertTrue(ready.candidate.increasedOrdinals.isEmpty())
+    }
+
     @Test fun newestFailedSameStationBlocksOlderSuccessRatherThanSkippingBack() {
         val history=listOf(completed(1),completed(2,week=2,
             reps=listOf(10,10),failed=setOf(1)))

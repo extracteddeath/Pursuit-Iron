@@ -220,9 +220,10 @@ class CustomWorkoutSnapshotDomainTest {
         val firstDay=block.days.first()
         val old=firstDay.slots.first()
         val authored=set(12,amp)
-        val staged=base.copy(blocks=listOf(block.copy(days=listOf(
-            firstDay.copy(slots=listOf(old.copy(sets=listOf(authored)))+
-                firstDay.slots.drop(1))+block.days.drop(1))))
+        val updatedDay=firstDay.copy(slots=
+            listOf(old.copy(sets=listOf(authored)))+firstDay.slots.drop(1))
+        val staged=base.copy(blocks=listOf(block.copy(days=
+            listOf(updatedDay)+block.days.drop(1))))
         val result=preview(staged)
         assertTrue(result.toString(),result is CustomWorkoutSnapshotResult.Preview)
         val session=(result as CustomWorkoutSnapshotResult.Preview).snapshot

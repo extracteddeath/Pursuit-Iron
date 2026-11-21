@@ -422,12 +422,10 @@ class NativeKotlinActivatedBlockCalendarFileStore(
         NativeActivatedBlockCalendarInventory =
         runCatching{fence.withOwnerTransaction(ownerKey) {
             val signed=active(ownerKey)
-                ?:return@withOwnerTransaction
-                    NativeActivatedBlockCalendarInventory.InvalidOrForeign
+                ?:return@withOwnerTransaction NativeActivatedBlockCalendarInventory.InvalidOrForeign
             val noFollow=java.nio.file.LinkOption.NOFOLLOW_LINKS
             if(!Files.exists(privateDirectory,noFollow))
-                return@withOwnerTransaction
-                    NativeActivatedBlockCalendarInventory.Verified(emptyList())
+                return@withOwnerTransaction NativeActivatedBlockCalendarInventory.Verified(emptyList())
             require(!Files.isSymbolicLink(privateDirectory) &&
                 Files.isDirectory(privateDirectory,noFollow))
             val physical=Files.list(privateDirectory).use {stream->

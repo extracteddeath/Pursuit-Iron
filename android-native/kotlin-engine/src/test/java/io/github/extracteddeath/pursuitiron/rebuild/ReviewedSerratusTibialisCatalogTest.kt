@@ -54,10 +54,11 @@ class ReviewedSerratusTibialisCatalogTest {
         assertEquals(2,summary.completedWorking);assertEquals(2,summary.skippedWorking);assertEquals(2,summary.failedWorking)
     }
 
-    @Test fun v10RetainsItsExactTwentyRowsAndCurrentV11DoesNotAlterExistingPrescriptions() {
+    @Test fun v10RetainsItsExactTwentyRowsAndFrozenV11DoesNotAlterExistingPrescriptions() {
         val input=StarterProgramReleaseFixture.request(ComposerSplit.FULL_BODY,TrainingPhase.HYPERTROPHY)
         val old=CoachFirstProgramStartDomain.review(input.copy(policyVersion=CoachFirstProgramStartDomain.V10_POLICY_VERSION))
-        val current=CoachFirstProgramStartDomain.review(input)
+        val current=CoachFirstProgramStartDomain.review(input.copy(
+            policyVersion=CoachFirstProgramStartDomain.V11_POLICY_VERSION))
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,old.status)
         assertEquals(FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW,current.status)
         assertEquals("v10",old.policy?.revision);assertEquals("v11",current.policy?.revision)

@@ -163,6 +163,27 @@ class BasicProgressionExtendedCoverageTest {
             stockLimit.proposedWorkingLoads)
     }
 
+    @Test fun repOnlyAndManualDoNotRequireAWeightIncrement() {
+        val noStep=BigDecimal.ZERO
+        val manual=BasicProgressionPolicyDomain.review(
+            request(BasicProgressionStrategy.MANUAL_LOGGING).copy(
+                previous=null,previousScope=null,verifiedStock=null,
+                maximumAuthorizedIncrement=noStep))
+        assertTrue(manual is BasicProgressionResult.Candidate)
+        val repOnly=BasicProgressionPolicyDomain.review(request(
+            BasicProgressionStrategy.REP_TARGET_PROGRESSION,
+            reps=listOf(8,7,10)).copy(
+                issuedRepTargets=listOf(8,8,10),verifiedStock=null,
+                maximumAuthorizedIncrement=noStep))
+        assertEquals(listOf(9,8,10),(repOnly as
+            BasicProgressionResult.Candidate).proposedRepTargets)
+        assertEquals(BasicProgressionResult.Refused(
+            BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD),
+            BasicProgressionPolicyDomain.review(request(
+                BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION).copy(
+                    maximumAuthorizedIncrement=noStep)))
+    }
+
     @Test fun eachPublicBaselineModeHasAnExplicitNonWritingPath() {
         assertEquals(setOf(
             BasicProgressionStrategy.MANUAL_LOGGING,

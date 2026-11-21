@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
+import java.math.BigDecimal
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -31,12 +32,18 @@ class KotlinWorkoutRestDomainTest {
     }
     private fun custom(amp:CustomSetAmplifier?=null,rest:Int=90,
         superset:String?=null,second:Boolean=true):CustomWorkoutJournalDraft {
-        fun slot(id:String,amplifier:CustomSetAmplifier?,group:String?)=
-            CustomWorkoutSlotSnapshot(id,"same-exercise","family","variant",
+        fun slot(id:String,amplifier:CustomSetAmplifier?,group:String?):
+            CustomWorkoutSlotSnapshot {
+            val load=if(amplifier?.kind==CustomAmplifierKind.DROP_SET)
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("20"))
+            else DraftSetLoad.ExplicitBodyweight
+            return CustomWorkoutSlotSnapshot(id,"same-exercise","family","variant",
                 ComposerRole.ACCESSORY,null,group,true,"",listOf(
                     CustomWorkoutSetSnapshot("$id:s1",id,1,CustomAuthoredSet(
-                        DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
+                        DraftSetType.WORKING,load,
                         RepBand(8,12),2,45,rest,amplifier))))
+        }
         val snapshot=CustomWorkoutDaySnapshot(
             CustomWorkoutSourceStamp("athlete","profile","cycle",1,"gym",1),
             1,1,"base",TrainingPhase.HYPERTROPHY,CustomBlockPurpose.TRAINING,
@@ -52,8 +59,23 @@ class KotlinWorkoutRestDomainTest {
         part:CustomWorkoutVisitPart=CustomWorkoutVisitPart.MAIN,
         outcome:KotlinJournalSetOutcome=KotlinJournalSetOutcome.COMPLETED,
         correction:String?=null):CustomWorkoutJournalDraft {
+        val prescribed=j.snapshot.slots.flatMap{it.sets}
+            .single{it.setKey==key}.prescription
+        val target=if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+            prescribed.amplifier?.let{
+                AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                    it,prescribed.load,1)
+            } ?:prescribed.load else prescribed.load
+        val weight=target as? DraftSetLoad.Verified
+        val measured=if(weight==null)actual(outcome) else when(outcome) {
+            KotlinJournalSetOutcome.COMPLETED ->
+                KotlinPerformedSet(weight.value,weight.unit,8,null)
+            KotlinJournalSetOutcome.FAILED_ATTEMPT ->
+                KotlinPerformedSet(weight.value,weight.unit,0,null)
+            KotlinJournalSetOutcome.SKIPPED -> null
+        }
         val operation=CustomWorkoutJournalOperation.Record("event-${j.revision}",
-            j.revision,visit(key,part),outcome,actual(outcome),correction)
+            j.revision,visit(key,part),outcome,measured,correction)
         return (CustomWorkoutJournalDomain.reduce(j,operation)
             as CustomWorkoutJournalDecision.Proposed).draft
     }
@@ -150,7 +172,11 @@ class KotlinWorkoutRestDomainTest {
 
     @Test fun amplifierUsesShortPauseBeforeFollowupAndOrdinaryRestAfterIt() {
         for(kind in CustomAmplifierKind.entries) {
-            var j=custom(CustomSetAmplifier(kind,4,20))
+            val reduced=if(kind==CustomAmplifierKind.DROP_SET)
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("15")) else null
+            var j=custom(CustomSetAmplifier(kind,4,20,
+                followUpLoad=reduced))
             assertEquals(visit("a:s1"),CustomWorkoutJournalDomain.nextUnresolvedVisit(j))
             assertEquals(90,rest(j).manualRestSeconds)
             j=record(j)
@@ -165,7 +191,10 @@ class KotlinWorkoutRestDomainTest {
     }
 
     @Test fun immediateDropHasNoInventedPauseAndLastFollowupHasNoFinalRest() {
-        var j=record(custom(CustomSetAmplifier(CustomAmplifierKind.DROP_SET,4,0),
+        var j=record(custom(CustomSetAmplifier(
+            CustomAmplifierKind.DROP_SET,4,0,
+            followUpLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,BigDecimal("15"))),
             second=false))
         assertTrue(rest(j).hasRemainingWork)
         assertEquals(0,rest(j).manualRestSeconds)

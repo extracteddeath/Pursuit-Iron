@@ -132,9 +132,10 @@ class BasicProgressionExtendedCoverageTest {
         assertEquals(listOf(6,6,6),newRung.proposedRepTargets)
         assertEquals(setOf(0,1,2),newRung.increasedOrdinals)
         assertFalse(newRung.mayModifyIssuedWorkout)
+        val prior=checkNotNull(all.previous)
         val stockLimit=BasicProgressionPolicyDomain.review(all.copy(
             issuedWorkingLoads=listOf(n("120"),n("120"),n("120")),
-            previous=all.previous?.copy(observations=all.previous.observations.map{
+            previous=prior.copy(observations=prior.observations.map{
                 it.copy(issuedLoad=n("120"),actualLoad=n("120"))
             }))) as BasicProgressionResult.Candidate
         assertEquals(BasicProgressionDecision.MAXIMUM_LOAD_REACHED,

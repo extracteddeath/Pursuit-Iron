@@ -230,7 +230,11 @@ class CustomWorkoutExecutionDomainTest {
     }
     @Test fun everyAmplifierKeepsItsOwnPauseAndMustResolveBeforeThePartner() {
         for(kind in CustomAmplifierKind.entries) {
-            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15)),slot("b"))
+            val prescribedReduction=if(kind==CustomAmplifierKind.DROP_SET)
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("15")) else null
+            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15,
+                followUpLoad=prescribedReduction)),slot("b"))
             j=record(j,"a:s1")
             assertEquals(visit("a:s1",CustomWorkoutVisitPart.FOLLOW_UP),next(j))
             assertEquals(15,rest(j).automaticCue?.seconds)
@@ -249,7 +253,10 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(150,rest(j).manualRestSeconds)
     }
     @Test fun outOfOrderCompletionCannotClaimAnUnfinishedRoundOrSkipATriggeredAmplifier() {
-        var j=initial(slot("a"),slot("b",amplifier=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,4,0)))
+        var j=initial(slot("a"),slot("b",amplifier=CustomSetAmplifier(
+            CustomAmplifierKind.DROP_SET,4,0,followUpLoad=
+                DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.DUMBBELL_PER_HAND,BigDecimal("15")))))
         j=record(j,"b:s1")
         assertEquals(visit("b:s1",CustomWorkoutVisitPart.FOLLOW_UP),next(j))
         assertEquals(0,rest(j).automaticCue?.seconds)
@@ -327,7 +334,11 @@ class CustomWorkoutExecutionDomainTest {
 
     @Test fun remainingCustomExercisePreservesSupersetPartnerAndCompletedMain() {
         for(kind in CustomAmplifierKind.entries) {
-            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15)),slot("b"))
+            val prescribedReduction=if(kind==CustomAmplifierKind.DROP_SET)
+                DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    BigDecimal("15")) else null
+            var j=initial(slot("a",amplifier=CustomSetAmplifier(kind,4,15,
+                followUpLoad=prescribedReduction)),slot("b"))
             j=record(j,"a:s1")
             val original=j
             val review=WorkoutRemainingExerciseDomain.custom(j,"a")!!

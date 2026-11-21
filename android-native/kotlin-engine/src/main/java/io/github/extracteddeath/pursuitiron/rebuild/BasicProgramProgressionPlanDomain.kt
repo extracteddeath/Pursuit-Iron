@@ -167,9 +167,10 @@ object BasicProgramProgressionPlanDomain {
             val quickChange=loaded && unitBasis.single().second in setOf(
                 LoadBasis.DUMBBELL_PER_HAND,LoadBasis.MACHINE_STACK,
                 LoadBasis.CABLE_STACK,LoadBasis.SMITH_TOTAL)
-            val authored=cycle.weekOverrides[block.blockId].orEmpty().filter {
+            val sourceWeekOverrides=cycle.weekOverrides[block.blockId].orEmpty().filter {
                 it.weekday==day.weekday && it.slotId==slot.slotId
-            }.map {it.weekInBlock}.toSet()
+            }
+            val authored=sourceWeekOverrides.map {it.weekInBlock}.toSet()
             val amplifier=working.any {it.amplifier!=null}
             val saved=slot.progressionMethod
             if(saved!=null && (key in selectedPerSetDynamic ||
@@ -213,7 +214,15 @@ object BasicProgramProgressionPlanDomain {
             val requested=selectedStrategies[key] ?: savedBasic ?: styledBasic ?:
                 if(key in selectedPerSetDynamic)
                     BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION else null
-            if(style==NativeProgressionStyle.WAVE && authored.isEmpty())
+            // The base slot prescribes week 1. Every later week must have
+            // an explicit source-authored prescription before we can call
+            // the block a Wave. A single week-2 override is NOT a wave:
+            // silently repeating week 1 on weeks 3/4 would fabricate its
+            // numerical periodization. A separate week-1 override is allowed.
+            if(style==NativeProgressionStyle.WAVE &&
+                (block.weeks<2 || sourceWeekOverrides.size!=authored.size ||
+                    authored.any { it !in 1..block.weeks } ||
+                    (2..block.weeks).any { it !in authored }))
                 return no("Wave progression needs a complete separately authored weekly load plan, not an invented wave.")
             if(style==NativeProgressionStyle.E1RM &&
                 (slot.role!=ComposerRole.PRIMARY ||

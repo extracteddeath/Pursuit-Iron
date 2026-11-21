@@ -115,6 +115,34 @@ class BasicProgressionExtendedCoverageTest {
                 lastScope=scope.copy(gymId="other"))))
     }
 
+    @Test fun repLadderBuildsTargetsThenResetsOnlyAfterAnEarnedVerifiedLoadStep() {
+        val mode=BasicProgressionStrategy.REP_LADDER_PROGRESSION
+        val building=request(mode,reps=listOf(8,7,10)).copy(
+            issuedRepTargets=listOf(8,8,10))
+        val pending=BasicProgressionPolicyDomain.review(building)
+            as BasicProgressionResult.Candidate
+        assertEquals(listOf(9,8,10),pending.proposedRepTargets)
+        assertEquals(listOf(n("100"),n("100"),n("100")),pending.proposedWorkingLoads)
+        assertEquals(emptySet<Int>(),pending.increasedOrdinals)
+        val all=request(mode,reps=listOf(10,10,10)).copy(
+            issuedRepTargets=listOf(10,10,10))
+        val newRung=BasicProgressionPolicyDomain.review(all)
+            as BasicProgressionResult.Candidate
+        assertEquals(listOf(n("105"),n("105"),n("105")),newRung.proposedWorkingLoads)
+        assertEquals(listOf(6,6,6),newRung.proposedRepTargets)
+        assertEquals(setOf(0,1,2),newRung.increasedOrdinals)
+        assertFalse(newRung.mayModifyIssuedWorkout)
+        val stockLimit=BasicProgressionPolicyDomain.review(all.copy(
+            issuedWorkingLoads=listOf(n("120"),n("120"),n("120")),
+            previous=all.previous?.copy(observations=all.previous.observations.map{
+                it.copy(issuedLoad=n("120"),actualLoad=n("120"))
+            }))) as BasicProgressionResult.Candidate
+        assertEquals(BasicProgressionDecision.MAXIMUM_LOAD_REACHED,
+            stockLimit.decision)
+        assertEquals(listOf(n("120"),n("120"),n("120")),
+            stockLimit.proposedWorkingLoads)
+    }
+
     @Test fun eachPublicBaselineModeHasAnExplicitNonWritingPath() {
         assertEquals(setOf(
             BasicProgressionStrategy.MANUAL_LOGGING,
@@ -122,6 +150,7 @@ class BasicProgressionExtendedCoverageTest {
             BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION,
             BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,
             BasicProgressionStrategy.REP_TARGET_PROGRESSION,
+            BasicProgressionStrategy.REP_LADDER_PROGRESSION,
             BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
         ),BasicProgressionStrategy.entries.toSet())
     }

@@ -7,7 +7,7 @@ import org.junit.Test
 
 class NativeCustomFinishFeedbackTest {
     @Test fun lostAcknowledgementNeverClaimsFinishWasRolledBack() {
-        val message=checkNotNull(NativeCustomFinishFeedback.message(null,false))
+        val message=checkNotNull(NativeFinishReviewPolicy.customFinishMessage(null,false))
         assertTrue(message.contains("unknown"))
         assertTrue(message.contains("may already be saved"))
         assertTrue(message.contains("verify History"))
@@ -20,7 +20,7 @@ class NativeCustomFinishFeedbackTest {
             val result=NativeCustomFinishResult.Rejected(reason)
             for(verified in listOf(false,true)) {
                 val message=checkNotNull(
-                    NativeCustomFinishFeedback.message(result,verified))
+                    NativeFinishReviewPolicy.customFinishMessage(result,verified))
                 assertTrue(reason.toString(),message.length in 50..250)
                 assertFalse(reason.toString(),message.contains(reason.name))
                 assertFalse(reason.toString(),message.contains("not committed"))
@@ -29,15 +29,15 @@ class NativeCustomFinishFeedbackTest {
     }
 
     @Test fun inconclusiveHistoryAndIncompleteSetsGetDifferentActions() {
-        val incomplete=checkNotNull(NativeCustomFinishFeedback.message(
+        val incomplete=checkNotNull(NativeFinishReviewPolicy.customFinishMessage(
             NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.SESSION_NOT_READY),false))
         assertTrue(incomplete.contains("recorded sets"))
-        val notEnrolled=checkNotNull(NativeCustomFinishFeedback.message(
+        val notEnrolled=checkNotNull(NativeFinishReviewPolicy.customFinishMessage(
             NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.NOT_ENROLLED),false))
         assertTrue(notEnrolled.contains("History setup"))
-        val storage=checkNotNull(NativeCustomFinishFeedback.message(
+        val storage=checkNotNull(NativeFinishReviewPolicy.customFinishMessage(
             NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.STORAGE_UNAVAILABLE),false))
         assertTrue(storage.contains("may have completed"))

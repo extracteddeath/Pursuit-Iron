@@ -124,6 +124,18 @@ class CustomBasicHistoryProgressionDomainTest {
         assertEquals("workout-1",
             (a as CustomBasicHistoryResult.Reviewed).historyWorkoutId)
         assertEquals(listOf(n(105),n(105)),a.candidate.proposedWorkingLoads)
+        // The saved default was A, but the athlete really switched to
+        // B. Physical actuals, not the former default, isolate the evidence.
+        val alternate=newer.copy(snapshot=
+            newer.snapshot.copy(slots=newer.snapshot.slots.map{
+                it.copy(machineInstanceId="A")
+            }))
+        val aAfterSwitch=review(next=snapshot(3,machine="A"),
+            sessions=listOf(earlier,alternate),machine="A")
+        assertTrue(aAfterSwitch.toString(),
+            aAfterSwitch is CustomBasicHistoryResult.Reviewed)
+        assertEquals("workout-1",
+            (aAfterSwitch as CustomBasicHistoryResult.Reviewed).historyWorkoutId)
         val b=review(next=snapshot(3,machine="B"),
             sessions=listOf(earlier,newer),machine="B")
         assertTrue(b.toString(),b is CustomBasicHistoryResult.Reviewed)

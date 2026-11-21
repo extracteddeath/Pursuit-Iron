@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -173,6 +174,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val futureActivationCommit=NativeKotlinFutureActivationCommitTransaction(
         root,revisionFence,localAthlete,authoringSourceStore,customDraftStore,
         futureBlockContexts,futureActivationApproval,futureActivationHandoff)
+    private val approvedBlockCalendar=NativeKotlinActivatedBlockCalendarFileStore(
+        root,revisionFence,localAthlete,futureActivationCommit,
+        authoringSourceStore,customDraftStore)
     private val activatedCycleSignoffs=NativeKotlinActivatedCycleSignoffFileStore(
         root,revisionFence,localAthlete,futureActivationCommit)
     private val customNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
@@ -1741,6 +1745,51 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeFutureCommitRefusal.NOT_AUTHORIZED)
         return futureActivationCommit.commit(owner.ownerKey)
     }
+    /** Athlete-reviewed future-block calendar. All operations require the
+     * same private authenticated owner and current approved source. The
+     * app never derives a start date from a completed workout or device week. */
+    fun readApprovedFutureBlockCalendar(
+        cycleId:String,blockId:String
+    ):NativeActivatedBlockCalendarRead {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeActivatedBlockCalendarRead.Rejected(
+                NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
+        return approvedBlockCalendar.read(signed.ownerKey,cycleId,blockId)
+    }
+
+    fun previewApprovedFutureBlockCalendar(
+        cycleId:String,blockId:String,firstWeekMonday:LocalDate
+    ):NativeActivatedBlockCalendarPreview {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeActivatedBlockCalendarPreview.Rejected(
+                NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
+        return approvedBlockCalendar.preview(
+            signed.ownerKey,cycleId,blockId,firstWeekMonday)
+    }
+
+    fun confirmApprovedFutureBlockCalendar(
+        cycleId:String,blockId:String,firstWeekMonday:LocalDate,
+        reviewedFingerprint:String,athleteConfirmed:Boolean
+    ):NativeActivatedBlockCalendarWrite {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeActivatedBlockCalendarWrite.Rejected(
+                NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
+        return approvedBlockCalendar.confirm(
+            signed.ownerKey,cycleId,blockId,firstWeekMonday,
+            reviewedFingerprint,athleteConfirmed)
+    }
+
+    /** Safe for the Plan screen only; never issue/skip/reorder based on date. */
+    fun reviewApprovedFutureBlockDay(
+        cycleId:String,blockId:String,absoluteWeek:Int,weekday:Int
+    ):NativeActivatedBlockScheduledDayReview {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeActivatedBlockScheduledDayReview.Rejected(
+                NativeActivatedBlockScheduledDayRefusal.NOT_AUTHORIZED)
+        return approvedBlockCalendar.reviewScheduledDay(
+            signed.ownerKey,cycleId,blockId,absoluteWeek,weekday)
+    }
+
     fun readFutureBlockActivationCommit():NativeFutureCommitReview {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeFutureCommitReview.Rejected(

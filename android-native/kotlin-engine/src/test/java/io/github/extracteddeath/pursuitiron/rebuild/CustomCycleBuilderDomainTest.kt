@@ -36,6 +36,56 @@ class CustomCycleBuilderDomainTest {
     private fun accepted(result: CustomCycleBuilderResult) =
         result as CustomCycleBuilderResult.Proposed
 
+    @Test fun selectedProgressionUsesOriginalCycleCasUndoAndOnlyOneSlot() {
+        val before=draft()
+        val changed=accepted(CustomCycleBuilderDomain.setProgressionMethod(
+            before,1,"base",0,"bench-b",SavedProgressionMethod.DYNAMIC))
+        assertEquals(2L,changed.draft.revision)
+        assertEquals("change-exercise-progression",changed.receipt.operation)
+        val day=changed.draft.blocks.single().days.single()
+        assertNull(day.slots.first().progressionMethod)
+        assertEquals(SavedProgressionMethod.DYNAMIC,
+            day.slots.last().progressionMethod)
+        assertEquals(before.weekOverrides,changed.draft.weekOverrides)
+        assertEquals(before.blocks.single().days.single().slots.last().sets,
+            day.slots.last().sets)
+        assertEquals(CustomCycleBuilderRefusal.STALE_REVISION,
+            (CustomCycleBuilderDomain.setProgressionMethod(
+                changed.draft,1,"base",0,"bench-b",SavedProgressionMethod.DOUBLE)
+                as CustomCycleBuilderResult.Rejected).reason)
+        val undone=accepted(CustomCycleBuilderDomain.undo(
+            changed.draft,changed.receipt))
+        assertEquals(before.blocks,undone.draft.blocks)
+        assertEquals(3L,undone.draft.revision)
+    }
+
+    @Test fun incompatibleSavedProgressionsCannotBypassWholeProgramReview() {
+        val before=draft()
+        for(mode in listOf(
+            SavedProgressionMethod.BODYWEIGHT_REPS,
+            SavedProgressionMethod.ASSISTANCE_DOUBLE,
+            SavedProgressionMethod.WAVE,
+            SavedProgressionMethod.E1RM)) {
+            val result=CustomCycleBuilderDomain.setProgressionMethod(
+                before,1,"base",0,"bench-b",mode)
+            assertEquals(mode.toString(),
+                CustomCycleBuilderRefusal.INVALID_INPUT,
+                (result as CustomCycleBuilderResult.Rejected).reason)
+        }
+        val preprogrammed=CustomCycleBuilderDomain.setProgressionMethod(
+            before,1,"base",0,"bench-a",SavedProgressionMethod.DOUBLE)
+        assertTrue(preprogrammed is CustomCycleBuilderResult.Rejected)
+        val manual=accepted(CustomCycleBuilderDomain.setProgressionMethod(
+            before,1,"base",0,"bench-a",SavedProgressionMethod.MANUAL))
+        assertEquals(SavedProgressionMethod.MANUAL,
+            manual.draft.blocks.single().days.single().slots.first()
+                .progressionMethod)
+        val reset=accepted(CustomCycleBuilderDomain.setProgressionMethod(
+            manual.draft,2,"base",0,"bench-a",null))
+        assertNull(reset.draft.blocks.single().days.single().slots.first()
+            .progressionMethod)
+    }
+
     @Test fun blankAllowsUnfinishedDraftWithoutPretendingWorkoutReady() {
         val blank = CustomCycleBuilderDomain.blank(
             "c-1", "athlete", AthleteTrainingGoal.STRENGTH,

@@ -419,8 +419,16 @@ class BasicProgramProgressionPlanDomainTest {
         val review=assignment(cycle(block(slots=listOf(tracked))))
         assertTrue(review.hasAttachedAmplifier)
         assertEquals(2,review.workingSetCount)
-        assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
-            review.basicStrategy)
+        assertEquals(ProgramProgressionRoute.SPECIAL_LOAD_SCHEME,review.route)
+        assertNull(review.basicStrategy)
+        assertNull(BasicProgramProgressionPlanDomain.savedChoice(review))
+        // Even a saved DOUBLE name cannot authorize a normal basic load step
+        // while a myo-reps / drop-set technique owns follow-up work.
+        val selected=assignment(cycle(block(slots=listOf(
+            tracked.copy(progressionMethod=SavedProgressionMethod.DOUBLE)))))
+        assertEquals(ProgramProgressionRoute.SPECIAL_LOAD_SCHEME,selected.route)
+        assertNull(selected.basicStrategy)
+        assertNull(BasicProgramProgressionPlanDomain.savedChoice(selected))
     }
 
     @Test fun everyGeneratedSlotGetsOneTypedRouteWithStableDayBlockIdentity() {

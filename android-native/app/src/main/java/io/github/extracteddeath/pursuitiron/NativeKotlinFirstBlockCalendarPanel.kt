@@ -41,7 +41,7 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
         val observed=withContext(Dispatchers.IO) {
             val current=(host.readCustomCycleDraft(cycleId) as?
                 NativeCustomDraftReadResult.Found)?.draft
-            if(current?.athleteId!=athleteId ||
+            if(current==null || current.athleteId!=athleteId ||
                 current.revision!=cycleRevision)
                 NativeFirstBlockCalendarPreview.Rejected(
                     NativeFirstBlockCalendarRefusal.UNVERIFIED_SOURCE_OR_CYCLE)
@@ -82,6 +82,10 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
                         modifier=Modifier.fillMaxWidth()) {
                         Text("Preview following week")
                     }
+                    if(monday!=null)
+                        TextButton(onClick={monday=null}) {
+                            Text("Return to this week's preview")
+                        }
                     Text("Initial start-date approval is not yet enabled. These previews cannot issue, move, skip, or update training.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)

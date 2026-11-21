@@ -448,13 +448,13 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         PageHeading("TODAY'S TRAINING",
             if(presentation?.finished==true)"Workout complete"
             else "Today's workout",
-            if(presentation==null)"Native session preview · no JavaScript"
+            if(presentation==null)"Workout preview"
             else "${presentation.purpose.name.replace('_',' ').lowercase()} · "+
                 "${presentation.estimatedMinutes} min estimated")
         if(state.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         if(presentation==null) {
             PursuitCard(highlighted=true) {
-                Text("Open a workout issued by the independent Kotlin coach.",
+                Text("Choose a workout from your training plan to begin.",
                     style=MaterialTheme.typography.titleMedium)
                 Text(if(state.busy)
                     "Verifying the saved workout and athlete ownership. Logging and Finish remain unavailable until recovery completes."
@@ -1008,12 +1008,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         if(presentation.finished)PursuitCard(highlighted=true) {
             Text("Workout completion is saved",
                 style=MaterialTheme.typography.titleMedium)
-            Text("Your original targets and every actual, skip, failure and correction remain in the Kotlin journal.")
+            Text("Your planned targets, recorded sets, skips, failed attempts and corrections stay attached to this workout.")
             when(verifiedFinish) {
                 is NativeComposerFinishHandoffResult.Verified -> {
                     NativeKotlinVerifiedFinishRecap(
                         host=host,workoutId=workoutId,isCustom=false)
-                    Text("Finish verified in committed native History. Your next workout remains unchanged until you explicitly review it.",
+                    Text("Your completed workout is verified in History. Your next workout remains unchanged until you review it.",
                         style=MaterialTheme.typography.bodySmall)
                     PursuitPrimaryAction("View finished workout in History",
                         enabled=!state.busy){onViewHistory()}

@@ -1690,9 +1690,9 @@ internal fun NativeKotlinCustomJournalScreen(
                 selected.finishedByEventId==null && !finished &&
                 !verifiedFinishedInHistory)
         AlertDialog(onDismissRequest={if(!busy)finishReview=null},
-            title={Text("Finish and save this workout?")},
+            title={Text("Finish this workout?")},
             text={Text(if(canCommit)
-                "Save the recorded results for this workout to History. You can review and correct saved sets there."
+                "All prescribed sets have an outcome. Finishing saves your results to History. Your planned targets stay unchanged, and you can review or correct saved sets there."
                 else "Your saved workout changed or needs recovery. Close this review and check the current sets before finishing.")},
             confirmButton={
                 Button(enabled=!busy && canCommit,
@@ -1731,10 +1731,10 @@ internal fun NativeKotlinCustomJournalScreen(
                                 ?.issued?.journal
                             busy=false
                         }
-                    }){Text("Commit native Finish")}
+                    }){Text("Finish workout")}
             },dismissButton={
                 TextButton(enabled=!busy,onClick={finishReview=null}) {
-                    Text("Keep training")}
+                    Text("Review sets")}
             })
     }
 }

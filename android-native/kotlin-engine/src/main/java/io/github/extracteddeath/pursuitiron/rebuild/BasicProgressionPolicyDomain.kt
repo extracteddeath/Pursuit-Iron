@@ -19,7 +19,10 @@ import java.util.Collections
 enum class BasicProgressionStrategy {
     MANUAL_LOGGING,
     STRICT_DOUBLE_PROGRESSION,
-    PER_SET_DYNAMIC_PROGRESSION
+    PER_SET_DYNAMIC_PROGRESSION,
+    LINEAR_LOAD_PROGRESSION,
+    REP_TARGET_PROGRESSION,
+    ASSISTANCE_DOUBLE_PROGRESSION
 }
 
 /** A physical machine, program day and block have independent load histories. */
@@ -53,7 +56,9 @@ data class BasicProgressionRequest(
     /** Current immutable, approved weights, not values from an editable UI. */
     val issuedWorkingLoads: List<BigDecimal>,
     val verifiedStock: VerifiedLoadStock?,
-    val maximumAuthorizedIncrement: BigDecimal
+    val maximumAuthorizedIncrement: BigDecimal,
+    /** Approved exact set targets, required for REP_TARGET_PROGRESSION only. */
+    val issuedRepTargets: List<Int>? = null
 )
 
 enum class BasicProgressionRefusal {
@@ -63,7 +68,8 @@ enum class BasicProgressionRefusal {
     BASELINE_DIFFERS_FROM_HISTORY,
     UNSUPPORTED_STRAIGHT_SET_SCHEME,
     STOCK_NOT_VERIFIED,
-    UNSUPPORTED_ASSISTANCE_DIRECTION
+    UNSUPPORTED_ASSISTANCE_DIRECTION,
+    REP_TARGETS_NOT_VERIFIED
 }
 
 enum class BasicProgressionDecision {
@@ -71,7 +77,8 @@ enum class BasicProgressionDecision {
     BUILD_REPS,
     EARNED_INCREMENT,
     MAXIMUM_LOAD_REACHED,
-    AUTHORIZED_INCREMENT_TOO_SMALL
+    AUTHORIZED_INCREMENT_TOO_SMALL,
+    EARNED_REP_TARGET
 }
 
 sealed interface BasicProgressionResult {
@@ -82,7 +89,9 @@ sealed interface BasicProgressionResult {
         /** Zero-based set ordinals whose *future* load may be raised. */
         val increasedOrdinals: Set<Int>,
         val decision: BasicProgressionDecision,
-        val evidenceWorkoutId: String?
+        val evidenceWorkoutId: String?,
+        val proposedRepTargets: List<Int>? = null,
+        val changedRepOrdinals: Set<Int> = emptySet()
     ): BasicProgressionResult {
         val mayModifyLoggedSets: Boolean get() = false
         val mayModifyIssuedWorkout: Boolean get() = false
@@ -91,7 +100,7 @@ sealed interface BasicProgressionResult {
 }
 
 /**
- * One deterministic evaluator for BOTH basic progression strategies.
+ * One deterministic evaluator for basic weighted straight-working-set strategies.
  * The only authority for a numeric increase is KotlinFutureLoadNumberAuthorityDomain,
  * using the exact next attainable load of the recorded implement.
  */
@@ -109,11 +118,14 @@ object BasicProgressionPolicyDomain {
             return reject(BasicProgressionRefusal.INVALID_SOURCE_OR_LOAD)
 
         fun candidate(values: List<BigDecimal>, changed: Set<Int>,
-            decision: BasicProgressionDecision, workoutId: String? = null) =
+            decision: BasicProgressionDecision, workoutId: String? = null,
+            repTargets: List<Int>? = null, changedReps: Set<Int> = emptySet()) =
             BasicProgressionResult.Candidate(
                 request.strategy,
                 Collections.unmodifiableList(values.toList()),
-                Collections.unmodifiableSet(changed.toSet()),decision,workoutId)
+                Collections.unmodifiableSet(changed.toSet()),decision,workoutId,
+                repTargets?.let { Collections.unmodifiableList(it.toList()) },
+                Collections.unmodifiableSet(changedReps.toSet()))
 
         // Basic logging deliberately neither requires a history or a gym
         // inventory, nor invokes progression or adaptive coaching.

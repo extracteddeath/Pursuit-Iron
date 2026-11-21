@@ -26,6 +26,7 @@ enum class BasicProgressionStrategy {
 data class BasicProgressionScope(
     val athleteId: String,
     val programId: String,
+    val gymId: String,
     val blockId: String,
     val trainingDayId: String,
     val exerciseId: String,
@@ -35,6 +36,7 @@ data class BasicProgressionScope(
 ) {
     fun valid(): Boolean =
         athleteId.isNotBlank() && programId.isNotBlank() &&
+        gymId.isNotBlank() &&
         blockId.isNotBlank() && trainingDayId.isNotBlank() &&
         exerciseId.isNotBlank() &&
         (machineInstanceId == null ||

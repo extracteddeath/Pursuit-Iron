@@ -233,6 +233,34 @@ class CustomBasicHistoryProgressionDomainTest {
                 CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun swappedExerciseOrChangedAttachmentCannotEarnOriginalExerciseProgression() {
+        val swap=completed(1).let {session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map{
+                    it.copy(exerciseId="swapped-press")
+                }))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (review(sessions=listOf(swap)) as
+                CustomBasicHistoryResult.Rejected).reason)
+
+        val alternateAttachment=completed(1).let{session->
+            session.copy(snapshot=session.snapshot.copy(slots=
+                session.snapshot.slots.map{it.copy(attachmentId="rope")}))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (review(sessions=listOf(alternateAttachment)) as
+                CustomBasicHistoryResult.Rejected).reason)
+
+        val alternateVariant=completed(1).let{session->
+            session.copy(snapshot=session.snapshot.copy(slots=
+                session.snapshot.slots.map{it.copy(variantId="different-angle")}))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (review(sessions=listOf(alternateVariant)) as
+                CustomBasicHistoryResult.Rejected).reason)
+    }
+
     @Test fun sourceChangesShortSessionsTechniqueFollowupsAndLoadEditsFailClosed() {
         val changed=completed(1).let {
             it.copy(snapshot=it.snapshot.copy(stamp=it.snapshot.stamp.copy(

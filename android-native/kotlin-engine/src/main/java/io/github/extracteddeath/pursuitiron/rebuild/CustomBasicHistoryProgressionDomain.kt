@@ -235,6 +235,13 @@ object CustomBasicHistoryProgressionDomain {
             original.slots.count {it.slotId==request.slotId}!=1)
             return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
         val oldSlot=original.slots.single {it.slotId==request.slotId}
+        // The same named slot is not proof of the same authored movement.
+        // Machine, incline and attachment changes can have distinct loads.
+        if(oldSlot.exerciseId!=selected.exerciseId ||
+            oldSlot.familyId!=selected.familyId ||
+            oldSlot.variantId!=selected.variantId ||
+            oldSlot.attachmentId!=selected.attachmentId)
+            return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
         val expected=oldSlot.sets.filter {it.prescription.type==DraftSetType.WORKING}
         val observations=prior.evidence.visits.filter {
             it.slotId==request.slotId &&
@@ -252,7 +259,8 @@ object CustomBasicHistoryProgressionDomain {
             val observed=byKey.getValue(item.setKey)
             val prescribed=observed.prescribedLoad as? DraftSetLoad.Verified
                 ?:return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
-            if(item.prescription.load!=prescribed ||
+            if(observed.exerciseId!=selected.exerciseId ||
+                item.prescription.load!=prescribed ||
                 item.prescription.reps!=observed.prescribedReps ||
                 item.prescription.reps!=targetReps ||
                 prescribed.unit!=unit || prescribed.basis!=basis ||

@@ -74,6 +74,36 @@ sealed interface ProgramProgressionPlan {
  * explicitly here so generation cannot accidentally substitute linear DP.
  */
 object BasicProgramProgressionPlanDomain {
+    /** One canonical mapping for generated, reviewed decisions to stored
+     * per-slot choices. Authoring/codec never invents a second strategy. */
+    fun savedChoice(assignment:ProgramProgressionAssignment):SavedProgressionMethod? =
+        when(assignment.route) {
+            ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS ->
+                SavedProgressionMethod.BODYWEIGHT_REPS
+            ProgramProgressionRoute.MANUAL -> SavedProgressionMethod.MANUAL
+            ProgramProgressionRoute.BASIC_WEIGHTED ->
+                when(assignment.basicStrategy) {
+                    BasicProgressionStrategy.MANUAL_LOGGING ->
+                        SavedProgressionMethod.MANUAL
+                    BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ->
+                        SavedProgressionMethod.DOUBLE
+                    BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION ->
+                        SavedProgressionMethod.DYNAMIC
+                    BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION ->
+                        SavedProgressionMethod.LINEAR
+                    BasicProgressionStrategy.REP_TARGET_PROGRESSION ->
+                        SavedProgressionMethod.REP_TARGETS
+                    BasicProgressionStrategy.REP_LADDER_PROGRESSION ->
+                        SavedProgressionMethod.LADDER
+                    BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION ->
+                        SavedProgressionMethod.ASSISTANCE_DOUBLE
+                    null -> null
+                }
+            // Other routes are deliberate specialist plans/holds, not an
+            // earned baseline strategy masquerading as a stored method.
+            else -> null
+        }
+
     fun review(
         cycle:CustomTrainingCycle,
         /** Only the explicitly selected slots can use independent per-set load progression. */

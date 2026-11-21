@@ -35,6 +35,14 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertTrue(cycle.blocks.first().days.flatMap {it.slots}.all {slot->
             slot.sets.any{it.type==DraftSetType.WORKING}
         })
+        val plan=checkNotNull(proposed.progressionPlan)
+        val savedSlots=cycle.blocks.flatMap{it.days}.flatMap{it.slots}
+        assertEquals(savedSlots.size,plan.assignments.size)
+        assertEquals(savedSlots.size,plan.assignments.map{it.key}.distinct().size)
+        assertTrue(plan.assignments.all{it.route==ProgramProgressionRoute.BASIC_WEIGHTED})
+        assertTrue(plan.assignments.all{
+            it.basicStrategy==BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+        })
         assertFalse(proposed.mayApproveProgram)
         assertFalse(proposed.mayIssueWorkout)
         assertEquals(candidate,reviewed())

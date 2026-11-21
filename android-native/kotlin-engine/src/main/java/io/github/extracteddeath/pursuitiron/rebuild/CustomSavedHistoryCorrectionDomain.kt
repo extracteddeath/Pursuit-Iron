@@ -200,9 +200,9 @@ object CustomSavedHistoryCorrectionDomain {
                         val actualLoad=completed.load
                         if(previous?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
                             previousLoad==null || actualLoad==null ||
-                            previous.performed?.unit!=authored.unit ||
+                            previous?.performed?.unit!=authored.unit ||
                             completed.unit!=authored.unit ||
-                            previous.performed?.machineInstanceId!=
+                            previous?.performed?.machineInstanceId!=
                                 activation.machineInstanceId ||
                             completed.machineInstanceId!=activation.machineInstanceId ||
                             previousLoad.compareTo(authored.value)<=0 ||

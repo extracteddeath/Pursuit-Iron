@@ -86,6 +86,30 @@ class CustomCycleBuilderDomainTest {
             .progressionMethod)
     }
 
+    @Test fun methodEditsCannotClaimAnAlreadyAuthoredWeekButItsPriorMethodCanSurvive() {
+        val current=draft()
+        val blocked=CustomCycleBuilderDomain.availableProgressionMethods(
+            current,ProgramProgressionSlotKey("base",0,"bench-a"))
+        assertFalse(SavedProgressionMethod.DOUBLE in blocked)
+        assertTrue(SavedProgressionMethod.MANUAL in blocked)
+        val prior=current.copy(weekOverrides=emptyMap())
+        val selected=accepted(CustomCycleBuilderDomain.setProgressionMethod(
+            prior,prior,"base",0,"bench-a",SavedProgressionMethod.DOUBLE))
+        val later=selected.draft.copy(weekOverrides=current.weekOverrides)
+        val replay=BasicProgramProgressionPlanDomain.review(later)
+            as ProgramProgressionPlan.Ready
+        val slot=replay.assignments.single {it.key.slotId=="bench-a"}
+        assertEquals(ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION,
+            slot.route)
+        assertNull(slot.basicStrategy)
+        assertEquals(SavedProgressionMethod.DOUBLE,
+            BasicProgramProgressionPlanDomain.savedChoice(slot))
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.setProgressionMethod(
+                later,later,"base",0,"bench-a",SavedProgressionMethod.LINEAR)
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
     @Test fun progressionChoicesMatchSaveAndCannotCrossProgramsOrAthletes() {
         val reviewed = draft()
         val key = ProgramProgressionSlotKey("base", 0, "bench-b")

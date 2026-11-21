@@ -90,12 +90,6 @@ object CustomWorkoutExecutionDomain {
         val amp=set.prescription.amplifier ?:return emptyList()
         if(main?.outcome!=KotlinJournalSetOutcome.COMPLETED)return emptyList()
         if(amp.followUpRounds !in 1..5)return emptyList()
-        // A malformed or stale one-drop recipe must never get a special
-        // "legacy" exemption from the same independently verified physical
-        // reductions required by two-drop protocols.
-        if(amp.kind==CustomAmplifierKind.DROP_SET &&
-            !AdvancedAmplifierProtocolDomain.validDropSequence(
-                set.prescription.load,amp))return emptyList()
         val visits=mutableListOf<CustomWorkoutVisitKey>()
         val observedFollowUpReps=mutableListOf<Int>()
         for(stage in 1..amp.followUpRounds) {
@@ -126,21 +120,6 @@ object CustomWorkoutExecutionDomain {
             val recorded=journal.effectiveVisits[key]?.operation
                 as? CustomWorkoutJournalOperation.Record ?:break
             if(recorded.outcome!=KotlinJournalSetOutcome.COMPLETED)break
-            if(amp.kind==CustomAmplifierKind.DROP_SET &&
-                amp.followUpRounds==2) {
-                // A second reduction is offered only after the first
-                // physically planned drop was actually performed, on the
-                // activation station. If the athlete entered a different
-                // weight, keep the factual receipt but do not invent the
-                // next lower weight or assume it is safe.
-                val activation=main.performed ?:break
-                val observed=recorded.performed ?:break
-                val planned=AdvancedAmplifierProtocolDomain.dropStageLoad(amp,stage)
-                    as? DraftSetLoad.Verified ?:break
-                if(observed.machineInstanceId!=activation.machineInstanceId ||
-                    observed.unit!=planned.unit ||
-                    observed.load?.compareTo(planned.value)!=0)break
-            }
             if(amp.followUpRounds>1 &&
                 (amp.kind==CustomAmplifierKind.MYO_REPS ||
                  amp.kind==CustomAmplifierKind.REST_PAUSE ||

@@ -200,6 +200,7 @@ assert.match(partialHistory,/final-set partial extension/);
 const twoDropCycle=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomTrainingCycleDomain.kt');
 const twoDropAuthor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
 const twoDropHistory=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutHistoryEvidenceDomain.kt');
+const savedDropCorrection=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomSavedHistoryCorrectionDomain.kt');
 const twoDropDraftCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeCustomCycleDraftCodec.kt');
 const twoDropSnapshotCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutSnapshotCodec.kt');
 assert.match(twoDropCycle,/val secondDropLoad: DraftSetLoad\? = null/);
@@ -216,7 +217,16 @@ assert.match(journal,/precedingDropPerformed=\(precedingDrop\?\.operation as\?/)
 assert.match(journal,/precedingDropReceiptRevision=precedingDrop\?\.appliedRevision/);
 assert.match(journal,/":previous-drop:"/);
 
-assert.match(restPauseExecution,/CustomAmplifierKind.DROP_SET &&/);
+// One authoritative stage evaluation drives Focus prefill, live logging,
+// saved correction and stage availability. No duplicated physical load
+// inequalities in the journal or historical correction reducers.
+assert.match(restPauseProtocol,/private fun eligiblePerformedDropTarget\(/);
+assert.match(restPauseProtocol,/fun validPerformedDropStage\(/);
+assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
+assert.match(restPauseJournal,/AdvancedAmplifierProtocolDomain\.validPerformedDropStage\(/);
+assert.match(savedDropCorrection,/AdvancedAmplifierProtocolDomain\.validPerformedDropStage\(/);
+assert.doesNotMatch(restPauseJournal,/performedLoad\.compareTo\(previousLoad\)/);
+assert.doesNotMatch(savedDropCorrection,/actualLoad\.compareTo\(previousLoad\)/);
 assert.match(restPauseJournal,/followUpLoadForStage\(/);
 assert.match(twoDropHistory,/followUpLoadForStage\(/);
 assert.match(restPauseSheet,/val secondDropLoad: String = ""/);

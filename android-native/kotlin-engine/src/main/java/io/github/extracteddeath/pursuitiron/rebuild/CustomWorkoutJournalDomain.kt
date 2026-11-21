@@ -311,16 +311,12 @@ object CustomWorkoutJournalDomain {
                                     CustomWorkoutVisitPart.FOLLOW_UP,
                                     operation.visit.stage-1)]?.operation as?
                                         CustomWorkoutJournalOperation.Record)
-                            val before=predecessor?.performed
-                            val actual=operation.performed
-                            val previousLoad=before?.load
-                            val performedLoad=actual?.load
                             if(predecessor?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
-                                previousLoad==null || performedLoad==null ||
-                                actual?.unit!=before?.unit ||
-                                actual?.machineInstanceId!=before?.machineInstanceId ||
-                                performedLoad.signum()<=0 ||
-                                performedLoad.compareTo(previousLoad)>=0)
+                                !AdvancedAmplifierProtocolDomain.validPerformedDropStage(
+                                    amp,target.prescription.load,main.performed,
+                                    if(operation.visit.stage==1)null
+                                        else predecessor.performed,
+                                    operation.performed,operation.visit.stage))
                                 return CustomWorkoutJournalDecision.Rejected(
                                     CustomWorkoutJournalRefusal.INVALID_ACTUAL)
                         }

@@ -1,6 +1,21 @@
 # Advanced set amplifiers — protocol, UX and beta acceptance
 
-**State on 2026-11-17:** Existing Kotlin custom workout journaling durably records opt-in **3–5-stage myo-reps** and **2–3-stage rest-pause** under independent owner/revision-fenced factual receipts, stop/skip, Focus/All, history and cold replay. The next staged milestone adds **2–5 same-load cluster quality efforts** with a separate receipt per observed cluster, subject to CI and device verification. All older one-follow-up snapshots keep their existing encoding. **Multi-drop, generated-program amplifier issuance, matched web runtime parity and full native device acceptance remain open.** No release approval is implied.
+**State on 2026-11-21:** The Kotlin custom engine now supports separately logged staged myo-reps, rest-pause, same-load clusters, lengthened partials and one/two independently authored physical drops. It preserves the historical single-follow-up byte formats. Custom authoring, live Focus, saved corrections, and verified History distinguish issued targets from performed observations. **Complete generated-program amplifier parity, the full native M3 Expressive UI and physical-device acceptance are not yet verified.** No release approval or APK is implied.
+
+## Single-authority map — maintain this, not a series of workarounds
+
+| Decision | One authoritative policy | Callers must *delegate*, not reimplement |
+| --- | --- | --- |
+| Valid authored amplifier/number of stages | `AdvancedAmplifierProtocolDomain.validStagedFollowUps`, `validDropSequence` | Custom exercise authoring, cycles, workout snapshots, swaps and codecs |
+| Whether a drop may physically start, including the second drop | `AdvancedAmplifierProtocolDomain.eligiblePerformedDropTarget` (internal to the protocol) | `resolveFollowUpEntryLoad` used by native Focus and `CustomWorkoutExecutionDomain.followUpVisits` |
+| Valid factual drop completion at the true prior weight/station | `AdvancedAmplifierProtocolDomain.validPerformedDropStage` | `CustomWorkoutJournalDomain` and `CustomSavedHistoryCorrectionDomain` |
+| Numeric weight precision, actual RIR and performed-vs-issued distinction | `KotlinSetNumberAuthorityDomain.review` | Generated and custom journals and history correction |
+| Session seconds including staged advanced work | `CustomWorkoutTimingDomain` | Workout Preview, Coach audit, short session, Swap / UndoSwap and Strength repair |
+| Durable set/history truth | Owner-fenced journal/history stores | Compose and coaching read verified receipts; never invent or overwrite them |
+
+**Maintenance rule:** Any new stage type or load decision changes its existing authoritative protocol first. Add corresponding cross-path tests for authoring, Focus, live receipt, saved correction, crash replay and native presentation. Do not add a fourth handwritten weight inequality to a screen or history adapter to make one test pass. A changed actual first drop can remain factual but must never silently rewrite the authored second drop or enable it without the protocol's exact physical-stage eligibility.
+
+
 
 ## Cold-reopen and issuance gate (reviewed November 17, 2026)
 

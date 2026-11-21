@@ -211,6 +211,73 @@ object AdvancedAmplifierProtocolDomain {
             second.value.signum()>0 && second.value<first.value
     }
 
+    /**
+     * The one source of truth for whether a physical drop stage may be
+     * offered. An issued reduction is not evidence of an actual one:
+     * always compare against the LAST physically performed stage, and
+     * require the original activation's station throughout.
+     *
+     * Stage two is not inferred from the activation: it is only available
+     * after its first drop was completed at the authored stage-one load.
+     */
+    private fun eligiblePerformedDropTarget(
+        amp:CustomSetAmplifier,
+        issuedActivation:DraftSetLoad,
+        performedActivation:KotlinPerformedSet?,
+        precedingDropPerformed:KotlinPerformedSet?,
+        selectedMachineId:String?,
+        stage:Int
+    ):DraftSetLoad.Verified? {
+        if(!validDropSequence(issuedActivation,amp) ||
+            stage !in 1..amp.followUpRounds)return null
+        val target=dropStageLoad(amp,stage)
+            as? DraftSetLoad.Verified ?:return null
+        val activation=performedActivation ?:return null
+        val previous=if(stage==1)activation else precedingDropPerformed
+            ?:return null
+        val firstTarget=dropStageLoad(amp,1)
+            as? DraftSetLoad.Verified ?:return null
+        if(activation.reps<=0 || activation.unit!=target.unit ||
+            activation.load==null ||
+            activation.load.compareTo(firstTarget.value)<=0 ||
+            activation.machineInstanceId!=selectedMachineId ||
+            previous.reps<=0 || previous.unit!=target.unit ||
+            previous.machineInstanceId!=activation.machineInstanceId ||
+            previous.load==null ||
+            previous.load.compareTo(target.value)<=0)
+            return null
+        if(stage==2 && previous.load.compareTo(firstTarget.value)!=0)
+            return null
+        return target
+    }
+
+    /** The same eligibility gate also validates REAL completed drop loads
+     * for live journal receipts and historical corrections. Never use the
+     * issued target as a replacement for a performed load or silently
+     * transfer performance between Machine A/B. */
+    fun validPerformedDropStage(
+        amp:CustomSetAmplifier,
+        issuedActivation:DraftSetLoad,
+        performedActivation:KotlinPerformedSet?,
+        precedingDropPerformed:KotlinPerformedSet?,
+        completed:KotlinPerformedSet?,
+        stage:Int
+    ):Boolean {
+        val target=eligiblePerformedDropTarget(
+            amp,issuedActivation,performedActivation,
+            precedingDropPerformed,performedActivation?.machineInstanceId,
+            stage) ?:return false
+        val previous=if(stage==1)performedActivation
+            else precedingDropPerformed
+        val prior=previous?.load ?:return false
+        val observed=completed?.load ?:return false
+        return completed.reps>0 &&
+            completed.unit==target.unit &&
+            completed.machineInstanceId==
+                performedActivation?.machineInstanceId &&
+            observed.signum()>0 && observed.compareTo(prior)<0
+    }
+
     /** All stage-specific target loads are immutable prescribed values.
      * Actuals are separately recorded and may differ, but do not
      * retroactively rewrite these targets or automatically promote stages. */
@@ -248,32 +315,10 @@ object AdvancedAmplifierProtocolDomain {
         if(stage !in 1..amp.followUpRounds)
             return AmplifierFollowUpEntryLoad.ActivationUnavailable
         if(amp.kind==CustomAmplifierKind.DROP_SET) {
-            if(!validDropSequence(issuedActivation,amp))
-                return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            val target=dropStageLoad(amp,stage) as? DraftSetLoad.Verified
+            val target=eligiblePerformedDropTarget(
+                amp,issuedActivation,performedActivation,
+                precedingDropPerformed,selectedMachineId,stage)
                 ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            val activation=performedActivation
-                ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            val actual=if(stage==1)activation else precedingDropPerformed
-                ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            if(activation.reps<=0 || actual.reps<=0 ||
-                activation.machineInstanceId!=selectedMachineId ||
-                actual.machineInstanceId!=activation.machineInstanceId ||
-                actual.unit!=target.unit || actual.load==null ||
-                actual.load.compareTo(target.value)<=0)
-                return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            // Only stage one can be started directly from the activation.
-            // A second reduction requires a factual first reduction at the
-            // exact authored stage-one weight; otherwise the live execution
-            // policy closes the sequence without inventing a new target.
-            if(stage==2) {
-                val previousTarget=dropStageLoad(amp,1)
-                    as? DraftSetLoad.Verified
-                    ?:return AmplifierFollowUpEntryLoad.ActivationUnavailable
-                if(actual.load.compareTo(previousTarget.value)!=0 ||
-                    actual.unit!=previousTarget.unit)
-                    return AmplifierFollowUpEntryLoad.ActivationUnavailable
-            }
             return AmplifierFollowUpEntryLoad.AuthoredStage(target)
         }
         val issued=followUpLoadForStage(amp,issuedActivation,stage)

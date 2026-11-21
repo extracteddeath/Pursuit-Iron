@@ -82,7 +82,10 @@ object BasicProgramProgressionPlanDomain {
             emptyMap(),
         /** Explicit compatible web-family styles are preserved as named intent. */
         selectedStyles:Map<ProgramProgressionSlotKey,NativeProgressionStyle> =
-            emptyMap()
+            emptyMap(),
+        /** Provisional catalog roles/patterns; never infer exercise traits from its name. */
+        reviewedCatalog:Map<String,CatalogMovement> = emptyMap(),
+        experience:AthleteExperience?=null
     ):ProgramProgressionPlan {
         fun no(why:String)=ProgramProgressionPlan.Refused(why)
         if(cycle.athleteId.isBlank() || cycle.cycleId.isBlank() ||
@@ -127,6 +130,12 @@ object BasicProgramProgressionPlanDomain {
             val sameWeights=bodyweight || values.all{it.compareTo(values.first())==0}
             val assistance=loaded && unitBasis.single().second==
                 LoadBasis.ASSISTANCE_COUNTERWEIGHT
+            val catalog=reviewedCatalog[slot.exerciseId]
+            val compound=catalog?.pattern!=null &&
+                catalog.pattern !in setOf(ComposerPattern.ISOLATION,ComposerPattern.CORE)
+            val quickChange=loaded && unitBasis.single().second in setOf(
+                LoadBasis.DUMBBELL_PER_HAND,LoadBasis.MACHINE_STACK,
+                LoadBasis.CABLE_STACK,LoadBasis.SMITH_TOTAL)
             val authored=cycle.weekOverrides[block.blockId].orEmpty().filter {
                 it.weekday==day.weekday && it.slotId==slot.slotId
             }.map {it.weekInBlock}.toSet()
@@ -199,16 +208,16 @@ object BasicProgramProgressionPlanDomain {
                     strategy=null
                     note="A recovery block is a deliberate dose change, not earned overload."
                 }
+                authored.isNotEmpty() -> {
+                    route=ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION
+                    strategy=null
+                    note="Exact source-authored weekly sets own the changing loads and reps."
+                }
                 block.purpose==CustomBlockPurpose.PERFORMANCE_TEST ||
                     block.phase==TrainingPhase.PEAK -> {
                     route=ProgramProgressionRoute.PEAK_OR_TEST_HOLD
                     strategy=null
                     note="Peak/test targets require authored periodization, not a surprise load jump."
-                }
-                authored.isNotEmpty() -> {
-                    route=ProgramProgressionRoute.AUTHORED_WEEKLY_PERIODIZATION
-                    strategy=null
-                    note="Exact source-authored weekly sets own the changing loads and reps."
                 }
                 special || bands.size!=1 -> {
                     route=ProgramProgressionRoute.SPECIAL_LOAD_SCHEME
@@ -230,11 +239,24 @@ object BasicProgramProgressionPlanDomain {
                     strategy=BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
                     note="Earn one verified lower counterweight after all straight work reaches the upper rep bound."
                 }
-                block.phase==TrainingPhase.STRENGTH &&
-                    slot.role==ComposerRole.PRIMARY -> {
+                experience==AthleteExperience.BEGINNER &&
+                    compound && slot.role==ComposerRole.PRIMARY -> {
                     route=ProgramProgressionRoute.BASIC_WEIGHTED
                     strategy=BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION
-                    note="Primary strength work may advance one physical increment after all sets meet the rep floor."
+                    note="A calibrated novice primary compound may earn a verified linear step after completing every set."
+                }
+                compound && quickChange -> {
+                    route=ProgramProgressionRoute.BASIC_WEIGHTED
+                    strategy=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+                    note="A source-reviewed compound with quick-change equipment may advance each working set independently."
+                }
+                block.phase==TrainingPhase.STRENGTH &&
+                    slot.role==ComposerRole.PRIMARY && experience==null -> {
+                    // Preserve a conservative compatibility default for old
+                    // callers without verified athlete/catalog context.
+                    route=ProgramProgressionRoute.BASIC_WEIGHTED
+                    strategy=BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION
+                    note="Unspecified athlete context: source-authoritative strength primary uses a basic linear candidate."
                 }
                 else -> {
                     route=ProgramProgressionRoute.BASIC_WEIGHTED

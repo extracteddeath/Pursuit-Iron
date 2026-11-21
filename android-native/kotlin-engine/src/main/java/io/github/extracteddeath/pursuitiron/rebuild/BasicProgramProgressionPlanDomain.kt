@@ -338,14 +338,6 @@ object BasicProgramProgressionPlanDomain {
                     strategy=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
                     note="A source-reviewed compound with quick-change equipment may advance each working set independently."
                 }
-                block.phase==TrainingPhase.STRENGTH &&
-                    slot.role==ComposerRole.PRIMARY && experience==null -> {
-                    // Preserve a conservative compatibility default for old
-                    // callers without verified athlete/catalog context.
-                    route=ProgramProgressionRoute.BASIC_WEIGHTED
-                    strategy=BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION
-                    note="Unspecified athlete context: source-authoritative strength primary uses a basic linear candidate."
-                }
                 else -> {
                     route=ProgramProgressionRoute.BASIC_WEIGHTED
                     strategy=BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION

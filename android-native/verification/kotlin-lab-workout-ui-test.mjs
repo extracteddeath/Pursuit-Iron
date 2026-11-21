@@ -208,6 +208,14 @@ assert.match(twoDropAuthor,/amp.secondDropLoad/);
 assert.match(restPauseProtocol,/fun dropStageLoad\(/);
 assert.match(restPauseProtocol,/fun followUpLoadForStage\(/);
 assert.match(restPauseProtocol,/fun validDropSequence\(/);
+// Both the next-step engine and editable Focus must now consult the same
+// actual preceding drop before authorizing any second-stage weight.
+assert.match(restPauseExecution,/AdvancedAmplifierProtocolDomain\.resolveFollowUpEntryLoad\(/);
+assert.match(restPauseProtocol,/precedingDropPerformed:KotlinPerformedSet\?=null/);
+assert.match(journal,/precedingDropPerformed=\(precedingDrop\?\.operation as\?/);
+assert.match(journal,/precedingDropReceiptRevision=precedingDrop\?\.appliedRevision/);
+assert.match(journal,/":previous-drop:"/);
+
 assert.match(restPauseExecution,/CustomAmplifierKind.DROP_SET &&/);
 assert.match(restPauseJournal,/followUpLoadForStage\(/);
 assert.match(twoDropHistory,/followUpLoadForStage\(/);

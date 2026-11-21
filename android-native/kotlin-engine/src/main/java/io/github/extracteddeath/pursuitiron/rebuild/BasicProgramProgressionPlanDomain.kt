@@ -233,11 +233,17 @@ object BasicProgramProgressionPlanDomain {
                     authored.any { it !in 1..block.weeks } ||
                     (2..block.weeks).any { it !in authored }))
                 return no("Wave progression needs a complete separately authored weekly load plan, not an invented wave.")
+            // e1RM may review one comparable straight, loaded primary,
+            // never a bodyweight prescription, assistance counterweight,
+            // mixed-load scheme, technique extension or a week already
+            // prescribed by the athlete. No fallback to guessed maxes.
             if(style==NativeProgressionStyle.E1RM &&
                 (slot.role!=ComposerRole.PRIMARY ||
                     block.purpose!=CustomBlockPurpose.TRAINING ||
-                    block.phase==TrainingPhase.HYPERTROPHY))
-                return no("e1RM progression requires a reviewed primary strength or peak exercise and comparable effort evidence.")
+                    block.phase==TrainingPhase.HYPERTROPHY ||
+                    !loaded || assistance || !sameWeights ||
+                    bands.size!=1 || authored.isNotEmpty() || amplifier))
+                return no("e1RM progression requires a straight weighted primary strength or peak exercise with no conflicting authored week or amplifier.")
             val selectedDynamic=requested==
                 BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
             val unavailablePhase=block.purpose!=CustomBlockPurpose.TRAINING ||

@@ -132,6 +132,12 @@ object CustomSavedHistoryCorrectionDomain {
         val hasLaterStage=savedFollowKeys.any{it.stage>operation.visit.stage}
         val load = when (operation.visit.part) {
             CustomWorkoutVisitPart.MAIN -> {
+                // Invalid physical units, missing weight or impossible RIR
+                // are malformed observations, not dependency changes.
+                if(!CustomWorkoutJournalDomain.actualValid(
+                        target.prescription.load,operation.outcome,
+                        operation.performed))
+                    return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
                 if (operation.outcome == KotlinJournalSetOutcome.COMPLETED &&
                     amplifier != null && followed == null)
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)

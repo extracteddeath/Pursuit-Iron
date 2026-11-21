@@ -101,7 +101,8 @@ internal fun NativeKotlinProgressionMethodPicker(
     var proposed by remember(draft.cycleId,draft.revision,blockId,weekday,slotId) {
         mutableStateOf(slot.progressionMethod)
     }
-    val allowed=proposed==null || available[proposed]==true
+    val candidate=proposed
+    val allowed=candidate==null || available[candidate]==true
     AlertDialog(
         onDismissRequest={if(!busy)onDismiss()},
         title={Text("Progression method")},

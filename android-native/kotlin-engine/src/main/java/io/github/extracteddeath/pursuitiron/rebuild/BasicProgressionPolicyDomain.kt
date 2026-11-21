@@ -169,12 +169,37 @@ object BasicProgressionPolicyDomain {
             })
             return reject(BasicProgressionRefusal.BASELINE_DIFFERS_FROM_HISTORY)
 
-        if (request.strategy == BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION &&
-            loads.any { it.compareTo(loads.first()) != 0 })
+        val uniformStrategy = request.strategy in setOf(
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,
+            BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION)
+        if (uniformStrategy && loads.any { it.compareTo(loads.first()) != 0 })
             return reject(BasicProgressionRefusal.UNSUPPORTED_STRAIGHT_SET_SCHEME)
 
-        if (request.nextScope.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT)
+        val assistance = request.nextScope.basis == LoadBasis.ASSISTANCE_COUNTERWEIGHT
+        if (assistance !=
+            (request.strategy == BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION))
             return reject(BasicProgressionRefusal.UNSUPPORTED_ASSISTANCE_DIRECTION)
+
+        // A rep-only policy does not need invented stock increments. Its
+        // authenticated exact issued targets are independent of logged
+        // achievement; no reported RIR or fatigue forecast is inferred.
+        if (request.strategy == BasicProgressionStrategy.REP_TARGET_PROGRESSION) {
+            val targets = request.issuedRepTargets
+                ?: return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
+            if (targets.size != loads.size ||
+                targets.any { it !in request.repBand.minimum..request.repBand.maximum })
+                return reject(BasicProgressionRefusal.REP_TARGETS_NOT_VERIFIED)
+            val proposed = targets.mapIndexed { i, target ->
+                if (facts[i].actualReps!! >= target && target < request.repBand.maximum)
+                    target + 1 else target
+            }
+            val changed = targets.indices.filter { proposed[it] != targets[it] }.toSet()
+            return candidate(loads, emptySet(),
+                if (changed.isEmpty()) BasicProgressionDecision.BUILD_REPS
+                else BasicProgressionDecision.EARNED_REP_TARGET,
+                previous.workoutId, proposed, changed)
+        }
 
         val stock = request.verifiedStock
         if (stock == null || stock.unit != request.nextScope.unit ||
@@ -188,49 +213,60 @@ object BasicProgressionPolicyDomain {
         if (inspected.any { !it.exact })
             return reject(BasicProgressionRefusal.STOCK_NOT_VERIFIED)
 
-        val qualified = facts.indices.filter {
+        val ceilingOrdinals = facts.indices.filter {
             facts[it].actualReps!! >= request.repBand.maximum
         }
+        val floorOrdinals = facts.indices.filter {
+            facts[it].actualReps!! >= request.repBand.minimum
+        }
         val eligible = when(request.strategy) {
-            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION ->
-                if (qualified.size == facts.size) facts.indices.toList() else emptyList()
-            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION -> qualified
-            BasicProgressionStrategy.MANUAL_LOGGING -> emptyList()
+            BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION ->
+                if (ceilingOrdinals.size == facts.size) facts.indices.toList() else emptyList()
+            BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION ->
+                if (floorOrdinals.size == facts.size) facts.indices.toList() else emptyList()
+            BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION -> ceilingOrdinals
+            BasicProgressionStrategy.MANUAL_LOGGING,
+            BasicProgressionStrategy.REP_TARGET_PROGRESSION -> emptyList()
         }
         if (eligible.isEmpty())
             return candidate(loads,emptySet(),BasicProgressionDecision.BUILD_REPS,
                 previous.workoutId)
 
-        // Atomic strict DP: either ALL straight working sets earn the same
-        // verified step, or the whole load remains exactly unchanged.
+        // Uniform schemes are atomic: all sets change or none change.
+        // Dynamic works on each stable set ordinal independently.
         val proposals = loads.toMutableList()
         val changed = linkedSetOf<Int>()
         var blockedByLimit = false
         var atMaximum = false
         for (ordinal in eligible) {
-            val next = inspected[ordinal].nextAbove
+            val next = if (assistance) {
+                // Lower counterweight means LESS assistance, not a load drop.
+                if (loads[ordinal] <= zero) null else
+                    (EquipmentLoadDomain.inspect(stock,
+                        loads[ordinal].subtract(BigDecimal("0.001")),
+                        request.nextScope.unit) as? LoadInspection.Confirmed)?.atOrBelow
+            } else inspected[ordinal].nextAbove
             if (next == null) {
                 atMaximum = true
-                if (request.strategy == BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION)
-                    break
+                if (uniformStrategy) break
                 continue
             }
             val verified = KotlinFutureLoadNumberAuthorityDomain.review(
                 issuedLoad=loads[ordinal],candidateLoad=next,
                 unit=request.nextScope.unit,basis=request.nextScope.basis,
                 stock=stock,maximumAuthorizedIncrease=request.maximumAuthorizedIncrement,
-                source=KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
+                source=if(assistance)KotlinFutureLoadSource.EARNED_ASSISTANCE_DECREMENT
+                    else KotlinFutureLoadSource.EARNED_NEXT_INCREMENT)
             if (verified !is KotlinFutureLoadReview.Accepted) {
                 blockedByLimit = true
-                if (request.strategy == BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION)
-                    break
+                if (uniformStrategy) break
                 continue
             }
             proposals[ordinal] = verified.fact.proposedLoad
             changed.add(ordinal)
         }
-        if (request.strategy == BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION &&
-            changed.size != facts.size)
+        if (uniformStrategy && changed.size != facts.size)
             return candidate(loads,emptySet(),
                 if(atMaximum)BasicProgressionDecision.MAXIMUM_LOAD_REACHED
                 else BasicProgressionDecision.AUTHORIZED_INCREMENT_TOO_SMALL,

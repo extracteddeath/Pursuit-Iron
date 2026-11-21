@@ -130,7 +130,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             shortSessionLimitMinutes=20,
             shortSessionOmittedSetKeys=listOf(safe.slots.last().sets.single().setKey))
         val encoded=NativeKotlinCustomWorkoutSnapshotCodec.encode(shortened)
-        assertEquals(7,encoded[7].toInt())
+        assertEquals(8,encoded[7].toInt())
         assertEquals(shortened,
             NativeKotlinCustomWorkoutSnapshotCodec.decode(encoded))
         assertArrayEquals(encoded,NativeKotlinCustomWorkoutSnapshotCodec.encode(
@@ -164,14 +164,14 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             })
         },knownSetAndRestSeconds=old.knownSetAndRestSeconds+90)
         val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(timed)
-        assertEquals(7,bytes[7].toInt())
+        assertEquals(8,bytes[7].toInt())
         assertEquals(timed,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
         assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
             NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
         assertArrayEquals(base,NativeKotlinCustomWorkoutSnapshotCodec.encode(old))
         val withSelection=timed.copy(shortSessionLimitMinutes=30)
         val selected=NativeKotlinCustomWorkoutSnapshotCodec.encode(withSelection)
-        assertEquals(7,selected[7].toInt())
+        assertEquals(8,selected[7].toInt())
         assertEquals(withSelection,
             NativeKotlinCustomWorkoutSnapshotCodec.decode(selected))
         val timedSlot=timed.slots.first()
@@ -228,7 +228,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             })},
             knownSetAndRestSeconds=previous.knownSetAndRestSeconds+80L)
         val wire=NativeKotlinCustomWorkoutSnapshotCodec.encode(upgraded)
-        assertEquals(7,java.nio.ByteBuffer.wrap(wire,4,4).int)
+        assertEquals(8,java.nio.ByteBuffer.wrap(wire,4,4).int)
         assertEquals(upgraded,NativeKotlinCustomWorkoutSnapshotCodec.decode(wire))
         val selected=upgraded.slots.last()
         val payload=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(selected)
@@ -262,7 +262,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
                 old.followUpRestSeconds*old.followUpRounds+
                 restSeconds*planned+60)
             val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(staged)
-            assertEquals(7,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+            assertEquals(8,java.nio.ByteBuffer.wrap(bytes,4,4).int)
             assertEquals(staged,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
             assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
                 NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
@@ -305,7 +305,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
                 })
             },knownSetAndRestSeconds=before.knownSetAndRestSeconds-20+15)
         val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(updated)
-        assertEquals(7,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        assertEquals(8,java.nio.ByteBuffer.wrap(bytes,4,4).int)
         assertEquals(updated,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
         assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
             NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
@@ -355,13 +355,13 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             })
         },knownSetAndRestSeconds=old.knownSetAndRestSeconds+5L)
         val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(updated)
-        assertEquals(7,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        assertEquals(8,java.nio.ByteBuffer.wrap(bytes,4,4).int)
         assertEquals(updated,NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes))
         assertArrayEquals(bytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
             NativeKotlinCustomWorkoutSnapshotCodec.decode(bytes)))
         val selected=updated.slots.first()
         val slotWire=NativeKotlinCustomWorkoutSnapshotCodec.encodeSlot(selected)
-        assertEquals(7,java.nio.ByteBuffer.wrap(slotWire,4,4).int)
+        assertEquals(8,java.nio.ByteBuffer.wrap(slotWire,4,4).int)
         assertEquals(selected,NativeKotlinCustomWorkoutSnapshotCodec.decodeSlot(slotWire))
         val broken=updated.copy(slots=updated.slots.map{slot->
             slot.copy(sets=slot.sets.map{set->
@@ -389,7 +389,7 @@ class NativeKotlinCustomWorkoutSnapshotCodecTest {
             })
         },knownSetAndRestSeconds=old.knownSetAndRestSeconds+80L)
         val stagedBytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(stagedOld)
-        assertEquals(7,java.nio.ByteBuffer.wrap(stagedBytes,4,4).int)
+        assertEquals(8,java.nio.ByteBuffer.wrap(stagedBytes,4,4).int)
         assertArrayEquals(stagedBytes,NativeKotlinCustomWorkoutSnapshotCodec.encode(
             NativeKotlinCustomWorkoutSnapshotCodec.decode(stagedBytes)))
     }

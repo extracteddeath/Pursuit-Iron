@@ -319,7 +319,7 @@ class NativeCustomCycleDraftFileStoreTest {
     @Test fun authoredAmplifierWorkSecondsPersistAcrossOverrideAndColdOpen() {
         val baseline=original()
         val bytes=NativeCustomCycleDraftCodec.encode(baseline)
-        assertEquals(7,bytes[7].toInt())
+        assertEquals(8,bytes[7].toInt())
         val timed=baseline.copy(
             blocks=baseline.blocks.map{block->
                 block.copy(days=block.days.map{day->
@@ -341,7 +341,7 @@ class NativeCustomCycleDraftFileStoreTest {
             }
         )
         val encoded=NativeCustomCycleDraftCodec.encode(timed)
-        assertEquals(7,encoded[7].toInt())
+        assertEquals(8,encoded[7].toInt())
         val recovered=NativeCustomCycleDraftCodec.decode(encoded)
         assertEquals(timed,recovered)
         assertArrayEquals(encoded,NativeCustomCycleDraftCodec.encode(recovered))
@@ -378,7 +378,7 @@ class NativeCustomCycleDraftFileStoreTest {
         })}
         val configured=original.copy(blocks=newBlocks)
         val wire=NativeCustomCycleDraftCodec.encode(configured)
-        assertEquals(7,wire[7].toInt())
+        assertEquals(8,wire[7].toInt())
         assertEquals(configured,NativeCustomCycleDraftCodec.decode(wire))
         assertArrayEquals(wire,NativeCustomCycleDraftCodec.encode(
             NativeCustomCycleDraftCodec.decode(wire)))

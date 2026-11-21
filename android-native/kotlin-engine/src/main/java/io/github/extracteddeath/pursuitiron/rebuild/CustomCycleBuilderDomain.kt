@@ -90,43 +90,44 @@ object CustomCycleBuilderDomain {
      * actual history and the selected machine are untouched.
      */
     fun setProgressionMethod(
-        current:CustomTrainingCycle,expectedRevision:Long,
-        blockId:String,weekday:Int,slotId:String,
-        method:SavedProgressionMethod?
-    ):CustomCycleBuilderResult {
-        val block=current.blocks.singleOrNull{it.blockId==blockId}
-            ?:return CustomCycleBuilderResult.Rejected(
-                CustomCycleBuilderRefusal.MISSING_BLOCK)
-        val day=block.days.singleOrNull{it.weekday==weekday}
-            ?:return CustomCycleBuilderResult.Rejected(
-                CustomCycleBuilderRefusal.MISSING_SLOT)
-        val slot=day.slots.singleOrNull{it.slotId==slotId}
-            ?:return CustomCycleBuilderResult.Rejected(
-                CustomCycleBuilderRefusal.MISSING_SLOT)
-        if(slot.progressionMethod==method)
-            return CustomCycleBuilderResult.Rejected(
-                CustomCycleBuilderRefusal.INVALID_INPUT)
-        return edit(current,expectedRevision,"change-exercise-progression") {
-            val next=current.copy(blocks=current.blocks.map{candidateBlock->
-                if(candidateBlock.blockId!=blockId)candidateBlock
-                else candidateBlock.copy(days=candidateBlock.days.map{candidateDay->
-                    if(candidateDay.weekday!=weekday)candidateDay
-                    else candidateDay.copy(slots=candidateDay.slots.map{candidateSlot->
-                        if(candidateSlot.slotId!=slotId)candidateSlot
-                        else candidateSlot.copy(progressionMethod=method)
-                    })
+        current: CustomTrainingCycle, reviewed: CustomTrainingCycle,
+        blockId: String, weekday: Int, slotId: String,
+        method: SavedProgressionMethod?
+    ): CustomCycleBuilderResult {
+        if (current != reviewed)
+            return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.STALE_REVISION)
+        val block = current.blocks.singleOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val slot = block.days.singleOrNull { it.weekday == weekday }
+            ?.slots?.singleOrNull { it.slotId == slotId }
+            ?: return CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.MISSING_SLOT)
+        return edit(current, reviewed.revision, "change-exercise-progression") {
+            if (slot.progressionMethod == method) null
+            else reviewedProgressionCandidate(
+                current, ProgramProgressionSlotKey(blockId, weekday, slotId), method)
+        }
+    }
+
+    fun availableProgressionMethods(
+        cycle: CustomTrainingCycle, key: ProgramProgressionSlotKey
+    ): Set<SavedProgressionMethod> = SavedProgressionMethod.entries.filterTo(mutableSetOf()) {
+        reviewedProgressionCandidate(cycle, key, it) != null
+    }
+
+    private fun reviewedProgressionCandidate(
+        cycle: CustomTrainingCycle, key: ProgramProgressionSlotKey, method: SavedProgressionMethod?
+    ): CustomTrainingCycle? {
+        val next = cycle.copy(blocks = cycle.blocks.map { block ->
+            if (block.blockId != key.blockId) block else block.copy(days = block.days.map { day ->
+                if (day.weekday != key.weekday) day else day.copy(slots = day.slots.map { slot ->
+                    if (slot.slotId != key.slotId) slot else slot.copy(progressionMethod = method)
                 })
             })
-            // Clearing a selection is also useful for a partially authored
-            // program; a new explicit method requires a full auditable plan.
-            if(method!=null) {
-                val checked=BasicProgramProgressionPlanDomain.review(next)
-                val selected=(checked as? ProgramProgressionPlan.Ready)
-                    ?.assignments?.singleOrNull{it.key==
-                        ProgramProgressionSlotKey(blockId,weekday,slotId)}
-                if(selected?.savedMethod!=method) null else next
-            } else next
-        }
+        })
+        // The athlete can clear an explicit choice even on an incomplete draft.
+        if (method == null) return next
+        val review = BasicProgramProgressionPlanDomain.review(next) as? ProgramProgressionPlan.Ready
+        return next.takeIf { review?.assignments?.singleOrNull { it.key == key }?.savedMethod == method }
     }
 
     /** Atomic program-only grouping. Empty membership explicitly unlinks the

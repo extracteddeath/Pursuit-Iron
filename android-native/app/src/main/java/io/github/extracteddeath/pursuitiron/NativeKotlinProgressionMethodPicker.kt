@@ -59,30 +59,6 @@ private fun savedProgressionExplanation(method:SavedProgressionMethod?):String =
             "Advance unweighted bodyweight rep targets without inventing external load."
     }
 
-/** Independently review each possible choice against the authoritative
- * WHOLE cycle; do not duplicate exercise/equipment eligibility in Compose. */
-internal fun nativeProgressionOptions(
-    draft:CustomTrainingCycle,blockId:String,weekday:Int,slotId:String
-):Map<SavedProgressionMethod,Boolean> {
-    val key=ProgramProgressionSlotKey(blockId,weekday,slotId)
-    return SavedProgressionMethod.entries.associateWith{method->
-        val revised=draft.copy(blocks=draft.blocks.map{block->
-            if(block.blockId!=blockId)block else block.copy(
-                days=block.days.map{day->
-                    if(day.weekday!=weekday)day else day.copy(
-                        slots=day.slots.map{slot->
-                            if(slot.slotId!=slotId)slot
-                            else slot.copy(progressionMethod=method)
-                        })
-                })
-        })
-        val review=BasicProgramProgressionPlanDomain.review(revised)
-            as? ProgramProgressionPlan.Ready
-        review?.assignments?.singleOrNull{it.key==key}
-            ?.savedMethod==method
-    }
-}
-
 @Composable
 internal fun NativeKotlinProgressionMethodPicker(
     draft:CustomTrainingCycle,
@@ -98,13 +74,14 @@ internal fun NativeKotlinProgressionMethodPicker(
         ?.slots?.singleOrNull{it.slotId==slotId}
     if(slot==null)return
     val available=remember(draft.cycleId,draft.revision,blockId,weekday,slotId){
-        nativeProgressionOptions(draft,blockId,weekday,slotId)
+        CustomCycleBuilderDomain.availableProgressionMethods(
+            draft, ProgramProgressionSlotKey(blockId, weekday, slotId))
     }
     var proposed by remember(draft.cycleId,draft.revision,blockId,weekday,slotId) {
         mutableStateOf(slot.progressionMethod)
     }
     val candidate=proposed
-    val allowed=candidate==null || available[candidate]==true
+    val allowed=candidate==null || candidate in available
     AlertDialog(
         onDismissRequest={if(!busy)onDismiss()},
         title={Text("Progression method")},
@@ -117,12 +94,10 @@ internal fun NativeKotlinProgressionMethodPicker(
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Column(Modifier.selectableGroup()) {
-                    // Null is a genuine legacy/program-default choice, not
-                    // a hidden alias of Double or Manual.
                     val choices:List<SavedProgressionMethod?> =
                         listOf(null)+SavedProgressionMethod.entries
                     choices.forEach {method ->
-                        val optionAllowed=method==null || available[method]==true
+                        val optionAllowed=method==null || method in available
                         Row(
                             modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(
                                 selected=proposed==method,

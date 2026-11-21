@@ -48,7 +48,9 @@ data class CustomAuthoredSet(
     val targetRir: Int?,
     val activeSeconds: Int,
     val restSeconds: Int,
-    val amplifier: CustomSetAmplifier? = null
+    val amplifier: CustomSetAmplifier? = null,
+    /** Exact saved working-set target; distinct from the permitted rep range. */
+    val exactRepTarget: Int? = null
 )
 
 /**
@@ -307,6 +309,9 @@ object CustomTrainingCycleDomain {
                     (set.targetRir != null && set.targetRir !in 0..10) ||
                     set.reps.minimum !in 1..100 ||
                     set.reps.maximum !in set.reps.minimum..100 ||
+                    (set.exactRepTarget != null &&
+                        (set.type != DraftSetType.WORKING ||
+                            set.exactRepTarget !in set.reps.minimum..set.reps.maximum)) ||
                     (set.type == DraftSetType.WARMUP && set.amplifier != null))
                     issue(CustomCycleIssueKind.INVALID_SET, here,
                         "Invalid reps, effort, timing or warmup amplifier.")

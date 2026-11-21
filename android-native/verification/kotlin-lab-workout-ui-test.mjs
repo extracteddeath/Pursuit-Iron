@@ -1748,3 +1748,31 @@ assert.ok(
   unifiedLiveCoachTests.includes('forgedInvalidNumericReceiptCannotBeUsedForLiveLoadAdvice'),
   'History, live and future coaching must derive each saved working-set number from the same authority'
 );
+
+
+// The basic Plan preview uses the same source-verified owner as completed
+// custom journals. Disabling optional fatigue coaching must not silently
+// erase basic progression, nor may an informational preview issue/save work.
+const basicPreviewScreen=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
+const basicPreviewPanel=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinBasicProgressionPreview.kt');
+const basicPreviewController=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleController.kt');
+const basicPreviewHost=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
+const basicNativeOwner=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomBasicNextReview.kt');
+assert.ok(
+  basicPreviewScreen.includes('slot.slotId in basicSlots') &&
+  basicPreviewScreen.includes('ProgramProgressionRoute.BASIC_WEIGHTED') &&
+  basicPreviewScreen.includes('ProgramProgressionRoute.MANUAL') &&
+  basicPreviewScreen.includes('Preview basic progression') &&
+  basicPreviewScreen.includes('!session.prescriptionEditedForTime') &&
+  basicPreviewScreen.includes('state.basicDayProgressionSlotId==slot.slotId') &&
+  !basicPreviewScreen.includes('state.progressionCoachingEnabled &&\n                            slot.slotId in basicSlots') &&
+  basicPreviewController.includes('host.reviewNextAuthoredBasicProgression(') &&
+  basicPreviewController.includes('next.copy(declaredNonSetSeconds=shown.declaredNonSetSeconds)==shown') &&
+  basicPreviewHost.includes('customBasicNextReview.reviewAuthored(') &&
+  basicNativeOwner.includes('history.read(ownerKey,owner.athleteId)') &&
+  basicNativeOwner.includes('CustomBasicHistoryProgressionDomain.review(') &&
+  basicPreviewPanel.includes('candidate.proposedWorkingLoads.forEachIndexed') &&
+  basicPreviewPanel.includes('Read-only suggestion from verified workout history.') &&
+  !basicPreviewPanel.includes('onClick='),
+  'Basic Plan preview must remain owner-verified, independent of optional coach assistance and non-issuable'
+);

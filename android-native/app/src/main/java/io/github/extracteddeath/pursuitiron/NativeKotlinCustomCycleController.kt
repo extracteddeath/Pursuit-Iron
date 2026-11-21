@@ -66,6 +66,9 @@ internal data class NativeKotlinCustomCycleState(
     val preparedWorkout: NativeCustomPreparedWorkout? = null,
     val preparationRefusal: NativeCustomPrepareRefusal? = null,
     val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null,
+    /** Owner-reverified basic progression, with no save or issuance authority. */
+    val basicDayProgression:NativeCustomBasicNextReadResult.Reviewed?=null,
+    val basicDayProgressionSlotId:String?=null,
     val calibrationReview:NativeBlockCalibrationPreview.Ready? = null,
     val authoredReturnReview:NativeAuthoredLoadReturnPreview.Ready? = null,
     val calibrationReceipt:NativeBlockCalibrationReceipt? = null,
@@ -802,7 +805,8 @@ internal class NativeKotlinCustomCycleController(
      * athlete draft is not a consent, grant, or workout.
      */
     fun previewAuthoredDay(absoluteWeek:Int,weekday:Int) = run {
-        current.value=current.value.copy(dayCoaching=null,authoredReturnReview=null,
+        current.value=current.value.copy(dayCoaching=null,basicDayProgression=null,
+            basicDayProgressionSlotId=null,authoredReturnReview=null,
             preparedWorkout=current.value.preparedWorkout?.takeIf{
                 it.snapshot.absoluteWeek==absoluteWeek&&it.snapshot.weekday==weekday})
         val draft=current.value.draft ?:return@run
@@ -841,6 +845,41 @@ internal class NativeKotlinCustomCycleController(
                     consentBoundPreview=null,
                     message="Cannot preview: ${result.reason.name.replace('_',' ').lowercase()}.")
         }
+    }
+
+    /**
+     * Independent basic progression. The native owner authenticates the
+     * signed program, gym and complete corrected history; this UI never
+     * supplies observed sets or approves the resulting proposal.
+     */
+    fun reviewAuthoredDayBasicProgression(
+        absoluteWeek:Int,weekday:Int,slotId:String,
+        maximumIncrement:java.math.BigDecimal
+    ) = run {
+        current.value=current.value.copy(basicDayProgression=null,
+            basicDayProgressionSlotId=null)
+        val draft=current.value.draft ?:return@run
+        val inputs=auditedInputs
+        if(inputs==null) {
+            current.value=current.value.copy(message=
+                "Review the full saved training cycle before previewing basic progression.")
+            return@run
+        }
+        val result=host.reviewNextAuthoredBasicProgression(
+            draft.cycleId,absoluteWeek,weekday,slotId,inputs,
+            "basic-preview-"+UUID.randomUUID().toString(),maximumIncrement)
+        val reviewed=result as? NativeCustomBasicNextReadResult.Reviewed
+        val shown=current.value.authoredPreview
+        val next=reviewed?.next
+        if(next!=null && shown!=null &&
+            next.copy(declaredNonSetSeconds=shown.declaredNonSetSeconds)==shown &&
+            next.stamp.cycleRevision==draft.revision &&
+            next.stamp.gymCatalogSourceRevision==current.value.sourceRevision) {
+            current.value=current.value.copy(basicDayProgression=reviewed,
+                basicDayProgressionSlotId=slotId,
+                message="Basic progression reviewed against saved work. No sets or targets were changed.")
+        } else current.value=current.value.copy(
+            message="Basic progression could not be verified. Recheck your saved program, equipment and workout history.")
     }
 
     /** Same complete native history reader as activated-block coaching. */
@@ -1213,7 +1252,8 @@ internal class NativeKotlinCustomCycleController(
      * under the owner lock. It intentionally does not issue a journal.
      */
     fun verifyConsentBoundDay(absoluteWeek:Int,weekday:Int) = run {
-        current.value=current.value.copy(dayCoaching=null,authoredReturnReview=null,
+        current.value=current.value.copy(dayCoaching=null,basicDayProgression=null,
+            basicDayProgressionSlotId=null,authoredReturnReview=null,
             preparedWorkout=current.value.preparedWorkout?.takeIf{
                 it.snapshot.absoluteWeek==absoluteWeek&&it.snapshot.weekday==weekday})
         val draft=current.value.draft ?:return@run

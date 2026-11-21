@@ -346,6 +346,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var coachReadiness by remember {mutableStateOf(CoachReadiness.NORMAL)}
     var coachRestricted by rememberSaveable {mutableStateOf(false)}
     var dayCoachingVisible by remember {mutableStateOf(false)}
+    var basicProgressionVisible by remember {mutableStateOf(false)}
     val futureWeekScope=rememberCoroutineScope()
     var futureWeekBusy by remember {mutableStateOf(false)}
     var futureWeekVersion by remember {mutableLongStateOf(0)}
@@ -364,6 +365,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         state.reviewedCoachInputs,coachMaxStep,coachReadiness,coachRestricted,
         inspectedWeek,inspectedWeekday) {
         dayCoachingVisible=false
+        basicProgressionVisible=false
         futureWeekVersion++
         futureWeekSlotId=null
         futureWeekOption=null
@@ -1117,23 +1119,38 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     val maxStep=runCatching{BigDecimal(coachMaxStep.trim())}
                         .getOrNull()?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
                             it.stripTrailingZeros().scale()<=3}
-                    if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled && !calibrationLocked) {
+                    val basicPlan=remember(draft.cycleId,draft.revision){
+                        BasicProgramProgressionPlanDomain.review(draft)
+                            as? ProgramProgressionPlan.Ready
+                    }
+                    val basicSlots=basicPlan?.assignments?.filter{
+                        it.key.blockId==session.blockId &&
+                            it.key.weekday==session.weekday &&
+                            it.savedMethod!=null &&
+                            it.route in setOf(ProgramProgressionRoute.BASIC_WEIGHTED,
+                                ProgramProgressionRoute.MANUAL)
+                    }?.map{it.key.slotId}?.toSet().orEmpty()
+                    if(state.reviewedCoachInputs!=null &&
+                        (state.progressionCoachingEnabled || basicSlots.isNotEmpty()) &&
+                        !calibrationLocked) {
                         OutlinedTextField(value=coachMaxStep,enabled=!busy,
                             onValueChange={coachMaxStep=it;dayCoachingVisible=false},
                             label={Text("Maximum load increase · gym units")},
                             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                             isError=maxStep==null,singleLine=true,
                             modifier=Modifier.fillMaxWidth())
-                        if(state.fatigueCoachingEnabled) {
-                            CycleChoiceRow("How are you feeling?",CoachReadiness.entries.toList(),
-                                coachReadiness,{pretty(it)}) {
-                                    if(!busy){coachReadiness=it;dayCoachingVisible=false}
-                                }
-                        }
-                        Row {
-                            Checkbox(checked=coachRestricted,enabled=!busy,
-                                onCheckedChange={coachRestricted=it;dayCoachingVisible=false})
-                            Text("Movement is painful or restricted")
+                        if(state.progressionCoachingEnabled) {
+                            if(state.fatigueCoachingEnabled) {
+                                CycleChoiceRow("How are you feeling?",CoachReadiness.entries.toList(),
+                                    coachReadiness,{pretty(it)}) {
+                                        if(!busy){coachReadiness=it;dayCoachingVisible=false}
+                                    }
+                            }
+                            Row {
+                                Checkbox(checked=coachRestricted,enabled=!busy,
+                                    onCheckedChange={coachRestricted=it;dayCoachingVisible=false})
+                                Text("Movement is painful or restricted")
+                            }
                         }
                     }
                     val supersetOrder=session.slots.mapNotNull{it.supersetGroup}.distinct()
@@ -1187,6 +1204,31 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                         session.weekday,slot.slotId,coachReadiness,
                                         coachRestricted,checkNotNull(maxStep))
                                 }){Text("Review next-session reps and weights")}
+                        }
+                        if(state.reviewedCoachInputs!=null && signed &&
+                            slot.slotId in basicSlots && !calibrationLocked &&
+                            !session.prescriptionEditedForTime &&
+                            session.shortSessionLimitMinutes==null &&
+                            state.preparedWorkout==null) {
+                            OutlinedButton(
+                                enabled=!busy && maxStep!=null &&
+                                    session.stamp.cycleRevision==draft.revision,
+                                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                                onClick={
+                                    basicProgressionVisible=true
+                                    controller.reviewAuthoredDayBasicProgression(
+                                        session.absoluteWeek,session.weekday,slot.slotId,
+                                        checkNotNull(maxStep))
+                                }
+                            ) {Text("Preview basic progression")}
+                            state.basicDayProgression?.takeIf{result->
+                                basicProgressionVisible &&
+                                state.basicDayProgressionSlotId==slot.slotId &&
+                                result.next.copy(
+                                    declaredNonSetSeconds=session.declaredNonSetSeconds)==session &&
+                                result.next.stamp.cycleRevision==draft.revision &&
+                                result.next.stamp.gymCatalogSourceRevision==state.sourceRevision
+                            }?.let{NativeKotlinBasicProgressionPreview(it)}
                         }
                     }
                     state.dayCoaching?.takeIf {reviewed->

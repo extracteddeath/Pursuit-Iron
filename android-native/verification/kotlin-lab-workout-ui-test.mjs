@@ -1010,6 +1010,11 @@ assert.ok(composer.includes('NativeSetValueFields(') &&
 const infoSheet=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutExerciseInfoSheet.kt')+
   read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutInfoPresentation.kt');
 const infoPolicy=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeWorkoutInfoActionPolicy.kt');
+// Native details show every planned amplifier stage and never render an
+// unprescribed warmup RIR as a numbered effort target.
+assert.match(infoSheet,/val rirLabel=if\(set\.targetRir=="Not set"\)"" else/);
+assert.match(infoSheet,/AdvancedAmplifierProtocolDomain\.dropStageLoad\(/);
+assert.match(infoSheet,/AdvancedAmplifierProtocolDomain\.stageNoun\(/);
 const betaBuild=read('android-native/app/build.gradle.kts');
 assert.ok(betaBuild.includes('"**/NativeWorkoutInfoActionPolicy.kt"') &&
   infoPolicy.includes('mayRequestSkipRemaining=active && hasRemainingSets') &&

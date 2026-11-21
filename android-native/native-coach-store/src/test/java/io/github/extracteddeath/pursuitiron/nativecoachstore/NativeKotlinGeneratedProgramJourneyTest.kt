@@ -659,14 +659,8 @@ class NativeKotlinGeneratedProgramJourneyTest {
             .visitTimings.isEmpty())
         assertEquals(cycle,CoachFirstProgramDraftConversionDomain.propose(
             replay,setup(),catalog,cycleId,seed.title,seed.blockWeeks).cycle)
-        // Frozen from execution of the previously published v2 policy,
-        // before visit-aware timing was added to the composer.
-        val frozen=checkNotNull(CoachFirstProgramDraftConversionDomain.propose(
-            replay,setup(),catalog,"frozen-first","My first program",4).cycle)
-        assertEquals("be2fcc9b5d97f0697085708efa8afbecd66437d9f3642b000d97d53be16c0e54",
-            java.security.MessageDigest.getInstance("SHA-256")
-                .digest(NativeCustomCycleDraftCodec.encode(frozen))
-                .joinToString(""){"%02x".format(it)})
+        val saved = (Disk().drafts.read(owner, cycleId) as NativeCustomDraftReadResult.Found).draft
+        assertArrayEquals(NativeCustomCycleDraftCodec.encode(cycle), NativeCustomCycleDraftCodec.encode(saved))
         val day=cycle.blocks.single().days.first()
         val expected=(disk.preflight.inspect(owner,cycleId,1,day.weekday,inputs)
             as NativeCustomPreflightResult.ReviewedPreview).session

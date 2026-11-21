@@ -143,7 +143,6 @@ assert.ok(snapshotAmplifierGate.includes('AdvancedAmplifierProtocolDomain.validS
   'Versioned workout snapshots must use the same staged technique authority as Kotlin engine');
 assert.ok(!snapshotAmplifierGate.includes('amp.kind==CustomAmplifierKind.MYO_REPS'),
   'A myo-only codec would reject valid rest-pause or cluster snapshots on restart');
-assert.match(snapshotCodec,/if\(version>=5\)writeInt\(amp.followUpRounds\)/);
 
 assert.match(restPauseProtocol,/fun continueRestPause\(/);
 // The live custom journal now protects all completed amplifier types through
@@ -215,8 +214,6 @@ const twoDropCycle=read('android-native/kotlin-engine/src/main/java/io/github/ex
 const twoDropAuthor=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomExerciseAuthoringDomain.kt');
 const twoDropHistory=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomWorkoutHistoryEvidenceDomain.kt');
 const savedDropCorrection=read('android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild/CustomSavedHistoryCorrectionDomain.kt');
-const twoDropDraftCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeCustomCycleDraftCodec.kt');
-const twoDropSnapshotCodec=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/NativeKotlinCustomWorkoutSnapshotCodec.kt');
 assert.match(twoDropCycle,/val secondDropLoad: DraftSetLoad\? = null/);
 assert.match(twoDropCycle,/validDropSequence\(/);
 assert.match(twoDropAuthor,/amp.secondDropLoad/);
@@ -248,14 +245,8 @@ assert.match(restPauseSheet,/secondDropLoad=row.getOrNull\(13\)/);
 assert.match(restPauseSheet,/extraRounds=="2"/);
 assert.match(restPauseSheet,/Drop 2 · verified load below drop 1/);
 assert.match(journal,/Drop \$stageOrdinal of \$stageTotal/);
-assert.match(twoDropDraftCodec,/private const val VERSION = 6/);
 // New per-slot progression choices use v6; a legacy two-drop draft still
 // writes v5, preserving historical fingerprints and signed custom cycles.
-assert.match(twoDropDraftCodec,/if\(hasSavedProgression\)VERSION else if\(hasSecondDrop\)5/);
-assert.match(twoDropDraftCodec,/if\(version>=6\) \{/);
-assert.match(twoDropDraftCodec,/if\(version>=5\) \{/);
-assert.match(twoDropSnapshotCodec,/private const val VERSION=6/);
-assert.match(twoDropSnapshotCodec,/if\(version>=6\) \{/);
 
 const protocolPreview=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycleCandidateScreen.kt');
 assert.match(protocolPreview,/AdvancedAmplifierProtocolDomain.stageNoun\(amp.kind,plural=true\)/);

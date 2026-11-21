@@ -195,7 +195,10 @@ internal fun NativeMeasuredExerciseSetEditor(
                 }
             } else {
                 if(units.size>1) {
-                    Row(horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+                    FlowRow(
+                        modifier=Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                        verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                         units.forEach{choice->
                             FilterChip(
                                 selected=choice==unit,enabled=!busy,
@@ -239,8 +242,10 @@ internal fun NativeMeasuredExerciseSetEditor(
                             if(plan.sides.size>1) {
                                 Text("Apply result to",
                                     style=MaterialTheme.typography.labelMedium)
-                                Row(horizontalArrangement=Arrangement.spacedBy(
-                                    PursuitSpace.xs)) {
+                                FlowRow(
+                                    modifier=Modifier.fillMaxWidth(),
+                                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs),
+                                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
                                     plan.sides.sortedBy{it.ordinal}.forEach{side->
                                         FilterChip(
                                             selected=stopwatchSide==side.name,

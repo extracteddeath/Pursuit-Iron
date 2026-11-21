@@ -174,6 +174,27 @@ class CustomBasicHistoryProgressionDomainTest {
         assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
             (review(sessions=listOf(completed(1,amp=amp))) as
                 CustomBasicHistoryResult.Rejected).reason)
+        val wrongUnit=completed(1).let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map{v->
+                    v.copy(actual=v.actual?.copy(unit=LoadUnit.KG))
+                }))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (review(sessions=listOf(wrongUnit)) as
+                CustomBasicHistoryResult.Rejected).reason)
+        val changedBand=completed(1).let{session->
+            session.copy(snapshot=session.snapshot.copy(slots=
+                session.snapshot.slots.map{slot->slot.copy(sets=
+                    slot.sets.map{it.copy(prescription=
+                        it.prescription.copy(reps=RepBand(5,8)))})}),
+                evidence=session.evidence.copy(visits=
+                    session.evidence.visits.map{it.copy(
+                        prescribedReps=RepBand(5,8))}))
+        }
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (review(sessions=listOf(changedBand)) as
+                CustomBasicHistoryResult.Rejected).reason)
         val altered=completed(1).let{session->
             session.copy(evidence=session.evidence.copy(visits=
                 session.evidence.visits.mapIndexed{i,v->

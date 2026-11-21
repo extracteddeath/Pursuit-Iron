@@ -217,9 +217,24 @@ object CoachFirstProgramDraftConversionDomain {
                     val decision=selectedByKey[key]
                         ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                             "A generated slot has no source-linked progression decision.")
-                    if(persistChoices)slot.copy(progressionMethod=
-                        BasicProgramProgressionPlanDomain.savedChoice(decision))
-                    else slot
+                    if(persistChoices) {
+                        val selectedMethod=BasicProgramProgressionPlanDomain.savedChoice(decision)
+                        // Newly generated source AUTHORIZES the starting rung
+                        // explicitly. The rep floor is a conservative, reviewed
+                        // initial prescription chosen at program construction,
+                        // never an inferred historical target on cold replay.
+                        val initializesReps=selectedMethod in setOf(
+                            SavedProgressionMethod.REP_TARGETS,
+                            SavedProgressionMethod.LADDER,
+                            SavedProgressionMethod.BODYWEIGHT_REPS)
+                        slot.copy(progressionMethod=selectedMethod,
+                            sets=if(initializesReps)Collections.unmodifiableList(
+                                slot.sets.map{set->
+                                    if(set.type==DraftSetType.WORKING)
+                                        set.copy(exactRepTarget=set.reps.minimum)
+                                    else set
+                                }) else slot.sets)
+                    } else slot
                 }
                 day.copy(slots=Collections.unmodifiableList(savedSlots))
             }

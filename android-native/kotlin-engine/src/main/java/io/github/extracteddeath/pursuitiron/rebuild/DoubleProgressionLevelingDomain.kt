@@ -63,17 +63,25 @@ object DoubleProgressionLevelingDomain {
      * is usable only for an explicitly confirmed landmine added-plate basis.
      * Never jump above the confirmed range floor. Ties round up in both paths.
      */
-    private fun nearestVerifiedWorkingLoad(
-        inspection:LoadInspection.Confirmed,mean:BigDecimal
-    ):BigDecimal? {
-        val addedPlates=inspection.basis.permitsZeroAddedLoad
-        val atOrBelow=inspection.atOrBelow?.takeIf{
-            it>BigDecimal.ZERO || addedPlates && it.signum()==0}
-            ?:return null
-        return listOfNotNull(atOrBelow,inspection.nextAbove)
-            .filter{it>BigDecimal.ZERO || addedPlates && it.signum()==0}
-            .minWithOrNull(compareBy<BigDecimal>{it.subtract(mean).abs()}
-                .thenByDescending{it})
+    private class WorkingLoadMean(loads: List<BigDecimal>) {
+        private val sum = loads.fold(BigDecimal.ZERO, BigDecimal::add)
+        private val count = BigDecimal(loads.size)
+        val displayed = sum.divide(count, 3, RoundingMode.HALF_UP).stripTrailingZeros()
+
+        // Stock accepts thousandths. Flooring the lookup keeps both actual
+        // neighbors around the unrounded mean, even just below a midpoint.
+        fun inspect(stock: VerifiedLoadStock): LoadInspection.Confirmed? =
+            EquipmentLoadDomain.inspect(stock, sum.divide(count, 3, RoundingMode.DOWN),
+                stock.unit) as? LoadInspection.Confirmed
+
+        fun nearestVerifiedWorkingLoad(inspection: LoadInspection.Confirmed): BigDecimal? {
+            val lower = inspection.atOrBelow ?: return null
+            if (lower.signum() == 0 && !inspection.basis.permitsZeroAddedLoad) return null
+            val upper = inspection.nextAbove ?: return lower
+            // Compare distances before division. Only an exact tie goes up.
+            return if (upper.multiply(count) - sum <= sum - lower.multiply(count))
+                upper else lower
+        }
     }
 
     /**
@@ -118,22 +126,19 @@ object DoubleProgressionLevelingDomain {
         val eligible=working.filterNot{it.completed}.map{it.setKey}
         if(eligible.isEmpty())
             return refuse(CurrentWorkoutLevelingReview.Reason.NO_UNFINISHED_SETS)
-        val mean=loads.fold(BigDecimal.ZERO,BigDecimal::add)
-            .divide(BigDecimal(loads.size),3,RoundingMode.HALF_UP)
+        val mean=WorkingLoadMean(loads)
         val reps=working.sumOf { checkNotNull(it.reps) }
         val averageReps=BigDecimal(reps).divide(
             BigDecimal(working.size),0,RoundingMode.HALF_UP).toInt()
         if(verifiedStock==null || verifiedStock.unit!=working.first().unit ||
             verifiedStock.basis!=working.first().basis)
             return refuse(CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK)
-        val inspection=EquipmentLoadDomain.inspect(
-            verifiedStock,mean,working.first().unit)
-                as? LoadInspection.Confirmed
+        val inspection=mean.inspect(verifiedStock)
                 ?:return refuse(CurrentWorkoutLevelingReview.Reason.UNVERIFIED_STOCK)
-        val rounded=nearestVerifiedWorkingLoad(inspection,mean)
+        val rounded=mean.nearestVerifiedWorkingLoad(inspection)
             ?:return refuse(CurrentWorkoutLevelingReview.Reason.NO_AVAILABLE_LOAD)
         return CurrentWorkoutLevelingReview.Ready(
-            mean.stripTrailingZeros(),rounded,averageReps,eligible,working.size)
+            mean.displayed,rounded,averageReps,eligible,working.size)
     }
 
     /**
@@ -195,7 +200,10 @@ object DoubleProgressionLevelingDomain {
     ): LevelingReviewResult {
         fun reject(reason: LevelingRefusal) = LevelingReviewResult.Rejected(reason)
         if (facts.size !in 2..12 || goalRir !in 0..10 ||
-            facts.any { it.load <= BigDecimal.ZERO || it.reps <= 0 ||
+            facts.any { it.load.signum()<0 ||
+                it.load.signum()==0 && verifiedStock?.basis?.permitsZeroAddedLoad!=true ||
+                it.load>BigDecimal("100000") || it.load.stripTrailingZeros().scale()>3 ||
+                it.reps <= 0 ||
                 it.actualRir != null && it.actualRir !in 0..10 })
             return reject(LevelingRefusal.INCOMPLETE_OR_INVALID)
         if (repBand.minimum <= 0 || repBand.maximum < repBand.minimum)
@@ -209,11 +217,9 @@ object DoubleProgressionLevelingDomain {
         if (facts.map { it.load.stripTrailingZeros() }.distinct().size == 1)
             return reject(LevelingRefusal.ALREADY_LEVEL)
         if (verifiedStock == null) return reject(LevelingRefusal.UNVERIFIED_STOCK)
-        val mean = facts.fold(BigDecimal.ZERO) { acc, fact -> acc + fact.load }
-            .divide(BigDecimal(facts.size), 3, RoundingMode.HALF_UP)
-        val inspection = EquipmentLoadDomain.inspect(verifiedStock, mean, verifiedStock.unit)
-            as? LoadInspection.Confirmed ?: return reject(LevelingRefusal.UNVERIFIED_STOCK)
-        val closest = nearestVerifiedWorkingLoad(inspection,mean)
+        val mean = WorkingLoadMean(facts.map { it.load })
+        val inspection = mean.inspect(verifiedStock) ?: return reject(LevelingRefusal.UNVERIFIED_STOCK)
+        val closest = mean.nearestVerifiedWorkingLoad(inspection)
             ?: return reject(LevelingRefusal.NO_SUPPORTED_CANDIDATE)
         // Never use the rounded mean as a guarantee: each set's capacity,
         // fatigue, and actual RIR still need the athlete's review.
@@ -222,7 +228,7 @@ object DoubleProgressionLevelingDomain {
         val effortNote = if (missingRir == 0) "" else
             " RIR was unreported for $missingRir set(s); their goal RIR is only an assumption, not measured capacity."
         return LevelingReviewResult.Candidate(
-            mean.stripTrailingZeros(), closest, commonReps, facts.size,
+            mean.displayed, closest, commonReps, facts.size,
             "Editable current-workout starting point only. Log the weight, reps and actual RIR you really perform; no historical, issued or future target has changed." + effortNote
         )
     }

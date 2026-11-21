@@ -144,6 +144,8 @@ object EquipmentLoadDomain {
         if (stock == null) return LoadInspection.Unavailable(LoadUnavailableReason.NO_CONFIRMED_STOCK)
         if (stock.unit != enteredUnit) return LoadInspection.Unavailable(LoadUnavailableReason.UNIT_MISMATCH)
 
+        if (stock is VerifiedLoadStock.Stack) return inspectStack(stock, normalized(entered))
+
         // Fail closed on impossible or attacker-sized inventory. A mutable
         // producer map/list is revalidated at each read before any result.
         val attainable = runCatching { attainable(stock) }.getOrElse {
@@ -157,6 +159,28 @@ object EquipmentLoadDomain {
         )
     }
 
+    private fun inspectStack(stock: VerifiedLoadStock.Stack, entered: BigDecimal): LoadInspection {
+        val invalid = LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK)
+        if (!validLoad(stock.minimum) || !validLoad(stock.maximum) ||
+            !validStep(stock.increment) || stock.maximum < stock.minimum) return invalid
+
+        val minimum = normalized(stock.minimum)
+        val maximum = normalized(stock.maximum)
+        val step = normalized(stock.increment)
+        val lastIndex = (maximum - minimum).divideToIntegralValue(step)
+        if (lastIndex >= BigDecimal(MAX_ATTAINABLE_TOTALS)) return invalid
+
+        // The declared ceiling need not be reachable by whole selector steps.
+        val lower = if (entered < minimum) null else {
+            val index = (entered - minimum).divideToIntegralValue(step).min(lastIndex)
+            normalized(minimum + index * step)
+        }
+        val upper = if (lower == null) minimum else
+            (lower + step).takeIf { it <= maximum }?.let(::normalized)
+        return LoadInspection.Confirmed(stock.unit, stock.basis, entered,
+            lower != null && lower.compareTo(entered) == 0, lower, upper)
+    }
+
     private fun attainable(stock: VerifiedLoadStock): NavigableSet<BigDecimal> = when(stock) {
         is VerifiedLoadStock.Totals -> {
             require(stock.loads.size in 1..MAX_ATTAINABLE_TOTALS &&
@@ -167,17 +191,7 @@ object EquipmentLoadDomain {
                 stock.loads.size)
             TreeSet<BigDecimal>().apply { addAll(stock.loads) }
         }
-        is VerifiedLoadStock.Stack -> {
-            require(validLoad(stock.minimum) && validLoad(stock.maximum) &&
-                validStep(stock.increment) && stock.maximum >= stock.minimum)
-            val range = stock.maximum.subtract(stock.minimum)
-            val count = range.divideToIntegralValue(stock.increment).toInt()
-            require(count in 0 until MAX_ATTAINABLE_TOTALS)
-            TreeSet<BigDecimal>().apply {
-                for (step in 0..count)
-                    add(stock.minimum.add(stock.increment.multiply(BigDecimal(step))))
-            }
-        }
+        is VerifiedLoadStock.Stack -> error("Stack brackets use selector arithmetic")
         is VerifiedLoadStock.PairedBar -> {
             require(validLoad(stock.barWeight) && stock.pairedPlates.size in 1..MAX_DISTINCT_PLATES)
             val entries = stock.pairedPlates.entries.toList()

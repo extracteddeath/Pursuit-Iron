@@ -71,15 +71,15 @@ class NativeKotlinCustomMachineBindingPolicyTest {
 
     @Test fun machineBindingsSurviveDraftAndIssuedSnapshotColdRoundTrips() {
         val old=cycle()
-        val savedLegacy=NativeCustomCycleDraftCodec.encode(old)
-        assertEquals(1,savedLegacy[7].toInt())
+        val unboundBytes=NativeCustomCycleDraftCodec.encode(old)
+        assertEquals(7,unboundBytes[7].toInt())
         val bound=cycle("A")
         val raw=NativeCustomCycleDraftCodec.encode(bound)
-        assertEquals(3,raw[7].toInt())
+        assertEquals(7,raw[7].toInt())
         assertEquals(bound,NativeCustomCycleDraftCodec.decode(raw))
         assertArrayEquals(raw,NativeCustomCycleDraftCodec.encode(
             NativeCustomCycleDraftCodec.decode(raw)))
-        assertArrayEquals(savedLegacy,NativeCustomCycleDraftCodec.encode(old))
+        assertArrayEquals(unboundBytes,NativeCustomCycleDraftCodec.encode(old))
 
         val original=NativeKotlinCustomWorkoutSnapshotCodec.encode(snapshot())
         assertEquals(1,original[7].toInt())

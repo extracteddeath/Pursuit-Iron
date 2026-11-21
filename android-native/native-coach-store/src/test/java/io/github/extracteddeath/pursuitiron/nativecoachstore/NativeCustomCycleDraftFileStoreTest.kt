@@ -96,18 +96,23 @@ class NativeCustomCycleDraftFileStoreTest {
     }
 
     @Test fun savedPerSlotProgressionSurvivesBinaryCodecAndColdOwnerRecovery() {
-        val legacy=original()
-        // Old custom training-cycle bytes and signoff fingerprints remain
-        // unchanged until the athlete deliberately sets a new method.
-        val before=NativeCustomCycleDraftCodec.encode(legacy)
-        assertEquals(1,java.nio.ByteBuffer.wrap(before).getInt(4))
-        assertEquals(legacy,NativeCustomCycleDraftCodec.decode(before))
-        assertTrue(legacy.blocks.flatMap{it.days}.flatMap{it.slots}
+        val baseline=original()
+        val before=NativeCustomCycleDraftCodec.encode(baseline)
+        assertEquals(7,java.nio.ByteBuffer.wrap(before).getInt(4))
+        assertEquals(baseline,NativeCustomCycleDraftCodec.decode(before))
+        for (unsupported in listOf(0, 1, 2, 3, 4, 5, 6, 8)) {
+            val bytes = before.copyOf()
+            java.nio.ByteBuffer.wrap(bytes).putInt(4, unsupported)
+            assertThrows(java.io.IOException::class.java) {
+                NativeCustomCycleDraftCodec.decode(bytes)
+            }
+        }
+        assertTrue(baseline.blocks.flatMap{it.days}.flatMap{it.slots}
             .all {it.progressionMethod==null})
 
-        val base=legacy.blocks.first()
+        val base=baseline.blocks.first()
         val upper=base.days.first()
-        val changed=legacy.copy(blocks=listOf(
+        val changed=baseline.copy(blocks=listOf(
             base.copy(days=listOf(upper.copy(slots=upper.slots.map {slot->
                 when(slot.slotId) {
                     "bench-1" -> slot.copy(
@@ -117,12 +122,12 @@ class NativeCustomCycleDraftFileStoreTest {
                     else -> slot
                 }
             }))),
-            legacy.blocks.last().copy(days=legacy.blocks.last().days.map {day->
+            baseline.blocks.last().copy(days=baseline.blocks.last().days.map {day->
                 day.copy(slots=day.slots.map{it.copy(
                     progressionMethod=SavedProgressionMethod.LINEAR)})
             })))
         val payload=NativeCustomCycleDraftCodec.encode(changed)
-        assertEquals(6,java.nio.ByteBuffer.wrap(payload).getInt(4))
+        assertEquals(7,java.nio.ByteBuffer.wrap(payload).getInt(4))
         assertEquals(changed,NativeCustomCycleDraftCodec.decode(payload))
         assertEquals(saved(1),repository().save("owner-1","cycle-1",0,changed))
         val cold=repository().read("owner-1","cycle-1")
@@ -285,12 +290,12 @@ class NativeCustomCycleDraftFileStoreTest {
             store.listOwned("owner-1"))
     }
 
-    @Test fun v2AuthoredAmplifierWorkSecondsPersistAcrossOverrideAndColdOpen() {
-        val legacy=original()
-        val bytes=NativeCustomCycleDraftCodec.encode(legacy)
-        assertEquals(1,bytes[7].toInt())
-        val timed=legacy.copy(
-            blocks=legacy.blocks.map{block->
+    @Test fun authoredAmplifierWorkSecondsPersistAcrossOverrideAndColdOpen() {
+        val baseline=original()
+        val bytes=NativeCustomCycleDraftCodec.encode(baseline)
+        assertEquals(7,bytes[7].toInt())
+        val timed=baseline.copy(
+            blocks=baseline.blocks.map{block->
                 block.copy(days=block.days.map{day->
                     day.copy(slots=day.slots.map{slot->
                         slot.copy(sets=slot.sets.map{set->
@@ -301,7 +306,7 @@ class NativeCustomCycleDraftFileStoreTest {
                     })
                 })
             },
-            weekOverrides=legacy.weekOverrides.mapValues{(_,rows)->
+            weekOverrides=baseline.weekOverrides.mapValues{(_,rows)->
                 rows.map{row->row.copy(sets=row.sets.map{set->
                     set.copy(amplifier=CustomSetAmplifier(
                         CustomAmplifierKind.MYO_REPS,4,12,
@@ -309,12 +314,12 @@ class NativeCustomCycleDraftFileStoreTest {
                 })}
             }
         )
-        val v2=NativeCustomCycleDraftCodec.encode(timed)
-        assertEquals(2,v2[7].toInt())
-        val recovered=NativeCustomCycleDraftCodec.decode(v2)
+        val encoded=NativeCustomCycleDraftCodec.encode(timed)
+        assertEquals(7,encoded[7].toInt())
+        val recovered=NativeCustomCycleDraftCodec.decode(encoded)
         assertEquals(timed,recovered)
-        assertArrayEquals(v2,NativeCustomCycleDraftCodec.encode(recovered))
-        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(legacy))
+        assertArrayEquals(encoded,NativeCustomCycleDraftCodec.encode(recovered))
+        assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(baseline))
         assertEquals(45,timed.blocks.first().days.first().slots.first()
             .sets.last().amplifier?.followUpActiveSeconds)
         assertEquals(30,timed.weekOverrides.getValue("base").single()
@@ -329,10 +334,10 @@ class NativeCustomCycleDraftFileStoreTest {
         assertEquals(NativeCustomDraftReadResult.Found(timed),
             cold.read("owner-1","cycle-1"))
         assertThrows(java.io.IOException::class.java){
-            NativeCustomCycleDraftCodec.decode(v2.copyOf(v2.size-1))
+            NativeCustomCycleDraftCodec.decode(encoded.copyOf(encoded.size-1))
         }
     }
-    @Test fun authoredMyoStageCountsSurviveV4DraftAndLegacyDraftBytesRemainStable() {
+    @Test fun authoredMyoStageCountsRoundTripDeterministically() {
         val original=original()
         val bytes=NativeCustomCycleDraftCodec.encode(original)
         val newBlocks=original.blocks.map { block -> block.copy(days=block.days.map {
@@ -347,7 +352,7 @@ class NativeCustomCycleDraftFileStoreTest {
         })}
         val configured=original.copy(blocks=newBlocks)
         val wire=NativeCustomCycleDraftCodec.encode(configured)
-        assertEquals(4,wire[7].toInt())
+        assertEquals(7,wire[7].toInt())
         assertEquals(configured,NativeCustomCycleDraftCodec.decode(wire))
         assertArrayEquals(wire,NativeCustomCycleDraftCodec.encode(
             NativeCustomCycleDraftCodec.decode(wire)))
@@ -374,7 +379,7 @@ class NativeCustomCycleDraftFileStoreTest {
                 })
             })
             val bytes=NativeCustomCycleDraftCodec.encode(withStages)
-            assertEquals(4,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+            assertEquals(7,java.nio.ByteBuffer.wrap(bytes,4,4).int)
             assertEquals(withStages,NativeCustomCycleDraftCodec.decode(bytes))
             assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(
                 NativeCustomCycleDraftCodec.decode(bytes)))
@@ -383,9 +388,9 @@ class NativeCustomCycleDraftFileStoreTest {
             NativeCustomCycleDraftCodec.decode(oldBytes)))
     }
 
-    @Test fun twoDropV5DraftStoresBothLoadsAcrossColdReopenAndOldV4IsIdentical() {
+    @Test fun twoDropDraftStoresBothLoadsAcrossColdReopen() {
         val original=original()
-        val legacy=NativeCustomCycleDraftCodec.encode(original)
+        val baseline=NativeCustomCycleDraftCodec.encode(original)
         val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
             followUpLoad=DraftSetLoad.Verified(LoadUnit.LB,
                 LoadBasis.SMITH_TOTAL,number(155)),
@@ -403,12 +408,12 @@ class NativeCustomCycleDraftFileStoreTest {
             })
         })
         val bytes=NativeCustomCycleDraftCodec.encode(two)
-        assertEquals(5,java.nio.ByteBuffer.wrap(bytes,4,4).int)
+        assertEquals(7,java.nio.ByteBuffer.wrap(bytes,4,4).int)
         assertEquals(two,NativeCustomCycleDraftCodec.decode(bytes))
         assertArrayEquals(bytes,NativeCustomCycleDraftCodec.encode(
             NativeCustomCycleDraftCodec.decode(bytes)))
-        assertArrayEquals(legacy,NativeCustomCycleDraftCodec.encode(
-            NativeCustomCycleDraftCodec.decode(legacy)))
+        assertArrayEquals(baseline,NativeCustomCycleDraftCodec.encode(
+            NativeCustomCycleDraftCodec.decode(baseline)))
         assertEquals(saved(1),repository().save("owner-1","cycle-1",0,two))
         assertEquals(NativeCustomDraftReadResult.Found(two),
             repository().read("owner-1","cycle-1"))
@@ -418,7 +423,7 @@ class NativeCustomCycleDraftFileStoreTest {
             NativeKotlinCurrentIdentity {signedIn})
         assertEquals(NativeCustomDraftReadResult.Found(two),
             cold.read("owner-1","cycle-1"))
-        val legacyStage=original.copy(blocks=original.blocks.map{block->
+        val singleDrop=original.copy(blocks=original.blocks.map{block->
             block.copy(days=block.days.map{day->
                 day.copy(slots=day.slots.map{slot->
                     if(slot.slotId!="bench-1")slot
@@ -430,8 +435,8 @@ class NativeCustomCycleDraftFileStoreTest {
                 })
             })
         })
-        val one=NativeCustomCycleDraftCodec.encode(legacyStage)
-        assertEquals(2,java.nio.ByteBuffer.wrap(one,4,4).int)
+        val one=NativeCustomCycleDraftCodec.encode(singleDrop)
+        assertEquals(7,java.nio.ByteBuffer.wrap(one,4,4).int)
     }
 
 }

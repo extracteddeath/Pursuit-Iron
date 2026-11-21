@@ -192,9 +192,14 @@ object CustomBasicHistoryProgressionDomain {
             }.toSet()
             // A wholly different, explicitly observed machine is its OWN
             // history. An unknown/partial station is never quietly bypassed.
+            // A real observed B workout must not suppress an earlier
+            // completed A baseline just because the program's default was
+            // A when the athlete switched stations during the session.
+            // But an unrecorded/skipped set has no authenticated station:
+            // do NOT skip past that ambiguous missed work to an older win.
             if(observedMachines.size==1 &&
                 normalizedMachine !in observedMachines &&
-                historicalSlot.machineInstanceId!=request.selectedMachineInstanceId)
+                visits.all{it.actual!=null})
                 continue
             if(observedMachines.size>1 ||
                 (observedMachines.isNotEmpty() &&

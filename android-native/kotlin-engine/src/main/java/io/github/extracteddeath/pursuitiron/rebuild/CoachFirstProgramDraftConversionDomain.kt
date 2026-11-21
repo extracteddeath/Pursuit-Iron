@@ -202,6 +202,12 @@ object CoachFirstProgramDraftConversionDomain {
         // map would disappear after cold launch, letting Auto silently pick
         // a different progression. Special/peak/periodized visits remain
         // null: these are authored source schemes, not basic overload.
+        // Historical v1–v11 generated programs are frozen source receipts.
+        // Their authored custom-cycle bytes and approval fingerprints must
+        // remain identical on cold replay. Only explicitly versioned v12+
+        // generation persists methods into its actual saved slot records.
+        val persistChoices=policy.policyId==
+            CoachFirstProgramStartDomain.POLICY_VERSION
         val selectedByKey=progressionPlan.assignments.associateBy{it.key}
         val persistedBlocks=next.blocks.map{block->
             val savedDays=block.days.map{day->
@@ -211,8 +217,9 @@ object CoachFirstProgramDraftConversionDomain {
                     val decision=selectedByKey[key]
                         ?:return reject(FirstProgramDraftStatus.CYCLE_REVIEW_FAILED,
                             "A generated slot has no source-linked progression decision.")
-                    slot.copy(progressionMethod=
+                    if(persistChoices)slot.copy(progressionMethod=
                         BasicProgramProgressionPlanDomain.savedChoice(decision))
+                    else slot
                 }
                 day.copy(slots=Collections.unmodifiableList(savedSlots))
             }

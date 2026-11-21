@@ -48,13 +48,14 @@ sealed interface KotlinFutureLoadReview {
 
 object KotlinFutureLoadNumberAuthorityDomain {
     private val zero=BigDecimal.ZERO
-    private val max=BigDecimal("100000")
     private val minPrecision=BigDecimal("0.001")
 
+    // Shared numeric envelope, not a second precision/ceiling table.
+    // Authored stock, adjacency, directions and athlete consent remain here.
     private fun validLoad(value:BigDecimal):Boolean =
-        value>=zero && value<=max && value.stripTrailingZeros().scale()<=3
+        KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)
     private fun validIncrease(value:BigDecimal):Boolean =
-        value>zero && value<=max && value.stripTrailingZeros().scale()<=3
+        value>zero && KotlinSetNumberAuthorityDomain.validPhysicalLoadValue(value)
     private fun same(a:BigDecimal,b:BigDecimal)=a.compareTo(b)==0
     private fun normalized(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
 

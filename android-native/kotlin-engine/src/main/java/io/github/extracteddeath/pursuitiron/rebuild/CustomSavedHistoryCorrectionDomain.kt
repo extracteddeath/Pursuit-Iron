@@ -186,29 +186,19 @@ object CustomSavedHistoryCorrectionDomain {
                             activation,completed))
                         return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                     if(amplifier.kind==CustomAmplifierKind.DROP_SET) {
-                        if(!AdvancedAmplifierProtocolDomain.validDropSequence(
-                                target.prescription.load,amplifier))
-                            return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                         val previous=if(operation.visit.stage==1)main
                             else current(state,CustomWorkoutVisitKey(
                                 operation.visit.setKey,
                                 CustomWorkoutVisitPart.FOLLOW_UP,
                                 operation.visit.stage-1))
-                        val authored=stageTarget as? DraftSetLoad.Verified
-                            ?:return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                        val previousLoad=previous?.performed?.load
-                        val actualLoad=completed.load
                         if(previous?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
-                            previousLoad==null || actualLoad==null ||
-                            previous?.performed?.unit!=authored.unit ||
-                            completed.unit!=authored.unit ||
-                            previous?.performed?.machineInstanceId!=
-                                activation.machineInstanceId ||
-                            completed.machineInstanceId!=activation.machineInstanceId ||
-                            previousLoad.compareTo(authored.value)<=0 ||
-                            actualLoad.signum()<=0 ||
-                            actualLoad.compareTo(previousLoad)>=0)
-                            return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                            !AdvancedAmplifierProtocolDomain.validPerformedDropStage(
+                                amplifier,target.prescription.load,activation,
+                                if(operation.visit.stage==1)null
+                                    else previous.performed,
+                                completed,operation.visit.stage))
+                            return reject(
+                                CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                     }
                 }
                 stageTarget

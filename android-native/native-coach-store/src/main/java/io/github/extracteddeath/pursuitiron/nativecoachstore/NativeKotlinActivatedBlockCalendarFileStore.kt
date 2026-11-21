@@ -85,6 +85,21 @@ sealed interface NativeActivatedBlockCalendarWrite {
         NativeActivatedBlockCalendarWrite
 }
 
+/**
+ * Restore inventory fact only. An archived valid calendar is preserved even
+ * when its original program is no longer the active one. A stale calendar
+ * must NEVER be accepted as fresh program approval.
+ */
+internal data class NativeActivatedBlockCalendarInventoryFact(
+    val calendar:NativeActivatedBlockCalendar,
+    val sourceStillCurrent:Boolean
+)
+internal sealed interface NativeActivatedBlockCalendarInventory {
+    data class Verified(val records:List<NativeActivatedBlockCalendarInventoryFact>):
+        NativeActivatedBlockCalendarInventory
+    data object InvalidOrForeign:NativeActivatedBlockCalendarInventory
+}
+
 private data class ActivatedBlockCalendarSource(
     val ownerKey:String,
     val athleteId:String,
@@ -396,6 +411,50 @@ class NativeKotlinActivatedBlockCalendarFileStore(
         }}.getOrElse{NativeActivatedBlockCalendarWrite.Rejected(
             NativeActivatedBlockCalendarRefusal.STORAGE_UNAVAILABLE)}
     }
+
+    /**
+     * PHYSICAL restore inventory. Walk every native calendar record, including
+     * retired blocks: a checksum-valid foreign/renamed/symlinked/unfinished
+     * file cannot disappear merely because read() only looks up active IDs.
+     * The current flag is advisory, never an activation or issuance grant.
+     */
+    internal fun inventoryOwner(ownerKey:String):
+        NativeActivatedBlockCalendarInventory =
+        runCatching{fence.withOwnerTransaction(ownerKey) {
+            val signed=active(ownerKey)
+                ?:return@withOwnerTransaction
+                    NativeActivatedBlockCalendarInventory.InvalidOrForeign
+            val noFollow=java.nio.file.LinkOption.NOFOLLOW_LINKS
+            if(!Files.exists(privateDirectory,noFollow))
+                return@withOwnerTransaction
+                    NativeActivatedBlockCalendarInventory.Verified(emptyList())
+            require(!Files.isSymbolicLink(privateDirectory) &&
+                Files.isDirectory(privateDirectory,noFollow))
+            val physical=Files.list(privateDirectory).use {stream->
+                stream.filter{it.fileName.toString().startsWith(
+                    "activated-block-calendar-")}
+                    .limit(4097).toList()
+            }
+            require(physical.size<=4096)
+            val name=Regex("^activated-block-calendar-[a-f0-9]{64}\\.bin$")
+            val seen=mutableSetOf<Pair<String,String>>()
+            val entries=physical.sortedBy{it.fileName.toString()}.map{file->
+                require(name.matches(file.fileName.toString()) &&
+                    !Files.isSymbolicLink(file) &&
+                    Files.isRegularFile(file,noFollow))
+                val record=decode(file)
+                    ?:throw IOException("Missing calendar record")
+                require(record.ownerKey==ownerKey &&
+                    record.athleteId==signed.athleteId &&
+                    file==path(record.ownerKey,record.cycleId,record.blockId) &&
+                    seen.add(record.cycleId to record.blockId))
+                val current=source(ownerKey,record.cycleId,record.blockId)
+                NativeActivatedBlockCalendarInventoryFact(record,
+                    current!=null && sameSource(record,current))
+            }
+            require(active(ownerKey)==signed)
+            NativeActivatedBlockCalendarInventory.Verified(entries)
+        }}.getOrElse{NativeActivatedBlockCalendarInventory.InvalidOrForeign}
 
     fun read(ownerKey:String,cycleId:String,blockId:String):
         NativeActivatedBlockCalendarRead {

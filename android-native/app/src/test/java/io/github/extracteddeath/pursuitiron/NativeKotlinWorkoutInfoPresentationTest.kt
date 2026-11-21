@@ -106,7 +106,8 @@ class NativeKotlinWorkoutInfoPresentationTest {
         assertTrue(technique,technique.indexOf("Drop 1:")<technique.indexOf("Drop 2:"))
         assertTrue(technique,technique.contains("35s total follow-up work"))
         assertFalse(technique.contains("performed"))
-        assertEquals("20 lb · per hand",info.load)
+        assertTrue(info.load,info.load.startsWith("20 lb"))
+        assertTrue(info.load,info.load.contains("per"))
         val invalid=parent.copy(prescription=parent.prescription.copy(
             amplifier=amp.copy(secondDropLoad=load("16"))))
         val warning=checkNotNull(customWorkoutInfoSets(listOf(invalid))

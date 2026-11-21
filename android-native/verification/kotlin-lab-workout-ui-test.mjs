@@ -654,6 +654,23 @@ for(const [name,body] of [['generated',generatedCoach],['custom',customCoach]]) 
     name+' optional live-coaching storage errors must fail closed, not crash the workout or hide coroutine cancellation');
 }
 const composer=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt');
+// Generated and custom Finish share athlete-facing wording, but still
+// require their OWN revision-guarded durable commit paths. No raw journal
+// implementation terminology should leak into these workout confirmations.
+for(const screen of [composer,journal]) {
+  assert.ok(screen.includes('title={Text("Finish this workout?")}') &&
+    screen.includes('Text("Finish workout")') &&
+    screen.includes('Text("Review sets")') &&
+    screen.includes('NativeFinishReviewPolicy.canCommit('),
+    'Both native workout routes must share finish review vocabulary and own a revision guard');
+}
+assert.ok(journal.includes('host.finishIssuedCustomWorkout(workoutId,') &&
+  composer.includes('controller.finish(reviewed.revision)') &&
+  !journal.includes('Commit native Finish') &&
+  !composer.includes('Native session preview · no JavaScript') &&
+  !composer.includes('Open a workout issued by the independent Kotlin coach.'),
+  'User-facing Finish must preserve durable writers without developer-only UI copy');
+
 // Machine A/B must be scoped to the gym that issued the workout. The
 // displayed Last AND the editable one-tap "Use Last" must share the same
 // machine filter, even when no machine is selected (legacy-only).

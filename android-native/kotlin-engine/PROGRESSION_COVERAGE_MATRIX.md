@@ -16,6 +16,7 @@ history, full-phase audits and explicit athlete approval.
 | Per-set dynamic | `BasicProgressionPolicyDomain` | A particular set reaches its rep ceiling | Only that stable set ordinal earns a physical step; no heaviest-set promotion |
 | Linear load | `BasicProgressionPolicyDomain` | All straight working sets meet at least the rep floor | One adjacent verified increment on all sets, atomically |
 | Rep-target advancement | `BasicRepTargetStepDomain` via weighted policy | Actual reps meet approved exact target | +1 exact rep target per eligible set, never beyond rep band; weights unchanged |
+| Rep ladder | `BasicProgressionPolicyDomain` + shared rep target helper | Build exact set targets; all sets reach ceiling | Only then earn one stock-verified uniform increment and reset exact targets to the lower rep bound |
 | Explicit bodyweight reps | `BasicBodyweightRepProgressionDomain` (same rep-step helper) | Completed authenticated unweighted work meets approved exact target | No invented 0-lb load, no borrowed machine history |
 | Assisted counterweight double | `BasicProgressionPolicyDomain` | All assisted sets meet ceiling | One exact **lower** machine counterweight, never mistaken for a load drop |
 | Programmed percentage / authored wave | `BasicProgrammedPercentageLoadDomain` | Athlete confirms training max + all prescribed week percentages | Every week maps DOWN to verified inventory; not based on RIR or unverified max |
@@ -30,7 +31,9 @@ from the fully authored, reviewed cycle.
 
 | Program/visit | Default route | Important exception |
 |---|---|---|
-| Ordinary hypertrophy and supporting strength accessory | Strict double | Exact user-selected basic strategy may replace default |
+| Ordinary isolation / barbell accessory | Strict double | Exact user-selected basic strategy may replace default |
+| Source-reviewed quick-change compound (DB/machine/cable/Smith) | Per-set dynamic | Requires source catalog pattern and verified experience, not exercise-name guessing |
+| Novice primary compound with reviewed catalog | Linear | Complete every set at the rep floor; cannot infer personal capacity |
 | Strength-phase primary, ordinary straight loading | Linear | Authored periodization or a separately calibrated wave takes priority |
 | Explicitly selected per-set weighted mode | Dynamic | Only compatible weighted working sets; no silently flattened backoffs |
 | Machine counterweight | Decrease assistance at rep ceiling | Rep-only if explicitly chosen; never ordinary higher-load progression |
@@ -38,6 +41,7 @@ from the fully authored, reviewed cycle.
 | Peak or performance test | Peak/test hold | Requires authored planned percentages/weeks; not earned auto-load |
 | Recovery/deload | Recovery hold | Must preserve its independently audited load/dose/time constraints |
 | Explicit week overrides (DUP, wave, ramp) | Authored weekly plan | No duplicate automatic DP on a previously specified week |
+| e1RM style | Specialist coach review | No e1RM is fabricated from uncalibrated strength/RIR data |
 | Mixed working loads, top/backoff, different rep envelopes | Specialist/authored loading | No inferred averaging or silent equalization |
 | Set amplifier attached to working set | Parent progression + separately attached technique | Mini-sets/drops are not independent ordinary working sets |
 | Athlete selects manual | Manual | No progression writes; preserve the program and history |
@@ -87,3 +91,34 @@ from the fully authored, reviewed cycle.
    any APK/AAB release.
 
 No JavaScript fallback, no web-app mutation and no new APK in this pass.
+
+
+## 5. Web progression style identity parity
+
+The actual web progression-style contract exports
+`auto, double, dynamic, ladder, linear, wave, e1rm`. The Kotlin model now
+recognizes **all seven names** through `NativeProgressionStyle`:
+
+- **Auto:** selects a safe method using reviewed physical basis, source
+  movement pattern, phase, athlete experience and exercise role where those
+  facts exist. Missing stability/loadability metadata cannot justify inventing
+  advanced readiness/measurement reliability.
+- **Double:** strict all-sets ceiling gate.
+- **Dynamic:** independent earned load step for each exact ordinal.
+- **Ladder:** increment an authenticated exact rep target per set, then take
+  one verified load step and reset to the rep floor when all reach ceiling.
+  Unweighted bodyweight holds at the cap pending a reviewed harder variation.
+- **Linear:** a deliberately basic floor-completion one-step policy. The web
+  evaluator's current safety gate may require all sets at their *ceiling*,
+  even while its style description suggests in-range progression; this is an
+  explicit behavior difference to test in matched engine comparison.
+- **Wave:** complete source-authored weekly sequence; can be calculated from
+  a separately confirmed training max and verified inventory with the
+  `BasicProgrammedPercentageLoadDomain`, not guessed from current reps.
+- **e1RM:** separately reviewed effort-based coaching only. Preserving its
+  style name does NOT claim validated e1RM prediction or an auto-load grant.
+
+These are typed *program candidate assignments*, not proof that the durable
+on-device progression selection and runtime adaptation have been migrated.
+The parity/superiority acceptance gate must compare exact per-style outputs,
+including this noted linear threshold difference, before any claim of parity.

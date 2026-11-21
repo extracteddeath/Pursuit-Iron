@@ -123,7 +123,10 @@ object CustomCycleBuilderDomain {
         // the athlete subsequently accepts a coached week edit; the shared
         // progression resolver then gives those signed week sets priority.
         // Wave expressly requires authored weeks, and Manual is a hold.
-        if (method != null && method !in setOf(
+        val currentMethod=cycle.blocks.singleOrNull { it.blockId==key.blockId }
+            ?.days?.singleOrNull { it.weekday==key.weekday }
+            ?.slots?.singleOrNull { it.slotId==key.slotId }?.progressionMethod
+        if (method != null && method!=currentMethod && method !in setOf(
                 SavedProgressionMethod.WAVE, SavedProgressionMethod.MANUAL
             ) && cycle.weekOverrides[key.blockId].orEmpty().any {
                 it.weekday == key.weekday && it.slotId == key.slotId

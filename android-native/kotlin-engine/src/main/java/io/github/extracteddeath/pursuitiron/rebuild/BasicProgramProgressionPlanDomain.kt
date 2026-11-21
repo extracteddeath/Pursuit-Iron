@@ -11,6 +11,13 @@ import java.util.Collections
  * dimensions; a drop, top/backoff, RIR target, deload or myo mini-set must
  * never masquerade as an earned next working-set weight.
  */
+/** All seven progression labels currently supported by the web engine.
+ * Only safe, explicitly defined basic strategies may calculate simple
+ * numbers; Wave/e1RM must retain their separate reviewed source evidence. */
+enum class NativeProgressionStyle {
+    AUTO, DOUBLE, DYNAMIC, LADDER, LINEAR, WAVE, E1RM
+}
+
 enum class ProgramProgressionRoute {
     BASIC_WEIGHTED,
     BASIC_BODYWEIGHT_REPS,
@@ -18,6 +25,7 @@ enum class ProgramProgressionRoute {
     PEAK_OR_TEST_HOLD,
     RECOVERY_HOLD,
     SPECIAL_LOAD_SCHEME,
+    E1RM_COACH_REVIEW,
     MANUAL
 }
 
@@ -37,7 +45,8 @@ data class ProgramProgressionAssignment(
     val hasAttachedAmplifier:Boolean,
     /** Explicit week overrides are authoritative, never displaced by basic DP. */
     val authoredWeekNumbers:Set<Int>,
-    val explanation:String
+    val explanation:String,
+    val selectedStyle:NativeProgressionStyle?=null
 ) {
     val mayChangeSavedProgram:Boolean get()=false
     val mayModifyIssuedSet:Boolean get()=false
@@ -70,6 +79,9 @@ object BasicProgramProgressionPlanDomain {
         selectedPerSetDynamic:Set<ProgramProgressionSlotKey> = emptySet(),
         /** Explicit user/programmer choices, never inferred from fatigue. */
         selectedStrategies:Map<ProgramProgressionSlotKey,BasicProgressionStrategy> =
+            emptyMap(),
+        /** Explicit compatible web-family styles are preserved as named intent. */
+        selectedStyles:Map<ProgramProgressionSlotKey,NativeProgressionStyle> =
             emptyMap()
     ):ProgramProgressionPlan {
         fun no(why:String)=ProgramProgressionPlan.Refused(why)
@@ -85,6 +97,8 @@ object BasicProgramProgressionPlanDomain {
         if(allKeys.size !in 1..2048 || allKeys.distinct().size!=allKeys.size ||
             !allKeys.toSet().containsAll(selectedPerSetDynamic) ||
             !allKeys.toSet().containsAll(selectedStrategies.keys) ||
+            !allKeys.toSet().containsAll(selectedStyles.keys) ||
+            selectedStyles.keys.any {it in selectedStrategies || it in selectedPerSetDynamic} ||
             selectedPerSetDynamic.any { key ->
                 selectedStrategies[key]!=null &&
                     selectedStrategies[key]!=BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
@@ -117,9 +131,30 @@ object BasicProgramProgressionPlanDomain {
                 it.weekday==day.weekday && it.slotId==slot.slotId
             }.map {it.weekInBlock}.toSet()
             val amplifier=working.any {it.amplifier!=null}
-            val requested=selectedStrategies[key] ?:
+            val style=selectedStyles[key]
+            val styledBasic=when(style) {
+                NativeProgressionStyle.DOUBLE ->
+                    BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION
+                NativeProgressionStyle.DYNAMIC ->
+                    BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
+                NativeProgressionStyle.LADDER ->
+                    if(bodyweight)null else BasicProgressionStrategy.REP_LADDER_PROGRESSION
+                NativeProgressionStyle.LINEAR ->
+                    BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION
+                NativeProgressionStyle.AUTO,
+                NativeProgressionStyle.WAVE,
+                NativeProgressionStyle.E1RM, null -> null
+            }
+            val requested=selectedStrategies[key] ?: styledBasic ?:
                 if(key in selectedPerSetDynamic)
                     BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION else null
+            if(style==NativeProgressionStyle.WAVE && authored.isEmpty())
+                return no("Wave progression needs a complete separately authored weekly load plan, not an invented wave.")
+            if(style==NativeProgressionStyle.E1RM &&
+                (slot.role!=ComposerRole.PRIMARY ||
+                    block.purpose!=CustomBlockPurpose.TRAINING ||
+                    block.phase==TrainingPhase.HYPERTROPHY))
+                return no("e1RM progression requires a reviewed primary strength or peak exercise and comparable effort evidence.")
             val selectedDynamic=requested==
                 BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
             val unavailablePhase=block.purpose!=CustomBlockPurpose.TRAINING ||
@@ -149,6 +184,11 @@ object BasicProgramProgressionPlanDomain {
             val strategy:BasicProgressionStrategy?
             val note:String
             when {
+                style==NativeProgressionStyle.E1RM -> {
+                    route=ProgramProgressionRoute.E1RM_COACH_REVIEW
+                    strategy=null
+                    note="Retain e1RM as a specialist effort-based review: no uncalibrated strength estimate or silent load step."
+                }
                 requested==BasicProgressionStrategy.MANUAL_LOGGING -> {
                     route=ProgramProgressionRoute.MANUAL
                     strategy=BasicProgressionStrategy.MANUAL_LOGGING
@@ -204,7 +244,7 @@ object BasicProgramProgressionPlanDomain {
             }
             assignments+=ProgramProgressionAssignment(
                 key,slot.exerciseId,route,strategy,working.size,amplifier,
-                Collections.unmodifiableSet(authored),note)
+                Collections.unmodifiableSet(authored),note,style)
         }
         return ProgramProgressionPlan.Ready(
             Collections.unmodifiableList(assignments))

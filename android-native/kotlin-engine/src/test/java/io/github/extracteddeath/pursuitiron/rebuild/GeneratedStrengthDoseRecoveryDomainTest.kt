@@ -136,4 +136,61 @@ class GeneratedStrengthDoseRecoveryDomainTest {
         assertTrue(request(inspected).added.isEmpty())
         assertEquals(2,source.verifiedDraft?.blocks?.size)
     }
+    @Test fun strengthRepairCannotHideAuthoredClusterTimeElsewhereOnTheDay() {
+        val original=cycle()
+        // With only ordinary strength work, 6 x (90+180) seconds plus
+        // 1200 overhead, a single additional 270-second set fits 52 min.
+        assertNotNull(request(review(original),maxMinutes=52).structure)
+        val strength=original.blocks.last()
+        val modified=strength.copy(days=strength.days.map {day->
+            if(day.weekday!=0)day else {
+                val first=day.slots.first()
+                val augmented=first.copy(sets=first.sets.mapIndexed {i,set->
+                    if(i!=1)set else set.copy(
+                        amplifier=CustomSetAmplifier(
+                            CustomAmplifierKind.CLUSTER,2,30,
+                            followUpActiveSeconds=120,followUpRounds=3))
+                })
+                day.copy(slots=listOf(augmented)+day.slots.drop(1))
+            }
+        })
+        val altered=original.copy(blocks=listOf(
+            original.blocks.first(),modified))
+        val source=review(altered)
+        assertEquals(StrengthDoseBoundaryStatus.HALVED_WORKING_DOSE_REQUIRES_REVIEW,
+            StrengthDoseBoundaryGuardDomain.review(source,"strength").status)
+        val result=request(source,maxMinutes=52)
+        assertNull(result.explanation,result.structure)
+        assertTrue(result.added.isEmpty())
+        // The source still has 18 authored Strength sets; no review has
+        // auto-mutated the athlete's work to hide the missing 210 seconds.
+        assertEquals(18,modified.days.sumOf{day->
+            day.slots.sumOf{slot->slot.sets.count {
+                it.type==DraftSetType.WORKING
+            }}
+        })
+        assertEquals(original.blocks.first(),altered.blocks.first())
+    }
+
+    @Test fun unmeasuredAdvancedActivityCannotBeDeclaredInsideAHardSessionLimit() {
+        val original=cycle()
+        val strength=original.blocks.last()
+        val amended=strength.copy(days=strength.days.map{day->
+            if(day.weekday!=0)day else {
+                val first=day.slots.first()
+                day.copy(slots=listOf(first.copy(sets=first.sets.mapIndexed{i,set->
+                    if(i==1)set.copy(amplifier=CustomSetAmplifier(
+                        CustomAmplifierKind.CLUSTER,2,30,
+                        followUpActiveSeconds=null,followUpRounds=3)) else set
+                }))+day.slots.drop(1))
+            }
+        })
+        val source=review(original.copy(blocks=listOf(
+            original.blocks.first(),amended)))
+        val result=request(source,maxMinutes=60)
+        assertNull(result.structure)
+        assertTrue(result.explanation.contains("not measured"))
+        assertTrue(result.added.isEmpty())
+    }
+
 }

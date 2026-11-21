@@ -29,7 +29,7 @@ second training engine or an auto-writer. See
 
 1. The native storage owner authenticates the completed workout and approved
    future workout; names entered in a screen are not history provenance.
-2. Every progression series is scoped to athlete, program, block, day,
+2. Every progression series is scoped to athlete, program, gym, block, day,
    exercise, physical machine, weight unit, and exact load basis. Unknown or
    mismatched identities must not combine histories.
 3. The current issued load must match **each corresponding** preceding

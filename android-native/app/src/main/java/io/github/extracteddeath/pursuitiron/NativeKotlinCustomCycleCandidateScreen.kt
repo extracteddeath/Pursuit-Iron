@@ -769,6 +769,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         exerciseEditor=Triple(blockId,weekday,slotId)
                     })
                 permissionHost?.let{ ownerHost ->
+                    NativeKotlinFirstBlockCalendarPanel(
+                        host=ownerHost,cycleId=draft.cycleId,
+                        athleteId=draft.athleteId,cycleRevision=draft.revision,
+                        sourceRevision=state.sourceRevision,
+                        nextSlot=currentSelection)
                     NativeKotlinApprovedBlockCalendarPanel(
                         host=ownerHost,cycleId=draft.cycleId,
                         athleteId=draft.athleteId,cycleRevision=draft.revision,

@@ -733,3 +733,39 @@ entire programmed week over the spring daylight-saving transition and reject
 unscheduled weekdays and adjacent blocks. This remains read-only; dates
 cannot issue or move a workout, override journal-resume priority, or change
 sets, loads, reps, or phase decisions.
+
+
+### First-block unsigned start preflight (native Plan)
+
+The native first-block calendar preflight is a **read-only, non-durable**
+counterpart to the explicitly approved *future-block* calendar. It refuses
+to infer original program activation from an athlete's previous workout
+timestamps, a device-local date, or a caller's "approved" flag.
+
+Under the shared owner transaction it independently reopens the current
+authored cycle, reviewed gym/athlete source, fully recovered saved coaching
+inputs and cycle signoff, the complete mixed history / prepared / issued
+census through the native next-session resolver, and any future activation
+commit state. Only a current **Week 1 / first scheduled weekday** position
+with an initial TRAINING block, matching 3–6 reviewed program weekdays,
+and no competing future activation can produce a candidate. Missing
+history, unresolved workouts, changed cycle/source, mismatched athlete,
+revoked/legacy signoff or untrusted clock refuses.
+
+A timezone-correct Monday in the current or next twelve local weeks
+projects only that first block's Week 1 days. The proposal fingerprint binds
+the canonical saved source and draft SHA digests, current signoff
+fingerprint, selected Monday, timezone and day roster; the preview grants
+**zero** authorization to issue/skip/reorder a workout, change numbers,
+mark a day missed, or write a start date. Plan visibly labels these days
+as proposed, **not activated**, and allows choosing another prospective
+week without creating a journal or consent record. Headless tests cover
+the March daylight-saving boundary, schedule and fingerprint changes, and
+invalid clocks/timezones/weekdays. This is not completion of first-block
+activation.
+
+**Still required:** a separately athlete-confirmed, immutable, owner-fenced
+initial start-date transaction, full encrypted backup/restore census, stale
+consent and reschedule policy, first-week issuance integration, historical
+program revision handling, and device acceptance. The future-block
+approval store is not reused for first-block start authority.

@@ -177,6 +177,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val approvedBlockCalendar=NativeKotlinActivatedBlockCalendarFileStore(
         root,revisionFence,localAthlete,futureActivationCommit,
         authoringSourceStore,customDraftStore)
+    // First-block dates are a separate, non-durable preflight. A future
+    // activation record can never stand in for the first block's consent.
+    private val firstBlockCalendarPreflight=NativeKotlinFirstBlockCalendarPreflight(
+        revisionFence,localAthlete,authoringSourceStore,customDraftStore,
+        customCycleSignoffs,nextCustomCycleSession,futureActivationCommit)
     private val activatedCycleSignoffs=NativeKotlinActivatedCycleSignoffFileStore(
         root,revisionFence,localAthlete,futureActivationCommit)
     private val customNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
@@ -1755,6 +1760,17 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeActivatedBlockCalendarRead.Rejected(
                 NativeActivatedBlockCalendarRefusal.NOT_AUTHORIZED)
         return approvedBlockCalendar.read(signed.ownerKey,cycleId,blockId)
+    }
+
+    /** A proposed initial Week 1 date is not an approved activation. */
+    fun reviewFirstBlockCalendarStart(
+        cycleId:String,selectedMonday:LocalDate?=null
+    ):NativeFirstBlockCalendarPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFirstBlockCalendarPreview.Rejected(
+                NativeFirstBlockCalendarRefusal.NOT_AUTHORIZED)
+        return firstBlockCalendarPreflight.review(
+            owner.ownerKey,cycleId,selectedMonday)
     }
 
     fun previewApprovedFutureBlockCalendar(

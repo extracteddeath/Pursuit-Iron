@@ -59,7 +59,8 @@ internal fun NativeKotlinFirstBlockCalendarPanel(
                     it.cycleId==cycleId &&
                         it.athleteId==athleteId &&
                         it.draftRevision==cycleRevision &&
-                        it.sourceRevision==sourceRevision
+                        it.sourceRevision==sourceRevision &&
+                        (monday==null || it.selectedMonday==monday)
                 }
                 if(plan==null)
                     Text("The saved athlete or program changed. Reopen the plan.",

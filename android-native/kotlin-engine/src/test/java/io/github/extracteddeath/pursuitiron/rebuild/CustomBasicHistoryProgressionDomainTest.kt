@@ -348,6 +348,91 @@ class CustomBasicHistoryProgressionDomainTest {
         }
     }
 
+    @Test fun unloadedBodyweightUsesVerifiedExactRepsWithoutAnyLoadOrUnit() {
+        fun plan(target:Int):CustomTrainingCycle {
+            val source=cycle(SavedProgressionMethod.BODYWEIGHT_REPS)
+            return source.copy(blocks=source.blocks.map{block ->
+                block.copy(days=block.days.map{day ->
+                    day.copy(slots=day.slots.map{slot ->
+                        slot.copy(sets=slot.sets.map{
+                            it.copy(load=DraftSetLoad.ExplicitBodyweight,
+                                exactRepTarget=target)
+                        })
+                    })
+                })
+            })
+        }
+        fun next(target:Int)=snapshot().let {day ->
+            day.copy(slots=day.slots.map{slot ->
+                slot.copy(sets=slot.sets.map{set ->
+                    set.copy(prescription=set.prescription.copy(
+                        load=DraftSetLoad.ExplicitBodyweight,
+                        exactRepTarget=target))
+                })
+            })
+        }
+        fun prior(reps:List<Int>,machine:String?=null,
+            failLast:Boolean=false):CustomCoachingHistoricalSession {
+            val weighted=completed(1,reps=reps,failed=if(failLast)setOf(1) else emptySet())
+            return weighted.copy(
+                snapshot=weighted.snapshot.copy(slots=weighted.snapshot.slots.map{slot ->
+                    slot.copy(sets=slot.sets.map{set ->
+                        set.copy(prescription=set.prescription.copy(
+                            load=DraftSetLoad.ExplicitBodyweight,exactRepTarget=8))
+                    })
+                }),
+                evidence=weighted.evidence.copy(visits=weighted.evidence.visits.map{visit ->
+                    visit.copy(prescribedLoad=DraftSetLoad.ExplicitBodyweight,
+                        actual=visit.actual?.copy(load=null,unit=null,
+                            machineInstanceId=machine))
+                }))
+        }
+        val athletePlan=plan(8)
+        val earned=review(program=athletePlan,next=next(8),
+            sessions=listOf(prior(listOf(8,7))))
+        assertTrue(earned.toString(),earned is CustomBasicHistoryResult.UnloadedReviewed)
+        val proposal=(earned as CustomBasicHistoryResult.UnloadedReviewed).candidate
+        assertEquals(listOf(9,8),proposal.proposedExactReps)
+        assertEquals(setOf(0),proposal.advancedOrdinals)
+        assertFalse(earned.maySaveProgram)
+        assertFalse(earned.mayIssueWorkout)
+        assertFalse(earned.mayModifyHistory)
+        val cap=review(program=plan(10),next=next(10),
+            sessions=listOf(prior(listOf(10,10))))
+        assertTrue(cap.toString(),cap is CustomBasicHistoryResult.UnloadedReviewed)
+        assertTrue((cap as CustomBasicHistoryResult.UnloadedReviewed)
+            .candidate.atRepCeiling)
+        assertEquals(listOf(10,10),cap.candidate.proposedExactReps)
+        val failed=review(program=athletePlan,next=next(8),
+            sessions=listOf(prior(listOf(8,7),failLast=true)))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (failed as CustomBasicHistoryResult.Rejected).reason)
+        val falselyTagged=review(program=athletePlan,next=next(8),
+            sessions=listOf(prior(listOf(8,8),machine="machine-A")))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (falselyTagged as CustomBasicHistoryResult.Rejected).reason)
+        val noExact=review(
+            program=cycle(SavedProgressionMethod.BODYWEIGHT_REPS).let{source->
+                source.copy(blocks=source.blocks.map{block->
+                    block.copy(days=block.days.map{day->
+                        day.copy(slots=day.slots.map{slot->
+                            slot.copy(sets=slot.sets.map{
+                                it.copy(load=DraftSetLoad.ExplicitBodyweight)
+                            })
+                        })
+                    })
+                })
+            },next=next(8),sessions=listOf(prior(listOf(8,8))))
+        assertEquals(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE,
+            (noExact as CustomBasicHistoryResult.Rejected).reason)
+        assertEquals(CustomBasicHistoryRefusal.NO_COMPARABLE_HISTORY,
+            (review(program=athletePlan,next=next(8).copy(weekday=2,
+                slots=next(8).slots.map{it.copy(slotId="push",sets=it.sets.map{set->
+                    set.copy(slotId="push")
+                })}),sessions=listOf(prior(listOf(8,8)))) as
+                CustomBasicHistoryResult.Rejected).reason)
+    }
+
     @Test fun sourceChangesShortSessionsTechniqueFollowupsAndLoadEditsFailClosed() {
         val changed=completed(1).let {
             it.copy(snapshot=it.snapshot.copy(stamp=it.snapshot.stamp.copy(

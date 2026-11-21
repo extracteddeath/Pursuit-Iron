@@ -51,6 +51,20 @@ data class CustomAuthoredSet(
     val amplifier: CustomSetAmplifier? = null
 )
 
+/**
+ * The athlete's persisted progression selection. Null in legacy drafts
+ * means no choice was stored; it MUST NOT be rewritten on read.
+ *
+ * These are durable names, not a second progression engine. The pure
+ * BasicProgramProgressionPlanDomain validates eligibility and maps this
+ * single field to an existing baseline or specialist progression authority.
+ * Never rename/reorder saved enum names without a versioned codec migration.
+ */
+enum class SavedProgressionMethod {
+    AUTO, DOUBLE, DYNAMIC, LADDER, LINEAR, WAVE, E1RM,
+    MANUAL, REP_TARGETS, ASSISTANCE_DOUBLE, BODYWEIGHT_REPS
+}
+
 data class CustomExerciseSlot(
     /** Stable athlete-authored identity; not an array index. */
     val slotId: String,
@@ -65,7 +79,9 @@ data class CustomExerciseSlot(
     /** Optional physical station bound to THIS authored slot (Machine A/B).
      * Null preserves legacy per-gym workout defaults. This is not a generic
      * exercise weight conversion or an already-issued workout override. */
-    val machineInstanceId: String? = null
+    val machineInstanceId: String? = null,
+    /** One saved method per exact block/day/slot, not per exercise family. */
+    val progressionMethod: SavedProgressionMethod? = null
 )
 
 data class CustomTrainingDay(

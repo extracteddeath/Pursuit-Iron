@@ -60,6 +60,15 @@ object KotlinSetNumberAuthorityDomain {
     private val maxLoad=BigDecimal("100000")
     private val zero=BigDecimal.ZERO
 
+    /** ONE physical weight value envelope for reported sets and reviewed
+     * future load candidates. The different journal/coach policies still
+     * own their own evidence and consent; this only checks numeric format.
+     * A submitted load of zero remains an allowed factual observation,
+     * whereas a future positive increment must separately exceed zero. */
+    internal fun validPhysicalLoadValue(value:BigDecimal):Boolean =
+        value>=zero && value<=maxLoad &&
+            value.stripTrailingZeros().scale()<=3
+
     /** One scale-independent identity rule for TWO immutable issued targets.
      * Never use physical numeric equality as machine A/B equivalence: the
      * equipment instance is a separate exact history identity key. */
@@ -111,8 +120,7 @@ object KotlinSetNumberAuthorityDomain {
                 val load=performed.load
                 if(load==null || performed.unit!=issuedLoad.unit)
                     return rejected(KotlinSetNumberRefusal.MISSING_OR_MISMATCHED_WEIGHT)
-                if(load<zero || load>maxLoad ||
-                    load.stripTrailingZeros().scale()>3)
+                if(!validPhysicalLoadValue(load))
                     return rejected(
                         KotlinSetNumberRefusal.INVALID_WEIGHT_RANGE_OR_PRECISION)
                 load.compareTo(issuedLoad.value)==0

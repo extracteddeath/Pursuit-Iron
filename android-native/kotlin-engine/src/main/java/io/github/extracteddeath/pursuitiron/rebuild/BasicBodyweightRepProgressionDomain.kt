@@ -34,11 +34,21 @@ data class BasicUnloadedProgressionScope(
     fun valid()=listOf(athleteId,gymId,programId,blockId,trainingDayId,exerciseId)
         .all {it.isNotBlank()}
 }
+/** Actual unweighted completed work has no physical unit or machine load. */
+data class BasicUnloadedWorkoutEvidence(
+    val workoutId:String,
+    val exerciseId:String,
+    val targetReps:RepBand,
+    val expectedWorkingSets:Int,
+    val observations:List<WorkingSetFact>,
+    val trainingDayId:String
+)
+
 data class BasicUnloadedProgressionRequest(
     val nextWorkoutId:String,
     val nextScope:BasicUnloadedProgressionScope,
     val lastScope:BasicUnloadedProgressionScope?,
-    val last:ProgressionWorkoutEvidence?,
+    val last:BasicUnloadedWorkoutEvidence?,
     val issuedWorkingSets:List<DraftSetLoad>,
     val issuedExactReps:List<Int>,
     val repBand:RepBand

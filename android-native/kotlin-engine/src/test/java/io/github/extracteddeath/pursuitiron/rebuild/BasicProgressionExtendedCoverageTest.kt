@@ -91,8 +91,8 @@ class BasicProgressionExtendedCoverageTest {
             listOf(8,8,10),listOf(8,7,10),band))
         val scope=BasicUnloadedProgressionScope("athlete","gym","program",
             "block","upper","pushup")
-        fun workout(reps:List<Int>)=ProgressionWorkoutEvidence(
-            "prior","pushup",LoadUnit.LB,band,3,
+        fun workout(reps:List<Int>)=BasicUnloadedWorkoutEvidence(
+            "prior","pushup",band,3,
             reps.mapIndexed{i,r->WorkingSetFact(i,SetOutcome.COMPLETED,
                 null,r,null,null,2)},"upper")
         val req=BasicUnloadedProgressionRequest("next",scope,scope,
@@ -121,7 +121,7 @@ class BasicProgressionExtendedCoverageTest {
             val facts = reps.mapIndexed { i, actual ->
                 WorkingSetFact(i, SetOutcome.COMPLETED, null, actual, null, null, 2)
             }
-            val last = ProgressionWorkoutEvidence("prior", "pushup", LoadUnit.LB, band, 3, facts, "upper")
+            val last = BasicUnloadedWorkoutEvidence("prior", "pushup", band, 3, facts, "upper")
             val request = BasicUnloadedProgressionRequest("next", scope, scope, last,
                 List(3) { DraftSetLoad.ExplicitBodyweight }, targets, band)
             return BasicBodyweightRepProgressionDomain.review(request) as BasicUnloadedProgressionResult.Candidate

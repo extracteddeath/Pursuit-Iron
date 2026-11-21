@@ -261,6 +261,55 @@ class CustomBasicHistoryProgressionDomainTest {
                 CustomBasicHistoryResult.Rejected).reason)
     }
 
+    @Test fun latestSourceIdentityMatrixKeepsStationVariantsAndActualSwapsIndependent() {
+        // Same cycle and stable slot: the older A visit really qualified.
+        val previousA=completed(1,week=1,machine="A")
+        val latestB=completed(2,week=2,machine="B").let{session->
+            session.copy(snapshot=session.snapshot.copy(slots=
+                session.snapshot.slots.map{it.copy(variantId="alternate-angle")}))
+        }
+        fun nextA(sessions:List<CustomCoachingHistoricalSession>)=
+            review(next=snapshot(3,machine="A"),sessions=sessions,machine="A")
+
+        // A fully verified different physical B station is independent.
+        // Its different exercise variant cannot erase previously earned A
+        // progression when the athlete returns to the original A station.
+        val verifiedB=nextA(listOf(previousA,latestB))
+        assertTrue(verifiedB.toString(),verifiedB is CustomBasicHistoryResult.Reviewed)
+        val earned=verifiedB as CustomBasicHistoryResult.Reviewed
+        assertEquals("workout-1",earned.historyWorkoutId)
+        assertEquals(listOf(n(105),n(105)),earned.candidate.proposedWorkingLoads)
+
+        // If even one of B's actual stations is unknown, skipping that visit
+        // and promoting A's older success would be unsafe.
+        val partlyUnknownB=latestB.copy(evidence=latestB.evidence.copy(visits=
+            latestB.evidence.visits.mapIndexed{index,visit->
+                if(index==1)visit.copy(actual=visit.actual?.copy(
+                    machineInstanceId=null)) else visit
+            }))
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (nextA(listOf(previousA,partlyUnknownB)) as
+                CustomBasicHistoryResult.Rejected).reason)
+
+        // A different completed exercise within the original A slot is not
+        // the same exercise; a new attachment on A has its own load evidence.
+        val actualSwapA=completed(2,week=2,machine="A").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.map{
+                    it.copy(exerciseId="substitute-press")
+                }))
+        }
+        val differentAttachmentA=completed(2,week=2,machine="A").let{session->
+            session.copy(snapshot=session.snapshot.copy(slots=
+                session.snapshot.slots.map{it.copy(attachmentId="rope")}))
+        }
+        for(recent in listOf(actualSwapA,differentAttachmentA)) {
+            assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+                (nextA(listOf(previousA,recent)) as
+                    CustomBasicHistoryResult.Rejected).reason)
+        }
+    }
+
     @Test fun sourceChangesShortSessionsTechniqueFollowupsAndLoadEditsFailClosed() {
         val changed=completed(1).let {
             it.copy(snapshot=it.snapshot.copy(stamp=it.snapshot.stamp.copy(

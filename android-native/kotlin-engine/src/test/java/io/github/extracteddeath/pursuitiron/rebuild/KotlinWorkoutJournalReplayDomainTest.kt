@@ -33,6 +33,28 @@ class KotlinWorkoutJournalReplayDomainTest {
         return applied(two,KotlinJournalOperation.Finish("finish",2))
     }
 
+    @Test fun oldFullJournalCanRecordRemainingSetsFinishAndReplayExactlyOnce() {
+        var journal=initial()
+        repeat(2048) { index ->
+            journal=applied(journal,KotlinJournalOperation.SessionNote("note-$index",
+                journal.revision,"Training"))
+        }
+        assertTrue(KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.SessionNote("extra",journal.revision,"")) is KotlinJournalDecision.Rejected)
+        assertTrue(KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.Finish("too-soon",journal.revision)) is KotlinJournalDecision.Rejected)
+        journal=applied(journal,record("first",journal.revision,"set-1",8))
+        assertTrue(KotlinWorkoutJournalDomain.reduce(journal,
+            record("edit",journal.revision,"set-1",9,"first")) is KotlinJournalDecision.Rejected)
+        journal=applied(journal,record("second",journal.revision,"set-2",10))
+        val finish=KotlinJournalOperation.Finish("finish",journal.revision)
+        journal=applied(journal,finish)
+        assertEquals(KotlinJournalReplayResult.Recovered(journal),
+            KotlinWorkoutJournalReplayDomain.verifyStoredState(journal))
+        assertEquals(KotlinJournalDecision.Proposed(journal,true),
+            KotlinWorkoutJournalDomain.reduce(journal,finish))
+    }
+
     @Test fun replaysRealCommittedReceiptsAndPreservesOriginalTargets() {
         val original=complete()
         val recovered=KotlinWorkoutJournalReplayDomain.replay(

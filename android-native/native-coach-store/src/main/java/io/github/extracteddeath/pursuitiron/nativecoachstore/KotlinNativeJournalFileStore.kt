@@ -81,7 +81,6 @@ private object NativeJournalBinary {
     private const val MAGIC = 0x50494A32 // "PIJ2" (not a legacy JS journal)
     private const val VERSION = 5
     private const val MAX_BYTES = 2_000_000
-    private const val MAX_EVENTS = 2048
 
     fun hash(raw: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(raw).joinToString("") {
@@ -100,7 +99,7 @@ private object NativeJournalBinary {
         hash(KotlinIssuedSnapshotCodec.encode(snapshot))
 
     fun encode(saved: SavedReceipts): ByteArray {
-        require(saved.receipts.size<=MAX_EVENTS)
+        require(saved.receipts.size<=KotlinWorkoutJournalDomain.MAX_RECEIPTS)
         val swapped=saved.receipts.any{
             it.operation is KotlinJournalOperation.SwapExercise
         }
@@ -236,7 +235,7 @@ private object NativeJournalBinary {
                     val revision=readLong()
                     val finishId=optional()
                     val count=readInt()
-                    if(count !in 0..MAX_EVENTS || revision!=count.toLong())
+                    if(count !in 0..KotlinWorkoutJournalDomain.MAX_RECEIPTS || revision!=count.toLong())
                         throw IOException("invalid journal receipt count")
                     val receipts=ArrayList<KotlinJournalReceipt>(count)
                     repeat(count) {

@@ -121,7 +121,10 @@ object KotlinWorkoutJournalDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val zero=BigDecimal.ZERO
     private val max=BigDecimal("100000")
-    private const val MAX_RECEIPTS=2048
+    // Preserve every legacy receipt. Once ordinary edits reach their limit,
+    // the remaining bounded slots are for unresolved work and Finish only.
+    internal const val EDIT_LIMIT = 2048
+    const val MAX_RECEIPTS = EDIT_LIMIT + 256 + 1
     const val MAX_SESSION_NOTE_CHARS=2000
     fun validSessionNote(text:String):Boolean =
         text.length<=MAX_SESSION_NOTE_CHARS && text.none {
@@ -179,7 +182,11 @@ object KotlinWorkoutJournalDomain {
             return KotlinJournalDecision.Rejected(KotlinJournalRefusal.STALE_REVISION)
         if(journal.finishedByEventId!=null)
             return KotlinJournalDecision.Rejected(KotlinJournalRefusal.FINISHED)
-        if(journal.receipts.size>=MAX_RECEIPTS)
+        val firstObservation = operation is KotlinJournalOperation.RecordSet &&
+            operation.setKey !in journal.effectiveSets && operation.correctsEventId == null
+        if(journal.receipts.size>=MAX_RECEIPTS ||
+            journal.receipts.size>=EDIT_LIMIT && !firstObservation &&
+                operation !is KotlinJournalOperation.Finish)
             return KotlinJournalDecision.Rejected(KotlinJournalRefusal.INVALID_VALUES)
         val nextRevision=journal.revision+1
         val nextReceipt=KotlinJournalReceipt(nextRevision,operation)

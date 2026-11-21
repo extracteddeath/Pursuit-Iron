@@ -27,7 +27,6 @@ sealed interface KotlinJournalReplayResult {
 }
 
 object KotlinWorkoutJournalReplayDomain {
-    private const val MAX_RECEIPTS = 2048
 
     fun replay(
         snapshot: KotlinStagedWorkout,
@@ -42,7 +41,7 @@ object KotlinWorkoutJournalReplayDomain {
             return KotlinJournalReplayResult.Rejected(
                 KotlinJournalReplayRefusal.INVALID_ISSUED_IDENTITY)
         }
-        if(committedReceipts.size>MAX_RECEIPTS)
+        if(committedReceipts.size>KotlinWorkoutJournalDomain.MAX_RECEIPTS)
             return KotlinJournalReplayResult.Rejected(
                 KotlinJournalReplayRefusal.TOO_MANY_RECEIPTS)
         if(expectedRevision<0 || expectedRevision!=committedReceipts.size.toLong())

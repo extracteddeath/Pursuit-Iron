@@ -143,7 +143,8 @@ object CustomWorkoutJournalDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val sha256=Regex("^[a-f0-9]{64}$")
     private val maxWeight=BigDecimal("100000")
-    private const val MAX_EVENTS=2048
+    // At most 256 main sets, each with up to five separately logged stages.
+    const val MAX_RECEIPTS = KotlinWorkoutJournalDomain.EDIT_LIMIT + 256 * 6 + 1
     const val MAX_SESSION_NOTE_CHARS=2000
     fun validSessionNote(text:String):Boolean =
         text.length<=MAX_SESSION_NOTE_CHARS && text.none {
@@ -200,7 +201,11 @@ object CustomWorkoutJournalDomain {
         if(prior.finishedByEventId!=null)
             return CustomWorkoutJournalDecision.Rejected(
                 CustomWorkoutJournalRefusal.FINISHED)
-        if(prior.receipts.size>=MAX_EVENTS)
+        val firstObservation = operation is CustomWorkoutJournalOperation.Record &&
+            operation.visit !in prior.effectiveVisits && operation.correctsEventId == null
+        if(prior.receipts.size>=MAX_RECEIPTS ||
+            prior.receipts.size>=KotlinWorkoutJournalDomain.EDIT_LIMIT && !firstObservation &&
+                operation !is CustomWorkoutJournalOperation.Finish)
             return CustomWorkoutJournalDecision.Rejected(
                 CustomWorkoutJournalRefusal.TOO_MANY_EVENTS)
 

@@ -132,6 +132,12 @@ object CustomSavedHistoryCorrectionDomain {
         val hasLaterStage=savedFollowKeys.any{it.stage>operation.visit.stage}
         val load = when (operation.visit.part) {
             CustomWorkoutVisitPart.MAIN -> {
+                // Invalid physical units, missing weight or impossible RIR
+                // are malformed observations, not dependency changes.
+                if(!CustomWorkoutJournalDomain.actualValid(
+                        target.prescription.load,operation.outcome,
+                        operation.performed))
+                    return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
                 if (operation.outcome == KotlinJournalSetOutcome.COMPLETED &&
                     amplifier != null && followed == null)
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
@@ -140,12 +146,16 @@ object CustomSavedHistoryCorrectionDomain {
                 if (operation.outcome != KotlinJournalSetOutcome.COMPLETED &&
                     savedFollowKeys.any{current(state,it)?.outcome!=KotlinJournalSetOutcome.SKIPPED})
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                if(amplifier?.kind==CustomAmplifierKind.MYO_REPS &&
-                    amplifier.followUpRounds>1 && savedFollowKeys.isNotEmpty() &&
-                    (main.performed?.load!=operation.performed?.load ||
-                        main.performed?.unit!=operation.performed?.unit ||
-                        main.performed?.machineInstanceId!=
-                            operation.performed?.machineInstanceId))
+                // The physical activation remains the anchor for EVERY
+                // completed dependent technique, not only staged myo-reps.
+                // Decimal formatting (20 vs 20.000) is not a load change.
+                // After the dependent visits are explicitly skipped, a
+                // skipped/failed main may still be corrected independently.
+                if (operation.outcome==KotlinJournalSetOutcome.COMPLETED &&
+                    savedFollowKeys.any {
+                        current(state,it)?.outcome==KotlinJournalSetOutcome.COMPLETED
+                    } && !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                        main.performed,operation.performed))
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
                 target.prescription.load
             }
@@ -156,7 +166,52 @@ object CustomSavedHistoryCorrectionDomain {
                     operation.visit.stage !in 1..amplifier.followUpRounds ||
                     hasLaterStage)
                     return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
-                amplifier.followUpLoad ?: target.prescription.load
+                // Same canonical authored stage policy as the live journal:
+                // a second drop is NEVER checked against the first drop's
+                // target or mistaken for another straight working set.
+                val stageTarget=AdvancedAmplifierProtocolDomain.followUpLoadForStage(
+                    amplifier,target.prescription.load,operation.visit.stage)
+                if(operation.outcome==KotlinJournalSetOutcome.COMPLETED) {
+                    val completed=operation.performed
+                        ?:return reject(CustomSavedCorrectionRefusal.INVALID_VALUES)
+                    val activation=main.performed
+                        ?:return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                    val sameLoadTechnique=amplifier.kind==
+                        CustomAmplifierKind.LENGTHENED_PARTIALS ||
+                        amplifier.followUpRounds>1 && amplifier.kind in setOf(
+                            CustomAmplifierKind.MYO_REPS,CustomAmplifierKind.REST_PAUSE,
+                            CustomAmplifierKind.CLUSTER)
+                    if(sameLoadTechnique &&
+                        !CustomWorkoutExecutionDomain.sameActualLoadAndStation(
+                            activation,completed))
+                        return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                    if(amplifier.kind==CustomAmplifierKind.DROP_SET) {
+                        if(!AdvancedAmplifierProtocolDomain.validDropSequence(
+                                target.prescription.load,amplifier))
+                            return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                        val previous=if(operation.visit.stage==1)main
+                            else current(state,CustomWorkoutVisitKey(
+                                operation.visit.setKey,
+                                CustomWorkoutVisitPart.FOLLOW_UP,
+                                operation.visit.stage-1))
+                        val authored=stageTarget as? DraftSetLoad.Verified
+                            ?:return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                        val previousLoad=previous?.performed?.load
+                        val actualLoad=completed.load
+                        if(previous?.outcome!=KotlinJournalSetOutcome.COMPLETED ||
+                            previousLoad==null || actualLoad==null ||
+                            previous?.performed?.unit!=authored.unit ||
+                            completed.unit!=authored.unit ||
+                            previous?.performed?.machineInstanceId!=
+                                activation.machineInstanceId ||
+                            completed.machineInstanceId!=activation.machineInstanceId ||
+                            previousLoad.compareTo(authored.value)<=0 ||
+                            actualLoad.signum()<=0 ||
+                            actualLoad.compareTo(previousLoad)>=0)
+                            return reject(CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER)
+                    }
+                }
+                stageTarget
             }
         }
         if (!CustomWorkoutJournalDomain.actualValid(

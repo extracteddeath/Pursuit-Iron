@@ -332,4 +332,132 @@ class CustomSavedHistoryCorrectionDomainTest {
         assertEquals(j,corrected.originalFinishedJournal)
     }
 
+    /** All receipts are real journal reductions; only the saved-correction
+     * logic is under test, never a synthetic forged effective map. */
+    private fun finishedStaged(kind:CustomAmplifierKind):CustomWorkoutJournalDraft {
+        val template=finished().snapshot
+        val originalSlot=template.slots.single()
+        val authored=originalSlot.sets.single()
+        val amp=when(kind) {
+            CustomAmplifierKind.DROP_SET -> CustomSetAmplifier(
+                kind,6,15,DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.DUMBBELL_PER_HAND,BigDecimal("15")),
+                followUpActiveSeconds=30,followUpRounds=2,
+                secondDropLoad=DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.DUMBBELL_PER_HAND,BigDecimal("10")))
+            CustomAmplifierKind.MYO_REPS ->
+                CustomSetAmplifier(kind,5,20,followUpActiveSeconds=60,
+                    followUpRounds=3)
+            CustomAmplifierKind.REST_PAUSE ->
+                CustomSetAmplifier(kind,3,20,followUpActiveSeconds=40,
+                    followUpRounds=2)
+            CustomAmplifierKind.LENGTHENED_PARTIALS ->
+                CustomSetAmplifier(kind,4,0,followUpActiveSeconds=20)
+            CustomAmplifierKind.CLUSTER ->
+                CustomSetAmplifier(kind,2,25,followUpActiveSeconds=50,
+                    followUpRounds=2)
+        }
+        val updatedSet=authored.copy(prescription=authored.prescription.copy(
+            amplifier=amp))
+        val updatedSnapshot=template.copy(slots=listOf(originalSlot.copy(
+            sets=listOf(updatedSet))))
+        var journal=CustomWorkoutJournalDomain.begin(
+            "corrected-${kind.name.lowercase()}",updatedSnapshot,"a".repeat(64))
+        fun record(event:String,visit:CustomWorkoutVisitKey,
+                   load:String,reps:Int) {
+            val result=CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Record(
+                    event,journal.revision,visit,KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(BigDecimal(load),LoadUnit.LB,reps,2)))
+            assertTrue(result.toString(),result is CustomWorkoutJournalDecision.Proposed)
+            journal=(result as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        record("main-stage",main,"20",13)
+        val stageLoads=if(kind==CustomAmplifierKind.DROP_SET)
+            listOf("15" to 6,"10" to 6)
+        else if(kind==CustomAmplifierKind.MYO_REPS)
+            listOf("20" to 5,"20" to 4,"20" to 3)
+        else if(kind==CustomAmplifierKind.REST_PAUSE)
+            listOf("20" to 3,"20" to 3)
+        else if(kind==CustomAmplifierKind.CLUSTER)
+            listOf("20" to 2,"20" to 2)
+        else listOf("20" to 4)
+        stageLoads.forEachIndexed{index,(weight,reps)->
+            record("stage-${index+1}",CustomWorkoutVisitKey(
+                setKey,CustomWorkoutVisitPart.FOLLOW_UP,index+1),weight,reps)
+        }
+        val final=CustomWorkoutJournalDomain.reduce(journal,
+            CustomWorkoutJournalOperation.Finish(
+                "finish-staged",journal.revision))
+        assertTrue(final.toString(),final is CustomWorkoutJournalDecision.Proposed)
+        return (final as CustomWorkoutJournalDecision.Proposed).draft
+    }
+
+    @Test fun secondDropSavedCorrectionCannotReplaceReductionWithAnIncrease() {
+        val original=finishedStaged(CustomAmplifierKind.DROP_SET)
+        val initial=CustomSavedHistoryCorrectionDomain.begin(original)
+        val second=CustomWorkoutVisitKey(
+            setKey,CustomWorkoutVisitPart.FOLLOW_UP,2)
+        val decrease=correction("correct-drop2",0,second,"stage-2",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("12"),LoadUnit.LB,7,2))
+        val edited=accept(initial,decrease)
+        assertEquals(CustomSavedCorrectionDecision.Proposed(edited,false),
+            CustomSavedHistoryCorrectionDomain.verifyStoredState(edited))
+        val facts=(CustomSavedHistoryEvidenceDomain.projectSaved(edited)
+            as CustomSavedHistoryProjectionResult.Candidate).corrected.evidence
+        assertEquals(BigDecimal("12"),facts.visits.last().actual?.load)
+        assertEquals(BigDecimal("15"),facts.visits[
+            facts.visits.size-2].actual?.load)
+        val increase=decrease.copy(eventId="wrong-drop",
+            performed=KotlinPerformedSet(BigDecimal("16"),LoadUnit.LB,7,2))
+        assertEquals(CustomSavedCorrectionDecision.Rejected(
+            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(initial,increase))
+        assertEquals(original,edited.originalFinishedJournal)
+    }
+
+    @Test fun finishedSameLoadTechniquesCannotBeRestoredOnAnotherWeight() {
+        for(kind in listOf(CustomAmplifierKind.MYO_REPS,
+            CustomAmplifierKind.REST_PAUSE,CustomAmplifierKind.CLUSTER,
+            CustomAmplifierKind.LENGTHENED_PARTIALS)) {
+            val original=finishedStaged(kind)
+            val base=CustomSavedHistoryCorrectionDomain.begin(original)
+            val finalStage=(original.effectiveVisits.keys.filter {
+                it.part==CustomWorkoutVisitPart.FOLLOW_UP
+            }.maxBy{it.stage})
+            val prior=(original.effectiveVisits.getValue(finalStage).operation
+                as CustomWorkoutJournalOperation.Record)
+            val edited=correction("invalid-follow-load",0,finalStage,
+                prior.eventId,KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal("19"),LoadUnit.LB,3,2))
+            assertEquals(kind.name,CustomSavedCorrectionDecision.Rejected(
+                CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+                CustomSavedHistoryCorrectionDomain.reduce(base,edited))
+        }
+    }
+
+    @Test fun savedActivationCorrectionsCompareNumericLoadAndExactStationIdentity() {
+        val original=finishedStaged(CustomAmplifierKind.MYO_REPS)
+        val base=CustomSavedHistoryCorrectionDomain.begin(original)
+        val same=correction("same-numeric-load",0,main,"main-stage",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20.000"),LoadUnit.LB,14,1))
+        val accepted=accept(base,same)
+        assertEquals(accepted,(CustomSavedHistoryCorrectionDomain.replay(
+            original,accepted.receipts,accepted.correctionRevision)
+                as CustomSavedCorrectionDecision.Proposed).state)
+        val changed=same.copy(eventId="different-load",
+            performed=KotlinPerformedSet(BigDecimal("21"),LoadUnit.LB,14,1))
+        assertEquals(CustomSavedCorrectionDecision.Rejected(
+            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(base,changed))
+        val station=same.copy(eventId="different-station",
+            performed=KotlinPerformedSet(BigDecimal("20"),LoadUnit.LB,
+                14,1,machineInstanceId="machine-b"))
+        assertEquals(CustomSavedCorrectionDecision.Rejected(
+            CustomSavedCorrectionRefusal.INCONSISTENT_AMPLIFIER),
+            CustomSavedHistoryCorrectionDomain.reduce(base,station))
+    }
+
 }

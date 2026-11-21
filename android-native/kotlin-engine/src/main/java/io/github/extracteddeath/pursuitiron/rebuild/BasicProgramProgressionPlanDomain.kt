@@ -113,7 +113,6 @@ object BasicProgramProgressionPlanDomain {
             val sameWeights=bodyweight || values.all{it.compareTo(values.first())==0}
             val assistance=loaded && unitBasis.single().second==
                 LoadBasis.ASSISTANCE_COUNTERWEIGHT
-            val baseEligible=bands.size==1 && (bodyweight || sameWeights)
             val authored=cycle.weekOverrides[block.blockId].orEmpty().filter {
                 it.weekday==day.weekday && it.slotId==slot.slotId
             }.map {it.weekInBlock}.toSet()
@@ -181,15 +180,15 @@ object BasicProgramProgressionPlanDomain {
                     strategy=null
                     note="Add one approved exact bodyweight rep target at a time; never invent a load."
                 }
-                assistance -> {
-                    route=ProgramProgressionRoute.BASIC_WEIGHTED
-                    strategy=BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
-                    note="Earn one verified lower counterweight after all straight work reaches the upper rep bound."
-                }
                 requested!=null -> {
                     route=ProgramProgressionRoute.BASIC_WEIGHTED
                     strategy=requested
                     note="Source-selected, explicit basic progression; no automatic load or target changes."
+                }
+                assistance -> {
+                    route=ProgramProgressionRoute.BASIC_WEIGHTED
+                    strategy=BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION
+                    note="Earn one verified lower counterweight after all straight work reaches the upper rep bound."
                 }
                 block.phase==TrainingPhase.STRENGTH &&
                     slot.role==ComposerRole.PRIMARY -> {

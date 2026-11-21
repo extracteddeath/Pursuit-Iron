@@ -213,7 +213,7 @@ object CustomBasicHistoryProgressionDomain {
             // do NOT skip past that ambiguous missed work to an older win.
             if(observedMachines.size==1 &&
                 normalizedMachine !in observedMachines &&
-                visits.all{it.actual!=null})
+                visits.all{it.actual?.machineInstanceId!=null})
                 continue
             if(observedMachines.size>1 ||
                 (observedMachines.isNotEmpty() &&

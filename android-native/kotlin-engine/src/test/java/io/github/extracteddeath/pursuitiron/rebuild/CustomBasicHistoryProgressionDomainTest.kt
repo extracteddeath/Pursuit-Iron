@@ -195,6 +195,21 @@ class CustomBasicHistoryProgressionDomainTest {
             sessions=listOf(priorA,unverified),machine="A")
         assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
             (result as CustomBasicHistoryResult.Rejected).reason)
+
+        // Mixed known/unknown actual station within the latest visit cannot
+        // be skipped as if all sets were verified on B. That would let the
+        // older A workout earn an unapproved increase.
+        val mixed=completed(3,week=3,machine="B").let{session->
+            session.copy(evidence=session.evidence.copy(visits=
+                session.evidence.visits.mapIndexed{index,visit->
+                    if(index==1) visit.copy(actual=visit.actual?.copy(
+                        machineInstanceId=null)) else visit
+                }))
+        }
+        val mixedReview=review(next=snapshot(4,machine="A"),
+            sessions=listOf(priorA,mixed),machine="A")
+        assertEquals(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE,
+            (mixedReview as CustomBasicHistoryResult.Rejected).reason)
     }
 
     @Test fun programDayAndAuthoredWeekOverridesCannotBorrowOtherNumericalOwners() {

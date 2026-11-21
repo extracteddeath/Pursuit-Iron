@@ -216,7 +216,7 @@ object CoachFirstProgramDraftConversionDomain {
                             BasicProgramProgressionPlanDomain.savedChoice(decision))
                     }))
                 }))
-            )}
+            }
         ))
         // Re-review the identical cycle structure AFTER freezing choices,
         // using the same equipment and catalog sources. This refuses a

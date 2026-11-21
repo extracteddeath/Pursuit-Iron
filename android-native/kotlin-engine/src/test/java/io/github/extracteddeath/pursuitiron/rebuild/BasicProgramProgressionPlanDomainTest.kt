@@ -215,6 +215,58 @@ class BasicProgramProgressionPlanDomainTest {
         assertEquals(NativeProgressionStyle.AUTO,auto.assignments.single().selectedStyle)
     }
 
+    @Test fun savedMethodBeatsTransientPreviewAndSurvivesBlockDayIdentity() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val cycle=cycle(block(slots=listOf(slot().copy(
+            progressionMethod=SavedProgressionMethod.LADDER))))
+        val first=BasicProgramProgressionPlanDomain.review(cycle)
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.REP_LADDER_PROGRESSION,
+            first.assignments.single().basicStrategy)
+        assertEquals(SavedProgressionMethod.LADDER,
+            first.assignments.single().savedMethod)
+        assertEquals(SavedProgressionMethod.LADDER,
+            BasicProgramProgressionPlanDomain.savedChoice(first.assignments.single()))
+        assertTrue(BasicProgramProgressionPlanDomain.review(
+            cycle,selectedStrategies=mapOf(
+                key to BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION))
+            is ProgramProgressionPlan.Refused)
+        // Explicitly changing the authored slot is the only way to select
+        // a new progression; an ephemeral call cannot trump disk history.
+        val revised=cycle.copy(blocks=listOf(block(
+            slots=listOf(slot().copy(
+                progressionMethod=SavedProgressionMethod.DOUBLE)))))
+        val updated=BasicProgramProgressionPlanDomain.review(revised)
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            updated.assignments.single().basicStrategy)
+    }
+
+    @Test fun savedBodyweightAndMachineAssistanceCannotBeSwappedAcrossEquipment() {
+        val bw=slot(sets=listOf(CustomAuthoredSet(
+            DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
+            RepBand(8,12),2,45,90))).copy(progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
+        val loaded=slot(sets=listOf(working(),working())).copy(
+            progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
+        val r=BasicProgramProgressionPlanDomain.review(
+            cycle(block(slots=listOf(bw)))) as ProgramProgressionPlan.Ready
+        assertEquals(ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS,
+            r.assignments.single().route)
+        assertTrue(BasicProgramProgressionPlanDomain.review(
+            cycle(block(slots=listOf(loaded))))
+            is ProgramProgressionPlan.Refused)
+        val assistance=slot(sets=listOf(working("40",assisted=true),
+            working("40",assisted=true))).copy(
+                progressionMethod=SavedProgressionMethod.ASSISTANCE_DOUBLE)
+        val a=BasicProgramProgressionPlanDomain.review(
+            cycle(block(slots=listOf(assistance))))
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.ASSISTANCE_DOUBLE_PROGRESSION,
+            a.assignments.single().basicStrategy)
+        assertEquals(SavedProgressionMethod.ASSISTANCE_DOUBLE,
+            BasicProgramProgressionPlanDomain.savedChoice(a.assignments.single()))
+    }
+
     @Test fun techniqueFollowUpsNeverCreateNewIndependentLoadProgressions() {
         val amplifier=CustomSetAmplifier(
             CustomAmplifierKind.MYO_REPS,4,20,

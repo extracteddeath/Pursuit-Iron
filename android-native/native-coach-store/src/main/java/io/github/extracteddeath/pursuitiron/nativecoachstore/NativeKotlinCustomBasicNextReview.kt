@@ -58,9 +58,10 @@ class NativeKotlinCustomBasicNextReview(
             NativeCustomBasicNextReadResult.Rejected(reason)
         if(listOf(ownerKey,cycleId,slotId,nextWorkoutId).any{!id.matches(it)} ||
             absoluteWeek !in 1..104 || weekday !in 0..6 ||
-            maximumAuthorizedIncrement<=BigDecimal.ZERO ||
-            maximumAuthorizedIncrement>BigDecimal("100000") ||
-            maximumAuthorizedIncrement.stripTrailingZeros().scale()>3)
+            // The engine's single number authority validates the exact
+            // physical envelope for non-manual progression. Keep the native
+            // owner input gate structural instead of duplicating that policy.
+            maximumAuthorizedIncrement<=BigDecimal.ZERO)
             return refuse(NativeCustomBasicNextRefusal.INVALID_SCOPE)
         return runCatching {
             fence.withOwnerTransaction(ownerKey) {

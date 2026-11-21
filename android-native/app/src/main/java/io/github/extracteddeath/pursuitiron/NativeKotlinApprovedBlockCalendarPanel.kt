@@ -76,8 +76,8 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
                 NativeCustomDraftReadResult.Found)?.draft
             // A stale open Plan screen cannot offer a new start date on the
             // current owner's newer cycle revision. Reopen the saved plan.
-            if(applied?.cycleId!=cycleId ||
-                currentDraft?.revision!=cycleRevision ||
+            if(applied?.cycleId!=cycleId || currentDraft==null ||
+                currentDraft.revision!=cycleRevision ||
                 currentDraft.athleteId!=athleteId)
                 Triple(null,null,null)
             else {

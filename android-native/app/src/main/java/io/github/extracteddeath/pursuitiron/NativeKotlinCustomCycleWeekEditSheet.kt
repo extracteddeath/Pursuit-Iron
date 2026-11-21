@@ -14,7 +14,9 @@ private fun CustomAuthoredSet.editDescription(): String {
         DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
         is DraftSetLoad.Verified -> "${load.value.toPlainString()} ${load.unit} · ${kotlinLoadBasisLabel(load.basis)}"
     }
-    return "${type.editLabel()} · ${loadText(load)} · ${reps.minimum}–${reps.maximum} reps · RIR ${targetRir ?: "unset"} · ${activeSeconds}s work / ${restSeconds}s rest"+
+    val displayedReps=exactRepTarget?.let { "$it target reps (${reps.minimum}–${reps.maximum} range)" }
+        ?: "${reps.minimum}–${reps.maximum} reps"
+    return "${type.editLabel()} · ${loadText(load)} · $displayedReps · RIR ${targetRir ?: "unset"} · ${activeSeconds}s work / ${restSeconds}s rest"+
         (amplifier?.let { amp -> " · ${amp.kind.editLabel()} · ${amp.followUpReps} follow-up reps / ${amp.followUpRestSeconds}s rest / ${amp.followUpActiveSeconds?.let{"${it}s extra work"}?:"extra work time unset"}"+
             (amp.followUpLoad?.let { " · ${loadText(it)}" } ?: " · same load") } ?: "")
 }

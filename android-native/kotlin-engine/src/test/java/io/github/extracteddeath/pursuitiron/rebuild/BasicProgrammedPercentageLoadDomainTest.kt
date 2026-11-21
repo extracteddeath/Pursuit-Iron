@@ -92,7 +92,7 @@ class BasicProgrammedPercentageLoadDomainTest {
 
     @Test fun decimalValuesBeyondThreePlacesUseDownOnlySearchEnvelope() {
         val stock=VerifiedLoadStock.Stack(LoadUnit.LB,
-            LoadBasis.MACHINE_STACK,n("0.001"),n("0.001"),n("300"))
+            LoadBasis.MACHINE_STACK,n("60"),n("0.001"),n("70"))
         val step=listOf(BasicProgrammedWeek(1,n("33.333"),3,RepBand(6,8)))
         val r=BasicProgrammedPercentageLoadDomain.review(request(
             tm="200.001",weeks=step,stock=stock))

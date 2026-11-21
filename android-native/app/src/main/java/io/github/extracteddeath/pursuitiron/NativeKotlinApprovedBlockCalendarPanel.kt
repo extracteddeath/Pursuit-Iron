@@ -72,8 +72,14 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
         val actual=withContext(Dispatchers.IO) {
             val commit=host.readFutureBlockActivationCommit()
             val applied=(commit as? NativeFutureCommitReview.Applied)?.context
-            if(applied?.cycleId!=cycleId)
-                Triple(commit,null,null)
+            val currentDraft=(host.readCustomCycleDraft(cycleId) as?
+                NativeCustomDraftReadResult.Found)?.draft
+            // A stale open Plan screen cannot offer a new start date on the
+            // current owner's newer cycle revision. Reopen the saved plan.
+            if(applied?.cycleId!=cycleId ||
+                currentDraft?.revision!=cycleRevision ||
+                currentDraft.athleteId!=athleteId)
+                Triple(null,null,null)
             else {
                 val source=(host.readCustomAuthoringSource() as?
                     NativeAuthoringSourceRead.Found)?.source
@@ -111,7 +117,7 @@ internal fun NativeKotlinApprovedBlockCalendarPanel(
         ?.takeIf{it.cycleId==cycleId}
     val existing=(saved as? NativeActivatedBlockCalendarRead.Found)
         ?.calendar?.takeIf{it.athleteId==athleteId &&
-            it.cycleId==cycleId &&
+            it.cycleId==cycleId && it.draftRevision==cycleRevision &&
             it.sourceRevision==sourceRevision}
     val nextWeekAndDay=when(nextSlot) {
         is NativeCustomNextCycleSlot.Next->nextSlot.absoluteWeek to nextSlot.weekday

@@ -140,7 +140,10 @@ class BasicProgramProgressionPlanDomainTest {
         assertEquals(ProgramProgressionRoute.MANUAL,manual.assignments.single().route)
         assertEquals(BasicProgressionStrategy.MANUAL_LOGGING,
             manual.assignments.single().basicStrategy)
-        val reps=BasicProgramProgressionPlanDomain.review(source,
+        val repsSource=cycle(block(slots=listOf(slot(sets=List(2){
+            working().copy(exactRepTarget=8)
+        }))))
+        val reps=BasicProgramProgressionPlanDomain.review(repsSource,
             selectedStrategies=mapOf(key to BasicProgressionStrategy.REP_TARGET_PROGRESSION))
             as ProgramProgressionPlan.Ready
         assertEquals(BasicProgressionStrategy.REP_TARGET_PROGRESSION,
@@ -164,8 +167,8 @@ class BasicProgramProgressionPlanDomainTest {
 
     @Test fun explicitAssistedRepOnlyNeverGetsOverriddenByDecrementStrategy() {
         val key=ProgramProgressionSlotKey("block",0,"slot")
-        val ass=slot(sets=listOf(working("40",assisted=true),
-            working("40",assisted=true)))
+        val ass=slot(sets=listOf(working("40",assisted=true).copy(exactRepTarget=8),
+            working("40",assisted=true).copy(exactRepTarget=8)))
         val result=BasicProgramProgressionPlanDomain.review(
             cycle(block(slots=listOf(ass))),
             selectedStrategies=mapOf(key to BasicProgressionStrategy.REP_TARGET_PROGRESSION))
@@ -192,8 +195,13 @@ class BasicProgramProgressionPlanDomainTest {
                 BasicProgressionStrategy.REP_LADDER_PROGRESSION,
             NativeProgressionStyle.LINEAR to
                 BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION)) {
+            val selectedSource=if(style==NativeProgressionStyle.LADDER)
+                cycle(block(phase=TrainingPhase.STRENGTH,
+                    slots=listOf(slot(role=ComposerRole.PRIMARY,
+                        sets=List(2){working().copy(exactRepTarget=8)}))))
+            else source
             val response=BasicProgramProgressionPlanDomain.review(
-                source,selectedStyles=mapOf(key to style))
+                selectedSource,selectedStyles=mapOf(key to style))
                 as ProgramProgressionPlan.Ready
             assertEquals(expected,response.assignments.single().basicStrategy)
             assertEquals(style,response.assignments.single().selectedStyle)
@@ -358,9 +366,55 @@ class BasicProgramProgressionPlanDomainTest {
             is ProgramProgressionPlan.Refused)
     }
 
+    @Test fun sourceReadinessRequiresExactTargetsForSelectedRepModes() {
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val unset=cycle(block())
+        assertTrue(BasicProgramProgressionPlanDomain.review(unset,
+            selectedStrategies=mapOf(key to
+                BasicProgressionStrategy.REP_TARGET_PROGRESSION))
+            is ProgramProgressionPlan.Refused)
+        assertTrue(BasicProgramProgressionPlanDomain.review(unset,
+            selectedStyles=mapOf(key to NativeProgressionStyle.LADDER))
+            is ProgramProgressionPlan.Refused)
+        for(method in listOf(SavedProgressionMethod.REP_TARGETS,
+            SavedProgressionMethod.LADDER)) {
+            val noTargets=cycle(block(slots=listOf(slot().copy(
+                progressionMethod=method))))
+            assertTrue(BasicProgramProgressionPlanDomain.review(noTargets)
+                is ProgramProgressionPlan.Refused)
+            val outOfRange=cycle(block(slots=listOf(slot(sets=List(2){
+                working().copy(exactRepTarget=11)
+            }).copy(progressionMethod=method))))
+            assertTrue(BasicProgramProgressionPlanDomain.review(outOfRange)
+                is ProgramProgressionPlan.Refused)
+            val exact=cycle(block(slots=listOf(slot(sets=List(2){
+                working().copy(exactRepTarget=8)
+            }).copy(progressionMethod=method))))
+            val ready=BasicProgramProgressionPlanDomain.review(exact)
+                as ProgramProgressionPlan.Ready
+            assertEquals(method,ready.assignments.single().savedMethod)
+        }
+        val bw=slot(sets=List(2){CustomAuthoredSet(
+            DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
+            RepBand(8,12),2,45,90)})
+            .copy(progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
+        assertTrue(BasicProgramProgressionPlanDomain.review(
+            cycle(block(slots=listOf(bw))))
+            is ProgramProgressionPlan.Refused)
+        assertEquals(ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS,
+            assignment(cycle(block(slots=listOf(bw.copy(sets=bw.sets.map{
+                it.copy(exactRepTarget=9)
+            }))))).route)
+        // Without a named rep-target mode, ordinary baseline progression
+        // still accepts a valid 6–10 range and never invents exact targets.
+        assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
+            assignment(unset).basicStrategy)
+    }
+
     @Test fun savedMethodBeatsTransientPreviewAndSurvivesBlockDayIdentity() {
         val key=ProgramProgressionSlotKey("block",0,"slot")
-        val cycle=cycle(block(slots=listOf(slot().copy(
+        val cycle=cycle(block(slots=listOf(slot(
+            sets=List(2){working().copy(exactRepTarget=8)}).copy(
             progressionMethod=SavedProgressionMethod.LADDER))))
         val first=BasicProgramProgressionPlanDomain.review(cycle)
             as ProgramProgressionPlan.Ready
@@ -388,7 +442,8 @@ class BasicProgramProgressionPlanDomainTest {
     @Test fun savedBodyweightAndMachineAssistanceCannotBeSwappedAcrossEquipment() {
         val bw=slot(sets=listOf(CustomAuthoredSet(
             DraftSetType.WORKING,DraftSetLoad.ExplicitBodyweight,
-            RepBand(8,12),2,45,90))).copy(progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
+            RepBand(8,12),2,45,90,exactRepTarget=8))).copy(
+                progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
         val loaded=slot(sets=listOf(working(),working())).copy(
             progressionMethod=SavedProgressionMethod.BODYWEIGHT_REPS)
         val r=BasicProgramProgressionPlanDomain.review(

@@ -34,23 +34,26 @@ private data class CustomSetFields(
     val extraWork: String = "",
     val extraLoad: String = "",
     val extraRounds: String = "1",
-    val secondDropLoad: String = ""
+    val secondDropLoad: String = "",
+    val exactRepTarget: String = ""
 )
 
 // Only unsaved editor text is Bundle-restored. It never certifies physical
 // stock, source validity, a swap, or an actual workout receipt.
 private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>,String>(
-    save = { state -> listOf("v2") + state.value.flatMap { field ->
+    save = { state -> listOf("v3") + state.value.flatMap { field ->
         listOf(field.type.name,field.weight,field.minimum,field.maximum,
             field.rir,field.seconds,field.rest,field.amplifier?.name.orEmpty(),
             field.extraReps,field.extraRest,field.extraWork,field.extraLoad,
-            field.extraRounds,field.secondDropLoad)
+            field.extraRounds,field.secondDropLoad,field.exactRepTarget)
     } },
     restore = { serialized ->
-        val newVersion=serialized.firstOrNull()=="v2"
-        val rows=if(newVersion)serialized.drop(1).chunked(14)
-            else serialized.chunked(13)
-        rows.filter { it.size==(if(newVersion)14 else 13) }.take(20).map { row ->
+        val schema=serialized.firstOrNull()
+        val columns=when(schema){"v3"->15;"v2"->14;else->13}
+        val values=if(schema=="v3"||schema=="v2")serialized.drop(1)
+            else serialized
+        val rows=values.chunked(columns)
+        rows.filter { it.size==columns }.take(20).map { row ->
             CustomSetFields(
                 type=DraftSetType.entries.firstOrNull { it.name==row[0] }
                     ?:DraftSetType.WORKING,
@@ -61,7 +64,8 @@ private val customSetFieldsSaver = listSaver<MutableState<List<CustomSetFields>>
                 },
                 extraReps=row[8],extraRest=row[9],extraWork=row[10],
                 extraLoad=row[11],extraRounds=row[12],
-                secondDropLoad=row.getOrNull(13).orEmpty())
+                secondDropLoad=row.getOrNull(13).orEmpty(),
+                exactRepTarget=row.getOrNull(14).orEmpty())
         }.ifEmpty { listOf(CustomSetFields()) }.let { mutableStateOf(it) }
     }
 )
@@ -73,6 +77,7 @@ private fun CustomAuthoredSet.toFields(): CustomSetFields =
             ?.value?.toPlainString().orEmpty(),
         minimum = reps.minimum.toString(),
         maximum = reps.maximum.toString(),
+        exactRepTarget = exactRepTarget?.toString().orEmpty(),
         rir = targetRir?.toString().orEmpty(),
         seconds = activeSeconds.toString(),
         rest = restSeconds.toString(),
@@ -116,17 +121,23 @@ private fun parsedSets(
                 if(kind==CustomAmplifierKind.DROP_SET &&
                     field.extraRounds=="2")weight(field.secondDropLoad)
                 else null)
+            val range=RepBand(
+                requireNotNull(field.minimum.toIntOrNull()),
+                requireNotNull(field.maximum.toIntOrNull()))
+            val exact=if(field.exactRepTarget.isBlank())null else
+                requireNotNull(field.exactRepTarget.toIntOrNull())
+            require(exact==null || (field.type==DraftSetType.WORKING &&
+                exact in range.minimum..range.maximum))
             CustomAuthoredSet(
                 field.type,
                 weight(field.weight),
-                RepBand(
-                    requireNotNull(field.minimum.toIntOrNull()),
-                    requireNotNull(field.maximum.toIntOrNull())),
+                range,
                 if (field.rir.isBlank()) null else
                     requireNotNull(field.rir.toIntOrNull()),
                 requireNotNull(field.seconds.toIntOrNull()),
                 requireNotNull(field.rest.toIntOrNull()),
-                amplifier
+                amplifier,
+                exact
             )
         }
     }.getOrNull()
@@ -476,7 +487,9 @@ internal fun NativeKotlinCustomExerciseSheet(
                                 forms = forms.toMutableList().also {
                                     it[index] = fields.copy(type = type,
                                         amplifier = if (type == DraftSetType.WARMUP)
-                                            null else fields.amplifier)
+                                            null else fields.amplifier,
+                                        exactRepTarget=if(type==DraftSetType.WARMUP)
+                                            "" else fields.exactRepTarget)
                                 }
                             }, label = { Text(type.name.lowercase().replaceFirstChar {
                                 it.uppercase()
@@ -498,6 +511,17 @@ internal fun NativeKotlinCustomExerciseSheet(
                     AuthorNumberField(fields.maximum, "Maximum reps",
                         { update(fields.copy(maximum = it)) },
                         Modifier.weight(1f))
+                }
+                if(fields.type==DraftSetType.WORKING) {
+                    AuthorNumberField(fields.exactRepTarget,
+                        "Exact current rep target (optional)",
+                        { update(fields.copy(exactRepTarget=it)) },
+                        Modifier.fillMaxWidth())
+                    Text("Rep target and ladder methods require a current target "+
+                        "for each working set inside its rep range. A range alone "+
+                        "does not authorize progression.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AuthorNumberField(fields.rir, "Target RIR (optional)",
@@ -687,6 +711,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                                     weight=fields.weight,
                                     minimum=fields.minimum,
                                     maximum=fields.maximum,
+                                    exactRepTarget=fields.exactRepTarget,
                                     rir=fields.rir,
                                     seconds=fields.seconds,
                                     rest=fields.rest)
@@ -699,7 +724,7 @@ internal fun NativeKotlinCustomExerciseSheet(
                 if(replacing!=null && option!=null &&
                     fields.type==DraftSetType.WORKING &&
                     forms.count{it.type==DraftSetType.WORKING}>1)
-                    Text("This copies only main-set load, reps, RIR and timing. "+
+                    Text("This copies only main-set load, rep range, exact rep target, RIR and timing. "+
                         "Each set keeps its own amplifier and follow-up edits.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)

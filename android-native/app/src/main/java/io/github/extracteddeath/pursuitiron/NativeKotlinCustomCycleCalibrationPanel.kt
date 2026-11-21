@@ -189,12 +189,15 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                         is DraftSetLoad.Verified -> "${load.value.toPlainString()} ${load.unit.name.lowercase()}"+
                             kotlinLoadBasisSuffix(load.basis)
                     }
-                    val reps=if(target.reps.minimum==target.reps.maximum)
-                        "${target.reps.minimum}" else "${target.reps.minimum}–${target.reps.maximum}"
+                    val reps=target.exactRepTarget?.let {
+                        "$it target reps (${target.reps.minimum}–${target.reps.maximum} range)"
+                    } ?: if(target.reps.minimum==target.reps.maximum)
+                        "${target.reps.minimum} reps"
+                    else "${target.reps.minimum}–${target.reps.maximum} reps"
                     val position=slot.sets.filter{it.prescription.type==target.type}.indexOf(set)+1
                     val label=if(target.type==DraftSetType.WARMUP)"Warm-up" else "Set"
                     val effort=target.targetRir?.let{" · $it RIR"}.orEmpty()
-                    Text("$label $position · $weight · $reps reps$effort",
+                    Text("$label $position · $weight · $reps$effort",
                         style=MaterialTheme.typography.bodySmall)
                 }
             }
@@ -225,8 +228,11 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                         is DraftSetLoad.Verified->
                             "${target.value.toPlainString()} ${target.unit.name.lowercase()}"
                     }
+                    val displayedReps=p.exactRepTarget?.let {
+                        "$it target reps (${p.reps.minimum}–${p.reps.maximum} range)"
+                    } ?: "${p.reps.minimum}–${p.reps.maximum} reps"
                     Text(
-                        "Set ${set.ordinalInSlot} · $load · ${p.reps.minimum}–${p.reps.maximum} reps" +
+                        "Set ${set.ordinalInSlot} · $load · $displayedReps" +
                             (p.targetRir?.let{" · $it RIR"}?:"") +
                             (if(set.setKey in review.shortened.snapshot.shortSessionOmittedSetKeys)
                                 " · restored optional set" else ""),

@@ -1802,6 +1802,26 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(1,(before as NativeKotlinStagedCoreAuditResult.Verified)
             .approvedFutureBlockCalendars)
         assertEquals(0,before.staleFutureBlockCalendars)
+        assertEquals(1,before.appliedFutureActivationIntents)
+        assertEquals(0,before.preparedFutureActivationIntents)
+        val commitFile=futurePhysical("future-activation-commit-")
+        val commitBytes=Files.readAllBytes(commitFile)
+        Files.write(commitFile,commitBytes.copyOf().also{
+            it[it.lastIndex]=(it.last().toInt() xor 1).toByte()
+        })
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.FUTURE_ACTIVATION_INTENT_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        Files.write(commitFile,commitBytes)
+        val extra=temp.root.toPath().resolve(
+            "future-activation-commit-"+"0".repeat(64)+".pending")
+        Files.write(extra,commitBytes)
+        assertEquals(NativeKotlinStagedCoreAuditResult.Rejected(
+            NativeKotlinStagedCoreRefusal.FUTURE_ACTIVATION_INTENT_UNVERIFIED),
+            NativeKotlinStagedCoreStoreAudit.inspect(temp.root.toPath(),expected))
+        Files.delete(extra)
+        assertEquals(before,NativeKotlinStagedCoreStoreAudit.inspect(
+            temp.root.toPath(),expected))
         val file=futurePhysical("activated-block-calendar-")
         val bytes=Files.readAllBytes(file)
         Files.write(file,bytes.copyOf().also{

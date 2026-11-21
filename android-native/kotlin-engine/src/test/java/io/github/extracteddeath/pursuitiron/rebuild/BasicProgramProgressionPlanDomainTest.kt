@@ -35,18 +35,27 @@ class BasicProgramProgressionPlanDomainTest {
         (BasicProgramProgressionPlanDomain.review(cycle,selected)
             as ProgramProgressionPlan.Ready).assignments.single()
 
-    @Test fun hypertrophyDefaultsToStrictDoubleAndStrengthPrimaryToLinear() {
+    @Test fun unknownExperienceDoesNotInventLinearStrengthProgression() {
         val hypertrophy=assignment(cycle(block()))
         assertEquals(ProgramProgressionRoute.BASIC_WEIGHTED,hypertrophy.route)
         assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
             hypertrophy.basicStrategy)
-        val strength=assignment(cycle(block(phase=TrainingPhase.STRENGTH,
-            slots=listOf(slot(role=ComposerRole.PRIMARY)))))
-        assertEquals(BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,
+        val strengthCycle=cycle(block(phase=TrainingPhase.STRENGTH,
+            slots=listOf(slot(role=ComposerRole.PRIMARY))))
+        val strength=assignment(strengthCycle)
+        assertEquals(BasicProgressionStrategy.STRICT_DOUBLE_PROGRESSION,
             strength.basicStrategy)
         assertEquals(2,strength.workingSetCount)
         assertFalse(strength.mayModifyIssuedSet)
         assertFalse(strength.mayChangeSavedProgram)
+        // A saved/reviewed linear choice still works; only the unsupported
+        // inference from an unknown athlete is removed.
+        val key=ProgramProgressionSlotKey("block",0,"slot")
+        val explicit=BasicProgramProgressionPlanDomain.review(
+            strengthCycle,selectedStyles=mapOf(key to NativeProgressionStyle.LINEAR))
+            as ProgramProgressionPlan.Ready
+        assertEquals(BasicProgressionStrategy.LINEAR_LOAD_PROGRESSION,
+            explicit.assignments.single().basicStrategy)
     }
 
     @Test fun bodyweightAndAssistanceNeverUseOrdinaryLoadIncrease() {

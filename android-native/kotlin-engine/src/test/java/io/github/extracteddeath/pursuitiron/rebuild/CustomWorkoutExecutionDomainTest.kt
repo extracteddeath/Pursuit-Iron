@@ -1044,4 +1044,106 @@ class CustomWorkoutExecutionDomainTest {
         assertEquals(3,j.effectiveVisits.size)
     }
 
+    @Test fun completedSingleDropMustReallyBeLowerThanThePerformedActivation() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                BigDecimal("15")))
+        var journal=initial(slot("real-drop",1,null,amplifier=amp))
+        journal=record(journal,"real-drop:s1",actualWeight="20.00",
+            station="machine-A")
+        for((index,actual) in listOf("20","20.000","25").withIndex()) {
+            val request=CustomWorkoutJournalOperation.Record(
+                "no-drop-$index",journal.revision,
+                visit("real-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal(actual),LoadUnit.LB,8,2,"machine-A"))
+            assertEquals(CustomWorkoutJournalRefusal.INVALID_ACTUAL,
+                (CustomWorkoutJournalDomain.reduce(journal,request)
+                    as CustomWorkoutJournalDecision.Rejected).reason)
+        }
+        val wrongMachine=CustomWorkoutJournalOperation.Record(
+            "different-implement",journal.revision,
+            visit("real-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"),LoadUnit.LB,8,2,"machine-B"))
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_ACTUAL,
+            (CustomWorkoutJournalDomain.reduce(journal,wrongMachine)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        journal=record(journal,"real-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            actualWeight="15",station="machine-A")
+        assertTrue(journal.canProposeFinish)
+        assertEquals(BigDecimal("20.00"),(journal.effectiveVisits.getValue(
+            visit("real-drop:s1")).operation as
+                CustomWorkoutJournalOperation.Record).performed?.load)
+    }
+
+    @Test fun secondDropCannotBeEqualToOrHeavierThanFirstPerformedDrop() {
+        fun n(v:String)=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,BigDecimal(v))
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            n("15"),followUpRounds=2,secondDropLoad=n("10"))
+        var journal=initial(slot("double-drop",1,null,amplifier=amp))
+        journal=record(journal,"double-drop:s1",actualWeight="20")
+        journal=record(journal,"double-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            stage=1,actualWeight="15")
+        for(weight in listOf("15","15.000","16")) {
+            val attempt=CustomWorkoutJournalOperation.Record(
+                "not-a-drop-${weight.replace('.','-')}",journal.revision,
+                visit("double-drop:s1",CustomWorkoutVisitPart.FOLLOW_UP,2),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal(weight),LoadUnit.LB,8,2))
+            assertEquals(CustomWorkoutJournalRefusal.INVALID_ACTUAL,
+                (CustomWorkoutJournalDomain.reduce(journal,attempt)
+                    as CustomWorkoutJournalDecision.Rejected).reason)
+        }
+        journal=record(journal,"double-drop:s1",
+            CustomWorkoutVisitPart.FOLLOW_UP,stage=2,actualWeight="12")
+        assertTrue(journal.canProposeFinish)
+        assertEquals(listOf(BigDecimal("20"),BigDecimal("15"),BigDecimal("12")),
+            journal.receipts.map{
+                (it.operation as CustomWorkoutJournalOperation.Record).performed?.load
+            })
+    }
+
+    @Test fun completedOneDropProtectsItsRealActivationOnCorrections() {
+        val amp=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,8,10,
+            DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,BigDecimal("15")))
+        var journal=initial(slot("single",1,null,amplifier=amp))
+        journal=record(journal,"single:s1",actualWeight="20")
+        journal=record(journal,"single:s1",CustomWorkoutVisitPart.FOLLOW_UP,
+            actualWeight="15")
+        val mainVisit=visit("single:s1")
+        val preceding=(journal.effectiveVisits.getValue(mainVisit).operation
+            as CustomWorkoutJournalOperation.Record)
+        val rebase=CustomWorkoutJournalOperation.Record(
+            "silently-smaller",journal.revision,mainVisit,
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("14"),LoadUnit.LB,9,2),
+            preceding.eventId)
+        assertEquals(CustomWorkoutJournalRefusal.INVALID_CORRECTION,
+            (CustomWorkoutJournalDomain.reduce(journal,rebase)
+                as CustomWorkoutJournalDecision.Rejected).reason)
+        journal=(CustomWorkoutJournalDomain.reduce(journal,
+            rebase.copy(eventId="numeric-same",performed=KotlinPerformedSet(
+                BigDecimal("20.000"),LoadUnit.LB,9,2)))
+            as CustomWorkoutJournalDecision.Proposed).draft
+        assertTrue(journal.canProposeFinish)
+        assertEquals(BigDecimal("20.000"),(journal.effectiveVisits.getValue(
+            mainVisit).operation as CustomWorkoutJournalOperation.Record)
+                .performed?.load)
+        val finished=(CustomWorkoutJournalDomain.reduce(journal,
+            CustomWorkoutJournalOperation.Finish("finish",journal.revision))
+                as CustomWorkoutJournalDecision.Proposed).draft
+        var rebuilt=CustomWorkoutJournalDomain.begin(
+            finished.workoutId,finished.originalSnapshot,
+            finished.preparedConsentFingerprint)
+        for(receipt in finished.receipts) {
+            val replay=CustomWorkoutJournalDomain.reduce(rebuilt,receipt.operation)
+            assertTrue(replay.toString(),replay is CustomWorkoutJournalDecision.Proposed)
+            rebuilt=(replay as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        assertEquals(finished,rebuilt)
+    }
+
 }

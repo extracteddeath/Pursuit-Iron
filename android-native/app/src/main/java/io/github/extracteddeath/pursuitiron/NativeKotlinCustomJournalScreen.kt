@@ -1718,11 +1718,12 @@ internal fun NativeKotlinCustomJournalScreen(
                             verifiedFinishedInHistory=if(finished)
                                 verifyCommittedHistory()
                             else false
-                            error=if(finished && verifiedFinishedInHistory)null else
-                                if(finished)
-                                    "Finish was committed, but the history read could not be independently verified. Use recovery before advancing."
-                                else
-                                "Finish not committed: ${result ?: "storage unavailable"}. The workout remains recoverable."
+                            // A lost disk acknowledgement cannot tell
+                            // us whether Finish committed. Only the durable
+                            // result and independently verified History may
+                            // report completion; never encourage a blind retry.
+                            error=NativeFinishReviewPolicy.customFinishMessage(
+                                result,verifiedFinishedInHistory)
                             val saved=withContext(Dispatchers.IO){
                                 runCatching{host.openIssuedCustomWorkout(workoutId)}
                                     .getOrNull()

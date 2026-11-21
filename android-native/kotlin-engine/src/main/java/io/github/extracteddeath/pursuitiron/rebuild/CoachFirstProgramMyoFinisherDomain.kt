@@ -61,7 +61,10 @@ object CoachFirstProgramMyoFinisherDomain {
                     (set.targetRir==null || set.targetRir !in 1..2))continue
                 // If a special back-off or different physical weight is
                 // already programmed, do not attach a same-load finisher.
-                if(working.any{it.value.load!=set.load})continue
+                if(working.any{
+                        !KotlinSetNumberAuthorityDomain.sameIssuedTarget(
+                            it.value.load,set.load)
+                    })continue
                 return FirstProgramMyoFinisherChoice(
                     session.dayIndex,index,exercise.exerciseId,
                     last.index,set.stableSetKey)

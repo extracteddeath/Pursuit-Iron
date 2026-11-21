@@ -1414,7 +1414,7 @@ const firstSeed=read('android-native/native-coach-store/src/main/java/io/github/
 assert.match(myoFirst,/experience==AthleteExperience\.BEGINNER/);
 assert.match(myoFirst,/movement\.pattern!=ComposerPattern\.ISOLATION/);
 assert.match(myoFirst,/set\.targetRir/);
-assert.match(myoFirst,/if\(working\.any\{it\.value\.load!=set\.load\}\)continue/);
+assert.match(myoFirst,/KotlinSetNumberAuthorityDomain\.sameIssuedTarget\(/);
 assert.match(firstConversion,/includeMyoFinisher:Boolean=false/);
 assert.match(firstConversion,/finisher\.setKey==set\.stableSetKey/);
 assert.match(firstConversion,/CustomCycleCoachAuditDomain\.review\(next,setup,curatedCatalog,inputs\)/);

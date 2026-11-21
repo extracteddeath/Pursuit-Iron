@@ -97,4 +97,28 @@ class CoachFirstProgramMyoFinisherDomainTest {
         assertEquals(0,pick.dayIndex)
         assertEquals(before,days)
     }
+    @Test fun identicalPhysicalLoadsAcrossDecimalScalesAreOneSameLoadFinisher() {
+        val first=set(1,weight=load.copy(value=BigDecimal("35.000")))
+        val last=set(2,weight=load.copy(value=BigDecimal("35.0")))
+        val baseline=pick(s=session(exercise(sets=listOf(first,last))))
+        assertEquals("curl-set-2",baseline?.setKey)
+        // Never rewrite the actual authored decimal representations.
+        assertEquals(BigDecimal("35.000"),
+            (first.load as DraftSetLoad.Verified).value)
+        assertEquals(BigDecimal("35.0"),
+            (last.load as DraftSetLoad.Verified).value)
+        val differentBasis=first.copy(
+            load=load.copy(basis=LoadBasis.MACHINE_STACK))
+        assertNull(pick(s=session(exercise(sets=listOf(
+            differentBasis,last)))))
+        val differentUnit=first.copy(
+            load=load.copy(unit=LoadUnit.KG))
+        assertNull(pick(s=session(exercise(sets=listOf(
+            differentUnit,last)))))
+        val differentWeight=first.copy(
+            load=load.copy(value=BigDecimal("34.999")))
+        assertNull(pick(s=session(exercise(sets=listOf(
+            differentWeight,last)))))
+    }
+
 }

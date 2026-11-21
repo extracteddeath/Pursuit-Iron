@@ -27,7 +27,6 @@ internal object NativeCustomWorkoutJournalCodec {
     private const val MAGIC=0x5049434A // PICJ
     private const val VERSION=5
     const val MAX_BYTES=2_000_000
-    private const val MAX_RECEIPTS=2048
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
     private fun DataOutputStream.textOptional(value:String?) {
@@ -193,7 +192,7 @@ internal object NativeCustomWorkoutJournalCodec {
         require(id.matches(record.ownerKey))
         val state=record.journal
         require(id.matches(state.workoutId))
-        require(state.receipts.size<=MAX_RECEIPTS)
+        require(state.receipts.size<=CustomWorkoutJournalDomain.MAX_RECEIPTS)
         val replayed=replay(state.originalSnapshot,state.workoutId,
             state.preparedConsentFingerprint,state.receipts,
             state.revision,state.finishedByEventId)
@@ -287,7 +286,7 @@ internal object NativeCustomWorkoutJournalCodec {
                 val revision=data.readLong()
                 val finish=data.textOptional()
                 val count=data.readInt()
-                if(count !in 0..MAX_RECEIPTS || count>data.available()/9)
+                if(count !in 0..CustomWorkoutJournalDomain.MAX_RECEIPTS || count>data.available()/9)
                     throw IOException("invalid custom journal receipt count")
                 val receipts=List(count) {
                     CustomWorkoutJournalReceipt(data.readLong(),data.operation(version))

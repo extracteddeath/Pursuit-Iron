@@ -44,6 +44,29 @@ class NativeCustomWorkoutJournalCodecTest {
     private fun record(state:CustomWorkoutJournalDraft)=
         NativeCustomWorkoutJournalRecord("owner-1",state)
 
+    @Test fun fullLegacyJournalCanResolveAnAmplifierAndColdReopenFinished() {
+        var draft=initial()
+        repeat(2048) { index ->
+            draft=accept(draft,CustomWorkoutJournalOperation.SessionNote("note-$index",
+                draft.revision,"Training"))
+        }
+        draft=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(draft))).journal
+        assertEquals(CustomWorkoutJournalDecision.Rejected(CustomWorkoutJournalRefusal.TOO_MANY_EVENTS),
+            CustomWorkoutJournalDomain.reduce(draft,
+                CustomWorkoutJournalOperation.SessionNote("extra",draft.revision,"")))
+        draft=accept(draft,event("main",draft.revision,CustomWorkoutVisitPart.MAIN,10))
+        assertFalse(draft.canProposeFinish)
+        draft=accept(draft,event("myo",draft.revision,CustomWorkoutVisitPart.FOLLOW_UP,4))
+        val finish=CustomWorkoutJournalOperation.Finish("finish",draft.revision)
+        draft=accept(draft,finish)
+        val reopened=NativeCustomWorkoutJournalCodec.decode(
+            NativeCustomWorkoutJournalCodec.encode(record(draft))).journal
+        assertEquals(draft,reopened)
+        assertEquals(CustomWorkoutJournalDecision.Proposed(reopened,true),
+            CustomWorkoutJournalDomain.reduce(reopened,finish))
+    }
+
     @Test fun machineVariantsPersistIndependentlyInMainAndAmplifierV4Receipts() {
         val base=initial()
         val main=accept(base,CustomWorkoutJournalOperation.Record(

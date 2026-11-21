@@ -1722,7 +1722,7 @@ internal fun NativeKotlinCustomJournalScreen(
                             // us whether Finish committed. Only the durable
                             // result and independently verified History may
                             // report completion; never encourage a blind retry.
-                            error=NativeCustomFinishFeedback.message(
+                            error=NativeFinishReviewPolicy.customFinishMessage(
                                 result,verifiedFinishedInHistory)
                             val saved=withContext(Dispatchers.IO){
                                 runCatching{host.openIssuedCustomWorkout(workoutId)}

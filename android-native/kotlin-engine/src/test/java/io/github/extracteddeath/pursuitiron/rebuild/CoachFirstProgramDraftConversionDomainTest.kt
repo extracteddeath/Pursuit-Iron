@@ -45,6 +45,18 @@ class CoachFirstProgramDraftConversionDomainTest {
         assertTrue(plan.assignments.all{
             it.basicStrategy==BasicProgressionStrategy.PER_SET_DYNAMIC_PROGRESSION
         })
+        val methods=savedSlots.map{it.progressionMethod}
+        assertEquals(savedSlots.size,methods.size)
+        assertTrue(methods.all{it==SavedProgressionMethod.DYNAMIC})
+        val reopenedPlan=BasicProgramProgressionPlanDomain.review(
+            cycle,reviewedCatalog=source.catalog.associateBy{it.exerciseId},
+            experience=checkNotNull(source.setup.reviewed).experience)
+            as ProgramProgressionPlan.Ready
+        assertEquals(plan.assignments.map{it.basicStrategy},
+            reopenedPlan.assignments.map{it.basicStrategy})
+        assertTrue(reopenedPlan.assignments.all{
+            it.savedMethod==SavedProgressionMethod.DYNAMIC
+        })
         assertFalse(proposed.mayApproveProgram)
         assertFalse(proposed.mayIssueWorkout)
         assertEquals(candidate,reviewed())

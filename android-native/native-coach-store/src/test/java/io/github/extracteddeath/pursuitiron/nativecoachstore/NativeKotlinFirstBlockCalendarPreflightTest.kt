@@ -86,6 +86,23 @@ class NativeKotlinFirstBlockCalendarPreflightTest {
         assertEquals(invalidClock,rejected(input=basis(weekdays=setOf(0,2,7))))
     }
 
+    @Test fun canBrowseEveryOfferedMondayInBothDirectionsAcrossDst() {
+        fun preview(date:LocalDate?)=(NativeFirstBlockCalendarDomain.propose(
+            basis(),springBefore,date) as NativeFirstBlockCalendarPreview.Ready).proposal
+        val first=preview(null)
+        assertNull(first.previousMonday)
+        var current=first
+        repeat(12) {
+            val following=preview(checkNotNull(current.nextMonday))
+            assertEquals(current.selectedMonday.plusWeeks(1),following.selectedMonday)
+            assertEquals(current.selectedMonday,following.previousMonday)
+            current=following
+        }
+        assertNull(current.nextMonday)
+        repeat(12) { current=preview(checkNotNull(current.previousMonday)) }
+        assertEquals(first,current)
+    }
+
     @Test fun noSelectionDefaultsToCurrentMondayInAthletesTimezone() {
         val friday=NativeFirstBlockCalendarDomain.propose(
             basis(),springBefore,null) as NativeFirstBlockCalendarPreview.Ready

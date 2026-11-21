@@ -35,7 +35,9 @@ data class NativeFirstBlockCalendarProposal(
     val timezoneId:String,
     val weekdays:Set<Int>,
     val firstWeek:List<NativeFirstBlockCalendarDay>,
-    val fingerprint:String
+    val fingerprint:String,
+    val previousMonday:LocalDate?,
+    val nextMonday:LocalDate?
 ) {
     val isApproved:Boolean get()=false
     val canIssueWorkout:Boolean get()=false
@@ -121,7 +123,9 @@ internal object NativeFirstBlockCalendarDomain {
                 basis.sourceRevision,basis.sourceSha256,
                 basis.draftRevision,basis.draftSha256,
                 basis.signoffFingerprint,monday,basis.timezoneId,
-                basis.weekdays.toSortedSet().toSet(),dates,digest(bytes.toByteArray())))
+                basis.weekdays.toSortedSet().toSet(),dates,digest(bytes.toByteArray()),
+                monday.minusWeeks(1).takeIf { it >= earliest && it.year >= 2000 },
+                monday.plusWeeks(1).takeIf { it <= earliest.plusWeeks(12) && it.year <= 2100 }))
     }
 }
 

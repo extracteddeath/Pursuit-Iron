@@ -21,7 +21,7 @@ class BasicProgramProgressionPlanDomainTest {
     private fun block(
         phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
         purpose:CustomBlockPurpose=CustomBlockPurpose.TRAINING,
-        slots:List<CustomExerciseSlot>=listOf(slot()),
+        slots:List<CustomExerciseSlot> = listOf(slot()),
         id:String="block"
     )=CustomTrainingBlock(id,"Block",phase,purpose,4,
         CustomSplitIdentity.Named(ComposerSplit.FULL_BODY),

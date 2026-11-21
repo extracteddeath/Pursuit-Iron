@@ -92,6 +92,44 @@ class NativeMeasuredWorkoutParentFileStoreTest {
         "set-$index",MeasuredSetOutcome.COMPLETED,
         actual(plan.sets[index-1],amount),corrects)
 
+    @Test fun exhaustedCorrectionBudgetStillAllowsRemainingSetsAndFinishAfterColdReplay() {
+        val sets=(1..9).map { plan("plank",it) }
+        val workout=MeasuredWorkoutPlan("workout-one","gym-one",3,sets)
+        var journal=checkNotNull(MeasuredWorkoutJournalDomain.begin(workout))
+        fun append(operation:MeasuredWorkoutOperation) {
+            journal=(MeasuredWorkoutJournalDomain.reduce(journal,operation)
+                as MeasuredWorkoutDecision.Proposed).journal
+        }
+        fun reopen() {
+            val stored=NativeMeasuredWorkoutStored("owner-one","athlete-one","approval",1,journal)
+            val bytes=NativeMeasuredWorkoutParentCodec.encode(stored)
+            val cold=NativeMeasuredWorkoutParentCodec.decode(bytes,"owner-one","athlete-one")
+            assertEquals(stored,cold)
+            journal=cold.journal
+        }
+        for(round in 0 until 128) for(index in 1..8) {
+            append(op(workout,index,journal.revision,"r-$round-$index",
+                if(round==0)null else "r-${round-1}-$index"))
+        }
+        reopen()
+        val child=journal.bySetKey.getValue("set-1")
+        val closedChild=(MeasuredExerciseJournalDomain.reduce(child,
+            MeasuredJournalOperation.Finish("child-finish",128))
+            as MeasuredJournalDecision.Proposed).journal
+        assertEquals(closedChild,NativeMeasuredExerciseJournalCodec.decode(
+            NativeMeasuredExerciseJournalCodec.encode("owner-one","athlete-one",closedChild),
+            "owner-one","athlete-one"))
+        assertEquals(MeasuredWorkoutRefusal.TOO_MANY_RECEIPTS,
+            (MeasuredWorkoutJournalDomain.reduce(journal,
+                op(workout,1,1024,"extra","r-127-1")) as MeasuredWorkoutDecision.Rejected).reason)
+        append(op(workout,9,1024))
+        val finish=MeasuredWorkoutOperation.Finish("finish",1025)
+        append(finish)
+        reopen()
+        assertTrue((MeasuredWorkoutJournalDomain.reduce(journal,finish)
+            as MeasuredWorkoutDecision.Proposed).replayed)
+    }
+
     @Test fun coldReopenEveryTypedSetAndOwnerFenceBeforeHistoryIntegration() {
         val p=approved(all=true)
         val store=store()

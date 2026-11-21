@@ -79,7 +79,10 @@ sealed interface MeasuredWorkoutDecision {
 
 object MeasuredWorkoutJournalDomain {
     private const val MAX_SETS=64
-    private const val MAX_RECEIPTS=1024
+    private const val CORRECTION_CUTOFF = 1024
+    // Previously saved workouts may already have exhausted the original budget.
+    // After that point allow only first observations of remaining sets and Finish.
+    const val MAX_RECEIPTS = CORRECTION_CUTOFF + MAX_SETS + 1
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private const val MAX_REVISION=9_007_199_254_740_991L
 
@@ -130,6 +133,10 @@ object MeasuredWorkoutJournalDomain {
             return reject(MeasuredWorkoutRefusal.STALE_REVISION)
         if(original.finishedByEventId!=null)
             return reject(MeasuredWorkoutRefusal.FINISHED)
+        if(original.receipts.size >= CORRECTION_CUTOFF &&
+            operation is MeasuredWorkoutOperation.Record &&
+            original.bySetKey[operation.setKey]?.effectiveRecord != null)
+            return reject(MeasuredWorkoutRefusal.TOO_MANY_RECEIPTS)
         if(original.receipts.size>=MAX_RECEIPTS ||
             original.revision>=MAX_REVISION)
             return reject(MeasuredWorkoutRefusal.TOO_MANY_RECEIPTS)

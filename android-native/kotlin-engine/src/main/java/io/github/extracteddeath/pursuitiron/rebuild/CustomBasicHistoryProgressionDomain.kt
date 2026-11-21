@@ -40,6 +40,18 @@ sealed interface CustomBasicHistoryResult {
         val reason: CustomBasicHistoryRefusal,
         val evaluatorReason: BasicProgressionRefusal? = null
     ): CustomBasicHistoryResult
+    data class UnloadedReviewed(
+        val historyWorkoutId:String,
+        val completionOrder:Long,
+        val candidate:BasicUnloadedProgressionResult.Candidate,
+        val blockId:String,
+        val weekday:Int,
+        val slotId:String
+    ):CustomBasicHistoryResult {
+        val mayIssueWorkout:Boolean get()=false
+        val maySaveProgram:Boolean get()=false
+        val mayModifyHistory:Boolean get()=false
+    }
     data class Reviewed(
         val historyWorkoutId: String?,
         val completionOrder: Long?,
@@ -105,11 +117,18 @@ object CustomBasicHistoryProgressionDomain {
         val assignment=plan.assignments.singleOrNull { it.key==
             ProgramProgressionSlotKey(block.blockId,next.weekday,request.slotId) }
             ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
+        val unweighted=assignment.route==ProgramProgressionRoute.BASIC_BODYWEIGHT_REPS &&
+            saved.progressionMethod==SavedProgressionMethod.BODYWEIGHT_REPS
         val strategy=when(assignment.route) {
             ProgramProgressionRoute.MANUAL -> BasicProgressionStrategy.MANUAL_LOGGING
             ProgramProgressionRoute.BASIC_WEIGHTED -> assignment.basicStrategy
             else -> null
-        } ?:return no(CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD)
+        }
+        if(!unweighted && strategy==null)
+            return no(CustomBasicHistoryRefusal.AUTHORED_OR_SPECIALIST_OWNS_LOAD)
+        if(unweighted && (request.selectedMachineInstanceId!=null ||
+            selected.machineInstanceId!=null))
+            return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
 
         val working=selected.sets.filter {it.prescription.type==DraftSetType.WORKING}
         if(working.size !in 1..32 ||
@@ -117,15 +136,18 @@ object CustomBasicHistoryProgressionDomain {
             working.map {it.prescription.reps}.distinct().size!=1)
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         val targetReps=working.first().prescription.reps
-        val loads=working.map {
+        if(unweighted && working.any{
+            it.prescription.load!=DraftSetLoad.ExplicitBodyweight
+        })return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
+        val loads=if(unweighted)emptyList() else working.map {
             it.prescription.load as? DraftSetLoad.Verified
                 ?:return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
         }
-        if(loads.map {it.unit to it.basis}.distinct().size!=1)
+        if(!unweighted && loads.map {it.unit to it.basis}.distinct().size!=1)
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
-        val unit=loads.first().unit
-        val basis=loads.first().basis
-        val exactReps=if(strategy in setOf(
+        val unit=loads.firstOrNull()?.unit
+        val basis=loads.firstOrNull()?.basis
+        val exactReps=if(unweighted || strategy in setOf(
                 BasicProgressionStrategy.REP_TARGET_PROGRESSION,
                 BasicProgressionStrategy.REP_LADDER_PROGRESSION)) {
             working.map {it.prescription.exactRepTarget
@@ -133,16 +155,16 @@ object CustomBasicHistoryProgressionDomain {
         } else null
         val normalizedMachine=KotlinMachineAlternativesDomain.normalizeMachineId(
             request.selectedMachineInstanceId)
-        val scope=BasicProgressionScope(
+        val scope=if(unweighted)null else BasicProgressionScope(
             next.stamp.athleteId,cycle.cycleId,next.stamp.gymId,
             next.blockId,next.blockId+":d"+next.weekday,selected.exerciseId,
-            request.selectedMachineInstanceId,unit,basis)
-        if(!scope.valid())
+            request.selectedMachineInstanceId,checkNotNull(unit),checkNotNull(basis))
+        if(scope!=null && !scope.valid())
             return no(CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE)
 
         if(strategy==BasicProgressionStrategy.MANUAL_LOGGING) {
             val manual=BasicProgressionPolicyDomain.review(BasicProgressionRequest(
-                strategy,request.nextWorkoutId,scope,null,null,targetReps,
+                strategy,request.nextWorkoutId,checkNotNull(scope),null,null,targetReps,
                 loads.map{it.value},null,request.maximumAuthorizedIncrement))
             return when(manual) {
                 is BasicProgressionResult.Candidate -> CustomBasicHistoryResult.Reviewed(
@@ -200,6 +222,9 @@ object CustomBasicHistoryProgressionDomain {
             // even if an older same-day visit at the desired station passed.
             // A fully recorded actual station may still legitimately differ
             // from the issued default when the athlete switched machines.
+            if(unweighted && (historicalSlot.machineInstanceId!=null ||
+                actualMachineIds.any{it!=null}))
+                return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             if(observedMachines.isEmpty() &&
                 historicalSlot.machineInstanceId!=null)
                 return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
@@ -256,19 +281,29 @@ object CustomBasicHistoryProgressionDomain {
         val byKey=observations.associateBy {it.setKey}
         val facts=expected.mapIndexed {ordinal,item ->
             val observed=byKey.getValue(item.setKey)
-            val prescribed=observed.prescribedLoad as? DraftSetLoad.Verified
-                ?:return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
             if(observed.exerciseId!=selected.exerciseId ||
-                item.prescription.load!=prescribed ||
+                item.prescription.load!=observed.prescribedLoad ||
                 item.prescription.reps!=observed.prescribedReps ||
                 item.prescription.reps!=targetReps ||
-                prescribed.unit!=unit || prescribed.basis!=basis ||
-                observed.amplifierKind!=null ||
-                (observed.actual!=null &&
-                    (observed.actual.unit!=unit ||
-                        KotlinMachineAlternativesDomain.normalizeMachineId(
-                            observed.actual.machineInstanceId)!=normalizedMachine)))
+                observed.amplifierKind!=null)
                 return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
+            val issued=if(unweighted) {
+                if(item.prescription.load!=DraftSetLoad.ExplicitBodyweight ||
+                    observed.actual?.let {it.load!=null || it.unit!=null ||
+                        it.machineInstanceId!=null}==true)
+                    return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
+                null
+            } else {
+                val prescribed=observed.prescribedLoad as? DraftSetLoad.Verified
+                    ?:return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
+                if(prescribed.unit!=unit || prescribed.basis!=basis ||
+                    observed.actual!=null &&
+                        (observed.actual.unit!=unit ||
+                            KotlinMachineAlternativesDomain.normalizeMachineId(
+                                observed.actual.machineInstanceId)!=normalizedMachine))
+                    return no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
+                prescribed.value
+            }
             WorkingSetFact(
                 ordinal,
                 when(observed.outcome) {
@@ -277,13 +312,35 @@ object CustomBasicHistoryProgressionDomain {
                     KotlinJournalSetOutcome.FAILED_ATTEMPT -> SetOutcome.FAILED_ATTEMPT
                 },
                 observed.actual?.load,observed.actual?.reps,
-                observed.actual?.actualRir,prescribed.value,item.prescription.targetRir)
+                observed.actual?.actualRir,issued,item.prescription.targetRir)
         }
+        if(unweighted) {
+            val unloadedScope=BasicUnloadedProgressionScope(
+                next.stamp.athleteId,next.stamp.gymId,cycle.cycleId,
+                next.blockId,next.blockId+":d"+next.weekday,selected.exerciseId)
+            val observed=BasicUnloadedWorkoutEvidence(
+                prior.evidence.workoutId,selected.exerciseId,targetReps,
+                expected.size,facts,unloadedScope.trainingDayId)
+            return when(val evaluated=BasicBodyweightRepProgressionDomain.review(
+                BasicUnloadedProgressionRequest(request.nextWorkoutId,
+                    unloadedScope,unloadedScope,observed,
+                    working.map {it.prescription.load},checkNotNull(exactReps),
+                    targetReps))) {
+                is BasicUnloadedProgressionResult.Candidate ->
+                    CustomBasicHistoryResult.UnloadedReviewed(
+                        prior.evidence.workoutId,prior.completionOrder,evaluated,
+                        next.blockId,next.weekday,request.slotId)
+                is BasicUnloadedProgressionResult.Rejected ->
+                    no(CustomBasicHistoryRefusal.LAST_VISIT_INCOMPATIBLE)
+            }
+        }
+        val validatedScope=checkNotNull(scope)
         val priorEvidence=ProgressionWorkoutEvidence(
-            prior.evidence.workoutId,selected.exerciseId,unit,targetReps,
-            expected.size,facts,scope.trainingDayId)
+            prior.evidence.workoutId,selected.exerciseId,checkNotNull(unit),
+            targetReps,expected.size,facts,validatedScope.trainingDayId)
         val calculated=BasicProgressionPolicyDomain.review(BasicProgressionRequest(
-            strategy,request.nextWorkoutId,scope,scope,priorEvidence,targetReps,
+            checkNotNull(strategy),request.nextWorkoutId,
+            validatedScope,validatedScope,priorEvidence,targetReps,
             loads.map{it.value},request.verifiedStock,
             request.maximumAuthorizedIncrement,exactReps))
         return when(calculated) {

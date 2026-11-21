@@ -18,6 +18,18 @@ internal fun NativeKotlinBasicProgressionPreview(
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         Text("Basic progression",style=MaterialTheme.typography.titleSmall)
         when(projection) {
+            is CustomBasicHistoryResult.UnloadedReviewed -> {
+                Text("Unweighted bodyweight · no load suggestion",
+                    style=MaterialTheme.typography.bodySmall)
+                projection.candidate.proposedExactReps.forEachIndexed {index,reps ->
+                    val changed=index in projection.candidate.advancedOrdinals
+                    Text("Working set ${index+1}: ${if(changed)"proposed " else ""}$reps reps",
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                if(projection.candidate.atRepCeiling)
+                    Text("All sets are at the rep ceiling. Any harder variation or added weight needs separate review.",
+                        style=MaterialTheme.typography.bodySmall)
+            }
             is CustomBasicHistoryResult.Rejected -> {
                 val explanation=when(projection.reason) {
                     CustomBasicHistoryRefusal.INVALID_NEXT_SOURCE ->

@@ -248,7 +248,11 @@ assert.match(restPauseSheet,/secondDropLoad=row.getOrNull\(13\)/);
 assert.match(restPauseSheet,/extraRounds=="2"/);
 assert.match(restPauseSheet,/Drop 2 · verified load below drop 1/);
 assert.match(journal,/Drop \$stageOrdinal of \$stageTotal/);
-assert.match(twoDropDraftCodec,/private const val VERSION = 5/);
+assert.match(twoDropDraftCodec,/private const val VERSION = 6/);
+// New per-slot progression choices use v6; a legacy two-drop draft still
+// writes v5, preserving historical fingerprints and signed custom cycles.
+assert.match(twoDropDraftCodec,/if\(hasSavedProgression\)VERSION else if\(hasSecondDrop\)5/);
+assert.match(twoDropDraftCodec,/if\(version>=6\) \{/);
 assert.match(twoDropDraftCodec,/if\(version>=5\) \{/);
 assert.match(twoDropSnapshotCodec,/private const val VERSION=6/);
 assert.match(twoDropSnapshotCodec,/if\(version>=6\) \{/);

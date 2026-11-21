@@ -5,6 +5,19 @@ import fs from 'node:fs';
 // acceptance milestone, not a claim made by this static test.
 const read=p=>fs.readFileSync(p,'utf8');
 const journal=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomJournalScreen.kt');
+const customFinishFeedback=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeCustomFinishFeedback.kt');
+// The custom Finish result may be lost AFTER the durable transaction.
+// A null acknowledgement is NOT evidence of a failed save.
+assert.ok(journal.includes('NativeCustomFinishFeedback.message(') &&
+  journal.includes('verifiedFinishedInHistory') &&
+  journal.includes('host.finishIssuedCustomWorkout(workoutId,') &&
+  !journal.includes('Finish not committed:') &&
+  customFinishFeedback.includes('Finish status is unknown.') &&
+  customFinishFeedback.includes('may already be saved') &&
+  customFinishFeedback.includes('NativeCustomFinishRefusal.STORAGE_UNAVAILABLE') &&
+  customFinishFeedback.includes('NativeCustomFinishRefusal.FINISH_EVENT_MISMATCH'),
+  'Finish uncertainty must be visible without changing the durable owner or fabricating a rollback');
+
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 
 

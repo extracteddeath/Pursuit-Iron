@@ -90,13 +90,21 @@ object CustomWorkoutExecutionDomain {
         val amp=set.prescription.amplifier ?:return emptyList()
         if(main?.outcome!=KotlinJournalSetOutcome.COMPLETED)return emptyList()
         if(amp.followUpRounds !in 1..5)return emptyList()
+        // A malformed or stale one-drop recipe must never get a special
+        // "legacy" exemption from the same independently verified physical
+        // reductions required by two-drop protocols.
+        if(amp.kind==CustomAmplifierKind.DROP_SET &&
+            !AdvancedAmplifierProtocolDomain.validDropSequence(
+                set.prescription.load,amp))return emptyList()
         val visits=mutableListOf<CustomWorkoutVisitKey>()
         val observedFollowUpReps=mutableListOf<Int>()
         for(stage in 1..amp.followUpRounds) {
             val key=CustomWorkoutVisitKey(set.setKey,
                 CustomWorkoutVisitPart.FOLLOW_UP,stage)
-            if(amp.kind==CustomAmplifierKind.DROP_SET &&
-                amp.followUpRounds==2) {
+            if(amp.kind==CustomAmplifierKind.DROP_SET) {
+                // Apply to EVERY weight drop, including the older one-drop
+                // recipe: an issued "reduction" may exceed what the athlete
+                // really lifted. No new stage is offered in that situation.
                 // An athlete's ACTUAL activation weight may differ from
                 // the issued target. Never present an optional drop that
                 // would increase or hold weight relative to the last
